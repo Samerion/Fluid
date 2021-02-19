@@ -5,4 +5,5 @@ public import
     glui.label,
     glui.node,
     glui.structs,
-    glui.style;
+    glui.style,
+    glui.utils;

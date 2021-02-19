@@ -80,7 +80,8 @@ class GluiFrame : GluiNode {
             child.draw(rect);
 
             // Offset position
-            position = childPosition(child, position);
+            if (direction == Direction.vertical) position.y += size.y;
+            else position.x += size.x;
 
         }
 
