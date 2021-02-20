@@ -10,59 +10,44 @@ void main() {
 
     scope (exit) CloseWindow();
 
-    auto style = new Style()
-        .set!"backgroundColor"(Colors.WHITE)
-        .set!"textColor"(Colors.BLACK);
+    auto style = new Style;
+    style.backgroundColor = Colors.WHITE;
+    style.textColor = Colors.BLACK;
 
-    auto bgred = new Style()
-        .set!"backgroundColor"(Color(0xc0, 0x12, 0x12, 0xff));
+    auto bgred = new Style;
+    bgred.backgroundColor = Color(0xc0, 0x12, 0x12, 0xff);
 
-    auto bggreen = new Style()
-        .set!"backgroundColor"(Color(0x12, 0xc0, 0x12, 0xff));
+    auto bggreen = new Style;
+    bggreen.backgroundColor = Color(0x12, 0xc0, 0x12, 0xff);
 
-    auto bgblue = new Style()
-        .set!"backgroundColor"(Color(0x12, 0x12, 0xc0, 0xff));
+    auto bgblue = new Style;
+    bgblue.backgroundColor = Color(0x12, 0x12, 0xc0, 0xff);
 
-    NodeLayout fill = {
+    Layout fill = {
         expand: 1,
         nodeAlign: NodeAlign.fill,
     };
 
-    NodeLayout header = {
-        nodeAlign: [
-            NodeAlign.fill,
-            NodeAlign.start,
-        ]
-    };
+    auto root = vframe(style, fill,
 
-    NodeLayout title = {
-        expand: 1,
-        nodeAlign: NodeAlign.center
-    };
+        vframe(style, layout(NodeAlign.fill, NodeAlign.start),
 
-    NodeLayout column = {
-        expand: 1,
-        nodeAlign: NodeAlign.fill,
-    };
+            label(style, layout(NodeAlign.center), "Hello, World!"),
 
-    auto root = new GluiFrame(fill).addChild(
+        ),
 
-        new GluiFrame(style, header)
-            .addChild(
-                new GluiLabel(style, title, "Hello, World!")
-            ),
+        hframe(style, fill,
 
-        new GluiFrame(fill)
-            .set!"directionHorizontal"(true)
-            .addChild(
-                new GluiFrame(column, bgred),
-                new GluiFrame(column, bggreen),
-                new GluiFrame(column)
-                    .addChild(
-                        new GluiFrame(fill, bgblue),
-                        new GluiLabel(header, style, "Welcome to Glui!"),
-                    ),
+            vframe(bgred, fill),
+            vframe(bggreen, fill),
+            vframe(fill,
+
+                vframe(bgblue, fill),
+                label(style, layout(NodeAlign.center), "Welcome to Glui!"),
+
             )
+
+        )
 
     );
 

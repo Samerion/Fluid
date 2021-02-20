@@ -4,6 +4,9 @@ import raylib;
 import std.string;
 
 import glui.node;
+import glui.utils;
+
+alias label = simpleConstructor!GluiLabel;
 
 /// A label can be used to display text on the screen.
 class GluiLabel : GluiNode {
@@ -11,6 +14,7 @@ class GluiLabel : GluiNode {
     /// Text of this label.
     string text;
 
+    /// Initialize the label with given text.
     this(T...)(T sup, string text) {
 
         super(sup);
@@ -24,7 +28,7 @@ class GluiLabel : GluiNode {
 
     }
 
-    protected override void drawImpl(Rectangle area) {
+    protected override void drawImpl(Rectangle area) const {
 
         style.drawBackground(area);
         style.drawText(area, text);

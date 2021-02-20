@@ -1,8 +1,28 @@
 module glui.frame;
 
 import raylib;
+import std.traits;
 
 import glui.node;
+import glui.style;
+import glui.utils;
+
+/// Make a new vertical frame
+GluiFrame vframe(T...)(T args) {
+
+    return new GluiFrame(args);
+
+}
+
+/// Make a new horizontal frame
+GluiFrame hframe(T...)(T args) {
+
+    auto frame = new GluiFrame(args);
+    frame.directionHorizontal = true;
+
+    return frame;
+
+}
 
 /// This is a frame, basic container for other nodes.
 class GluiFrame : GluiNode {
@@ -25,11 +45,15 @@ class GluiFrame : GluiNode {
 
     }
 
-    /// Params:
-    ///     children = Children to add.
-    this(T...)(T sup) {
+    // Generate constructors
+    static foreach (index; 0 .. BasicNodeParamLength) {
 
-        super(sup);
+        this(BasicNodeParam!index params, GluiNode[] nodes...) {
+
+            super(params);
+            this.children ~= nodes;
+
+        }
 
     }
 
@@ -93,7 +117,7 @@ class GluiFrame : GluiNode {
 
     }
 
-    protected override void drawImpl(Rectangle area) {
+    protected override void drawImpl(Rectangle area) const {
 
         style.drawBackground(area);
 
@@ -122,7 +146,7 @@ class GluiFrame : GluiNode {
     /// Params:
     ///     child     = Child to calculate.
     ///     previous  = Previous position.
-    private Vector2 childPosition(GluiNode child, Vector2 previous) {
+    private Vector2 childPosition(const GluiNode child, Vector2 previous) const {
 
         import std.algorithm : max;
 
@@ -150,7 +174,7 @@ class GluiFrame : GluiNode {
     /// Params:
     ///     child     = Child to place
     ///     available = Available space
-    private Vector2 childSpace(GluiNode child, Vector2 available) {
+    private Vector2 childSpace(const GluiNode child, Vector2 available) const {
 
         // Horizontal
         if (directionHorizontal) {
@@ -181,13 +205,5 @@ class GluiFrame : GluiNode {
         }
 
     }
-
-}
-
-/// Add children to a frame
-T addChild(T : GluiFrame)(T parent, GluiNode[] nodes...) {
-
-    parent ~= nodes;
-    return parent;
 
 }
