@@ -31,17 +31,6 @@ class Style {
 
     }
 
-    // Layout
-    struct {
-
-        /// Margin of the node.
-        uint[2] margin;
-
-        /// Padding (inner margin) of the node.
-        uint[2] padding;
-
-    }
-
     this() {
 
         font = GetFontDefault;

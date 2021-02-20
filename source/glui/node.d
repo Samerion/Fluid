@@ -17,6 +17,9 @@ abstract class GluiNode {
     /// Minimum size of the node.
     protected auto minSize = Vector2(0, 0);
 
+    /// If true, this node must update its size.
+    private bool requiresResize = true;
+
     /// Params:
     ///     layout = Layout for this node.
     ///     style = Style of this node.
@@ -48,7 +51,15 @@ abstract class GluiNode {
 
         const space = Vector2(GetScreenWidth, GetScreenHeight);
 
-        resize(space);
+        // Resize if required
+        if (IsWindowResized || requiresResize) {
+
+            resize(space);
+            requiresResize = false;
+
+        }
+
+        // Draw this node
         draw(Rectangle(0, 0, space.x, space.y));
 
     }
