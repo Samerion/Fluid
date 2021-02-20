@@ -48,16 +48,19 @@ class Style {
     }
 
     /// Draw text using the params
-    void drawText(Rectangle rect, string text) {
+    void drawText(Rectangle rect, string text) const {
 
         import std.string : toStringz;
 
-        DrawTextRec(font, text.toStringz, rect, fontSize, 1f, textWrap, textColor);
+        DrawTextRec(cast() font, text.toStringz, rect, fontSize, 1f, textWrap, textColor);
+        // Note: I doubt DrawTextRec has any side-effects on font.
+        // Most likely it isn't const because the keyword isn't transistive in C, so it wouldn't affect the parameter,
+        // while it does in D.
 
     }
 
     /// Draw the background
-    void drawBackground(Rectangle rect) {
+    void drawBackground(Rectangle rect) const {
 
         DrawRectangleRec(rect, backgroundColor);
 

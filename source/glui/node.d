@@ -9,7 +9,7 @@ import glui.structs;
 abstract class GluiNode {
 
     /// Layout for this node.
-    NodeLayout layout;
+    Layout layout;
 
     /// Style of this node.
     Style style;
@@ -20,7 +20,7 @@ abstract class GluiNode {
     /// Params:
     ///     layout = Layout for this node.
     ///     style = Style of this node.
-    this(NodeLayout layout = NodeLayout.init, Style style = null) {
+    this(Layout layout = Layout.init, Style style = null) {
 
         this.layout = layout;
         this.style  = style ? style : new Style;
@@ -28,7 +28,7 @@ abstract class GluiNode {
     }
 
     /// Ditto
-    this(Style style = null, NodeLayout layout = NodeLayout.init) {
+    this(Style style = null, Layout layout = Layout.init) {
 
         this(layout, style);
 
@@ -37,7 +37,7 @@ abstract class GluiNode {
     /// Ditto
     this() {
 
-        this(NodeLayout.init, null);
+        this(Layout.init, null);
 
     }
 
@@ -52,7 +52,7 @@ abstract class GluiNode {
     }
 
     /// Draw this node at specified location.
-    final protected void draw(Rectangle space) {
+    final protected void draw(Rectangle space) const {
 
         const spaceV = Vector2(space.width, space.height);
 
@@ -82,10 +82,10 @@ abstract class GluiNode {
     /// Draw this node.
     /// Params:
     ///     rect = Area the node should draw in.
-    protected abstract void drawImpl(Rectangle rect);
+    protected abstract void drawImpl(Rectangle rect) const;
 
     /// Get the node position.
-    private Vector2 position(Rectangle space, Vector2 usedSpace) {
+    private Vector2 position(Rectangle space, Vector2 usedSpace) const {
 
         float positionImpl(NodeAlign align_, lazy float spaceLeft) {
 
