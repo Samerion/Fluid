@@ -100,6 +100,13 @@ class GluiFrame : GluiNode {
         // Vertical
         foreach (child; nodeList) {
 
+            // Inherit style
+            if (child.style is null) {
+
+                child.style = style;
+
+            }
+
             child.resize(childSpace(child, available));
             minSize = childPosition(child, minSize);
 

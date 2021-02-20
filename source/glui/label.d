@@ -1,7 +1,6 @@
 module glui.label;
 
 import raylib;
-import std.string;
 
 import glui.node;
 import glui.utils;
@@ -24,7 +23,7 @@ class GluiLabel : GluiNode {
 
     protected override void resize(Vector2 available) {
 
-        minSize = MeasureTextEx(style.font, text.toStringz, style.fontSize, 1.0);
+        minSize = style.measureText(available, text);
 
     }
 
