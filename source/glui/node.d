@@ -23,7 +23,7 @@ abstract class GluiNode {
     this(Layout layout = Layout.init, Style style = null) {
 
         this.layout = layout;
-        this.style  = style ? style : new Style;
+        this.style  = style;
 
     }
 
@@ -43,6 +43,8 @@ abstract class GluiNode {
 
     /// Draw this node.
     final void draw() {
+
+        assert(style, "Cannot draw a node lacking style.");
 
         const space = Vector2(GetScreenWidth, GetScreenHeight);
 

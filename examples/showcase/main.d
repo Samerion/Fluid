@@ -10,10 +10,13 @@ void main() {
 
     scope (exit) CloseWindow();
 
+
+    // Create default style
     auto style = new Style;
     style.backgroundColor = Colors.WHITE;
     style.textColor = Colors.BLACK;
 
+    // Create styles for different backgrounds
     auto bgred = new Style;
     bgred.backgroundColor = Color(0xc0, 0x12, 0x12, 0xff);
 
@@ -23,6 +26,7 @@ void main() {
     auto bgblue = new Style;
     bgblue.backgroundColor = Color(0x12, 0x12, 0xc0, 0xff);
 
+
     Layout fill = {
         expand: 1,
         nodeAlign: NodeAlign.fill,
@@ -30,20 +34,24 @@ void main() {
 
     auto root = vframe(style, fill,
 
-        vframe(style, layout(NodeAlign.fill, NodeAlign.start),
+        vframe(layout(NodeAlign.fill, NodeAlign.start),
 
-            label(style, layout(NodeAlign.center), "Hello, World!"),
+            label(layout(NodeAlign.center), "Hello, World!"),
 
         ),
 
-        hframe(style, fill,
+        hframe(fill,
 
             vframe(bgred, fill),
             vframe(bggreen, fill),
             vframe(fill,
 
-                vframe(bgblue, fill),
-                label(style, layout(NodeAlign.center), "Welcome to Glui!"),
+                vframe(bgblue, fill,
+
+                    label(layout(1, NodeAlign.center), "Third column")
+
+                ),
+                label(layout(NodeAlign.center), "Welcome to Glui!"),
 
             )
 

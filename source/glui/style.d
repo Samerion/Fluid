@@ -1,6 +1,7 @@
 module glui.style;
 
 import raylib;
+import std.string;
 
 /// Contains a style for a node.
 class Style {
@@ -47,15 +48,22 @@ class Style {
 
     }
 
+    /// Measure given text will use.
+    /// Params:
+    ///     availableSpace = Space available for drawing.
+    Vector2 measureText(Vector2 availableSpace, string text) const {
+
+        return MeasureTextEx(cast() font, text.toStringz, fontSize, fontSize / 10f);
+
+    }
+
     /// Draw text using the params
     void drawText(Rectangle rect, string text) const {
 
-        import std.string : toStringz;
-
-        DrawTextRec(cast() font, text.toStringz, rect, fontSize, 1f, textWrap, textColor);
-        // Note: I doubt DrawTextRec has any side-effects on font.
-        // Most likely it isn't const because the keyword isn't transistive in C, so it wouldn't affect the parameter,
-        // while it does in D.
+        DrawTextRec(cast() font, text.toStringz, rect, fontSize, fontSize / 10f, textWrap, textColor);
+        // Note: I doubt DrawTextRec has any side-effects on the font.
+        // Most likely it isn't const because the keyword isn't transistive in C, so it wouldn't affect the parameter.
+        // It does in D, because the struct contains pointers.
 
     }
 
