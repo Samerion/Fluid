@@ -73,11 +73,11 @@ abstract class GluiNode {
 
     }
 
-    /// Recalculate the node size by changing the `minSize` property.
+    /// Recalculate the minumum node size and update the `minSize` property.
     /// Params:
     ///     space = Available space.
     protected abstract void resize(Vector2 space);
-    // TODO: only resize if the window was resized.
+    // TODO: only resize if the parent was resized.
 
     /// Draw this node.
     /// Params:

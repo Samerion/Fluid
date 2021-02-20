@@ -26,6 +26,7 @@ class GluiLabel : GluiNode {
 
     protected override void drawImpl(Rectangle area) {
 
+        style.drawBackground(area);
         style.drawText(area, text);
 
     }

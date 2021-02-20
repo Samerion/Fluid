@@ -11,14 +11,18 @@ class GluiFrame : GluiNode {
     GluiNode[] children;
 
     /// Defines in what directions children of this frame should be placed.
-    Direction direction;
+    ///
+    /// If true, children are placed horizontally, if false, vertically.
+    bool directionHorizontal;
 
-    /// Denominator for content sizing
-    private uint denominator;
+    private {
 
-    enum Direction {
-        vertical,
-        horizontal
+        /// Denominator for content sizing.
+        uint denominator;
+
+        /// Space reserved for shrinking elements.
+        uint reservedSpace;
+
     }
 
     /// Params:
@@ -41,21 +45,49 @@ class GluiFrame : GluiNode {
 
         import std.algorithm : max, map, fold;
 
-        // Reset min size
+        // Reset size
         minSize = Vector2(0, 0);
+        reservedSpace = 0;
+        denominator = 0;
 
         // Ignore the rest if there's no children
         if (!children.length) return;
 
-        denominator = children
-            .map!`a.layout.expand`
-            .fold!`a + b`;
+        // Construct a new node list
+        GluiNode[] nodeList;
+        foreach (child; children) {
+
+            // This node expands
+            if (child.layout.expand) {
+
+                // Append
+                nodeList ~= child;
+
+                // Add to the denominator
+                denominator += child.layout.expand;
+
+            }
+
+            // Prepend to ensure the child will be checked first
+            else nodeList = child ~ nodeList;
+
+        }
 
         // Vertical
-        foreach (child; children) {
+        foreach (child; nodeList) {
 
             child.resize(childSpace(child, available));
             minSize = childPosition(child, minSize);
+
+            // If this child doesn't expand
+            if (child.layout.expand == 0) {
+
+                // Reserve space for it
+                reservedSpace += directionHorizontal
+                    ? cast(uint) child.minSize.x
+                    : cast(uint) child.minSize.y;
+
+            }
 
         }
 
@@ -80,8 +112,8 @@ class GluiFrame : GluiNode {
             child.draw(rect);
 
             // Offset position
-            if (direction == Direction.vertical) position.y += size.y;
-            else position.x += size.x;
+            if (directionHorizontal) position.x += size.x;
+            else position.y += size.y;
 
         }
 
@@ -94,20 +126,20 @@ class GluiFrame : GluiNode {
 
         import std.algorithm : max;
 
-        // Vertical
-        if (direction == Direction.vertical) {
+        // Horizontal
+        if (directionHorizontal) {
 
             return Vector2(
-                max(minSize.x, child.minSize.x),
-                previous.y + child.minSize.y,
+                previous.x + child.minSize.x,
+                max(minSize.y, child.minSize.y),
             );
 
         }
 
-        // Horizontal
+        // Vertical
         else return Vector2(
-            previous.x + child.minSize.x,
-            max(minSize.y, child.minSize.y),
+            max(minSize.x, child.minSize.x),
+            previous.y + child.minSize.y,
         );
 
     }
@@ -120,25 +152,33 @@ class GluiFrame : GluiNode {
     ///     available = Available space
     private Vector2 childSpace(GluiNode child, Vector2 available) {
 
-        // Vertical
-        if (direction == Direction.vertical) {
+        // Horizontal
+        if (directionHorizontal) {
+
+            const avail = (available.x - reservedSpace);
 
             return Vector2(
-                available.x,
                 child.layout.expand
-                    ? available.y * child.layout.expand / denominator
-                    : child.minSize.y,
+                    ? avail * child.layout.expand / denominator
+                    : child.minSize.x,
+                available.y,
             );
 
         }
 
-        // Horizontal
-        else return Vector2(
-            child.layout.expand
-                ? available.x * child.layout.expand / denominator
-                : child.minSize.x,
-            available.y,
-        );
+        // Vertical
+        else {
+
+            const avail = (available.y - reservedSpace);
+
+            return Vector2(
+                available.x,
+                child.layout.expand
+                    ? avail * child.layout.expand / denominator
+                    : child.minSize.y,
+            );
+
+        }
 
     }
 

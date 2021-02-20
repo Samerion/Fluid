@@ -53,11 +53,15 @@ void main() {
             ),
 
         new GluiFrame(fill)
-            .set!"direction"(GluiFrame.Direction.horizontal)
+            .set!"directionHorizontal"(true)
             .addChild(
                 new GluiFrame(column, bgred),
                 new GluiFrame(column, bggreen),
-                new GluiFrame(column, bgblue),
+                new GluiFrame(column)
+                    .addChild(
+                        new GluiFrame(fill, bgblue),
+                        new GluiLabel(header, style, "Welcome to Glui!"),
+                    ),
             )
 
     );
@@ -66,6 +70,7 @@ void main() {
 
         BeginDrawing();
 
+            ClearBackground(Colors.BLACK);
             root.draw();
 
         EndDrawing();
