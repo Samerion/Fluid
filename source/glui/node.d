@@ -1,3 +1,4 @@
+///
 module glui.node;
 
 import raylib;
@@ -8,32 +9,78 @@ import glui.structs;
 /// Represents a Glui node.
 abstract class GluiNode {
 
+    /// Root node. Note: requires at least one draw before it will work.
+    GluiNode rootNode;
+
     /// Layout for this node.
     Layout layout;
-
-    /// Style of this node.
-    Style style;
 
     /// Minimum size of the node.
     protected auto minSize = Vector2(0, 0);
 
-    /// If true, this node must update its size.
-    private bool requiresResize = true;
+    private {
+
+        /// If true, this node must update its size.
+        bool requiresResize = true;
+
+        /// If true, this node is hidden and won't be rendered.
+        bool _hidden;
+
+        /// Theme of this node.
+        Theme _theme;
+
+    }
+
+    @property {
+
+        /// Get the current theme.
+        pragma(inline)
+        const(Theme) theme() const { return _theme; }
+
+        /// Set the theme.
+        const(Theme) theme(const Theme value) {
+
+            _theme = cast(Theme) value;
+            reloadStyles();
+            return _theme;
+
+        }
+
+    }
+
+    @property {
+
+        /// Check if the node is hidden.
+        pragma(inline)
+        bool hidden() const { return _hidden; }
+
+        /// Set the visibility
+        bool hidden(bool value) {
+
+            // If changed, trigger resize
+            if (_hidden != value) updateSize();
+
+            return _hidden = value;
+
+        }
+
+    }
 
     /// Params:
     ///     layout = Layout for this node.
-    ///     style = Style of this node.
-    this(Layout layout = Layout.init, Style style = null) {
+    ///     theme = Theme of this node.
+    this(Layout layout = Layout.init, Theme theme = null) {
 
         this.layout = layout;
-        this.style  = style;
+        this.theme  = theme;
+        this.rootNode = this;
 
     }
 
     /// Ditto
-    this(Style style = null, Layout layout = Layout.init) {
+    this(Theme theme = null, Layout layout = Layout.init) {
 
-        this(layout, style);
+        this(layout, theme);
 
     }
 
@@ -44,10 +91,28 @@ abstract class GluiNode {
 
     }
 
-    /// Draw this node.
+    /// Show the node.
+    final void show() { hidden = false; }
+
+    /// Hide the node.
+    final void hide() { hidden = true; }
+
+    /// Toggle the node's visibility.
+    final void toggleShow() { hidden = !hidden; }
+
+    /// Recalculate the window size before next draw.
+    ///
+    /// Note: should be called or root; in case of children, will only work after the first draw.
+    final void updateSize() {
+
+        rootNode.requiresResize = true;
+
+    }
+
+    /// Draw this node as a root node.
     final void draw() {
 
-        assert(style, "Cannot draw a node lacking style.");
+        assert(theme, "Cannot draw a node lacking theme.");
 
         const space = Vector2(GetScreenWidth, GetScreenHeight);
 
@@ -67,12 +132,17 @@ abstract class GluiNode {
     /// Draw this node at specified location.
     final protected void draw(Rectangle space) const {
 
+        import std.algorithm : min;
+
+        // If hidden, don't draw anything
+        if (hidden) return;
+
         const spaceV = Vector2(space.width, space.height);
 
         // Get parameters
         const size = Vector2(
-            layout.nodeAlign[0] == NodeAlign.fill ? space.width  : minSize.x,
-            layout.nodeAlign[1] == NodeAlign.fill ? space.height : minSize.y,
+            layout.nodeAlign[0] == NodeAlign.fill ? space.width  : min(space.width,  minSize.x),
+            layout.nodeAlign[1] == NodeAlign.fill ? space.height : min(space.height, minSize.y),
         );
         const position = position(space, size);
 
@@ -89,13 +159,40 @@ abstract class GluiNode {
     /// Recalculate the minumum node size and update the `minSize` property.
     /// Params:
     ///     space = Available space.
-    protected abstract void resize(Vector2 space);
-    // TODO: only resize if the parent was resized.
+    protected final void resize(Vector2 space) {
+
+        // The node is hidden, reset size
+        if (hidden) minSize = Vector2(0, 0);
+
+        // Otherwise perform like normal
+        else resizeImpl(space);
+
+    }
+
+    /// Ditto
+    ///
+    /// This is the implementation of resizing to be provided by children.
+    protected abstract void resizeImpl(Vector2 space);
 
     /// Draw this node.
+    ///
+    /// Note: Instead of directly accessing `style`, use `pickStyle` to enable temporarily changing styles as visual
+    /// feedback. `resize` should still use the normal style.
+    ///
     /// Params:
     ///     rect = Area the node should draw in.
     protected abstract void drawImpl(Rectangle rect) const;
+
+    /// Reload styles for the node. Triggered when the theme is changed.
+    ///
+    /// Use `mixin DefineStyles` to generate.
+    protected abstract void reloadStyles() { }
+
+    /// Get the current style.
+    /// Params:
+    ///     area = Area this node spans (to pass further from `drawImpl`). Used for event handling in buttons and
+    ///            similar nodes.
+    protected abstract const(Style) pickStyle(Rectangle area) const;
 
     /// Get the node position.
     private Vector2 position(Rectangle space, Vector2 usedSpace) const {

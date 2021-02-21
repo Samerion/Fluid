@@ -1,3 +1,4 @@
+///
 module glui.structs;
 
 import glui.node;
