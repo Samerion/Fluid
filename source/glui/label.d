@@ -1,27 +1,38 @@
+///
 module glui.label;
 
 import raylib;
 
 import glui.node;
 import glui.utils;
+import glui.style;
 
 alias label = simpleConstructor!GluiLabel;
 
 /// A label can be used to display text on the screen.
+/// Styles: $(UL
+///     $(LI `style` = Default style for this node.)
+/// )
 class GluiLabel : GluiNode {
+
+    mixin DefineStyles!("style", q{ Style.init });
 
     /// Text of this label.
     string text;
 
-    /// Initialize the label with given text.
-    this(T...)(T sup, string text) {
+    static foreach (index; 0 .. BasicNodeParamLength) {
 
-        super(sup);
-        this.text = text;
+        /// Initialize the label with given text.
+        this(BasicNodeParam!index sup, string text = "") {
+
+            super(sup);
+            this.text = text;
+
+        }
 
     }
 
-    protected override void resize(Vector2 available) {
+    protected override void resizeImpl(Vector2 available) {
 
         minSize = style.measureText(available, text);
 
@@ -29,8 +40,15 @@ class GluiLabel : GluiNode {
 
     protected override void drawImpl(Rectangle area) const {
 
+        const style = pickStyle(area);
         style.drawBackground(area);
         style.drawText(area, text);
+
+    }
+
+    protected override const(Style) pickStyle(Rectangle) const {
+
+        return style;
 
     }
 

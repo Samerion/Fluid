@@ -1,3 +1,4 @@
+///
 module glui.frame;
 
 import raylib;
@@ -25,7 +26,12 @@ GluiFrame hframe(T...)(T args) {
 }
 
 /// This is a frame, basic container for other nodes.
+/// Styles: $(UL
+///     $(LI `style` = Default style for this node.)
+/// )
 class GluiFrame : GluiNode {
+
+    mixin DefineStyles!("style", q{ Style.init });
 
     /// Children of this frame.
     GluiNode[] children;
@@ -65,7 +71,7 @@ class GluiFrame : GluiNode {
 
     }
 
-    protected override void resize(Vector2 available) {
+    protected override void resizeImpl(Vector2 available) {
 
         import std.algorithm : max, map, fold;
 
@@ -100,10 +106,13 @@ class GluiFrame : GluiNode {
         // Vertical
         foreach (child; nodeList) {
 
-            // Inherit style
-            if (child.style is null) {
+            // Inherit root
+            child.rootNode = rootNode;
 
-                child.style = style;
+            // Inherit theme
+            if (child.theme is null) {
+
+                child.theme = theme;
 
             }
 
@@ -126,6 +135,7 @@ class GluiFrame : GluiNode {
 
     protected override void drawImpl(Rectangle area) const {
 
+        const style = pickStyle(area);
         style.drawBackground(area);
 
         auto position = Vector2(area.x, area.y);
@@ -147,6 +157,12 @@ class GluiFrame : GluiNode {
             else position.y += size.y;
 
         }
+
+    }
+
+    protected override const(Style) pickStyle(Rectangle) const {
+
+        return style;
 
     }
 
@@ -174,8 +190,6 @@ class GluiFrame : GluiNode {
         );
 
     }
-
-    import std.stdio;
 
     /// Get space for a child.
     /// Params:
