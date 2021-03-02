@@ -28,7 +28,12 @@ void main() {
             textColor = Colors.BLACK;
             fontSize = 20;
         },
+        &GluiTextInput.styleKey: style!q{
+            backgroundColor = Color(0xff, 0xff, 0xff, 0xcc);
+            textColor = Colors.BLACK;
+        }
     ];
+    // TODO: create a default theme and use it, also add styleKey helpers
 
     // Create themes for colored backgrounds
     auto redTheme = theme.dup;
@@ -49,12 +54,9 @@ void main() {
         nodeAlign: NodeAlign.fill,
     };
 
-    auto secondColumn = vframe(
 
-        label("Second column!"),
-
-    );
-    secondColumn.hide();
+    // Save IDs
+    GluiNode secondColumn;
 
     auto root = vframe(theme, fill,
 
@@ -77,7 +79,13 @@ void main() {
                         secondColumn.toggleShow();
                     }
                 ),
-                secondColumn,
+
+                secondColumn = vframe(
+
+                    label("Second column!"),
+                    textInput("Your input..."),
+
+                ).hide()
 
             ),
 

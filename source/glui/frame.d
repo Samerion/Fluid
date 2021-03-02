@@ -107,7 +107,7 @@ class GluiFrame : GluiNode {
         foreach (child; nodeList) {
 
             // Inherit root
-            child.rootNode = rootNode;
+            child.tree = tree;
 
             // Inherit theme
             if (child.theme is null) {
