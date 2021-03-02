@@ -5,6 +5,7 @@ import raylib;
 
 import glui.node;
 import glui.frame;
+import glui.input;
 import glui.label;
 import glui.utils;
 import glui.style;
@@ -20,7 +21,7 @@ alias frameButton = simpleConstructor!(GluiButton!GluiFrame);
 ///   $(LI `pressStyleKey` = Style to apply when the button is pressed.)
 ///   $(LI `focusStyleKey` = Style to apply when the button is focused. (TODO))
 /// )
-class GluiButton(T : GluiNode) : T {
+class GluiButton(T : GluiNode) : GluiInput!T {
 
     mixin DefineStyles!(
         "style", q{ Style.init },
@@ -30,11 +31,11 @@ class GluiButton(T : GluiNode) : T {
     );
 
     /// Callback to run when the button is pressed.
-    void delegate() pressed;
+    alias pressed = submitted;
 
     /// Create a new button.
     /// Params:
-    ///     pressed = Callback to run when the button is pressed.
+    ///     pressed = Action to perform when the button is pressed.
     this(T...)(T sup, void delegate() pressed) {
 
         super(sup);

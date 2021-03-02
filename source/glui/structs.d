@@ -61,3 +61,20 @@ enum NodeAlign {
     start, center, end, fill
 
 }
+
+interface GluiFocusable {
+
+    void focus();
+
+}
+
+/// Global data for the layout tree.
+struct LayoutTree {
+
+    /// Root node of the tree.
+    GluiNode root;
+
+    /// Currently focused node.
+    GluiFocusable focused;
+
+}

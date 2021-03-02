@@ -9,8 +9,8 @@ import glui.structs;
 /// Represents a Glui node.
 abstract class GluiNode {
 
-    /// Root node. Note: requires at least one draw before it will work.
-    GluiNode rootNode;
+    /// Tree data for the node. Note: requires at least one draw before this will work.
+    LayoutTree* tree;
 
     /// Layout for this node.
     Layout layout;
@@ -73,7 +73,7 @@ abstract class GluiNode {
 
         this.layout = layout;
         this.theme  = theme;
-        this.rootNode = this;
+        this.tree   = new LayoutTree(this);
 
     }
 
@@ -92,10 +92,20 @@ abstract class GluiNode {
     }
 
     /// Show the node.
-    final void show() { hidden = false; }
+    final GluiNode show() {
+
+        hidden = false;
+        return this;
+
+    }
 
     /// Hide the node.
-    final void hide() { hidden = true; }
+    final GluiNode hide() {
+
+        hidden = true;
+        return this;
+
+    }
 
     /// Toggle the node's visibility.
     final void toggleShow() { hidden = !hidden; }
@@ -105,7 +115,7 @@ abstract class GluiNode {
     /// Note: should be called or root; in case of children, will only work after the first draw.
     final void updateSize() {
 
-        rootNode.requiresResize = true;
+        tree.root.requiresResize = true;
 
     }
 
