@@ -75,6 +75,6 @@ struct LayoutTree {
     GluiNode root;
 
     /// Currently focused node.
-    GluiFocusable focused;
+    GluiFocusable focus;
 
 }

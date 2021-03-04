@@ -62,3 +62,28 @@ bool contains(Rectangle rectangle, Vector2 point) {
         && point.y < rectangle.y + rectangle.height;
 
 }
+
+/// Get names of static fields in the given object.
+template StaticFieldNames(T) {
+
+    import std.traits : hasStaticMember;
+    import std.meta : Alias, Filter;
+
+    // Prepare data
+    alias Members = __traits(allMembers, T);
+
+    // Check if the said member is static
+    enum isStaticMember(alias member) =
+
+        // Make sure this isn't an alias
+        __traits(compiles,
+            Alias!(__traits(getMember, T, member))
+        )
+
+        // Find the member
+        && hasStaticMember!(T, member);
+
+    // Result
+    alias StaticFieldNames = Filter!(isStaticMember, Members);
+
+}
