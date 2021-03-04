@@ -3,6 +3,8 @@ module glui.input;
 
 import raylib;
 
+import std.meta;
+
 import glui.node;
 import glui.structs;
 import glui.style;
@@ -16,7 +18,19 @@ import glui.style;
 /// )
 abstract class GluiInput(Parent : GluiNode) : Parent, GluiFocusable {
 
-    mixin DefineStyles!(
+    /// Style property is present
+    static if (__traits(hasMember, typeof(this), "style")) {
+
+        // Leave it original
+        mixin DefineStyles!(
+            "focusStyle", q{ style },
+            "disabledStyle", q{ style },
+        );
+
+    }
+
+    // Define it
+    else mixin DefineStyles!(
         "style", q{ Style.init },
         "focusStyle", q{ style },
         "disabledStyle", q{ style },
@@ -39,6 +53,8 @@ abstract class GluiInput(Parent : GluiNode) : Parent, GluiFocusable {
 
     /// Change the focus to this node.
     void focus() {
+
+        tree.focus = this;
 
     }
 

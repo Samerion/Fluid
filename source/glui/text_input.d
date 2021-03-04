@@ -21,8 +21,6 @@ alias textInput = simpleConstructor!GluiTextInput;
 class GluiTextInput : GluiInput!GluiNode {
 
     mixin DefineStyles!(
-        "style", q{ Style.init },
-        "focusStyle", q{ style },
         "emptyStyle", q{ style },
     );
 

@@ -24,10 +24,8 @@ alias frameButton = simpleConstructor!(GluiButton!GluiFrame);
 class GluiButton(T : GluiNode) : GluiInput!T {
 
     mixin DefineStyles!(
-        "style", q{ Style.init },
         "hoverStyle", q{ style },
         "pressStyle", q{ hoverStyle },
-        "focusStyle", q{ hoverStyle },
     );
 
     /// Callback to run when the button is pressed.

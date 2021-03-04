@@ -104,9 +104,28 @@ class Style {
 
 /// Define styles.
 /// params:
-///     Names = A list of styles to define.
+///     names = A list of styles to define.
 mixin template DefineStyles(names...) {
 
+    import std.traits : BaseClassesTuple;
+    import std.meta : Filter;
+
+    import glui.utils : StaticFieldNames;
+
+    private alias Parent = BaseClassesTuple!(typeof(this))[0];
+    private alias MemberType(alias member) = typeof(__traits(getMember, Parent, member));
+
+    private enum isStyleKey(alias member) = is(MemberType!member == immutable(StyleKey));
+    private alias StyleKeys = Filter!(isStyleKey, StaticFieldNames!Parent);
+
+    // Inherit style keys
+    static foreach (field; StyleKeys) {
+
+        mixin("static immutable StyleKey " ~ field ~ ";");
+
+    }
+
+    // Local styles
     static foreach(i, name; names) {
 
         // Only check even names
@@ -116,15 +135,29 @@ mixin template DefineStyles(names...) {
             mixin("static immutable StyleKey " ~ name ~ "Key;");
 
             // Define the value
-            mixin("@StyleKey private Style " ~ name ~ ";");
+            mixin("protected Style " ~ name ~ ";");
 
         }
 
     }
 
+    // Load styles
     override protected void reloadStyles() {
 
+        import std.stdio;
+        import std.traits;
+
         super.reloadStyles();
+
+        static foreach (name; StyleKeys) {{
+
+            if (auto style = &mixin(name) in theme) {
+
+                mixin("this." ~ name[0 .. $-3]) = cast() *style;
+
+            }
+
+        }}
 
         static foreach (i, name; names) {
 
