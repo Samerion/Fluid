@@ -38,15 +38,15 @@ class GluiLabel : GluiNode {
 
     }
 
-    protected override void drawImpl(Rectangle area) const {
+    protected override void drawImpl(Rectangle area) {
 
-        const style = pickStyle(area);
+        const style = pickStyle();
         style.drawBackground(area);
         style.drawText(area, text);
 
     }
 
-    protected override const(Style) pickStyle(Rectangle) const {
+    protected override const(Style) pickStyle() const {
 
         return style;
 

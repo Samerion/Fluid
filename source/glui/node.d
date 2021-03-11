@@ -140,7 +140,7 @@ abstract class GluiNode {
     }
 
     /// Draw this node at specified location.
-    final protected void draw(Rectangle space) const {
+    final protected void draw(Rectangle space) {
 
         import std.algorithm : min;
 
@@ -191,7 +191,7 @@ abstract class GluiNode {
     ///
     /// Params:
     ///     rect = Area the node should draw in.
-    protected abstract void drawImpl(Rectangle rect) const;
+    protected abstract void drawImpl(Rectangle rect);
 
     /// Reload styles for the node. Triggered when the theme is changed.
     ///
@@ -199,10 +199,7 @@ abstract class GluiNode {
     protected abstract void reloadStyles() { }
 
     /// Get the current style.
-    /// Params:
-    ///     area = Area this node spans (to pass further from `drawImpl`). Used for event handling in buttons and
-    ///            similar nodes.
-    protected abstract const(Style) pickStyle(Rectangle area) const;
+    protected abstract const(Style) pickStyle() const;
 
     /// Get the node position.
     private Vector2 position(Rectangle space, Vector2 usedSpace) const {

@@ -28,6 +28,11 @@ void main() {
             textColor = Colors.BLACK;
             fontSize = 20;
         },
+        &GluiButton!GluiLabel.pressStyleKey: style!q{
+            backgroundColor = Color(0xaa, 0xaa, 0xaa, 0xff);
+            textColor = Colors.BLACK;
+            fontSize = 20;
+        },
         &GluiTextInput.styleKey: style!q{
             backgroundColor = Color(0xff, 0xff, 0xff, 0xcc);
             textColor = Colors.BLACK;

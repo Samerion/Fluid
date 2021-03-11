@@ -51,10 +51,38 @@ abstract class GluiInput(Parent : GluiNode) : Parent, GluiFocusable {
 
     }
 
+    override const(Style) pickStyle() const {
+
+        // Disabled
+        if (disabled) return disabledStyle;
+
+        // Focused
+        else if (isFocused) return focusStyle;
+
+        // Other
+        else return style;
+
+    }
+
     /// Change the focus to this node.
     void focus() {
 
         tree.focus = this;
+
+    }
+
+    /// Check if the node has focus.
+    bool isFocused() const {
+
+        return tree.focus is this;
+
+    }
+
+    /// Set or remove focus from this node.
+    bool isFocused(bool enable) {
+
+        tree.focus = enable ? this : null;
+        return enable;
 
     }
 
