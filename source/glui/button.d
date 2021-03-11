@@ -28,8 +28,22 @@ class GluiButton(T : GluiNode) : GluiInput!T {
         "pressStyle", q{ hoverStyle },
     );
 
+    /// Mouse button to trigger the button.
+    private static immutable triggerButton = MouseButton.MOUSE_LEFT_BUTTON;
+
     /// Callback to run when the button is pressed.
     alias pressed = submitted;
+
+    // Button status
+    struct {
+
+        /// If true, this button is currently being hovered.
+        bool isHovered;
+
+        // If true, this button is currenly down.
+        bool isPressed;
+
+    }
 
     /// Create a new button.
     /// Params:
@@ -41,34 +55,50 @@ class GluiButton(T : GluiNode) : GluiInput!T {
 
     }
 
-    /// Pick the style.
-    protected override const(Style) pickStyle(Rectangle area) const {
+    protected override void drawImpl(Rectangle area) {
 
-        // If focused
-        if (false) { }
+        // Update status
+        isHovered = area.contains(GetMousePosition);
+        isPressed = isHovered && IsMouseButtonDown(triggerButton);
+        // TODO: Keyboard support
 
-        // If hovered
-        else if (area.contains(GetMousePosition)) {
+        // Handle events
+        if (isHovered && IsMouseButtonReleased(triggerButton)) {
 
-            SetMouseCursor(MouseCursor.MOUSE_CURSOR_POINTING_HAND);
-
-            // If pressed
-            if (IsMouseButtonPressed(MouseButton.MOUSE_LEFT_BUTTON)) {
-
-                pressed();
-                return pressStyle;
-
-            }
-
-            // If not
-            return hoverStyle;
+            // Call the delegate
+            pressed();
 
         }
 
-        // Inactive
+        super.drawImpl(area);
 
-        // Normal state
-        else return style;
+    }
+
+    /// Pick the style.
+    protected override const(Style) pickStyle() const {
+
+        const(Style)* result;
+
+        // If hovered
+        if (isHovered) {
+
+            // Set cursor
+            SetMouseCursor(MouseCursor.MOUSE_CURSOR_POINTING_HAND);
+
+            // Use the style
+            result = &hoverStyle;
+
+        }
+
+        // If pressed — override hover
+        if (isPressed) result = &pressStyle;
+
+
+        // Return the result
+        if (result) return *result;
+
+        // No decision — normal state
+        else return super.pickStyle();
 
     }
 

@@ -70,9 +70,9 @@ class GluiTextInput : GluiInput!GluiNode {
 
     }
 
-    override void drawImpl(Rectangle rect) const {
+    override void drawImpl(Rectangle rect) {
 
-        auto style = pickStyle(rect);
+        auto style = pickStyle();
 
         // Fill the background
         style.drawBackground(rect);
@@ -82,10 +82,18 @@ class GluiTextInput : GluiInput!GluiNode {
 
     }
 
-    // TODO: style inheritance needs to be implemented first
-    override const(Style) pickStyle(Rectangle) const {
+    override const(Style) pickStyle() const {
 
-        return style;
+        auto sup = super.pickStyle();
+
+        // Overriden by parent (disabled/focus)
+        if (sup !is style) return sup;
+
+        // Empty text (display placeholder)
+        else if (value == "") return emptyStyle;
+
+        // Default style
+        else return style;
 
     }
 

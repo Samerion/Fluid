@@ -133,9 +133,9 @@ class GluiFrame : GluiNode {
 
     }
 
-    protected override void drawImpl(Rectangle area) const {
+    protected override void drawImpl(Rectangle area) {
 
-        const style = pickStyle(area);
+        const style = pickStyle();
         style.drawBackground(area);
 
         auto position = Vector2(area.x, area.y);
@@ -160,7 +160,7 @@ class GluiFrame : GluiNode {
 
     }
 
-    protected override const(Style) pickStyle(Rectangle) const {
+    protected override const(Style) pickStyle() const {
 
         return style;
 
