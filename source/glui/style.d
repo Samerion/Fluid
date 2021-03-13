@@ -83,6 +83,24 @@ class Style {
 
     }
 
+    /// Measure the box of the text.
+    /// Params:
+    ///     availableSpace = Space available for drawing.
+    ///     text           = Text to draw.
+    Rectangle measureText(Rectangle availableSpace, string text) const {
+
+        const vec = measureText(
+            Vector2(availableSpace.width, availableSpace.height),
+            text,
+        );
+
+        return Rectangle(
+            availableSpace.x, availableSpace.y,
+            vec.x, vec.y
+        );
+
+    }
+
     /// Draw text using the params
     void drawText(Rectangle rect, string text) const {
 

@@ -12,12 +12,15 @@ void main() {
 
     // Create theme
     auto theme = [
+
         &GluiFrame.styleKey: style!q{
             backgroundColor = Colors.WHITE;
         },
+
         &GluiLabel.styleKey: style!q{
             textColor = Colors.BLACK;
         },
+
         &GluiButton!GluiLabel.styleKey: style!q{
             backgroundColor = Colors.WHITE;
             textColor = Colors.BLACK;
@@ -33,10 +36,21 @@ void main() {
             textColor = Colors.BLACK;
             fontSize = 20;
         },
+
         &GluiTextInput.styleKey: style!q{
             backgroundColor = Color(0xff, 0xff, 0xff, 0xcc);
             textColor = Colors.BLACK;
+        },
+        &GluiTextInput.emptyStyleKey: style!q{
+            backgroundColor = Color(0xff, 0xff, 0xff, 0xcc);
+            textColor = Color(0x00, 0x00, 0x00, 0xaa);
+
+        },
+        &GluiTextInput.focusStyleKey: style!q{
+            backgroundColor = Color(0xff, 0xff, 0xff, 0xff);
+            textColor = Colors.BLACK;
         }
+
     ];
     // TODO: create a default theme and use it, also add styleKey helpers
 
