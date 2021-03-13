@@ -10,6 +10,9 @@ import glui.utils;
 
 alias textInput = simpleConstructor!GluiTextInput;
 
+/// Raylib: Get pressed char
+private extern (C) int GetCharPressed() nothrow @nogc;
+
 /// Text input field.
 ///
 /// Styles: $(UL
@@ -23,6 +26,9 @@ class GluiTextInput : GluiInput!GluiNode {
     mixin DefineStyles!(
         "emptyStyle", q{ style },
     );
+
+    /// Time in seconds before the cursor toggles visibility.
+    static immutable float blinkTime = 1;
 
     /// Size of the field.
     auto size = Vector2(200, 0);
@@ -53,7 +59,7 @@ class GluiTextInput : GluiInput!GluiNode {
 
     }
 
-    override void resizeImpl(Vector2 arg) {
+    override void resizeImpl(Vector2 area) {
 
         import std.algorithm : max;
 
@@ -72,28 +78,130 @@ class GluiTextInput : GluiInput!GluiNode {
 
     override void drawImpl(Rectangle rect) {
 
+        const hovered = rect.contains(GetMousePosition);
+
+        // Update status
+        if (IsMouseButtonDown(MouseButton.MOUSE_LEFT_BUTTON)) {
+
+            isFocused = hovered;
+
+        }
+
+        // Box has focus — take input
+        if (isFocused) takeInput();
+
         auto style = pickStyle();
 
         // Fill the background
         style.drawBackground(rect);
 
         // Draw the text
-        style.drawText(rect, value ? value : placeholder);
+        const text = (value == "") ? placeholder : value;
+        style.drawText(rect, text);
+
+        // If the box is focused
+        if (isFocused && GetTime % (blinkTime*2) < blinkTime) {
+
+            auto textArea = value == ""
+                ? Rectangle()
+                : style.measureText(rect, text);
+            auto end = Vector2(
+                textArea.x + textArea.width,
+                textArea.y + textArea.height,
+            );
+            auto margin = style.fontSize / 10f;
+
+            DrawLineV(
+                end - Vector2(0, style.fontSize - margin),
+                end - Vector2(0, margin),
+                style.textColor
+            );
+
+        }
+
+    }
+
+    private void takeInput() {
+
+        import std.uni : isAlpha, isWhite;
+        import std.range : back;
+        import std.string : chop;
+
+        string input;
+
+        // Get pressed key
+        while (true) {
+
+            // Backspace
+            if (value.length && IsKeyPressed(KeyboardKey.KEY_BACKSPACE)) {
+
+                /// If true, delete whole words
+                const word = IsKeyDown(KeyboardKey.KEY_LEFT_CONTROL);
+
+                // Remove the last character
+                do {
+
+                    const lastChar = value.back;
+                    value = value.chop;
+
+                    // Stop instantly if there are no characters left
+                    if (value.length == 0) break;
+
+
+                    // Whitespace, continue deleting
+                    if (lastChar.isWhite) continue;
+
+                    // Matching alpha, continue deleting
+                    else if (value.back.isAlpha == lastChar.isAlpha) continue;
+
+                    // Break in other cases
+                    break;
+
+                }
+
+                // Repeat only if requested to delete whole words
+                while (word);
+
+                break;
+
+            }
+
+            // Submit
+            if (!multiline && IsKeyPressed(KeyboardKey.KEY_ENTER)) {
+
+                submitted();
+                break;
+
+            }
+
+
+            // Read text
+            if (const key = GetCharPressed()) {
+
+                // Append to char arrays
+                input ~= cast(dchar) key;
+
+            }
+
+            // Stop if nothing left
+            else break;
+
+        }
+
+        value ~= input;
 
     }
 
     override const(Style) pickStyle() const {
 
-        auto sup = super.pickStyle();
-
-        // Overriden by parent (disabled/focus)
-        if (sup !is style) return sup;
+        // Disabled
+        if (disabled) return disabledStyle;
 
         // Empty text (display placeholder)
         else if (value == "") return emptyStyle;
 
-        // Default style
-        else return style;
+        // Other styles
+        else return super.pickStyle();
 
     }
 
