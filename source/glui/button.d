@@ -19,7 +19,7 @@ alias frameButton = simpleConstructor!(GluiButton!GluiFrame);
 ///   $(LI `styleKey` = Default style for the button.)
 ///   $(LI `hoverStyleKey` = Style to apply when the button is hovered.)
 ///   $(LI `pressStyleKey` = Style to apply when the button is pressed.)
-///   $(LI `focusStyleKey` = Style to apply when the button is focused. (TODO))
+///   $(LI `focusStyleKey` = Style to apply when the button is focused.)
 /// )
 class GluiButton(T : GluiNode) : GluiInput!T {
 
@@ -30,6 +30,7 @@ class GluiButton(T : GluiNode) : GluiInput!T {
 
     /// Mouse button to trigger the button.
     private static immutable triggerButton = MouseButton.MOUSE_LEFT_BUTTON;
+    // TODO left handed support?
 
     /// Callback to run when the button is pressed.
     alias pressed = submitted;
@@ -62,6 +63,15 @@ class GluiButton(T : GluiNode) : GluiInput!T {
         isPressed = isHovered && IsMouseButtonDown(triggerButton);
         // TODO: Keyboard support
 
+        handleInput();
+
+        super.drawImpl(area);
+
+    }
+
+    /// Handle button input. By default, this will call the `pressed` delegate if the button is pressed.
+    protected void handleInput() {
+
         // Handle events
         if (isHovered && IsMouseButtonReleased(triggerButton)) {
 
@@ -69,8 +79,6 @@ class GluiButton(T : GluiNode) : GluiInput!T {
             pressed();
 
         }
-
-        super.drawImpl(area);
 
     }
 
