@@ -18,8 +18,20 @@
 			"dependencies": {
 				"glui": "*"
 			},
-			"sourcePaths": ["examples/showcase"],
-			"targetPath": "build"
+			"sourcePaths": [],
+			"sourceFiles": ["examples/showcase.d"],
+			"targetPath": "build",
+			"targetType": "executable"
+		},
+		{
+			"name": "example-onions",
+			"dependencies": {
+				"glui": "*"
+			},
+			"sourcePaths": [],
+			"sourceFiles": ["examples/onions.d"],
+			"targetPath": "build",
+			"targetType": "executable"
 		}
 	]
 }

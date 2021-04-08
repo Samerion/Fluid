@@ -7,6 +7,7 @@ public import
     glui.hover_button,
     glui.label,
     glui.node,
+    glui.onion_frame,
     glui.structs,
     glui.style,
     glui.text_input,
