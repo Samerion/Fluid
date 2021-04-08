@@ -87,7 +87,9 @@ void main() {
 
         hframe(fill,
 
-            vframe(redTheme, fill),
+            vframe(redTheme, fill,
+                label("Sample text"),
+            ),
 
             vframe(greenTheme, fill,
 
