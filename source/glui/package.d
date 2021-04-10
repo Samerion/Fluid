@@ -3,6 +3,7 @@ module glui;
 
 public import
     glui.button,
+    glui.file_picker,
     glui.frame,
     glui.hover_button,
     glui.label,
