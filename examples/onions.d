@@ -27,6 +27,13 @@ void main() {
             backgroundColor = Color(0x12, 0xc0, 0x12, 0xff);
         },
     ];
+    auto whiteTheme = [
+        &GluiFrame.styleKey: style!q{
+            backgroundColor = Color(0xff, 0xff, 0xff, 0xff);
+        },
+    ];
+
+    GluiFilePicker picker;
 
     auto root = onionFrame(
         theme,
@@ -41,9 +48,11 @@ void main() {
             label("Red background!"),
             vframe(greenTheme,
                 layout(NodeAlign.fill),
-                label("Green background!")
+                label("Green background!"),
+                button("Trigger the file picker", () { picker.show(); }),
             ),
         ),
+        picker = filePicker(whiteTheme, "Pick a file..."),
 
     );
     while (!WindowShouldClose) {

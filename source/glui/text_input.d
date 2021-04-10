@@ -169,7 +169,7 @@ class GluiTextInput : GluiInput!GluiNode {
             // Submit
             if (!multiline && IsKeyPressed(KeyboardKey.KEY_ENTER)) {
 
-                submitted();
+                if (submitted) submitted();
                 break;
 
             }
