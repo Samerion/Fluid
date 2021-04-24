@@ -7,6 +7,7 @@ void main() {
     SetTraceLogLevel(TraceLogType.LOG_NONE);
     InitWindow(800, 600, "Hello, World!");
     SetTargetFPS(60);
+    SetExitKey(0);
 
     scope (exit) CloseWindow();
 
@@ -34,6 +35,7 @@ void main() {
     ];
 
     GluiFilePicker picker;
+    GluiLabel fileStatus;
 
     auto root = onionFrame(
         theme,
@@ -49,10 +51,19 @@ void main() {
             vframe(greenTheme,
                 layout(NodeAlign.fill),
                 label("Green background!"),
+
+                fileStatus = label("Press the text below..."),
                 button("Trigger the file picker", () { picker.show(); }),
             ),
         ),
-        picker = filePicker(whiteTheme, "Pick a file..."),
+        picker = filePicker(whiteTheme, "Pick a file...",
+            () {
+                fileStatus.text = "Picked " ~ picker.value;
+            },
+            () {
+                fileStatus.text = "Cancelled.";
+            }
+        ),
 
     );
     while (!WindowShouldClose) {
