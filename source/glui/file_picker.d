@@ -1,10 +1,15 @@
+///
 module glui.file_picker;
+
+// To consider: Split into two modules, this plus generic text input with suggestions.
 
 import raylib;
 import std.conv;
 import std.file;
 import std.path;
 import std.range;
+import std.string;
+import std.typecons;
 import std.algorithm;
 
 import glui.frame;
@@ -21,13 +26,18 @@ alias filePicker = simpleConstructor!GluiFilePicker;
 /// A file picker node.
 ///
 /// Note, this node is hidden by default, use `show` to show.
+/// Styles: $(UL
+///     $(LI `selectedStyle` = Style for the currently selected suggestion.)
+/// )
 class GluiFilePicker : GluiInput!GluiFrame {
+
+    mixin DefineStyles!("selectedStyle", q{ Style.init });
 
     /// Callback to run when input was cancelled.
     void delegate() cancelled;
 
     /// Max amount of suggestions that can be provided.
-    uint suggestionLimit = 10;
+    ulong suggestionLimit = 10;
 
     private {
 
@@ -44,6 +54,12 @@ class GluiFilePicker : GluiInput!GluiFrame {
 
         /// Label with suggestions to the text.
         GluiRichLabel suggestions;
+
+        /// Filename typed by the user, before choosing suggestions.
+        string typedFilename;
+
+        /// Currently chosen suggestion. 0 is no suggestion chosen.
+        ulong currentSuggestion;
 
     }
 
@@ -67,17 +83,36 @@ class GluiFilePicker : GluiInput!GluiFrame {
         version (Windows) input.value = `C:\`;
         else input.value = expandTilde("~/");
 
+        typedFilename = input.value;
+
         // Bind events
         input.changed = () {
             if (changed) changed();
+            typedFilename = value;
             updateSuggestions();
         };
 
         input.submitted = () {
-            if (submitted) submitted();
 
-            // Automatically hide when submitted
-            hide();
+            // Suggestion checked
+            if (currentSuggestion != 0) {
+
+                // Activate it
+                typedFilename = value;
+                currentSuggestion = 0;
+                updateSuggestions();
+
+            }
+
+            // Final submit
+            else {
+
+                if (submitted) submitted();
+
+                // Automatically hide when submitted
+                hide();
+
+            }
         };
 
     }
@@ -117,9 +152,9 @@ class GluiFilePicker : GluiInput!GluiFrame {
     /// Refresh the suggestion list.
     void updateSuggestions() {
 
-        const split = value.retro.array.findSplitBefore("/");
-        const dir  = split ? split[1].retro.to!string : "";
-        const file = split ? split[0].retro.to!string : value;
+        const values = valueTuple;
+        const dir  = values[0];
+        const file = values[1];
 
         suggestions.clear();
 
@@ -127,7 +162,7 @@ class GluiFilePicker : GluiInput!GluiFrame {
         if (!dir.exists || !dir.isDir) return;
 
         // Check the entries
-        int num;
+        ulong num;
         foreach (entry; dir.dirEntries(file ~ "*", SpanMode.shallow)) {
 
             const name = entry.name.baseName;
@@ -138,15 +173,88 @@ class GluiFilePicker : GluiInput!GluiFrame {
             // Stop after 10 entries.
             if (num++ >= 10) break;
 
+
+            const prefix = num > 1 ? "\n" : "";
+
+            // Get the style
+            auto style = currentSuggestion == num
+                ? selectedStyle
+                : null;
+
             // Found a directory
-            if (entry.isDir) suggestions ~= name ~ "/\n";
+            if (entry.isDir) suggestions.push(style, prefix ~ name ~ "/");
 
             // File
-            else suggestions ~= name ~ "\n";
+            else suggestions.push(style, prefix ~ name);
+
+        }
+
+        // This suggestion was removed
+        if (currentSuggestion > suggestions.textParts.length) {
+
+            currentSuggestion = suggestions.textParts.length;
 
         }
 
         updateSize();
+
+    }
+
+    /// Get the value as a (directory, file) tuple.
+    private auto valueTuple() const {
+
+        return valueTuple(value);
+
+    }
+
+    /// Ditto.
+    private auto valueTuple(string path) const {
+
+        // Directory
+        if (path.endsWith(dirSeparator)) {
+
+            return tuple(path, "");
+
+        }
+
+        const file = path.baseName;
+        return tuple(
+            path.chomp(file).to!string,
+            file,
+        );
+
+    }
+
+    /// Offset currently chosen selection by number.
+    private void offsetSuggestion(ulong n) {
+
+        auto previous = currentSuggestion;
+        currentSuggestion = (currentSuggestion + n) % (suggestions.textParts.length + 1);
+
+        // Clear style of the previous selection
+        if (previous != 0 && previous <= suggestions.textParts.length) {
+
+            suggestions.textParts[previous - 1].style = null;
+
+        }
+
+        // Style thew new item
+        if (currentSuggestion != 0) {
+
+            auto part = &suggestions.textParts[currentSuggestion - 1];
+            part.style = selectedStyle;
+
+            value = valueTuple(typedFilename)[0] ~ part.text.stripLeft;
+
+        }
+
+        // Nothing selected
+        else {
+
+            // Restore original text
+            value = typedFilename;
+
+        }
 
     }
 
@@ -186,11 +294,48 @@ class GluiFilePicker : GluiInput!GluiFrame {
 
         }
 
-        // If escape was pressed
-        if (IsKeyPressed(KeyboardKey.KEY_ESCAPE)) {
 
-            cancel();
-            return;
+        with (KeyboardKey) {
+
+            // If escape was pressed
+            if (IsKeyPressed(KEY_ESCAPE)) {
+
+                cancel();
+                return;
+
+            }
+
+            // Ctrl
+            else if (IsKeyDown(KEY_LEFT_CONTROL)) {
+
+                // Vim
+                if (IsKeyPressed(KEY_K)) offsetSuggestion(-1);
+                else if (IsKeyPressed(KEY_J)) offsetSuggestion(1);
+
+                // Emacs
+                if (IsKeyPressed(KEY_P)) offsetSuggestion(-1);
+                else if (IsKeyPressed(KEY_N)) offsetSuggestion(1);
+
+            }
+
+            // Alt
+            else if (IsKeyDown(KEY_LEFT_ALT)) {
+
+                // Dir up
+                if (IsKeyPressed(KEY_UP)) {
+
+                    typedFilename = value = value.dirName;
+                    updateSuggestions();
+
+                }
+
+            }
+
+            // Go up
+            else if (IsKeyPressed(KEY_UP)) offsetSuggestion(-1);
+
+            // Go down
+            else if (IsKeyPressed(KEY_DOWN)) offsetSuggestion(1);
 
         }
 
