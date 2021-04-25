@@ -9,6 +9,7 @@ public import
     glui.label,
     glui.node,
     glui.onion_frame,
+    glui.rich_label,
     glui.structs,
     glui.style,
     glui.text_input,
