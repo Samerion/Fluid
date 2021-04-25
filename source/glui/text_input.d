@@ -127,6 +127,7 @@ class GluiTextInput : GluiInput!GluiNode {
         import std.range : back;
         import std.string : chop;
 
+        bool backspace = false;
         string input;
 
         // Get pressed key
@@ -143,6 +144,8 @@ class GluiTextInput : GluiInput!GluiNode {
 
                     const lastChar = value.back;
                     value = value.chop;
+
+                    backspace = true;
 
                     // Stop instantly if there are no characters left
                     if (value.length == 0) break;
@@ -189,6 +192,9 @@ class GluiTextInput : GluiInput!GluiNode {
         }
 
         value ~= input;
+
+        // Trigger callback
+        if ((input.length || backspace) && changed) changed();
 
     }
 

@@ -1,7 +1,11 @@
 module glui.file_picker;
 
 import raylib;
+import std.conv;
+import std.file;
 import std.path;
+import std.range;
+import std.algorithm;
 
 import glui.frame;
 import glui.label;
@@ -9,6 +13,7 @@ import glui.utils;
 import glui.input;
 import glui.style;
 import glui.structs;
+import glui.rich_label;
 import glui.text_input;
 
 alias filePicker = simpleConstructor!GluiFilePicker;
@@ -20,6 +25,9 @@ class GluiFilePicker : GluiInput!GluiFrame {
 
     /// Callback to run when input was cancelled.
     void delegate() cancelled;
+
+    /// Max amount of suggestions that can be provided.
+    uint suggestionLimit = 10;
 
     private {
 
@@ -34,6 +42,9 @@ class GluiFilePicker : GluiInput!GluiFrame {
         /// Text input field containing the currently selected directory or file for the file picker.
         GluiTextInput input;
 
+        /// Label with suggestions to the text.
+        GluiRichLabel suggestions;
+
     }
 
     this(Theme theme, string name, void delegate() submitted, void delegate() cancelled = null) {
@@ -42,8 +53,9 @@ class GluiFilePicker : GluiInput!GluiFrame {
             .layout(1, NodeAlign.center, NodeAlign.start),
             theme,
 
-            titleLabel = label(name),
-            input = textInput("Path to file...", submitted),
+            titleLabel  = label(name),
+            input       = textInput("Path to file...", submitted),
+            suggestions = richLabel(),
         );
 
         this.cancelled = cancelled;
@@ -53,11 +65,12 @@ class GluiFilePicker : GluiInput!GluiFrame {
 
         // Windows is silly
         version (Windows) input.value = `C:\`;
-        else input.value = expandTilde("~");
+        else input.value = expandTilde("~/");
 
         // Bind events
         input.changed = () {
             if (changed) changed();
+            updateSuggestions();
         };
 
         input.submitted = () {
@@ -101,6 +114,42 @@ class GluiFilePicker : GluiInput!GluiFrame {
 
     }
 
+    /// Refresh the suggestion list.
+    void updateSuggestions() {
+
+        const split = value.retro.array.findSplitBefore("/");
+        const dir  = split ? split[1].retro.to!string : "";
+        const file = split ? split[0].retro.to!string : value;
+
+        suggestions.clear();
+
+        // Make sure the directory exists
+        if (!dir.exists || !dir.isDir) return;
+
+        // Check the entries
+        int num;
+        foreach (entry; dir.dirEntries(file ~ "*", SpanMode.shallow)) {
+
+            const name = entry.name.baseName;
+
+            // Ignore hidden directories if not prompted
+            if (!file.length && name.startsWith(".")) continue;
+
+            // Stop after 10 entries.
+            if (num++ >= 10) break;
+
+            // Found a directory
+            if (entry.isDir) suggestions ~= name ~ "/\n";
+
+            // File
+            else suggestions ~= name ~ "\n";
+
+        }
+
+        updateSize();
+
+    }
+
     override void focus() {
 
         savedFocus = true;
@@ -118,8 +167,16 @@ class GluiFilePicker : GluiInput!GluiFrame {
 
     protected override void drawImpl(Rectangle rect) {
 
-        // Weren't focused, focus now
-        if (!savedFocus) focus();
+        // Wasn't focused
+        if (!savedFocus) {
+
+            // Focus now
+            focus();
+
+            // Refresh suggestions
+            updateSuggestions();
+
+        }
 
         // Just lost focus
         else if (!isFocused) {
@@ -136,8 +193,6 @@ class GluiFilePicker : GluiInput!GluiFrame {
             return;
 
         }
-
-        // Lost focus
 
         super.drawImpl(rect);
 
