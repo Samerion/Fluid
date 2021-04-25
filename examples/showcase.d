@@ -109,6 +109,8 @@ void main() {
                     null, "Line 4\n",
                 ),
 
+                imageView(fill, "./logo.png"),
+
             ),
 
             vframe(greenTheme, fill,
