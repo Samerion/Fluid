@@ -81,7 +81,9 @@ abstract class GluiInput(Parent : GluiNode) : Parent, GluiFocusable {
     /// Set or remove focus from this node.
     bool isFocused(bool enable) {
 
-        tree.focus = enable ? this : null;
+        if (enable) focus();
+        else if (isFocused) tree.focus = null;
+
         return enable;
 
     }
