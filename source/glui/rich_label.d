@@ -109,6 +109,13 @@ class GluiRichLabel : GluiNode {
 
     }
 
+    /// Erase all label contents.
+    void clear() {
+
+        textParts = [];
+
+    }
+
     protected override void resizeImpl(Vector2 available) {
 
         minSize = style.measureText(available, text);
