@@ -73,10 +73,13 @@ class GluiImageView : GluiNode {
 
     override protected void drawImpl(Rectangle rect) {
 
+        import std.algorithm : min;
+
         // Get the scale
-        const scale = rect.width < rect.height
-            ? rect.width / texture.width
-            : rect.height / texture.height;
+        const scale = min(
+            rect.width / texture.width,
+            rect.height / texture.height
+        );
 
         const source = Rectangle(0, 0, texture.width, texture.height);
         const size   = Vector2(texture.width * scale, texture.height * scale);
