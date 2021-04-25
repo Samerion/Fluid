@@ -1,4 +1,7 @@
-# glui
+<h1>
+    <img src="./logo.png" alt="logo" height="50" />
+    glui
+</h1>
 
 A simple high-level UI library designed for use in [IsodiTools](https://github.com/Samerion/IsodiTools) and Samerion.
 I decided to write it because making one comes out to be faster and easier than trying to make raygui or imgui work
