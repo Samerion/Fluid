@@ -86,7 +86,12 @@ void main() {
 
         vframe(layout(NodeAlign.fill, NodeAlign.start),
 
-            label(layout(NodeAlign.center), "Hello, World!"),
+            hframe(
+                layout(NodeAlign.center),
+
+                imageView("./logo.png", Vector2(40, 40)),
+                label(layout(NodeAlign.center), "Hello, Glui!"),
+            )
 
         ),
 
