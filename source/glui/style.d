@@ -79,7 +79,8 @@ class Style {
     ///     text           = Text to draw.
     Vector2 measureText(Vector2 availableSpace, string text) const {
 
-        return MeasureTextEx(cast() font, text.toStringz, fontSize, fontSize / 10f);
+        auto res = MeasureTextEx(cast() font, text.toStringz, fontSize, fontSize / 10f);
+        return Vector2(res.x + fontSize / 10f, res.y);
 
     }
 

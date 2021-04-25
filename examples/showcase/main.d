@@ -68,6 +68,11 @@ void main() {
         backgroundColor = Color(0x12, 0x12, 0xc0, 0xff);
     };
 
+
+    auto whiteText = style!q{
+        textColor = Colors.WHITE;
+    };
+
     Layout fill = {
         expand: 1,
         nodeAlign: NodeAlign.fill,
@@ -87,7 +92,19 @@ void main() {
 
         hframe(fill,
 
-            vframe(redTheme, fill),
+            vframe(redTheme, fill,
+
+                richLabel(
+                    layout(1, NodeAlign.center),
+                    "Hello, ", whiteText, "World", null, "!\n\n",
+
+                    "Line 1\n",
+                    "Line 2\n",
+                    whiteText, "Line 3 (but white)\n",
+                    null, "Line 4\n",
+                ),
+
+            ),
 
             vframe(greenTheme, fill,
 
