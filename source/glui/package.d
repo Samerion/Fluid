@@ -6,6 +6,7 @@ public import
     glui.file_picker,
     glui.frame,
     glui.hover_button,
+    glui.image_view,
     glui.label,
     glui.node,
     glui.onion_frame,
