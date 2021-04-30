@@ -34,6 +34,9 @@ class Style {
         /// Font size (height) in pixels.
         float fontSize = 24;
 
+        /// Space between characters, relative to font size.
+        float charSpacing = 0.1;
+
         /// Text color.
         Color textColor = Colors.BLACK;
 
@@ -79,8 +82,8 @@ class Style {
     ///     text           = Text to draw.
     Vector2 measureText(Vector2 availableSpace, string text) const {
 
-        auto res = MeasureTextEx(cast() font, text.toStringz, fontSize, fontSize / 10f);
-        return Vector2(res.x + fontSize / 10f, res.y);
+        auto res = MeasureTextEx(cast() font, text.toStringz, fontSize, fontSize * charSpacing);
+        return Vector2(res.x + fontSize * charSpacing, res.y);
 
     }
 
@@ -105,7 +108,7 @@ class Style {
     /// Draw text using the params
     void drawText(Rectangle rect, string text) const {
 
-        DrawTextRec(cast() font, text.toStringz, rect, fontSize, fontSize / 10f, textWrap, textColor);
+        DrawTextRec(cast() font, text.toStringz, rect, fontSize, fontSize * charSpacing, textWrap, textColor);
         // Note: I doubt DrawTextRec has any side-effects on the font.
         // Most likely it isn't const because the keyword isn't transistive in C, so it wouldn't affect the parameter.
         // It does in D, because the struct contains pointers.
