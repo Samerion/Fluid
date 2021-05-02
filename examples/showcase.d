@@ -73,24 +73,20 @@ void main() {
         textColor = Colors.WHITE;
     };
 
-    Layout fill = {
-        expand: 1,
-        nodeAlign: NodeAlign.fill,
-    };
-
+    Layout fill = layout!(1, "fill");
 
     // Save IDs
     GluiNode secondColumn;
 
     auto root = vframe(theme, fill,
 
-        vframe(layout(NodeAlign.fill, NodeAlign.start),
+        vframe(layout!("fill", "start"),
 
             hframe(
-                layout(NodeAlign.center),
+                layout!"center",
 
                 imageView("./logo.png", Vector2(40, 40)),
-                label(layout(NodeAlign.center), "Hello, Glui!"),
+                label(layout!"center", "Hello, Glui!"),
             )
 
         ),
@@ -100,7 +96,7 @@ void main() {
             vframe(redTheme, fill,
 
                 richLabel(
-                    layout(1, NodeAlign.center),
+                    layout!(1, "center"),
                     "Hello, ", whiteText, "World", null, "!\n\n",
 
                     "Line 1\n",
@@ -115,7 +111,7 @@ void main() {
 
             vframe(greenTheme, fill,
 
-                button(layout(NodeAlign.center, NodeAlign.start),
+                button(layout!("center", "start"),
                     "Press to reveal the rest of this column",
 
                     () {
@@ -136,10 +132,10 @@ void main() {
 
                 vframe(blueTheme, fill,
 
-                    label(layout(1, NodeAlign.center), "Third column")
+                    label(layout!(1, "center"), "Third column")
 
                 ),
-                label(layout(NodeAlign.center), "Welcome to Glui!"),
+                label(layout!("center"), "Welcome to Glui!"),
 
             )
 

@@ -1,6 +1,7 @@
 ///
 module glui.structs;
 
+import std.conv;
 import glui.node;
 
 /// Create a new layout
@@ -38,6 +39,41 @@ Layout layout(NodeAlign align_) {
 
 /// Ditto
 Layout layout(uint expand) {
+
+    return Layout(expand);
+
+}
+
+/// CTFE version of the layout constructor, allows using strings instead of enum members, to avoid boilerplate.
+Layout layout(uint expand, string alignX, string alignY)() {
+
+    return Layout(expand, [alignX.to!NodeAlign, alignY.to!NodeAlign]);
+
+}
+
+/// Ditto
+Layout layout(uint expand, string align_)() {
+
+    return Layout(expand, align_.to!NodeAlign);
+
+}
+
+/// Ditto
+Layout layout(string alignX, string alignY)() {
+
+    return Layout(0, [alignX.to!NodeAlign, alignY.to!NodeAlign]);
+
+}
+
+/// Ditto
+Layout layout(string align_)() {
+
+    return Layout(0, align_.to!NodeAlign);
+
+}
+
+/// Ditto
+Layout layout(uint expand)() {
 
     return Layout(expand);
 
