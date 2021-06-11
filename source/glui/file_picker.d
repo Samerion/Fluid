@@ -37,7 +37,7 @@ class GluiFilePicker : GluiInput!GluiFrame {
     void delegate() cancelled;
 
     /// Max amount of suggestions that can be provided.
-    ulong suggestionLimit = 10;
+    size_t suggestionLimit = 10;
 
     private {
 
@@ -59,7 +59,7 @@ class GluiFilePicker : GluiInput!GluiFrame {
         string typedFilename;
 
         /// Currently chosen suggestion. 0 is no suggestion chosen.
-        ulong currentSuggestion;
+        size_t currentSuggestion;
 
     }
 
