@@ -87,9 +87,15 @@ class GluiFilePicker : GluiInput!GluiFrame {
 
         // Bind events
         input.changed = () {
+
+            // Trigger an event
             if (changed) changed();
+
+            // Update suggestions
             typedFilename = value;
+            currentSuggestion = 0;
             updateSuggestions();
+
         };
 
         input.submitted = () {
@@ -108,6 +114,9 @@ class GluiFilePicker : GluiInput!GluiFrame {
             else {
 
                 if (submitted) submitted();
+
+                // Remove focus
+                super.isFocused = false;
 
                 // Automatically hide when submitted
                 hide();
