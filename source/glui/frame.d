@@ -2,7 +2,10 @@
 module glui.frame;
 
 import raylib;
+
+import std.range;
 import std.traits;
+import std.algorithm;
 
 import glui.node;
 import glui.style;
@@ -103,7 +106,7 @@ class GluiFrame : GluiNode {
 
         }
 
-        // Vertical
+        // Calculate the size of each child
         foreach (child; nodeList) {
 
             // Inherit root
@@ -140,23 +143,27 @@ class GluiFrame : GluiNode {
 
         auto position = Vector2(area.x, area.y);
 
-        foreach (child; children) {
+        // Draw each child and get rid of removed children
+        children = children
+            .filter!"!a.toRemove"
+            .tee!((child) {
 
-            // Get params
-            const size = childSpace(child, Vector2(area.width, area.height));
-            const rect = Rectangle(
-                position.x, position.y,
-                size.x, size.y
-            );
+                // Get params
+                const size = childSpace(child, Vector2(area.width, area.height));
+                const rect = Rectangle(
+                    position.x, position.y,
+                    size.x, size.y
+                );
 
-            // Draw the child
-            child.draw(rect);
+                // Draw the child
+                child.draw(rect);
 
-            // Offset position
-            if (directionHorizontal) position.x += size.x;
-            else position.y += size.y;
+                // Offset position
+                if (directionHorizontal) position.x += size.x;
+                else position.y += size.y;
 
-        }
+            })
+            .array;
 
     }
 
