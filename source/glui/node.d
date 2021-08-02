@@ -15,13 +15,16 @@ abstract class GluiNode {
     /// Layout for this node.
     Layout layout;
 
+    /// If true, this node will be removed from the tree on the next draw.
+    bool toRemove;
+
     /// Minimum size of the node.
     protected auto minSize = Vector2(0, 0);
 
     private {
 
         /// If true, this node must update its size.
-        bool requiresResize = true;
+        bool _requiresResize = true;
 
         /// If true, this node is hidden and won't be rendered.
         bool _hidden;
@@ -107,6 +110,14 @@ abstract class GluiNode {
 
     }
 
+    /// Remove this node from the tree before the next draw.
+    final void remove() {
+
+        hidden = true;
+        toRemove = true;
+
+    }
+
     /// Toggle the node's visibility.
     final void toggleShow() { hidden = !hidden; }
 
@@ -115,7 +126,7 @@ abstract class GluiNode {
     /// Note: should be called or root; in case of children, will only work after the first draw.
     final void updateSize() {
 
-        tree.root.requiresResize = true;
+        tree.root._requiresResize = true;
 
     }
 
@@ -127,10 +138,10 @@ abstract class GluiNode {
         const space = Vector2(GetScreenWidth, GetScreenHeight);
 
         // Resize if required
-        if (IsWindowResized || requiresResize) {
+        if (IsWindowResized || _requiresResize) {
 
             resize(space);
-            requiresResize = false;
+            _requiresResize = false;
 
         }
 
