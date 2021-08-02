@@ -39,6 +39,7 @@ void main() {
 
     GluiFilePicker picker;
     GluiLabel fileStatus;
+    GluiButton!() unrelatedButton;
 
     auto root = onionFrame(
         theme,
@@ -56,7 +57,9 @@ void main() {
                 label("Green background!"),
 
                 fileStatus = label("Press the text below..."),
-                button("Trigger the file picker", () { picker.show(); }),
+                button("Trigger the file picker", { picker.show(); }),
+
+                unrelatedButton = button("An unrelated button", { unrelatedButton.text = "Huh?"; }),
             ),
         ),
         picker = filePicker(whiteTheme, "Pick a file...",

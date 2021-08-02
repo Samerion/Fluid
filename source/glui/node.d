@@ -137,6 +137,9 @@ abstract class GluiNode {
 
         const space = Vector2(GetScreenWidth, GetScreenHeight);
 
+        // Clear input
+        tree.mouseInput = null;
+
         // Resize if required
         if (IsWindowResized || _requiresResize) {
 
@@ -147,6 +150,10 @@ abstract class GluiNode {
 
         // Draw this node
         draw(Rectangle(0, 0, space.x, space.y));
+
+        // Dispatch the input
+        if (tree.mouseInput) tree.mouseInput();
+        if (tree.keyboardInput) tree.keyboardInput();
 
     }
 

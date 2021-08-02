@@ -28,10 +28,12 @@ class GluiHoverButton(T) : GluiButton!T {
     }
 
     /// Check events
-    protected override void handleInput() {
+    protected override void mouseImpl() {
+
+        assert(isHovered);
 
         // Simple enough
-        if (isHovered) hovered();
+        hovered();
 
     }
 

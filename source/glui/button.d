@@ -63,22 +63,17 @@ class GluiButton(T : GluiNode = GluiLabel) : GluiInput!T {
         isPressed = isHovered && IsMouseButtonDown(triggerButton);
         // TODO: Keyboard support
 
-        handleInput();
+        if (isHovered) catchMouse();
 
         super.drawImpl(area);
 
     }
 
     /// Handle button input. By default, this will call the `pressed` delegate if the button is pressed.
-    protected void handleInput() {
+    protected override void mouseImpl() {
 
-        // Handle events
-        if (isHovered && IsMouseButtonReleased(triggerButton)) {
-
-            // Call the delegate
-            pressed();
-
-        }
+        // Pressed down
+        if (IsMouseButtonReleased(triggerButton)) pressed();
 
     }
 
