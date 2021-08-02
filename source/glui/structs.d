@@ -113,4 +113,10 @@ struct LayoutTree {
     /// Currently focused node.
     GluiFocusable focus;
 
+    /// Registered mouse callback.
+    void delegate() mouseInput;
+
+    /// Registered misc. callbacks.
+    void delegate() keyboardInput;
+
 }

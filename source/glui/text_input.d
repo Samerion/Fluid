@@ -78,14 +78,17 @@ class GluiTextInput : GluiInput!GluiNode {
 
     override void drawImpl(Rectangle rect) {
 
-        const hovered = rect.contains(GetMousePosition);
+        const isHovered = rect.contains(GetMousePosition);
 
         // Update status
         if (IsMouseButtonDown(MouseButton.MOUSE_LEFT_BUTTON)) {
 
-            isFocused = hovered;
+            isFocused = isHovered;
 
         }
+
+        // Hovered, catch mouse input
+        if (isHovered) catchMouse();
 
         // Box has focus — take input
         if (isFocused) takeInput();
@@ -120,6 +123,9 @@ class GluiTextInput : GluiInput!GluiNode {
         }
 
     }
+
+    // Do nothing, we don't take mouse input.
+    protected override void mouseImpl() { }
 
     private void takeInput() {
 
@@ -172,7 +178,12 @@ class GluiTextInput : GluiInput!GluiNode {
             // Submit
             if (!multiline && IsKeyPressed(KeyboardKey.KEY_ENTER)) {
 
-                if (submitted) submitted();
+                if (submitted) {
+
+                    isFocused = false;
+                    submitted();
+
+                }
                 break;
 
             }

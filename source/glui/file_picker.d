@@ -284,6 +284,9 @@ class GluiFilePicker : GluiInput!GluiFrame {
 
     protected override void drawImpl(Rectangle rect) {
 
+        // Hovered, catch the mouse
+        if (rect.contains(GetMousePosition)) catchMouse();
+
         // Wasn't focused
         if (!savedFocus) {
 
@@ -366,6 +369,12 @@ class GluiFilePicker : GluiInput!GluiFrame {
 
         // Resize the node itself
         super.resizeImpl(space);
+
+    }
+
+    protected override void mouseImpl() {
+
+        input.focus();
 
     }
 
