@@ -1,5 +1,6 @@
 import glui;
 import raylib;
+import std.format;
 
 void main() {
 
@@ -78,6 +79,17 @@ void main() {
     // Save IDs
     GluiNode secondColumn;
 
+    /// A button which will disappear on click.
+    GluiButton!() hidingButton() {
+
+        static size_t number;
+
+        GluiButton!() result;
+        result = button(format!"Click me! %s"(++number), { result.remove; });
+        return result;
+
+    }
+
     auto root = vframe(theme, fill,
 
         vframe(layout!("fill", "start"),
@@ -114,7 +126,7 @@ void main() {
                 button(layout!("center", "start"),
                     "Press to reveal the rest of this column",
 
-                    () {
+                    {
                         secondColumn.toggleShow();
                     }
                 ),
@@ -123,6 +135,11 @@ void main() {
 
                     label("Second column!"),
                     textInput("Your input..."),
+
+                    // Add a couple of our hiding buttons
+                    hidingButton(),
+                    hidingButton(),
+                    hidingButton(),
 
                 ).hide()
 

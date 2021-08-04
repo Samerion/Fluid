@@ -83,7 +83,7 @@ class Style {
     Vector2 measureText(Vector2 availableSpace, string text) const {
 
         auto res = MeasureTextEx(cast() font, text.toStringz, fontSize, fontSize * charSpacing);
-        return Vector2(res.x + fontSize * charSpacing, res.y);
+        return Vector2(res.x + fontSize * charSpacing * 2, res.y);
 
     }
 
