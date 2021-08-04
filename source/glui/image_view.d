@@ -18,7 +18,12 @@ class GluiImageView : GluiNode {
     mixin DefineStyles!();
 
     /// Texture for this node.
-    private Texture _texture;
+    private {
+
+        Texture _texture;
+        Rectangle _targetArea;  // Rectangle occupied by this node after all calculations
+
+    }
 
     static foreach (index; 0 .. BasicNodeParamLength) {
 
@@ -36,27 +41,33 @@ class GluiImageView : GluiNode {
 
     }
 
-    /// Set the texture.
-    void texture(Texture texture) {
+    @property {
 
-        this._texture = texture;
+        /// Set the texture.
+        Texture texture(Texture texture) {
 
-    }
+            return this._texture = texture;
 
-    /// Load the texture from a filename.
-    void texture(string filename) {
+        }
 
-        import std.string : toStringz;
+        /// Load the texture from a filename.
+        string texture(string filename) {
 
-        texture = LoadTexture(filename.toStringz);
-        updateSize();
+            import std.string : toStringz;
 
-    }
+            texture = LoadTexture(filename.toStringz);
+            updateSize();
 
-    /// Get the current texture.
-    const(Texture) texture() const {
+            return filename;
 
-        return _texture;
+        }
+
+        /// Get the current texture.
+        const(Texture) texture() const {
+
+            return _texture;
+
+        }
 
     }
 
@@ -83,12 +94,19 @@ class GluiImageView : GluiNode {
 
         const source = Rectangle(0, 0, texture.width, texture.height);
         const size   = Vector2(texture.width * scale, texture.height * scale);
-        const target = Rectangle(
+
+        _targetArea = Rectangle(
             rect.x + rect.w/2 - size.x/2, rect.y + rect.h/2 - size.y/2,
             size.x, size.y
         );
 
-        DrawTexturePro(texture, source, target, Vector2(0, 0), 0, Colors.WHITE);
+        DrawTexturePro(texture, source, _targetArea, Vector2(0, 0), 0, Colors.WHITE);
+
+    }
+
+    override protected bool hoveredImpl(Rectangle, Vector2 mouse) const {
+
+        return _targetArea.contains(mouse);
 
     }
 

@@ -4,19 +4,24 @@ module glui.node;
 import raylib;
 
 import glui.style;
+import glui.utils;
 import glui.structs;
 
 /// Represents a Glui node.
 abstract class GluiNode {
 
-    /// Tree data for the node. Note: requires at least one draw before this will work.
-    LayoutTree* tree;
+    public {
 
-    /// Layout for this node.
-    Layout layout;
+        /// Tree data for the node. Note: requires at least one draw before this will work.
+        LayoutTree* tree;
 
-    /// If true, this node will be removed from the tree on the next draw.
-    bool toRemove;
+        /// Layout for this node.
+        Layout layout;
+
+        /// If true, this node will be removed from the tree on the next draw.
+        bool toRemove;
+
+    }
 
     /// Minimum size of the node.
     protected auto minSize = Vector2(0, 0);
@@ -28,6 +33,9 @@ abstract class GluiNode {
 
         /// If true, this node is hidden and won't be rendered.
         bool _hidden;
+
+        /// If true, this node is currently hovered.
+        bool _hovered;
 
         /// Theme of this node.
         Theme _theme;
@@ -54,7 +62,6 @@ abstract class GluiNode {
     @property {
 
         /// Check if the node is hidden.
-        pragma(inline)
         bool hidden() const { return _hidden; }
 
         /// Set the visibility
@@ -110,6 +117,9 @@ abstract class GluiNode {
 
     }
 
+    /// Toggle the node's visibility.
+    final void toggleShow() { hidden = !hidden; }
+
     /// Remove this node from the tree before the next draw.
     final void remove() {
 
@@ -118,8 +128,9 @@ abstract class GluiNode {
 
     }
 
-    /// Toggle the node's visibility.
-    final void toggleShow() { hidden = !hidden; }
+    /// Check if this node is hovered.
+    @property
+    bool hovered() const { return _hovered; }
 
     /// Recalculate the window size before next draw.
     ///
@@ -138,7 +149,7 @@ abstract class GluiNode {
         const space = Vector2(GetScreenWidth, GetScreenHeight);
 
         // Clear input
-        tree.mouseInput = null;
+        tree.hover = null;
 
         // Resize if required
         if (IsWindowResized || _requiresResize) {
@@ -151,8 +162,38 @@ abstract class GluiNode {
         // Draw this node
         draw(Rectangle(0, 0, space.x, space.y));
 
-        // Dispatch input
-        if (tree.mouseInput) tree.mouseInput();
+
+        // Set mouse cursor to match hovered node
+        if (tree.hover) {
+
+            if (auto style = tree.hover.pickStyle) {
+
+                SetMouseCursor(style.mouseCursor);
+
+            }
+
+        }
+
+
+        // Note: pressed, not released; released activates input events, pressed activates focus
+        const mousePressed = IsMouseButtonPressed(MouseButton.MOUSE_LEFT_BUTTON);
+
+        // Mouse is hovering an input node
+        if (auto hoverInput = cast(GluiFocusable) tree.hover) {
+
+            // Pass the input to it
+            hoverInput.mouseImpl();
+
+            // If the left mouse button is pressed down, let it have focus
+            if (mousePressed && !hoverInput.isFocused) hoverInput.focus();
+
+        }
+
+        // Mouse pressed over a non-focusable node, remove focus
+        else if (mousePressed) tree.focus = null;
+
+
+        // Pass keyboard input to the currently focused node
         if (tree.focus) tree.focus.keyboardImpl();
 
     }
@@ -173,14 +214,21 @@ abstract class GluiNode {
             layout.nodeAlign[1] == NodeAlign.fill ? space.height : min(space.height, minSize.y),
         );
         const position = position(space, size);
+        const rectangle = Rectangle(
+            position.x, position.y,
+            size.x,     size.y,
+        );
+
+        // If hovered
+        if (hoveredImpl(rectangle, GetMousePosition)) {
+
+            _hovered = true;
+            tree.hover = this;
+
+        }
 
         // Draw the node
-        drawImpl(
-            Rectangle(
-                position.x, position.y,
-                size.x,     size.y,
-            )
-        );
+        drawImpl(rectangle);
 
     }
 
@@ -210,6 +258,29 @@ abstract class GluiNode {
     /// Params:
     ///     rect = Area the node should draw in.
     protected abstract void drawImpl(Rectangle rect);
+
+    /// Check if the node is hovered.
+    ///
+    /// This will be called right before drawImpl for each node in order to determine the which node should handle mouse
+    /// input.
+    ///
+    /// If your node fills the rectangle area its given in `drawImpl`, you may use `mixin ImplHoveredRect` to implement
+    /// this automatically.
+    ///
+    /// Params:
+    ///     rect          = Area the node should be drawn in, as provided by drawImpl.
+    ///     mousePosition = Current mouse position within the window.
+    protected abstract bool hoveredImpl(Rectangle rect, Vector2 mousePosition) const;
+
+    protected mixin template ImplHoveredRect() {
+
+        protected override bool hoveredImpl(Rectangle rect, Vector2 mousePosition) const {
+
+            return rect.contains(mousePosition);
+
+        }
+
+    }
 
     /// Reload styles for the node. Triggered when the theme is changed.
     ///

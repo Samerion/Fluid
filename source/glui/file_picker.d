@@ -289,9 +289,6 @@ class GluiFilePicker : GluiInput!GluiFrame {
 
     protected override void drawImpl(Rectangle rect) {
 
-        // Hovered, catch the mouse
-        if (rect.contains(GetMousePosition)) catchMouse();
-
         // Wasn't focused
         if (!savedFocus) {
 

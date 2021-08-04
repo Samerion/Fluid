@@ -35,6 +35,7 @@ void main() {
         &GluiButton!GluiLabel.hoverStyleKey: style!q{
             backgroundColor = Color(0xdd, 0xdd, 0xdd, 0xff);
             textColor = Colors.BLACK;
+            mouseCursor = MouseCursor.MOUSE_CURSOR_POINTING_HAND,
             fontSize = 20;
         },
         &GluiButton!GluiLabel.pressStyleKey: style!q{
@@ -46,10 +47,12 @@ void main() {
         &GluiTextInput.styleKey: style!q{
             backgroundColor = Color(0xff, 0xff, 0xff, 0xcc);
             textColor = Colors.BLACK;
+            mouseCursor = MouseCursor.MOUSE_CURSOR_IBEAM;
         },
         &GluiTextInput.emptyStyleKey: style!q{
             backgroundColor = Color(0xff, 0xff, 0xff, 0xcc);
             textColor = Color(0x00, 0x00, 0x00, 0xaa);
+            mouseCursor = MouseCursor.MOUSE_CURSOR_IBEAM;
 
         },
         &GluiTextInput.focusStyleKey: style!q{
@@ -169,7 +172,6 @@ void main() {
 
         BeginDrawing();
 
-            SetMouseCursor(MouseCursor.MOUSE_CURSOR_DEFAULT);
             ClearBackground(Colors.BLACK);
             root.draw();
 

@@ -16,8 +16,6 @@ alias frameHoverButton = simpleConstructor!(GluiHoverButton!GluiFrame);
 /// entry nor hover leave events. Make sure you know what you're doing when using this node!
 class GluiHoverButton(T) : GluiButton!T {
 
-    alias hovered = submitted;
-
     /// Create a new hover button.
     /// Params:
     ///     pressed = Action to perform when the button is hovered.
@@ -30,10 +28,10 @@ class GluiHoverButton(T) : GluiButton!T {
     /// Check events
     protected override void mouseImpl() {
 
-        assert(isHovered);
+        assert(hovered);
 
         // Simple enough
-        hovered();
+        submitted();
 
     }
 

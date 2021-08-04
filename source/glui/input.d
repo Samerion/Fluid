@@ -75,13 +75,6 @@ abstract class GluiInput(Parent : GluiNode) : Parent, GluiFocusable {
     /// This will be called each frame as long as this node has focus.
     protected abstract void keyboardImpl();
 
-    /// Register mouse input on this node. This should be called every frame as long as the node is hovered.
-    protected void catchMouse() {
-
-        tree.mouseInput = &mouseImpl;
-
-    }
-
     /// Change the focus to this node.
     void focus() {
 
@@ -89,20 +82,24 @@ abstract class GluiInput(Parent : GluiNode) : Parent, GluiFocusable {
 
     }
 
-    /// Check if the node has focus.
-    bool isFocused() const {
+    @property {
 
-        return tree.focus is this;
+        /// Check if the node has focus.
+        bool isFocused() const {
 
-    }
+            return tree.focus is this;
 
-    /// Set or remove focus from this node.
-    bool isFocused(bool enable) {
+        }
 
-        if (enable) focus();
-        else if (isFocused) tree.focus = null;
+        /// Set or remove focus from this node.
+        bool isFocused(bool enable) {
 
-        return enable;
+            if (enable) focus();
+            else if (isFocused) tree.focus = null;
+
+            return enable;
+
+        }
 
     }
 

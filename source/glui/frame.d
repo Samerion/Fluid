@@ -35,6 +35,7 @@ GluiFrame hframe(T...)(T args) {
 class GluiFrame : GluiNode {
 
     mixin DefineStyles!("style", q{ Style.init });
+    mixin ImplHoveredRect;
 
     /// Children of this frame.
     GluiNode[] children;

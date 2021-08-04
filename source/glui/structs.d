@@ -101,6 +101,8 @@ enum NodeAlign {
 package interface GluiFocusable {
 
     void focus();
+    bool isFocused() const;
+    void mouseImpl();
     void keyboardImpl();
 
 }
@@ -111,10 +113,10 @@ struct LayoutTree {
     /// Root node of the tree.
     GluiNode root;
 
+    /// Top-most hovered node in the tree.
+    GluiNode hover;
+
     /// Currently focused node.
     GluiFocusable focus;
-
-    /// Registered mouse callback.
-    void delegate() mouseInput;
 
 }
