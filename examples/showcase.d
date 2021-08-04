@@ -27,6 +27,11 @@ void main() {
             textColor = Colors.BLACK;
             fontSize = 20;
         },
+        &GluiButton!GluiLabel.focusStyleKey: style!q{
+            backgroundColor = Color(0xee, 0xee, 0xee, 0xff);
+            textColor = Colors.BLACK;
+            fontSize = 20;
+        },
         &GluiButton!GluiLabel.hoverStyleKey: style!q{
             backgroundColor = Color(0xdd, 0xdd, 0xdd, 0xff);
             textColor = Colors.BLACK;

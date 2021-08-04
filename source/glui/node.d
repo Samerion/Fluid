@@ -151,9 +151,9 @@ abstract class GluiNode {
         // Draw this node
         draw(Rectangle(0, 0, space.x, space.y));
 
-        // Dispatch the input
+        // Dispatch input
         if (tree.mouseInput) tree.mouseInput();
-        if (tree.keyboardInput) tree.keyboardInput();
+        if (tree.focus) tree.focus.keyboardImpl();
 
     }
 

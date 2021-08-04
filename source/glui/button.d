@@ -30,7 +30,6 @@ class GluiButton(T : GluiNode = GluiLabel) : GluiInput!T {
 
     /// Mouse button to trigger the button.
     private static immutable triggerButton = MouseButton.MOUSE_LEFT_BUTTON;
-    // TODO left handed support?
 
     /// Callback to run when the button is pressed.
     alias pressed = submitted;
@@ -60,20 +59,42 @@ class GluiButton(T : GluiNode = GluiLabel) : GluiInput!T {
 
         // Update status
         isHovered = area.contains(GetMousePosition);
-        isPressed = isHovered && IsMouseButtonDown(triggerButton);
-        // TODO: Keyboard support
+        scope (exit) isPressed = false;
 
+        // Check for hover
         if (isHovered) catchMouse();
 
+        // Draw the button
         super.drawImpl(area);
 
     }
 
-    /// Handle button input. By default, this will call the `pressed` delegate if the button is pressed.
+    /// Handle mouse input. By default, this will call the `pressed` delegate if the button is pressed.
     protected override void mouseImpl() {
 
-        // Pressed down
-        if (IsMouseButtonReleased(triggerButton)) pressed();
+        // Pushed down, get focus
+        if (IsMouseButtonPressed(triggerButton)) focus();
+
+        // Just released
+        if (IsMouseButtonReleased(triggerButton)) {
+
+            isPressed = true;
+            pressed();
+
+        }
+
+    }
+
+    /// Handle keyboard input.
+    protected override void keyboardImpl() {
+
+        // Pressed enter
+        if (IsKeyPressed(KeyboardKey.KEY_ENTER)) {
+
+            isPressed = true;
+            pressed();
+
+        }
 
     }
 

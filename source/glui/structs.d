@@ -84,7 +84,7 @@ struct Layout {
 
     /// Fraction of available space this node should occupy in the node direction.
     ///
-    /// If set to `0`, the node doesn't have a strict size limit and has size based on children.
+    /// If set to `0`, the node doesn't have a strict size limit and has size based on content.
     uint expand;
 
     /// Align the content box to a side of the occupied space.
@@ -98,9 +98,10 @@ enum NodeAlign {
 
 }
 
-interface GluiFocusable {
+package interface GluiFocusable {
 
     void focus();
+    void keyboardImpl();
 
 }
 
@@ -115,8 +116,5 @@ struct LayoutTree {
 
     /// Registered mouse callback.
     void delegate() mouseInput;
-
-    /// Registered misc. callbacks.
-    void delegate() keyboardInput;
 
 }
