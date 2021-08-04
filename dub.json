@@ -32,6 +32,16 @@
 			"sourceFiles": ["examples/onions.d"],
 			"targetPath": "build",
 			"targetType": "executable"
+		},
+		{
+			"name": "example-checks",
+			"dependencies": {
+				"glui": "*"
+			},
+			"sourcePaths": [],
+			"sourceFiles": ["examples/checks.d"],
+			"targetPath": "build",
+			"targetType": "executable"
 		}
 	]
 }

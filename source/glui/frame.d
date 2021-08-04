@@ -10,6 +10,7 @@ import std.algorithm;
 import glui.node;
 import glui.style;
 import glui.utils;
+import glui.children;
 
 /// Make a new vertical frame
 GluiFrame vframe(T...)(T args) {
@@ -37,7 +38,7 @@ class GluiFrame : GluiNode {
     mixin DefineStyles!("style", q{ Style.init });
 
     /// Children of this frame.
-    GluiNode[] children;
+    Children children;
 
     /// Defines in what directions children of this frame should be placed.
     ///
@@ -143,8 +144,13 @@ class GluiFrame : GluiNode {
 
         auto position = Vector2(area.x, area.y);
 
+        GluiNode[] leftovers;
+
+        children.lock();
+        scope (exit) children.unlock();
+
         // Draw each child and get rid of removed children
-        children = children
+        leftovers = children[]
             .filter!"!a.toRemove"
             .tee!((child) {
 
@@ -163,7 +169,9 @@ class GluiFrame : GluiNode {
                 else position.y += size.y;
 
             })
-            .array;
+            .moveAll(children.forceMutable);
+
+        children.forceMutable.length -= leftovers.length;
 
     }
 
