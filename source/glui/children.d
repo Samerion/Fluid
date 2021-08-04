@@ -10,10 +10,20 @@ import glui.node;
 
 debug struct Children {
 
+    private enum mutateError = "Cannot mutate children list while its being rendered. This should be done in an event "
+        ~ "handler, such as the mouseImpl/keyboardImpl methods.";
+
     private {
 
         GluiNode[] _children;
         bool _locked;
+
+    }
+
+    this(inout(Children) old) inout {
+
+        this._children = old._children;
+        this._locked = false;
 
     }
 
@@ -34,6 +44,7 @@ debug struct Children {
     /// Remove the first item.
     void popFront() {
 
+        assert(!_locked, mutateError);
         assert(!empty, "Can't pop an empty children list");
 
         _children.popFront();
@@ -51,15 +62,27 @@ debug struct Children {
 
     void opAssign(GluiNode[] newList) {
 
-        assert(!_locked, "Cannot mutate children list while its being rendered. This should be done in an event "
-            ~ "handler, such as the mouseImpl/keyboardImpl methods.");
+        assert(!_locked, mutateError);
         _children = newList;
 
     }
 
-    GluiNode opIndex(size_t index) {
+    // Indexing and slicing is allowed
+    GluiNode[] opIndex() {
 
-        return _children[index];
+        return _children[];
+
+    }
+    auto opIndex(Args...)(Args args) {
+
+        return _children[args];
+
+    }
+
+    @property
+    size_t opDollar() const {
+
+        return _children.length;
 
     }
 
@@ -120,7 +143,13 @@ void lock(ref Children children) {
 pragma(inline)
 void unlock(ref Children children) {
 
-    debug children._locked = false;
+    debug {
+
+        assert(children._locked, "Already unlocked.");
+
+        children._locked = false;
+
+    }
 
 }
 
@@ -139,6 +168,14 @@ const(GluiNode[]) asConst(Children children) {
 
     debug return children._children;
     else  return children;
+
+}
+
+/// Get a reference to the children list forcefully, ignoring the lock.
+pragma(inline)
+ref GluiNode[] forceMutable(return ref Children children) {
+
+    return children._children;
 
 }
 
