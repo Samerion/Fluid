@@ -21,7 +21,7 @@ alias frameButton = simpleConstructor!(GluiButton!GluiFrame);
 ///   $(LI `pressStyleKey` = Style to apply when the button is pressed.)
 ///   $(LI `focusStyleKey` = Style to apply when the button is focused.)
 /// )
-class GluiButton(T : GluiNode) : GluiInput!T {
+class GluiButton(T : GluiNode = GluiLabel) : GluiInput!T {
 
     mixin DefineStyles!(
         "hoverStyle", q{ style },
