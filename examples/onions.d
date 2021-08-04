@@ -27,6 +27,9 @@ void main() {
         &GluiFrame.styleKey: style!q{
             backgroundColor = Color(0x12, 0xc0, 0x12, 0xff);
         },
+        &GluiButton!GluiLabel.hoverStyleKey: style!q{
+            mouseCursor = MouseCursor.MOUSE_CURSOR_POINTING_HAND;
+        },
     ];
     auto whiteTheme = [
         &GluiFrame.styleKey: style!q{
@@ -76,7 +79,6 @@ void main() {
 
         BeginDrawing();
 
-            SetMouseCursor(MouseCursor.MOUSE_CURSOR_DEFAULT);
             ClearBackground(Colors.BLACK);
             root.draw();
 

@@ -37,9 +37,6 @@ class GluiButton(T : GluiNode = GluiLabel) : GluiInput!T {
     // Button status
     struct {
 
-        /// If true, this button is currently being hovered.
-        bool isHovered;
-
         // If true, this button is currenly down.
         bool isPressed;
 
@@ -57,23 +54,16 @@ class GluiButton(T : GluiNode = GluiLabel) : GluiInput!T {
 
     protected override void drawImpl(Rectangle area) {
 
-        // Update status
-        isHovered = area.contains(GetMousePosition);
-        scope (exit) isPressed = false;
-
-        // Check for hover
-        if (isHovered) catchMouse();
-
         // Draw the button
         super.drawImpl(area);
+
+        // Reset pressed status
+        isPressed = false;
 
     }
 
     /// Handle mouse input. By default, this will call the `pressed` delegate if the button is pressed.
     protected override void mouseImpl() {
-
-        // Pushed down, get focus
-        if (IsMouseButtonPressed(triggerButton)) focus();
 
         // Just released
         if (IsMouseButtonReleased(triggerButton)) {
@@ -101,28 +91,14 @@ class GluiButton(T : GluiNode = GluiLabel) : GluiInput!T {
     /// Pick the style.
     protected override const(Style) pickStyle() const {
 
-        const(Style)* result;
-
         // If hovered
-        if (isHovered) {
-
-            // Set cursor
-            SetMouseCursor(MouseCursor.MOUSE_CURSOR_POINTING_HAND);
-
-            // Use the style
-            result = &hoverStyle;
-
-        }
+        if (hovered) return hoverStyle;
 
         // If pressed — override hover
-        if (isPressed) result = &pressStyle;
-
-
-        // Return the result
-        if (result) return *result;
+        if (isPressed) return pressStyle;
 
         // No decision — normal state
-        else return super.pickStyle();
+        return super.pickStyle();
 
     }
 

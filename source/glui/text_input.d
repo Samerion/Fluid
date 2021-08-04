@@ -26,6 +26,7 @@ class GluiTextInput : GluiInput!GluiNode {
     mixin DefineStyles!(
         "emptyStyle", q{ style },
     );
+    mixin ImplHoveredRect;
 
     /// Time in seconds before the cursor toggles visibility.
     static immutable float blinkTime = 1;
@@ -59,7 +60,7 @@ class GluiTextInput : GluiInput!GluiNode {
 
     }
 
-    override void resizeImpl(Vector2 area) {
+    protected override void resizeImpl(Vector2 area) {
 
         import std.algorithm : max;
 
@@ -76,19 +77,7 @@ class GluiTextInput : GluiInput!GluiNode {
 
     }
 
-    override void drawImpl(Rectangle rect) {
-
-        const isHovered = rect.contains(GetMousePosition);
-
-        // Update status
-        if (IsMouseButtonDown(MouseButton.MOUSE_LEFT_BUTTON)) {
-
-            isFocused = isHovered;
-
-        }
-
-        // Hovered, catch mouse input
-        if (isHovered) catchMouse();
+    protected override void drawImpl(Rectangle rect) {
 
         auto style = pickStyle();
 
@@ -122,7 +111,16 @@ class GluiTextInput : GluiInput!GluiNode {
     }
 
     // Do nothing, we take mouse focus while drawing.
-    protected override void mouseImpl() { }
+    protected override void mouseImpl() {
+
+        // Update status
+        if (IsMouseButtonDown(MouseButton.MOUSE_LEFT_BUTTON)) {
+
+            isFocused = true;
+
+        }
+
+    }
 
     protected override void keyboardImpl() {
 
