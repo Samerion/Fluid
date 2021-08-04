@@ -10,6 +10,7 @@ import std.algorithm;
 import glui.node;
 import glui.style;
 import glui.utils;
+import glui.children;
 
 /// Make a new vertical frame
 GluiFrame vframe(T...)(T args) {
@@ -38,7 +39,7 @@ class GluiFrame : GluiNode {
     mixin ImplHoveredRect;
 
     /// Children of this frame.
-    GluiNode[] children;
+    Children children;
 
     /// Defines in what directions children of this frame should be placed.
     ///
@@ -144,8 +145,18 @@ class GluiFrame : GluiNode {
 
         auto position = Vector2(area.x, area.y);
 
+        Children newChildren;
+
+        children.lock();
+        scope (exit) {
+
+            children.unlock();
+            children = newChildren;
+
+        }
+
         // Draw each child and get rid of removed children
-        children = children
+        newChildren = children
             .filter!"!a.toRemove"
             .tee!((child) {
 

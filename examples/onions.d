@@ -4,7 +4,7 @@ import raylib;
 void main() {
 
     SetConfigFlags(ConfigFlag.FLAG_WINDOW_RESIZABLE);
-    SetTraceLogLevel(TraceLogType.LOG_NONE);
+    SetTraceLogLevel(TraceLogType.LOG_WARNING);
     InitWindow(800, 600, "Hello, World!");
     SetTargetFPS(60);
     SetExitKey(0);
