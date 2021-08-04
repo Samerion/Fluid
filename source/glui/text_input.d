@@ -90,9 +90,6 @@ class GluiTextInput : GluiInput!GluiNode {
         // Hovered, catch mouse input
         if (isHovered) catchMouse();
 
-        // Box has focus — take input
-        if (isFocused) takeInput();
-
         auto style = pickStyle();
 
         // Fill the background
@@ -124,10 +121,10 @@ class GluiTextInput : GluiInput!GluiNode {
 
     }
 
-    // Do nothing, we don't take mouse input.
+    // Do nothing, we take mouse focus while drawing.
     protected override void mouseImpl() { }
 
-    private void takeInput() {
+    protected override void keyboardImpl() {
 
         import std.uni : isAlpha, isWhite;
         import std.range : back;

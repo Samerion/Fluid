@@ -108,15 +108,20 @@ class GluiFilePicker : GluiInput!GluiFrame {
                 currentSuggestion = 0;
                 updateSuggestions();
 
+                // Restore focus
+                focus();
+
             }
 
             // Final submit
             else {
 
+                // Submit the selection
                 if (submitted) submitted();
 
                 // Remove focus
                 super.isFocused = false;
+                savedFocus = false;
 
                 // Automatically hide when submitted
                 hide();
@@ -375,6 +380,13 @@ class GluiFilePicker : GluiInput!GluiFrame {
     protected override void mouseImpl() {
 
         input.focus();
+
+    }
+
+    // Does nothing
+    protected override void keyboardImpl() {
+
+        assert(false, "FilePicker cannot directly have focus; call filePicker.focus to resolve automatically");
 
     }
 

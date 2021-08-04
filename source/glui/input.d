@@ -18,7 +18,7 @@ import glui.style;
 /// )
 abstract class GluiInput(Parent : GluiNode) : Parent, GluiFocusable {
 
-    /// Style property is present
+    // Style property is present
     static if (__traits(hasMember, typeof(this), "style")) {
 
         // Leave it original
@@ -69,6 +69,11 @@ abstract class GluiInput(Parent : GluiNode) : Parent, GluiFocusable {
     /// Only one node can run its `inputImpl` callback per frame, specifically, the last one to register its input.
     /// This is to prevent parents or overlapping children to take input when another node is drawn on them.
     protected abstract void mouseImpl();
+
+    /// Handle keyboard input.
+    ///
+    /// This will be called each frame as long as this node has focus.
+    protected abstract void keyboardImpl();
 
     /// Register mouse input on this node. This should be called every frame as long as the node is hovered.
     protected void catchMouse() {
