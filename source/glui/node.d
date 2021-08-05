@@ -221,12 +221,8 @@ abstract class GluiNode {
         );
 
         // If hovered
-        if (hoveredImpl(rectangle, GetMousePosition)) {
-
-            _hovered = true;
-            tree.hover = this;
-
-        }
+        _hovered = hoveredImpl(rectangle, GetMousePosition);
+        if (_hovered) tree.hover = this;
 
         // Draw the node
         drawImpl(rectangle);
@@ -276,6 +272,8 @@ abstract class GluiNode {
     protected mixin template ImplHoveredRect() {
 
         protected override bool hoveredImpl(Rectangle rect, Vector2 mousePosition) const {
+
+            import glui.utils : contains;
 
             return rect.contains(mousePosition);
 

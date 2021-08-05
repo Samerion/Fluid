@@ -12,6 +12,7 @@ public import
     glui.node,
     glui.onion_frame,
     glui.rich_label,
+    glui.space,
     glui.structs,
     glui.style,
     glui.text_input,
