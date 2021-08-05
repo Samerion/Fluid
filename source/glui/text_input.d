@@ -122,7 +122,7 @@ class GluiTextInput : GluiInput!GluiNode {
 
     }
 
-    protected override void keyboardImpl() {
+    protected override bool keyboardImpl() {
 
         import std.uni : isAlpha, isWhite;
         import std.range : back;
@@ -166,20 +166,17 @@ class GluiTextInput : GluiInput!GluiNode {
                 // Repeat only if requested to delete whole words
                 while (word);
 
-                break;
+                return true;
 
             }
 
             // Submit
             if (!multiline && IsKeyPressed(KeyboardKey.KEY_ENTER)) {
 
-                if (submitted) {
+                isFocused = false;
+                if (submitted) submitted();
 
-                    isFocused = false;
-                    submitted();
-
-                }
-                break;
+                return true;
 
             }
 
@@ -200,7 +197,18 @@ class GluiTextInput : GluiInput!GluiNode {
         value ~= input;
 
         // Trigger callback
-        if ((input.length || backspace) && changed) changed();
+        if ((input.length || backspace) && changed) {
+
+            changed();
+            return true;
+
+        }
+
+        // Even if nothing changed, user might have held the key for a while which this function probably wouldn't have
+        // caught, so we'd be returning false-positives all the time.
+        // The safest way is to just return true always, text input really is complex enough we can assume we did take
+        // any input there could be.
+        return true;
 
     }
 

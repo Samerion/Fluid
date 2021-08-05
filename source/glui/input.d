@@ -73,7 +73,9 @@ abstract class GluiInput(Parent : GluiNode) : Parent, GluiFocusable {
     /// Handle keyboard input.
     ///
     /// This will be called each frame as long as this node has focus.
-    protected abstract void keyboardImpl();
+    ///
+    /// Returns: True if the input was handled, false if not.
+    protected abstract bool keyboardImpl();
 
     /// Change the focus to this node.
     void focus() {

@@ -381,7 +381,7 @@ class GluiFilePicker : GluiInput!GluiFrame {
     }
 
     // Does nothing
-    protected override void keyboardImpl() {
+    protected override bool keyboardImpl() {
 
         assert(false, "FilePicker cannot directly have focus; call filePicker.focus to resolve automatically");
 

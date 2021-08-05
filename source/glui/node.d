@@ -194,7 +194,8 @@ abstract class GluiNode {
 
 
         // Pass keyboard input to the currently focused node
-        if (tree.focus) tree.focus.keyboardImpl();
+        if (tree.focus) tree.keyboardHandled = tree.focus.keyboardImpl();
+        else tree.keyboardHandled = false;
 
     }
 

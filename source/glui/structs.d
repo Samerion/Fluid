@@ -103,7 +103,7 @@ package interface GluiFocusable {
     void focus();
     bool isFocused() const;
     void mouseImpl();
-    void keyboardImpl();
+    bool keyboardImpl();
 
 }
 
@@ -118,5 +118,8 @@ struct LayoutTree {
 
     /// Currently focused node.
     GluiFocusable focus;
+
+    /// Check if keyboard input was handled once rendering is complete.
+    bool keyboardHandled;
 
 }
