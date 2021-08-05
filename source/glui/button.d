@@ -76,15 +76,18 @@ class GluiButton(T : GluiNode = GluiLabel) : GluiInput!T {
     }
 
     /// Handle keyboard input.
-    protected override void keyboardImpl() {
+    protected override bool keyboardImpl() {
 
         // Pressed enter
-        if (IsKeyPressed(KeyboardKey.KEY_ENTER)) {
+        if (IsKeyReleased(KeyboardKey.KEY_ENTER)) {
 
             isPressed = true;
             pressed();
+            return true;
 
         }
+
+        return IsKeyDown(KeyboardKey.KEY_ENTER);
 
     }
 

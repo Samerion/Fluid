@@ -35,6 +35,12 @@ class GluiHoverButton(T) : GluiButton!T {
 
     }
 
+    protected override bool keyboardImpl() {
+
+        return false;
+
+    }
+
 }
 
 // TODO Needs an example
