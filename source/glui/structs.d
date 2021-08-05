@@ -84,7 +84,7 @@ struct Layout {
 
     /// Fraction of available space this node should occupy in the node direction.
     ///
-    /// If set to `0`, the node doesn't have a strict size limit and has size based on children.
+    /// If set to `0`, the node doesn't have a strict size limit and has size based on content.
     uint expand;
 
     /// Align the content box to a side of the occupied space.
@@ -98,9 +98,12 @@ enum NodeAlign {
 
 }
 
-interface GluiFocusable {
+package interface GluiFocusable {
 
     void focus();
+    bool isFocused() const;
+    void mouseImpl();
+    bool keyboardImpl();
 
 }
 
@@ -110,7 +113,13 @@ struct LayoutTree {
     /// Root node of the tree.
     GluiNode root;
 
+    /// Top-most hovered node in the tree.
+    GluiNode hover;
+
     /// Currently focused node.
     GluiFocusable focus;
+
+    /// Check if keyboard input was handled once rendering is complete.
+    bool keyboardHandled;
 
 }

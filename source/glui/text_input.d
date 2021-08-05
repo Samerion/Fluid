@@ -26,6 +26,7 @@ class GluiTextInput : GluiInput!GluiNode {
     mixin DefineStyles!(
         "emptyStyle", q{ style },
     );
+    mixin ImplHoveredRect;
 
     /// Time in seconds before the cursor toggles visibility.
     static immutable float blinkTime = 1;
@@ -59,7 +60,7 @@ class GluiTextInput : GluiInput!GluiNode {
 
     }
 
-    override void resizeImpl(Vector2 area) {
+    protected override void resizeImpl(Vector2 area) {
 
         import std.algorithm : max;
 
@@ -76,19 +77,7 @@ class GluiTextInput : GluiInput!GluiNode {
 
     }
 
-    override void drawImpl(Rectangle rect) {
-
-        const hovered = rect.contains(GetMousePosition);
-
-        // Update status
-        if (IsMouseButtonDown(MouseButton.MOUSE_LEFT_BUTTON)) {
-
-            isFocused = hovered;
-
-        }
-
-        // Box has focus — take input
-        if (isFocused) takeInput();
+    protected override void drawImpl(Rectangle rect) {
 
         auto style = pickStyle();
 
@@ -121,7 +110,19 @@ class GluiTextInput : GluiInput!GluiNode {
 
     }
 
-    private void takeInput() {
+    // Do nothing, we take mouse focus while drawing.
+    protected override void mouseImpl() {
+
+        // Update status
+        if (IsMouseButtonDown(MouseButton.MOUSE_LEFT_BUTTON)) {
+
+            isFocused = true;
+
+        }
+
+    }
+
+    protected override bool keyboardImpl() {
 
         import std.uni : isAlpha, isWhite;
         import std.range : back;
@@ -165,15 +166,17 @@ class GluiTextInput : GluiInput!GluiNode {
                 // Repeat only if requested to delete whole words
                 while (word);
 
-                break;
+                return true;
 
             }
 
             // Submit
             if (!multiline && IsKeyPressed(KeyboardKey.KEY_ENTER)) {
 
+                isFocused = false;
                 if (submitted) submitted();
-                break;
+
+                return true;
 
             }
 
@@ -194,7 +197,18 @@ class GluiTextInput : GluiInput!GluiNode {
         value ~= input;
 
         // Trigger callback
-        if ((input.length || backspace) && changed) changed();
+        if ((input.length || backspace) && changed) {
+
+            changed();
+            return true;
+
+        }
+
+        // Even if nothing changed, user might have held the key for a while which this function probably wouldn't have
+        // caught, so we'd be returning false-positives all the time.
+        // The safest way is to just return true always, text input really is complex enough we can assume we did take
+        // any input there could be.
+        return true;
 
     }
 
