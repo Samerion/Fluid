@@ -18,7 +18,7 @@ import glui.style;
 /// )
 abstract class GluiInput(Parent : GluiNode) : Parent, GluiFocusable {
 
-    /// Style property is present
+    // Style property is present
     static if (__traits(hasMember, typeof(this), "style")) {
 
         // Leave it original
@@ -64,6 +64,19 @@ abstract class GluiInput(Parent : GluiNode) : Parent, GluiFocusable {
 
     }
 
+    /// Handle mouse input.
+    ///
+    /// Only one node can run its `inputImpl` callback per frame, specifically, the last one to register its input.
+    /// This is to prevent parents or overlapping children to take input when another node is drawn on them.
+    protected abstract void mouseImpl();
+
+    /// Handle keyboard input.
+    ///
+    /// This will be called each frame as long as this node has focus.
+    ///
+    /// Returns: True if the input was handled, false if not.
+    protected abstract bool keyboardImpl();
+
     /// Change the focus to this node.
     void focus() {
 
@@ -71,20 +84,24 @@ abstract class GluiInput(Parent : GluiNode) : Parent, GluiFocusable {
 
     }
 
-    /// Check if the node has focus.
-    bool isFocused() const {
+    @property {
 
-        return tree.focus is this;
+        /// Check if the node has focus.
+        bool isFocused() const {
 
-    }
+            return tree.focus is this;
 
-    /// Set or remove focus from this node.
-    bool isFocused(bool enable) {
+        }
 
-        if (enable) focus();
-        else if (isFocused) tree.focus = null;
+        /// Set or remove focus from this node.
+        bool isFocused(bool enable) {
 
-        return enable;
+            if (enable) focus();
+            else if (isFocused) tree.focus = null;
+
+            return enable;
+
+        }
 
     }
 

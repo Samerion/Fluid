@@ -4,6 +4,8 @@ module glui.style;
 import raylib;
 import std.string;
 
+import glui.utils;
+
 /// Node theme.
 alias Theme = Style[immutable(StyleKey)*];
 
@@ -51,6 +53,16 @@ class Style {
 
         /// Background color of the node.
         Color backgroundColor;
+
+    }
+
+    // Misc
+    struct {
+
+        /// Cursor icon to use while this node is hovered.
+        ///
+        /// Custom image cursors are not supported yet.
+        MouseCursor mouseCursor;
 
     }
 

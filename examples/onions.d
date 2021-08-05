@@ -27,6 +27,9 @@ void main() {
         &GluiFrame.styleKey: style!q{
             backgroundColor = Color(0x12, 0xc0, 0x12, 0xff);
         },
+        &GluiButton!GluiLabel.hoverStyleKey: style!q{
+            mouseCursor = MouseCursor.MOUSE_CURSOR_POINTING_HAND;
+        },
     ];
     auto whiteTheme = [
         &GluiFrame.styleKey: style!q{
@@ -39,6 +42,7 @@ void main() {
 
     GluiFilePicker picker;
     GluiLabel fileStatus;
+    GluiButton!() unrelatedButton;
 
     auto root = onionFrame(
         theme,
@@ -56,7 +60,9 @@ void main() {
                 label("Green background!"),
 
                 fileStatus = label("Press the text below..."),
-                button("Trigger the file picker", () { picker.show(); }),
+                button("Trigger the file picker", { picker.show(); }),
+
+                unrelatedButton = button("An unrelated button", { unrelatedButton.text = "Huh?"; }),
             ),
         ),
         picker = filePicker(whiteTheme, "Pick a file...",
@@ -73,7 +79,6 @@ void main() {
 
         BeginDrawing();
 
-            SetMouseCursor(MouseCursor.MOUSE_CURSOR_DEFAULT);
             ClearBackground(Colors.BLACK);
             root.draw();
 

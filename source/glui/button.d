@@ -30,16 +30,12 @@ class GluiButton(T : GluiNode = GluiLabel) : GluiInput!T {
 
     /// Mouse button to trigger the button.
     private static immutable triggerButton = MouseButton.MOUSE_LEFT_BUTTON;
-    // TODO left handed support?
 
     /// Callback to run when the button is pressed.
     alias pressed = submitted;
 
     // Button status
     struct {
-
-        /// If true, this button is currently being hovered.
-        bool isHovered;
 
         // If true, this button is currenly down.
         bool isPressed;
@@ -58,55 +54,54 @@ class GluiButton(T : GluiNode = GluiLabel) : GluiInput!T {
 
     protected override void drawImpl(Rectangle area) {
 
-        // Update status
-        isHovered = area.contains(GetMousePosition);
-        isPressed = isHovered && IsMouseButtonDown(triggerButton);
-        // TODO: Keyboard support
-
-        handleInput();
-
+        // Draw the button
         super.drawImpl(area);
+
+        // Reset pressed status
+        isPressed = false;
 
     }
 
-    /// Handle button input. By default, this will call the `pressed` delegate if the button is pressed.
-    protected void handleInput() {
+    /// Handle mouse input. By default, this will call the `pressed` delegate if the button is pressed.
+    protected override void mouseImpl() {
 
-        // Handle events
-        if (isHovered && IsMouseButtonReleased(triggerButton)) {
+        // Just released
+        if (IsMouseButtonReleased(triggerButton)) {
 
-            // Call the delegate
+            isPressed = true;
             pressed();
 
         }
 
     }
 
-    /// Pick the style.
-    protected override const(Style) pickStyle() const {
+    /// Handle keyboard input.
+    protected override bool keyboardImpl() {
 
-        const(Style)* result;
+        // Pressed enter
+        if (IsKeyReleased(KeyboardKey.KEY_ENTER)) {
 
-        // If hovered
-        if (isHovered) {
-
-            // Set cursor
-            SetMouseCursor(MouseCursor.MOUSE_CURSOR_POINTING_HAND);
-
-            // Use the style
-            result = &hoverStyle;
+            isPressed = true;
+            pressed();
+            return true;
 
         }
 
+        return IsKeyDown(KeyboardKey.KEY_ENTER);
+
+    }
+
+    /// Pick the style.
+    protected override const(Style) pickStyle() const {
+
+        // If hovered
+        if (hovered) return hoverStyle;
+
         // If pressed — override hover
-        if (isPressed) result = &pressStyle;
-
-
-        // Return the result
-        if (result) return *result;
+        if (isPressed) return pressStyle;
 
         // No decision — normal state
-        else return super.pickStyle();
+        return super.pickStyle();
 
     }
 
