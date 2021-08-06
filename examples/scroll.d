@@ -14,7 +14,7 @@ void main() {
     scope (exit) CloseWindow();
 
     Theme theme = [
-        &GluiFrame.styleKey: style!q{ backgroundColor = Colors.WHITE; },
+        &GluiFrame.styleKey: style!q{ },
     ];
     Theme theme2 = [
         &GluiFrame.styleKey: style!q{ backgroundColor = Colors.RED; },
@@ -30,7 +30,7 @@ void main() {
             label("bar"),
             label("Lorem\nipsum\ndolor\nsit\namet,\nconsectetur\nadipiscing\nelit"),
         ),
-        vspace(
+        scrollFrame(
             .layout!1,
             label("Lorem\nipsum\ndolor\nsit\namet,\nconsectetur\nadipiscing\nelit"),
         ),
@@ -40,12 +40,8 @@ void main() {
 
         BeginDrawing();
 
-            BeginScissorMode(0, 0, 50, 50);
-
-                ClearBackground(Colors.BLACK);
-                root.draw();
-
-            EndScissorMode();
+            ClearBackground(Colors.WHITE);
+            root.draw();
 
         EndDrawing();
 
