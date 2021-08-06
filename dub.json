@@ -7,51 +7,61 @@
 		"raylib-d": "~>3.0.3"
 	},
 	"description": "A simple UI library designed for IsodiTools and Samerion",
+	"libs": [
+		"raylib"
+	],
 	"license": "BSL",
 	"name": "glui",
-	"targetPath": "build",
-	"targetType": "library",
-	"libs": ["raylib"],
 	"subPackages": [
 		{
+			"dependencies": {
+				"glui": ">=0.0.0"
+			},
 			"name": "example-showcase",
-			"dependencies": {
-				"glui": "*"
-			},
+			"sourceFiles": [
+				"examples/showcase.d"
+			],
 			"sourcePaths": [],
-			"sourceFiles": ["examples/showcase.d"],
 			"targetPath": "build",
 			"targetType": "executable"
 		},
 		{
+			"dependencies": {
+				"glui": ">=0.0.0"
+			},
 			"name": "example-onions",
-			"dependencies": {
-				"glui": "*"
-			},
+			"sourceFiles": [
+				"examples/onions.d"
+			],
 			"sourcePaths": [],
-			"sourceFiles": ["examples/onions.d"],
 			"targetPath": "build",
 			"targetType": "executable"
 		},
 		{
+			"dependencies": {
+				"glui": ">=0.0.0"
+			},
 			"name": "example-checks",
-			"dependencies": {
-				"glui": "*"
-			},
+			"sourceFiles": [
+				"examples/checks.d"
+			],
 			"sourcePaths": [],
-			"sourceFiles": ["examples/checks.d"],
 			"targetPath": "build",
 			"targetType": "executable"
 		},
 		{
-			"name": "example-scroll",
 			"dependencies": {
-				"glui": "*"
+				"glui": ">=0.0.0"
 			},
+			"name": "example-scroll",
+			"sourceFiles": [
+				"examples/scroll.d"
+			],
 			"sourcePaths": [],
-			"sourceFiles": ["examples/scroll.d"],
 			"targetPath": "build",
 			"targetType": "executable"
 		}
-	]
+	],
+	"targetPath": "build",
+	"targetType": "library"
 }
