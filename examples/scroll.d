@@ -32,6 +32,7 @@ void main() {
         ),
         scrollFrame(
             .layout!1,
+            label("foo"),
             label("Lorem\nipsum\ndolor\nsit\namet,\nconsectetur\nadipiscing\nelit"),
         ),
     );

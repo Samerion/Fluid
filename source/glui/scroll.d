@@ -74,19 +74,32 @@ class GluiScrollable(T : GluiFrame) : GluiInput!T {
         const float move = -GetMouseWheelMove;
         const float totalChange = move * scrollSpeed;
 
-        scroll = clamp(scroll + totalChange, 0, scrollMax).to!ptrdiff_t;
+        setScroll(scroll.to!ptrdiff_t + totalChange.to!ptrdiff_t);
 
     }
 
     override protected void mouseImpl() {
 
-        // Empty; a child might've caught the input
+        // We're scrolling on draw because a child might've caught the input
+        // For now we just focus
+        focus();
 
     }
 
     override protected bool keyboardImpl() {
 
-        return false;
+        const arrowSpeed = scrollSpeed / 3.0;
+        const pageSpeed = actualSize.to!double * 3/4;
+
+        const move = IsKeyPressed(KeyboardKey.KEY_PAGE_DOWN) ? +pageSpeed
+            : IsKeyPressed(KeyboardKey.KEY_PAGE_UP) ? -pageSpeed
+            : IsKeyDown(KeyboardKey.KEY_DOWN) ? +arrowSpeed
+            : IsKeyDown(KeyboardKey.KEY_UP) ? -arrowSpeed
+            : 0;
+
+        setScroll(scroll.to!ptrdiff_t + move.to!ptrdiff_t);
+
+        return move != 0;
 
     }
 
@@ -101,6 +114,13 @@ class GluiScrollable(T : GluiFrame) : GluiInput!T {
     void scrollEnd() {
 
         scroll = scrollMax;
+
+    }
+
+    /// Set the scroll to a value clamped between start and end.
+    void setScroll(ptrdiff_t value) {
+
+        scroll = clamp(value, 0, scrollMax);
 
     }
 
