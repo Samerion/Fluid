@@ -120,7 +120,7 @@ struct LayoutTree {
     /// Currently focused node.
     GluiFocusable focus;
 
-    /// Check if keyboard input was handled once rendering is complete.
+    /// Check if keyboard input was handled after rendering is has completed.
     bool keyboardHandled;
 
     /// Scissors stack.
