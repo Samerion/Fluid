@@ -224,12 +224,15 @@ abstract class GluiNode {
         _hovered = hoveredImpl(rectangle, GetMousePosition);
         if (_hovered) tree.hover = this;
 
+        tree.pushScissors(rectangle);
+        scope (exit) tree.popScissors();
+
         // Draw the node
         drawImpl(rectangle);
 
     }
 
-    /// Recalculate the minumum node size and update the `minSize` property.
+    /// Recalculate the minimum node size and update the `minSize` property.
     /// Params:
     ///     space = Available space.
     protected final void resize(Vector2 space) {

@@ -1,6 +1,7 @@
 ///
 module glui.structs;
 
+import raylib;
 import std.conv;
 import glui.node;
 
@@ -121,5 +122,60 @@ struct LayoutTree {
 
     /// Check if keyboard input was handled once rendering is complete.
     bool keyboardHandled;
+
+    /// Scissors stack.
+    package Rectangle[] scissors;
+
+    /// Start scissors mode.
+    void pushScissors(Rectangle rect) {
+
+        import std.algorithm : min, max;
+
+        auto result = rect;
+
+        // There's already something on the stack
+        if (scissors.length) {
+
+            const b = scissors[$-1];
+
+            // Intersect
+            result.x = max(rect.x, b.x);
+            result.y = max(rect.y, b.y);
+            result.w = min(rect.x + rect.w, b.x + b.w) - result.x;
+            result.h = min(rect.y + rect.h, b.y + b.h) - result.y;
+
+        }
+
+        // Push to the stack
+        scissors ~= result;
+
+        // Start the mode
+        applyScissors(result);
+
+    }
+
+    void popScissors() {
+
+        // Pop the stack
+        scissors = scissors[0 .. $-1];
+
+        // There's still something left
+        if (scissors.length) {
+
+            // Start again
+            applyScissors(scissors[$-1]);
+
+        }
+
+        // Nope, end
+        else EndScissorMode();
+
+    }
+
+    private void applyScissors(Rectangle rect) {
+
+        BeginScissorMode(rect.x.to!int, rect.y.to!int, rect.w.to!int, rect.h.to!int);
+
+    }
 
 }
