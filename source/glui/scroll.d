@@ -10,96 +10,61 @@ import glui.frame;
 import glui.space;
 import glui.utils;
 import glui.input;
+import glui.scrollbar;
 
 private extern(C) float GetMouseWheelMove();
 
-alias scrollFrame = simpleConstructor!(GluiScrollable!GluiFrame);
+alias vscrollFrame = simpleConstructor!(GluiScrollable!GluiFrame);
+
+GluiScrollable!GluiFrame hscrollFrame(Args...)(Args args) {
+
+    auto scroll = vscrollFrame(args);
+    scroll.directionHorizontal = true;
+    return scroll;
+
+}
 
 /// Implement scrolling for the given frame.
 ///
 /// This only supports scrolling in one side.
 class GluiScrollable(T : GluiFrame) : GluiInput!T {
 
-    /// Multipler of the scroll speed.
-    enum scrollSpeed = 15.0;
+    // TODO: move keyboard input to GluiScrollBar.
 
-    /// Actual size of the node, determined by drawImpl.
-    private size_t actualSize;
+    public {
 
-    /// Amount of pixels the node is scrolled in the space direction.
-    size_t scroll;
+        /// Scrollbar for the frame. Can be replaced with a customzed one.
+        GluiScrollBar scrollBar;
+
+    }
+
+    private {
+
+        /// Actual size of the node, determined by drawImpl.
+        size_t actualSize;
+
+    }
 
     this(T...)(T args) {
 
         super(args);
+        this.scrollBar = .vscrollBar();
 
     }
 
-    override void drawImpl(Rectangle rect) {
+    @property {
 
-        // Note: mouse input detection is primitive, awaiting #13 and #14 to help better identify when should the mouse
-        // affect this frame.
+        size_t scroll() const {
 
-        // Scroll the given rectangle horizontally
-        if (directionHorizontal) {
-
-            actualSize = cast(size_t) rect.x;
-
-            if (hovered) inputImpl();
-
-            rect.x -= scroll;
-            rect.w = minSize.x;
+            return scrollBar.position;
 
         }
 
-        // Vertically
-        else {
+        size_t scroll(size_t value) {
 
-            actualSize = cast(size_t) rect.y;
-
-            if (hovered) inputImpl();
-
-            rect.y -= scroll;
-            rect.h = minSize.y;
+            return scrollBar.position = value;
 
         }
-
-        super.drawImpl(rect);
-
-    }
-
-    /// Actual implementation of mouse input
-    private void inputImpl() {
-
-        const float move = -GetMouseWheelMove;
-        const float totalChange = move * scrollSpeed;
-
-        setScroll(scroll.to!ptrdiff_t + totalChange.to!ptrdiff_t);
-
-    }
-
-    override protected void mouseImpl() {
-
-        // We're scrolling on draw because a child might've caught the input
-        // For now we just focus
-        focus();
-
-    }
-
-    override protected bool keyboardImpl() {
-
-        const arrowSpeed = scrollSpeed / 3.0;
-        const pageSpeed = actualSize.to!double * 3/4;
-
-        const move = IsKeyPressed(KeyboardKey.KEY_PAGE_DOWN) ? +pageSpeed
-            : IsKeyPressed(KeyboardKey.KEY_PAGE_UP) ? -pageSpeed
-            : IsKeyDown(KeyboardKey.KEY_DOWN) ? +arrowSpeed
-            : IsKeyDown(KeyboardKey.KEY_UP) ? -arrowSpeed
-            : 0;
-
-        setScroll(scroll.to!ptrdiff_t + move.to!ptrdiff_t);
-
-        return move != 0;
 
     }
 
@@ -120,16 +85,117 @@ class GluiScrollable(T : GluiFrame) : GluiInput!T {
     /// Set the scroll to a value clamped between start and end.
     void setScroll(ptrdiff_t value) {
 
-        scroll = clamp(value, 0, scrollMax);
+        scrollBar.setScroll(value);
 
     }
 
     /// Get the maximum value this container can be scrolled to. Requires at least one draw.
     size_t scrollMax() const {
 
-        const fullSize = directionHorizontal ? minSize.x : minSize.y;
+        return scrollBar.scrollMax();
 
-        return max(0, fullSize.to!ptrdiff_t - actualSize.to!ptrdiff_t).to!size_t;
+    }
+
+    override void resizeImpl(Vector2 space) {
+
+        assert(scrollBar !is null);
+        assert(theme !is null);
+        assert(tree !is null);
+
+        // Resize the scrollbar
+        scrollBar.tree = tree;
+        scrollBar.theme = theme;
+        scrollBar.resize(space);
+
+        // Get the size
+        super.resizeImpl(space);
+
+        if (directionHorizontal) {
+
+            scrollBar.availableSpace = cast(size_t) minSize.x;
+            minSize.y += scrollBar.minSize.y;
+
+        }
+
+        else {
+
+            scrollBar.availableSpace = cast(size_t) minSize.y;
+            minSize.x += scrollBar.minSize.x;
+
+        }
+
+    }
+
+    override void drawImpl(Rectangle rect) {
+
+        // Note: mouse input detection is primitive, awaiting #13 and #14 to help better identify when should the mouse
+        // affect this frame.
+
+        scrollBar.horizontal = directionHorizontal;
+
+        auto scrollBarRect = rect;
+
+        // Scroll the given rectangle horizontally
+        if (directionHorizontal) {
+
+            actualSize = cast(size_t) rect.x;
+
+            if (hovered) inputImpl();
+
+            rect.x -= scroll;
+            rect.width = minSize.x;
+            rect.height -= scrollBar.minSize.y;
+
+            scrollBarRect.y += rect.height;
+            scrollBarRect.height = scrollBar.minSize.y;
+
+        }
+
+        // Vertically
+        else {
+
+            actualSize = cast(size_t) rect.y;
+
+            if (hovered) inputImpl();
+
+            rect.y -= scroll;
+            rect.width -= scrollBar.minSize.x;
+            rect.height = minSize.y;
+
+            scrollBarRect.x += rect.width;
+            scrollBarRect.width = scrollBar.minSize.x;
+
+        }
+
+        // Draw the scrollbar
+        scrollBar.draw(scrollBarRect);
+
+        // Draw the frame
+        super.drawImpl(rect);
+
+    }
+
+    /// Actual implementation of mouse input
+    private void inputImpl() {
+
+        const float move = -GetMouseWheelMove;
+        const float totalChange = move * scrollBar.scrollSpeed;
+
+        scrollBar.setScroll(scroll.to!ptrdiff_t + totalChange.to!ptrdiff_t);
+
+    }
+
+    override protected void mouseImpl() {
+
+        // We're scrolling on draw because a child might've caught the input
+        // For now we just focus
+        focus();
+
+    }
+
+    override protected bool keyboardImpl() {
+
+        return false;
 
     }
 

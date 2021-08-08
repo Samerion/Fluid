@@ -274,6 +274,8 @@ abstract class GluiNode {
 
     protected mixin template ImplHoveredRect() {
 
+        private import raylib : Rectangle, Vector2;
+
         protected override bool hoveredImpl(Rectangle rect, Vector2 mousePosition) const {
 
             import glui.utils : contains;
