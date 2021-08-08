@@ -8,34 +8,62 @@ void main() {
 
     SetConfigFlags(ConfigFlag.FLAG_WINDOW_RESIZABLE);
     SetTraceLogLevel(TraceLogType.LOG_WARNING);
-    InitWindow(300, 300, "Scrolling example");
+    InitWindow(600, 300, "Scrolling example");
     SetTargetFPS(60);
     SetExitKey(0);
     scope (exit) CloseWindow();
 
     Theme theme = [
         &GluiFrame.styleKey: style!q{ },
+
+        &GluiScrollBar.backgroundStyleKey: style!q{
+            backgroundColor = Color(0xee, 0xee, 0xee, 0xff);
+        },
+        &GluiScrollBar.styleKey: style!q{
+            backgroundColor = Color(0xaa, 0xaa, 0xaa, 0xff);
+        },
+        &GluiScrollBar.hoverStyleKey: style!q{
+            backgroundColor = Color(0x88, 0x88, 0x88, 0xff);
+        },
+        &GluiScrollBar.focusStyleKey: style!q{
+            backgroundColor = Color(0x77, 0x77, 0x77, 0xff);
+        },
+        &GluiScrollBar.pressStyleKey: style!q{
+            backgroundColor = Color(0x55, 0x55, 0x55, 0xff);
+        }
     ];
     Theme theme2 = [
         &GluiFrame.styleKey: style!q{ backgroundColor = Colors.RED; },
     ];
 
-    auto root = vframe(
+    GluiScrollBar myScrollBar;
+
+    auto root = hframe(
         theme,
         .layout!(1, "fill"),
+        vspace(
+            .layout!("fill"),
+            vframe(
+                .layout!(1, "fill"),
+                theme2,
+                label("foo"),
+                label("bar"),
+                label("Lorem\nipsum\ndolor\nsit\namet,\nconsectetur\nadipiscing\nelit"),
+            ),
+            vscrollFrame(
+                .layout!(1, "fill"),
+                label("foo"),
+                label("Lorem\nipsum\ndolor\nsit\namet,\nconsectetur\nadipiscing\nelit"),
+            ),
+        ),
         vframe(
             .layout!1,
-            theme2,
-            label("foo"),
-            label("bar"),
-            label("Lorem\nipsum\ndolor\nsit\namet,\nconsectetur\nadipiscing\nelit"),
-        ),
-        scrollFrame(
-            .layout!1,
-            label("foo"),
-            label("Lorem\nipsum\ndolor\nsit\namet,\nconsectetur\nadipiscing\nelit"),
-        ),
+            label("A useless scrollbar:"),
+            myScrollBar = hscrollBar(.layout!"fill"),
+        )
     );
+
+    myScrollBar.availableSpace = 5_000;
 
     while (!WindowShouldClose) {
 
