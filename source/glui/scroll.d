@@ -27,7 +27,7 @@ GluiScrollable!GluiFrame hscrollFrame(Args...)(Args args) {
 /// Implement scrolling for the given frame.
 ///
 /// This only supports scrolling in one side.
-class GluiScrollable(T : GluiFrame) : GluiInput!T {
+class GluiScrollable(T : GluiFrame) : T {
 
     // TODO: move keyboard input to GluiScrollBar.
 
@@ -128,8 +128,12 @@ class GluiScrollable(T : GluiFrame) : GluiInput!T {
 
     override void drawImpl(Rectangle rect) {
 
-        // Note: mouse input detection is primitive, awaiting #13 and #14 to help better identify when should the mouse
+        // Note: Mouse input detection is primitive, awaiting #13 and #14 to help better identify when should the mouse
         // affect this frame.
+
+        // This node doesn't use GluiInput because it doesn't take focus, and we don't want to cause related
+        // accessbility issues. It can function perfectly without it, or at least until above note gets fixed.
+        // Then, a "GluiHoverable" interface could possibly become a thing.
 
         scrollBar.horizontal = directionHorizontal;
 
@@ -175,27 +179,13 @@ class GluiScrollable(T : GluiFrame) : GluiInput!T {
 
     }
 
-    /// Actual implementation of mouse input
+    /// Implementation of mouse input
     private void inputImpl() {
 
         const float move = -GetMouseWheelMove;
         const float totalChange = move * scrollBar.scrollSpeed;
 
         scrollBar.setScroll(scroll.to!ptrdiff_t + totalChange.to!ptrdiff_t);
-
-    }
-
-    override protected void mouseImpl() {
-
-        // We're scrolling on draw because a child might've caught the input
-        // For now we just focus
-        focus();
-
-    }
-
-    override protected bool keyboardImpl() {
-
-        return false;
 
     }
 

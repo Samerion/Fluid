@@ -73,6 +73,9 @@ class GluiScrollBar : GluiInput!GluiNode {
         /// Position where the mouse grabbed the scrollbar.
         Vector2 grabPosition;
 
+        /// Start position of the mouse at the beginning of the grab.
+        size_t startPosition;
+
     }
 
     this(Args...)(Args args) {
@@ -182,6 +185,7 @@ class GluiScrollBar : GluiInput!GluiNode {
 
             // Remember the grab position
             grabPosition = GetMousePosition;
+            scope (exit) startPosition = position;
 
             // Didn't press the handle
             if (!innerHovered) {
@@ -208,10 +212,7 @@ class GluiScrollBar : GluiInput!GluiNode {
                 : mouse.y - grabPosition.y;
 
             // Move the scrollbar
-            setScroll(position + move * availableSpace / scrollbarLength);
-
-            // Update the position
-            grabPosition = mouse;
+            setScroll(startPosition + move * availableSpace / scrollbarLength);
 
         }
 

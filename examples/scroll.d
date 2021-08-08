@@ -16,6 +16,10 @@ void main() {
     Theme theme = [
         &GluiFrame.styleKey: style!q{ },
 
+        &GluiButton!GluiLabel.styleKey: style!q{
+            backgroundColor = Color(0xee, 0xee, 0xee, 0xff);
+        },
+
         &GluiScrollBar.backgroundStyleKey: style!q{
             backgroundColor = Color(0xee, 0xee, 0xee, 0xff);
         },
@@ -60,6 +64,12 @@ void main() {
             .layout!1,
             label("A useless scrollbar:"),
             myScrollBar = hscrollBar(.layout!"fill"),
+            label("..."), // margins are a must
+            button("Change scrollbar position", {
+
+                myScrollBar.position = !myScrollBar.position * myScrollBar.scrollMax;
+
+            }),
         )
     );
 
