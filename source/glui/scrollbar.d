@@ -64,6 +64,15 @@ class GluiScrollBar : GluiInput!GluiNode {
         /// Length of the scrollbar as determined in drawImpl.
         double scrollbarLength;
 
+        /// Length of the handle.
+        double handleLength;
+
+        /// Position of the scrollbar on the screen.
+        Vector2 scrollbarPosition;
+
+        /// Position where the mouse grabbed the scrollbar.
+        Vector2 grabPosition;
+
     }
 
     this(Args...)(Args args) {
@@ -74,6 +83,13 @@ class GluiScrollBar : GluiInput!GluiNode {
 
     /// Set the scroll to a value clamped between start and end.
     void setScroll(ptrdiff_t value) {
+
+        position = cast(size_t) value.clamp(0, scrollMax);
+
+    }
+
+    /// Ditto
+    void setScroll(float value) {
 
         position = cast(size_t) value.clamp(0, scrollMax);
 
@@ -101,12 +117,13 @@ class GluiScrollBar : GluiInput!GluiNode {
         backgroundStyle.drawBackground(rect);
 
         // Calculate the size of the scrollbar
+        scrollbarPosition = Vector2(rect.x, rect.y);
         scrollbarLength = horizontal ? rect.width : rect.height;
 
-        const size = availableSpace
+        handleLength = availableSpace
             ? max(50, scrollbarLength^^2 / availableSpace)
             : 0;
-        const handlePosition = (scrollbarLength - size) * position / scrollMax;
+        const handlePosition = (scrollbarLength - handleLength) * position / scrollMax;
 
         // Now get the size of the inner rect
         auto innerRect = rect;
@@ -114,14 +131,14 @@ class GluiScrollBar : GluiInput!GluiNode {
         if (horizontal) {
 
             innerRect.x += handlePosition;
-            innerRect.w  = size;
+            innerRect.w  = handleLength;
 
         }
 
         else {
 
             innerRect.y += handlePosition;
-            innerRect.h  = size;
+            innerRect.h  = handleLength;
 
         }
 
@@ -155,6 +172,49 @@ class GluiScrollBar : GluiInput!GluiNode {
 
     override protected void mouseImpl() {
 
+        const triggerButton = MouseButton.MOUSE_LEFT_BUTTON;
+
+        // Ignore if we can't scroll
+        if (availableSpace == 0) return;
+
+        // Pressed the scrollbar
+        if (IsMouseButtonPressed(triggerButton)) {
+
+            // Remember the grab position
+            grabPosition = GetMousePosition;
+
+            // Didn't press the handle
+            if (!innerHovered) {
+
+                // Get the position
+                const posdir = horizontal ? scrollbarPosition.x : scrollbarPosition.y;
+                const grabdir = horizontal ? grabPosition.x : grabPosition.y;
+                const screenPos = grabdir - posdir - handleLength/2;
+
+                // Move it to this position
+                setScroll(screenPos * availableSpace / scrollbarLength);
+
+            }
+
+        }
+
+        // Mouse is held down
+        else if (IsMouseButtonDown(triggerButton)) {
+
+            const mouse = GetMousePosition;
+
+            const float move = horizontal
+                ? mouse.x - grabPosition.x
+                : mouse.y - grabPosition.y;
+
+            // Move the scrollbar
+            setScroll(position + move * availableSpace / scrollbarLength);
+
+            // Update the position
+            grabPosition = mouse;
+
+        }
+
     }
 
     override protected bool keyboardImpl() {
@@ -177,7 +237,7 @@ class GluiScrollBar : GluiInput!GluiNode {
 
         if (move != 0) {
 
-            setScroll(cast(long) (position + move));
+            setScroll(position + move);
 
             if (changed) changed();
 
