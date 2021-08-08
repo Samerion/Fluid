@@ -14,9 +14,10 @@ import glui.scrollbar;
 
 private extern(C) float GetMouseWheelMove();
 
-alias vscrollFrame = simpleConstructor!(GluiScrollable!GluiFrame);
+alias GluiScrollFrame = GluiScrollable!GluiFrame;
+alias vscrollFrame = simpleConstructor!GluiScrollFrame;
 
-GluiScrollable!GluiFrame hscrollFrame(Args...)(Args args) {
+GluiScrollFrame hscrollFrame(Args...)(Args args) {
 
     auto scroll = vscrollFrame(args);
     scroll.directionHorizontal = true;

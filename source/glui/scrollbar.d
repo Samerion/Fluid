@@ -122,10 +122,10 @@ class GluiScrollBar : GluiInput!GluiNode {
         // Calculate the size of the scrollbar
         scrollbarPosition = Vector2(rect.x, rect.y);
         scrollbarLength = horizontal ? rect.width : rect.height;
-
         handleLength = availableSpace
             ? max(50, scrollbarLength^^2 / availableSpace)
             : 0;
+
         const handlePosition = (scrollbarLength - handleLength) * position / scrollMax;
 
         // Now get the size of the inner rect
