@@ -148,8 +148,9 @@ abstract class GluiNode {
 
         const space = Vector2(GetScreenWidth, GetScreenHeight);
 
-        // Clear input
-        tree.hover = null;
+        // Clear mouse hover if LMB is up
+        if (!isLMBHeld) tree.hover = null;
+
 
         // Resize if required
         if (IsWindowResized || _requiresResize) {
@@ -220,16 +221,21 @@ abstract class GluiNode {
             size.x,     size.y,
         );
 
-        // If hovered
+        // Check if hovered
         _hovered = hoveredImpl(rectangle, GetMousePosition);
-        if (_hovered) tree.hover = this;
+
+        // Update global hover unless mouse is being held down
+        if (_hovered && !isLMBHeld) tree.hover = this;
+
+        tree.pushScissors(rectangle);
+        scope (exit) tree.popScissors();
 
         // Draw the node
         drawImpl(rectangle);
 
     }
 
-    /// Recalculate the minumum node size and update the `minSize` property.
+    /// Recalculate the minimum node size and update the `minSize` property.
     /// Params:
     ///     space = Available space.
     protected final void resize(Vector2 space) {
@@ -271,6 +277,8 @@ abstract class GluiNode {
 
     protected mixin template ImplHoveredRect() {
 
+        private import raylib : Rectangle, Vector2;
+
         protected override bool hoveredImpl(Rectangle rect, Vector2 mousePosition) const {
 
             import glui.utils : contains;
@@ -309,6 +317,13 @@ abstract class GluiNode {
             space.x + positionImpl(layout.nodeAlign[0], space.width  - usedSpace.x),
             space.y + positionImpl(layout.nodeAlign[1], space.height - usedSpace.y),
         );
+
+    }
+
+    private bool isLMBHeld() {
+
+        const lmb = MouseButton.MOUSE_LEFT_BUTTON;
+        return IsMouseButtonDown(lmb) || IsMouseButtonReleased(lmb);
 
     }
 

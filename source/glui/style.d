@@ -183,6 +183,9 @@ mixin template DefineStyles(names...) {
 
         super.reloadStyles();
 
+        // I have no idea why is this foreach actually necessary. I tried removing it, but it breaks everything.
+        // The default value in the second foreach should be enough. It's not. Might as well try removing the other
+        // foreach and adding default value functionality here; probably a better option.
         static foreach (name; StyleKeys) {{
 
             if (auto style = &mixin(name) in theme) {

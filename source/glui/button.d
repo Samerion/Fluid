@@ -24,7 +24,6 @@ alias frameButton = simpleConstructor!(GluiButton!GluiFrame);
 class GluiButton(T : GluiNode = GluiLabel) : GluiInput!T {
 
     mixin DefineStyles!(
-        "hoverStyle", q{ style },
         "pressStyle", q{ hoverStyle },
     );
 
@@ -94,11 +93,14 @@ class GluiButton(T : GluiNode = GluiLabel) : GluiInput!T {
     /// Pick the style.
     protected override const(Style) pickStyle() const {
 
+        // If pressed
+        if (isPressed) return pressStyle;
+
+        // If focused
+        if (isFocused) return focusStyle;
+
         // If hovered
         if (hovered) return hoverStyle;
-
-        // If pressed — override hover
-        if (isPressed) return pressStyle;
 
         // No decision — normal state
         return super.pickStyle();

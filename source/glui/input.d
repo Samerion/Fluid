@@ -24,6 +24,7 @@ abstract class GluiInput(Parent : GluiNode) : Parent, GluiFocusable {
         // Leave it original
         mixin DefineStyles!(
             "focusStyle", q{ style },
+            "hoverStyle", q{ style },
             "disabledStyle", q{ style },
         );
 
@@ -33,6 +34,7 @@ abstract class GluiInput(Parent : GluiNode) : Parent, GluiFocusable {
     else mixin DefineStyles!(
         "style", q{ Style.init },
         "focusStyle", q{ style },
+        "hoverStyle", q{ style },
         "disabledStyle", q{ style },
     );
 
@@ -59,6 +61,9 @@ abstract class GluiInput(Parent : GluiNode) : Parent, GluiFocusable {
         // Focused
         else if (isFocused) return focusStyle;
 
+        // Hovered
+        else if (hovered) return hoverStyle;
+
         // Other
         else return style;
 
@@ -84,6 +89,7 @@ abstract class GluiInput(Parent : GluiNode) : Parent, GluiFocusable {
 
     }
 
+    // TODO Rename back to "focused"
     @property {
 
         /// Check if the node has focus.
