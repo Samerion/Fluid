@@ -108,6 +108,10 @@ class GluiScrollable(T : GluiFrame) : T {
         scrollBar.theme = theme;
         scrollBar.resize(space);
 
+        // Update available space
+        space.x = max(0, space.x - scrollBar.minSize.x);
+        space.y = max(0, space.y - scrollBar.minSize.y);
+
         // Get the size
         super.resizeImpl(space);
 
