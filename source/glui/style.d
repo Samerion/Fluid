@@ -3,6 +3,7 @@ module glui.style;
 
 import raylib;
 
+import std.math;
 import std.range;
 import std.string;
 import std.typecons;
@@ -141,20 +142,20 @@ class Style {
     void drawText(Rectangle rect, string text) const {
 
         // Text position from top, relative to given rect
-        double top = 0;
+        size_t top;
 
         const totalLineHeight = fontSize * lineHeight;
 
         // Draw each line
         foreach (line; wrapText(rect.width, text, false)) {
 
-            scope (success) top += lineHeight * fontSize;
+            scope (success) top += cast(size_t) ceil(lineHeight * fontSize);
 
             // Stop if drawing below rect
             if (top > rect.height) break;
 
             // Text position from left
-            double left = 0;
+            size_t left;
 
             const margin = (totalLineHeight - fontSize)/2;
 
@@ -165,7 +166,7 @@ class Style {
                 DrawTextEx(cast() font, word.text.toStringz, position, fontSize,
                     fontSize * charSpacing, textColor);
 
-                left += word.width + fontSize * wordSpacing;
+                left += cast(size_t) ceil(word.width + fontSize * wordSpacing);
 
             }
 
@@ -181,7 +182,7 @@ class Style {
     ///     lineFeedsOnly = If true, this should only wrap the text on line feeds.
     TextLine[] wrapText(double width, string text, bool lineFeedsOnly) const {
 
-        const spaceSize = fontSize * wordSpacing;
+        const spaceSize = cast(size_t) ceil(fontSize * wordSpacing);
 
         auto result = [TextLine()];
 
@@ -201,7 +202,7 @@ class Style {
         foreach (chunk; whitespaceSplit.chunks(2)) {
 
             const wordText = chunk.front;
-            const size = wordWidth(wordText);
+            const size = cast(size_t) wordWidth(wordText).ceil;
 
             chunk.popFront;
             const feed = chunk.empty
@@ -277,7 +278,7 @@ struct TextLine {
     struct Word {
 
         string text;
-        float width;
+        size_t width;
         bool lineFeed;  // Word is followed by a line feed.
 
     }
@@ -286,7 +287,7 @@ struct TextLine {
     Word[] words;
 
     /// Width of the line (including spaces).
-    float width = 0;
+    size_t width = 0;
 
 }
 
