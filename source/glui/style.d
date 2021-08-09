@@ -2,7 +2,11 @@
 module glui.style;
 
 import raylib;
+
+import std.range;
 import std.string;
+import std.typecons;
+import std.algorithm;
 
 import glui.utils;
 
@@ -36,13 +40,20 @@ class Style {
         /// Font size (height) in pixels.
         float fontSize = 24;
 
+        /// Line height, as a fraction of `fontSize`.
+        float lineHeight = 1.2;
+
         /// Space between characters, relative to font size.
         float charSpacing = 0.1;
+
+        /// Space between words, relative to the font size.
+        float wordSpacing = 0.5;
 
         /// Text color.
         Color textColor = Colors.BLACK;
 
         /// If true, text will be wrapped. Requires align=fill on height.
+        deprecated("textWrap is always enabled and has no effect.")
         bool textWrap = true;
         // TODO for other aligns
 
@@ -94,8 +105,12 @@ class Style {
     ///     text           = Text to draw.
     Vector2 measureText(Vector2 availableSpace, string text) const {
 
-        auto res = MeasureTextEx(cast() font, text.toStringz, fontSize, fontSize * charSpacing);
-        return Vector2(res.x + fontSize * charSpacing * 2, res.y);
+        auto wrapped = wrapText(availableSpace.x, text);
+
+        return Vector2(
+            wrapped.map!"a.width".maxElement,
+            wrapped.length * fontSize * lineHeight,
+        );
 
     }
 
@@ -120,10 +135,114 @@ class Style {
     /// Draw text using the params
     void drawText(Rectangle rect, string text) const {
 
-        DrawTextRec(cast() font, text.toStringz, rect, fontSize, fontSize * charSpacing, textWrap, textColor);
-        // Note: I doubt DrawTextRec has any side-effects on the font.
-        // Most likely it isn't const because the keyword isn't transistive in C, so it wouldn't affect the parameter.
-        // It does in D, because the struct contains pointers.
+        // Text position from top, relative to given rect
+        double top = 0;
+
+        // Draw each line
+        foreach (line; wrapText(rect.width, text)) {
+
+            scope (success) top += fontSize * lineHeight;
+
+            // Stop if drawing below rect
+            if (top > rect.height) break;
+
+            // Text position from left
+            double left = 0;
+
+            foreach (word; line.words) {
+
+                DrawTextEx(cast() font, word.text.toStringz, Vector2(rect.x + left, rect.y + top), fontSize,
+                    fontSize * charSpacing, textColor);
+
+                left += word.width + fontSize * wordSpacing;
+
+            }
+
+        }
+
+    }
+
+    /// Split the text into multiple lines in order to fit within given width.
+    TextLine[] wrapText(double width, string text) const {
+
+        const spaceSize = fontSize * wordSpacing;
+
+        auto result = [TextLine()];
+
+        /// Get width of the given word.
+        float wordWidth(string wordText) {
+
+            return MeasureTextEx(cast() font, wordText.toStringz, fontSize, fontSize * charSpacing).x;
+
+        }
+
+        TextLine.Word[] words;
+
+        auto whitespaceSplit = text[]
+            .splitter!((a, string b) => [' ', '\n'].canFind(a), Yes.keepSeparators)(" ");
+
+        // Pass 1: split on words, calculate minimum size
+        foreach (chunk; whitespaceSplit.chunks(2)) {
+
+            const wordText = chunk.front;
+            const size = wordWidth(wordText);
+
+            chunk.popFront;
+            const feed = chunk.empty
+                ? false
+                : chunk.front == "\n";
+
+            // Push the word
+            words ~= TextLine.Word(wordText, size, feed);
+
+            // Update minimum size
+            if (size > width) width = size;
+
+        }
+
+        // Pass 2: calculate total size
+        foreach (word; words) {
+
+            scope (success) {
+
+                // Start a new line if this words is followed by a line feed
+                if (word.lineFeed) result ~= TextLine();
+
+            }
+
+            auto lastLine = &result[$-1];
+
+            // If last line is empty
+            if (lastLine.words == []) {
+
+                // Append to it immediately
+                lastLine.words ~= word;
+                lastLine.width += word.width;
+                continue;
+
+            }
+
+
+            // Check if this word can fit
+            if (lastLine.width + spaceSize + word.width <= width) {
+
+                // Push it to this line
+                lastLine.words ~= word;
+                lastLine.width += spaceSize + word.width;
+
+            }
+
+            // It can't
+            else {
+
+                // Push it to a new line
+                result ~= TextLine([word], word.width);
+
+            }
+
+        }
+
+        return result;
 
     }
 
@@ -136,7 +255,26 @@ class Style {
 
 }
 
-/// Define styles.
+/// `wrapText` result.
+struct TextLine {
+
+    struct Word {
+
+        string text;
+        float width;
+        bool lineFeed;  // Word is followed by a line feed.
+
+    }
+
+    /// Words on this line.
+    Word[] words;
+
+    /// Width of the line (including spaces).
+    float width = 0;
+
+}
+
+/// Define style fields for a node and let them be affected by themes.
 /// params:
 ///     names = A list of styles to define.
 mixin template DefineStyles(names...) {
