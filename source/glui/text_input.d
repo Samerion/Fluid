@@ -86,29 +86,45 @@ class GluiTextInput : GluiInput!GluiNode {
 
         // Draw the text
         const text = (value == "") ? placeholder : value;
-        style.drawText(rect, text);
 
         // If the box is focused
-        if (isFocused && GetTime % (blinkTime*2) < blinkTime) {
+        if (isFocused) {
 
-            const textArea = value == ""
+            import std.algorithm : max;
+
+            auto textArea = value == ""
                 ? Rectangle()
-                : style.measureText(rect, text);
-            const margin = style.fontSize / 10f;
-            const lineHeight = style.fontSize * style.lineHeight;
-            const end = Vector2(
-                textArea.x + textArea.width + margin,
-                textArea.y + textArea.height,
-            );
+                : style.measureText(rect, text, false);
 
-            // Draw the caret
-            DrawLineV(
-                end - Vector2(0, lineHeight - margin),
-                end - Vector2(0, margin),
-                style.textColor
-            );
+            const scrollOffset = max(0, textArea.w - rect.w);
+
+            rect.x -= scrollOffset;
+
+            style.drawText(rect, text, false);
+
+            // Add a blinking caret
+            if (GetTime % (blinkTime*2) < blinkTime) {
+
+                const margin = style.fontSize / 10f;
+                const lineHeight = style.fontSize * style.lineHeight;
+                const end = Vector2(
+                    textArea.x + textArea.width + margin,
+                    textArea.y + textArea.height,
+                );
+
+                // Draw the caret
+                DrawLineV(
+                    end - Vector2(0, lineHeight - margin),
+                    end - Vector2(0, margin),
+                    style.textColor
+                );
+
+            }
 
         }
+
+        // Not focused, draw text
+        else style.drawText(rect, text, false);
 
     }
 
