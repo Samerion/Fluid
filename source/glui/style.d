@@ -102,19 +102,19 @@ class Style {
 
     /// Measure space given text will use.
     ///
-    /// Note: Enables wrapping by default, unless given space is empty.
-    ///
     /// Params:
     ///     availableSpace = Space available for drawing.
     ///     text           = Text to draw.
+    ///     wrap           = If true (default), the text will be wrapped to match available space, unless the space is
+    ///                      empty.
     /// Returns:
     ///     If `availableSpace` is a vector, returns the result as a vector.
     ///
     ///     If `availableSpace` is a rectangle, returns a rectangle of the size of the result, offset to the position
     ///     of the given rectangle.
-    Vector2 measureText(Vector2 availableSpace, string text) const {
+    Vector2 measureText(Vector2 availableSpace, string text, bool wrap = true) const {
 
-        auto wrapped = wrapText(availableSpace.x, text, availableSpace.x == 0);
+        auto wrapped = wrapText(availableSpace.x, text, !wrap || availableSpace.x == 0);
 
         return Vector2(
             wrapped.map!"a.width".maxElement,
@@ -124,11 +124,11 @@ class Style {
     }
 
     /// Ditto
-    Rectangle measureText(Rectangle availableSpace, string text) const {
+    Rectangle measureText(Rectangle availableSpace, string text, bool wrap = true) const {
 
         const vec = measureText(
             Vector2(availableSpace.width, availableSpace.height),
-            text,
+            text, wrap
         );
 
         return Rectangle(
@@ -138,8 +138,8 @@ class Style {
 
     }
 
-    /// Draw text using the params
-    void drawText(Rectangle rect, string text) const {
+    /// Draw text using the same params as `measureText`.
+    void drawText(Rectangle rect, string text, bool wrap = true) const {
 
         // Text position from top, relative to given rect
         size_t top;
@@ -147,7 +147,7 @@ class Style {
         const totalLineHeight = fontSize * lineHeight;
 
         // Draw each line
-        foreach (line; wrapText(rect.width, text, false)) {
+        foreach (line; wrapText(rect.width, text, !wrap)) {
 
             scope (success) top += cast(size_t) ceil(lineHeight * fontSize);
 
