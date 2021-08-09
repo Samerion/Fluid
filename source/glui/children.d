@@ -44,7 +44,7 @@ debug struct Children {
     /// Remove the first item.
     void popFront() {
 
-        assert(!_locked, mutateError);
+        debug assert(!_locked, mutateError);
         assert(!empty, "Can't pop an empty children list");
 
         _children.popFront();
@@ -62,7 +62,7 @@ debug struct Children {
 
     void opAssign(GluiNode[] newList) {
 
-        assert(!_locked, mutateError);
+        debug assert(!_locked, mutateError);
         _children = newList;
 
     }
@@ -88,10 +88,10 @@ debug struct Children {
 
     ref GluiNode[] getChildren() return {
 
-        assert(!_locked, "Can't get a mutable reference to children while rendering. Consider doing this in input "
-            ~ "handling methods like mouseImpl/keyboardImpl which happen after rendering is complete. But if this is "
-            ~ "necessary, you may use `glui.children.asConst` instead. Note, iterating over the (mutable) children is "
-            ~ "still legal. You can also use `node.remove` if you want to simply remove a node.");
+        debug assert(!_locked, "Can't get a mutable reference to children while rendering. Consider doing this in "
+            ~ "input handling methods like mouseImpl/keyboardImpl which happen after rendering is complete. But if "
+            ~ "this is necessary, you may use `glui.children.asConst` instead. Note, iterating over the (mutable) "
+            ~ "children is still legal. You can also use `node.remove` if you want to simply remove a node.");
         return _children;
 
     }
@@ -175,7 +175,8 @@ const(GluiNode[]) asConst(Children children) {
 pragma(inline)
 ref GluiNode[] forceMutable(return ref Children children) {
 
-    return children._children;
+    debug return children._children;
+    else  return children;
 
 }
 
@@ -184,7 +185,7 @@ ref GluiNode[] forceMutable(return ref Children children) {
 /// This will probably be soon deprecated in favor of a "placeholder" node to fulfill this purpose.
 ref GluiNode childRef(ref Children children, size_t index) {
 
-    assert(!children._locked, "Can't get reference to a locked child.");
+    debug assert(!children._locked, "Can't get reference to a locked child.");
 
     debug return children._children[index];
     else  return children[index];
