@@ -92,21 +92,22 @@ class GluiTextInput : GluiInput!GluiNode {
 
             import std.algorithm : max;
 
+            const lineHeight = style.fontSize * style.lineHeight;
+
             auto textArea = value == ""
-                ? Rectangle()
+                ? Rectangle(rect.x, rect.y, 0, lineHeight)
                 : style.measureText(rect, text, false);
 
             const scrollOffset = max(0, textArea.w - rect.w);
 
             rect.x -= scrollOffset;
 
-            style.drawText(rect, text, false);
+            style.drawText(rect, value, false);
 
             // Add a blinking caret
             if (GetTime % (blinkTime*2) < blinkTime) {
 
                 const margin = style.fontSize / 10f;
-                const lineHeight = style.fontSize * style.lineHeight;
                 const end = Vector2(
                     textArea.x + textArea.width + margin,
                     textArea.y + textArea.height,
@@ -232,6 +233,9 @@ class GluiTextInput : GluiInput!GluiNode {
 
         // Disabled
         if (disabled) return disabledStyle;
+
+        // Focused
+        else if (isFocused) return focusStyle;
 
         // Empty text (display placeholder)
         else if (value == "") return emptyStyle;
