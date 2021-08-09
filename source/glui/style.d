@@ -41,7 +41,7 @@ class Style {
         float fontSize = 24;
 
         /// Line height, as a fraction of `fontSize`.
-        float lineHeight = 1.2;
+        float lineHeight = 1.4;
 
         /// Space between characters, relative to font size.
         float charSpacing = 0.1;
@@ -53,7 +53,7 @@ class Style {
         Color textColor = Colors.BLACK;
 
         /// If true, text will be wrapped. Requires align=fill on height.
-        deprecated("textWrap is always enabled and has no effect.")
+        deprecated("textWrap is now always enabled and this property has no effect.")
         bool textWrap = true;
         // TODO for other aligns
 
@@ -100,12 +100,20 @@ class Style {
     }
 
     /// Measure space given text will use.
+    ///
+    /// Note: Enables wrapping by default, unless given space is empty.
+    ///
     /// Params:
     ///     availableSpace = Space available for drawing.
     ///     text           = Text to draw.
+    /// Returns:
+    ///     If `availableSpace` is a vector, returns the result as a vector.
+    ///
+    ///     If `availableSpace` is a rectangle, returns a rectangle of the size of the result, offset to the position
+    ///     of the given rectangle.
     Vector2 measureText(Vector2 availableSpace, string text) const {
 
-        auto wrapped = wrapText(availableSpace.x, text);
+        auto wrapped = wrapText(availableSpace.x, text, availableSpace.x == 0);
 
         return Vector2(
             wrapped.map!"a.width".maxElement,
@@ -114,10 +122,7 @@ class Style {
 
     }
 
-    /// Measure the box of the text.
-    /// Params:
-    ///     availableSpace = Space available for drawing.
-    ///     text           = Text to draw.
+    /// Ditto
     Rectangle measureText(Rectangle availableSpace, string text) const {
 
         const vec = measureText(
@@ -138,10 +143,12 @@ class Style {
         // Text position from top, relative to given rect
         double top = 0;
 
-        // Draw each line
-        foreach (line; wrapText(rect.width, text)) {
+        const totalLineHeight = fontSize * lineHeight;
 
-            scope (success) top += fontSize * lineHeight;
+        // Draw each line
+        foreach (line; wrapText(rect.width, text, false)) {
+
+            scope (success) top += lineHeight * fontSize;
 
             // Stop if drawing below rect
             if (top > rect.height) break;
@@ -149,9 +156,13 @@ class Style {
             // Text position from left
             double left = 0;
 
+            const margin = (totalLineHeight - fontSize)/2;
+
             foreach (word; line.words) {
 
-                DrawTextEx(cast() font, word.text.toStringz, Vector2(rect.x + left, rect.y + top), fontSize,
+                const position = Vector2(rect.x + left, rect.y + top + margin);
+
+                DrawTextEx(cast() font, word.text.toStringz, position, fontSize,
                     fontSize * charSpacing, textColor);
 
                 left += word.width + fontSize * wordSpacing;
@@ -163,7 +174,12 @@ class Style {
     }
 
     /// Split the text into multiple lines in order to fit within given width.
-    TextLine[] wrapText(double width, string text) const {
+    ///
+    /// Params:
+    ///     width         = Container width the text should fit in.
+    ///     text          = Text to wrap.
+    ///     lineFeedsOnly = If true, this should only wrap the text on line feeds.
+    TextLine[] wrapText(double width, string text, bool lineFeedsOnly) const {
 
         const spaceSize = fontSize * wordSpacing;
 
@@ -224,7 +240,7 @@ class Style {
 
 
             // Check if this word can fit
-            if (lastLine.width + spaceSize + word.width <= width) {
+            if (lineFeedsOnly || lastLine.width + spaceSize + word.width <= width) {
 
                 // Push it to this line
                 lastLine.words ~= word;

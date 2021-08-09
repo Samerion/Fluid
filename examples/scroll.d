@@ -57,7 +57,7 @@ void main() {
             vscrollFrame(
                 .layout!(1, "fill"),
                 label("foo"),
-                label("Lorem ipsum dolor sit amet, consectetur adipiscing elit"),
+                label("Lorem\nipsum\ndolor\nsit\namet,\nconsectetur\nadipiscing\nelit"),
             ),
         ),
         vframe(

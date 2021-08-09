@@ -131,7 +131,7 @@ void main() {
 
             vframe(greenTheme, fill,
 
-                button(layout!("center", "start"),
+                button(layout!("fill", "start"),
                     "Press to reveal the rest of this column",
 
                     {

@@ -71,7 +71,7 @@ class GluiTextInput : GluiInput!GluiNode {
         if (!multiline) {
 
             // Set height to at least the font size
-            minSize.y = max(minSize.y, style.fontSize);
+            minSize.y = max(minSize.y, style.fontSize * style.lineHeight);
 
         }
 
@@ -91,17 +91,19 @@ class GluiTextInput : GluiInput!GluiNode {
         // If the box is focused
         if (isFocused && GetTime % (blinkTime*2) < blinkTime) {
 
-            auto textArea = value == ""
+            const textArea = value == ""
                 ? Rectangle()
                 : style.measureText(rect, text);
-            auto end = Vector2(
-                textArea.x + textArea.width,
+            const margin = style.fontSize / 10f;
+            const lineHeight = style.fontSize * style.lineHeight;
+            const end = Vector2(
+                textArea.x + textArea.width + margin,
                 textArea.y + textArea.height,
             );
-            auto margin = style.fontSize / 10f;
 
+            // Draw the caret
             DrawLineV(
-                end - Vector2(0, style.fontSize - margin),
+                end - Vector2(0, lineHeight - margin),
                 end - Vector2(0, margin),
                 style.textColor
             );
@@ -165,8 +167,6 @@ class GluiTextInput : GluiInput!GluiNode {
 
                 // Repeat only if requested to delete whole words
                 while (word);
-
-                return true;
 
             }
 

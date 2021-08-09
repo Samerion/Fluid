@@ -160,8 +160,8 @@ class GluiSpace : GluiNode {
                 child.draw(rect);
 
                 // Offset position
-                if (directionHorizontal) position.x += size.x;
-                else position.y += size.y;
+                if (directionHorizontal) position.x += cast(int) size.x;
+                else position.y += cast(int) size.y;
 
             })
             .moveAll(children.forceMutable);
