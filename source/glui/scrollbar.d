@@ -116,6 +116,8 @@ class GluiScrollBar : GluiInput!GluiNode {
 
     override protected void drawImpl(Rectangle rect) {
 
+        setScroll(position);
+
         // Draw the background
         backgroundStyle.drawBackground(rect);
 
