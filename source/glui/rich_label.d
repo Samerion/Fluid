@@ -146,12 +146,13 @@ class GluiRichLabel : GluiNode {
                     Rectangle(cursor.x, cursor.y, rect.w, rect.h),
                     current
                 );
+                // TODO: wrapping+indent
 
                 thisStyle.drawBackground(area);
                 thisStyle.drawText(area, current);
 
                 // Move the cursor
-                cursor.y += area.h - thisStyle.fontSize;
+                cursor.y += area.h - thisStyle.fontSize * thisStyle.lineHeight;
 
                 // Ended with a newline
                 if (current[$-1] == '\n') cursor.x = rect.x;
