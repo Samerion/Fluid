@@ -9,6 +9,8 @@ import glui.node;
 import glui.structs;
 import glui.style;
 
+@safe:
+
 /// Represents a general input node.
 ///
 /// Styles: $(UL

@@ -9,6 +9,8 @@ import glui.button;
 alias hoverButton = simpleConstructor!(GluiHoverButton!GluiLabel);
 alias frameHoverButton = simpleConstructor!(GluiHoverButton!GluiFrame);
 
+@safe:
+
 /// An button that triggers every frame as long as the button is hovered. Useful for advanced buttons which react to
 /// more than just left button click.
 ///

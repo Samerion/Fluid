@@ -6,6 +6,8 @@ import raylib;
 import glui.space;
 import glui.style;
 
+@safe:
+
 /// Make a new vertical frame
 GluiFrame vframe(T...)(T args) {
 

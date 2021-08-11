@@ -13,6 +13,8 @@ alias textInput = simpleConstructor!GluiTextInput;
 /// Raylib: Get pressed char
 private extern (C) int GetCharPressed() nothrow @nogc;
 
+@safe:
+
 /// Text input field.
 ///
 /// Styles: $(UL
@@ -50,7 +52,7 @@ class GluiTextInput : GluiInput!GluiNode {
         ///     sup         = Node parameters.
         ///     placeholder = Placeholder text for the field.
         ///     submitted   = Callback for when the field is submitted (enter pressed, ctrl+enter if multiline).
-        this(BasicNodeParam!index sup, string placeholder = "", void delegate() submitted = null) {
+        this(BasicNodeParam!index sup, string placeholder = "", void delegate() @trusted submitted = null) {
 
             super(sup);
             this.placeholder = placeholder;
@@ -77,7 +79,7 @@ class GluiTextInput : GluiInput!GluiNode {
 
     }
 
-    protected override void drawImpl(Rectangle rect) {
+    protected override void drawImpl(Rectangle rect) @trusted {
 
         auto style = pickStyle();
 
@@ -130,7 +132,7 @@ class GluiTextInput : GluiInput!GluiNode {
     }
 
     // Do nothing, we take mouse focus while drawing.
-    protected override void mouseImpl() {
+    protected override void mouseImpl() @trusted {
 
         // Update status
         if (IsMouseButtonDown(MouseButton.MOUSE_LEFT_BUTTON)) {
@@ -141,7 +143,7 @@ class GluiTextInput : GluiInput!GluiNode {
 
     }
 
-    protected override bool keyboardImpl() {
+    protected override bool keyboardImpl() @trusted {
 
         import std.uni : isAlpha, isWhite;
         import std.range : back;

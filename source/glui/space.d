@@ -12,6 +12,8 @@ import glui.style;
 import glui.utils;
 import glui.children;
 
+@safe:
+
 /// Make a new vertical space
 GluiSpace vspace(T...)(T args) {
 
@@ -145,7 +147,7 @@ class GluiSpace : GluiNode {
         scope (exit) children.unlock();
 
         // Draw each child and get rid of removed children
-        leftovers = children[]
+        auto range = children[]
             .filter!"!a.toRemove"
             .tee!((child) {
 
@@ -163,10 +165,17 @@ class GluiSpace : GluiNode {
                 if (directionHorizontal) position.x += cast(int) size.x;
                 else position.y += cast(int) size.y;
 
-            })
-            .moveAll(children.forceMutable);
+            });
 
-        children.forceMutable.length -= leftovers.length;
+        () @trusted {
+
+            // Process the children and move them back to the original array
+            auto leftovers = range.moveAll(children.forceMutable);
+
+            // Adjust the array size
+            children.forceMutable.length -= leftovers.length;
+
+        }();
 
     }
 

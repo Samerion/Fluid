@@ -9,6 +9,8 @@ import glui.style;
 
 alias imageView = simpleConstructor!GluiImageView;
 
+@safe:
+
 /// A node specifically to display images.
 ///
 /// The image will automatically scale to fit available space. It will keep aspect ratio by default and will be
@@ -51,7 +53,7 @@ class GluiImageView : GluiNode {
         }
 
         /// Load the texture from a filename.
-        string texture(string filename) {
+        string texture(string filename) @trusted {
 
             import std.string : toStringz;
 
@@ -82,7 +84,7 @@ class GluiImageView : GluiNode {
 
     }
 
-    override protected void drawImpl(Rectangle rect) {
+    override protected void drawImpl(Rectangle rect) @trusted {
 
         import std.algorithm : min;
 

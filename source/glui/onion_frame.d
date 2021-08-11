@@ -9,6 +9,8 @@ import glui.utils;
 /// Make a new onion frame
 alias onionFrame = simpleConstructor!GluiOnionFrame;
 
+@safe:
+
 /// An onion frame places its children as layers, drawing one on top of the other, instead of on the side.
 ///
 /// Children are placed in order of drawing — the last child will be drawn last.
