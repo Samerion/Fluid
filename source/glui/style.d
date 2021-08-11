@@ -302,7 +302,10 @@ struct TextLine {
 }
 
 /// Define style fields for a node and let them be affected by themes.
-/// params:
+///
+/// Note: This should be used in *every* node, even if empty, to ensure keys are inherited properly.
+///
+/// Params:
 ///     names = A list of styles to define.
 mixin template DefineStyles(names...) {
 
@@ -320,6 +323,7 @@ mixin template DefineStyles(names...) {
     // Inherit style keys
     static foreach (field; StyleKeys) {
 
+        // Inherit default value
         mixin("static immutable StyleKey " ~ field ~ ";");
 
     }
@@ -340,32 +344,68 @@ mixin template DefineStyles(names...) {
 
     }
 
-    // Load styles
+    private enum inherits = !is(typeof(super) == Object);
+
     override protected void reloadStyles() {
 
-        import std.stdio;
-        import std.traits;
+        // First load what we're given
+        reloadStylesImpl();
 
-        super.reloadStyles();
+        // Then load the defaults
+        loadDefaultStyles();
 
-        // I have no idea why is this foreach actually necessary. I tried removing it, but it breaks everything.
-        // The default value in the second foreach should be enough. It's not. Might as well try removing the other
-        // foreach and adding default value functionality here; probably a better option.
+    }
+
+    // Load styles
+    override protected void reloadStylesImpl() {
+
+        // Inherit styles
+        static if (inherits) super.reloadStylesImpl();
+
+        // Load inherited keys (so class A:B will load both B.styleKey and A.styleKey)
         static foreach (name; StyleKeys) {{
 
             if (auto style = &mixin(name) in theme) {
 
-                mixin("this." ~ name[0 .. $-3]) = cast() *style;
+                mixin("this." ~ name[0 .. $-3]) = *style;
 
             }
 
+            // No default value, the parent has already handled it
+
         }}
 
+        // Load local keys and load defaults if none are set
         static foreach (i, name; names) {
 
             static if (i % 2 == 0) {
 
-                mixin(name) = theme.get(&mixin(name ~ "Key"), mixin(names[i+1]));
+                // We're deferring the default for later to make sure it uses up-to-date values
+                mixin("this." ~ name) = theme.get(&mixin(name ~ "Key"), null);
+
+            }
+
+        }
+
+    }
+
+    override void loadDefaultStyles() {
+
+        // Inherit
+        static if (inherits) super.loadDefaultStyles();
+
+        // Load defaults for each unset style
+        static foreach (i, name; names) {
+
+            static if (i % 2 == 0) {
+
+                // Found an unset value
+                if (mixin("this." ~ name) is null) {
+
+                    // Set the default
+                    mixin("this." ~ name) = mixin(names[i+1]);
+
+                }
 
             }
 

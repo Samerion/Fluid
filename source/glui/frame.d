@@ -31,7 +31,7 @@ GluiFrame hframe(T...)(T args) {
 /// )
 class GluiFrame : GluiSpace {
 
-    mixin DefineStyles!("style", q{ Style.init });
+    mixin DefineStyles;
     mixin ImplHoveredRect;
 
     this(T...)(T args) {
