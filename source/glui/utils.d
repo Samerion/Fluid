@@ -28,6 +28,8 @@ extern (C) @nogc nothrow {
 
 }
 
+@safe:
+
 /// Create a function to easily construct nodes.
 template simpleConstructor(T) {
 

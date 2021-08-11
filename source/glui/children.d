@@ -20,6 +20,8 @@ debug struct Children {
 
     }
 
+    @safe:
+
     this(inout(Children) old) inout {
 
         this._children = old._children;
@@ -96,8 +98,7 @@ debug struct Children {
 
     }
 
-    @system
-    int opApply(int delegate(GluiNode node) dg) {
+    int opApply(int delegate(GluiNode node) @trusted dg) {
 
         foreach (child; _children) {
 
@@ -109,8 +110,7 @@ debug struct Children {
 
     }
 
-    @system
-    int opApply(int delegate(size_t index, GluiNode node) dg) {
+    int opApply(int delegate(size_t index, GluiNode node) @trusted dg) {
 
         foreach (i, child; _children) {
 
@@ -173,7 +173,7 @@ const(GluiNode[]) asConst(Children children) {
 
 /// Get a reference to the children list forcefully, ignoring the lock.
 pragma(inline)
-ref GluiNode[] forceMutable(return ref Children children) {
+ref GluiNode[] forceMutable(return ref Children children) @system {
 
     debug return children._children;
     else  return children;
@@ -183,7 +183,7 @@ ref GluiNode[] forceMutable(return ref Children children) {
 /// Get a reference to child within the parent.
 ///
 /// This will probably be soon deprecated in favor of a "placeholder" node to fulfill this purpose.
-ref GluiNode childRef(ref Children children, size_t index) {
+ref GluiNode childRef(ref Children children, size_t index) @system {
 
     debug assert(!children._locked, "Can't get reference to a locked child.");
 

@@ -17,6 +17,8 @@ private extern(C) float GetMouseWheelMove();
 alias GluiScrollFrame = GluiScrollable!GluiFrame;
 alias vscrollFrame = simpleConstructor!GluiScrollFrame;
 
+@safe:
+
 GluiScrollFrame hscrollFrame(Args...)(Args args) {
 
     auto scroll = vscrollFrame(args);
@@ -185,7 +187,7 @@ class GluiScrollable(T : GluiFrame) : T {
     }
 
     /// Implementation of mouse input
-    private void inputImpl() {
+    private void inputImpl() @trusted {
 
         const float move = -GetMouseWheelMove;
         const float totalChange = move * scrollBar.scrollSpeed;

@@ -13,6 +13,8 @@ import glui.style;
 alias button = simpleConstructor!(GluiButton!GluiLabel);
 alias frameButton = simpleConstructor!(GluiButton!GluiFrame);
 
+@safe:
+
 /// A button can be pressed by the user to trigger an action.
 ///
 /// Styles: $(UL
@@ -44,7 +46,7 @@ class GluiButton(T : GluiNode = GluiLabel) : GluiInput!T {
     /// Create a new button.
     /// Params:
     ///     pressed = Action to perform when the button is pressed.
-    this(T...)(T sup, void delegate() pressed) {
+    this(T...)(T sup, void delegate() @trusted pressed) {
 
         super(sup);
         this.pressed = pressed;
@@ -62,7 +64,7 @@ class GluiButton(T : GluiNode = GluiLabel) : GluiInput!T {
     }
 
     /// Handle mouse input. By default, this will call the `pressed` delegate if the button is pressed.
-    protected override void mouseImpl() {
+    protected override void mouseImpl() @trusted {
 
         // Just released
         if (IsMouseButtonReleased(triggerButton)) {
@@ -75,7 +77,7 @@ class GluiButton(T : GluiNode = GluiLabel) : GluiInput!T {
     }
 
     /// Handle keyboard input.
-    protected override bool keyboardImpl() {
+    protected override bool keyboardImpl() @trusted {
 
         // Pressed enter
         if (IsKeyReleased(KeyboardKey.KEY_ENTER)) {

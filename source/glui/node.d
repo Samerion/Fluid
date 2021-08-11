@@ -7,6 +7,8 @@ import glui.style;
 import glui.utils;
 import glui.structs;
 
+@safe:
+
 /// Represents a Glui node.
 abstract class GluiNode {
 
@@ -46,10 +48,10 @@ abstract class GluiNode {
 
         /// Get the current theme.
         pragma(inline)
-        const(Theme) theme() const { return _theme; }
+        inout(Theme) theme() inout { return _theme; }
 
         /// Set the theme.
-        const(Theme) theme(const Theme value) {
+        Theme theme(Theme value) {
 
             _theme = cast(Theme) value;
             reloadStyles();
@@ -142,7 +144,7 @@ abstract class GluiNode {
     }
 
     /// Draw this node as a root node.
-    final void draw() {
+    final void draw() @trusted {
 
         assert(theme, "Cannot draw a node lacking theme.");
 
@@ -201,7 +203,7 @@ abstract class GluiNode {
     }
 
     /// Draw this node at specified location.
-    final protected void draw(Rectangle space) {
+    final protected void draw(Rectangle space) @trusted {
 
         import std.algorithm : min;
 
@@ -320,7 +322,7 @@ abstract class GluiNode {
 
     }
 
-    private bool isLMBHeld() {
+    private bool isLMBHeld() @trusted {
 
         const lmb = MouseButton.MOUSE_LEFT_BUTTON;
         return IsMouseButtonDown(lmb) || IsMouseButtonReleased(lmb);

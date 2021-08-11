@@ -11,6 +11,8 @@ import std.algorithm;
 
 import glui.utils;
 
+@safe:
+
 /// Node theme.
 alias Theme = Style[immutable(StyleKey)*];
 
@@ -78,7 +80,7 @@ class Style {
 
     }
 
-    this() {
+    this() @trusted {
 
         font = GetFontDefault;
 
@@ -163,8 +165,15 @@ class Style {
 
                 const position = Vector2(rect.x + left, rect.y + top + margin);
 
-                DrawTextEx(cast() font, word.text.toStringz, position, fontSize,
-                    fontSize * charSpacing, textColor);
+                () @trusted {
+
+                    // cast(): raylib doesn't mutate the font. The parameter would probably be defined `const`, but
+                    // since it's not transistive in C, and font is a struct with a pointer inside, it only matters
+                    // in D.
+                    DrawTextEx(cast() font, word.text.toStringz, position, fontSize,
+                        fontSize * charSpacing, textColor);
+
+                }();
 
                 left += cast(size_t) ceil(word.width + fontSize * wordSpacing);
 
@@ -187,8 +196,9 @@ class Style {
         auto result = [TextLine()];
 
         /// Get width of the given word.
-        float wordWidth(string wordText) {
+        float wordWidth(string wordText) @trusted {
 
+            // See drawText for cast()
             return MeasureTextEx(cast() font, wordText.toStringz, fontSize, fontSize * charSpacing).x;
 
         }
@@ -264,7 +274,7 @@ class Style {
     }
 
     /// Draw the background
-    void drawBackground(Rectangle rect) const {
+    void drawBackground(Rectangle rect) const @trusted {
 
         DrawRectangleRec(rect, backgroundColor);
 
@@ -355,7 +365,7 @@ mixin template DefineStyles(names...) {
 
             static if (i % 2 == 0) {
 
-                mixin(name) = cast() theme.get(&mixin(name ~ "Key"), mixin(names[i+1]));
+                mixin(name) = theme.get(&mixin(name ~ "Key"), mixin(names[i+1]));
 
             }
 

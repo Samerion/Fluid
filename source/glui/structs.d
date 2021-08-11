@@ -5,6 +5,8 @@ import raylib;
 import std.conv;
 import glui.node;
 
+@safe:
+
 /// Create a new layout
 /// Params:
 ///     expand = Numerator of the fraction of space this node should occupy in the parent.
@@ -126,55 +128,66 @@ struct LayoutTree {
     /// Scissors stack.
     package Rectangle[] scissors;
 
-    /// Start scissors mode.
-    void pushScissors(Rectangle rect) {
+    debug (Glui_DisableScissors) {
 
-        import std.algorithm : min, max;
-
-        auto result = rect;
-
-        // There's already something on the stack
-        if (scissors.length) {
-
-            const b = scissors[$-1];
-
-            // Intersect
-            result.x = max(rect.x, b.x);
-            result.y = max(rect.y, b.y);
-            result.w = min(rect.x + rect.w, b.x + b.w) - result.x;
-            result.h = min(rect.y + rect.h, b.y + b.h) - result.y;
-
-        }
-
-        // Push to the stack
-        scissors ~= result;
-
-        // Start the mode
-        applyScissors(result);
+        void pushScissors(Rectangle) { }
+        void popScissors() { }
 
     }
 
-    void popScissors() {
+    else {
 
-        // Pop the stack
-        scissors = scissors[0 .. $-1];
+        /// Start scissors mode.
+        void pushScissors(Rectangle rect) {
 
-        // There's still something left
-        if (scissors.length) {
+            import std.algorithm : min, max;
 
-            // Start again
-            applyScissors(scissors[$-1]);
+            auto result = rect;
+
+            // There's already something on the stack
+            if (scissors.length) {
+
+                const b = scissors[$-1];
+
+                // Intersect
+                result.x = max(rect.x, b.x);
+                result.y = max(rect.y, b.y);
+                result.w = min(rect.x + rect.w, b.x + b.w) - result.x;
+                result.h = min(rect.y + rect.h, b.y + b.h) - result.y;
+
+            }
+
+            // Push to the stack
+            scissors ~= result;
+
+            // Start the mode
+            applyScissors(result);
 
         }
 
-        // Nope, end
-        else EndScissorMode();
+        void popScissors() @trusted {
 
-    }
+            // Pop the stack
+            scissors = scissors[0 .. $-1];
 
-    private void applyScissors(Rectangle rect) {
+            // There's still something left
+            if (scissors.length) {
 
-        BeginScissorMode(rect.x.to!int, rect.y.to!int, rect.w.to!int, rect.h.to!int);
+                // Start again
+                applyScissors(scissors[$-1]);
+
+            }
+
+            // Nope, end
+            else EndScissorMode();
+
+        }
+
+        private void applyScissors(Rectangle rect) @trusted {
+
+            BeginScissorMode(rect.x.to!int, rect.y.to!int, rect.w.to!int, rect.h.to!int);
+
+        }
 
     }
 

@@ -15,6 +15,8 @@ import glui.style;
 
 alias richLabel = simpleConstructor!GluiRichLabel;
 
+@safe:
+
 /// Defines a part of the label text.
 struct Part {
 

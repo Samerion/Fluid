@@ -23,6 +23,8 @@ import glui.text_input;
 
 alias filePicker = simpleConstructor!GluiFilePicker;
 
+@safe:
+
 /// A file picker node.
 ///
 /// Note, this node is hidden by default, use `show` to show.
@@ -63,7 +65,7 @@ class GluiFilePicker : GluiInput!GluiFrame {
 
     }
 
-    this(Theme theme, string name, void delegate() submitted, void delegate() cancelled = null) {
+    this(Theme theme, string name, void delegate() @trusted submitted, void delegate() @trusted cancelled = null) {
 
         super(
             .layout(1, NodeAlign.center, NodeAlign.start),
@@ -131,7 +133,7 @@ class GluiFilePicker : GluiInput!GluiFrame {
 
     }
 
-    this(string name, void delegate() submitted, void delegate() cancelled = null) {
+    this(string name, void delegate() @trusted submitted, void delegate() @trusted cancelled = null) {
 
         this(null, name, submitted, cancelled);
 
@@ -176,6 +178,25 @@ class GluiFilePicker : GluiInput!GluiFrame {
         if (!dir.exists || !dir.isDir) return;
 
         // Check the entries
+        addSuggestions();
+
+        // This suggestion was removed
+        if (currentSuggestion > suggestions.textParts.length) {
+
+            currentSuggestion = suggestions.textParts.length;
+
+        }
+
+        updateSize();
+
+    }
+
+    private void addSuggestions() @trusted {
+
+        const values = valueTuple;
+        const dir  = values[0];
+        const file = values[1];
+
         ulong num;
         foreach (entry; dir.dirEntries(file ~ "*", SpanMode.shallow)) {
 
@@ -202,15 +223,6 @@ class GluiFilePicker : GluiInput!GluiFrame {
             else suggestions.push(style, prefix ~ name);
 
         }
-
-        // This suggestion was removed
-        if (currentSuggestion > suggestions.textParts.length) {
-
-            currentSuggestion = suggestions.textParts.length;
-
-        }
-
-        updateSize();
 
     }
 
@@ -287,7 +299,7 @@ class GluiFilePicker : GluiInput!GluiFrame {
 
     }
 
-    protected override void drawImpl(Rectangle rect) {
+    protected override void drawImpl(Rectangle rect) @trusted {
 
         // Wasn't focused
         if (!savedFocus) {

@@ -11,6 +11,8 @@ import glui.style;
 
 alias vscrollBar = simpleConstructor!GluiScrollBar;
 
+@safe:
+
 GluiScrollBar hscrollBar(Args...)(Args args) {
 
     auto bar = vscrollBar(args);
@@ -114,7 +116,7 @@ class GluiScrollBar : GluiInput!GluiNode {
 
     }
 
-    override protected void drawImpl(Rectangle rect) {
+    override protected void drawImpl(Rectangle rect) @trusted {
 
         setScroll(position);
 
@@ -162,7 +164,7 @@ class GluiScrollBar : GluiInput!GluiNode {
         const up = super.pickStyle();
 
         // The outer part is being hovered...
-        if (up == hoverStyle) {
+        if (up is hoverStyle) {
 
             // Check if the inner part is
             return innerHovered
@@ -175,7 +177,7 @@ class GluiScrollBar : GluiInput!GluiNode {
 
     }
 
-    override protected void mouseImpl() {
+    override protected void mouseImpl() @trusted {
 
         const triggerButton = MouseButton.MOUSE_LEFT_BUTTON;
 
@@ -220,7 +222,7 @@ class GluiScrollBar : GluiInput!GluiNode {
 
     }
 
-    override protected bool keyboardImpl() {
+    override protected bool keyboardImpl() @trusted {
 
         const plusKey = horizontal
             ? KeyboardKey.KEY_RIGHT
