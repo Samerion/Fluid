@@ -28,23 +28,10 @@ void main() {
             backgroundColor = Colors.WHITE;
             mouseCursor = MouseCursor.MOUSE_CURSOR_POINTING_HAND,
 
-            GluiButton!().focusStyleAdd!q{
-
-                backgroundColor = Color(0xee, 0xee, 0xee, 0xff);
-
-            };
-
-            GluiButton!().hoverStyleAdd!q{
-
-                backgroundColor = Color(0xdd, 0xdd, 0xdd, 0xff);
-
-            };
-
-            GluiButton!().pressStyleAdd!q{
-
-                backgroundColor = Color(0xaa, 0xaa, 0xaa, 0xff);
-
-            };
+            // Define alternative styles
+            focusStyleAdd.backgroundColor = Color(0xee, 0xee, 0xee, 0xff);
+            hoverStyleAdd.backgroundColor = Color(0xdd, 0xdd, 0xdd, 0xff);
+            pressStyleAdd.backgroundColor = Color(0xaa, 0xaa, 0xaa, 0xff);
 
         };
 
@@ -53,17 +40,8 @@ void main() {
             backgroundColor = Color(0xff, 0xff, 0xff, 0xcc);
             mouseCursor = MouseCursor.MOUSE_CURSOR_IBEAM;
 
-            GluiTextInput.emptyStyleAdd!q{
-
-                textColor = Color(0x00, 0x00, 0x00, 0xaa);
-
-            };
-
-            GluiTextInput.focusStyleAdd!q{
-
-                backgroundColor = Color(0xff, 0xff, 0xff, 0xff);
-
-            };
+            GluiTextInput.emptyStyleAdd.textColor = Color(0x00, 0x00, 0x00, 0xaa);
+            GluiTextInput.focusStyleAdd.backgroundColor = Color(0xff, 0xff, 0xff, 0xff);
 
         };
 
@@ -73,29 +51,25 @@ void main() {
     // Create sub-themes for colored backgrounds
     auto redTheme = theme.makeTheme!q{
 
-        GluiFrame.styleAdd!q{
-            backgroundColor = Color(0xc0, 0x12, 0x12, 0xff);
-        };
+        GluiFrame.styleAdd.backgroundColor = Color(0xc0, 0x12, 0x12, 0xff);
 
     };
 
     auto greenTheme = theme.makeTheme!q{
 
-        GluiFrame.styleAdd!q{
-            backgroundColor = Color(0x12, 0xc0, 0x12, 0xff);
-        };
+        GluiFrame.styleAdd.backgroundColor = Color(0x12, 0xc0, 0x12, 0xff);
 
     };
     auto blueTheme = theme.makeTheme!q{
 
-        GluiFrame.styleAdd!q{
-            backgroundColor = Color(0x12, 0x12, 0xc0, 0xff);
-        };
+        GluiFrame.styleAdd.backgroundColor = Color(0x12, 0x12, 0xc0, 0xff);
 
     };
 
     auto whiteText = style!q{
+
         textColor = Colors.WHITE;
+
     };
 
     Layout fill = layout!(1, "fill");

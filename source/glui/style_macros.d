@@ -43,8 +43,6 @@ Style nestStyle(string init, alias styleKey)() {
 
     Style style;
 
-    //assert(&styleKey !in currentTheme, fullyQualifiedName!styleKey.format!"The theme already defines style key %s");
-
     // Inherit from the parent style
     if (styleStack.length) {
 
@@ -55,11 +53,18 @@ Style nestStyle(string init, alias styleKey)() {
     // Create a new style otherwise
     else style = new Style;
 
-    styleStack ~= style;
-    scope (exit) styleStack.popBack();
 
-    // Update the style
-    style.update!init;
+    // Init was given
+    static if (init.length) {
+
+        // Push the style to the stack
+        styleStack ~= style;
+        scope (exit) styleStack.popBack();
+
+        // Update the style
+        style.update!(init, __traits(parent, styleKey));
+
+     }
 
     // Add the result to the theme
     return currentTheme[&styleKey] = style;
@@ -95,7 +100,7 @@ mixin template DefineStyles(names...) {
         // Helper function to declare nested styles
         mixin(name[0 .. $-3].format!q{
 
-            static Style %sAdd(string content)() {
+            static Style %1$sAdd(string content = "")() {
 
                 return nestStyle!(content, %1$sKey);
 
@@ -120,7 +125,7 @@ mixin template DefineStyles(names...) {
             // Helper function to declare nested styles
             mixin(name.format!q{
 
-                static Style %sAdd(string content)() {
+                static Style %sAdd(string content = "")() {
 
                     return nestStyle!(content, %1$sKey);
 
