@@ -11,34 +11,37 @@ void main() {
 
     scope (exit) CloseWindow();
 
-    auto theme = [
-        &GluiFrame.styleKey: style!q{
-            backgroundColor = Color(0x00, 0x00, 0x00, 0x00);
-        },
-    ];
+    auto theme = makeTheme!q{
 
-    auto redTheme = [
-        &GluiFrame.styleKey: style!q{
-            backgroundColor = Color(0xc0, 0x12, 0x12, 0xff);
-        },
-    ];
+        GluiFrame.styleAdd.backgroundColor = Color(0x00, 0x00, 0x00, 0x00);
 
-    auto greenTheme = [
-        &GluiFrame.styleKey: style!q{
-            backgroundColor = Color(0x12, 0xc0, 0x12, 0xff);
-        },
-        &GluiButton!GluiLabel.hoverStyleKey: style!q{
-            mouseCursor = MouseCursor.MOUSE_CURSOR_POINTING_HAND;
-        },
-    ];
-    auto whiteTheme = [
-        &GluiFrame.styleKey: style!q{
-            backgroundColor = Color(0xff, 0xff, 0xff, 0xff);
-        },
-        &GluiFilePicker.selectedStyleKey: style!q{
-            backgroundColor = Color(0xff, 0x51, 0x2f, 0xff);
-        },
-    ];
+    };
+
+    auto redTheme = makeTheme!q{
+
+        GluiFrame.styleAdd.backgroundColor = Color(0xc0, 0x12, 0x12, 0xff);
+
+    };
+
+    auto greenTheme = makeTheme!q{
+
+        GluiFrame.styleAdd.backgroundColor = Color(0x12, 0xc0, 0x12, 0xff);
+
+        GluiButton!().styleAdd!q{
+
+            backgroundColor = Color(0xff, 0xff, 0xff, 0xaa);
+
+            hoverStyleAdd.mouseCursor = MouseCursor.MOUSE_CURSOR_POINTING_HAND;
+
+        };
+
+    };
+    auto whiteTheme = makeTheme!q{
+
+        GluiFrame.styleAdd.backgroundColor = Color(0xff, 0xff, 0xff, 0xff);
+        GluiFilePicker.selectedStyleAdd.backgroundColor = Color(0xff, 0x51, 0x2f, 0xff);
+
+    };
 
     GluiFilePicker picker;
     GluiLabel fileStatus;
