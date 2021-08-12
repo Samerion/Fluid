@@ -16,9 +16,7 @@ void main() {
     SetExitKey(0);
     scope (exit) CloseWindow();
 
-    Theme theme = [
-        &GluiFrame.styleKey: style!q{ },
-    ];
+    Theme theme = makeTheme!q{ };
 
     auto root = vframe(
         theme,
