@@ -13,32 +13,30 @@ void main() {
     SetExitKey(0);
     scope (exit) CloseWindow();
 
-    Theme theme = [
-        &GluiFrame.styleKey: style!q{ },
+    auto theme = makeTheme!q{
 
-        &GluiButton!GluiLabel.styleKey: style!q{
+        GluiButton!().styleAdd!q{
             backgroundColor = Color(0xee, 0xee, 0xee, 0xff);
-        },
+        };
 
-        &GluiScrollBar.backgroundStyleKey: style!q{
-            backgroundColor = Color(0xee, 0xee, 0xee, 0xff);
-        },
-        &GluiScrollBar.styleKey: style!q{
+        GluiScrollBar.styleAdd!q{
+
             backgroundColor = Color(0xaa, 0xaa, 0xaa, 0xff);
-        },
-        &GluiScrollBar.hoverStyleKey: style!q{
-            backgroundColor = Color(0x88, 0x88, 0x88, 0xff);
-        },
-        &GluiScrollBar.focusStyleKey: style!q{
-            backgroundColor = Color(0x77, 0x77, 0x77, 0xff);
-        },
-        &GluiScrollBar.pressStyleKey: style!q{
-            backgroundColor = Color(0x55, 0x55, 0x55, 0xff);
-        }
-    ];
-    Theme theme2 = [
-        &GluiFrame.styleKey: style!q{ backgroundColor = Colors.RED; },
-    ];
+
+            backgroundStyleAdd.backgroundColor = Color(0xee, 0xee, 0xee, 0xff);
+            hoverStyleAdd.backgroundColor = Color(0x88, 0x88, 0x88, 0xff);
+            focusStyleAdd.backgroundColor = Color(0x77, 0x77, 0x77, 0xff);
+            pressStyleAdd.backgroundColor = Color(0x55, 0x55, 0x55, 0xff);
+
+        };
+
+    };
+
+    Theme theme2 = theme.makeTheme!q{
+
+        GluiFrame.styleAdd.backgroundColor = Colors.RED;
+
+    };
 
     GluiScrollBar myScrollBar;
 

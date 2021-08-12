@@ -119,11 +119,24 @@ class Style {
     ///
     /// This allows each init code to have a consistent default scope, featuring `glui`, `raylib` and chosen `std`
     /// modules.
+    ///
+    /// Params:
+    ///     init = Code to update the style with.
+    ///     T    = An compile-time object to update the scope with.
     void update(string init)() {
 
         import glui;
 
         mixin(init);
+
+    }
+
+    /// Ditto.
+    void update(string init, T)() {
+
+        import glui;
+
+        with (T) mixin(init);
 
     }
 
