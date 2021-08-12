@@ -11,6 +11,8 @@ import std.algorithm;
 
 import glui.utils;
 
+public import glui.style_macros;
+
 @safe:
 
 /// Node theme.
@@ -22,6 +24,21 @@ struct StyleKey { }
 /// Create a new style initialized with given D code.
 ///
 /// raylib and std.string are accessible inside by default.
+///
+/// Params:
+///     init = D code to use.
+///     data = Data to pass to the code as the context. All fields of the struct will be within the style's scope.
+Style style(string init, Data)(Data data) {
+
+    auto result = new Style;
+
+    with (data) with (result) mixin(init);
+
+    return result;
+
+}
+
+/// Ditto.
 Style style(string init)() {
 
     auto result = new Style;
@@ -33,6 +50,14 @@ Style style(string init)() {
 
 /// Contains a style for a node.
 class Style {
+
+    // Internal use only, can't be private because it's used in mixins.
+    static {
+
+        Theme _currentTheme;
+        Style[] _styleStack;
+
+    }
 
     // Text options
     struct {
@@ -54,11 +79,6 @@ class Style {
 
         /// Text color.
         Color textColor = Colors.BLACK;
-
-        /// If true, text will be wrapped. Requires align=fill on height.
-        deprecated("textWrap is now always enabled and this property has no effect.")
-        bool textWrap = true;
-        // TODO for other aligns
 
     }
 
@@ -95,10 +115,32 @@ class Style {
 
     }
 
+    /// Update the style with given D code.
     ///
-    private void update(string code)() {
+    /// This allows each init code to have a consistent default scope, featuring `glui`, `raylib` and chosen `std`
+    /// modules.
+    void update(string init)() {
 
-        mixin(code);
+        import glui;
+
+        mixin(init);
+
+    }
+
+    /// Duplicate the style.
+    final This dup(this This)() {
+
+        import std.traits;
+
+        auto style = new Style;
+
+        static foreach (field; FieldNameTuple!This) {
+
+            mixin(field.format!q{ style.%1$s = this.%1$s; });
+
+        }
+
+        return style;
 
     }
 
@@ -298,119 +340,5 @@ struct TextLine {
 
     /// Width of the line (including spaces).
     size_t width = 0;
-
-}
-
-/// Define style fields for a node and let them be affected by themes.
-///
-/// Note: This should be used in *every* node, even if empty, to ensure keys are inherited properly.
-///
-/// Params:
-///     names = A list of styles to define.
-mixin template DefineStyles(names...) {
-
-    import std.traits : BaseClassesTuple;
-    import std.meta : Filter;
-
-    import glui.utils : StaticFieldNames;
-
-    private alias Parent = BaseClassesTuple!(typeof(this))[0];
-    private alias MemberType(alias member) = typeof(__traits(getMember, Parent, member));
-
-    private enum isStyleKey(alias member) = is(MemberType!member == immutable(StyleKey));
-    private alias StyleKeys = Filter!(isStyleKey, StaticFieldNames!Parent);
-
-    // Inherit style keys
-    static foreach (field; StyleKeys) {
-
-        // Inherit default value
-        mixin("static immutable StyleKey " ~ field ~ ";");
-
-    }
-
-    // Local styles
-    static foreach(i, name; names) {
-
-        // Only check even names
-        static if (i % 2 == 0) {
-
-            // Define the key
-            mixin("static immutable StyleKey " ~ name ~ "Key;");
-
-            // Define the value
-            mixin("protected Style " ~ name ~ ";");
-
-        }
-
-    }
-
-    private enum inherits = !is(typeof(super) == Object);
-
-    override protected void reloadStyles() {
-
-        // First load what we're given
-        reloadStylesImpl();
-
-        // Then load the defaults
-        loadDefaultStyles();
-
-    }
-
-    // Load styles
-    override protected void reloadStylesImpl() {
-
-        // Inherit styles
-        static if (inherits) super.reloadStylesImpl();
-
-        // Load inherited keys (so class A:B will load both B.styleKey and A.styleKey)
-        static foreach (name; StyleKeys) {{
-
-            if (auto style = &mixin(name) in theme) {
-
-                mixin("this." ~ name[0 .. $-3]) = *style;
-
-            }
-
-            // No default value, the parent has already handled it
-
-        }}
-
-        // Load local keys and load defaults if none are set
-        static foreach (i, name; names) {
-
-            static if (i % 2 == 0) {
-
-                // We're deferring the default for later to make sure it uses up-to-date values
-                mixin("this." ~ name) = theme.get(&mixin(name ~ "Key"), null);
-
-            }
-
-        }
-
-    }
-
-    override void loadDefaultStyles() {
-
-        // Inherit
-        static if (inherits) super.loadDefaultStyles();
-
-        // Load defaults for each unset style
-        static foreach (i, name; names) {
-
-            static if (i % 2 == 0) {
-
-                // Found an unset value
-                if (mixin("this." ~ name) is null) {
-
-                    // Set the default
-                    mixin("this." ~ name) = mixin(names[i+1]);
-
-                }
-
-            }
-
-        }
-
-    }
 
 }
