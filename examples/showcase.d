@@ -12,19 +12,19 @@ void main() {
     scope (exit) CloseWindow();
 
     // Create sub-themes for colored backgrounds
-    // Tip: You can use `makeTheme!q{ }` without passing a theme to it to make one from the scratch
-    auto redTheme = gluiDefaultTheme.makeTheme!q{
+    // Tip: To make a new theme from scratch without inheriting Glui defaults, use `Theme.init.makeTheme`
+    auto redTheme = makeTheme!q{
 
         GluiFrame.styleAdd.backgroundColor = Color(0xc0, 0x12, 0x12, 0xff);
 
     };
 
-    auto greenTheme = gluiDefaultTheme.makeTheme!q{
+    auto greenTheme = makeTheme!q{
 
         GluiFrame.styleAdd.backgroundColor = Color(0x12, 0xc0, 0x12, 0xff);
 
     };
-    auto blueTheme = gluiDefaultTheme.makeTheme!q{
+    auto blueTheme = makeTheme!q{
 
         GluiFrame.styleAdd.backgroundColor = Color(0x12, 0x12, 0xc0, 0xff);
 

@@ -13,26 +13,7 @@ void main() {
     SetExitKey(0);
     scope (exit) CloseWindow();
 
-    auto theme = makeTheme!q{
-
-        GluiButton!().styleAdd!q{
-            backgroundColor = Color(0xee, 0xee, 0xee, 0xff);
-        };
-
-        GluiScrollBar.styleAdd!q{
-
-            backgroundColor = Color(0xaa, 0xaa, 0xaa, 0xff);
-
-            backgroundStyleAdd.backgroundColor = Color(0xee, 0xee, 0xee, 0xff);
-            hoverStyleAdd.backgroundColor = Color(0x88, 0x88, 0x88, 0xff);
-            focusStyleAdd.backgroundColor = Color(0x77, 0x77, 0x77, 0xff);
-            pressStyleAdd.backgroundColor = Color(0x55, 0x55, 0x55, 0xff);
-
-        };
-
-    };
-
-    Theme theme2 = theme.makeTheme!q{
+    immutable theme2 = makeTheme!q{
 
         GluiFrame.styleAdd.backgroundColor = Colors.RED;
 
@@ -41,7 +22,6 @@ void main() {
     GluiScrollBar myScrollBar;
 
     auto root = hframe(
-        theme,
         .layout!(1, "fill"),
         vspace(
             .layout!("fill"),

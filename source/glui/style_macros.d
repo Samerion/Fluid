@@ -6,6 +6,7 @@ import std.string;
 import std.typecons;
 
 import glui.style;
+import glui.default_theme;
 
 @safe:
 
@@ -23,12 +24,40 @@ private static {
 ///     init = D code to initialize the Node style with.
 ///     parent = Inherit styles from a parent theme.
 /// Returns: The created theme.
-inout(Theme) makeTheme(string init)(inout Theme parent = Theme.init) @trusted {
+template makeTheme(string init) {
+
+    // This ugly template is a workaround for https://issues.dlang.org/show_bug.cgi?id=22208
+    // We can't use inout here, sorry...
+
+    Theme makeTheme(Theme theme) {
+
+        makeThemeImpl!init(theme);
+        return currentTheme;
+
+    }
+
+    const(Theme) makeTheme(const Theme theme) @trusted {
+
+        makeThemeImpl!init(cast(Theme) theme.dup);
+        return cast(const) currentTheme;
+
+    }
+
+    immutable(Theme) makeTheme(immutable Theme theme = gluiDefaultTheme) @trusted {
+
+        makeThemeImpl!init(cast(Theme) theme.dup);
+        return cast(immutable) currentTheme;
+
+    }
+
+}
+
+private void makeThemeImpl(string init)(Theme parent) {
 
     import glui.node;
 
     // Create the theme
-    currentTheme = cast(Theme) parent.dup;
+    currentTheme = parent;
 
     // Load init
     {
@@ -52,8 +81,6 @@ inout(Theme) makeTheme(string init)(inout Theme parent = Theme.init) @trusted {
     }
 
     assert(styleStack.length == 0, "The style stack has not been emptied");
-
-    return cast(typeof(return)) currentTheme;
 
 }
 
