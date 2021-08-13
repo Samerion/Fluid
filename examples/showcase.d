@@ -12,6 +12,7 @@ void main() {
     scope (exit) CloseWindow();
 
     // Create sub-themes for colored backgrounds
+    // Tip: You can use `makeTheme!q{ }` without passing a theme to it to make one from the scratch
     auto redTheme = gluiDefaultTheme.makeTheme!q{
 
         GluiFrame.styleAdd.backgroundColor = Color(0xc0, 0x12, 0x12, 0xff);

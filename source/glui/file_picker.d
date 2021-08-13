@@ -65,7 +65,9 @@ class GluiFilePicker : GluiInput!GluiFrame {
 
     }
 
-    this(Theme theme, string name, void delegate() @trusted submitted, void delegate() @trusted cancelled = null) {
+    this(const Theme theme, string name, void delegate() @trusted submitted,
+        void delegate() @trusted cancelled = null)
+    do {
 
         super(
             .layout(1, NodeAlign.center, NodeAlign.start),

@@ -30,8 +30,26 @@ inout(Theme) makeTheme(string init)(inout Theme parent = Theme.init) @trusted {
     // Create the theme
     currentTheme = cast(Theme) parent.dup;
 
-    // Add the node style
-    nestStyle!(init, GluiNode.styleKey);
+    // Load init
+    {
+
+        // If the theme has a default style definition, push it
+        if (auto nodeStyle = &GluiNode.styleKey in currentTheme) {
+
+            styleStack ~= *nodeStyle;
+
+        }
+
+        // No, push the default style instead
+        else styleStack ~= Style.init;
+
+        // Clear the style when done
+        scope (exit) styleStack.popBack();
+
+        // Add the node style
+        nestStyle!(init, GluiNode.styleKey);
+
+    }
 
     assert(styleStack.length == 0, "The style stack has not been emptied");
 
