@@ -47,10 +47,10 @@ template simpleConstructor(T) {
 alias BasicNodeParamLength = Alias!5;
 template BasicNodeParam(int index) {
 
-    static if (index == 0) alias BasicNodeParam = AliasSeq!(Layout, Theme);
-    static if (index == 1) alias BasicNodeParam = AliasSeq!(Theme, Layout);
+    static if (index == 0) alias BasicNodeParam = AliasSeq!(Layout, const Theme);
+    static if (index == 1) alias BasicNodeParam = AliasSeq!(const Theme, Layout);
     static if (index == 2) alias BasicNodeParam = AliasSeq!(Layout);
-    static if (index == 3) alias BasicNodeParam = AliasSeq!(Theme);
+    static if (index == 3) alias BasicNodeParam = AliasSeq!(const Theme);
     static if (index == 4) alias BasicNodeParam = AliasSeq!();
 
 }

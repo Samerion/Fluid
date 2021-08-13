@@ -74,10 +74,10 @@ abstract class GluiNode : Styleable {
 
         /// Get the current theme.
         pragma(inline)
-        inout(Theme) theme() inout { return _theme; }
+        const(Theme) theme() const { return _theme; }
 
         /// Set the theme.
-        Theme theme(Theme value) {
+        const(Theme) theme(const Theme value) @trusted {
 
             _theme = cast(Theme) value;
             reloadStyles();
@@ -107,7 +107,7 @@ abstract class GluiNode : Styleable {
     /// Params:
     ///     layout = Layout for this node.
     ///     theme = Theme of this node.
-    this(Layout layout = Layout.init, Theme theme = null) {
+    this(Layout layout = Layout.init, const Theme theme = null) {
 
         this.layout = layout;
         this.theme  = theme;
@@ -116,7 +116,7 @@ abstract class GluiNode : Styleable {
     }
 
     /// Ditto
-    this(Theme theme = null, Layout layout = Layout.init) {
+    this(const Theme theme = null, Layout layout = Layout.init) {
 
         this(layout, theme);
 
@@ -172,7 +172,13 @@ abstract class GluiNode : Styleable {
     /// Draw this node as a root node.
     final void draw() @trusted {
 
-        assert(theme, "Cannot draw a node lacking theme.");
+        // No theme set, set the default
+        if (!theme) {
+
+            import glui.default_theme;
+            theme = gluiDefaultTheme;
+
+        }
 
         const space = Vector2(GetScreenWidth, GetScreenHeight);
 

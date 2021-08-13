@@ -3,6 +3,7 @@ module glui.style_macros;
 import std.range;
 import std.traits;
 import std.string;
+import std.typecons;
 
 import glui.style;
 
@@ -22,19 +23,19 @@ private static {
 ///     init = D code to initialize the Node style with.
 ///     parent = Inherit styles from a parent theme.
 /// Returns: The created theme.
-Theme makeTheme(string init)(Theme parent = Theme.init) {
+inout(Theme) makeTheme(string init)(inout Theme parent = Theme.init) @trusted {
 
     import glui.node;
 
     // Create the theme
-    currentTheme = parent.dup;
+    currentTheme = cast(Theme) parent.dup;
 
     // Add the node style
     nestStyle!(init, GluiNode.styleKey);
 
     assert(styleStack.length == 0, "The style stack has not been emptied");
 
-    return currentTheme;
+    return cast(typeof(return)) currentTheme;
 
 }
 
@@ -46,7 +47,7 @@ Style nestStyle(string init, alias styleKey)() {
     // Inherit from the parent style
     if (styleStack.length) {
 
-        style = styleStack[$-1].dup;
+        style = new Style(styleStack[$-1]);
 
     }
 
@@ -81,6 +82,7 @@ mixin template DefineStyles(names...) {
 
     import std.meta : Filter;
     import std.format : format;
+    import std.typecons : Rebindable;
     import std.traits : BaseClassesTuple;
 
     import glui.utils : StaticFieldNames;
@@ -120,7 +122,7 @@ mixin template DefineStyles(names...) {
             mixin(name.format!q{ static immutable StyleKey %sKey; });
 
             // Define the value
-            mixin(name.format!q{ protected Style %s; });
+            mixin(name.format!q{ protected Rebindable!(const Style) %s; });
 
             // Helper function to declare nested styles
             mixin(name.format!q{
