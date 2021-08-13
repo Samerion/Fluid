@@ -48,6 +48,10 @@ shared static this() {
 
         };
 
+        import glui.file_picker;
+
+        GluiFilePicker.selectedStyleAdd.backgroundColor = Color(0xff, 0x51, 0x2f, 0xff);
+
     };
 
 

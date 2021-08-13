@@ -11,35 +11,19 @@ void main() {
 
     scope (exit) CloseWindow();
 
-    auto theme = makeTheme!q{
-
-        GluiFrame.styleAdd.backgroundColor = Color(0x00, 0x00, 0x00, 0x00);
-
-    };
-
-    auto redTheme = makeTheme!q{
+    auto redTheme = gluiDefaultTheme.makeTheme!q{
 
         GluiFrame.styleAdd.backgroundColor = Color(0xc0, 0x12, 0x12, 0xff);
 
     };
-
-    auto greenTheme = makeTheme!q{
+    auto greenTheme = gluiDefaultTheme.makeTheme!q{
 
         GluiFrame.styleAdd.backgroundColor = Color(0x12, 0xc0, 0x12, 0xff);
 
-        GluiButton!().styleAdd!q{
-
-            backgroundColor = Color(0xff, 0xff, 0xff, 0xaa);
-
-            hoverStyleAdd.mouseCursor = MouseCursor.MOUSE_CURSOR_POINTING_HAND;
-
-        };
-
     };
-    auto whiteTheme = makeTheme!q{
+    auto whiteTheme = gluiDefaultTheme.makeTheme!q{
 
         GluiFrame.styleAdd.backgroundColor = Color(0xff, 0xff, 0xff, 0xff);
-        GluiFilePicker.selectedStyleAdd.backgroundColor = Color(0xff, 0x51, 0x2f, 0xff);
 
     };
 
@@ -48,14 +32,13 @@ void main() {
     GluiButton!() unrelatedButton;
 
     auto root = onionFrame(
-        theme,
         layout(NodeAlign.fill),
 
         hframe(
             layout(NodeAlign.fill),
             redTheme
         ),
-        hframe(
+        hspace(
             layout(NodeAlign.fill),
             label("Red background!"),
             vframe(greenTheme,
