@@ -16,7 +16,7 @@ void main() {
     SetExitKey(0);
     scope (exit) CloseWindow();
 
-    Theme theme = makeTheme!q{ };
+    immutable theme = makeTheme!q{ };
 
     auto root = vframe(
         theme,
