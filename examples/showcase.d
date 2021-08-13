@@ -11,56 +11,19 @@ void main() {
 
     scope (exit) CloseWindow();
 
-    // Create theme
-    auto theme = makeTheme!q{
-
-        fontSize = 20;
-        textColor = Colors.BLACK;
-
-        GluiFrame.styleAdd!q{
-
-            backgroundColor = Colors.WHITE;
-
-        };
-
-        GluiButton!().styleAdd!q{
-
-            backgroundColor = Colors.WHITE;
-            mouseCursor = MouseCursor.MOUSE_CURSOR_POINTING_HAND,
-
-            // Define alternative styles
-            focusStyleAdd.backgroundColor = Color(0xee, 0xee, 0xee, 0xff);
-            hoverStyleAdd.backgroundColor = Color(0xdd, 0xdd, 0xdd, 0xff);
-            pressStyleAdd.backgroundColor = Color(0xaa, 0xaa, 0xaa, 0xff);
-
-        };
-
-        GluiTextInput.styleAdd!q{
-
-            backgroundColor = Color(0xff, 0xff, 0xff, 0xcc);
-            mouseCursor = MouseCursor.MOUSE_CURSOR_IBEAM;
-
-            GluiTextInput.emptyStyleAdd.textColor = Color(0x00, 0x00, 0x00, 0xaa);
-            GluiTextInput.focusStyleAdd.backgroundColor = Color(0xff, 0xff, 0xff, 0xff);
-
-        };
-
-    };
-    // TODO: create a default theme and use it, also add styleKey helpers
-
     // Create sub-themes for colored backgrounds
-    auto redTheme = theme.makeTheme!q{
+    auto redTheme = gluiDefaultTheme.makeTheme!q{
 
         GluiFrame.styleAdd.backgroundColor = Color(0xc0, 0x12, 0x12, 0xff);
 
     };
 
-    auto greenTheme = theme.makeTheme!q{
+    auto greenTheme = gluiDefaultTheme.makeTheme!q{
 
         GluiFrame.styleAdd.backgroundColor = Color(0x12, 0xc0, 0x12, 0xff);
 
     };
-    auto blueTheme = theme.makeTheme!q{
+    auto blueTheme = gluiDefaultTheme.makeTheme!q{
 
         GluiFrame.styleAdd.backgroundColor = Color(0x12, 0x12, 0xc0, 0xff);
 
@@ -88,7 +51,7 @@ void main() {
 
     }
 
-    auto root = vframe(theme, fill,
+    auto root = vframe(fill,
 
         vframe(layout!("fill", "start"),
 

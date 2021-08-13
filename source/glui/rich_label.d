@@ -21,7 +21,7 @@ alias richLabel = simpleConstructor!GluiRichLabel;
 struct Part {
 
     /// Style to apply for this part. If null, uses default style instead.
-    Style style;
+    Rebindable!(const Style) style;
 
     /// Text for this part.
     string text;
@@ -63,9 +63,9 @@ class GluiRichLabel : GluiNode {
     }
 
     /// Change the style for next part of the text.
-    void opOpAssign(string op : "~")(Style style) {
+    void opOpAssign(string op : "~")(const Style style) {
 
-        textParts ~= Part(style, "");
+        textParts ~= Part(style.rebindable, "");
 
     }
 
@@ -81,7 +81,7 @@ class GluiRichLabel : GluiNode {
         }
 
         // Nope, make a new part
-        else textParts ~= Part(null, text);
+        else textParts ~= Part(rebindable(cast(const Style) null), text);
 
     }
 
@@ -89,9 +89,9 @@ class GluiRichLabel : GluiNode {
     /// Params:
     ///     style = Style of the text.
     ///     text  = Text to add.
-    void push(Style style, string text) {
+    void push(const Style style, string text) {
 
-        textParts ~= Part(style, text);
+        textParts ~= Part(style.rebindable, text);
 
     }
 

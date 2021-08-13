@@ -16,7 +16,8 @@ public import glui.style_macros;
 @safe:
 
 /// Node theme.
-alias Theme = Style[immutable(StyleKey)*];
+alias StyleKeyPtr = immutable(StyleKey)*;
+alias Theme = Style[StyleKeyPtr];
 
 /// An empty struct used to create unique style type identifiers.
 struct StyleKey { }
@@ -100,9 +101,19 @@ class Style {
 
     }
 
-    this() @trusted {
+    this() {
 
-        font = GetFontDefault;
+    }
+
+    this(Style style) {
+
+        import std.traits;
+
+        static foreach (field; FieldNameTuple!(typeof(this))) {
+
+            mixin(field.format!q{ this.%1$s = style.%1$s; });
+
+        }
 
     }
 
@@ -140,20 +151,10 @@ class Style {
 
     }
 
-    /// Duplicate the style.
-    final This dup(this This)() {
+    /// Get the current font
+    inout(Font) getFont() inout @trusted {
 
-        import std.traits;
-
-        auto style = new Style;
-
-        static foreach (field; FieldNameTuple!This) {
-
-            mixin(field.format!q{ style.%1$s = this.%1$s; });
-
-        }
-
-        return style;
+        return cast(inout) (font.recs ? font : GetFontDefault);
 
     }
 
@@ -225,8 +226,9 @@ class Style {
                     // cast(): raylib doesn't mutate the font. The parameter would probably be defined `const`, but
                     // since it's not transistive in C, and font is a struct with a pointer inside, it only matters
                     // in D.
-                    DrawTextEx(cast() font, word.text.toStringz, position, fontSize,
-                        fontSize * charSpacing, textColor);
+
+                    DrawTextEx(cast() getFont, word.text.toStringz, position, fontSize, fontSize * charSpacing,
+                        textColor);
 
                 }();
 
@@ -254,7 +256,7 @@ class Style {
         float wordWidth(string wordText) @trusted {
 
             // See drawText for cast()
-            return MeasureTextEx(cast() font, wordText.toStringz, fontSize, fontSize * charSpacing).x;
+            return MeasureTextEx(cast() getFont, wordText.toStringz, fontSize, fontSize * charSpacing).x;
 
         }
 
