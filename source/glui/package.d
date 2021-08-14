@@ -4,6 +4,7 @@ module glui;
 public import
     glui.button,
     glui.children,
+    glui.default_theme,
     glui.file_picker,
     glui.frame,
     glui.hover_button,

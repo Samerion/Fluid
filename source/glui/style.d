@@ -11,10 +11,13 @@ import std.algorithm;
 
 import glui.utils;
 
+public import glui.style_macros;
+
 @safe:
 
 /// Node theme.
-alias Theme = Style[immutable(StyleKey)*];
+alias StyleKeyPtr = immutable(StyleKey)*;
+alias Theme = Style[StyleKeyPtr];
 
 /// An empty struct used to create unique style type identifiers.
 struct StyleKey { }
@@ -22,6 +25,21 @@ struct StyleKey { }
 /// Create a new style initialized with given D code.
 ///
 /// raylib and std.string are accessible inside by default.
+///
+/// Params:
+///     init = D code to use.
+///     data = Data to pass to the code as the context. All fields of the struct will be within the style's scope.
+Style style(string init, Data)(Data data) {
+
+    auto result = new Style;
+
+    with (data) with (result) mixin(init);
+
+    return result;
+
+}
+
+/// Ditto.
 Style style(string init)() {
 
     auto result = new Style;
@@ -33,6 +51,14 @@ Style style(string init)() {
 
 /// Contains a style for a node.
 class Style {
+
+    // Internal use only, can't be private because it's used in mixins.
+    static {
+
+        Theme _currentTheme;
+        Style[] _styleStack;
+
+    }
 
     // Text options
     struct {
@@ -55,11 +81,6 @@ class Style {
         /// Text color.
         Color textColor = Colors.BLACK;
 
-        /// If true, text will be wrapped. Requires align=fill on height.
-        deprecated("textWrap is now always enabled and this property has no effect.")
-        bool textWrap = true;
-        // TODO for other aligns
-
     }
 
     // Background
@@ -80,9 +101,19 @@ class Style {
 
     }
 
-    this() @trusted {
+    this() {
 
-        font = GetFontDefault;
+    }
+
+    this(Style style) {
+
+        import std.traits;
+
+        static foreach (field; FieldNameTuple!(typeof(this))) {
+
+            mixin(field.format!q{ this.%1$s = style.%1$s; });
+
+        }
 
     }
 
@@ -95,10 +126,35 @@ class Style {
 
     }
 
+    /// Update the style with given D code.
     ///
-    private void update(string code)() {
+    /// This allows each init code to have a consistent default scope, featuring `glui`, `raylib` and chosen `std`
+    /// modules.
+    ///
+    /// Params:
+    ///     init = Code to update the style with.
+    ///     T    = An compile-time object to update the scope with.
+    void update(string init)() {
 
-        mixin(code);
+        import glui;
+
+        mixin(init);
+
+    }
+
+    /// Ditto.
+    void update(string init, T)() {
+
+        import glui;
+
+        with (T) mixin(init);
+
+    }
+
+    /// Get the current font
+    inout(Font) getFont() inout @trusted {
+
+        return cast(inout) (font.recs ? font : GetFontDefault);
 
     }
 
@@ -170,8 +226,9 @@ class Style {
                     // cast(): raylib doesn't mutate the font. The parameter would probably be defined `const`, but
                     // since it's not transistive in C, and font is a struct with a pointer inside, it only matters
                     // in D.
-                    DrawTextEx(cast() font, word.text.toStringz, position, fontSize,
-                        fontSize * charSpacing, textColor);
+
+                    DrawTextEx(cast() getFont, word.text.toStringz, position, fontSize, fontSize * charSpacing,
+                        textColor);
 
                 }();
 
@@ -199,7 +256,7 @@ class Style {
         float wordWidth(string wordText) @trusted {
 
             // See drawText for cast()
-            return MeasureTextEx(cast() font, wordText.toStringz, fontSize, fontSize * charSpacing).x;
+            return MeasureTextEx(cast() getFont, wordText.toStringz, fontSize, fontSize * charSpacing).x;
 
         }
 
@@ -298,79 +355,5 @@ struct TextLine {
 
     /// Width of the line (including spaces).
     size_t width = 0;
-
-}
-
-/// Define style fields for a node and let them be affected by themes.
-/// params:
-///     names = A list of styles to define.
-mixin template DefineStyles(names...) {
-
-    import std.traits : BaseClassesTuple;
-    import std.meta : Filter;
-
-    import glui.utils : StaticFieldNames;
-
-    private alias Parent = BaseClassesTuple!(typeof(this))[0];
-    private alias MemberType(alias member) = typeof(__traits(getMember, Parent, member));
-
-    private enum isStyleKey(alias member) = is(MemberType!member == immutable(StyleKey));
-    private alias StyleKeys = Filter!(isStyleKey, StaticFieldNames!Parent);
-
-    // Inherit style keys
-    static foreach (field; StyleKeys) {
-
-        mixin("static immutable StyleKey " ~ field ~ ";");
-
-    }
-
-    // Local styles
-    static foreach(i, name; names) {
-
-        // Only check even names
-        static if (i % 2 == 0) {
-
-            // Define the key
-            mixin("static immutable StyleKey " ~ name ~ "Key;");
-
-            // Define the value
-            mixin("protected Style " ~ name ~ ";");
-
-        }
-
-    }
-
-    // Load styles
-    override protected void reloadStyles() {
-
-        import std.stdio;
-        import std.traits;
-
-        super.reloadStyles();
-
-        // I have no idea why is this foreach actually necessary. I tried removing it, but it breaks everything.
-        // The default value in the second foreach should be enough. It's not. Might as well try removing the other
-        // foreach and adding default value functionality here; probably a better option.
-        static foreach (name; StyleKeys) {{
-
-            if (auto style = &mixin(name) in theme) {
-
-                mixin("this." ~ name[0 .. $-3]) = cast() *style;
-
-            }
-
-        }}
-
-        static foreach (i, name; names) {
-
-            static if (i % 2 == 0) {
-
-                mixin(name) = theme.get(&mixin(name ~ "Key"), mixin(names[i+1]));
-
-            }
-
-        }
-
-    }
 
 }
