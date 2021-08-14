@@ -5,6 +5,7 @@ import raylib;
 
 import glui.frame;
 import glui.utils;
+import glui.style;
 
 /// Make a new onion frame
 alias onionFrame = simpleConstructor!GluiOnionFrame;
@@ -17,6 +18,8 @@ alias onionFrame = simpleConstructor!GluiOnionFrame;
 ///
 /// It might be useful to use OnionFrame as the root node to enable drawing overlaying items, such as modals.
 class GluiOnionFrame : GluiFrame {
+
+    mixin DefineStyles;
 
     this(T...)(T args) {
 

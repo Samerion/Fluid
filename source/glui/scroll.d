@@ -10,6 +10,7 @@ import glui.frame;
 import glui.space;
 import glui.utils;
 import glui.input;
+import glui.style;
 import glui.scrollbar;
 
 private extern(C) float GetMouseWheelMove();
@@ -31,6 +32,8 @@ GluiScrollFrame hscrollFrame(Args...)(Args args) {
 ///
 /// This only supports scrolling in one side.
 class GluiScrollable(T : GluiFrame) : T {
+
+    mixin DefineStyles;
 
     // TODO: move keyboard input to GluiScrollBar.
 

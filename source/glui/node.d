@@ -13,8 +13,16 @@ private interface Styleable {
 
     /// Reload styles for the node. Triggered when the theme is changed.
     ///
-    /// Use `mixin DefineStyles` to generate.
-    protected void reloadStyles();
+    /// Use `mixin DefineStyles` to generate the styles.
+    final void reloadStyles() {
+
+        // First load what we're given
+        reloadStylesImpl();
+
+        // Then load the defaults
+        loadDefaultStyles();
+
+    }
 
     // Internal:
 
@@ -237,6 +245,10 @@ abstract class GluiNode : Styleable {
     /// Draw this node at specified location.
     final protected void draw(Rectangle space) @trusted {
 
+        // Given "space" is the amount of space we're given and what we should use at max.
+        // Within this function, we deduce how much of the space we should actually use, and align the node
+        // within the space.
+
         import std.algorithm : min;
 
         // If hidden, don't draw anything
@@ -250,9 +262,19 @@ abstract class GluiNode : Styleable {
             layout.nodeAlign[1] == NodeAlign.fill ? space.height : min(space.height, minSize.y),
         );
         const position = position(space, size);
+
+        // Calculate the margin
+        const margin = style
+            ? Rectangle(
+                style.margin[0], style.margin[2],
+                style.margin[0] + style.margin[1], style.margin[2] + style.margin[3]
+            )
+            : Rectangle(0, 0, 0, 0);
+
+        // Get the rectangle this node should occupy within the space given
         const rectangle = Rectangle(
-            position.x, position.y,
-            size.x,     size.y,
+            position.x + margin.x, position.y + margin.x,
+            size.x - margin.w,     size.y - margin.h,
         );
 
         // Check if hovered
@@ -278,7 +300,20 @@ abstract class GluiNode : Styleable {
         if (hidden) minSize = Vector2(0, 0);
 
         // Otherwise perform like normal
-        else resizeImpl(space);
+        else {
+
+            // Resize the node
+            resizeImpl(space);
+
+            // Add margins
+            if (style) {
+
+                minSize.x += style.margin[0] + style.margin[1];
+                minSize.y += style.margin[2] + style.margin[3];
+
+            }
+
+        }
 
     }
 
