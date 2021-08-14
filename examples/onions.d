@@ -11,48 +11,34 @@ void main() {
 
     scope (exit) CloseWindow();
 
-    auto theme = [
-        &GluiFrame.styleKey: style!q{
-            backgroundColor = Color(0x00, 0x00, 0x00, 0x00);
-        },
-    ];
+    auto redTheme = gluiDefaultTheme.makeTheme!q{
 
-    auto redTheme = [
-        &GluiFrame.styleKey: style!q{
-            backgroundColor = Color(0xc0, 0x12, 0x12, 0xff);
-        },
-    ];
+        GluiFrame.styleAdd.backgroundColor = Color(0xc0, 0x12, 0x12, 0xff);
 
-    auto greenTheme = [
-        &GluiFrame.styleKey: style!q{
-            backgroundColor = Color(0x12, 0xc0, 0x12, 0xff);
-        },
-        &GluiButton!GluiLabel.hoverStyleKey: style!q{
-            mouseCursor = MouseCursor.MOUSE_CURSOR_POINTING_HAND;
-        },
-    ];
-    auto whiteTheme = [
-        &GluiFrame.styleKey: style!q{
-            backgroundColor = Color(0xff, 0xff, 0xff, 0xff);
-        },
-        &GluiFilePicker.selectedStyleKey: style!q{
-            backgroundColor = Color(0xff, 0x51, 0x2f, 0xff);
-        },
-    ];
+    };
+    auto greenTheme = gluiDefaultTheme.makeTheme!q{
+
+        GluiFrame.styleAdd.backgroundColor = Color(0x12, 0xc0, 0x12, 0xff);
+
+    };
+    auto whiteTheme = gluiDefaultTheme.makeTheme!q{
+
+        GluiFrame.styleAdd.backgroundColor = Color(0xff, 0xff, 0xff, 0xff);
+
+    };
 
     GluiFilePicker picker;
     GluiLabel fileStatus;
     GluiButton!() unrelatedButton;
 
     auto root = onionFrame(
-        theme,
         layout(NodeAlign.fill),
 
         hframe(
             layout(NodeAlign.fill),
             redTheme
         ),
-        hframe(
+        hspace(
             layout(NodeAlign.fill),
             label("Red background!"),
             vframe(greenTheme,

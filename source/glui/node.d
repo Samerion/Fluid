@@ -9,8 +9,34 @@ import glui.structs;
 
 @safe:
 
+private interface Styleable {
+
+    /// Reload styles for the node. Triggered when the theme is changed.
+    ///
+    /// Use `mixin DefineStyles` to generate.
+    protected void reloadStyles();
+
+    // Internal:
+
+    protected void reloadStylesImpl();
+    protected void loadDefaultStyles();
+
+}
+
 /// Represents a Glui node.
-abstract class GluiNode {
+abstract class GluiNode : Styleable {
+
+    /// This node defines a single style, `style`, which also works as a default style for all other nodes. However,
+    /// rather than for that, the purpose of this style is to define the convention of `style` being the node's default,
+    /// idle style.
+    ///
+    /// It should be noted the default `style` is the only style that affects a node's sizing — as the tree would have
+    /// to be resized in case they changed and secondary styles are assumed to change frequently (for example, on
+    /// hover). In practice, resizing the tree on those changes usually ends up horrible for the user, so it's advised
+    /// to stick to constant sizing in order to not hurt the accessibility.
+    mixin DefineStyles!(
+        "style", q{ Style.init },
+    );
 
     public {
 
@@ -48,10 +74,10 @@ abstract class GluiNode {
 
         /// Get the current theme.
         pragma(inline)
-        inout(Theme) theme() inout { return _theme; }
+        const(Theme) theme() const { return _theme; }
 
         /// Set the theme.
-        Theme theme(Theme value) {
+        const(Theme) theme(const Theme value) @trusted {
 
             _theme = cast(Theme) value;
             reloadStyles();
@@ -81,7 +107,7 @@ abstract class GluiNode {
     /// Params:
     ///     layout = Layout for this node.
     ///     theme = Theme of this node.
-    this(Layout layout = Layout.init, Theme theme = null) {
+    this(Layout layout = Layout.init, const Theme theme = null) {
 
         this.layout = layout;
         this.theme  = theme;
@@ -90,7 +116,7 @@ abstract class GluiNode {
     }
 
     /// Ditto
-    this(Theme theme = null, Layout layout = Layout.init) {
+    this(const Theme theme = null, Layout layout = Layout.init) {
 
         this(layout, theme);
 
@@ -146,7 +172,13 @@ abstract class GluiNode {
     /// Draw this node as a root node.
     final void draw() @trusted {
 
-        assert(theme, "Cannot draw a node lacking theme.");
+        // No theme set, set the default
+        if (!theme) {
+
+            import glui.default_theme;
+            theme = gluiDefaultTheme;
+
+        }
 
         const space = Vector2(GetScreenWidth, GetScreenHeight);
 
@@ -290,11 +322,6 @@ abstract class GluiNode {
         }
 
     }
-
-    /// Reload styles for the node. Triggered when the theme is changed.
-    ///
-    /// Use `mixin DefineStyles` to generate.
-    protected abstract void reloadStyles() { }
 
     /// Get the current style.
     protected abstract const(Style) pickStyle() const;

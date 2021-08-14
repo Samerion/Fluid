@@ -139,7 +139,7 @@ class GluiScrollable(T : GluiFrame) : T {
         // affect this frame.
 
         // This node doesn't use GluiInput because it doesn't take focus, and we don't want to cause related
-        // accessbility issues. It can function perfectly without it, or at least until above note gets fixed.
+        // accessibility issues. It can function perfectly without it, or at least until above note gets fixed.
         // Then, a "GluiHoverable" interface could possibly become a thing.
 
         scrollBar.horizontal = directionHorizontal;
