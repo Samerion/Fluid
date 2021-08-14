@@ -17,7 +17,7 @@ alias imageView = simpleConstructor!GluiImageView;
 /// displayed in the middle of the available box.
 class GluiImageView : GluiNode {
 
-    mixin DefineStyles!();
+    mixin DefineStyles;
 
     /// Texture for this node.
     private {

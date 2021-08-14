@@ -37,6 +37,7 @@ enum isPart(T) = is(T : Style) || is(T == string);
 /// )
 class GluiRichLabel : GluiNode {
 
+    mixin DefineStyles;
     mixin ImplHoveredRect;
 
     /// Parts defining label text.

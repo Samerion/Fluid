@@ -91,6 +91,19 @@ class Style {
 
     }
 
+    // Spacing
+    struct {
+
+        /// Margin (outer margin) of the node. `[left, right, top, bottom]`.
+        ///
+        /// Tip: You can directly set all margins with eg. `margin = 6;`
+        uint[4] margin;
+
+        /// Padding (inner margin) of the node. `[left, right, top, bottom]`.
+        uint[4] padding;
+
+    }
+
     // Misc
     struct {
 
@@ -101,9 +114,7 @@ class Style {
 
     }
 
-    this() {
-
-    }
+    this() { }
 
     this(Style style) {
 

@@ -17,6 +17,7 @@ alias label = simpleConstructor!GluiLabel;
 /// )
 class GluiLabel : GluiNode {
 
+    mixin DefineStyles;
     mixin ImplHoveredRect;
 
     /// Text of this label.

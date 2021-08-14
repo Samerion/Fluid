@@ -164,6 +164,8 @@ mixin template DefineStyles(names...) {
         static if (i % 2 == 0) {
 
             // Define the key
+            // TODO: Make the stylekey private and add a getter for it. This getter could statically check for accessing
+            // missing `mixin DefineStyles` statements and then imply the statement with a warning.
             mixin(name.format!q{ static immutable StyleKey %sKey; });
 
             // Define the value
@@ -185,16 +187,6 @@ mixin template DefineStyles(names...) {
     }
 
     private enum inherits = !is(typeof(super) == Object);
-
-    override protected void reloadStyles() {
-
-        // First load what we're given
-        reloadStylesImpl();
-
-        // Then load the defaults
-        loadDefaultStyles();
-
-    }
 
     // Load styles
     override protected void reloadStylesImpl() {
