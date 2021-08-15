@@ -52,6 +52,12 @@ Style style(string init)() {
 /// Contains a style for a node.
 class Style {
 
+    enum Side {
+
+        left, right, top, bottom,
+
+    }
+
     // Internal use only, can't be private because it's used in mixins.
     static {
 
@@ -97,9 +103,13 @@ class Style {
         /// Margin (outer margin) of the node. `[left, right, top, bottom]`.
         ///
         /// Tip: You can directly set all margins with eg. `margin = 6;`
+        ///
+        /// See: enum `Side`
         uint[4] margin;
 
         /// Padding (inner margin) of the node. `[left, right, top, bottom]`.
+        ///
+        /// See: enum `Side`
         uint[4] padding;
 
     }
@@ -345,6 +355,30 @@ class Style {
     void drawBackground(Rectangle rect) const @trusted {
 
         DrawRectangleRec(rect, backgroundColor);
+
+    }
+
+    /// Remove padding from the vector representing size of a box.
+    Vector2 contentBox(Vector2 size) const {
+
+        size.x = max(0, size.x - padding[0] - padding[1]);
+        size.y = max(0, size.y - padding[2] - padding[3]);
+
+        return size;
+
+    }
+
+    /// Remove padding from the given rect.
+    Rectangle contentBox(Rectangle rect) const {
+
+        rect.x += padding[0];
+        rect.y += padding[2];
+
+        const size = contentBox(Vector2(rect.w, rect.h));
+        rect.width = size.x;
+        rect.height = size.y;
+
+        return rect;
 
     }
 

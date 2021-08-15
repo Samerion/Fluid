@@ -84,7 +84,7 @@ class GluiImageView : GluiNode {
 
     }
 
-    override protected void drawImpl(Rectangle rect) @trusted {
+    override protected void drawImpl(Rectangle, Rectangle rect) @trusted {
 
         import std.algorithm : min;
 

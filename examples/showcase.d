@@ -116,6 +116,7 @@ void main() {
 
                             GluiLabel.styleAdd!q{
                                 margin = 6;
+                                padding = 12;
                                 backgroundColor = Color(0xff, 0xff, 0xff, 0xaa);
                             };
 

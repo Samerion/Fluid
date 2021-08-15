@@ -139,7 +139,7 @@ class GluiSpace : GluiNode {
 
     }
 
-    protected override void drawImpl(Rectangle area) {
+    protected override void drawImpl(Rectangle, Rectangle area) {
 
         auto position = Vector2(area.x, area.y);
 
