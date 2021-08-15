@@ -89,6 +89,8 @@ Style nestStyle(string init, alias styleKey)() {
 
     Style style;
 
+    // TODO: inherit from previous instance
+
     // Inherit from the parent style
     if (styleStack.length) {
 

@@ -125,13 +125,13 @@ class GluiRichLabel : GluiNode {
 
     }
 
-    protected override void drawImpl(Rectangle rect) {
+    protected override void drawImpl(Rectangle outer, Rectangle inner) {
 
         const style = pickStyle();
-        style.drawBackground(rect);
+        style.drawBackground(outer);
 
         /// Current position on the screen to append to.
-        auto cursor = Vector2(rect.x, rect.y);
+        auto cursor = Vector2(inner.x, inner.y);
 
         foreach (part; textParts) {
 
@@ -145,7 +145,7 @@ class GluiRichLabel : GluiNode {
                 // Get area to draw in
                 auto thisStyle = part.style is null ? style : part.style;
                 auto area = thisStyle.measureText(
-                    Rectangle(cursor.x, cursor.y, rect.w, rect.h),
+                    Rectangle(cursor.x, cursor.y, inner.w, inner.h),
                     current
                 );
                 // TODO: wrapping+indent
@@ -157,7 +157,7 @@ class GluiRichLabel : GluiNode {
                 cursor.y += area.h - thisStyle.fontSize * thisStyle.lineHeight;
 
                 // Ended with a newline
-                if (current[$-1] == '\n') cursor.x = rect.x;
+                if (current[$-1] == '\n') cursor.x = inner.x;
                 else cursor.x += area.w;
 
             }

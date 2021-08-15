@@ -19,6 +19,18 @@ void main() {
 
     };
 
+    immutable rightTheme = makeTheme!q{
+
+        GluiSpace.styleAdd!q{
+            margin = 5;
+            margin[Style.Side.top..$] = 10;
+        };
+        GluiButton!().styleAdd!q{
+            margin[Style.Side.top] = 10;
+        };
+
+    };
+
     GluiScrollBar myScrollBar;
 
     auto root = hframe(
@@ -40,14 +52,28 @@ void main() {
         ),
         vframe(
             .layout!1,
-            label("A useless scrollbar:"),
-            myScrollBar = hscrollBar(.layout!"fill"),
-            label("..."), // margins are a must
-            button("Change scrollbar position", {
+            rightTheme,
+            vspace(
 
-                myScrollBar.position = !myScrollBar.position * myScrollBar.scrollMax;
+                label("A useless scrollbar:"),
+                myScrollBar = hscrollBar(.layout!"fill"),
 
-            }),
+                button("Change scrollbar position", {
+
+                    myScrollBar.position = !myScrollBar.position * myScrollBar.scrollMax;
+
+                }),
+
+            ),
+            vspace(
+                hscrollFrame(
+                    .layout!"fill",
+
+                    label("A long time ago far far far far far far far far far far far far far far far away..."),
+
+                ),
+            ),
+
         )
     );
 

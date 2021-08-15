@@ -2,6 +2,7 @@ module glui.scroll;
 
 import raylib;
 
+import std.meta;
 import std.conv;
 import std.algorithm;
 
@@ -11,6 +12,7 @@ import glui.space;
 import glui.utils;
 import glui.input;
 import glui.style;
+import glui.structs;
 import glui.scrollbar;
 
 private extern(C) float GetMouseWheelMove();
@@ -41,13 +43,6 @@ class GluiScrollable(T : GluiFrame) : T {
 
         /// Scrollbar for the frame. Can be replaced with a customzed one.
         GluiScrollBar scrollBar;
-
-    }
-
-    private {
-
-        /// Actual size of the node, determined by drawImpl.
-        size_t actualSize;
 
     }
 
@@ -109,34 +104,44 @@ class GluiScrollable(T : GluiFrame) : T {
         assert(tree !is null);
 
         // Resize the scrollbar
-        scrollBar.tree = tree;
-        scrollBar.theme = theme;
-        scrollBar.resize(space);
+        with (scrollBar) {
+
+            tree = this.tree;
+            theme = this.theme;
+            horizontal = this.directionHorizontal;
+            layout = .layout!(1, "fill");
+            resize(space);
+
+        }
 
         // Update available space
-        space.x = max(0, space.x - scrollBar.minSize.x);
-        space.y = max(0, space.y - scrollBar.minSize.y);
+        if (directionHorizontal) {
+            space.y = max(0, space.y - scrollBar.minSize.y);
+        }
+        else {
+            space.x = max(0, space.x - scrollBar.minSize.x);
+        }
 
         // Get the size
         super.resizeImpl(space);
 
         if (directionHorizontal) {
 
-            scrollBar.availableSpace = cast(size_t) minSize.x;
+            scrollBar.availableSpace = cast(size_t) minSize.x + style.padding[Style.Side.left .. 2].sum;
             minSize.y += scrollBar.minSize.y;
 
         }
 
         else {
 
-            scrollBar.availableSpace = cast(size_t) minSize.y;
+            scrollBar.availableSpace = cast(size_t) minSize.y + style.padding[Style.Side.top .. $].sum;
             minSize.x += scrollBar.minSize.x;
 
         }
 
     }
 
-    override void drawImpl(Rectangle rect) {
+    override void drawImpl(Rectangle outer, Rectangle inner) {
 
         // Note: Mouse input detection is primitive, awaiting #13 and #14 to help better identify when should the mouse
         // affect this frame.
@@ -147,20 +152,25 @@ class GluiScrollable(T : GluiFrame) : T {
 
         scrollBar.horizontal = directionHorizontal;
 
-        auto scrollBarRect = rect;
+        auto scrollBarRect = outer;
 
         // Scroll the given rectangle horizontally
         if (directionHorizontal) {
 
-            actualSize = cast(size_t) rect.x;
-
             if (hovered) inputImpl();
 
-            rect.x -= scroll;
-            rect.width = minSize.x;
-            rect.height -= scrollBar.minSize.y;
+            static foreach (rect; AliasSeq!(outer, inner)) {
 
-            scrollBarRect.y += rect.height;
+                // Perform the scroll
+                rect.x -= scroll;
+                rect.width = minSize.x;
+
+                // Reduce both rects by scrollbar size
+                rect.height -= scrollBar.minSize.y;
+
+            }
+
+            scrollBarRect.y += outer.height;
             scrollBarRect.height = scrollBar.minSize.y;
 
         }
@@ -168,15 +178,20 @@ class GluiScrollable(T : GluiFrame) : T {
         // Vertically
         else {
 
-            actualSize = cast(size_t) rect.y;
-
             if (hovered) inputImpl();
 
-            rect.y -= scroll;
-            rect.width -= scrollBar.minSize.x;
-            rect.height = minSize.y;
+            static foreach (rect; AliasSeq!(outer, inner)) {
 
-            scrollBarRect.x += rect.width;
+                // Perform the scroll
+                rect.y -= scroll;
+                rect.height = minSize.y;
+
+                // Reduce both rects by scrollbar size
+                rect.width -= scrollBar.minSize.x;
+
+            }
+
+            scrollBarRect.x += outer.width;
             scrollBarRect.width = scrollBar.minSize.x;
 
         }
@@ -185,7 +200,7 @@ class GluiScrollable(T : GluiFrame) : T {
         scrollBar.draw(scrollBarRect);
 
         // Draw the frame
-        super.drawImpl(rect);
+        super.drawImpl(outer, inner);
 
     }
 
