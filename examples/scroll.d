@@ -23,10 +23,10 @@ void main() {
 
         GluiSpace.styleAdd!q{
             margin = 5;
-            margin[Style.Side.top..$] = 10;
+            margin.sideY = 10;
         };
         GluiButton!().styleAdd!q{
-            margin[Style.Side.top] = 10;
+            margin.sideTop = 10;
         };
 
     };
