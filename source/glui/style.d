@@ -26,10 +26,13 @@ struct StyleKey { }
 ///
 /// raylib and std.string are accessible inside by default.
 ///
+/// Note: It is recommended to create a root style node defining font parameters and then inherit other styles from it.
+///
 /// Params:
-///     init = D code to use.
-///     data = Data to pass to the code as the context. All fields of the struct will be within the style's scope.
-Style style(string init, Data)(Data data) {
+///     init    = D code to use.
+///     parents = Styles to inherit from. See `Style.this` documentation for more info.
+///     data    = Data to pass to the code as the context. All fields of the struct will be within the style's scope.
+Style style(string init, Data)(Data data, Style[] parents...) {
 
     auto result = new Style;
 
@@ -40,9 +43,9 @@ Style style(string init, Data)(Data data) {
 }
 
 /// Ditto.
-Style style(string init)() {
+Style style(string init)(Style[] parents...) {
 
-    auto result = new Style;
+    auto result = new Style(parents);
     result.update!init;
 
     return result;
@@ -73,19 +76,19 @@ class Style {
         Font font;
 
         /// Font size (height) in pixels.
-        float fontSize = 24;
+        float fontSize;
 
         /// Line height, as a fraction of `fontSize`.
-        float lineHeight = 1.4;
+        float lineHeight;
 
         /// Space between characters, relative to font size.
-        float charSpacing = 0.1;
+        float charSpacing;
 
         /// Space between words, relative to the font size.
-        float wordSpacing = 0.5;
+        float wordSpacing;
 
         /// Text color.
-        Color textColor = Colors.BLACK;
+        Color textColor;
 
     }
 

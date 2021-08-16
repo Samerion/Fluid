@@ -30,12 +30,6 @@ void main() {
 
     };
 
-    auto whiteText = style!q{
-
-        textColor = Colors.WHITE;
-
-    };
-
     Layout fill = .layout!(1, "fill");
 
     // Save IDs
@@ -69,15 +63,7 @@ void main() {
 
             vframe(redTheme, fill,
 
-                richLabel(
-                    .layout!(1, "center"),
-                    "Hello, ", whiteText, "World", null, "!\n\n",
-
-                    "Line 1\n",
-                    "Line 2\n",
-                    whiteText, "Line 3 (but white)\n",
-                    null, "Line 4\n",
-                ),
+                label("Hello!"),
 
                 imageView(fill, "./logo.png"),
 
