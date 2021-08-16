@@ -301,7 +301,7 @@ class GluiFilePicker : GluiInput!GluiFrame {
 
     }
 
-    protected override void drawImpl(Rectangle rect) @trusted {
+    protected override void drawImpl(Rectangle outer, Rectangle inner) @trusted {
 
         // Wasn't focused
         if (!savedFocus) {
@@ -367,7 +367,7 @@ class GluiFilePicker : GluiInput!GluiFrame {
 
         }
 
-        super.drawImpl(rect);
+        super.drawImpl(outer, inner);
 
     }
 

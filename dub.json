@@ -60,6 +60,18 @@
 			"sourcePaths": [],
 			"targetPath": "build",
 			"targetType": "executable"
+		},
+		{
+			"dependencies": {
+				"glui": ">=0.0.0"
+			},
+			"name": "example-margins",
+			"sourceFiles": [
+				"examples/margins.d"
+			],
+			"sourcePaths": [],
+			"targetPath": "build",
+			"targetType": "executable"
 		}
 	],
 	"targetPath": "build",

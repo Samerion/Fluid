@@ -37,6 +37,8 @@ GluiSpace hspace(T...)(T args) {
 /// overlaying nodes, eg. with `GluiOnionFrame`.
 class GluiSpace : GluiNode {
 
+    mixin DefineStyles;
+
     /// Children of this frame.
     Children children;
 
@@ -137,7 +139,7 @@ class GluiSpace : GluiNode {
 
     }
 
-    protected override void drawImpl(Rectangle area) {
+    protected override void drawImpl(Rectangle, Rectangle area) {
 
         auto position = Vector2(area.x, area.y);
 
@@ -188,10 +190,6 @@ class GluiSpace : GluiNode {
     protected override const(Style) pickStyle() const {
 
         return null;
-
-    }
-
-    protected override void reloadStyles() {
 
     }
 

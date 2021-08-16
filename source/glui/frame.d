@@ -40,12 +40,12 @@ class GluiFrame : GluiSpace {
 
     }
 
-    protected override void drawImpl(Rectangle area) {
+    protected override void drawImpl(Rectangle outer, Rectangle inner) {
 
         const style = pickStyle();
-        style.drawBackground(area);
+        style.drawBackground(outer);
 
-        super.drawImpl(area);
+        super.drawImpl(outer, inner);
 
     }
 

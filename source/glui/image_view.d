@@ -17,7 +17,7 @@ alias imageView = simpleConstructor!GluiImageView;
 /// displayed in the middle of the available box.
 class GluiImageView : GluiNode {
 
-    mixin DefineStyles!();
+    mixin DefineStyles;
 
     /// Texture for this node.
     private {
@@ -84,7 +84,7 @@ class GluiImageView : GluiNode {
 
     }
 
-    override protected void drawImpl(Rectangle rect) @trusted {
+    override protected void drawImpl(Rectangle, Rectangle rect) @trusted {
 
         import std.algorithm : min;
 

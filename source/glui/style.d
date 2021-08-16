@@ -26,10 +26,13 @@ struct StyleKey { }
 ///
 /// raylib and std.string are accessible inside by default.
 ///
+/// Note: It is recommended to create a root style node defining font parameters and then inherit other styles from it.
+///
 /// Params:
-///     init = D code to use.
-///     data = Data to pass to the code as the context. All fields of the struct will be within the style's scope.
-Style style(string init, Data)(Data data) {
+///     init    = D code to use.
+///     parents = Styles to inherit from. See `Style.this` documentation for more info.
+///     data    = Data to pass to the code as the context. All fields of the struct will be within the style's scope.
+Style style(string init, Data)(Data data, Style[] parents...) {
 
     auto result = new Style;
 
@@ -40,9 +43,9 @@ Style style(string init, Data)(Data data) {
 }
 
 /// Ditto.
-Style style(string init)() {
+Style style(string init)(Style[] parents...) {
 
-    auto result = new Style;
+    auto result = new Style(parents);
     result.update!init;
 
     return result;
@@ -51,6 +54,12 @@ Style style(string init)() {
 
 /// Contains a style for a node.
 class Style {
+
+    enum Side {
+
+        left, right, top, bottom,
+
+    }
 
     // Internal use only, can't be private because it's used in mixins.
     static {
@@ -67,19 +76,19 @@ class Style {
         Font font;
 
         /// Font size (height) in pixels.
-        float fontSize = 24;
+        float fontSize;
 
         /// Line height, as a fraction of `fontSize`.
-        float lineHeight = 1.4;
+        float lineHeight;
 
         /// Space between characters, relative to font size.
-        float charSpacing = 0.1;
+        float charSpacing;
 
         /// Space between words, relative to the font size.
-        float wordSpacing = 0.5;
+        float wordSpacing;
 
         /// Text color.
-        Color textColor = Colors.BLACK;
+        Color textColor;
 
     }
 
@@ -88,6 +97,23 @@ class Style {
 
         /// Background color of the node.
         Color backgroundColor;
+
+    }
+
+    // Spacing
+    struct {
+
+        /// Margin (outer margin) of the node. `[left, right, top, bottom]`.
+        ///
+        /// Tip: You can directly set all margins with eg. `margin = 6;`
+        ///
+        /// See: enum `Side`
+        uint[4] margin;
+
+        /// Padding (inner margin) of the node. `[left, right, top, bottom]`.
+        ///
+        /// See: enum `Side`
+        uint[4] padding;
 
     }
 
@@ -101,17 +127,32 @@ class Style {
 
     }
 
-    this() {
+    this() { }
 
-    }
+    /// Create a style by copying params of others.
+    ///
+    /// Multiple styles can be set, so if one field is set to `typeof(field).init`, it will be taken from the previous
+    /// style from the list — that is, settings from the last style override previous ones.
+    this(Style[] styles...) {
 
-    this(Style style) {
+        import std.meta, std.traits;
 
-        import std.traits;
+        // Check each style
+        foreach (i, style; styles) {
 
-        static foreach (field; FieldNameTuple!(typeof(this))) {
+            // Inherit each field
+            static foreach (field; FieldNameTuple!(typeof(this))) {{
 
-            mixin(field.format!q{ this.%1$s = style.%1$s; });
+                auto inheritedField = mixin("style." ~ field);
+
+                // Ignore if it's set to init (unless it's the first style)
+                if (i == 0 || inheritedField != typeof(inheritedField).init) {
+
+                    mixin("this." ~ field) = inheritedField;
+
+                }
+
+            }}
 
         }
 
@@ -138,7 +179,11 @@ class Style {
 
         import glui;
 
-        mixin(init);
+        // Wrap init content in brackets to allow imports
+        // See: https://forum.dlang.org/thread/nl4vse$egk$1@digitalmars.com
+        // The thread mentions mixin templates but it's the same for string mixins too; and a mixin with multiple
+        // statements is annoyingly treated as multiple separate mixins.
+        mixin(init.format!"{ %s }");
 
     }
 
@@ -147,7 +192,7 @@ class Style {
 
         import glui;
 
-        with (T) mixin(init);
+        with (T) mixin(init.format!"{ %s }");
 
     }
 
@@ -337,6 +382,30 @@ class Style {
 
     }
 
+    /// Remove padding from the vector representing size of a box.
+    Vector2 contentBox(Vector2 size) const {
+
+        size.x = max(0, size.x - padding[0] - padding[1]);
+        size.y = max(0, size.y - padding[2] - padding[3]);
+
+        return size;
+
+    }
+
+    /// Remove padding from the given rect.
+    Rectangle contentBox(Rectangle rect) const {
+
+        rect.x += padding[0];
+        rect.y += padding[2];
+
+        const size = contentBox(Vector2(rect.w, rect.h));
+        rect.width = size.x;
+        rect.height = size.y;
+
+        return rect;
+
+    }
+
 }
 
 /// `wrapText` result.
@@ -355,5 +424,41 @@ struct TextLine {
 
     /// Width of the line (including spaces).
     size_t width = 0;
+
+}
+
+ref uint sideLeft(return ref uint[4] sides) {
+
+    return sides[Style.Side.left];
+
+}
+ref uint sideRight(return ref uint[4] sides) {
+
+    return sides[Style.Side.right];
+
+}
+ref uint sideTop(return ref uint[4] sides) {
+
+    return sides[Style.Side.top];
+
+}
+
+ref uint sideBottom(return ref uint[4] sides) {
+
+    return sides[Style.Side.bottom];
+
+}
+
+ref uint[2] sideX(return ref uint[4] sides) {
+
+    const start = Style.Side.left;
+    return sides[start .. start + 2];
+
+}
+
+ref uint[2] sideY(return ref uint[4] sides) {
+
+    const start = Style.Side.top;
+    return sides[start .. start + 2];
 
 }

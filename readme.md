@@ -12,4 +12,5 @@ integrate in other projects.
 
 It is guaranteed to work with Raylib, but might not work with other libraries or frameworks.
 
-glui has a poor feature set at the moment and new features will be added as needed.
+Glui has a decent feature set at the moment, but new features will still be added over time. It's mostly stable as of
+now and ready to be used. What it's missing the most, is examples and documentation on design concepts behind it.

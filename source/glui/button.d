@@ -53,10 +53,10 @@ class GluiButton(T : GluiNode = GluiLabel) : GluiInput!T {
 
     }
 
-    protected override void drawImpl(Rectangle area) {
+    protected override void drawImpl(Rectangle outer, Rectangle inner) {
 
         // Draw the button
-        super.drawImpl(area);
+        super.drawImpl(outer, inner);
 
         // Reset pressed status
         isPressed = false;

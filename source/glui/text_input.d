@@ -79,12 +79,12 @@ class GluiTextInput : GluiInput!GluiNode {
 
     }
 
-    protected override void drawImpl(Rectangle rect) @trusted {
+    protected override void drawImpl(Rectangle outer, Rectangle inner) @trusted {
 
         auto style = pickStyle();
 
         // Fill the background
-        style.drawBackground(rect);
+        style.drawBackground(outer);
 
         // Draw the text
         const text = (value == "") ? placeholder : value;
@@ -97,14 +97,14 @@ class GluiTextInput : GluiInput!GluiNode {
             const lineHeight = style.fontSize * style.lineHeight;
 
             auto textArea = value == ""
-                ? Rectangle(rect.x, rect.y, 0, lineHeight)
-                : style.measureText(rect, text, false);
+                ? Rectangle(inner.x, inner.y, 0, lineHeight)
+                : style.measureText(inner, text, false);
 
-            const scrollOffset = max(0, textArea.w - rect.w);
+            const scrollOffset = max(0, textArea.w - outer.w);
 
-            rect.x -= scrollOffset;
+            inner.x -= scrollOffset;
 
-            style.drawText(rect, value, false);
+            style.drawText(inner, value, false);
 
             // Add a blinking caret
             if (GetTime % (blinkTime*2) < blinkTime) {
@@ -127,7 +127,7 @@ class GluiTextInput : GluiInput!GluiNode {
         }
 
         // Not focused, draw text
-        else style.drawText(rect, text, false);
+        else style.drawText(inner, text, false);
 
     }
 
