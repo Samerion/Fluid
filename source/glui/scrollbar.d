@@ -116,16 +116,16 @@ class GluiScrollBar : GluiInput!GluiNode {
 
     }
 
-    override protected void drawImpl(Rectangle rect) @trusted {
+    override protected void drawImpl(Rectangle paddingBox, Rectangle contentBox) @trusted {
 
         setScroll(position);
 
         // Draw the background
-        backgroundStyle.drawBackground(rect);
+        backgroundStyle.drawBackground(paddingBox);
 
         // Calculate the size of the scrollbar
-        scrollbarPosition = Vector2(rect.x, rect.y);
-        scrollbarLength = horizontal ? rect.width : rect.height;
+        scrollbarPosition = Vector2(contentBox.x, contentBox.y);
+        scrollbarLength = horizontal ? contentBox.width : contentBox.height;
         handleLength = availableSpace
             ? max(50, scrollbarLength^^2 / availableSpace)
             : 0;
@@ -133,7 +133,7 @@ class GluiScrollBar : GluiInput!GluiNode {
         const handlePosition = (scrollbarLength - handleLength) * position / scrollMax;
 
         // Now get the size of the inner rect
-        auto innerRect = rect;
+        auto innerRect = contentBox;
 
         if (horizontal) {
 

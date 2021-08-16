@@ -13,8 +13,16 @@ private interface Styleable {
 
     /// Reload styles for the node. Triggered when the theme is changed.
     ///
-    /// Use `mixin DefineStyles` to generate.
-    protected void reloadStyles();
+    /// Use `mixin DefineStyles` to generate the styles.
+    final void reloadStyles() {
+
+        // First load what we're given
+        reloadStylesImpl();
+
+        // Then load the defaults
+        loadDefaultStyles();
+
+    }
 
     // Internal:
 
@@ -237,6 +245,10 @@ abstract class GluiNode : Styleable {
     /// Draw this node at specified location.
     final protected void draw(Rectangle space) @trusted {
 
+        // Given "space" is the amount of space we're given and what we should use at max.
+        // Within this function, we deduce how much of the space we should actually use, and align the node
+        // within the space.
+
         import std.algorithm : min;
 
         // If hidden, don't draw anything
@@ -244,28 +256,44 @@ abstract class GluiNode : Styleable {
 
         const spaceV = Vector2(space.width, space.height);
 
+        // No style set? Reload styles, the theme might've been set through CTFE
+        if (!style) reloadStyles();
+
         // Get parameters
         const size = Vector2(
             layout.nodeAlign[0] == NodeAlign.fill ? space.width  : min(space.width,  minSize.x),
             layout.nodeAlign[1] == NodeAlign.fill ? space.height : min(space.height, minSize.y),
         );
         const position = position(space, size);
-        const rectangle = Rectangle(
-            position.x, position.y,
-            size.x,     size.y,
+
+        // Calculate the margin
+        const margin = style
+            ? Rectangle(
+                style.margin[0], style.margin[2],
+                style.margin[0] + style.margin[1], style.margin[2] + style.margin[3]
+            )
+            : Rectangle(0, 0, 0, 0);
+
+        // Get the rectangle this node should occupy within the given space
+        const paddingBox = Rectangle(
+            position.x + margin.x, position.y + margin.y,
+            size.x - margin.w,     size.y - margin.h,
         );
 
+        // Subtract padding to get the content box.
+        const contentBox = style.contentBox(paddingBox);
+
         // Check if hovered
-        _hovered = hoveredImpl(rectangle, GetMousePosition);
+        _hovered = hoveredImpl(paddingBox, GetMousePosition);
 
         // Update global hover unless mouse is being held down
         if (_hovered && !isLMBHeld) tree.hover = this;
 
-        tree.pushScissors(rectangle);
+        tree.pushScissors(paddingBox);
         scope (exit) tree.popScissors();
 
         // Draw the node
-        drawImpl(rectangle);
+        drawImpl(paddingBox, contentBox);
 
     }
 
@@ -278,13 +306,34 @@ abstract class GluiNode : Styleable {
         if (hidden) minSize = Vector2(0, 0);
 
         // Otherwise perform like normal
-        else resizeImpl(space);
+        else {
+
+            import std.range, std.algorithm;
+
+            const spacingX = style ? chain(style.margin[0..2], style.padding[0..2]).sum : 0;
+            const spacingY = style ? chain(style.margin[2..4], style.padding[2..4]).sum : 0;
+
+            // Reduce space by margins
+            space.x = max(0, space.x - spacingX);
+            space.y = max(0, space.y - spacingY);
+
+            // Resize the node
+            resizeImpl(space);
+
+            // Add margins
+            minSize.x += spacingX;
+            minSize.y += spacingY;
+
+        }
 
     }
 
     /// Ditto
     ///
     /// This is the implementation of resizing to be provided by children.
+    ///
+    /// If style margins/paddings are non-zero, they are automatically subtracted from space, so they are handled
+    /// automatically.
     protected abstract void resizeImpl(Vector2 space);
 
     /// Draw this node.
@@ -293,8 +342,10 @@ abstract class GluiNode : Styleable {
     /// feedback. `resize` should still use the normal style.
     ///
     /// Params:
-    ///     rect = Area the node should draw in.
-    protected abstract void drawImpl(Rectangle rect);
+    ///     paddingBox = Area which should be used by the node. It should include styling elements such as background,
+    ///         but no content.
+    ///     contentBox = Area which should be filled with content of the node, such as child nodes, text, etc.
+    protected abstract void drawImpl(Rectangle paddingBox, Rectangle contentBox);
 
     /// Check if the node is hovered.
     ///

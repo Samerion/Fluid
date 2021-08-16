@@ -17,6 +17,7 @@ alias label = simpleConstructor!GluiLabel;
 /// )
 class GluiLabel : GluiNode {
 
+    mixin DefineStyles;
     mixin ImplHoveredRect;
 
     /// Text of this label.
@@ -40,11 +41,11 @@ class GluiLabel : GluiNode {
 
     }
 
-    protected override void drawImpl(Rectangle area) {
+    protected override void drawImpl(Rectangle outer, Rectangle inner) {
 
         const style = pickStyle();
-        style.drawBackground(area);
-        style.drawText(area, text);
+        style.drawBackground(outer);
+        style.drawText(inner, text);
 
     }
 

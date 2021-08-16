@@ -20,21 +20,7 @@ import glui.style;
 /// )
 abstract class GluiInput(Parent : GluiNode) : Parent, GluiFocusable {
 
-    // Style property is present
-    static if (__traits(hasMember, typeof(this), "style")) {
-
-        // Leave it original
-        mixin DefineStyles!(
-            "focusStyle", q{ style },
-            "hoverStyle", q{ style },
-            "disabledStyle", q{ style },
-        );
-
-    }
-
-    // Define it
-    else mixin DefineStyles!(
-        "style", q{ Style.init },
+    mixin DefineStyles!(
         "focusStyle", q{ style },
         "hoverStyle", q{ style },
         "disabledStyle", q{ style },

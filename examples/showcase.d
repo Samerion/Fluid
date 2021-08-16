@@ -16,27 +16,21 @@ void main() {
     auto redTheme = makeTheme!q{
 
         GluiFrame.styleAdd.backgroundColor = Color(0xc0, 0x12, 0x12, 0xff);
+        GluiButton!().styleAdd.backgroundColor = Color(0xff, 0xff, 0xff, 0xff);
 
     };
-
-    auto greenTheme = makeTheme!q{
+    auto greenTheme = redTheme.makeTheme!q{
 
         GluiFrame.styleAdd.backgroundColor = Color(0x12, 0xc0, 0x12, 0xff);
 
     };
-    auto blueTheme = makeTheme!q{
+    auto blueTheme = redTheme.makeTheme!q{
 
         GluiFrame.styleAdd.backgroundColor = Color(0x12, 0x12, 0xc0, 0xff);
 
     };
 
-    auto whiteText = style!q{
-
-        textColor = Colors.WHITE;
-
-    };
-
-    Layout fill = layout!(1, "fill");
+    Layout fill = .layout!(1, "fill");
 
     // Save IDs
     GluiNode secondColumn;
@@ -54,13 +48,13 @@ void main() {
 
     auto root = vframe(fill,
 
-        vframe(layout!("fill", "start"),
+        vframe(.layout!("fill", "start"),
 
             hframe(
-                layout!"center",
+                .layout!"center",
 
                 imageView("./logo.png", Vector2(40, 40)),
-                label(layout!"center", "Hello, Glui!"),
+                label(.layout!"center", "Hello, Glui!"),
             )
 
         ),
@@ -69,15 +63,7 @@ void main() {
 
             vframe(redTheme, fill,
 
-                richLabel(
-                    layout!(1, "center"),
-                    "Hello, ", whiteText, "World", null, "!\n\n",
-
-                    "Line 1\n",
-                    "Line 2\n",
-                    whiteText, "Line 3 (but white)\n",
-                    null, "Line 4\n",
-                ),
+                label("Hello!"),
 
                 imageView(fill, "./logo.png"),
 
@@ -85,7 +71,7 @@ void main() {
 
             vframe(greenTheme, fill,
 
-                button(layout!("fill", "start"),
+                button(.layout!("fill", "start"),
                     "Press to reveal the rest of this column",
 
                     {
@@ -111,10 +97,32 @@ void main() {
 
                 vframe(blueTheme, fill,
 
-                    label(layout!(1, "center"), "Third column")
+                    vspace(
+                        .layout!(1, "fill", "center"),
+                        makeTheme!q{
+
+                            GluiLabel.styleAdd!q{
+                                margin = 6;
+                                padding = 12;
+                                backgroundColor = Color(0xff, 0xff, 0xff, 0xaa);
+                            };
+
+                        },
+
+                        label(
+                            .layout!"fill",
+                            "Label with a margin",
+                        ),
+
+                        label(
+                            .layout!"fill",
+                            "Another label with a margin",
+                        )
+
+                    ),
 
                 ),
-                label(layout!("center"), "Welcome to Glui!"),
+                label(.layout!("center"), "Welcome to Glui!"),
 
             )
 
