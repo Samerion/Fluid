@@ -31,7 +31,11 @@ struct Part {
 enum isPart(T) = is(T : Style) || is(T == string);
 
 /// A rich label can display text on the screen and apply custom styling to parts of the text.
-/// Warning, doesn't support wrapping as of yet.
+///
+/// Warning: This component is currently difficult to use and easy to break. It is also lacking in features such as
+/// wrapping. To obtain styles in order to pass to it, it's recommended to create a custom node, define them with
+/// `DefineStyles` and then use the resulting styles. A way to get achieve this is to subclass this node.
+///
 /// Styles: $(UL
 ///     $(LI `style` = Default style for this node.)
 /// )
