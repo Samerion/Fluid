@@ -16,14 +16,15 @@ void main() {
     auto redTheme = makeTheme!q{
 
         GluiFrame.styleAdd.backgroundColor = Color(0xc0, 0x12, 0x12, 0xff);
+        GluiButton!().styleAdd.backgroundColor = Color(0xff, 0xff, 0xff, 0xff);
 
     };
-    auto greenTheme = makeTheme!q{
+    auto greenTheme = redTheme.makeTheme!q{
 
         GluiFrame.styleAdd.backgroundColor = Color(0x12, 0xc0, 0x12, 0xff);
 
     };
-    auto blueTheme = makeTheme!q{
+    auto blueTheme = redTheme.makeTheme!q{
 
         GluiFrame.styleAdd.backgroundColor = Color(0x12, 0x12, 0xc0, 0xff);
 

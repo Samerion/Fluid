@@ -31,7 +31,7 @@ template makeTheme(string init) {
 
     Theme makeTheme(Theme theme) {
 
-        makeThemeImpl!init(theme);
+        makeThemeImpl!init(theme.dup);
         return currentTheme;
 
     }
@@ -87,19 +87,19 @@ private void makeThemeImpl(string init)(Theme parent) {
 // Internal, public because required in mixins
 Style nestStyle(string init, alias styleKey)() {
 
-    Style style;
-
     // TODO: inherit from previous instance
+    Style[] inheritance;
+
+    // Inherit from previous instance
+    if (auto prev = &styleKey in currentTheme) inheritance ~= *prev;
 
     // Inherit from the parent style
-    if (styleStack.length) {
+    // Takes precendence, as this behavior is more expected
+    if (styleStack.length) inheritance ~= styleStack[$-1];
 
-        style = new Style(styleStack[$-1]);
 
-    }
-
-    // Create a new style otherwise
-    else style = new Style;
+    // Create a new style inheriting from them
+    auto style = new Style(inheritance);
 
 
     // Init was given
@@ -126,6 +126,8 @@ Style nestStyle(string init, alias styleKey)() {
 /// Params:
 ///     names = A list of styles to define.
 mixin template DefineStyles(names...) {
+
+    @safe:
 
     import std.meta : Filter;
     import std.format : format;

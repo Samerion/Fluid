@@ -81,6 +81,11 @@ void main() {
                     padding = 10;
                 };
 
+                GluiScrollBar.styleAdd!q{
+                    margin.sideLeft = 4;
+                    padding = 4;
+                };
+
             },
 
             cast(GluiNode[]) generate(() => label("Line of text")).take(150).array,
