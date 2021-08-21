@@ -33,8 +33,6 @@ class GluiHoverButton(T) : GluiButton!T {
     /// Check events
     protected override void mouseImpl() {
 
-        assert(hovered);
-
         // Simple enough
         submitted();
 
