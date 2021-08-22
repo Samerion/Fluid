@@ -3,7 +3,9 @@ module glui.space;
 
 import raylib;
 
+import std.math;
 import std.range;
+import std.string;
 import std.traits;
 import std.algorithm;
 
@@ -222,7 +224,20 @@ class GluiSpace : GluiNode {
     /// Params:
     ///     child     = Child to place
     ///     available = Available space
-    private Vector2 childSpace(const GluiNode child, Vector2 available) const {
+    private Vector2 childSpace(const GluiNode child, Vector2 available) const
+    in(
+        child.layout.expand <= denominator,
+        format!"Nodes %s/%s sizes are out of date, call updateSize after updating the tree or layout (%s/%s)"(
+            typeid(this), typeid(child), child.layout.expand, denominator,
+        )
+    )
+    out(
+        r; [r.tupleof].all!isFinite,
+        format!"space: child %s given invalid size %s. available = %s, expand = %s, denominator = %s, reserved = %s"(
+            typeid(child), r, available, child.layout.expand, denominator, reservedSpace
+        )
+    )
+    do {
 
         // Horizontal
         if (directionHorizontal) {
