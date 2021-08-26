@@ -130,6 +130,7 @@ struct LayoutTree {
 
     debug (Glui_DisableScissors) {
 
+        Rectangle intersect(Rectangle rect) { return rect; }
         void pushScissors(Rectangle) { }
         void popScissors() { }
 
@@ -137,23 +138,38 @@ struct LayoutTree {
 
     else {
 
-        /// Start scissors mode.
-        void pushScissors(Rectangle rect) {
+        /// Intersect the given rectangle against current scissor area.
+        Rectangle intersectScissors(Rectangle rect) {
 
             import std.algorithm : min, max;
+
+            // No limit applied
+            if (!scissors.length) return rect;
+
+            const b = scissors[$-1];
+
+            Rectangle result;
+
+            // Intersect
+            result.x = max(rect.x, b.x);
+            result.y = max(rect.y, b.y);
+            result.w = min(rect.x + rect.w, b.x + b.w) - result.x;
+            result.h = min(rect.y + rect.h, b.y + b.h) - result.y;
+
+            return result;
+
+        }
+
+        /// Start scissors mode.
+        void pushScissors(Rectangle rect) {
 
             auto result = rect;
 
             // There's already something on the stack
             if (scissors.length) {
 
-                const b = scissors[$-1];
-
                 // Intersect
-                result.x = max(rect.x, b.x);
-                result.y = max(rect.y, b.y);
-                result.w = min(rect.x + rect.w, b.x + b.w) - result.x;
-                result.h = min(rect.y + rect.h, b.y + b.h) - result.y;
+                result = intersectScissors(rect);
 
             }
 
@@ -170,6 +186,9 @@ struct LayoutTree {
             // Pop the stack
             scissors = scissors[0 .. $-1];
 
+            // Pop the mode
+            EndScissorMode();
+
             // There's still something left
             if (scissors.length) {
 
@@ -178,13 +197,14 @@ struct LayoutTree {
 
             }
 
-            // Nope, end
-            else EndScissorMode();
-
         }
 
         private void applyScissors(Rectangle rect) @trusted {
 
+            // End the current mode, if any
+            if (scissors.length) EndScissorMode();
+
+            // Start this one
             BeginScissorMode(rect.x.to!int, rect.y.to!int, rect.w.to!int, rect.h.to!int);
 
         }
