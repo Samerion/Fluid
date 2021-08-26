@@ -96,7 +96,7 @@ class GluiFilePicker : GluiInput!GluiFrame {
             if (changed) changed();
 
             // Update suggestions
-            typedFilename = value;
+            typedFilename = input.value;
             currentSuggestion = 0;
             updateSuggestions();
 
@@ -108,7 +108,7 @@ class GluiFilePicker : GluiInput!GluiFrame {
             if (currentSuggestion != 0) {
 
                 // Activate it
-                typedFilename = value;
+                typedFilename = input.value;
                 currentSuggestion = 0;
                 updateSuggestions();
 
@@ -147,9 +147,15 @@ class GluiFilePicker : GluiInput!GluiFrame {
 
     }
 
-    ref inout(string) value() inout {
+    inout(string) value() inout {
 
         return input.value;
+
+    }
+
+    string value(string newValue) {
+
+        return typedFilename = input.value = newValue;
 
     }
 
@@ -231,7 +237,7 @@ class GluiFilePicker : GluiInput!GluiFrame {
     /// Get the value as a (directory, file) tuple.
     private auto valueTuple() const {
 
-        return valueTuple(value);
+        return valueTuple(input.value);
 
     }
 
@@ -254,13 +260,15 @@ class GluiFilePicker : GluiInput!GluiFrame {
     }
 
     /// Offset currently chosen selection by number.
-    private void offsetSuggestion(ulong n) {
+    private void offsetSuggestion(long n) {
+
+        const suggestionCount = (suggestions.textParts.length + 1);
 
         auto previous = currentSuggestion;
-        currentSuggestion = (currentSuggestion + n) % (suggestions.textParts.length + 1);
+        currentSuggestion = (suggestionCount + currentSuggestion + n) % suggestionCount;
 
         // Clear style of the previous selection
-        if (previous != 0 && previous <= suggestions.textParts.length) {
+        if (previous != 0 && previous < suggestionCount) {
 
             suggestions.textParts[previous - 1].style = null;
 
@@ -272,7 +280,7 @@ class GluiFilePicker : GluiInput!GluiFrame {
             auto part = &suggestions.textParts[currentSuggestion - 1];
             part.style = selectedStyle;
 
-            value = valueTuple(typedFilename)[0] ~ part.text.stripLeft;
+            input.value = valueTuple(typedFilename)[0] ~ part.text.stripLeft;
 
         }
 
@@ -280,7 +288,7 @@ class GluiFilePicker : GluiInput!GluiFrame {
         else {
 
             // Restore original text
-            value = typedFilename;
+            input.value = typedFilename;
 
         }
 
@@ -352,7 +360,7 @@ class GluiFilePicker : GluiInput!GluiFrame {
                 // Dir up
                 if (IsKeyPressed(KEY_UP)) {
 
-                    typedFilename = value = value.dirName;
+                    typedFilename = input.value = input.value.dirName;
                     updateSuggestions();
 
                 }
