@@ -251,6 +251,8 @@ abstract class GluiNode : Styleable {
 
         import std.algorithm : min, max;
 
+        assert(!toRemove, "A toRemove child wasn't removed from container.");
+
         // If hidden, don't draw anything
         if (hidden) return;
 
