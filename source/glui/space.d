@@ -143,6 +143,29 @@ class GluiSpace : GluiNode {
 
         auto position = Vector2(area.x, area.y);
 
+        drawChildren((child) {
+
+            // Get params
+            const size = childSpace(child, Vector2(area.width, area.height));
+            const rect = Rectangle(
+                position.x, position.y,
+                size.x, size.y
+            );
+
+            // Draw the child
+            child.draw(rect);
+
+            // Offset position
+            if (directionHorizontal) position.x += cast(int) size.x;
+            else position.y += cast(int) size.y;
+
+        });
+
+    }
+
+    /// Iterate over every child and perform the painting function. Will automatically remove nodes queued for removal.
+    protected void drawChildren(void delegate(GluiNode) @safe painter) {
+
         GluiNode[] leftovers;
 
         children.lock();
@@ -151,23 +174,7 @@ class GluiSpace : GluiNode {
         // Draw each child and get rid of removed children
         auto range = children[]
             .filter!"!a.toRemove"
-            .tee!((child) {
-
-                // Get params
-                const size = childSpace(child, Vector2(area.width, area.height));
-                const rect = Rectangle(
-                    position.x, position.y,
-                    size.x, size.y
-                );
-
-                // Draw the child
-                child.draw(rect);
-
-                // Offset position
-                if (directionHorizontal) position.x += cast(int) size.x;
-                else position.y += cast(int) size.y;
-
-            });
+            .tee!((node) => painter(node));
 
         () @trusted {
 
