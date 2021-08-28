@@ -93,8 +93,8 @@ class GluiSpace : GluiNode {
         GluiNode[] nodeList;
         foreach (child; children) {
 
-            // This node expands
-            if (child.layout.expand) {
+            // This node expands and isn't hidden
+            if (child.layout.expand && !child.hidden) {
 
                 // Append
                 nodeList ~= child;
@@ -230,6 +230,9 @@ class GluiSpace : GluiNode {
     ///     child     = Child to place
     ///     available = Available space
     private Vector2 childSpace(const GluiNode child, Vector2 available) const {
+
+        // Hidden, give it no space
+        if (child.hidden) return Vector2();
 
         // Horizontal
         if (directionHorizontal) {
