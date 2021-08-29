@@ -29,10 +29,21 @@ debug struct Children {
 
     }
 
-    @property
-    size_t length() const {
+    @property {
 
-        return _children.length;
+        size_t length() const {
+
+            return _children.length;
+
+        }
+
+        size_t length(size_t value) {
+
+            debug assert(!_locked, mutateError);
+
+            return _children.length = value;
+
+        }
 
     }
 
