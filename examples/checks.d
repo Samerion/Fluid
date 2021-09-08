@@ -9,8 +9,8 @@ import std.exception;
 
 void main() {
 
-    SetConfigFlags(ConfigFlag.FLAG_WINDOW_RESIZABLE);
-    SetTraceLogLevel(TraceLogType.LOG_WARNING);
+    SetConfigFlags(ConfigFlags.FLAG_WINDOW_RESIZABLE);
+    SetTraceLogLevel(TraceLogLevel.LOG_WARNING);
     InitWindow(800, 600, "Check test");
     SetTargetFPS(60);
     SetExitKey(0);
@@ -25,7 +25,7 @@ void main() {
 
     class BrokenFrame : GluiFrame {
 
-        override void drawImpl(Rectangle rect) {
+        override void drawImpl(Rectangle outer, Rectangle inner) {
 
             debug {
 
@@ -37,7 +37,7 @@ void main() {
 
             }
 
-            super.drawImpl(rect);
+            super.drawImpl(outer, inner);
 
         }
 

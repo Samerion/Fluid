@@ -7,27 +7,6 @@ import std.meta;
 import glui.style;
 import glui.structs;
 
-/// Raylib functions not included in raylib-d
-extern (C) @nogc nothrow {
-
-    void SetMouseCursor(MouseCursor cursor);
-
-    enum MouseCursor {
-        MOUSE_CURSOR_DEFAULT,
-        MOUSE_CURSOR_ARROW,
-        MOUSE_CURSOR_IBEAM,
-        MOUSE_CURSOR_CROSSHAIR,
-        MOUSE_CURSOR_POINTING_HAND,
-        MOUSE_CURSOR_RESIZE_EW,         // The horizontal resize/move arrow shape
-        MOUSE_CURSOR_RESIZE_NS,         // The vertical resize/move arrow shape
-        MOUSE_CURSOR_RESIZE_NWSE,       // The top-left to bottom-right diagonal resize/move arrow shape
-        MOUSE_CURSOR_RESIZE_NESW,       // The top-right to bottom-left diagonal resize/move arrow shape
-        MOUSE_CURSOR_RESIZE_ALL,        // The omni-directional resize/move cursor shape
-        MOUSE_CURSOR_NOT_ALLOWED,       // The operation-not-allowed shape
-    }
-
-}
-
 @safe:
 
 /// Create a function to easily construct nodes.
