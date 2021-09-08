@@ -3,6 +3,10 @@ module glui.node;
 
 import raylib;
 
+import std.math;
+import std.traits;
+import std.string;
+
 import glui.style;
 import glui.utils;
 import glui.structs;
@@ -249,7 +253,7 @@ abstract class GluiNode : Styleable {
         // Within this function, we deduce how much of the space we should actually use, and align the node
         // within the space.
 
-        import std.algorithm : min, max;
+        import std.algorithm : all, min, max;
 
         assert(!toRemove, "A toRemove child wasn't removed from container.");
 
@@ -294,6 +298,19 @@ abstract class GluiNode : Styleable {
         // Update global hover unless mouse is being held down
         if (_hovered && !isLMBHeld) tree.hover = this;
 
+        assert(
+            [size.tupleof].all!isFinite,
+            format!"Node %s resulting size is invalid: %s; given space = %s, minSize = %s"(
+                typeid(this), size, space, minSize
+            ),
+        );
+        assert(
+            [paddingBox.tupleof, contentBox.tupleof].all!isFinite,
+            format!"Node %s size is invalid: paddingBox = %s, contentBox = %s"(
+                typeid(this), paddingBox, contentBox
+            )
+        );
+
         tree.pushScissors(paddingBox);
         scope (exit) tree.popScissors();
 
@@ -330,6 +347,11 @@ abstract class GluiNode : Styleable {
             minSize.y += spacingY;
 
         }
+
+        assert(
+            minSize.x.isFinite && minSize.y.isFinite,
+            format!"Node %s returned invalid minSize %s"(typeid(this), minSize)
+        );
 
     }
 
@@ -409,6 +431,12 @@ abstract class GluiNode : Styleable {
 
         const lmb = MouseButton.MOUSE_LEFT_BUTTON;
         return IsMouseButtonDown(lmb) || IsMouseButtonReleased(lmb);
+
+    }
+
+    override string toString() const {
+
+        return format!"%s(%s)"(typeid(this), layout);
 
     }
 
