@@ -32,6 +32,7 @@ void main() {
     };
 
     GluiScrollBar myScrollBar;
+    GluiButton!() myButton;
 
     auto root = hframe(
         .layout!(1, "fill"),
@@ -47,6 +48,14 @@ void main() {
             vscrollFrame(
                 .layout!(1, "fill"),
                 label("foo"),
+                myButton = button("Toggle me!", {
+
+                    myButton.text = myButton.text[0] == 'T'
+                        ? "Don't toggle me!"
+                        : "Toggle me!";
+                    myButton.updateSize();
+
+                }),
                 label("Lorem\nipsum\ndolor\nsit\namet,\nconsectetur\nadipiscing\nelit"),
             ),
         ),

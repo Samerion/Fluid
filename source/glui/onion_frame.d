@@ -62,11 +62,7 @@ class GluiOnionFrame : GluiFrame {
         const style = pickStyle();
         style.drawBackground(outer);
 
-        foreach (child; children) {
-
-            child.draw(inner);
-
-        }
+        drawChildren(child => child.draw(inner));
 
     }
 
