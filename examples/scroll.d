@@ -6,8 +6,8 @@ import std.exception;
 
 void main() {
 
-    SetConfigFlags(ConfigFlag.FLAG_WINDOW_RESIZABLE);
-    SetTraceLogLevel(TraceLogType.LOG_WARNING);
+    SetConfigFlags(ConfigFlags.FLAG_WINDOW_RESIZABLE);
+    SetTraceLogLevel(TraceLogLevel.LOG_WARNING);
     InitWindow(600, 300, "Scrolling example");
     SetTargetFPS(60);
     SetExitKey(0);
