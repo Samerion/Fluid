@@ -5,7 +5,9 @@ import raylib;
 import std.conv;
 import glui.node;
 
+
 @safe:
+
 
 /// Create a new layout
 /// Params:
@@ -92,6 +94,31 @@ struct Layout {
 
     /// Align the content box to a side of the occupied space.
     NodeAlign[2] nodeAlign;
+
+    string toString() const {
+
+        import std.format;
+
+        const equalAlign = nodeAlign[0] == nodeAlign[1];
+        const startAlign = equalAlign && nodeAlign[0] == NodeAlign.start;
+
+        if (expand) {
+
+            if (startAlign) return format!".layout!%s"(expand);
+            else if (equalAlign) return format!".layout!(%s, %s)"(expand, nodeAlign[0]);
+            else return format!".layout!(%s, %s, %s)"(expand, nodeAlign[0], nodeAlign[1]);
+
+        }
+
+        else {
+
+            if (startAlign) return format!"Layout()";
+            else if (equalAlign) return format!".layout!%s"(nodeAlign[0]);
+            else return format!".layout!(%s, %s)"(nodeAlign[0], nodeAlign[1]);
+
+        }
+
+    }
 
 }
 
