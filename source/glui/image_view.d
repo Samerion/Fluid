@@ -20,7 +20,7 @@ class GluiImageView : GluiNode {
     mixin DefineStyles;
 
     /// Texture for this node.
-    private {
+    protected {
 
         Texture _texture;
         Rectangle _targetArea;  // Rectangle occupied by this node after all calculations
@@ -74,9 +74,18 @@ class GluiImageView : GluiNode {
     }
 
     /// Minimum size of the image.
+    @property
     ref inout(Vector2) minSize() inout {
 
         return super.minSize;
+
+    }
+
+    /// Area on the screen the image was last drawn to.
+    @property
+    Rectangle targetArea() const {
+
+        return _targetArea;
 
     }
 

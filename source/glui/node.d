@@ -253,7 +253,9 @@ abstract class GluiNode : Styleable {
         // Within this function, we deduce how much of the space we should actually use, and align the node
         // within the space.
 
-        import std.algorithm : all, min;
+        import std.algorithm : all, min, max;
+
+        assert(!toRemove, "A toRemove child wasn't removed from container.");
 
         // If hidden, don't draw anything
         if (hidden) return;
@@ -284,11 +286,14 @@ abstract class GluiNode : Styleable {
             size.x - margin.w,     size.y - margin.h,
         );
 
+        // Get the visible part of the padding box — so overflowed content doesn't get mouse focus
+        const visibleBox = tree.intersectScissors(paddingBox);
+
         // Subtract padding to get the content box.
         const contentBox = style.contentBox(paddingBox);
 
         // Check if hovered
-        _hovered = hoveredImpl(paddingBox, GetMousePosition);
+        _hovered = hoveredImpl(visibleBox, GetMousePosition);
 
         // Update global hover unless mouse is being held down
         if (_hovered && !isLMBHeld) tree.hover = this;
