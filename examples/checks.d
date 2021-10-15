@@ -20,6 +20,7 @@ void main() {
 
     auto root = vframe(
         theme,
+        vspace(.layout!1, label("NO CRASH PLS")).hide,
         label("Gone!"),
     );
 
@@ -29,8 +30,8 @@ void main() {
 
             debug {
 
-                assert(root.children.length == 2);
-                assert(cast(GluiLabel) root.children[0]),
+                assert(root.children.length == 3);
+                assert(cast(GluiLabel) root.children[1]),
                 assertLocked(root.children);
 
                 assertThrown!Error(root.children = root.children[1..$]);

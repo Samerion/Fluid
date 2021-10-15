@@ -4,7 +4,7 @@
 	],
 	"copyright": "Copyright © 2021, Soaku",
 	"dependencies": {
-		"raylib-d": "~>3.7.0"
+		"raylib-d": "~>3.1.0"
 	},
 	"description": "A simple UI library designed for IsodiTools and Samerion",
 	"libs": [
