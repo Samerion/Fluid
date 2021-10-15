@@ -233,7 +233,7 @@ class GluiSpace : GluiNode {
     ///     available = Available space
     private Vector2 childSpace(const GluiNode child, Vector2 available) const
     in(
-        child.layout.expand <= denominator,
+        child.hidden || child.layout.expand <= denominator,
         format!"Nodes %s/%s sizes are out of date, call updateSize after updating the tree or layout (%s/%s)"(
             typeid(this), typeid(child), child.layout.expand, denominator,
         )
