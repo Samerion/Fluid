@@ -123,7 +123,6 @@ abstract class GluiNode : Styleable {
 
         this.layout = layout;
         this.theme  = theme;
-        this.tree   = new LayoutTree(this);
 
     }
 
@@ -177,12 +176,23 @@ abstract class GluiNode : Styleable {
     /// Note: should be called or root; in case of children, will only work after the first draw.
     final void updateSize() {
 
-        tree.root._requiresResize = true;
+        if (tree) tree.root._requiresResize = true;
 
     }
 
     /// Draw this node as a root node.
     final void draw() @trusted {
+
+        // No tree set
+        if (tree is null) {
+
+            // Create one
+            tree = new LayoutTree(this);
+
+            // Workaround for a HiDPI scissors mode glitch, which breaks Glui
+            SetWindowSize(GetScreenWidth, GetScreenHeight);
+
+        }
 
         // No theme set, set the default
         if (!theme) {
@@ -192,7 +202,11 @@ abstract class GluiNode : Styleable {
 
         }
 
-        const space = Vector2(GetScreenWidth, GetScreenHeight);
+        // Windows scales scissors mode regardless if we report that we support it or not
+        version (Windows) const scale = GetWindowScaleDPI;
+        else const scale = hidpiScale();
+
+        const space = Vector2(GetScreenWidth / scale.x, GetScreenHeight / scale.y);
 
         // Clear mouse hover if LMB is up
         if (!isLMBHeld) tree.hover = null;

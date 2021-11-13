@@ -26,7 +26,7 @@ void main() {
 
     class BrokenFrame : GluiFrame {
 
-        override void drawImpl(Rectangle outer, Rectangle inner) {
+        override void drawImpl(Rectangle outer, Rectangle inner) @trusted {
 
             debug {
 

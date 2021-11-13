@@ -72,6 +72,18 @@
 			"sourcePaths": [],
 			"targetPath": "build",
 			"targetType": "executable"
+		},
+		{
+			"dependencies": {
+				"glui": ">=0.0.0"
+			},
+			"name": "example-hidpi",
+			"sourceFiles": [
+				"examples/hidpi.d"
+			],
+			"sourcePaths": [],
+			"targetPath": "build",
+			"targetType": "executable"
 		}
 	],
 	"targetPath": "build",
