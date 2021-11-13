@@ -6,8 +6,8 @@ import std.exception;
 
 void main() {
 
-    SetConfigFlags(ConfigFlag.FLAG_WINDOW_RESIZABLE);
-    SetTraceLogLevel(TraceLogType.LOG_WARNING);
+    SetConfigFlags(ConfigFlags.FLAG_WINDOW_RESIZABLE | ConfigFlags.FLAG_WINDOW_HIGHDPI);
+    SetTraceLogLevel(TraceLogLevel.LOG_WARNING);
     InitWindow(600, 300, "Scrolling example");
     SetTargetFPS(60);
     SetExitKey(0);
@@ -59,9 +59,16 @@ void main() {
                 label("Lorem\nipsum\ndolor\nsit\namet,\nconsectetur\nadipiscing\nelit"),
             ),
         ),
-        vframe(
+        vscrollFrame(
             .layout!1,
             rightTheme,
+
+            vspace(
+
+                label("Note: Text in this example might be blurry because it's HiDPI enabled. This wouldn't be the "
+                    ~ "case if a custom font was loaded, with Style.loadFont.",)
+
+            ),
             vspace(
 
                 label("A useless scrollbar:"),

@@ -130,7 +130,7 @@ struct LayoutTree {
 
     debug (Glui_DisableScissors) {
 
-        Rectangle intersect(Rectangle rect) { return rect; }
+        Rectangle intersectScissors(Rectangle rect) { return rect; }
         void pushScissors(Rectangle) { }
         void popScissors() { }
 
@@ -201,11 +201,20 @@ struct LayoutTree {
 
         private void applyScissors(Rectangle rect) @trusted {
 
+            import glui.utils;
+
             // End the current mode, if any
             if (scissors.length) EndScissorMode();
 
+            auto scale = hidpiScale;
+
             // Start this one
-            BeginScissorMode(rect.x.to!int, rect.y.to!int, rect.w.to!int, rect.h.to!int);
+            BeginScissorMode(
+                to!int(rect.x * scale.x),
+                to!int(rect.y * scale.y),
+                to!int(rect.w * scale.x),
+                to!int(rect.h * scale.y),
+            );
 
         }
 
