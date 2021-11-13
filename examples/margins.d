@@ -8,7 +8,7 @@ import std.format;
 void main() {
 
     SetConfigFlags(ConfigFlags.FLAG_WINDOW_RESIZABLE);
-    SetTraceLogLevel(TraceLogLevel.LOG_NONE);
+    SetTraceLogLevel(TraceLogLevel.LOG_WARNING);
     InitWindow(800, 600, "Hello, World!");
     SetTargetFPS(60);
 

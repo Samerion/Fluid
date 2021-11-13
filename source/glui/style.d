@@ -167,6 +167,15 @@ class Style {
 
     }
 
+    static Font loadFont(string file, int fontSize, dchar[] fontChars = null) @trusted {
+
+        const realSize = fontSize * hidpiScale.y;
+
+        return LoadFontEx(file.toStringz, cast(int) realSize.ceil, cast(int*) fontChars.ptr,
+            cast(int) fontChars.length);
+
+    }
+
     /// Update the style with given D code.
     ///
     /// This allows each init code to have a consistent default scope, featuring `glui`, `raylib` and chosen `std`

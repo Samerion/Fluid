@@ -59,7 +59,7 @@ void main() {
                 label("Lorem\nipsum\ndolor\nsit\namet,\nconsectetur\nadipiscing\nelit"),
             ),
         ),
-        vframe(
+        vscrollFrame(
             .layout!1,
             rightTheme,
             vspace(
