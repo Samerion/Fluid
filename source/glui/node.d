@@ -198,7 +198,10 @@ abstract class GluiNode : Styleable {
 
         }
 
-        const scale = hidpiScale();
+        // Windows scales scissors mode regardless if we report that we support it or not
+        version (Windows) const scale = GetWindowScaleDPI;
+        else const scale = hidpiScale();
+
         const space = Vector2(GetScreenWidth / scale.x, GetScreenHeight / scale.y);
 
         // Clear mouse hover if LMB is up

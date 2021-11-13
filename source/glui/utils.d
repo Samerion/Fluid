@@ -72,6 +72,7 @@ template StaticFieldNames(T) {
 /// Get the current HiDPI scale. Returns Vector2(1, 1) if HiDPI is off.
 Vector2 hidpiScale() @trusted {
 
+    // HiDPI is on
     return IsWindowState(ConfigFlags.FLAG_WINDOW_HIGHDPI)
         ? GetWindowScaleDPI
         : Vector2.one;

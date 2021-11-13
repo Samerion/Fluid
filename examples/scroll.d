@@ -6,7 +6,7 @@ import std.exception;
 
 void main() {
 
-    SetConfigFlags(ConfigFlags.FLAG_WINDOW_RESIZABLE | ConfigFlags.FLAG_WINDOW_HIGHDPI);
+    SetConfigFlags(ConfigFlags.FLAG_WINDOW_RESIZABLE);
     SetTraceLogLevel(TraceLogLevel.LOG_WARNING);
     InitWindow(600, 300, "Scrolling example");
     SetTargetFPS(60);
@@ -62,13 +62,6 @@ void main() {
         vscrollFrame(
             .layout!1,
             rightTheme,
-
-            vspace(
-
-                label("Note: Text in this example might be blurry because it's HiDPI enabled. This wouldn't be the "
-                    ~ "case if a custom font was loaded, with Style.loadFont.",)
-
-            ),
             vspace(
 
                 label("A useless scrollbar:"),
