@@ -52,28 +52,38 @@ Layout layout(uint expand) {
 /// CTFE version of the layout constructor, allows using strings instead of enum members, to avoid boilerplate.
 Layout layout(uint expand, string alignX, string alignY)() {
 
-    return Layout(expand, [alignX.to!NodeAlign, alignY.to!NodeAlign]);
+    enum valueX = alignX.to!NodeAlign;
+    enum valueY = alignY.to!NodeAlign;
+
+    return Layout(expand, [valueX, valueY]);
 
 }
 
 /// Ditto
 Layout layout(uint expand, string align_)() {
 
-    return Layout(expand, align_.to!NodeAlign);
+    enum valueXY = align_.to!NodeAlign;
+
+    return Layout(expand, valueXY);
 
 }
 
 /// Ditto
 Layout layout(string alignX, string alignY)() {
 
-    return Layout(0, [alignX.to!NodeAlign, alignY.to!NodeAlign]);
+    enum valueX = alignX.to!NodeAlign;
+    enum valueY = alignY.to!NodeAlign;
+
+    return Layout(0, [valueX, valueY]);
 
 }
 
 /// Ditto
 Layout layout(string align_)() {
 
-    return Layout(0, align_.to!NodeAlign);
+    enum valueXY = align_.to!NodeAlign;
+
+    return Layout(0, valueXY);
 
 }
 
@@ -81,6 +91,19 @@ Layout layout(string align_)() {
 Layout layout(uint expand)() {
 
     return Layout(expand);
+
+}
+
+unittest {
+
+    assert(layout!1 == layout(1));
+    assert(layout!("fill") == layout(NodeAlign.fill, NodeAlign.fill));
+    assert(layout!("fill", "fill") == layout(NodeAlign.fill));
+
+    assert(!__traits(compiles, layout!"expand"));
+    assert(!__traits(compiles, layout!("expand", "noexpand")));
+    assert(!__traits(compiles, layout!(1, "whatever")));
+    assert(!__traits(compiles, layout!(2, "foo", "bar")));
 
 }
 
