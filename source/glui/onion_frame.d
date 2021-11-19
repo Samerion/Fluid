@@ -36,18 +36,8 @@ class GluiOnionFrame : GluiFrame {
         // Check each child
         foreach (child; children) {
 
-            // Inherit root
-            child.tree = tree;
-
-            // Inherit theme
-            if (child.theme is null) {
-
-                child.theme = theme;
-
-            }
-
             // Resize the child
-            child.resize(available);
+            child.resize(tree, theme, available);
 
             // Update minSize
             minSize.x = max(minSize.x, child.minSize.x);

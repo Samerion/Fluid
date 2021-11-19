@@ -215,7 +215,7 @@ abstract class GluiNode : Styleable {
         // Resize if required
         if (IsWindowResized || _requiresResize) {
 
-            resize(space);
+            resize(tree, theme, space);
             _requiresResize = false;
 
         }
@@ -335,8 +335,17 @@ abstract class GluiNode : Styleable {
 
     /// Recalculate the minimum node size and update the `minSize` property.
     /// Params:
+    ///     tree  = The parent's tree to pass down to this node.
+    ///     theme = Theme to inherit from the parent.
     ///     space = Available space.
-    protected final void resize(Vector2 space) {
+    protected final void resize(LayoutTree* tree, const Theme theme, Vector2 space)
+    in(tree, "Tree for Node.resize() must not be null.")
+    in(theme, "Theme for Node.resize() must not be null.")
+    do {
+
+        // Inherit tree and theme
+        this.tree = tree;
+        if (this.theme is null) this.theme = theme;
 
         // The node is hidden, reset size
         if (hidden) minSize = Vector2(0, 0);

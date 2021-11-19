@@ -106,11 +106,9 @@ class GluiScrollable(T : GluiFrame) : T {
         // Resize the scrollbar
         with (scrollBar) {
 
-            tree = this.tree;
-            theme = this.theme;
             horizontal = this.directionHorizontal;
             layout = .layout!(1, "fill");
-            resize(space);
+            resize(this.tree, this.theme, space);
 
         }
 

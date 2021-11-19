@@ -72,20 +72,9 @@ class GluiMapSpace : GluiSpace {
 
         foreach (child; children) {
 
-            // Inherit root
-            child.tree = tree;
-
-            // Inherit theme
-            if (child.theme is null) {
-                child.theme = theme;
-            }
-
-            // Ignore hidden children
-            if (child.hidden) continue;
-
             const position = positions[child];
 
-            child.resize(space);
+            child.resize(tree, theme, space);
 
             // Get the children's bottom right corner
             minSize.x = max(minSize.x, position.x + child.minSize.x);

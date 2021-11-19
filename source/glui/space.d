@@ -114,17 +114,8 @@ class GluiSpace : GluiNode {
         // Calculate the size of each child
         foreach (child; nodeList) {
 
-            // Inherit root
-            child.tree = tree;
-
-            // Inherit theme
-            if (child.theme is null) {
-
-                child.theme = theme;
-
-            }
-
-            child.resize(childSpace(child, available));
+            // Resize the child
+            child.resize(tree, theme, childSpace(child, available));
             minSize = childPosition(child, minSize);
 
             // If this child doesn't expand
