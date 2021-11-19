@@ -1,19 +1,19 @@
-module glui.map_frame;
+module glui.map_space;
 
 import raylib;
 import std.algorithm;
 
 import glui.node;
-import glui.frame;
+import glui.space;
 import glui.utils;
 
 
 @safe:
 
 
-alias mapFrame = simpleConstructor!GluiMapFrame;
+alias mapSpace = simpleConstructor!GluiMapSpace;
 
-class GluiMapFrame : GluiFrame {
+class GluiMapSpace : GluiSpace {
 
     /// Mapping of nodes to their positions.
     Vector2[GluiNode] positions;
@@ -23,7 +23,7 @@ class GluiMapFrame : GluiFrame {
 
     static foreach (index; 0..BasicNodeParamLength) {
 
-        /// Construct the frame. Arguments are either nodes, or position vectors affecting all next nodes.
+        /// Construct the space. Arguments are either nodes, or position vectors affecting all next nodes.
         this(T...)(BasicNodeParam!index params, T children)
         if (!T.length || is(T[0] == Vector2) || is(T[0] : GluiNode)) {
 
@@ -49,7 +49,7 @@ class GluiMapFrame : GluiFrame {
 
     }
 
-    /// Add a new child to the frame and assign it some position.
+    /// Add a new child to the space and assign it some position.
     void addChild(GluiNode node, Vector2 position) {
 
         children ~= node;
@@ -67,6 +67,8 @@ class GluiMapFrame : GluiFrame {
     protected override void resizeImpl(Vector2 space) {
 
         minSize = Vector2(0, 0);
+
+        // TODO get rid of position entries for removed elements
 
         foreach (child; children) {
 
@@ -94,9 +96,6 @@ class GluiMapFrame : GluiFrame {
     }
 
     protected override void drawImpl(Rectangle outer, Rectangle inner) {
-
-        const style = pickStyle();
-        style.drawBackground(outer);
 
         drawChildren((child) {
 

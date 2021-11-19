@@ -10,9 +10,9 @@ void main() {
 
     scope (exit) CloseWindow();
 
-    GluiMapFrame root;
+    GluiMapSpace root;
 
-    root = mapFrame(
+    root = mapSpace(
         .layout!(1, "fill"),
 
         // A button to toggle overlap
@@ -26,13 +26,15 @@ void main() {
         Vector2(300, 500), label("Try to resize the window!"),
 
         // We need to go deeper!
-        Vector2(300, 300), mapFrame(
+        Vector2(300, 300), vframe(
             makeTheme!q{
                 GluiFrame.styleAdd.backgroundColor = Color(0xaa, 0xaa, 0xaa, 0xff);
             },
-            label("We need"),
-            Vector2(40, 40), label("to go"),
-            Vector2(80, 80), label("deeper!"),
+            mapSpace(
+                label("We need"),
+                Vector2(40, 40), label("to go"),
+                Vector2(80, 80), label("deeper!"),
+            ),
         ),
     );
 
