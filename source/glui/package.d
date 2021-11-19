@@ -5,6 +5,7 @@ public import
     glui.button,
     glui.children,
     glui.default_theme,
+    glui.dropdown,
     glui.file_picker,
     glui.frame,
     glui.hover_button,

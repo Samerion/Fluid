@@ -50,6 +50,22 @@ void main() {
             label("going"),
         ),
 
+        // A real dropdown
+        Vector2(400, 150),
+        button("Show a real dropdown", () @trusted {
+
+            auto position = MapPosition(GetMousePosition, dropVector!"auto");
+
+            root.addChild(
+                dropdown(
+                    label("I'm a dropdown"),
+                    label("Hurray!"),
+                ),
+                position,
+            );
+
+        }),
+
         // We need to go deeper!
         Vector2(300, 400), vframe(
             mapSpace(
