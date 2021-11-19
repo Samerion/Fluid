@@ -136,6 +136,18 @@ class GluiMapSpace : GluiSpace {
 
     }
 
+    void moveChild(GluiNode node, Vector2 vector) {
+
+        positions[node].coords = vector;
+
+    }
+
+    void moveChild(GluiNode node, DropVector vector) {
+
+        positions[node].drop = vector;
+
+    }
+
     protected override void resizeImpl(Vector2 space) {
 
         minSize = Vector2(0, 0);
