@@ -7,6 +7,7 @@ import std.algorithm;
 
 import glui.node;
 import glui.space;
+import glui.style;
 import glui.utils;
 
 
@@ -64,6 +65,8 @@ MapDropVector dropVector(string dropX, string dropY)() {
 }
 
 class GluiMapSpace : GluiSpace {
+
+    mixin DefineStyles;
 
     alias DropDirection = MapDropDirection;
     alias DropVector = MapDropVector;
