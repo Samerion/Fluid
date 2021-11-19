@@ -10,6 +10,7 @@ public import
     glui.hover_button,
     glui.image_view,
     glui.label,
+    glui.map_frame,
     glui.node,
     glui.onion_frame,
     glui.rich_label,
