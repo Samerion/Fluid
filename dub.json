@@ -84,6 +84,18 @@
 			"sourcePaths": [],
 			"targetPath": "build",
 			"targetType": "executable"
+		},
+		{
+			"dependencies": {
+				"glui": ">=0.0.0"
+			},
+			"name": "example-map",
+			"sourceFiles": [
+				"examples/map.d"
+			],
+			"sourcePaths": [],
+			"targetPath": "build",
+			"targetType": "executable"
 		}
 	],
 	"targetPath": "build",
