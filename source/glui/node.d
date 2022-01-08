@@ -61,6 +61,9 @@ abstract class GluiNode : Styleable {
         /// If true, this node will be removed from the tree on the next draw.
         bool toRemove;
 
+        /// Crop overflowing content, so node content will not leave the box given the node.
+        bool enableScissors;
+
     }
 
     /// Minimum size of the node.
@@ -325,11 +328,18 @@ abstract class GluiNode : Styleable {
             )
         );
 
-        tree.pushScissors(paddingBox);
-        scope (exit) tree.popScissors();
+        // Draw the node cropped
+        if (enableScissors) {
+
+            tree.pushScissors(paddingBox);
+            scope (exit) tree.popScissors();
+
+            drawImpl(paddingBox, contentBox);
+
+        }
 
         // Draw the node
-        drawImpl(paddingBox, contentBox);
+        else drawImpl(paddingBox, contentBox);
 
     }
 
