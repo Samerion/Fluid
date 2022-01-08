@@ -37,7 +37,6 @@ class GluiFrame : GluiSpace {
     this(T...)(T args) {
 
         super(args);
-        this.enableScissors = true;
 
     }
 
