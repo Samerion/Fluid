@@ -41,7 +41,7 @@ class GluiScrollBar : GluiInput!GluiNode {
         /// If true, the scrollbar will be horizontal.
         bool horizontal;
 
-        /// Amount of pixel the page is scrolled down.
+        /// Amount of pixels the page is scrolled down.
         size_t position;
 
         /// Available space to scroll.
@@ -62,6 +62,9 @@ class GluiScrollBar : GluiInput!GluiNode {
 
         /// If true, the inner part of the scrollbar is hovered.
         bool innerHovered;
+
+        /// Page length as determined in drawImpl.
+        double pageLength;
 
         /// Length of the scrollbar as determined in drawImpl.
         double scrollbarLength;
@@ -103,21 +106,28 @@ class GluiScrollBar : GluiInput!GluiNode {
     /// Get the maximum value this container can be scrolled to. Requires at least one draw.
     size_t scrollMax() const {
 
-        return cast(size_t) max(0, availableSpace - scrollbarLength);
+        return cast(size_t) max(0, availableSpace - pageLength);
 
     }
 
     /// Set the total size of the scrollbar. Will always fill the available space in the target direction.
     override protected void resizeImpl(Vector2 space) {
 
+        // Get minSize
         minSize = horizontal
             ? Vector2(space.x, 10)
             : Vector2(10, space.y);
+
+        // Get the expected page length
+        pageLength = horizontal
+            ? space.x + style.padding.sideX[].sum + style.margin.sideX[].sum
+            : space.y + style.padding.sideY[].sum + style.margin.sideY[].sum;
 
     }
 
     override protected void drawImpl(Rectangle paddingBox, Rectangle contentBox) @trusted {
 
+        // Clamp the values first
         setScroll(position);
 
         // Draw the background
