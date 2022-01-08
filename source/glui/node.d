@@ -363,8 +363,8 @@ abstract class GluiNode : Styleable {
 
             import std.range, std.algorithm;
 
-            const spacingX = style ? chain(style.margin[0..2], style.padding[0..2]).sum : 0;
-            const spacingY = style ? chain(style.margin[2..4], style.padding[2..4]).sum : 0;
+            const spacingX = style ? chain(style.margin.sideX[], style.padding.sideX[]).sum : 0;
+            const spacingY = style ? chain(style.margin.sideY[], style.padding.sideY[]).sum : 0;
 
             // Reduce space by margins
             space.x = max(0, space.x - spacingX);

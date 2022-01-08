@@ -458,14 +458,14 @@ ref uint sideBottom(return ref uint[4] sides) {
 
 }
 
-ref uint[2] sideX(return ref uint[4] sides) {
+ref inout(uint[2]) sideX(return ref inout uint[4] sides) {
 
     const start = Style.Side.left;
     return sides[start .. start + 2];
 
 }
 
-ref uint[2] sideY(return ref uint[4] sides) {
+ref inout(uint[2]) sideY(return ref inout uint[4] sides) {
 
     const start = Style.Side.top;
     return sides[start .. start + 2];
