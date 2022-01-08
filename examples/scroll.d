@@ -60,7 +60,7 @@ void main() {
             ),
         ),
         vscrollFrame(
-            .layout!1,
+            .layout!(1, "fill", "start"),
             rightTheme,
             vspace(
 

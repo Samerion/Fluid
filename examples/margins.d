@@ -25,6 +25,22 @@ void main() {
 
     };
 
+    auto fancyScroll = makeTheme!q{
+
+        GluiFrame.styleAdd!q{
+            backgroundColor = Color(0xff, 0xff, 0xff, 0xaa);
+            margin = 10;
+            padding = 10;
+        };
+
+        GluiScrollBar.styleAdd!q{
+            margin = 0;
+            margin.sideLeft = 4;
+            padding = 4;
+        };
+
+    };
+
     GluiFrame innerExpand;
     GluiSpace root, screen1, screen2;
 
@@ -71,25 +87,28 @@ void main() {
         vframe(
             button("Switch to screen 1", { root = screen1; }),
         ),
-        vscrollFrame(
+        hspace(
             .layout!(1, "fill"),
-            theme.makeTheme!q{
+            fancyScroll
+            ,
+            vscrollFrame(
+                .layout!(1, "fill"),
 
-                GluiFrame.styleAdd!q{
-                    backgroundColor = Color(0xff, 0xff, 0xff, 0xaa);
-                    margin = 10;
-                    padding = 10;
-                };
+                cast(GluiNode[]) generate(() => label("Line of text")).take(150).array,
+            ),
+            vscrollFrame(
+                .layout!(1, "fill"),
+                fancyScroll.makeTheme!q{
 
-                GluiScrollBar.styleAdd!q{
-                    margin.sideLeft = 4;
-                    padding = 4;
-                };
+                    GluiScrollBar.styleAdd!q{
+                        margin = 4;
+                        margin.sideRight = 0;
+                    };
 
-            },
+                },
 
-            cast(GluiNode[]) generate(() => label("Line of text")).take(150).array,
-
+                cast(GluiNode[]) generate(() => label("Line of text")).take(150).array,
+            ),
         ),
     );
 
