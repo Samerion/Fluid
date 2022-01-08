@@ -46,6 +46,13 @@ class GluiScrollable(T : GluiFrame) : T {
 
     }
 
+    private {
+
+        /// minSize including the padding.
+        Vector2 paddingBoxSize;
+
+    }
+
     this(T...)(T args) {
 
         super(args);
@@ -99,40 +106,47 @@ class GluiScrollable(T : GluiFrame) : T {
 
     override void resizeImpl(Vector2 space) {
 
-        assert(scrollBar !is null);
+        assert(scrollBar !is null, "No scrollbar has been set for GluiScrollable");
         assert(theme !is null);
         assert(tree !is null);
+
+        /// Padding represented as a vector. This sums the padding on each axis.
+        const paddingVector = Vector2(style.padding.sideX[].sum, style.padding.sideY[].sum);
+
+        /// Space with padding included
+        const paddingSpace = space + paddingVector;
 
         // Resize the scrollbar
         with (scrollBar) {
 
             horizontal = this.directionHorizontal;
             layout = .layout!(1, "fill");
-            resize(this.tree, this.theme, space);
+            resize(this.tree, this.theme, paddingSpace);
 
         }
 
-        // Update available space
+        /// Space without the scrollbar
+        const contentSpace = directionHorizontal
+            ? space - Vector2(0, scrollBar.minSize.y)
+            : space - Vector2(scrollBar.minSize.x, 0);
+
+        // Resize the frame while reserving some space for the scrollbar
+        super.resizeImpl(contentSpace);
+
+        // Calculate the expected padding box size
+        paddingBoxSize = minSize + paddingVector;
+
+        // Set scrollbar size and add the scrollbar to the result
         if (directionHorizontal) {
-            space.y = max(0, space.y - scrollBar.minSize.y);
-        }
-        else {
-            space.x = max(0, space.x - scrollBar.minSize.x);
-        }
 
-        // Get the size
-        super.resizeImpl(space);
-
-        if (directionHorizontal) {
-
-            scrollBar.availableSpace = cast(size_t) minSize.x + style.padding[Style.Side.left .. 2].sum;
+            scrollBar.availableSpace = cast(size_t) paddingBoxSize.x;
             minSize.y += scrollBar.minSize.y;
 
         }
 
         else {
 
-            scrollBar.availableSpace = cast(size_t) minSize.y + style.padding[Style.Side.top .. $].sum;
+            scrollBar.availableSpace = cast(size_t) paddingBoxSize.y;
             minSize.x += scrollBar.minSize.x;
 
         }
@@ -148,20 +162,25 @@ class GluiScrollable(T : GluiFrame) : T {
         // accessibility issues. It can function perfectly without it, or at least until above note gets fixed.
         // Then, a "GluiHoverable" interface could possibly become a thing.
 
+        // TODO Is the above still true?
+
         scrollBar.horizontal = directionHorizontal;
 
         auto scrollBarRect = outer;
 
+        if (hovered) inputImpl();
+
         // Scroll the given rectangle horizontally
         if (directionHorizontal) {
 
-            if (hovered) inputImpl();
+            // Calculate fake box sizes
+            outer.width = paddingBoxSize.x;
+            inner = style.contentBox(outer);
 
             static foreach (rect; AliasSeq!(outer, inner)) {
 
                 // Perform the scroll
                 rect.x -= scroll;
-                rect.width = minSize.x;
 
                 // Reduce both rects by scrollbar size
                 rect.height -= scrollBar.minSize.y;
@@ -176,13 +195,14 @@ class GluiScrollable(T : GluiFrame) : T {
         // Vertically
         else {
 
-            if (hovered) inputImpl();
+            // Calculate fake box sizes
+            outer.height = paddingBoxSize.y;
+            inner = style.contentBox(outer);
 
             static foreach (rect; AliasSeq!(outer, inner)) {
 
                 // Perform the scroll
                 rect.y -= scroll;
-                rect.height = minSize.y;
 
                 // Reduce both rects by scrollbar size
                 rect.width -= scrollBar.minSize.x;
