@@ -47,7 +47,9 @@ class GluiSpace : GluiNode {
     /// Defines in what directions children of this frame should be placed.
     ///
     /// If true, children are placed horizontally, if false, vertically.
-    bool directionHorizontal;
+    bool horizontal;
+
+    alias directionHorizontal = horizontal;
 
     private {
 
@@ -91,37 +93,30 @@ class GluiSpace : GluiNode {
         // Ignore the rest if there's no children
         if (!children.length) return;
 
-        // Construct a new node list
-        GluiNode[] nodeList;
+        Vector2 maxExpandSize;
+
+        // Collect expanding children in a separate array
+        GluiNode[] expandChildren;
         foreach (child; children) {
 
             // This node expands and isn't hidden
             if (child.layout.expand && !child.hidden) {
 
-                // Append
-                nodeList ~= child;
+                // Make it happen later
+                expandChildren ~= child;
 
                 // Add to the denominator
                 denominator += child.layout.expand;
 
             }
 
-            // Prepend to ensure the child will be checked first
-            else nodeList = child ~ nodeList;
+            // Check non-expand nodes now
+            else {
 
-        }
+                child.resize(tree, theme, childSpace(child, available));
+                minSize = childPosition(child.minSize, minSize);
 
-        // Calculate the size of each child
-        foreach (child; nodeList) {
-
-            // Resize the child
-            child.resize(tree, theme, childSpace(child, available));
-            minSize = childPosition(child, minSize);
-
-            // If this child doesn't expand
-            if (child.layout.expand == 0) {
-
-                // Reserve space for it
+                // Reserve space for this node
                 reservedSpace += directionHorizontal
                     ? cast(uint) child.minSize.x
                     : cast(uint) child.minSize.y;
@@ -129,6 +124,32 @@ class GluiSpace : GluiNode {
             }
 
         }
+
+        // Calculate the size of expanding children last
+        foreach (child; expandChildren) {
+
+            // Resize the child
+            child.resize(tree, theme, childSpace(child, available));
+
+            const childSize = child.minSize;
+            const childExpand = child.layout.expand;
+
+            const segmentSize = horizontal
+                ? Vector2(childSize.x / childExpand, childSize.y)
+                : Vector2(childSize.x, childSize.y / childExpand);
+
+            // Reserve expand space
+            maxExpandSize.x = max(maxExpandSize.x, segmentSize.x);
+            maxExpandSize.y = max(maxExpandSize.y, segmentSize.y);
+
+        }
+
+        const expandSize = horizontal
+            ? Vector2(maxExpandSize.x * denominator, maxExpandSize.y)
+            : Vector2(maxExpandSize.x, maxExpandSize.y * denominator);
+
+        // Add the expand space
+        minSize = childPosition(expandSize, minSize);
 
     }
 
@@ -194,9 +215,9 @@ class GluiSpace : GluiNode {
     }
 
     /// Params:
-    ///     child     = Child to calculate.
+    ///     child     = Child size to add.
     ///     previous  = Previous position.
-    private Vector2 childPosition(const GluiNode child, Vector2 previous) const {
+    private Vector2 childPosition(Vector2 child, Vector2 previous) const {
 
         import std.algorithm : max;
 
@@ -204,16 +225,16 @@ class GluiSpace : GluiNode {
         if (directionHorizontal) {
 
             return Vector2(
-                previous.x + child.minSize.x,
-                max(minSize.y, child.minSize.y),
+                previous.x + child.x,
+                max(minSize.y, child.y),
             );
 
         }
 
         // Vertical
         else return Vector2(
-            max(minSize.x, child.minSize.x),
-            previous.y + child.minSize.y,
+            max(minSize.x, child.x),
+            previous.y + child.y,
         );
 
     }

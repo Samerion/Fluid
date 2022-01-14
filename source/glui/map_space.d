@@ -186,8 +186,8 @@ class GluiMapSpace : GluiSpace {
 
             if (preventOverlap) {
 
-                x = x.clamp(inner.x, inner.x + inner.w - child.minSize.x);
-                y = y.clamp(inner.y, inner.y + inner.h - child.minSize.y);
+                x = x.clamp(inner.x, inner.x + max(0, inner.w - child.minSize.x));
+                y = y.clamp(inner.y, inner.y + max(0, inner.h - child.minSize.y));
 
             }
 
