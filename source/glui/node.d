@@ -77,6 +77,9 @@ abstract class GluiNode : Styleable {
         /// If true, this node is currently hovered.
         bool _hovered;
 
+        /// If true, this node is currently disabled.
+        bool _disabled;
+
         /// Theme of this node.
         Theme _theme;
 
@@ -169,14 +172,20 @@ abstract class GluiNode : Styleable {
 
     /// Check if this node is hovered.
     @property
-    bool hovered() const { return _hovered; }
+    bool hovered() const { return _hovered && !_disabled; }
+
+    /// Check if this node is disabled.
+    ref inout(bool) isDisabled() inout { return _disabled; }
+
+    /// Check if this node is disabled.
+    deprecated("`disabled` will be removed in Glui 0.6.0. Use isDisabled instead.")
+    ref inout(bool) disabled() inout { return _disabled; }
 
     /// Recalculate the window size before next draw.
-    ///
-    /// Note: should be called or root; in case of children, will only work after the first draw.
     final void updateSize() {
 
         if (tree) tree.root._requiresResize = true;
+        // Tree might be null — if so, the node will be resized regardless
 
     }
 
@@ -255,7 +264,7 @@ abstract class GluiNode : Styleable {
 
 
         // Pass keyboard input to the currently focused node
-        if (tree.focus) tree.keyboardHandled = tree.focus.keyboardImpl();
+        if (tree.focus && !tree.focus.isDisabled) tree.keyboardHandled = tree.focus.keyboardImpl();
         else tree.keyboardHandled = false;
 
     }
