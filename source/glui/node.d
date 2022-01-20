@@ -171,8 +171,10 @@ abstract class GluiNode : Styleable {
     }
 
     /// Check if this node is hovered.
+    ///
+    /// Returns false if the node or some of its ancestors are disabled.
     @property
-    bool hovered() const { return _hovered && !_disabled; }
+    bool hovered() const { return _hovered && !_disabled && !tree.disabledDepth; }
 
     /// Check if this node is disabled.
     ref inout(bool) isDisabled() inout { return _disabled; }
@@ -333,6 +335,13 @@ abstract class GluiNode : Styleable {
                 typeid(this), paddingBox, contentBox
             )
         );
+
+        // Descending into a disabled tree
+        const incrementDisabled = isDisabled || tree.disabledDepth;
+
+        // Count if disabled or not
+        if (incrementDisabled) tree.disabledDepth++;
+        scope (exit) if (incrementDisabled) tree.disabledDepth--;
 
         // Draw the node cropped
         // Note: minSize includes margin!
