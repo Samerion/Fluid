@@ -183,6 +183,10 @@ abstract class GluiNode : Styleable {
     deprecated("`disabled` will be removed in Glui 0.6.0. Use isDisabled instead.")
     ref inout(bool) disabled() inout { return _disabled; }
 
+    /// Checks if the node is disabled, either by self, or by any of its ancestors. Only works while the node is being
+    /// drawn.
+    protected bool isDisabledInherited() const { return tree.disabledDepth != 0; }
+
     /// Recalculate the window size before next draw.
     final void updateSize() {
 

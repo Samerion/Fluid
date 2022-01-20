@@ -11,6 +11,8 @@ import glui.style;
 
 @safe:
 
+// TODO This could probably be just a plain interface, replacing GluiFocusable
+
 /// Represents a general input node.
 ///
 /// Styles: $(UL
@@ -43,7 +45,7 @@ abstract class GluiInput(Parent : GluiNode) : Parent, GluiFocusable {
     override const(Style) pickStyle() const {
 
         // Disabled
-        if (isDisabled) return disabledStyle;
+        if (isDisabledInherited) return disabledStyle;
 
         // Focused
         else if (isFocused) return focusStyle;
