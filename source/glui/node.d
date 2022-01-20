@@ -250,6 +250,10 @@ abstract class GluiNode : Styleable {
         // Note: pressed, not released; released activates input events, pressed activates focus
         const mousePressed = IsMouseButtonPressed(MouseButton.MOUSE_LEFT_BUTTON);
 
+        // TODO: remove hover from disabled nodes (specifically to handle edgecase — node disabled while hovered and LMB
+        // down)
+        // TODO: move focus away from disabled nodes into neighbors along with #8
+
         // Mouse is hovering an input node
         if (auto hoverInput = cast(GluiFocusable) tree.hover) {
 
@@ -321,7 +325,7 @@ abstract class GluiNode : Styleable {
         _hovered = hoveredImpl(visibleBox, GetMousePosition);
 
         // Update global hover unless mouse is being held down
-        if (_hovered && !isLMBHeld) tree.hover = this;
+        if (hovered && !isLMBHeld) tree.hover = this;
 
         assert(
             [size.tupleof].all!isFinite,
