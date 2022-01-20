@@ -157,6 +157,7 @@ package interface GluiFocusable {
     bool isFocused() const;
     void mouseImpl();
     bool keyboardImpl();
+    ref inout(bool) isDisabled() inout;
 
 }
 
