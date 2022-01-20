@@ -176,6 +176,10 @@ struct LayoutTree {
     /// Check if keyboard input was handled after rendering is has completed.
     bool keyboardHandled;
 
+    /// Current depth of "disabled" nodes, incremented for any node descended into, while any of the ancestors is
+    /// disabled.
+    uint disabledDepth;
+
     /// Scissors stack.
     package Rectangle[] scissors;
 
