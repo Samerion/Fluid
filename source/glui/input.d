@@ -11,6 +11,8 @@ import glui.style;
 
 @safe:
 
+// TODO This could probably be just a plain interface, replacing GluiFocusable
+
 /// Represents a general input node.
 ///
 /// Styles: $(UL
@@ -32,19 +34,18 @@ abstract class GluiInput(Parent : GluiNode) : Parent, GluiFocusable {
     /// Callback to run when the input is submitted.
     void delegate() submitted;
 
-    ///
-    bool disabled;
-
     this(T...)(T sup) {
 
         super(sup);
 
     }
 
+    override ref inout(bool) isDisabled() inout { return super.isDisabled; }
+
     override const(Style) pickStyle() const {
 
         // Disabled
-        if (disabled) return disabledStyle;
+        if (isDisabledInherited) return disabledStyle;
 
         // Focused
         else if (isFocused) return focusStyle;
@@ -73,11 +74,14 @@ abstract class GluiInput(Parent : GluiNode) : Parent, GluiFocusable {
     /// Change the focus to this node.
     void focus() {
 
+        // Ignore if disabled
+        if (isDisabled) return;
+
         tree.focus = this;
 
     }
 
-    // TODO Rename back to "focused"
+    // TODO naming consistence??
     @property {
 
         /// Check if the node has focus.

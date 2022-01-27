@@ -174,7 +174,7 @@ class GluiScrollable(T : GluiFrame) : T {
         if (directionHorizontal) {
 
             // Calculate fake box sizes
-            outer.width = paddingBoxSize.x;
+            outer.width = max(outer.width, paddingBoxSize.x);
             inner = style.contentBox(outer);
 
             static foreach (rect; AliasSeq!(outer, inner)) {
@@ -196,7 +196,7 @@ class GluiScrollable(T : GluiFrame) : T {
         else {
 
             // Calculate fake box sizes
-            outer.height = paddingBoxSize.y;
+            outer.height = max(outer.height, paddingBoxSize.y);
             inner = style.contentBox(outer);
 
             static foreach (rect; AliasSeq!(outer, inner)) {

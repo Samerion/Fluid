@@ -2,6 +2,8 @@ import glui;
 import raylib;
 import std.format;
 
+// This showcase is a WIP.
+
 void main() {
 
     SetConfigFlags(ConfigFlags.FLAG_WINDOW_RESIZABLE);
@@ -117,7 +119,7 @@ void main() {
                         label(
                             .layout!"fill",
                             "Another label with a margin",
-                        )
+                        ),
 
                     ),
 

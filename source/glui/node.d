@@ -77,6 +77,9 @@ abstract class GluiNode : Styleable {
         /// If true, this node is currently hovered.
         bool _hovered;
 
+        /// If true, this node is currently disabled.
+        bool _disabled;
+
         /// Theme of this node.
         Theme _theme;
 
@@ -168,15 +171,27 @@ abstract class GluiNode : Styleable {
     }
 
     /// Check if this node is hovered.
+    ///
+    /// Returns false if the node or some of its ancestors are disabled.
     @property
-    bool hovered() const { return _hovered; }
+    bool hovered() const { return _hovered && !_disabled && !tree.disabledDepth; }
+
+    /// Check if this node is disabled.
+    ref inout(bool) isDisabled() inout { return _disabled; }
+
+    /// Check if this node is disabled.
+    deprecated("`disabled` will be removed in Glui 0.6.0. Use isDisabled instead.")
+    ref inout(bool) disabled() inout { return _disabled; }
+
+    /// Checks if the node is disabled, either by self, or by any of its ancestors. Only works while the node is being
+    /// drawn.
+    protected bool isDisabledInherited() const { return tree.disabledDepth != 0; }
 
     /// Recalculate the window size before next draw.
-    ///
-    /// Note: should be called or root; in case of children, will only work after the first draw.
     final void updateSize() {
 
         if (tree) tree.root._requiresResize = true;
+        // Tree might be null — if so, the node will be resized regardless
 
     }
 
@@ -239,6 +254,10 @@ abstract class GluiNode : Styleable {
         // Note: pressed, not released; released activates input events, pressed activates focus
         const mousePressed = IsMouseButtonPressed(MouseButton.MOUSE_LEFT_BUTTON);
 
+        // TODO: remove hover from disabled nodes (specifically to handle edgecase — node disabled while hovered and LMB
+        // down)
+        // TODO: move focus away from disabled nodes into neighbors along with #8
+
         // Mouse is hovering an input node
         if (auto hoverInput = cast(GluiFocusable) tree.hover) {
 
@@ -255,7 +274,7 @@ abstract class GluiNode : Styleable {
 
 
         // Pass keyboard input to the currently focused node
-        if (tree.focus) tree.keyboardHandled = tree.focus.keyboardImpl();
+        if (tree.focus && !tree.focus.isDisabled) tree.keyboardHandled = tree.focus.keyboardImpl();
         else tree.keyboardHandled = false;
 
     }
@@ -310,7 +329,7 @@ abstract class GluiNode : Styleable {
         _hovered = hoveredImpl(visibleBox, GetMousePosition);
 
         // Update global hover unless mouse is being held down
-        if (_hovered && !isLMBHeld) tree.hover = this;
+        if (hovered && !isLMBHeld) tree.hover = this;
 
         assert(
             [size.tupleof].all!isFinite,
@@ -324,6 +343,13 @@ abstract class GluiNode : Styleable {
                 typeid(this), paddingBox, contentBox
             )
         );
+
+        // Descending into a disabled tree
+        const incrementDisabled = isDisabled || tree.disabledDepth;
+
+        // Count if disabled or not
+        if (incrementDisabled) tree.disabledDepth++;
+        scope (exit) if (incrementDisabled) tree.disabledDepth--;
 
         // Draw the node cropped
         // Note: minSize includes margin!
