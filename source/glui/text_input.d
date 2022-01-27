@@ -234,7 +234,7 @@ class GluiTextInput : GluiInput!GluiNode {
     override const(Style) pickStyle() const {
 
         // Disabled
-        if (disabled) return disabledStyle;
+        if (isDisabledInherited) return disabledStyle;
 
         // Focused
         else if (isFocused) return focusStyle;

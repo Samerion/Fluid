@@ -29,6 +29,18 @@
 			"dependencies": {
 				"glui": ">=0.0.0"
 			},
+			"name": "example-showcase-2",
+			"sourceFiles": [
+				"examples/showcase_2.d"
+			],
+			"sourcePaths": [],
+			"targetPath": "build",
+			"targetType": "executable"
+		},
+		{
+			"dependencies": {
+				"glui": ">=0.0.0"
+			},
 			"name": "example-onions",
 			"sourceFiles": [
 				"examples/onions.d"

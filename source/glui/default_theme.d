@@ -32,6 +32,12 @@ shared static this() {
             focusStyleAdd.backgroundColor = Color(0xdd, 0xdd, 0xdd, 0xff);
             hoverStyleAdd.backgroundColor = Color(0xcc, 0xcc, 0xcc, 0xff);
             pressStyleAdd.backgroundColor = Color(0xaa, 0xaa, 0xaa, 0xff);
+            disabledStyleAdd!q{
+
+                textColor = Color(0x00, 0x00, 0x00, 0xaa);
+                backgroundColor = Color(0xee, 0xee, 0xee, 0x55);
+
+            };
 
         };
 
@@ -43,8 +49,14 @@ shared static this() {
             margin.sideY = 2;
             padding.sideX = 6;
 
-            GluiTextInput.emptyStyleAdd.textColor = Color(0x00, 0x00, 0x00, 0xaa);
-            GluiTextInput.focusStyleAdd.backgroundColor = Color(0xff, 0xff, 0xff, 0xff);
+            emptyStyleAdd.textColor = Color(0x00, 0x00, 0x00, 0xaa);
+            focusStyleAdd.backgroundColor = Color(0xff, 0xff, 0xff, 0xff);
+            disabledStyleAdd!q{
+
+                textColor = Color(0x00, 0x00, 0x00, 0xaa);
+                backgroundColor = Color(0xff, 0xff, 0xff, 0x55);
+
+            };
 
         };
 
@@ -56,6 +68,7 @@ shared static this() {
             hoverStyleAdd.backgroundColor = Color(0x88, 0x88, 0x88, 0xff);
             focusStyleAdd.backgroundColor = Color(0x77, 0x77, 0x77, 0xff);
             pressStyleAdd.backgroundColor = Color(0x55, 0x55, 0x55, 0xff);
+            disabledStyleAdd.backgroundColor = Color(0xaa, 0xaa, 0xaa, 0x55);
 
         };
 

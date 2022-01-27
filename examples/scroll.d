@@ -31,7 +31,7 @@ void main() {
 
     };
 
-    GluiScrollBar myScrollBar;
+    GluiScrollBar myScrollBar, disabledScrollbar;
     GluiButton!() myButton;
 
     auto root = hframe(
@@ -82,11 +82,19 @@ void main() {
 
                 ),
             ),
+            vspace(
+
+                label("Even more useless scrollbar:"),
+                disabledScrollbar = hscrollBar(.layout!"fill"),
+
+            ),
 
         )
     );
 
     myScrollBar.availableSpace = 5_000;
+    disabledScrollbar.availableSpace = 5_000;
+    disabledScrollbar.disabled = true;
 
     while (!WindowShouldClose) {
 
