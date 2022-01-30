@@ -1,4 +1,4 @@
-/// This module defines the `Children` struct which will catch mutations to it made while drawing, and defines utils
+/// This module defines the `Children` struct which will catch mutations made to it while drawing, and defines utils
 /// for operating on children.
 module glui.children;
 
@@ -81,12 +81,12 @@ debug struct Children {
     }
 
     // Indexing and slicing is allowed
-    GluiNode[] opIndex() {
+    inout(GluiNode[]) opIndex() inout {
 
         return _children[];
 
     }
-    auto opIndex(Args...)(Args args) {
+    auto opIndex(Args...)(Args args) inout {
 
         return _children[args];
 
