@@ -11,32 +11,40 @@ void main() {
 
     scope (exit) CloseWindow();
 
+    // Let's customize the theme first
+    auto theme = makeTheme!q{
+
+        // Vertical margin for spaces
+        GluiSpace.styleAdd.margin.sideY = 6;
+
+        // Some nice padding for frames
+        GluiFrame.styleAdd!q{
+
+            margin.sideRight = 4;
+            padding.sideX = 6;
+            backgroundColor = Color(0xff, 0xff, 0xff, 0xaa);
+
+        };
+
+        // Get some nicer background for the main frame
+        GluiScrollFrame.styleAdd!q{
+
+            padding.sideX = 6;
+            backgroundColor = Colors.SKYBLUE;
+
+        };
+
+    };
+
     auto root = vscrollFrame(
         .layout!(1, "fill"),
 
         // Customizing the theme...
-        makeTheme!q{
-
-            // Some nice padding for frames
-            GluiFrame.styleAdd!q{
-
-                padding.sideX = 6;
-                backgroundColor = Color(0xff, 0xff, 0xff, 0xaa);
-
-            };
-
-            // Get some nicer background for the main frame
-            GluiScrollFrame.styleAdd!q{
-
-                padding.sideX = 6;
-                backgroundColor = Colors.SKYBLUE;
-
-            };
-
-        },
+        theme,
 
         // Add children nodes
         inputExample,
+        slotExample,
     );
 
     while (!WindowShouldClose) {
@@ -64,6 +72,8 @@ GluiSpace inputExample() {
 
     auto root = vspace(
         .layout!"fill",
+
+        label(.layout!"center", "Input handling"),
 
         frontLabel = label(firstText),
 
@@ -112,6 +122,38 @@ GluiSpace inputExample() {
 
     // Disable all the designated nodes
     disabledNodes[].each!"a.disabled = true";
+
+    return root;
+
+}
+
+GluiSpace slotExample() {
+
+    GluiNodeSlot!GluiNode slot;
+    GluiNodeSlot!GluiNode emptiedSlot;
+    GluiNodeSlot!GluiNode[6] slots;
+
+    auto root = vspace(
+        .layout!"fill",
+
+        label(.layout!"center", "Complex tree management with node slots"),
+
+        label("Press a button to place a node below"),
+        slot = nodeSlot!GluiNode(),
+
+        hspace(
+            vframe(
+                slots[0] = nodeSlot!GluiNode(label("Hello, World!")),
+                button("SWAP", { slot.swapSlots(slots[0]); }),
+            ),
+
+            vframe(
+                slots[1] = nodeSlot!GluiNode(label("Hi!")),
+                button("SWAP", { slot.swapSlots(slots[1]); }),
+            ),
+        ),
+
+    );
 
     return root;
 
