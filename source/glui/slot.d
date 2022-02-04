@@ -59,13 +59,16 @@ class GluiNodeSlot(T : GluiNode) : GluiNode {
 
     /// Change the node in the slot.
     ///
-    /// Note: This function is a little bit more convenient than setting the value directly, as it'll mark itself as
-    /// needing an update.
-    T opAssign(T value) {
+    /// This function is a little bit more convenient than setting the value directly, as it'll mark itself as
+    /// needing an update. Additionally, it returns the slot, not the given node, so you can assign a value to a
+    /// constructed slot while adding it to the scene tree.
+    typeof(this) opAssign(T value) {
 
         updateSize();
 
-        return this.value = value;
+        this.value = value;
+
+        return this;
 
     }
 
