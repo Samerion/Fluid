@@ -131,28 +131,77 @@ GluiSpace slotExample() {
 
     GluiNodeSlot!GluiNode slot;
     GluiNodeSlot!GluiNode emptiedSlot;
-    GluiNodeSlot!GluiNode[6] slots;
+    GluiNodeSlot!GluiNode[5] slots;
 
-    auto root = vspace(
-        .layout!"fill",
-
-        label(.layout!"center", "Complex tree management with node slots"),
-
+    // Example A
+    auto exampleA = vspace(
         label("Press a button to place a node below"),
         slot = nodeSlot!GluiNode(),
 
         hspace(
             vframe(
-                slots[0] = nodeSlot!GluiNode(label("Hello, World!")),
+                slots[0] = nodeSlot!GluiNode(
+                    label("Hello, World!")
+                ),
                 button("SWAP", { slot.swapSlots(slots[0]); }),
             ),
 
             vframe(
-                slots[1] = nodeSlot!GluiNode(label("Hi!")),
+                slots[1] = nodeSlot!GluiNode(
+                    vframe(
+                        label("Hi!")
+                    ),
+                ),
                 button("SWAP", { slot.swapSlots(slots[1]); }),
             ),
-        ),
 
+            vframe(
+                slots[2] = nodeSlot!GluiNode(
+                    hspace(
+                        // Nested slots!
+                        slots[3] = nodeSlot!GluiNode(
+                            button("Swap", { slots[4].swapSlots(slots[3]); })
+                        ),
+                        slots[4] = nodeSlot!GluiNode(
+                            label("Text")
+                        ),
+                    ),
+                ),
+                button("SWAP", { slot.swapSlots(slots[2]); }),
+            ),
+        ),
+    );
+
+    // We can swap between two differently typed slots if they hold nodes of compatible virtual type
+    auto slot1 = nodeSlot!GluiNode(.layout!(1, "start"), label("Label 1"));
+    auto slot2 = nodeSlot!GluiLabel(.layout!(1, "end"), label("Label 2"));
+
+    // But they will fail to compile if the types cannot intersect
+    auto slot3 = nodeSlot!GluiFrame();
+
+    static assert(!__traits(compiles,  // Therefore, this fails to compile
+        slot3.swapSlots(slot2)
+    ));
+
+    // Example B
+    auto exampleB = vspace(
+        .layout!"fill",
+        label("A backend example: see the code!"),
+        hspace(
+            .layout!"fill",
+            slot1,
+            label("---"),
+            slot2
+        ),
+        button("SWAP", { slot1.swapSlots(slot2); })
+    );
+
+    auto root = vspace(
+        .layout!"fill",
+
+        label(.layout!"center", "Complex tree management with node slots"),
+        exampleA,
+        exampleB,
     );
 
     return root;
