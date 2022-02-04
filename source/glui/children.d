@@ -192,8 +192,7 @@ ref GluiNode[] forceMutable(return ref Children children) @system {
 }
 
 /// Get a reference to child within the parent.
-///
-/// This will probably be soon deprecated in favor of a "placeholder" node to fulfill this purpose.
+deprecated("childRef will be removed in 0.6.0. Use the @safe GluiNodeSlot instead.")
 ref GluiNode childRef(ref Children children, size_t index) @system {
 
     debug assert(!children._locked, "Can't get reference to a locked child.");

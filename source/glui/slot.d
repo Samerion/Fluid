@@ -121,7 +121,7 @@ class GluiNodeSlot(T : GluiNode) : GluiNode {
 
             }
 
-            static if (is(T : U) || is(Y : U)) {
+            else static if (is(T : U) || is(U : T)) {
 
                 auto theirs = cast(T) other.value;
                 auto ours   = cast(U) value;
@@ -132,13 +132,17 @@ class GluiNodeSlot(T : GluiNode) : GluiNode {
                 assert(canAcceptTheirs, format!"Can't swap: This slot doesn't accept %s"(typeid(theirs)));
                 assert(canAcceptOurs,   format!"Can't swap: Other slot doesn't accept %s"(typeid(ours)));
 
-                // TODO tests for this branch
+                // Perform the swap
+                value = theirs;
+                other.value = ours;
 
             }
 
             else static assert(false, "Slots given to swapSlots are not compatible");
 
         }
+
+        else static assert(false, "The other item is not a node");
 
     }
 
