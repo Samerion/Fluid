@@ -61,6 +61,10 @@ abstract class GluiNode : Styleable {
         /// If true, this node will be removed from the tree on the next draw.
         bool toRemove;
 
+        /// If true, mouse focus will be disabled for this node, so mouse signals will "go through" to its parents, as
+        /// if the node wasn't there. The mouse will still detect hover like normal.
+        bool mousePass;
+
     }
 
     /// Minimum size of the node.
@@ -328,8 +332,8 @@ abstract class GluiNode : Styleable {
         // Check if hovered
         _hovered = hoveredImpl(visibleBox, GetMousePosition);
 
-        // Update global hover unless mouse is being held down
-        if (hovered && !isLMBHeld) tree.hover = this;
+        // Update global hover unless mouse is being held down or mouse focus is disabled for this node
+        if (hovered && !isLMBHeld && !mousePass) tree.hover = this;
 
         assert(
             [size.tupleof].all!isFinite,
