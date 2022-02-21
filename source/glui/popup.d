@@ -1,4 +1,4 @@
-module glui.dropdown;
+module glui.popup;
 
 import raylib;
 
@@ -12,12 +12,17 @@ import glui.utils;
 
 @safe:
 
+deprecated("To be removed in 0.5.0. Use popup() instead")
+alias dropdown = popup;
 
-alias dropdown = simpleConstructor!GluiDropdown;
+deprecated("To be removed in 0.5.0. Use GluiPopup instead")
+alias GluiDropdown = GluiPopup;
+
+alias popup = simpleConstructor!GluiPopup;
 
 /// This is an override of GluiFrame to simplify creating dropdowns: if clicked outside of it, it will disappear from
 /// the node tree.
-class GluiDropdown : GluiFrame {
+class GluiPopup : GluiFrame {
 
     // TODO: ...unless clicked on another dropdown.
 
