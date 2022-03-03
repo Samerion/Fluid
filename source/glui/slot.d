@@ -31,6 +31,8 @@ class GluiNodeSlot(T : GluiNode) : GluiNode {
 
         /// If true, the slot will inherit its layout from the node it holds. If there's no node, it'll be reset to
         /// shrink.
+        ///
+        /// Note: This field is stupid. You'd rather set the child to use `.layout!"fill"`.
         bool inheritLayout;
 
     }
@@ -89,7 +91,16 @@ class GluiNodeSlot(T : GluiNode) : GluiNode {
 
         updateLayout();
 
-        value.draw(contentBox);
+        // The value is to be removed
+        if (value.toRemove) {
+
+            // Clear the value
+            value = null;
+
+        }
+
+        // Draw as expected
+        else value.draw(contentBox);
 
     }
 
