@@ -404,8 +404,8 @@ abstract class GluiNode : Styleable {
             resizeImpl(space);
 
             // Add margins
-            minSize.x += spacingX;
-            minSize.y += spacingY;
+            minSize.x = ceil(minSize.x + spacingX);
+            minSize.y = ceil(minSize.y + spacingY);
 
         }
 

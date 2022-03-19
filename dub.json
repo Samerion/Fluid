@@ -3,15 +3,28 @@
 		"Soaku"
 	],
 	"copyright": "Copyright © 2021, Soaku",
-	"dependencies": {
-		"raylib-d": "~>3.1.0"
-	},
 	"description": "A simple UI library designed for IsodiTools and Samerion",
 	"libs": [
 		"raylib"
 	],
 	"license": "BSL",
 	"name": "glui",
+	"configurations": [
+		{
+			"name": "raylib3",
+			"dependencies": {
+				"raylib-d": "~>3.1.0"
+			},
+			"versions": ["Glui_Raylib3"]
+		},
+		{
+			"name": "raylib4",
+			"dependencies": {
+				"raylib-d": "~>4.0.1"
+			},
+			"versions": ["Glui_Raylib4"]
+		}
+	],
 	"subPackages": [
 		{
 			"dependencies": {

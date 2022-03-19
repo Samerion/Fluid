@@ -94,7 +94,7 @@ void main() {
 
     myScrollBar.availableSpace = 5_000;
     disabledScrollbar.availableSpace = 5_000;
-    disabledScrollbar.disabled = true;
+    disabledScrollbar.isDisabled = true;
 
     while (!WindowShouldClose) {
 
