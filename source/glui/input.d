@@ -51,7 +51,7 @@ abstract class GluiInput(Parent : GluiNode) : Parent, GluiFocusable {
         else if (isFocused) return focusStyle;
 
         // Hovered
-        else if (hovered) return hoverStyle;
+        else if (isHovered) return hoverStyle;
 
         // Other
         else return style;

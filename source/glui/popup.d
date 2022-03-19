@@ -39,7 +39,7 @@ class GluiPopup : GluiFrame {
         const mousePressed = [EnumMembers!MouseButton].any!IsMouseButtonReleased;
 
         // Pressed outside!
-        if (mousePressed && !hovered) {
+        if (mousePressed && !isHovered) {
 
             remove();
 

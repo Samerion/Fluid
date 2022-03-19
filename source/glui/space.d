@@ -100,7 +100,7 @@ class GluiSpace : GluiNode {
         foreach (child; children) {
 
             // This node expands and isn't hidden
-            if (child.layout.expand && !child.hidden) {
+            if (child.layout.expand && !child.isHidden) {
 
                 // Make it happen later
                 expandChildren ~= child;
@@ -245,7 +245,7 @@ class GluiSpace : GluiNode {
     ///     available = Available space
     private Vector2 childSpace(const GluiNode child, Vector2 available) const
     in(
-        child.hidden || child.layout.expand <= denominator,
+        child.isHidden || child.layout.expand <= denominator,
         format!"Nodes %s/%s sizes are out of date, call updateSize after updating the tree or layout (%s/%s)"(
             typeid(this), typeid(child), child.layout.expand, denominator,
         )
@@ -259,7 +259,7 @@ class GluiSpace : GluiNode {
     do {
 
         // Hidden, give it no space
-        if (child.hidden) return Vector2();
+        if (child.isHidden) return Vector2();
 
         // Horizontal
         if (directionHorizontal) {
