@@ -165,7 +165,7 @@ class GluiScrollable(T : GluiNode, string horizontalExpression) : T {
 
         auto scrollBarRect = outer;
 
-        if (hovered) inputImpl();
+        if (isHovered) inputImpl();
 
         // Scroll the given rectangle horizontally
         if (isHorizontal) {

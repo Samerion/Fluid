@@ -63,7 +63,10 @@ abstract class GluiNode : Styleable {
 
         /// If true, mouse focus will be disabled for this node, so mouse signals will "go through" to its parents, as
         /// if the node wasn't there. The mouse will still detect hover like normal.
-        bool mousePass;
+        bool ignoreMouse;
+
+        deprecated("mousePass has been renamed to ignoreMouse and will be removed in 0.6.0")
+        ref inout(bool) mousePass() inout { return ignoreMouse; }
 
     }
 
@@ -76,13 +79,13 @@ abstract class GluiNode : Styleable {
         bool _requiresResize = true;
 
         /// If true, this node is hidden and won't be rendered.
-        bool _hidden;
+        bool _isHidden;
 
         /// If true, this node is currently hovered.
-        bool _hovered;
+        bool _isHovered;
 
         /// If true, this node is currently disabled.
-        bool _disabled;
+        bool _isDisabled;
 
         /// Theme of this node.
         Theme _theme;
@@ -109,15 +112,22 @@ abstract class GluiNode : Styleable {
     @property {
 
         /// Check if the node is hidden.
-        bool hidden() const { return _hidden; }
+        bool isHidden() const { return _isHidden; }
 
         /// Set the visibility
-        bool hidden(bool value) {
+        bool isHidden(bool value) {
 
             // If changed, trigger resize
-            if (_hidden != value) updateSize();
+            if (_isHidden != value) updateSize();
 
-            return _hidden = value;
+            return _isHidden = value;
+
+        }
+
+        deprecated("hidden has been renamed to isHidden and will be removed in 0.6.0") {
+
+            bool hidden() const { return _isHidden; }
+            bool hidden(bool value) { return _isHidden = value; }
 
         }
 
@@ -150,7 +160,7 @@ abstract class GluiNode : Styleable {
     /// Show the node.
     final GluiNode show() {
 
-        hidden = false;
+        isHidden = false;
         return this;
 
     }
@@ -158,18 +168,18 @@ abstract class GluiNode : Styleable {
     /// Hide the node.
     final GluiNode hide() {
 
-        hidden = true;
+        isHidden = true;
         return this;
 
     }
 
     /// Toggle the node's visibility.
-    final void toggleShow() { hidden = !hidden; }
+    final void toggleShow() { isHidden = !isHidden; }
 
     /// Remove this node from the tree before the next draw.
     final void remove() {
 
-        hidden = true;
+        isHidden = true;
         toRemove = true;
 
     }
@@ -178,14 +188,17 @@ abstract class GluiNode : Styleable {
     ///
     /// Returns false if the node or some of its ancestors are disabled.
     @property
-    bool hovered() const { return _hovered && !_disabled && !tree.disabledDepth; }
+    bool isHovered() const { return _isHovered && !_isDisabled && !tree.disabledDepth; }
+
+    deprecated("hovered has been renamed to isHovered and will be removed in 0.6.0.")
+    bool hovered() const { return isHovered; }
 
     /// Check if this node is disabled.
-    ref inout(bool) isDisabled() inout { return _disabled; }
+    ref inout(bool) isDisabled() inout { return _isDisabled; }
 
     /// Check if this node is disabled.
-    deprecated("`disabled` will be removed in Glui 0.6.0. Use isDisabled instead.")
-    ref inout(bool) disabled() inout { return _disabled; }
+    deprecated("disabled has been renamed to isDisabled and will be removed in 0.6.0.")
+    ref inout(bool) disabled() inout { return isDisabled; }
 
     /// Checks if the node is disabled, either by self, or by any of its ancestors. Only works while the node is being
     /// drawn.
@@ -295,7 +308,7 @@ abstract class GluiNode : Styleable {
         assert(!toRemove, "A toRemove child wasn't removed from container.");
 
         // If hidden, don't draw anything
-        if (hidden) return;
+        if (isHidden) return;
 
         const spaceV = Vector2(space.width, space.height);
 
@@ -330,10 +343,10 @@ abstract class GluiNode : Styleable {
         const contentBox = style.contentBox(paddingBox);
 
         // Check if hovered
-        _hovered = hoveredImpl(visibleBox, GetMousePosition);
+        _isHovered = hoveredImpl(visibleBox, GetMousePosition);
 
         // Update global hover unless mouse is being held down or mouse focus is disabled for this node
-        if (hovered && !isLMBHeld && !mousePass) tree.hover = this;
+        if (isHovered && !isLMBHeld && !ignoreMouse) tree.hover = this;
 
         assert(
             [size.tupleof].all!isFinite,
@@ -386,7 +399,7 @@ abstract class GluiNode : Styleable {
         if (this.theme is null) this.theme = theme;
 
         // The node is hidden, reset size
-        if (hidden) minSize = Vector2(0, 0);
+        if (isHidden) minSize = Vector2(0, 0);
 
         // Otherwise perform like normal
         else {

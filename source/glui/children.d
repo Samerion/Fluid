@@ -16,7 +16,7 @@ debug struct Children {
     private {
 
         GluiNode[] _children;
-        bool _locked;
+        bool _isLocked;
 
     }
 
@@ -25,7 +25,7 @@ debug struct Children {
     this(inout(Children) old) inout {
 
         this._children = old._children;
-        this._locked = false;
+        this._isLocked = false;
 
     }
 
@@ -39,7 +39,7 @@ debug struct Children {
 
         size_t length(size_t value) {
 
-            debug assert(!_locked, mutateError);
+            debug assert(!_isLocked, mutateError);
 
             return _children.length = value;
 
@@ -57,7 +57,7 @@ debug struct Children {
     /// Remove the first item.
     void popFront() {
 
-        debug assert(!_locked, mutateError);
+        debug assert(!_isLocked, mutateError);
         assert(!empty, "Can't pop an empty children list");
 
         _children.popFront();
@@ -75,7 +75,7 @@ debug struct Children {
 
     void opAssign(GluiNode[] newList) {
 
-        debug assert(!_locked, mutateError);
+        debug assert(!_isLocked, mutateError);
         _children = newList;
 
     }
@@ -101,7 +101,7 @@ debug struct Children {
 
     ref GluiNode[] getChildren() return {
 
-        debug assert(!_locked, "Can't get a mutable reference to children while rendering. Consider doing this in "
+        debug assert(!_isLocked, "Can't get a mutable reference to children while rendering. Consider doing this in "
             ~ "input handling methods like mouseImpl/keyboardImpl which happen after rendering is complete. But if "
             ~ "this is necessary, you may use `glui.children.asConst` instead. Note, iterating over the (mutable) "
             ~ "children is still legal. You can also use `node.remove` if you want to simply remove a node.");
@@ -145,7 +145,7 @@ static assert(isInputRange!Children);
 pragma(inline)
 void lock(ref Children children) {
 
-    debug children._locked = true;
+    debug children._isLocked = true;
 
     assertLocked(children);
 
@@ -156,9 +156,9 @@ void unlock(ref Children children) {
 
     debug {
 
-        assert(children._locked, "Already unlocked.");
+        assert(children._isLocked, "Already unlocked.");
 
-        children._locked = false;
+        children._isLocked = false;
 
     }
 
@@ -169,7 +169,7 @@ void assertLocked(ref Children children) {
 
     // debug just to de sure lol
     // pretty sure you can fiddle with the compiler flags enough to make this not compile
-    debug assert(children._locked);
+    debug assert(children._isLocked);
 
 }
 
@@ -195,7 +195,7 @@ ref GluiNode[] forceMutable(return ref Children children) @system {
 deprecated("childRef will be removed in 0.6.0. Use the @safe GluiNodeSlot instead.")
 ref GluiNode childRef(ref Children children, size_t index) @system {
 
-    debug assert(!children._locked, "Can't get reference to a locked child.");
+    debug assert(!children._isLocked, "Can't get reference to a locked child.");
 
     debug return children._children[index];
     else  return children[index];

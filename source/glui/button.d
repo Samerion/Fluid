@@ -102,7 +102,7 @@ class GluiButton(T : GluiNode = GluiLabel) : GluiInput!T {
         if (isFocused) return focusStyle;
 
         // If hovered
-        if (hovered) return hoverStyle;
+        if (isHovered) return hoverStyle;
 
         // No decision — normal state
         return super.pickStyle();

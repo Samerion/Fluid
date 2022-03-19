@@ -45,6 +45,8 @@ bool contains(Rectangle rectangle, Vector2 point) {
 }
 
 /// Get names of static fields in the given object.
+///
+/// Ignores deprecated fields.
 template StaticFieldNames(T) {
 
     import std.traits : hasStaticMember;
@@ -53,16 +55,21 @@ template StaticFieldNames(T) {
     // Prepare data
     alias Members = __traits(allMembers, T);
 
-    // Check if the said member is static
-    enum isStaticMember(alias member) =
+    template isStaticMember(string member) {
 
-        // Make sure this isn't an alias
-        __traits(compiles,
-            Alias!(__traits(getMember, T, member))
-        )
+        enum isStaticMember =
 
-        // Find the member
-        && hasStaticMember!(T, member);
+            // Make sure this isn't an alias
+            __traits(compiles,
+                Alias!(__traits(getMember, T, member))
+            )
+
+            && !__traits(isDeprecated, __traits(getMember, T, member))
+
+            // Find the member
+            && hasStaticMember!(T, member);
+
+    }
 
     // Result
     alias StaticFieldNames = Filter!(isStaticMember, Members);
