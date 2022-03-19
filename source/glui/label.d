@@ -20,8 +20,15 @@ class GluiLabel : GluiNode {
     mixin DefineStyles;
     mixin ImplHoveredRect;
 
-    /// Text of this label.
-    string text;
+    public {
+
+        /// Text of this label.
+        string text;
+
+        /// If true, the content of the label should not be wrapped into new lines if it's too long to fit into one.
+        bool disableWrap;
+
+    }
 
     static foreach (index; 0 .. BasicNodeParamLength) {
 
@@ -37,7 +44,7 @@ class GluiLabel : GluiNode {
 
     protected override void resizeImpl(Vector2 available) {
 
-        minSize = style.measureText(available, text);
+        minSize = style.measureText(available, text, !disableWrap);
 
     }
 
@@ -45,7 +52,7 @@ class GluiLabel : GluiNode {
 
         const style = pickStyle();
         style.drawBackground(outer);
-        style.drawText(inner, text);
+        style.drawText(inner, text, !disableWrap);
 
     }
 
