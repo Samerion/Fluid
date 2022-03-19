@@ -183,7 +183,10 @@ struct LayoutTree {
     /// Scissors stack.
     package Rectangle[] scissors;
 
-    debug (Glui_DisableScissors) {
+    // Disable scissors mode on macOS, it's broken; see #60
+    version (OSX) version = Glui_DisableScissors;
+
+    version (Glui_DisableScissors) {
 
         Rectangle intersectScissors(Rectangle rect) { return rect; }
         void pushScissors(Rectangle) { }

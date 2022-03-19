@@ -12,6 +12,7 @@ in D.
 * If HiDPI is on in the system, fonts will be blurry, unless you load them upscaled. Use Style.loadFont instead.
 * Glui currently defaults to use bindings for Raylib 3.7.0, if you're using Raylib 4.0 or newer, you should use the
   `raylib4` configuration.
+* Glui cannot reliably implement scrolling nodes on macOS, so their effect is currently disabled on the platform.
 
 It implements a tree node structure, but doesn't provide an event loop and doesn't create a window, making it easier to
 integrate in other projects.
