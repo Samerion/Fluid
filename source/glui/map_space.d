@@ -76,7 +76,22 @@ class GluiMapSpace : GluiSpace {
     Position[GluiNode] positions;
 
     /// If true, the node will prevent its children from leaving the screen space.
-    bool preventOverlap;
+    bool preventOverflow;
+
+    deprecated("preventOverlap has been renamed to preventOverflow and will be removed in Glui 0.6.0")
+    ref inout(bool) preventOverlap() inout { return preventOverflow; }
+
+    private {
+
+        /// Last mouse position
+        Vector2 _mousePosition;
+
+        /// Child currently dragged with the mouse.
+        ///
+        /// The child will move along with mouse movements performed by the user.
+        GluiNode _mouseDrag;
+
+    }
 
     static foreach (index; 0..BasicNodeParamLength) {
 
@@ -151,6 +166,39 @@ class GluiMapSpace : GluiSpace {
 
     }
 
+    /// Make a node move relatively according to mouse position changes, making it behave as if it was being dragged by
+    /// the mouse.
+    GluiNode mouseDrag(GluiNode node) @trusted {
+
+        assert(node in positions, "Requested node is not present in the map");
+
+        _mouseDrag = node;
+        _mousePosition = Vector2(float.nan, float.nan);
+
+        return node;
+
+    }
+
+    /// Get the node currently affected by mouseDrag.
+    inout(GluiNode) mouseDrag() inout { return _mouseDrag; }
+
+    /// Stop current mouse movements
+    final void stopMouseDrag() {
+
+        _mouseDrag = null;
+
+    }
+
+    /// Drag the given child, changing its position relatively.
+    void dragChildBy(GluiNode node, Vector2 delta) {
+
+        auto position = node in positions;
+        assert(position, "Dragged node is not present in the map");
+
+        position.coords = Vector2(position.x + delta.x, position.y + delta.y);
+
+    }
+
     protected override void resizeImpl(Vector2 space) {
 
         minSize = Vector2(0, 0);
@@ -175,24 +223,65 @@ class GluiMapSpace : GluiSpace {
 
     protected override void drawImpl(Rectangle outer, Rectangle inner) {
 
+        /// Move the given box to mapSpace bounds
+        Vector2 moveToBounds(Vector2 coords, Vector2 size) {
+
+            // Ignore if no overflow prevention is enabled
+            if (!preventOverflow) return coords;
+
+            return Vector2(
+                coords.x.clamp(inner.x, inner.x + max(0, inner.width - size.x)),
+                coords.y.clamp(inner.y, inner.y + max(0, inner.height - size.y)),
+            );
+
+        }
+
+        // Drag the current child
+        if (_mouseDrag) () @trusted {
+
+            import std.math;
+
+            // Update the mouse position
+            auto mouse = GetMousePosition();
+            scope (exit) _mousePosition = mouse;
+
+            // If the previous mouse position was NaN, we've just started dragging
+            if (isNaN(_mousePosition.x)) {
+
+                // Check their current position
+                auto position = _mouseDrag in positions;
+                assert(position, "Dragged node is not present in the map");
+
+                // Keep them in bounds
+                position.coords = moveToBounds(position.coords, _mouseDrag.minSize);
+
+            }
+
+            else {
+
+                // Drag the child
+                dragChildBy(_mouseDrag, mouse - _mousePosition);
+
+            }
+
+        }();
+
         drawChildren((child) {
 
             const position = positions.require(child, Position.init);
             const space = Vector2(inner.w, inner.h);
             const startCorner = getStartCorner(space, child, position);
 
-            auto x = inner.x + startCorner.x;
-            auto y = inner.y + startCorner.y;
+            auto vec = Vector2(inner.x, inner.y) + startCorner;
 
-            if (preventOverlap) {
+            if (preventOverflow) {
 
-                x = x.clamp(inner.x, inner.x + max(0, inner.w - child.minSize.x));
-                y = y.clamp(inner.y, inner.y + max(0, inner.h - child.minSize.y));
+                vec = moveToBounds(vec, child.minSize);
 
             }
 
             const childRect = Rectangle(
-                x, y,
+                vec.tupleof,
                 child.minSize.x, child.minSize.y
             );
 

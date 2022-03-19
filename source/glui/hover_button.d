@@ -1,6 +1,7 @@
 ///
 module glui.hover_button;
 
+import glui.node;
 import glui.utils;
 import glui.frame;
 import glui.label;
@@ -17,7 +18,7 @@ alias frameHoverButton = simpleConstructor!(GluiHoverButton!GluiFrame);
 ///
 /// Note, this is a somewhat low-level node and the hover event, as stated, triggers every frame. There are no hover
 /// entry nor hover leave events. Make sure you know what you're doing when using this node!
-class GluiHoverButton(T) : GluiButton!T {
+class GluiHoverButton(T : GluiNode = GluiLabel) : GluiButton!T {
 
     mixin DefineStyles;
 

@@ -11,6 +11,7 @@ void main() {
     scope (exit) CloseWindow();
 
     GluiMapSpace root;
+    GluiHoverButton!() draggableButton;
 
     root = mapSpace(
         .layout!(1, "fill"),
@@ -19,8 +20,8 @@ void main() {
         },
 
         // A button to toggle overlap
-        Vector2(0, 0), button("Toggle overlap", () @trusted {
-            root.preventOverlap = !root.preventOverlap;
+        Vector2(0, 0), button("Toggle overflow", () @trusted {
+            root.preventOverflow = !root.preventOverflow;
         }),
 
         // Sample elements
@@ -67,13 +68,37 @@ void main() {
         }),
 
         // We need to go deeper!
-        Vector2(300, 400), vframe(
+        Vector2(300, 400),
+        vframe(
             mapSpace(
                 label("We need"),
                 Vector2(40, 40), label("to go"),
                 Vector2(80, 80), label("deeper!"),
             ),
         ),
+
+        // A node that can be dragged
+        Vector2(300, 30),
+        draggableButton = hoverButton("Drag this button!", () @trusted {
+
+            enum mouseButton = MouseButton.MOUSE_LEFT_BUTTON;
+
+            // Pressing the button
+            if (IsMouseButtonPressed(mouseButton)) {
+
+                // Drag it!
+                root.mouseDrag(draggableButton);
+
+            }
+
+            // Released it
+            if (IsMouseButtonReleased(mouseButton)) {
+
+                root.stopMouseDrag();
+
+            }
+
+        }),
     );
 
     while (!WindowShouldClose) {
