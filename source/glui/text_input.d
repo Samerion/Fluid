@@ -41,6 +41,9 @@ class GluiTextInput : GluiInput!GluiNode {
         /// Size of the field.
         auto size = Vector2(200, 0);
 
+        /// Value of the field.
+        string value;
+
         /// A placeholder text for the field, displayed when the field is empty. Style using `emptyStyle`.
         string placeholder;
 
@@ -50,7 +53,7 @@ class GluiTextInput : GluiInput!GluiNode {
     }
 
     /// Underlying label controlling the content. Needed to properly adjust it to scroll.
-    private GluiScrollable!(GluiLabel, "true") contentLabel;
+    private GluiScrollable!(TextImpl, "true") contentLabel;
 
     static foreach (index; 0 .. BasicNodeParamLength) {
 
@@ -62,19 +65,16 @@ class GluiTextInput : GluiInput!GluiNode {
         this(BasicNodeParam!index sup, string placeholder = "", void delegate() @trusted submitted = null) {
 
             super(sup);
-            this.contentLabel = new typeof(contentLabel)(.layout!(1, "fill"));
-            this.contentLabel.scrollBar.width = 0;
             this.placeholder = placeholder;
             this.submitted = submitted;
 
+            // Create the label
+            this.contentLabel = new typeof(contentLabel)(.layout!(1, "fill"));
+            this.contentLabel.scrollBar.width = 0;
+            this.contentLabel.disableWrap = true;
+            this.contentLabel.ignoreMouse = true;
+
         }
-
-    }
-
-    @property {
-
-        /// Current value of the input.
-        ref inout(string) value() inout { return contentLabel.text; }
 
     }
 
@@ -93,6 +93,9 @@ class GluiTextInput : GluiInput!GluiNode {
 
         }
 
+        // Set the label text
+        contentLabel.text = (value == "") ? placeholder : value;
+
         // Resize the label
         contentLabel.resize(tree, theme, Vector2(0, minSize.y));
 
@@ -100,53 +103,61 @@ class GluiTextInput : GluiInput!GluiNode {
 
     protected override void drawImpl(Rectangle outer, Rectangle inner) @trusted {
 
-        auto style = pickStyle();
+        // Note: We're drawing the label in `outer` so it overlaps us as the presence of the label is meant to be
+        // transparent.
+
+        const style = pickStyle();
 
         // Fill the background
         style.drawBackground(outer);
 
-        // Draw the text
-        const text = (value == "") ? placeholder : value;
+        // Copy the style to the label
+        contentLabel.style = style;
 
-        // If the box is focused
-        if (isFocused) {
+        // If the box isn't focused
+        if (!isFocused) {
 
-            import std.algorithm : min, max;
-
-            const scrollOffset = max(0, contentLabel.scrollMax - inner.w);
-
-            // Set the scroll
-            contentLabel.scroll = cast(size_t) scrollOffset;
-
-            // Reduce margin
-            inner.x = max(outer.x, inner.x - scrollOffset);
-
-            // Draw the label
-            contentLabel.draw(inner);
-
-            // Add a blinking caret
-            if (GetTime % (blinkTime*2) < blinkTime) {
-
-                const lineHeight = style.fontSize * style.lineHeight;
-                const margin = style.fontSize / 10f;
-                const end = Vector2(
-                    inner.x + min(contentLabel.scrollMax, inner.w) + margin,
-                    inner.y + inner.height,
-                );
-
-                // Draw the caret
-                DrawLineV(
-                    end - Vector2(0, lineHeight - margin),
-                    end - Vector2(0, margin),
-                    style.textColor
-                );
-
-            }
+            // Just draw the text
+            contentLabel.draw(outer);
+            return;
 
         }
 
-        // Not focused, draw text
-        else style.drawText(inner, text, false);
+        import std.algorithm : min, max;
+
+        const scrollOffset = max(0, contentLabel.scrollMax - inner.w);
+
+        // Set the scroll
+        contentLabel.scroll = cast(size_t) scrollOffset;
+
+        // Draw the label
+        contentLabel.draw(outer);
+
+        // Add a blinking caret
+        if (GetTime % (blinkTime*2) < blinkTime) {
+
+            const lineHeight = style.fontSize * style.lineHeight;
+            const margin = style.fontSize / 10f;
+
+            // Put the caret at the start if the placeholder is shown
+            const textWidth = value.length
+                ? min(contentLabel.scrollMax, inner.w)
+                : 0;
+
+            // Get caret position
+            const end = Vector2(
+                inner.x + textWidth,
+                inner.y + inner.height,
+            );
+
+            // Draw the caret
+            DrawLineV(
+                end - Vector2(0, lineHeight - margin),
+                end - Vector2(0, margin),
+                style.textColor
+            );
+
+        }
 
     }
 
@@ -266,6 +277,24 @@ class GluiTextInput : GluiInput!GluiNode {
 
         // Other styles
         else return super.pickStyle();
+
+    }
+
+}
+
+private class TextImpl : GluiLabel {
+
+    this(T...)(T args) {
+
+        super(args);
+
+    }
+
+    // Same as parent, but doesn't draw background
+    override void drawImpl(Rectangle outer, Rectangle inner) {
+
+        const style = pickStyle();
+        style.drawText(inner, text);
 
     }
 
