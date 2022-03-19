@@ -5,8 +5,11 @@ import raylib;
 
 import glui.node;
 import glui.input;
+import glui.label;
 import glui.style;
 import glui.utils;
+import glui.scroll;
+import glui.structs;
 
 alias textInput = simpleConstructor!GluiTextInput;
 
@@ -33,17 +36,21 @@ class GluiTextInput : GluiInput!GluiNode {
     /// Time in seconds before the cursor toggles visibility.
     static immutable float blinkTime = 1;
 
-    /// Size of the field.
-    auto size = Vector2(200, 0);
+    public {
 
-    /// Value of the field.
-    string value;
+        /// Size of the field.
+        auto size = Vector2(200, 0);
 
-    /// A placeholder text for the field, displayed when the field is empty. Style using `emptyStyle`.
-    string placeholder;
+        /// A placeholder text for the field, displayed when the field is empty. Style using `emptyStyle`.
+        string placeholder;
 
-    /// TODO. If true, this input accepts multiple lines.
-    bool multiline;
+        /// TODO. If true, this input accepts multiple lines.
+        bool multiline;
+
+    }
+
+    /// Underlying label controlling the content. Needed to properly adjust it to scroll.
+    private GluiScrollable!(GluiLabel, "true") contentLabel;
 
     static foreach (index; 0 .. BasicNodeParamLength) {
 
@@ -55,10 +62,19 @@ class GluiTextInput : GluiInput!GluiNode {
         this(BasicNodeParam!index sup, string placeholder = "", void delegate() @trusted submitted = null) {
 
             super(sup);
+            this.contentLabel = new typeof(contentLabel)(.layout!(1, "fill"));
+            this.contentLabel.scrollBar.width = 0;
             this.placeholder = placeholder;
             this.submitted = submitted;
 
         }
+
+    }
+
+    @property {
+
+        /// Current value of the input.
+        ref inout(string) value() inout { return contentLabel.text; }
 
     }
 
@@ -77,6 +93,9 @@ class GluiTextInput : GluiInput!GluiNode {
 
         }
 
+        // Resize the label
+        contentLabel.resize(tree, theme, Vector2(0, minSize.y));
+
     }
 
     protected override void drawImpl(Rectangle outer, Rectangle inner) @trusted {
@@ -92,27 +111,27 @@ class GluiTextInput : GluiInput!GluiNode {
         // If the box is focused
         if (isFocused) {
 
-            import std.algorithm : max;
+            import std.algorithm : min, max;
 
-            const lineHeight = style.fontSize * style.lineHeight;
+            const scrollOffset = max(0, contentLabel.scrollMax - inner.w);
 
-            auto textArea = value == ""
-                ? Rectangle(inner.x, inner.y, 0, lineHeight)
-                : style.measureText(inner, text, false);
+            // Set the scroll
+            contentLabel.scroll = cast(size_t) scrollOffset;
 
-            const scrollOffset = max(0, textArea.w - outer.w);
+            // Reduce margin
+            inner.x = max(outer.x, inner.x - scrollOffset);
 
-            inner.x -= scrollOffset;
-
-            style.drawText(inner, value, false);
+            // Draw the label
+            contentLabel.draw(inner);
 
             // Add a blinking caret
             if (GetTime % (blinkTime*2) < blinkTime) {
 
+                const lineHeight = style.fontSize * style.lineHeight;
                 const margin = style.fontSize / 10f;
                 const end = Vector2(
-                    textArea.x + textArea.width + margin,
-                    textArea.y + textArea.height,
+                    inner.x + min(contentLabel.scrollMax, inner.w) + margin,
+                    inner.y + inner.height,
                 );
 
                 // Draw the caret
@@ -222,6 +241,9 @@ class GluiTextInput : GluiInput!GluiNode {
             return true;
 
         }
+
+        // Update the size of the input
+        updateSize();
 
         // Even if nothing changed, user might have held the key for a while which this function probably wouldn't have
         // caught, so we'd be returning false-positives all the time.

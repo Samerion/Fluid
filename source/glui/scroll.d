@@ -30,10 +30,12 @@ GluiScrollFrame hscrollFrame(Args...)(Args args) {
 
 }
 
-/// Implement scrolling for the given frame.
+alias GluiScrollable(T : GluiSpace) = GluiScrollable!(T, "directionHorizontal");
+
+/// Implement scrolling for the given node.
 ///
 /// This only supports scrolling in one side.
-class GluiScrollable(T : GluiFrame) : T {
+class GluiScrollable(T : GluiNode, string horizontalExpression) : T {
 
     mixin DefineStyles;
 
@@ -41,7 +43,7 @@ class GluiScrollable(T : GluiFrame) : T {
 
     public {
 
-        /// Scrollbar for the frame. Can be replaced with a customzed one.
+        /// Scrollbar for the frame. Can be replaced with a customized one.
         GluiScrollBar scrollBar;
 
     }
@@ -60,19 +62,14 @@ class GluiScrollable(T : GluiFrame) : T {
 
     }
 
-    @property {
+    /// Distance the node is scrolled by.
+    @property
+    ref inout(size_t) scroll() inout { return scrollBar.position; }
 
-        size_t scroll() const {
+    /// Check if the underlying node is horizontal.
+    private bool isHorizontal() const {
 
-            return scrollBar.position;
-
-        }
-
-        size_t scroll(size_t value) {
-
-            return scrollBar.position = value;
-
-        }
+        return mixin(horizontalExpression);
 
     }
 
@@ -119,14 +116,14 @@ class GluiScrollable(T : GluiFrame) : T {
         // Resize the scrollbar
         with (scrollBar) {
 
-            horizontal = this.directionHorizontal;
+            horizontal = isHorizontal;
             layout = .layout!(1, "fill");
             resize(this.tree, this.theme, paddingSpace);
 
         }
 
         /// Space without the scrollbar
-        const contentSpace = directionHorizontal
+        const contentSpace = isHorizontal
             ? space - Vector2(0, scrollBar.minSize.y)
             : space - Vector2(scrollBar.minSize.x, 0);
 
@@ -137,7 +134,7 @@ class GluiScrollable(T : GluiFrame) : T {
         paddingBoxSize = minSize + paddingVector;
 
         // Set scrollbar size and add the scrollbar to the result
-        if (directionHorizontal) {
+        if (isHorizontal) {
 
             scrollBar.availableSpace = cast(size_t) paddingBoxSize.x;
             minSize.y += scrollBar.minSize.y;
@@ -164,14 +161,14 @@ class GluiScrollable(T : GluiFrame) : T {
 
         // TODO Is the above still true?
 
-        scrollBar.horizontal = directionHorizontal;
+        scrollBar.horizontal = isHorizontal;
 
         auto scrollBarRect = outer;
 
         if (hovered) inputImpl();
 
         // Scroll the given rectangle horizontally
-        if (directionHorizontal) {
+        if (isHorizontal) {
 
             // Calculate fake box sizes
             outer.width = max(outer.width, paddingBoxSize.x);
