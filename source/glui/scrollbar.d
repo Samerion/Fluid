@@ -38,6 +38,12 @@ class GluiScrollBar : GluiInput!GluiNode {
 
     public {
 
+        /// Multipler of the scroll speed; applies to keyboard scroll only.
+        ///
+        /// This is actually number of pixels per mouse wheel event, as `GluiScrollable` determines mouse scroll speed
+        /// based on this.
+        enum scrollSpeed = 15.0;
+
         /// If true, the scrollbar will be horizontal.
         bool horizontal;
 
@@ -50,11 +56,8 @@ class GluiScrollBar : GluiInput!GluiNode {
         /// scrollbar.
         size_t availableSpace;
 
-        /// Multipler of the scroll speed; applies to keyboard scroll only.
-        ///
-        /// This is actually number of pixels per mouse wheel event, as `GluiScrollable` determines mouse scroll speed
-        /// based on this.
-        enum scrollSpeed = 15.0;
+        /// Width of the scrollbar.
+        size_t width = 10;
 
     }
 
@@ -115,8 +118,8 @@ class GluiScrollBar : GluiInput!GluiNode {
 
         // Get minSize
         minSize = horizontal
-            ? Vector2(space.x, 10)
-            : Vector2(10, space.y);
+            ? Vector2(space.x, width)
+            : Vector2(width, space.y);
 
         // Get the expected page length
         pageLength = horizontal
