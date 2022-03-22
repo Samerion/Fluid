@@ -158,18 +158,20 @@ abstract class GluiNode : Styleable {
     }
 
     /// Show the node.
-    final GluiNode show() {
+    This show(this This = GluiNode)() return {
+
+        // Note: The default value for This is necessary, otherwise virtual calls don't work
 
         isHidden = false;
-        return this;
+        return cast(This) this;
 
     }
 
     /// Hide the node.
-    final GluiNode hide() {
+    This hide(this This = GluiNode)() return {
 
         isHidden = true;
-        return this;
+        return cast(This) this;
 
     }
 

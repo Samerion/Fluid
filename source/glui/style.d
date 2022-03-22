@@ -52,7 +52,7 @@ Style style(string init)(Style[] parents...) {
 
 }
 
-/// Contains a style for a node.
+/// Contains the style for a node.
 class Style {
 
     enum Side {
