@@ -35,7 +35,7 @@ void main() {
     Layout fill = .layout!(1, "fill");
 
     // Save IDs
-    GluiNode secondColumn;
+    GluiFrame secondColumn;
 
     /// A button which will disappear on click.
     GluiButton!() hidingButton() {
