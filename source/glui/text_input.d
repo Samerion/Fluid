@@ -70,9 +70,14 @@ class GluiTextInput : GluiInput!GluiNode {
 
             // Create the label
             this.contentLabel = new typeof(contentLabel)(.layout!(1, "fill"));
-            this.contentLabel.scrollBar.width = 0;
-            this.contentLabel.disableWrap = true;
-            this.contentLabel.ignoreMouse = true;
+
+            with (this.contentLabel) {
+
+                scrollBar.width = 0;
+                disableWrap = true;
+                ignoreMouse = true;
+
+            }
 
         }
 
@@ -96,6 +101,13 @@ class GluiTextInput : GluiInput!GluiNode {
         // Set the label text
         contentLabel.text = (value == "") ? placeholder : value;
 
+        // Inherit main style
+        const theme = [
+
+            &TextImpl.styleKey: cast(const Style) style,
+
+        ];
+
         // Resize the label
         contentLabel.resize(tree, theme, Vector2(0, minSize.y));
 
@@ -112,7 +124,7 @@ class GluiTextInput : GluiInput!GluiNode {
         style.drawBackground(outer);
 
         // Copy the style to the label
-        contentLabel.style = style;
+        contentLabel.activeStyle = style;
 
         // If the box isn't focused
         if (!isFocused) {
@@ -284,6 +296,10 @@ class GluiTextInput : GluiInput!GluiNode {
 
 private class TextImpl : GluiLabel {
 
+    mixin DefineStyles!(
+        "activeStyle", q{ style }
+    );
+
     this(T...)(T args) {
 
         super(args);
@@ -295,6 +311,12 @@ private class TextImpl : GluiLabel {
 
         const style = pickStyle();
         style.drawText(inner, text);
+
+    }
+
+    override const(Style) pickStyle() const {
+
+        return activeStyle;
 
     }
 
