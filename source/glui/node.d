@@ -324,25 +324,14 @@ abstract class GluiNode : Styleable {
         );
         const position = position(space, size);
 
-        // Calculate the margin
-        const margin = style
-            ? Rectangle(
-                style.margin[0], style.margin[2],
-                style.margin[0] + style.margin[1], style.margin[2] + style.margin[3]
-            )
-            : Rectangle(0, 0, 0, 0);
-
-        // Get the rectangle this node should occupy within the given space
-        const paddingBox = Rectangle(
-            position.x + margin.x, position.y + margin.y,
-            size.x - margin.w,     size.y - margin.h,
-        );
+        // Calculate the boxes
+        const marginBox = Rectangle(position.tupleof, size.tupleof);
+        const borderBox = style ? style.cropBox(marginBox, style.margin) : marginBox;
+        const paddingBox = style && style.border ? style.cropBox(borderBox, style.border.size) : borderBox;
+        const contentBox = style ? style.cropBox(paddingBox, style.padding) : paddingBox;
 
         // Get the visible part of the padding box — so overflowed content doesn't get mouse focus
-        const visibleBox = tree.intersectScissors(paddingBox);
-
-        // Subtract padding to get the content box.
-        const contentBox = style.contentBox(paddingBox);
+        const visibleBox = tree.intersectScissors(borderBox);
 
         // Check if hovered
         _isHovered = hoveredImpl(visibleBox, GetMousePosition);
