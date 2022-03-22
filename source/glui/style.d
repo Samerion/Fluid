@@ -9,8 +9,10 @@ import std.string;
 import std.typecons;
 import std.algorithm;
 
+import glui.node;
 import glui.utils;
 
+public import glui.border;
 public import glui.style_macros;
 
 @safe:
@@ -18,6 +20,31 @@ public import glui.style_macros;
 /// Node theme.
 alias StyleKeyPtr = immutable(StyleKey)*;
 alias Theme = Style[StyleKeyPtr];
+
+/// An array defining size of something surrounding a box, for example margin, border etc. `[left, right, top, bottom]`.
+/// You can also use `Style.Side` to index this array with an enum.
+///
+/// Because of the default behavior of static arrays, one can set the value for all sides to be equal with a simple
+/// assignment: `array = 8`. Additionally, to make it easier to manipulate the box, one may use the `sideX` and `sideY`
+/// functions to get a `uint[2]` array of the values corresponding to the given array (which can also be assigned like
+/// `array.sideX = 8`) or the `sideLeft`, `sideRight`, `sideTop` and `sideBottom` functions corresponding to the given
+/// box.
+alias SideArray = uint[4];
+
+///
+unittest {
+
+    SideArray sides;
+    sides.sideX = 4;
+
+    assert(sides.sideLeft == sides.sideRight);
+    assert(sides.sideLeft == 2);
+
+    sides = 8;
+    assert(sides == [8, 8, 8, 8]);
+    assert(sides.sideX == sides.sideY);
+
+}
 
 /// An empty struct used to create unique style type identifiers.
 struct StyleKey { }
@@ -107,13 +134,18 @@ class Style {
         ///
         /// Tip: You can directly set all margins with eg. `margin = 6;`
         ///
+        /// See: enum `Side`.
+        SideArray margin;
+
+        /// Border (between margin and padding) for the node. `[left, right, top, bottom]`.
+        ///
         /// See: enum `Side`
-        uint[4] margin;
+        GluiBorder border;
 
         /// Padding (inner margin) of the node. `[left, right, top, bottom]`.
         ///
         /// See: enum `Side`
-        uint[4] padding;
+        SideArray padding;
 
     }
 
@@ -145,8 +177,19 @@ class Style {
 
                 auto inheritedField = mixin("style." ~ field);
 
+                static if (is(typeof(inheritedField) == class)) {
+
+                    const isInit = inheritedField is null;
+
+                }
+                else {
+
+                    const isInit = inheritedField == inheritedField.init;
+
+                }
+
                 // Ignore if it's set to init (unless it's the first style)
-                if (i == 0 || inheritedField != typeof(inheritedField).init) {
+                if (i == 0 || !isInit) {
 
                     mixin("this." ~ field) = inheritedField;
 
@@ -391,23 +434,49 @@ class Style {
 
     }
 
+    /// Get a side array holding both the regular margin and the border.
+    uint[4] fullMargin() const {
+
+        return [
+            margin.sideLeft + border.size.sideLeft,
+            margin.sideRight + border.size.sideRight,
+            margin.sideTop + border.size.sideTop,
+            margin.sideBottom + border.size.sideBottom,
+        ];
+
+    }
+
     /// Remove padding from the vector representing size of a box.
     Vector2 contentBox(Vector2 size) const {
 
-        size.x = max(0, size.x - padding[0] - padding[1]);
-        size.y = max(0, size.y - padding[2] - padding[3]);
-
-        return size;
+        return cropBox(size, padding);
 
     }
 
     /// Remove padding from the given rect.
     Rectangle contentBox(Rectangle rect) const {
 
-        rect.x += padding[0];
-        rect.y += padding[2];
+        return cropBox(rect, padding);
 
-        const size = contentBox(Vector2(rect.w, rect.h));
+    }
+
+    /// Crop the given box by reducing its size on all sides.
+    static Vector2 cropBox(Vector2 size, SideArray sides) {
+
+        size.x = max(0, size.x - sides.sideLeft - sides.sideRight);
+        size.y = max(0, size.y - sides.sideTop - sides.sideBottom);
+
+        return size;
+
+    }
+
+    /// ditto
+    static Rectangle cropBox(Rectangle rect, SideArray sides) {
+
+        rect.x += sides.sideLeft;
+        rect.y += sides.sideTop;
+
+        const size = cropBox(Vector2(rect.w, rect.h), sides);
         rect.width = size.x;
         rect.height = size.y;
 
@@ -436,38 +505,77 @@ struct TextLine {
 
 }
 
-ref uint sideLeft(return ref uint[4] sides) {
+/// Get a reference to the left, right, top or bottom side of the given side array.
+ref inout(uint) sideLeft(return ref inout SideArray sides) {
 
     return sides[Style.Side.left];
 
 }
-ref uint sideRight(return ref uint[4] sides) {
+
+/// ditto
+ref inout(uint) sideRight(return ref inout SideArray sides) {
 
     return sides[Style.Side.right];
 
 }
-ref uint sideTop(return ref uint[4] sides) {
+
+/// ditto
+ref inout(uint) sideTop(return ref inout SideArray sides) {
 
     return sides[Style.Side.top];
 
 }
 
-ref uint sideBottom(return ref uint[4] sides) {
+/// ditto
+ref inout(uint) sideBottom(return ref inout SideArray sides) {
 
     return sides[Style.Side.bottom];
 
 }
 
-ref inout(uint[2]) sideX(return ref inout uint[4] sides) {
+///
+unittest {
+
+    uint[4] sides = [8, 0, 4, 2];
+
+    assert(sides.sideRight == 0);
+
+    sides.sideRight = 8;
+    sides.sideBottom = 4;
+
+    assert(sides == [8, 8, 4, 4]);
+
+}
+
+/// Get a reference to the X axis for the given side array.
+ref inout(uint[2]) sideX(return ref inout SideArray sides) {
 
     const start = Style.Side.left;
     return sides[start .. start + 2];
 
 }
 
-ref inout(uint[2]) sideY(return ref inout uint[4] sides) {
+ref inout(uint[2]) sideY(return ref inout SideArray sides) {
 
     const start = Style.Side.top;
     return sides[start .. start + 2];
+
+}
+
+///
+unittest {
+
+    uint[4] sides = [1, 2, 3, 4];
+
+    assert(sides.sideX == [sides.sideLeft, sides.sideRight]);
+    assert(sides.sideY == [sides.sideTop, sides.sideBottom]);
+
+    sides.sideX = 8;
+
+    assert(sides == [8, 8, 3, 4]);
+
+    sides.sideY = sides.sideBottom;
+
+    assert(sides == [8, 8, 4, 4]);
 
 }
