@@ -305,7 +305,7 @@ abstract class GluiNode : Styleable {
         // Within this function, we deduce how much of the space we should actually use, and align the node
         // within the space.
 
-        import std.algorithm : all, min, max;
+        import std.algorithm : all, min, max, either;
 
         assert(!toRemove, "A toRemove child wasn't removed from container.");
 
@@ -324,25 +324,22 @@ abstract class GluiNode : Styleable {
         );
         const position = position(space, size);
 
-        // Calculate the margin
-        const margin = style
-            ? Rectangle(
-                style.margin[0], style.margin[2],
-                style.margin[0] + style.margin[1], style.margin[2] + style.margin[3]
-            )
-            : Rectangle(0, 0, 0, 0);
+        // Calculate the boxes
+        const marginBox = Rectangle(position.tupleof, size.tupleof);
+        const borderBox = style ? style.cropBox(marginBox, style.margin) : marginBox;
+        const paddingBox = style ? style.cropBox(borderBox, style.border) : borderBox;
+        const contentBox = style ? style.cropBox(paddingBox, style.padding) : paddingBox;
 
-        // Get the rectangle this node should occupy within the given space
-        const paddingBox = Rectangle(
-            position.x + margin.x, position.y + margin.y,
-            size.x - margin.w,     size.y - margin.h,
-        );
+        // If there's a border active, draw it
+        const currentStyle = pickStyle;
+        if (style && currentStyle && currentStyle.borderStyle) {
+
+            pickStyle().borderStyle.apply(borderBox, style.border);
+
+        }
 
         // Get the visible part of the padding box — so overflowed content doesn't get mouse focus
         const visibleBox = tree.intersectScissors(paddingBox);
-
-        // Subtract padding to get the content box.
-        const contentBox = style.contentBox(paddingBox);
 
         // Check if hovered
         _isHovered = hoveredImpl(visibleBox, GetMousePosition);
@@ -408,8 +405,9 @@ abstract class GluiNode : Styleable {
 
             import std.range, std.algorithm;
 
-            const spacingX = style ? chain(style.margin.sideX[], style.padding.sideX[]).sum : 0;
-            const spacingY = style ? chain(style.margin.sideY[], style.padding.sideY[]).sum : 0;
+            const fullMargin = style.fullMargin;
+            const spacingX = style ? chain(fullMargin.sideX[], style.padding.sideX[]).sum : 0;
+            const spacingY = style ? chain(fullMargin.sideY[], style.padding.sideY[]).sum : 0;
 
             // Reduce space by margins
             space.x = max(0, space.x - spacingX);
