@@ -43,6 +43,7 @@ void main() {
         theme,
 
         // Add children nodes
+        boxExample,
         inputExample,
         slotExample,
     );
@@ -57,6 +58,82 @@ void main() {
         EndDrawing();
 
     }
+
+}
+
+GluiSpace boxExample() {
+
+    auto root = vspace(
+
+        label(.layout!"center", "Boxes"),
+
+        label("To make it easier to style your interface, Glui has a box system similar to HTML."),
+
+        // Space for the boxes so we can make their width align
+        vspace(
+
+            hspace(
+                .layout!"fill",
+
+                // Margin
+                vframe(
+                    .layout!"fill",
+                    vframe(
+                        makeTheme!q{
+                            GluiFrame.styleAdd.margin = 16;
+                        },
+                        label("Frame with margin"),
+                    ),
+                ),
+
+                // Border
+                vframe(
+                    .layout!"fill",
+                    vframe(
+                        makeTheme!q{
+                            GluiFrame.styleAdd!q{
+                                border = 6;
+                                borderStyle = colorBorder(Colors.BLUE);
+                            };
+                        },
+                        label("Frame with border"),
+                    ),
+                ),
+
+                // Padding
+                vframe(
+                    .layout!"fill",
+                    vframe(
+                        makeTheme!q{
+                            GluiFrame.styleAdd.padding = 16;
+                        },
+                        label("Frame with padding"),
+                    ),
+                ),
+
+            ),
+
+            vframe(
+                .layout!"fill",
+
+                vframe(
+                    .layout!"fill",
+                    makeTheme!q{
+                        GluiFrame.styleAdd!q{
+                            margin = 16;
+                            border.sideX = 6;
+                            border.sideY = 4;
+                            borderStyle = colorBorder([Colors.DARKBLUE, Colors.BLUE]);
+                            padding = 16;
+                        };
+                    },
+                    label("All mixed!"),
+                ),
+            ),
+        ),
+    );
+
+    return root;
 
 }
 
@@ -107,6 +184,52 @@ GluiSpace inputExample() {
                     button("Goodbye", never),
                 ),
                 disabledNodes[1] = button("Disabled button", never),
+
+            ),
+
+            // Fancier stuff
+            vframe(
+                .layout!1,
+
+                // An outset border button
+                button(
+                    makeTheme!q{
+
+                        GluiButton!().styleAdd!q{
+
+                            // Default style
+                            backgroundColor = Color(0xcc, 0xcc, 0xcc, 0xff);
+                            borderStyle = colorBorder([
+                                Color(0xff, 0xff, 0xff, 0xff),
+                                Color(0x66, 0x66, 0x66, 0xff),
+                                Color(0xff, 0xff, 0xff, 0xff),
+                                Color(0x66, 0x66, 0x66, 0xff),
+                            ]);
+
+                            // Sizing
+                            border = 3;
+                            padding.sideX = 4;
+                            padding.sideY = 0;
+
+                            hoverStyleAdd;
+                            focusStyleAdd.backgroundColor = Color(0xb1, 0xc6, 0xe4, 0xff);
+
+                            // Make it inset when pressed
+                            pressStyleAdd!q{
+                                backgroundColor = Color(0xaa, 0xaa, 0xaa, 0xff);
+                                borderStyle = colorBorder([
+                                    Color(0x66, 0x66, 0x66, 0xff),
+                                    Color(0xff, 0xff, 0xff, 0xff),
+                                    Color(0x66, 0x66, 0x66, 0xff),
+                                    Color(0xff, 0xff, 0xff, 0xff),
+                                ]);
+                            };
+                        };
+                    },
+
+                    "Fancy!",
+                    { frontLabel.text = "Fancy!"; }
+                ),
 
             ),
 

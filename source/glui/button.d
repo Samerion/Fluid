@@ -95,8 +95,10 @@ class GluiButton(T : GluiNode = GluiLabel) : GluiInput!T {
     /// Pick the style.
     protected override const(Style) pickStyle() const {
 
+        alias pressing = () @trusted => IsMouseButtonDown(triggerButton);
+
         // If pressed
-        if (isPressed) return pressStyle;
+        if (isHovered && pressing()) return pressStyle;
 
         // If focused
         if (isFocused) return focusStyle;
