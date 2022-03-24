@@ -330,8 +330,11 @@ abstract class GluiNode : Styleable {
         const paddingBox = style && style.border ? style.cropBox(borderBox, style.border.size) : borderBox;
         const contentBox = style ? style.cropBox(paddingBox, style.padding) : paddingBox;
 
+        // Draw the border
+        if (style.border) style.border.apply(borderBox);
+
         // Get the visible part of the padding box — so overflowed content doesn't get mouse focus
-        const visibleBox = tree.intersectScissors(borderBox);
+        const visibleBox = tree.intersectScissors(paddingBox);
 
         // Check if hovered
         _isHovered = hoveredImpl(visibleBox, GetMousePosition);
@@ -397,8 +400,9 @@ abstract class GluiNode : Styleable {
 
             import std.range, std.algorithm;
 
-            const spacingX = style ? chain(style.margin.sideX[], style.padding.sideX[]).sum : 0;
-            const spacingY = style ? chain(style.margin.sideY[], style.padding.sideY[]).sum : 0;
+            const fullMargin = style.fullMargin;
+            const spacingX = style ? chain(fullMargin.sideX[], style.padding.sideX[]).sum : 0;
+            const spacingY = style ? chain(fullMargin.sideY[], style.padding.sideY[]).sum : 0;
 
             // Reduce space by margins
             space.x = max(0, space.x - spacingX);
