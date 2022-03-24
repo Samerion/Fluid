@@ -34,11 +34,13 @@ enum isSideArray(T) = is(T == X[4], X);
 ///
 unittest {
 
-    SideArray sides;
+    uint[4] sides;
+    static assert(isSideArray!(typeof(sides)));
+
     sides.sideX = 4;
 
     assert(sides.sideLeft == sides.sideRight);
-    assert(sides.sideLeft == 2);
+    assert(sides.sideLeft == 4);
 
     sides = 8;
     assert(sides == [8, 8, 8, 8]);
@@ -607,5 +609,40 @@ T[4] normalizeSideArray(T, size_t n)(T[n] values) {
 T[4] normalizeSideArray(T)(T value) {
 
     return [value, value, value, value];
+
+}
+
+/// Shift the side clockwise (if positive) or counter-clockwise (if negative).
+Style.Side shiftSide(Style.Side side, int shift) {
+
+    // Conver the side to an "angle" — 0 is the top, 1 is right and so on...
+    const angle = side.predSwitch(
+        Style.Side.top, 0,
+        Style.Side.right, 1,
+        Style.Side.bottom, 2,
+        Style.Side.left, 3,
+    );
+
+    // Perform the shift
+    const shifted = (angle + shift) % 4;
+
+    // And convert it back
+    return shifted.predSwitch(
+        0, Style.Side.top,
+        1, Style.Side.right,
+        2, Style.Side.bottom,
+        3, Style.Side.left,
+    );
+
+}
+
+unittest {
+
+    assert(shiftSide(Style.Side.left, 0) == Style.Side.left);
+    assert(shiftSide(Style.Side.left, 1) == Style.Side.top);
+    assert(shiftSide(Style.Side.left, 2) == Style.Side.right);
+    assert(shiftSide(Style.Side.left, 4) == Style.Side.left);
+
+    assert(shiftSide(Style.Side.top, 1) == Style.Side.right);
 
 }

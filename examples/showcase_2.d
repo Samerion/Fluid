@@ -91,7 +91,7 @@ GluiSpace boxExample() {
                     .layout!"fill",
                     vframe(
                         makeTheme!q{
-                            GluiFrame.styleAdd.border = colorBorder(4, [Colors.DARKBLUE, Colors.BLUE]);
+                            GluiFrame.styleAdd.border = colorBorder([6, 4], Colors.BLUE);
                         },
                         label("Frame with border"),
                     ),
@@ -118,7 +118,7 @@ GluiSpace boxExample() {
                     makeTheme!q{
                         GluiFrame.styleAdd!q{
                             margin = 16;
-                            border = colorBorder([6, 4], [Colors.DARKBLUE, Colors.BLUE]);
+                            border = colorBorder(4, [Colors.DARKBLUE, Colors.BLUE]);
                             padding = 16;
                         };
                     },
