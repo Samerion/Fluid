@@ -21,15 +21,15 @@ public import glui.style_macros;
 alias StyleKeyPtr = immutable(StyleKey)*;
 alias Theme = Style[StyleKeyPtr];
 
-/// An array defining size of something surrounding a box, for example margin, border etc. `[left, right, top, bottom]`.
-/// You can also use `Style.Side` to index this array with an enum.
+/// Side array is a static array defining a property separately for each side of a box, for example margin and border
+/// size. Order is as follows: `[left, right, top, bottom]`. You can use `Style.Side` to index this array with an enum.
 ///
 /// Because of the default behavior of static arrays, one can set the value for all sides to be equal with a simple
 /// assignment: `array = 8`. Additionally, to make it easier to manipulate the box, one may use the `sideX` and `sideY`
 /// functions to get a `uint[2]` array of the values corresponding to the given array (which can also be assigned like
 /// `array.sideX = 8`) or the `sideLeft`, `sideRight`, `sideTop` and `sideBottom` functions corresponding to the given
 /// box.
-alias SideArray = uint[4];
+enum isSideArray(T) = is(T == X[4], X);
 
 ///
 unittest {
@@ -132,20 +132,16 @@ class Style {
 
         /// Margin (outer margin) of the node. `[left, right, top, bottom]`.
         ///
-        /// Tip: You can directly set all margins with eg. `margin = 6;`
-        ///
-        /// See: enum `Side`.
-        SideArray margin;
+        /// See: `isSideArray`.
+        uint[4] margin;
 
-        /// Border (between margin and padding) for the node. `[left, right, top, bottom]`.
-        ///
-        /// See: enum `Side`
+        /// Border (between margin and padding) for the node.
         GluiBorder border;
 
         /// Padding (inner margin) of the node. `[left, right, top, bottom]`.
         ///
-        /// See: enum `Side`
-        SideArray padding;
+        /// See: `isSideArray`
+        uint[4] padding;
 
     }
 
@@ -437,6 +433,9 @@ class Style {
     /// Get a side array holding both the regular margin and the border.
     uint[4] fullMargin() const {
 
+        // No border
+        if (border is null) return margin;
+
         return [
             margin.sideLeft + border.size.sideLeft,
             margin.sideRight + border.size.sideRight,
@@ -461,7 +460,7 @@ class Style {
     }
 
     /// Crop the given box by reducing its size on all sides.
-    static Vector2 cropBox(Vector2 size, SideArray sides) {
+    static Vector2 cropBox(Vector2 size, uint[4] sides) {
 
         size.x = max(0, size.x - sides.sideLeft - sides.sideRight);
         size.y = max(0, size.y - sides.sideTop - sides.sideBottom);
@@ -471,7 +470,7 @@ class Style {
     }
 
     /// ditto
-    static Rectangle cropBox(Rectangle rect, SideArray sides) {
+    static Rectangle cropBox(Rectangle rect, uint[4] sides) {
 
         rect.x += sides.sideLeft;
         rect.y += sides.sideTop;
@@ -506,28 +505,32 @@ struct TextLine {
 }
 
 /// Get a reference to the left, right, top or bottom side of the given side array.
-ref inout(uint) sideLeft(return ref inout SideArray sides) {
+ref inout(uint) sideLeft(T)(return ref inout T sides)
+if (isSideArray!T) {
 
     return sides[Style.Side.left];
 
 }
 
 /// ditto
-ref inout(uint) sideRight(return ref inout SideArray sides) {
+ref inout(uint) sideRight(T)(return ref inout T sides)
+if (isSideArray!T) {
 
     return sides[Style.Side.right];
 
 }
 
 /// ditto
-ref inout(uint) sideTop(return ref inout SideArray sides) {
+ref inout(uint) sideTop(T)(return ref inout T sides)
+if (isSideArray!T) {
 
     return sides[Style.Side.top];
 
 }
 
 /// ditto
-ref inout(uint) sideBottom(return ref inout SideArray sides) {
+ref inout(uint) sideBottom(T)(return ref inout T sides)
+if (isSideArray!T) {
 
     return sides[Style.Side.bottom];
 
@@ -548,14 +551,16 @@ unittest {
 }
 
 /// Get a reference to the X axis for the given side array.
-ref inout(uint[2]) sideX(return ref inout SideArray sides) {
+ref inout(uint[2]) sideX(T)(return ref inout T sides)
+if (isSideArray!T) {
 
     const start = Style.Side.left;
     return sides[start .. start + 2];
 
 }
 
-ref inout(uint[2]) sideY(return ref inout SideArray sides) {
+ref inout(uint[2]) sideY(T)(return ref inout T sides)
+if (isSideArray!T) {
 
     const start = Style.Side.top;
     return sides[start .. start + 2];
@@ -577,5 +582,30 @@ unittest {
     sides.sideY = sides.sideBottom;
 
     assert(sides == [8, 8, 4, 4]);
+
+}
+
+/// Returns a side array created from either: another side array like it, a two item array with each representing an
+/// axis like `[x, y]`, or a single item array or the element type to fill all values with it.
+T[4] normalizeSideArray(T, size_t n)(T[n] values) {
+
+    // Already a valid side array
+    static if (n == 4) return values;
+
+    // Axis array
+    else static if (n == 2) return [values[0], values[0], values[1], values[1]];
+
+    // Single item array
+    else static if (n == 1) return [values[0], values[0], values[0], values[0]];
+
+    else static assert(false, format!"Unsupported static array size %s, expected 1, 2 or 4 elements."(n));
+
+
+}
+
+/// ditto
+T[4] normalizeSideArray(T)(T value) {
+
+    return [value, value, value, value];
 
 }
