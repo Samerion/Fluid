@@ -305,7 +305,7 @@ abstract class GluiNode : Styleable {
         // Within this function, we deduce how much of the space we should actually use, and align the node
         // within the space.
 
-        import std.algorithm : all, min, max;
+        import std.algorithm : all, min, max, either;
 
         assert(!toRemove, "A toRemove child wasn't removed from container.");
 
@@ -327,11 +327,16 @@ abstract class GluiNode : Styleable {
         // Calculate the boxes
         const marginBox = Rectangle(position.tupleof, size.tupleof);
         const borderBox = style ? style.cropBox(marginBox, style.margin) : marginBox;
-        const paddingBox = style && style.border ? style.cropBox(borderBox, style.border.size) : borderBox;
+        const paddingBox = style ? style.cropBox(borderBox, style.border) : borderBox;
         const contentBox = style ? style.cropBox(paddingBox, style.padding) : paddingBox;
 
-        // Draw the border
-        if (style.border) style.border.apply(borderBox);
+        // If there's a border active, draw it
+        const currentStyle = pickStyle;
+        if (style && currentStyle && currentStyle.borderStyle) {
+
+            pickStyle().borderStyle.apply(borderBox, style.border);
+
+        }
 
         // Get the visible part of the padding box — so overflowed content doesn't get mouse focus
         const visibleBox = tree.intersectScissors(paddingBox);

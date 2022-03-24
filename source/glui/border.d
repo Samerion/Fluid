@@ -9,16 +9,13 @@ import glui.style;
 
 
 /// Interface for borders
-abstract class GluiBorder {
-
-    /// Size of the border.
-    uint[4] size;
+interface GluiBorder {
 
     /// Apply the border, drawing it in the given box.
-    abstract void apply(Rectangle borderBox) const;
+    abstract void apply(Rectangle borderBox, uint[4] size) const;
 
     /// Get the rectangle for the given side of the border.
-    protected Rectangle sideRect(Rectangle source, Style.Side side) const {
+    final Rectangle sideRect(Rectangle source, uint[4] size, Style.Side side) const {
 
         final switch (side) {
 
@@ -64,7 +61,7 @@ abstract class GluiBorder {
 
     /// Get square for corner next counter-clockwise to the given side.
     /// Note: returned rectangles may have negative size; rect start position will always point to the corner itself.
-    protected Rectangle cornerRect(Rectangle source, Style.Side side) const {
+    final Rectangle cornerRect(Rectangle source, uint[4] size, Style.Side side) const {
 
         final switch (side) {
 
@@ -108,31 +105,16 @@ abstract class GluiBorder {
 
 
 
-ColorBorder colorBorder(uint size, Color color) {
+ColorBorder colorBorder(Color color) {
 
-    return colorBorder([size], [color]);
-
-}
-
-ColorBorder colorBorder(size_t n)(uint[n] size, Color color) {
-
-    return colorBorder(size, [color]);
+    return colorBorder([color]);
 
 }
 
-ColorBorder colorBorder(size_t n)(uint size, Color[n] color) {
-
-    return colorBorder([size], color);
-
-}
-
-ColorBorder colorBorder(size_t n, size_t m)(uint[n] size, Color[m] color) {
+ColorBorder colorBorder(size_t n)(Color[n] color) {
 
     auto result = new ColorBorder;
-
-    result.size = normalizeSideArray!uint(size);
     result.color = normalizeSideArray!Color(color);
-
     return result;
 
 }
@@ -141,7 +123,7 @@ class ColorBorder : GluiBorder {
 
     Color[4] color;
 
-    override void apply(Rectangle borderBox) const @trusted {
+    void apply(Rectangle borderBox, uint[4] size) const @trusted {
 
         // For each side
         foreach (sideIndex; 0..4) {
@@ -150,7 +132,7 @@ class ColorBorder : GluiBorder {
             const nextSide = cast(Style.Side) ((sideIndex + 1) % 4);
 
             // Draw all the fragments
-            DrawRectangleRec(sideRect(borderBox, side), color[side]);
+            DrawRectangleRec(sideRect(borderBox, size, side), color[side]);
 
             // Draw triangles in the corner
             foreach (shift; 0..2) {
@@ -159,7 +141,7 @@ class ColorBorder : GluiBorder {
                 const cornerSide = shiftSide(side, shift);
 
                 // Get corner parameters
-                const corner = cornerRect(borderBox, cornerSide);
+                const corner = cornerRect(borderBox, size, cornerSide);
                 const cornerStart = Vector2(corner.x, corner.y);
                 const cornerSize = Vector2(corner.w, corner.h);
                 const cornerEnd = side < 2
