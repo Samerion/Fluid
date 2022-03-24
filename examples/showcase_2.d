@@ -91,7 +91,10 @@ GluiSpace boxExample() {
                     .layout!"fill",
                     vframe(
                         makeTheme!q{
-                            GluiFrame.styleAdd.border = colorBorder([6, 4], Colors.BLUE);
+                            GluiFrame.styleAdd!q{
+                                border = 6;
+                                borderStyle = colorBorder(Colors.BLUE);
+                            };
                         },
                         label("Frame with border"),
                     ),
@@ -118,7 +121,9 @@ GluiSpace boxExample() {
                     makeTheme!q{
                         GluiFrame.styleAdd!q{
                             margin = 16;
-                            border = colorBorder(4, [Colors.DARKBLUE, Colors.BLUE]);
+                            border.sideX = 6;
+                            border.sideY = 4;
+                            borderStyle = colorBorder([Colors.DARKBLUE, Colors.BLUE]);
                             padding = 16;
                         };
                     },
@@ -179,6 +184,52 @@ GluiSpace inputExample() {
                     button("Goodbye", never),
                 ),
                 disabledNodes[1] = button("Disabled button", never),
+
+            ),
+
+            // Fancier stuff
+            vframe(
+                .layout!1,
+
+                // An outset border button
+                button(
+                    makeTheme!q{
+
+                        GluiButton!().styleAdd!q{
+
+                            // Default style
+                            backgroundColor = Color(0xcc, 0xcc, 0xcc, 0xff);
+                            borderStyle = colorBorder([
+                                Color(0xff, 0xff, 0xff, 0xff),
+                                Color(0x66, 0x66, 0x66, 0xff),
+                                Color(0xff, 0xff, 0xff, 0xff),
+                                Color(0x66, 0x66, 0x66, 0xff),
+                            ]);
+
+                            // Sizing
+                            border = 3;
+                            padding.sideX = 4;
+                            padding.sideY = 0;
+
+                            hoverStyleAdd;
+                            focusStyleAdd.backgroundColor = Color(0xb1, 0xc6, 0xe4, 0xff);
+
+                            // Make it inset when pressed
+                            pressStyleAdd!q{
+                                backgroundColor = Color(0xaa, 0xaa, 0xaa, 0xff);
+                                borderStyle = colorBorder([
+                                    Color(0x66, 0x66, 0x66, 0xff),
+                                    Color(0xff, 0xff, 0xff, 0xff),
+                                    Color(0x66, 0x66, 0x66, 0xff),
+                                    Color(0xff, 0xff, 0xff, 0xff),
+                                ]);
+                            };
+                        };
+                    },
+
+                    "Fancy!",
+                    { frontLabel.text = "Fancy!"; }
+                ),
 
             ),
 

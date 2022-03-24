@@ -137,13 +137,18 @@ class Style {
         /// See: `isSideArray`.
         uint[4] margin;
 
-        /// Border (between margin and padding) for the node.
-        GluiBorder border;
+        /// Border size, placed between margin and padding. `[left, right, top, bottom]`.
+        ///
+        /// See: `isSideArray`
+        uint[4] border;
 
         /// Padding (inner margin) of the node. `[left, right, top, bottom]`.
         ///
         /// See: `isSideArray`
         uint[4] padding;
+
+        /// Border style to use.
+        GluiBorder borderStyle;
 
     }
 
@@ -175,7 +180,7 @@ class Style {
 
                 auto inheritedField = mixin("style." ~ field);
 
-                static if (is(typeof(inheritedField) == class)) {
+                static if (__traits(compiles, inheritedField is null)) {
 
                     const isInit = inheritedField is null;
 
@@ -436,13 +441,13 @@ class Style {
     uint[4] fullMargin() const {
 
         // No border
-        if (border is null) return margin;
+        if (borderStyle is null) return margin;
 
         return [
-            margin.sideLeft + border.size.sideLeft,
-            margin.sideRight + border.size.sideRight,
-            margin.sideTop + border.size.sideTop,
-            margin.sideBottom + border.size.sideBottom,
+            margin.sideLeft + border.sideLeft,
+            margin.sideRight + border.sideRight,
+            margin.sideTop + border.sideTop,
+            margin.sideBottom + border.sideBottom,
         ];
 
     }
