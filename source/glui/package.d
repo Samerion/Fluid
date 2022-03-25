@@ -17,6 +17,7 @@ public import
     glui.rich_label,
     glui.scroll,
     glui.scrollbar,
+    glui.size_lock,
     glui.slot,
     glui.space,
     glui.structs,

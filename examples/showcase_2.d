@@ -46,6 +46,7 @@ void main() {
         boxExample,
         inputExample,
         slotExample,
+        sizeLimitExample,
     );
 
     while (!WindowShouldClose) {
@@ -328,6 +329,48 @@ GluiSpace slotExample() {
         label(.layout!"center", "Complex tree management with node slots"),
         exampleA,
         exampleB,
+    );
+
+    return root;
+
+}
+
+GluiSpace sizeLimitExample() {
+
+    auto root = vspace(
+        .layout!"fill",
+
+        label(.layout!"center", "Limiting node size with size locks"),
+
+        hspace(
+            .layout!"fill",
+
+            vspace(
+                .layout!(1, "fill"),
+
+                sizeLock!vframe(
+                    .layout!"center",
+                    .sizeLimitX(100),
+
+                    label("This node will not be wider than 100 pixels"),
+                ),
+            ),
+
+            vspace(
+                .layout!(1, "fill"),
+
+                sizeLock!vframe(
+                    .layout!"center",
+                    .sizeLimitX(300),
+
+                    label("Even if smaller than"),
+                    label("the limit, the box will"),
+                    label("expand nicely if it can"),
+                ),
+
+            ),
+
+        ),
     );
 
     return root;
