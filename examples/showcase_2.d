@@ -153,7 +153,7 @@ GluiSpace inputExample() {
 
         label(.layout!"center", "Input handling"),
 
-        frontLabel = label(firstText),
+        frontLabel = label(.layout!"fill", firstText),
 
         hspace(
             .layout!"fill",
@@ -341,6 +341,8 @@ GluiSpace sizeLimitExample() {
         .layout!"fill",
 
         label(.layout!"center", "Limiting node size with size locks"),
+        label("Size locks will adjust node size closely to the one you want, but will still shrink if needed to ensure"
+            ~ " responsiveness."),
 
         hspace(
             .layout!"fill",
@@ -368,6 +370,24 @@ GluiSpace sizeLimitExample() {
                     label("expand nicely if it can"),
                 ),
 
+            ),
+
+            vspace(
+                .layout!(1, "fill"),
+
+                sizeLock!hframe(
+                    .layout!1,
+                    .sizeLimitY(50),
+
+                    label("Look into the code! "),
+                    // Creating size-locked nodes is easy and convenient and works with any node type through a
+                    // template! It accepts any node class or node constructor like hframe.
+                    //
+                    //      sizeLock!GluiLabel
+                    //      sizeLock!label
+                    //      sizeLock!vframe
+                    //      sizeLock!hframe
+                ),
             ),
 
         ),
