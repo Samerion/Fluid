@@ -14,26 +14,21 @@ import glui.style;
 import glui.utils;
 import glui.children;
 
+
 @safe:
 
-/// Make a new vertical space
-GluiSpace vspace(T...)(T args) {
 
-    return new GluiSpace(args);
+/// Make a new vertical space.
+alias vspace = simpleConstructor!GluiSpace;
 
-}
+/// Make a new horizontal space.
+alias hspace = simpleConstructor!(GluiSpace, (a) {
 
-/// Make a new horizontal space
-GluiSpace hspace(T...)(T args) {
+    a.directionHorizontal = true;
 
-    auto frame = new GluiSpace(args);
-    frame.directionHorizontal = true;
+});
 
-    return frame;
-
-}
-
-/// This is a space, basic container for other nodes.
+/// This is a space, a basic container for other nodes.
 ///
 /// Space only acts as a container and doesn't implement styles and doesn't take focus. It can be very useful to build
 /// overlaying nodes, eg. with `GluiOnionFrame`.

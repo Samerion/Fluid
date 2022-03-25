@@ -10,13 +10,46 @@ import glui.structs;
 @safe:
 
 /// Create a function to easily construct nodes.
-template simpleConstructor(T) {
+enum simpleConstructor(T, alias fun = "a") = SimpleConstructor!(T, fun).init;
 
-    T simpleConstructor(Args...)(Args args) {
+struct SimpleConstructor(T, alias fun = "a") {
 
-        return new T(args);
+    import std.functional;
+
+    alias Type = T;
+    alias initializer = unaryFun!fun;
+
+    Type opCall(Args...)(Args args) {
+
+        auto result = new Type(args);
+        initializer(result);
+        return result;
 
     }
+
+}
+
+unittest {
+
+    static class Foo {
+
+        this() { }
+
+        string value;
+
+    }
+
+    alias xfoo = simpleConstructor!Foo;
+    assert(xfoo().value == "");
+
+    alias yfoo = simpleConstructor!(Foo, (a) {
+        a.value = "foo";
+    });
+    assert(yfoo().value == "foo");
+
+    auto myFoo = new Foo;
+    yfoo.initializer(myFoo);
+    assert(myFoo.value == "foo");
 
 }
 

@@ -9,17 +9,19 @@ import glui.utils;
 import glui.input;
 import glui.style;
 
-alias vscrollBar = simpleConstructor!GluiScrollBar;
 
 @safe:
 
-GluiScrollBar hscrollBar(Args...)(Args args) {
 
-    auto bar = vscrollBar(args);
-    bar.horizontal = true;
-    return bar;
+/// Create a new vertical scroll bar.
+alias vscrollBar = simpleConstructor!GluiScrollBar;
 
-}
+/// Create a new horizontal scroll bar.
+alias hscrollBar = simpleConstructor!(GluiScrollBar, (a) {
+
+    a.horizontal = true;
+
+});
 
 ///
 class GluiScrollBar : GluiInput!GluiNode {
