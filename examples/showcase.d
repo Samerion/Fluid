@@ -17,18 +17,18 @@ void main() {
     // Tip: To make a new theme from scratch without inheriting Glui defaults, use `Theme.init.makeTheme`
     auto redTheme = makeTheme!q{
 
-        GluiFrame.styleAdd.backgroundColor = Color(0xc0, 0x12, 0x12, 0xff);
-        GluiButton!().styleAdd.backgroundColor = Color(0xff, 0xff, 0xff, 0xff);
+        GluiFrame.styleAdd.backgroundColor = color!"#c01212";
+        GluiButton!().styleAdd.backgroundColor = Colors.WHITE;
 
     };
     auto greenTheme = redTheme.makeTheme!q{
 
-        GluiFrame.styleAdd.backgroundColor = Color(0x12, 0xc0, 0x12, 0xff);
+        GluiFrame.styleAdd.backgroundColor = color!"#12c012";
 
     };
     auto blueTheme = redTheme.makeTheme!q{
 
-        GluiFrame.styleAdd.backgroundColor = Color(0x12, 0x12, 0xc0, 0xff);
+        GluiFrame.styleAdd.backgroundColor = color!"#1212c0";
 
     };
 
@@ -106,7 +106,7 @@ void main() {
                             GluiLabel.styleAdd!q{
                                 margin = 6;
                                 padding = 12;
-                                backgroundColor = Color(0xff, 0xff, 0xff, 0xaa);
+                                backgroundColor = color!"#fffa";
                             };
 
                         },

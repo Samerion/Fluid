@@ -19,7 +19,7 @@ void main() {
         GluiFrame.styleAdd!q{
 
             margin = 10;
-            backgroundColor = Color(0xff, 0xff, 0xff, 0xaa);
+            backgroundColor = color!"#fffa";
 
         };
 
@@ -28,7 +28,7 @@ void main() {
     auto fancyScroll = makeTheme!q{
 
         GluiFrame.styleAdd!q{
-            backgroundColor = Color(0xff, 0xff, 0xff, 0xaa);
+            backgroundColor = color!"#fffa";
             margin = 10;
             padding = 10;
         };
