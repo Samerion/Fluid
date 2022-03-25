@@ -22,7 +22,7 @@ void main() {
 
             margin.sideRight = 4;
             padding.sideX = 6;
-            backgroundColor = Color(0xff, 0xff, 0xff, 0xaa);
+            backgroundColor = color!"#fffa";
 
         };
 
@@ -198,12 +198,12 @@ GluiSpace inputExample() {
                         GluiButton!().styleAdd!q{
 
                             // Default style
-                            backgroundColor = Color(0xcc, 0xcc, 0xcc, 0xff);
+                            backgroundColor = color!"#ccc";
                             borderStyle = colorBorder([
-                                Color(0xff, 0xff, 0xff, 0xff),
-                                Color(0x66, 0x66, 0x66, 0xff),
-                                Color(0xff, 0xff, 0xff, 0xff),
-                                Color(0x66, 0x66, 0x66, 0xff),
+                                color!"#fff",
+                                color!"#666",
+                                color!"#fff",
+                                color!"#666",
                             ]);
 
                             // Sizing
@@ -212,16 +212,16 @@ GluiSpace inputExample() {
                             padding.sideY = 0;
 
                             hoverStyleAdd;
-                            focusStyleAdd.backgroundColor = Color(0xb1, 0xc6, 0xe4, 0xff);
+                            focusStyleAdd.backgroundColor = color!"#b1c6e4";
 
                             // Make it inset when pressed
                             pressStyleAdd!q{
-                                backgroundColor = Color(0xaa, 0xaa, 0xaa, 0xff);
+                                backgroundColor = color!"#aaa";
                                 borderStyle = colorBorder([
-                                    Color(0x66, 0x66, 0x66, 0xff),
-                                    Color(0xff, 0xff, 0xff, 0xff),
-                                    Color(0x66, 0x66, 0x66, 0xff),
-                                    Color(0xff, 0xff, 0xff, 0xff),
+                                    color!"#666",
+                                    color!"#fff",
+                                    color!"#666",
+                                    color!"#fff",
                                 ]);
                             };
                         };

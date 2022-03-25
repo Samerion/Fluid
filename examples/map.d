@@ -16,7 +16,7 @@ void main() {
     root = mapSpace(
         .layout!(1, "fill"),
         makeTheme!q{
-            GluiFrame.styleAdd.backgroundColor = Color(0xaa, 0xaa, 0xaa, 0xff);
+            GluiFrame.styleAdd.backgroundColor = color!"#aaa";
         },
 
         // A button to toggle overlap

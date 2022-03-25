@@ -23,19 +23,19 @@ shared static this() {
 
         GluiButton!().styleAdd!q{
 
-            backgroundColor = Color(0xee, 0xee, 0xee, 0xff);
+            backgroundColor = color!"#eee";
             mouseCursor = MouseCursor.MOUSE_CURSOR_POINTING_HAND;
 
             margin.sideY = 2;
             padding.sideX = 6;
 
-            focusStyleAdd.backgroundColor = Color(0xdd, 0xdd, 0xdd, 0xff);
-            hoverStyleAdd.backgroundColor = Color(0xcc, 0xcc, 0xcc, 0xff);
-            pressStyleAdd.backgroundColor = Color(0xaa, 0xaa, 0xaa, 0xff);
+            focusStyleAdd.backgroundColor = color!"#ddd";
+            hoverStyleAdd.backgroundColor = color!"#ccc";
+            pressStyleAdd.backgroundColor = color!"#aaa";
             disabledStyleAdd!q{
 
-                textColor = Color(0x00, 0x00, 0x00, 0xaa);
-                backgroundColor = Color(0xee, 0xee, 0xee, 0x55);
+                textColor = color!"#000a";
+                backgroundColor = color!"#eee5";
 
             };
 
@@ -43,18 +43,18 @@ shared static this() {
 
         GluiTextInput.styleAdd!q{
 
-            backgroundColor = Color(0xff, 0xff, 0xff, 0xcc);
+            backgroundColor = color!"#fffc";
             mouseCursor = MouseCursor.MOUSE_CURSOR_IBEAM;
 
             margin.sideY = 2;
             padding.sideX = 6;
 
-            emptyStyleAdd.textColor = Color(0x00, 0x00, 0x00, 0xaa);
-            focusStyleAdd.backgroundColor = Color(0xff, 0xff, 0xff, 0xff);
+            emptyStyleAdd.textColor = color!"#000a";
+            focusStyleAdd.backgroundColor = color!"#fff";
             disabledStyleAdd!q{
 
-                textColor = Color(0x00, 0x00, 0x00, 0xaa);
-                backgroundColor = Color(0xff, 0xff, 0xff, 0x55);
+                textColor = color!"#000a";
+                backgroundColor = color!"#fff5";
 
             };
 
@@ -62,17 +62,17 @@ shared static this() {
 
         GluiScrollBar.styleAdd!q{
 
-            backgroundColor = Color(0xaa, 0xaa, 0xaa, 0xff);
+            backgroundColor = color!"#aaa";
 
-            backgroundStyleAdd.backgroundColor = Color(0xee, 0xee, 0xee, 0xff);
-            hoverStyleAdd.backgroundColor = Color(0x88, 0x88, 0x88, 0xff);
-            focusStyleAdd.backgroundColor = Color(0x77, 0x77, 0x77, 0xff);
-            pressStyleAdd.backgroundColor = Color(0x55, 0x55, 0x55, 0xff);
-            disabledStyleAdd.backgroundColor = Color(0xaa, 0xaa, 0xaa, 0x55);
+            backgroundStyleAdd.backgroundColor = color!"#eee";
+            hoverStyleAdd.backgroundColor = color!"#888";
+            focusStyleAdd.backgroundColor = color!"#777";
+            pressStyleAdd.backgroundColor = color!"#555";
+            disabledStyleAdd.backgroundColor = color!"#aaa5";
 
         };
 
-        GluiFilePicker.selectedStyleAdd.backgroundColor = Color(0xff, 0x51, 0x2f, 0xff);
+        GluiFilePicker.selectedStyleAdd.backgroundColor = color!"#ff512f";
 
     };
 

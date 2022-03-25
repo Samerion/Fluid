@@ -13,17 +13,17 @@ void main() {
 
     auto redTheme = gluiDefaultTheme.makeTheme!q{
 
-        GluiFrame.styleAdd.backgroundColor = Color(0xc0, 0x12, 0x12, 0xff);
+        GluiFrame.styleAdd.backgroundColor = color!"#c01212";
 
     };
     auto greenTheme = gluiDefaultTheme.makeTheme!q{
 
-        GluiFrame.styleAdd.backgroundColor = Color(0x12, 0xc0, 0x12, 0xff);
+        GluiFrame.styleAdd.backgroundColor = color!"#12c012";
 
     };
     auto whiteTheme = gluiDefaultTheme.makeTheme!q{
 
-        GluiFrame.styleAdd.backgroundColor = Color(0xff, 0xff, 0xff, 0xff);
+        GluiFrame.styleAdd.backgroundColor = Colors.WHITE;
 
     };
 
