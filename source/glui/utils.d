@@ -2,21 +2,106 @@
 module glui.utils;
 
 import raylib;
+
 import std.meta;
+import std.functional;
 
 import glui.style;
 import glui.structs;
 
 @safe:
 
-/// Create a function to easily construct nodes.
-template simpleConstructor(T) {
+/// Create a simple node constructor for declarative usage.
+///
+/// Initial properties can be provided in the function provided in the second argument.
+enum simpleConstructor(T, alias fun = "a") = SimpleConstructor!(T, fun).init;
 
-    T simpleConstructor(Args...)(Args args) {
+/// Create a simple template node constructor for declarative usage.
+///
+/// If the parent is a simple constructor, its initializer will be ran *after* this one. This is because the user
+/// usually specifies the parent in templates, so it has more importance.
+///
+/// T must be a template accepting a single parameter — Parent type will be passed to it.
+template simpleConstructor(alias T, alias Parent, alias fun = "a") {
 
-        return new T(args);
+    alias simpleConstructor = simpleConstructor!(T!(Parent.Type), (a) {
+
+        alias initializer = unaryFun!fun;
+
+        initializer(a);
+        Parent.initializer(a);
+
+    });
+
+}
+
+/// ditto
+alias simpleConstructor(alias T, Parent, alias fun = "a") = simpleConstructor!(T!Parent, fun);
+
+enum isSimpleConstructor(T) = is(T : SimpleConstructor!(A, a), A, alias a);
+
+struct SimpleConstructor(T, alias fun = "a") {
+
+    alias Type = T;
+    alias initializer = unaryFun!fun;
+
+    Type opCall(Args...)(Args args) {
+
+        auto result = new Type(args);
+        initializer(result);
+        return result;
 
     }
+
+}
+
+unittest {
+
+    static class Foo {
+
+        string value;
+
+        this() { }
+
+    }
+
+    alias xfoo = simpleConstructor!Foo;
+    assert(xfoo().value == "");
+
+    alias yfoo = simpleConstructor!(Foo, (a) {
+        a.value = "foo";
+    });
+    assert(yfoo().value == "foo");
+
+    auto myFoo = new Foo;
+    yfoo.initializer(myFoo);
+    assert(myFoo.value == "foo");
+
+    static class Bar(T) : T {
+
+        int foo;
+
+        this(int foo) {
+
+            this.foo = foo;
+
+        }
+
+    }
+
+    alias xbar(alias T) = simpleConstructor!(Bar, T);
+
+    const barA = xbar!Foo(1);
+    assert(barA.value == "");
+    assert(barA.foo == 1);
+
+    const barB = xbar!xfoo(2);
+    assert(barB.value == "");
+    assert(barB.foo == 2);
+
+    const barC = xbar!yfoo(3);
+    assert(barC.value == "foo");
+    assert(barC.foo == 3);
 
 }
 
