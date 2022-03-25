@@ -14,7 +14,7 @@ import glui.structs;
 
 
 /// Quickly create a node slot.
-alias nodeSlot(T) = simpleConstructor!(GluiNodeSlot!T);
+alias nodeSlot(alias T) = simpleConstructor!(GluiNodeSlot, T);
 
 /// A "node slot" node, which displays the node given to it. Allows safely swapping nodes in the layout by reference,
 /// even during drawing.

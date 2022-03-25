@@ -5,25 +5,21 @@ import raylib;
 
 import glui.space;
 import glui.style;
+import glui.utils;
+
 
 @safe:
 
-/// Make a new vertical frame
-GluiFrame vframe(T...)(T args) {
 
-    return new GluiFrame(args);
+/// Make a new vertical frame.
+alias vframe = simpleConstructor!GluiFrame;
 
-}
+/// Make a new horizontal frame.
+alias hframe = simpleConstructor!(GluiFrame, (a) {
 
-/// Make a new horizontal frame
-GluiFrame hframe(T...)(T args) {
+    a.directionHorizontal = true;
 
-    auto frame = new GluiFrame(args);
-    frame.directionHorizontal = true;
-
-    return frame;
-
-}
+});
 
 /// This is a frame, a stylized container for other nodes.
 /// Styles: $(UL
