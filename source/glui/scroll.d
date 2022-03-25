@@ -17,20 +17,22 @@ import glui.scrollbar;
 
 private extern(C) float GetMouseWheelMove();
 
-alias GluiScrollFrame = GluiScrollable!GluiFrame;
-alias vscrollFrame = simpleConstructor!GluiScrollFrame;
 
 @safe:
 
-GluiScrollFrame hscrollFrame(Args...)(Args args) {
 
-    auto scroll = vscrollFrame(args);
-    scroll.directionHorizontal = true;
-    return scroll;
-
-}
-
+alias GluiScrollFrame = GluiScrollable!GluiFrame;
 alias GluiScrollable(T : GluiSpace) = GluiScrollable!(T, "directionHorizontal");
+
+/// Create a new vertical scroll frame.
+alias vscrollFrame = simpleConstructor!GluiScrollFrame;
+
+/// Create a new horizontal scroll frame.
+alias hscrollFrame = simpleConstructor!(GluiScrollFrame, (a) {
+
+    a.directionHorizontal = true;
+
+});
 
 /// Implement scrolling for the given node.
 ///
