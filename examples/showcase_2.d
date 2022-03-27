@@ -347,47 +347,36 @@ GluiSpace sizeLimitExample() {
         hspace(
             .layout!"fill",
 
-            vspace(
-                .layout!(1, "fill"),
+            sizeLock!vframe(
+                .layout!(1, "center"),
+                .sizeLimitX(100),
 
-                sizeLock!vframe(
-                    .layout!"center",
-                    .sizeLimitX(100),
-
-                    label("This node will not be wider than 100 pixels"),
-                ),
+                label("This node will not be wider than 100 pixels"),
             ),
 
-            vspace(
-                .layout!(1, "fill"),
+            sizeLock!vframe(
+                .layout!(1, "center"),
+                .sizeLimitX(300),
 
-                sizeLock!vframe(
-                    .layout!"center",
-                    .sizeLimitX(300),
-
-                    label("Even if smaller than"),
-                    label("the limit, the box will"),
-                    label("expand nicely if it can"),
-                ),
-
+                label("Even if contents are"),
+                label("smaller than the limit,"),
+                label("the box will expand"),
+                label("if it can..."),
             ),
 
-            vspace(
-                .layout!(1, "fill"),
+            sizeLock!hframe(
+                .layout!(1, "center"),
+                .sizeLimitY(50),
 
-                sizeLock!hframe(
-                    .layout!1,
-                    .sizeLimitY(50),
-
-                    label("Look into the code! "),
-                    // Creating size-locked nodes is easy and convenient and works with any node type through a
-                    // template! It accepts any node class or node constructor like hframe.
-                    //
-                    //      sizeLock!GluiLabel
-                    //      sizeLock!label
-                    //      sizeLock!vframe
-                    //      sizeLock!hframe
-                ),
+                label("Look into "),
+                label("the code!"),
+                // Creating size-locked nodes is easy and convenient and works with any node type through a
+                // template! It accepts any node class or node constructor like hframe.
+                //
+                //      sizeLock!GluiLabel
+                //      sizeLock!label
+                //      sizeLock!vframe
+                //      sizeLock!hframe
             ),
 
         ),
