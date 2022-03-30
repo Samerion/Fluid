@@ -344,8 +344,12 @@ abstract class GluiNode : Styleable {
         // Check if hovered
         _isHovered = hoveredImpl(visibleBox, GetMousePosition);
 
+        // Check if the mouse stroke started this node
+        const heldElsewhere = !IsMouseButtonPressed(MouseButton.MOUSE_LEFT_BUTTON)
+            && isLMBHeld;
+
         // Update global hover unless mouse is being held down or mouse focus is disabled for this node
-        if (isHovered && !isLMBHeld && !ignoreMouse) tree.hover = this;
+        if (isHovered && !heldElsewhere && !ignoreMouse) tree.hover = this;
 
         assert(
             [size.tupleof].all!isFinite,
