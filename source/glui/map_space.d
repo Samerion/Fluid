@@ -306,23 +306,46 @@ class GluiMapSpace : GluiSpace {
             const dropDirection = mixin("position.drop." ~ direction);
             const childSize = mixin("child.minSize." ~ direction);
 
-            const overflow = pos + childSize > mixin("space." ~ direction);
+            /// Get the value
+            float value(DropDirection targetDirection) {
 
-            static if (end)
-            mixin("result." ~ direction) = dropDirection.predSwitch(
-                DropDirection.start,     pos + childSize,
-                DropDirection.center,    pos + childSize/2,
-                DropDirection.end,       pos,
-                DropDirection.automatic, overflow ? pos : pos + childSize,
-            );
+                /// Get the direction chosen by auto.
+                DropDirection autoDirection() {
 
-            else
-            mixin("result." ~ direction) = dropDirection.predSwitch(
-                DropDirection.start,     pos,
-                DropDirection.center,    pos - childSize/2,
-                DropDirection.end,       pos - childSize,
-                DropDirection.automatic, overflow ? pos - childSize : pos,
-            );
+                    // Check if it overflows on the end
+                    const overflowEnd = pos + childSize > mixin("space." ~ direction);
+
+                    // Drop from the start
+                    if (!overflowEnd) return DropDirection.start;
+
+                    // Check if it overflows on both sides
+                    const overflowStart = pos - childSize < 0;
+
+                    return overflowStart
+                        ? DropDirection.center
+                        : DropDirection.end;
+
+                }
+
+                static if (end)
+                return targetDirection.predSwitch(
+                    DropDirection.start,     pos + childSize,
+                    DropDirection.center,    pos + childSize/2,
+                    DropDirection.end,       pos,
+                    DropDirection.automatic, value(autoDirection),
+                );
+
+                else
+                return targetDirection.predSwitch(
+                    DropDirection.start,     pos,
+                    DropDirection.center,    pos - childSize/2,
+                    DropDirection.end,       pos - childSize,
+                    DropDirection.automatic, value(autoDirection),
+                );
+
+            }
+
+            mixin("result." ~ direction) = value(dropDirection);
 
         }}
 
