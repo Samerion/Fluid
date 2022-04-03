@@ -51,9 +51,9 @@ void main() {
             label("going"),
         ),
 
-        // A real dropdown
-        Vector2(400, 150),
-        button("Show a real dropdown", () @trusted {
+        // A proper dropdown
+        Vector2(0, 300),
+        button("Show a dropdown", () @trusted {
 
             auto position = MapPosition(GetMousePosition, dropVector!"auto");
 
