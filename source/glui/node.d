@@ -499,8 +499,8 @@ abstract class GluiNode : Styleable {
         }
 
         return Vector2(
-            space.x + positionImpl(layout.nodeAlign[0], space.width  - usedSpace.x),
-            space.y + positionImpl(layout.nodeAlign[1], space.height - usedSpace.y),
+            round(space.x + positionImpl(layout.nodeAlign[0], space.width  - usedSpace.x)),
+            round(space.y + positionImpl(layout.nodeAlign[1], space.height - usedSpace.y)),
         );
 
     }
