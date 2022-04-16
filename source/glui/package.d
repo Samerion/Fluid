@@ -7,6 +7,7 @@ public import
     glui.default_theme,
     glui.file_picker,
     glui.frame,
+    glui.grid,
     glui.hover_button,
     glui.image_view,
     glui.label,
