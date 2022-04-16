@@ -45,8 +45,9 @@ void main() {
         // Add children nodes
         boxExample,
         inputExample,
-        slotExample,
+        gridExample,
         sizeLimitExample,
+        slotExample,
     );
 
     while (!WindowShouldClose) {
@@ -65,6 +66,7 @@ void main() {
 GluiSpace boxExample() {
 
     auto root = vspace(
+        .layout!"fill",
 
         label(.layout!"center", "Boxes"),
 
@@ -72,6 +74,7 @@ GluiSpace boxExample() {
 
         // Space for the boxes so we can make their width align
         vspace(
+            .layout!"center",
 
             hspace(
                 .layout!"fill",
@@ -380,6 +383,38 @@ GluiSpace sizeLimitExample() {
             ),
 
         ),
+    );
+
+    return root;
+
+}
+
+GluiSpace gridExample() {
+
+    GluiSpace root;
+
+    root = vspace(
+        .layout!"fill",
+
+        label(.layout!"center", "Grids"),
+
+        grid(
+            .layout!"fill",
+            .segments!4,
+
+            label("You can make tables and grids with GluiGrid"),
+            [
+                label("This"),
+                label("Is"),
+                label("A"),
+                label("Grid"),
+            ],
+            [
+                label(.segments!2, "Multiple columns"),
+                label(.segments!2, "For a single cell"),
+            ],
+        ),
+
     );
 
     return root;
