@@ -38,7 +38,13 @@ template segments(T...) {
 class GluiGrid : GluiFrame {
 
     ulong segmentCount;
-    int[] segmentSizes;
+
+    private {
+
+        int[] segmentSizes;
+        int[] expandedSegments;
+
+    }
 
     this(T...)(T args) {
 
@@ -119,7 +125,7 @@ class GluiGrid : GluiFrame {
 
     }
 
-    override protected void resizeImpl(Vector2 size) {
+    override protected void resizeImpl(Vector2 space) {
 
         import std.numeric;
 
@@ -150,9 +156,23 @@ class GluiGrid : GluiFrame {
 
         // Reserve the segments
         segmentSizes = new int[segmentCount];
+        expandedSegments = segmentSizes.dup;
 
         // Resize the children
-        super.resizeImpl(size);
+        super.resizeImpl(space);
+
+    }
+
+    override void drawImpl(Rectangle outer, Rectangle inner) {
+
+        // Reset segment size
+        copy(segmentSizes, expandedSegments);
+
+        // Expand the segments to match the box size
+        redistributeSpace(expandedSegments, inner.width);
+
+        // Draw the row
+        super.drawImpl(outer, inner);
 
     }
 
@@ -225,8 +245,6 @@ class GluiGridRow : GluiFrame {
 
     override void resizeImpl(Vector2 space) {
 
-        import std.math, std.range;
-
         // Reset the size
         minSize = Vector2();
 
@@ -268,32 +286,7 @@ class GluiGridRow : GluiFrame {
             auto range = parent.segmentSizes[segment..segment+segments];
 
             // Second step: Expand the segments to give some space for the child
-
-            /// Sizes of all relevant segments, sorted greatest to smallest
-            auto segmentSizes = range.dup.sort!"a > b";
-
-            /// Space to distribute
-            auto total = child.minSize.x;
-
-            /// Space to give per segment
-            int perSegment;
-
-            // Assign the segments
-            foreach (i, segment; segmentSizes.enumerate) {
-
-                // Split the size over all segments, except for those exceeding our target
-                perSegment = cast(int) ceil(total / (segments - i));
-
-                // This number can be assigned, stop
-                if (perSegment <= segment) break;
-
-                // This one segment is too big, we shouldn't shrink it
-                total -= segment;
-
-            }
-
-            // Assign the size
-            foreach (ref item; range) item = max(item, perSegment);
+            range.redistributeSpace(child.minSize.x);
 
         }
 
@@ -307,7 +300,7 @@ class GluiGridRow : GluiFrame {
         drawChildren((child) {
 
             const segments = either(child.layout.expand, 1);
-            const width = parent.segmentSizes[segment..segment+segments].sum;
+            const width = parent.expandedSegments[segment..segment+segments].sum;
 
             // Draw the child
             child.draw(Rectangle(
@@ -320,6 +313,51 @@ class GluiGridRow : GluiFrame {
             position.x += width;
 
         });
+
+    }
+
+}
+
+private void redistributeSpace(Range, Numeric)(ref Range range, Numeric space) {
+
+    import std.math, std.range;
+
+    alias RangeNumeric = ElementType!Range;
+
+    // Get a sorted copy of the range
+    auto sortedCopy = range.save.sort!"a > b";
+
+    /// Extra space to give
+    auto extra = cast(double) space - range.save.sum;
+
+    // Do nothing if there's no eextra space
+    if (extra <= 0) return;
+
+    /// Smallest item in the range
+    auto min = range.save.minElement;
+
+    /// Space to give per segment
+    RangeNumeric perElement;
+
+    // Largest segment to apply to
+    auto largest = RangeNumeric.min;
+
+    // Assign the segments
+    foreach (i, segment; sortedCopy.enumerate) {
+
+        // Split the size over all segments, except for those exceeding our target
+        perElement = min + cast(RangeNumeric) ceil(extra / (range.length - i));
+
+        // This number can be assigned, stop
+        if (perElement > segment) break;
+
+    }
+
+    // Assign the size
+    foreach (ref item; range)  {
+
+        // Grow this one
+        item = max(item, perElement);
 
     }
 
