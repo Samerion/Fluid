@@ -115,16 +115,21 @@ class GluiTextInput : GluiInput!GluiNode {
 
     protected override void drawImpl(Rectangle outer, Rectangle inner) @trusted {
 
-        // Note: We're drawing the label in `outer` so it overlaps us as the presence of the label is meant to be
-        // transparent.
+        // Note: We're drawing the label in `outer` as the presence of the label is meant to be transparent.
+
+        import std.algorithm : min, max;
 
         const style = pickStyle();
+        const scrollOffset = max(0, contentLabel.scrollMax - inner.w);
 
         // Fill the background
         style.drawBackground(outer);
 
         // Copy the style to the label
         contentLabel.activeStyle = style;
+
+        // Set the scroll
+        contentLabel.scroll = cast(size_t) scrollOffset;
 
         // If the box isn't focused
         if (!isFocused) {
@@ -134,13 +139,6 @@ class GluiTextInput : GluiInput!GluiNode {
             return;
 
         }
-
-        import std.algorithm : min, max;
-
-        const scrollOffset = max(0, contentLabel.scrollMax - inner.w);
-
-        // Set the scroll
-        contentLabel.scroll = cast(size_t) scrollOffset;
 
         // Draw the label
         contentLabel.draw(outer);
@@ -260,13 +258,15 @@ class GluiTextInput : GluiInput!GluiNode {
         // Trigger callback
         if ((input.length || backspace) && changed) {
 
+            // Trigger change
             changed();
+
+            // Update the size of the input
+            updateSize();
+
             return true;
 
         }
-
-        // Update the size of the input
-        updateSize();
 
         // Even if nothing changed, user might have held the key for a while which this function probably wouldn't have
         // caught, so we'd be returning false-positives all the time.
