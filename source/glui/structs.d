@@ -5,6 +5,8 @@ import raylib;
 import std.conv;
 import glui.node;
 
+// Disable scissors mode on macOS, it's broken; see #60
+version (OSX) version = Glui_DisableScissors;
 
 @safe:
 
@@ -182,9 +184,6 @@ struct LayoutTree {
 
     /// Scissors stack.
     package Rectangle[] scissors;
-
-    // Disable scissors mode on macOS, it's broken; see #60
-    version (OSX) version = Glui_DisableScissors;
 
     version (Glui_DisableScissors) {
 
