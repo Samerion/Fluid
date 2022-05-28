@@ -1,8 +1,8 @@
 {
 	"authors": [
-		"Soaku"
+		"Artha"
 	],
-	"copyright": "Copyright © 2021, Soaku",
+	"copyright": "Copyright © 2021, Artha",
 	"description": "A simple UI library designed for IsodiTools and Samerion",
 	"libs": [
 		"raylib"

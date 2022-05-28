@@ -5,7 +5,8 @@ import raylib;
 import std.conv;
 import glui.node;
 
-// Disable scissors mode on macOS, it's broken; see #60
+// Disable scissors mode on macOS in Raylib 3, it's broken; see #60
+version (Glui_Raylib3)
 version (OSX) version = Glui_DisableScissors;
 
 @safe:
