@@ -11,11 +11,12 @@ most, is decent examples, tutorials and documentation on its design.
 
 ## Notes
 
-* If HiDPI is on in the system, fonts will be blurry, unless you load them upscaled. Use Style.loadFont instead.
-* Glui currently defaults to use bindings for Raylib 3.7.0, if you're using Raylib 4.0 or newer, you should use the
+* If HiDPI is on in the system, fonts will be blurry, unless you load them upscaled. Glui's `Style.loadFont` can handle
+  this for you.
+* Glui currently defaults to bindings for Raylib 3.7.0, if you're using Raylib 4.0 or newer, you should use the
   `raylib4` configuration.
   * Dub will probably incorrectly complain about a raylib-d and glui version clash. If this happens, remove one of them,
-    perform `dub upgrade` and add again.
+    perform `dub upgrade` and then add again.
 * Glui cannot reliably implement scrolling nodes on macOS.
   * For this reason, those are disabled if using Raylib 3.
   * If you're using Raylib 4 you have to disable them manually using version `Glui_DisableScissors` or you can switch to
