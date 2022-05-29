@@ -55,7 +55,7 @@ void main() {
             hframe(
                 .layout!"center",
 
-                imageView("./logo.png", Vector2(40, 40)),
+                imageView("./logo48.png", Vector2(48, 48)),
                 label(.layout!"center", "Hello, Glui!"),
             )
 
