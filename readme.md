@@ -1,7 +1,4 @@
-<h1>
-    <img src="./logo.png" alt="" height="50" />
-    glui
-</h1>
+<img src="./logo.png" alt="Glui" height="144" align="left" />
 
 A simple and declarative high-level UI library for [Raylib](https://www.raylib.com/) & [Dlang](https://dlang.org/).
 
