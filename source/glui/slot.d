@@ -108,6 +108,9 @@ class GluiNodeSlot(T : GluiNode) : GluiNode {
 
         if (!value) return false;
 
+        // If the child has ignoreMouse set, we should ignore it as well
+        if (value.ignoreMouse) return false;
+
         // hoveredImpl may be private... uhhh
         return (cast(const GluiNode) value).hoveredImpl(rect, position);
 
