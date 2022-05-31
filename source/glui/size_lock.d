@@ -70,9 +70,9 @@ class GluiSizeLock(T : GluiNode) : T {
         // Resize
         super.resizeImpl(space);
 
-        // Fill in the space we get, unless we don't have enough to place ourselves
-        if (limit.x != 0) minSize.x = max(space.x, minSize.x);
-        if (limit.y != 0) minSize.y = max(space.y, minSize.y);
+        // Apply the limit to the resulting value; fill in remaining space if available
+        if (limit.x != 0) minSize.x = max(space.x, min(limit.x, minSize.x));
+        if (limit.y != 0) minSize.y = max(space.y, min(limit.y, minSize.y));
 
     }
 
