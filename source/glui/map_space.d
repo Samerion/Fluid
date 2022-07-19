@@ -3,6 +3,8 @@ module glui.map_space;
 import raylib;
 
 import std.conv;
+import std.math;
+import std.format;
 import std.algorithm;
 
 import glui.node;
@@ -140,21 +142,26 @@ class GluiMapSpace : GluiSpace {
     }
 
     /// Add a new child to the space and assign it some position.
-    void addChild(GluiNode node, Position position) {
+    void addChild(GluiNode node, Position position)
+    in ([position.coords.tupleof].any!isFinite, format!"Given %s isn't valid, values must be finite"(position))
+    do {
 
         children ~= node;
         positions[node] = position;
         updateSize();
-
     }
 
-    void moveChild(GluiNode node, Position position) {
+    void moveChild(GluiNode node, Position position)
+    in ([position.coords.tupleof].any!isFinite, format!"Given %s isn't valid, values must be finite"(position))
+    do {
 
         positions[node] = position;
 
     }
 
-    void moveChild(GluiNode node, Vector2 vector) {
+    void moveChild(GluiNode node, Vector2 vector)
+    in ([vector.tupleof].any!isFinite, format!"Given %s isn't valid, values must be finite"(vector))
+    do {
 
         positions[node].coords = vector;
 
