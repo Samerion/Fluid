@@ -109,7 +109,7 @@ debug struct Children {
 
     }
 
-    int opApply(int delegate(GluiNode node) @trusted dg) {
+    int opApply(scope int delegate(GluiNode node) @trusted dg) {
 
         foreach (child; _children) {
 
@@ -121,7 +121,7 @@ debug struct Children {
 
     }
 
-    int opApply(int delegate(size_t index, GluiNode node) @trusted dg) {
+    int opApply(scope int delegate(size_t index, GluiNode node) @trusted dg) {
 
         foreach (i, child; _children) {
 

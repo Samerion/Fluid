@@ -112,10 +112,10 @@ abstract class GluiNode : Styleable {
     @property {
 
         /// Check if the node is hidden.
-        bool isHidden() const { return _isHidden; }
+        bool isHidden() const return { return _isHidden; }
 
         /// Set the visibility
-        bool isHidden(bool value) {
+        bool isHidden(bool value) return {
 
             // If changed, trigger resize
             if (_isHidden != value) updateSize();
@@ -207,7 +207,7 @@ abstract class GluiNode : Styleable {
     protected bool isDisabledInherited() const { return tree.disabledDepth != 0; }
 
     /// Recalculate the window size before next draw.
-    final void updateSize() {
+    final void updateSize() scope {
 
         if (tree) tree.root._requiresResize = true;
         // Tree might be null — if so, the node will be resized regardless
