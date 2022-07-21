@@ -224,6 +224,7 @@ abstract class GluiNode : Styleable {
             tree = new LayoutTree(this);
 
             // Workaround for a HiDPI scissors mode glitch, which breaks Glui
+            version (Glui_Raylib3)
             SetWindowSize(GetScreenWidth, GetScreenHeight);
 
         }
@@ -236,9 +237,8 @@ abstract class GluiNode : Styleable {
 
         }
 
-        // Windows scales scissors mode regardless if we report that we support it or not
-        version (Windows) const scale = GetWindowScaleDPI;
-        else const scale = hidpiScale();
+        version (Glui_Raylib3) const scale = hidpiScale();
+        else                   const scale = Vector2(1, 1);
 
         const space = Vector2(GetScreenWidth / scale.x, GetScreenHeight / scale.y);
 
