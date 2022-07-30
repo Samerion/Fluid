@@ -6,8 +6,7 @@ import std.conv;
 import glui.node;
 
 // Disable scissors mode on macOS in Raylib 3, it's broken; see #60
-version (Glui_Raylib3)
-version (OSX) version = Glui_DisableScissors;
+version (Glui_Raylib3) version (OSX) version = Glui_DisableScissors;
 
 @safe:
 
@@ -264,7 +263,8 @@ struct LayoutTree {
             // End the current mode, if any
             if (scissors.length) EndScissorMode();
 
-            auto scale = hidpiScale;
+            version (Glui_Raylib3) const scale = hidpiScale;
+            else                   const scale = Vector2(1, 1);
 
             // Start this one
             BeginScissorMode(
