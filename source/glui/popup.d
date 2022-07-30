@@ -12,15 +12,15 @@ import glui.utils;
 
 @safe:
 
-deprecated("To be removed in 0.5.0. Use popup() instead")
+deprecated("To be removed in 0.6.0. Use popup() instead")
 alias dropdown = popup;
 
-deprecated("To be removed in 0.5.0. Use GluiPopup instead")
+deprecated("To be removed in 0.6.0. Use GluiPopup instead")
 alias GluiDropdown = GluiPopup;
 
 alias popup = simpleConstructor!GluiPopup;
 
-/// This is an override of GluiFrame to simplify creating dropdowns: if clicked outside of it, it will disappear from
+/// This is an override of GluiFrame to simplify creating popups: if clicked outside of it, it will disappear from
 /// the node tree.
 class GluiPopup : GluiFrame {
 
