@@ -44,6 +44,8 @@ class GluiLabel : GluiNode {
 
     protected override void resizeImpl(Vector2 available) {
 
+        import std.math;
+
         minSize = style.measureText(available, text, !disableWrap);
 
     }
