@@ -343,19 +343,30 @@ class Style {
     ///
     ///     If `availableSpace` is a rectangle, returns a rectangle of the size of the result, offset to the position
     ///     of the given rectangle.
-    Vector2 measureText(Vector2 availableSpace, string text, bool wrap = true) const {
+    Vector2 measureText(Vector2 availableSpace, string text, bool wrap = true) const
+    in (availableSpace.x.isFinite && availableSpace.y.isFinite,
+        format!"Text space given must be finite: %s"(availableSpace))
+    in (fontSize.isFinite,
+        format!"Invalid font size %s"(fontSize))
+    in (lineHeight.isFinite,
+        format!"Invalid line height %s"(lineHeight))
+    out (r; r.x.isFinite && r.y.isFinite,
+        format!"Resulting text space must be finite: %s"(r))
+    do {
 
-        auto wrapped = wrapText(availableSpace.x, text, !wrap || availableSpace.x == 0);
+        auto wrappedLines = wrapText(availableSpace.x, text, !wrap || availableSpace.x == 0);
+
 
         return Vector2(
-            wrapped.map!"a.width".maxElement,
-            wrapped.length * fontSize * lineHeight,
+            wrappedLines.map!"a.width".maxElement,
+            wrappedLines.length * fontSize * lineHeight,
         );
 
     }
 
     /// Ditto
-    Rectangle measureText(Rectangle availableSpace, string text, bool wrap = true) const {
+    Rectangle measureText(Rectangle availableSpace, string text, bool wrap = true) const
+    do {
 
         const vec = measureText(
             Vector2(availableSpace.width, availableSpace.height),
@@ -536,6 +547,14 @@ class Style {
     Rectangle contentBox(Rectangle rect) const {
 
         return cropBox(rect, padding);
+
+    }
+
+    /// Get a sum of margin, border size and padding.
+    uint[4] totalMargin() const {
+
+        uint[4] ret = margin[] + border[] + padding[];
+        return ret;
 
     }
 

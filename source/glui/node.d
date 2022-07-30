@@ -325,16 +325,16 @@ abstract class GluiNode : Styleable {
         const position = position(space, size);
 
         // Calculate the boxes
-        const marginBox = Rectangle(position.tupleof, size.tupleof);
-        const borderBox = style ? style.cropBox(marginBox, style.margin) : marginBox;
-        const paddingBox = style ? style.cropBox(borderBox, style.border) : borderBox;
+        const marginBox  = Rectangle(position.tupleof, size.tupleof);
+        const borderBox  = style ? style.cropBox(marginBox, style.margin)   : marginBox;
+        const paddingBox = style ? style.cropBox(borderBox, style.border)   : borderBox;
         const contentBox = style ? style.cropBox(paddingBox, style.padding) : paddingBox;
 
         // If there's a border active, draw it
         const currentStyle = pickStyle;
         if (style && currentStyle && currentStyle.borderStyle) {
 
-            pickStyle().borderStyle.apply(borderBox, style.border);
+            currentStyle.borderStyle.apply(borderBox, style.border);
 
         }
 
@@ -401,6 +401,7 @@ abstract class GluiNode : Styleable {
         this.tree = tree;
         if (this.theme is null) this.theme = theme;
 
+
         // The node is hidden, reset size
         if (isHidden) minSize = Vector2(0, 0);
 
@@ -417,8 +418,19 @@ abstract class GluiNode : Styleable {
             space.x = max(0, space.x - spacingX);
             space.y = max(0, space.y - spacingY);
 
+            assert(
+                space.x.isFinite && space.y.isFinite,
+                format!"Internal error — Node %s was given infinite space: %s; spacing(x = %s, y = %s)"(typeid(this),
+                    space, spacingX, spacingY)
+            );
+
             // Resize the node
             resizeImpl(space);
+
+            assert(
+                minSize.x.isFinite && minSize.y.isFinite,
+                format!"Node %s resizeImpl requested infinite minSize: %s"(typeid(this), minSize)
+            );
 
             // Add margins
             minSize.x = ceil(minSize.x + spacingX);
@@ -428,7 +440,7 @@ abstract class GluiNode : Styleable {
 
         assert(
             minSize.x.isFinite && minSize.y.isFinite,
-            format!"Node %s returned invalid minSize %s"(typeid(this), minSize)
+            format!"Internal error — Node %s returned invalid minSize %s"(typeid(this), minSize)
         );
 
     }
