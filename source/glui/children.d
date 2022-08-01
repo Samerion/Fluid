@@ -86,7 +86,7 @@ debug struct Children {
         return _children[];
 
     }
-    auto opIndex(Args...)(Args args) inout {
+    ref auto opIndex(Args...)(Args args) inout {
 
         return _children[args];
 
@@ -99,6 +99,7 @@ debug struct Children {
 
     }
 
+    deprecated("getChildren will be removed in 0.6.0, please use Children directly, as if it was an array")
     ref GluiNode[] getChildren() return {
 
         debug assert(!_isLocked, "Can't get a mutable reference to children while rendering. Consider doing this in "
