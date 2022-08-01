@@ -63,12 +63,12 @@ class GluiGrid : GluiFrame {
             // Grid row (via array)
             static if (is(typeof(arg) : U[], U)) {
 
-                children.getChildren[i] = gridRow(this, arg);
+                children[i] = gridRow(this, arg);
 
             }
 
             // Other stuff
-            else children.getChildren[i] = arg;
+            else children[i] = arg;
 
         }}
 
