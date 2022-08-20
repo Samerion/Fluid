@@ -87,9 +87,9 @@ void main() {
                 label("Even more useless scrollbar:"),
                 disabledScrollbar = hscrollBar(.layout!"fill"),
 
-            ),
+                textInput("Type something long!"),
 
-            textInput("Type something long!"),
+            ),
 
         )
     );

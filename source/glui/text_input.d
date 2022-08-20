@@ -102,14 +102,22 @@ class GluiTextInput : GluiInput!GluiNode {
         contentLabel.text = (value == "") ? placeholder : value;
 
         // Inherit main style
-        const theme = [
+        // TODO reuse the hashmap maybe?
+        const childTheme = theme.makeTheme!q{
 
-            &TextImpl.styleKey: cast(const Style) style,
+            GluiLabel.styleAdd!q{
 
-        ];
+                // Those are already included in our theme, we should remove them
+                margin = 0;
+                padding = 0;
+                border = 0;
+
+            };
+
+        };
 
         // Resize the label
-        contentLabel.resize(tree, theme, Vector2(0, minSize.y));
+        contentLabel.resize(tree, childTheme, Vector2(0, minSize.y));
 
     }
 
@@ -131,17 +139,11 @@ class GluiTextInput : GluiInput!GluiNode {
         // Set the scroll
         contentLabel.scroll = cast(size_t) scrollOffset;
 
-        // If the box isn't focused
-        if (!isFocused) {
+        // Draw the text
+        contentLabel.draw(inner);
 
-            // Just draw the text
-            contentLabel.draw(outer);
-            return;
-
-        }
-
-        // Draw the label
-        contentLabel.draw(outer);
+        // Ignore the rest if the node isn't focused
+        if (!isFocused) return;
 
         // Add a blinking caret
         if (GetTime % (blinkTime*2) < blinkTime) {
@@ -164,7 +166,7 @@ class GluiTextInput : GluiInput!GluiNode {
             DrawLineV(
                 end - Vector2(0, lineHeight - margin),
                 end - Vector2(0, margin),
-                style.textColor
+                focusStyle.textColor
             );
 
         }
@@ -281,11 +283,11 @@ class GluiTextInput : GluiInput!GluiNode {
         // Disabled
         if (isDisabledInherited) return disabledStyle;
 
-        // Focused
-        else if (isFocused) return focusStyle;
-
         // Empty text (display placeholder)
         else if (value == "") return emptyStyle;
+
+        // Focused
+        else if (isFocused) return focusStyle;
 
         // Other styles
         else return super.pickStyle();
