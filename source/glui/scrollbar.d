@@ -40,11 +40,11 @@ class GluiScrollBar : GluiInput!GluiNode {
 
     public {
 
-        /// Multipler of the scroll speed; applies to keyboard scroll only.
+        /// Multipler of the scroll speed.
         ///
         /// This is actually number of pixels per mouse wheel event, as `GluiScrollable` determines mouse scroll speed
         /// based on this.
-        enum scrollSpeed = 15.0;
+        enum scrollSpeed = 30.0;
 
         /// If true, the scrollbar will be horizontal.
         bool horizontal;

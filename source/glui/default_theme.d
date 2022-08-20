@@ -44,10 +44,12 @@ shared static this() {
         GluiTextInput.styleAdd!q{
 
             backgroundColor = color!"#fffc";
+            borderStyle = colorBorder(color!"#aaa");
             mouseCursor = MouseCursor.MOUSE_CURSOR_IBEAM;
 
             margin.sideY = 2;
             padding.sideX = 6;
+            border.sideBottom = 2;
 
             emptyStyleAdd.textColor = color!"#000a";
             focusStyleAdd.backgroundColor = color!"#fff";
