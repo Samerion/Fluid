@@ -255,11 +255,11 @@ class GluiTextInput : GluiInput!GluiNode {
 
         value ~= input;
 
-        // Trigger callback
-        if ((input.length || backspace) && changed) {
+        // Typed something
+        if (input.length || backspace) {
 
-            // Trigger change
-            changed();
+            // Trigger the callback
+            if (changed) changed();
 
             // Update the size of the input
             updateSize();
