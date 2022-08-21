@@ -227,6 +227,9 @@ struct LayoutTree {
     /// Focus direction data.
     FocusDirection focusDirection;
 
+    /// Padding box of the currently focused node.
+    Rectangle focusBox;
+
     /// Check if keyboard input was handled after rendering is has completed.
     bool keyboardHandled;
 

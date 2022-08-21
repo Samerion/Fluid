@@ -147,7 +147,6 @@ GluiSpace inputExample() {
 
     GluiLabel frontLabel;
     GluiTextInput frontInput;
-    GluiNode[3] disabledNodes;
 
     enum never = delegate() => assert(0);
 
@@ -183,11 +182,11 @@ GluiSpace inputExample() {
                 label("Disabled buttons"),
 
                 // We can disable a whole container node to recursively disable its contents
-                disabledNodes[0] = vframe(
+                vframe(
                     button("Bye", never),
                     button("Goodbye", never),
-                ),
-                disabledNodes[1] = button("Disabled button", never),
+                ).disable,
+                button("Disabled button", never).disable,
 
             ),
 
@@ -240,15 +239,12 @@ GluiSpace inputExample() {
             // Text input!
             vspace(
                 frontInput = textInput("Input custom text", { frontLabel.text = frontInput.value; }),
-                disabledNodes[2] = textInput("Disabled input", never),
+                textInput("Disabled input", never).disable(),
             ),
 
         ),
 
     );
-
-    // Disable all the designated nodes
-    disabledNodes[].each!"a.disabled = true";
 
     return root;
 

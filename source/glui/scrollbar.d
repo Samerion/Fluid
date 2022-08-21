@@ -54,7 +54,7 @@ class GluiScrollBar : GluiInput!GluiNode {
 
         /// Available space to scroll.
         ///
-        /// Note: page length, and therefore scrollbar handle length, are determined from the space occupied by the
+        /// Note: visible box size, and therefore scrollbar handle length, are determined from the space occupied by the
         /// scrollbar.
         size_t availableSpace;
 
