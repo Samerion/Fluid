@@ -52,8 +52,12 @@ class GluiTextInput : GluiInput!GluiNode {
 
     }
 
-    /// Underlying label controlling the content. Needed to properly adjust it to scroll.
-    private GluiScrollable!(TextImpl, "true") contentLabel;
+    private {
+
+        /// Underlying label controlling the content. Needed to properly adjust it to scroll.
+        GluiScrollable!(TextImpl, "true") contentLabel;
+
+    }
 
     static foreach (index; 0 .. BasicNodeParamLength) {
 
@@ -73,7 +77,11 @@ class GluiTextInput : GluiInput!GluiNode {
 
             with (this.contentLabel) {
 
+                // Make the scrollbar invisible
+                scrollBar.disable();
                 scrollBar.width = 0;
+                // Note: We're not hiding the scrollbar, so it may adjust used values to the size of the input
+
                 disableWrap = true;
                 ignoreMouse = true;
 
@@ -271,10 +279,12 @@ class GluiTextInput : GluiInput!GluiNode {
         }
 
         // Even if nothing changed, user might have held the key for a while which this function probably wouldn't have
-        // caught, so we'd be returning false-positives all the time.
-        // The safest way is to just return true always, text input really is complex enough we can assume we did take
-        // any input there could be.
-        return true;
+        // caught, so we'd be returning false-negatives all the time.
+        // The best way would be to check if keys that triggered action in the input were released — but Raylib's input
+        // handling is sadly too limited.
+        // Instead we're returning `false` only if the tab key was pressed.
+
+        return IsKeyUp(KeyboardKey.KEY_TAB);
 
     }
 
