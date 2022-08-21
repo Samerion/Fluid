@@ -9,6 +9,7 @@ import std.string;
 
 import glui.style;
 import glui.utils;
+import glui.input;
 import glui.structs;
 
 @safe:
@@ -217,6 +218,8 @@ abstract class GluiNode : Styleable {
     /// Draw this node as a root node.
     final void draw() @trusted {
 
+        import std.algorithm : either;
+
         // No tree set
         if (tree is null) {
 
@@ -244,6 +247,9 @@ abstract class GluiNode : Styleable {
 
         // Clear mouse hover if LMB is up
         if (!isLMBHeld) tree.hover = null;
+
+        // Clear focus info
+        tree.focusDirection = FocusDirection();
 
 
         // Resize if required
@@ -296,14 +302,34 @@ abstract class GluiNode : Styleable {
         if (tree.focus && !tree.focus.isDisabled) tree.keyboardHandled = tree.focus.keyboardImpl();
         else tree.keyboardHandled = false;
 
+        // Keyboard wasn't handled, but pressing tab
+        if (!tree.keyboardHandled && IsKeyPressed(KeyboardKey.KEY_TAB)) {
+
+            auto direction = tree.focusDirection;
+
+            // Try switching focus
+            tree.focus = IsKeyDown(KeyboardKey.KEY_LEFT_SHIFT)
+
+                // Requesting previous item
+                ? either(direction.previous, direction.last)
+
+                // Requesting next
+                : either(direction.next, direction.first);
+
+
+
+        }
+
     }
 
-    /// Draw this node at specified location.
+    /// Draw this node at the specified location from within of another (parent) node.
+    ///
+    /// The drawn node will be aligned according to the `layout` field within the box given.
+    ///
+    /// Params:
+    ///     space = Space the node should be drawn in. It should be limited to space within the parent node.
+    ///             If the node can't fit, it will be cropped.
     final protected void draw(Rectangle space) @trusted {
-
-        // Given "space" is the amount of space we're given and what we should use at max.
-        // Within this function, we deduce how much of the space we should actually use, and align the node
-        // within the space.
 
         import std.algorithm : all, min, max, either;
 
@@ -386,6 +412,9 @@ abstract class GluiNode : Styleable {
 
         // Draw the node
         else drawImpl(paddingBox, contentBox);
+
+        // Update focus info
+        tree.focusDirection.update(this);
 
     }
 

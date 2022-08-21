@@ -6,12 +6,39 @@ import raylib;
 import std.meta;
 
 import glui.node;
-import glui.structs;
 import glui.style;
+
 
 @safe:
 
-// TODO This could probably be just a plain interface, replacing GluiFocusable
+
+/// An interface to be implemented by all nodes that can take focus.
+///
+/// Use this interface exclusively for typing, do not subclass it — instead implement GluiInput.
+interface GluiFocusable {
+
+    void mouseImpl();
+    bool keyboardImpl();
+    ref inout(bool) isDisabled() inout;
+    void focus();
+    bool isFocused() const;
+
+    /// Check if the given node implements GluiFocusable and isn't disabled, and return it. If it's not, returns `null`.
+    static inout(GluiFocusable) check(inout GluiNode node) {
+
+        // Check if it's focusable
+        if (auto focus = cast(inout GluiFocusable) node) {
+
+            // Return it, but not if it's disabled
+            return focus.isDisabled ? null : focus;
+
+        }
+
+        else return null;
+
+    }
+
+}
 
 /// Represents a general input node.
 ///
@@ -81,7 +108,6 @@ abstract class GluiInput(Parent : GluiNode) : Parent, GluiFocusable {
 
     }
 
-    // TODO naming consistence??
     @property {
 
         /// Check if the node has focus.
