@@ -29,7 +29,10 @@ template segments(T...) {
 
     Segments segments(Args...)(Args args) {
 
-        return Segments(.layout!T(args));
+        static if (T.length == 0)
+            return Segments(.layout(args));
+        else
+            return Segments(.layout!T(args));
 
     }
 
@@ -44,7 +47,11 @@ class GluiGrid : GluiFrame {
 
     private {
 
+        /// Sizes for each segment.
         int[] segmentSizes;
+
+        /// Last grid width given.
+        float lastWidth;
 
     }
 
@@ -162,19 +169,33 @@ class GluiGrid : GluiFrame {
         // Resize the children
         super.resizeImpl(space);
 
+        // Reset width
+        lastWidth = 0;
+
     }
 
     override void drawImpl(Rectangle outer, Rectangle inner) {
 
-        // Note: We're assuming all rows have the same margin. This might not hold true with the introduction of tags.
-        const rowMargin = children.length
-            ? children[0].style.totalMargin
-            : (uint[4]).init;
+        void expand(GluiNode child) {
 
-        // Expand the segments to match the box size
-        redistributeSpace(segmentSizes, inner.width - rowMargin.sideLeft - rowMargin.sideRight);
+            // Given more grid space than we allocated
+            if (lastWidth >= inner.width + 1) return;
 
-        // TODO only do the above one once?
+            // Only proceed if the given node is a row
+            if (!cast(GluiGridRow) child) return;
+
+            // Update the width
+            lastWidth = inner.width;
+
+            // Get margin for the row
+            const rowMargin = child.style.totalMargin;
+            // Note: We're assuming all rows have the same margin. This might not hold true with the introduction of
+            // tags.
+
+            // Expand the segments to match box size
+            redistributeSpace(segmentSizes, inner.width - rowMargin.sideLeft - rowMargin.sideRight);
+
+        }
 
         // Draw the background
         pickStyle.drawBackground(outer);
@@ -190,6 +211,9 @@ class GluiGrid : GluiFrame {
                 inner.x, position,
                 inner.width, child.minSize.y
             );
+
+            // Try to expand grid segments
+            expand(child);
 
             // Draw the child
             child.draw(rect);
@@ -238,8 +262,7 @@ class GluiGridRow : GluiFrame {
         ///     params = Standard Glui constructor parameters.
         ///     parent = Grid this row will be placed in.
         ///     args = Children to be placed in the row.
-        this(T...)(BasicNodeParam!i params, GluiGrid parent, T args)
-        if (is(T[0] : GluiNode) || is(T[0] : U[], U)) {
+        this(T...)(BasicNodeParam!i params, GluiGrid parent, T args) {
 
             super(params);
             this.layout.nodeAlign = NodeAlign.fill;
@@ -357,7 +380,7 @@ class GluiGridRow : GluiFrame {
 ///         already greater) to this number.
 /// Returns:
 ///     Newly acquired amount of space, the resulting sum of range size.
-private ElementType!Range redistributeSpace(Range, Numeric)(ref Range range, Numeric space) {
+private ElementType!Range redistributeSpace(Range, Numeric)(ref Range range, Numeric space, string caller = __FUNCTION__) {
 
     import std.math;
 

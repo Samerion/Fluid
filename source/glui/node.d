@@ -308,6 +308,8 @@ abstract class GluiNode : Styleable {
         import std.algorithm : all, min, max, either;
 
         assert(!toRemove, "A toRemove child wasn't removed from container.");
+        assert(tree !is null, toString ~ " wasn't resized prior to drawing. You might be missing an `updateSize`"
+            ~ " call!");
 
         // If hidden, don't draw anything
         if (isHidden) return;
