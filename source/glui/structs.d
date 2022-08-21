@@ -175,7 +175,7 @@ struct FocusDirection {
 
         import std.algorithm : either;
 
-        auto currentFocusable = GluiFocusable.check(current);
+        auto currentFocusable = cast(GluiFocusable) current;
 
         // If the current node may take focus
         if (currentFocusable) {

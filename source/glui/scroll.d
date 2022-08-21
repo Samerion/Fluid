@@ -13,7 +13,8 @@ import glui.utils;
 import glui.input;
 import glui.style;
 import glui.structs;
-import glui.scrollbar;
+
+public import glui.scrollbar;
 
 private extern(C) float GetMouseWheelMove();
 
@@ -36,7 +37,7 @@ alias hscrollFrame = simpleConstructor!(GluiScrollFrame, (a) {
 
 /// Implement scrolling for the given node.
 ///
-/// This only supports scrolling in one side.
+/// This only supports scrolling in one axis.
 class GluiScrollable(T : GluiNode, string horizontalExpression) : T {
 
     mixin DefineStyles;

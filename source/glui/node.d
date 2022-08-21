@@ -162,7 +162,6 @@ abstract class GluiNode : Styleable {
     This show(this This = GluiNode)() return {
 
         // Note: The default value for This is necessary, otherwise virtual calls don't work
-
         isHidden = false;
         return cast(This) this;
 
@@ -172,6 +171,22 @@ abstract class GluiNode : Styleable {
     This hide(this This = GluiNode)() return {
 
         isHidden = true;
+        return cast(This) this;
+
+    }
+
+    /// Disable this node.
+    This disable(this This = GluiNode)() return {
+
+        isDisabled = true;
+        return cast(This) this;
+
+    }
+
+    /// Enable this node.
+    This enable(this This = GluiNode)() return {
+
+        isDisabled = false;
         return cast(This) this;
 
     }
@@ -299,7 +314,11 @@ abstract class GluiNode : Styleable {
 
 
         // Pass keyboard input to the currently focused node
-        if (tree.focus && !tree.focus.isDisabled) tree.keyboardHandled = tree.focus.keyboardImpl();
+        if (tree.focus && !tree.focus.asNode.isDisabledInherited) {
+
+            tree.keyboardHandled = tree.focus.keyboardImpl();
+
+        }
         else tree.keyboardHandled = false;
 
         // Keyboard wasn't handled, but pressing tab
@@ -315,8 +334,6 @@ abstract class GluiNode : Styleable {
 
                 // Requesting next
                 : either(direction.next, direction.first);
-
-
 
         }
 
@@ -413,8 +430,9 @@ abstract class GluiNode : Styleable {
         // Draw the node
         else drawImpl(paddingBox, contentBox);
 
-        // Update focus info
-        tree.focusDirection.update(this);
+
+        // Update focus info, if not disabled
+        if (!incrementDisabled) tree.focusDirection.update(this);
 
     }
 

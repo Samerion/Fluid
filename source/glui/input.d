@@ -23,18 +23,9 @@ interface GluiFocusable {
     void focus();
     bool isFocused() const;
 
-    /// Check if the given node implements GluiFocusable and isn't disabled, and return it. If it's not, returns `null`.
-    static inout(GluiFocusable) check(inout GluiNode node) {
+    final inout(GluiNode) asNode() inout {
 
-        // Check if it's focusable
-        if (auto focus = cast(inout GluiFocusable) node) {
-
-            // Return it, but not if it's disabled
-            return focus.isDisabled ? null : focus;
-
-        }
-
-        else return null;
+        return cast(inout GluiNode) this;
 
     }
 
