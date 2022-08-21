@@ -3,13 +3,16 @@ module glui.structs;
 
 import raylib;
 import std.conv;
-import glui.node;
 
-// Disable scissors mode on macOS in Raylib 3, it's broken; see #60
-version (Glui_Raylib3) version (OSX) version = Glui_DisableScissors;
+import glui.node;
+import glui.input;
+
 
 @safe:
 
+
+// Disable scissors mode on macOS in Raylib 3, it's broken; see #60
+version (Glui_Raylib3) version (OSX) version = Glui_DisableScissors;
 
 /// Create a new layout
 /// Params:
@@ -153,13 +156,59 @@ enum NodeAlign {
 
 }
 
-package interface GluiFocusable {
+///
+struct FocusDirection {
 
-    void focus();
-    bool isFocused() const;
-    void mouseImpl();
-    bool keyboardImpl();
-    ref inout(bool) isDisabled() inout;
+    /// Nodes that may get focus with tab navigation.
+    GluiFocusable previous, next;
+
+    /// First and last focusable nodes in the tree.
+    GluiFocusable first, last;
+
+    /// Update focus info with the given nodes. Automatically called when a node is drawn.
+    ///
+    /// `previous` will be the last focusable node encountered before the focused node, and `next` will be the first one
+    /// after. `first` and `last will be the last focusable nodes in the entire tree.
+    void update(GluiNode current)
+    in (current !is null, "Current node must not be null")
+    do {
+
+        import std.algorithm : either;
+
+        auto currentFocusable = GluiFocusable.check(current);
+
+        // If the current node may take focus
+        if (currentFocusable) {
+
+            // And it DOES have focus
+            if (currentFocusable.isFocused) {
+
+                // Mark the node preceding it to the last encountered focusable node
+                previous = last;
+
+                // Clear the next node, so it can be overwritten by a correct value.
+                next = null;
+
+            }
+
+            // There's no node to take focus next
+            else if (next is null) {
+
+                // Set it now
+                next = currentFocusable;
+
+            }
+
+
+            // Set the current node as the first focusable, if true
+            if (first is null) first = currentFocusable;
+
+            // Replace the last
+            last = currentFocusable;
+
+        }
+
+    }
 
 }
 
@@ -174,6 +223,9 @@ struct LayoutTree {
 
     /// Currently focused node.
     GluiFocusable focus;
+
+    /// Focus direction data.
+    FocusDirection focusDirection;
 
     /// Check if keyboard input was handled after rendering is has completed.
     bool keyboardHandled;
