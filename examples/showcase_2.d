@@ -392,13 +392,15 @@ GluiSpace sizeLimitExample() {
 GluiSpace gridExample() {
 
     GluiSpace root;
+    GluiGrid myGrid;
 
+    // Create the grid
     root = vspace(
         .layout!"fill",
 
         label(.layout!"center", "Grids"),
 
-        grid(
+        myGrid = grid(
             .layout!"fill",
             .segments!4,
 
@@ -407,16 +409,41 @@ GluiSpace gridExample() {
                 label("This"),
                 label("Is"),
                 label("A"),
-                label("Grid"),
+                button("Grid", () => addRow(myGrid)),
             ],
             [
                 label(.segments!2, "Multiple columns"),
                 label(.segments!2, "For a single cell"),
-            ],
+            ]
         ),
 
     );
 
     return root;
+
+}
+
+/// Advanced: Create a new row with randomly sized buttons
+void addRow(GluiGrid myGrid) @safe {
+
+    import std.random;
+
+    auto row = gridRow(myGrid);
+
+    int usedSpace;
+    while (usedSpace < 4) {
+
+        int size = uniform!"[]"(1, 4 - usedSpace);
+        usedSpace += size;
+        row ~= button(
+            .layout(size, NodeAlign.fill),
+            "click me!",
+            () => addRow(myGrid)
+        );
+
+    }
+
+    myGrid ~= row;
+    myGrid.updateSize();
 
 }
