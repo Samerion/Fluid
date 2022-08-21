@@ -181,15 +181,8 @@ class GluiTextInput : GluiInput!GluiNode {
 
     }
 
-    // Do nothing, we take mouse focus while drawing.
+    // There's nothing that can be done with a mouse.
     protected override void mouseImpl() @trusted {
-
-        // Update status
-        if (IsMouseButtonDown(MouseButton.MOUSE_LEFT_BUTTON)) {
-
-            isFocused = true;
-
-        }
 
     }
 

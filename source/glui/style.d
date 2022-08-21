@@ -524,9 +524,6 @@ class Style {
     /// Get a side array holding both the regular margin and the border.
     uint[4] fullMargin() const {
 
-        // No border
-        if (borderStyle is null) return margin;
-
         return [
             margin.sideLeft + border.sideLeft,
             margin.sideRight + border.sideRight,

@@ -294,18 +294,19 @@ abstract class GluiNode : Styleable {
         // Note: pressed, not released; released activates input events, pressed activates focus
         const mousePressed = IsMouseButtonPressed(MouseButton.MOUSE_LEFT_BUTTON);
 
-        // TODO: remove hover from disabled nodes (specifically to handle edgecase — node disabled while hovered and LMB
-        // down)
-        // TODO: move focus away from disabled nodes into neighbors along with #8
-
         // Mouse is hovering an input node
         if (auto hoverInput = cast(GluiFocusable) tree.hover) {
 
-            // Pass the input to it
-            hoverInput.mouseImpl();
+            // Ignore if the node is disabled
+            if (!tree.hover.isDisabledInherited) {
 
-            // If the left mouse button is pressed down, let it have focus
-            if (mousePressed && !hoverInput.isFocused) hoverInput.focus();
+                // Pass the input to it
+                hoverInput.mouseImpl();
+
+                // If the left mouse button is pressed down, let it have focus
+                if (mousePressed && !hoverInput.isFocused) hoverInput.focus();
+
+            }
 
         }
 
@@ -320,6 +321,7 @@ abstract class GluiNode : Styleable {
 
         }
         else tree.keyboardHandled = false;
+
 
         // Keyboard wasn't handled, but pressing tab
         if (!tree.keyboardHandled && IsKeyPressed(KeyboardKey.KEY_TAB)) {
@@ -359,7 +361,7 @@ abstract class GluiNode : Styleable {
 
         const spaceV = Vector2(space.width, space.height);
 
-        // No style set? Reload styles, the theme might've been set through CTFE
+        // No style set? It likely hasn't been loaded
         if (!style) reloadStyles();
 
         // Get parameters
@@ -431,8 +433,21 @@ abstract class GluiNode : Styleable {
         else drawImpl(paddingBox, contentBox);
 
 
-        // Update focus info, if not disabled
-        if (!incrementDisabled) tree.focusDirection.update(this);
+        // If not disabled
+        if (!incrementDisabled) {
+
+            // Update focus info
+            tree.focusDirection.update(this);
+
+            // If this node is focused
+            if (this is cast(GluiNode) tree.focus) {
+
+                // Set the focus box
+                tree.focusBox = borderBox;
+
+            }
+
+        }
 
     }
 
