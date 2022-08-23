@@ -2,7 +2,9 @@
 module glui.structs;
 
 import raylib;
+
 import std.conv;
+import std.math;
 
 import glui.node;
 import glui.input;
@@ -160,10 +162,18 @@ enum NodeAlign {
 ///
 struct FocusDirection {
 
-    struct WithDistance {
+    struct WithPriority {
 
-        int steps;
+        /// Pick priority based on tree distance from the focused node.
+        int priority;
+
+        /// Square of the distance between this node and the focused node.
+        float distance2;
+
+        /// The node.
         GluiFocusable node;
+
+        alias node this;
 
     }
 
@@ -176,19 +186,19 @@ struct FocusDirection {
     /// First and last focusable nodes in the tree.
     GluiFocusable first, last;
 
-    /// Focusable nodes, by direction from the focused node. Nodes are chosen by tree distance.
-    WithDistance[4] positional;
+    /// Focusable nodes, by direction from the focused node.
+    WithPriority[4] positional;
 
-    /// Iteration steps made towards the focused node.
+    /// Focus priority for the node.
     ///
     /// Increased until the focused node is found, decremented afterwards. As a result, values will be the highest for
     /// nodes near the focused one.
-    int steps;
+    int priority;
 
     private {
 
-        /// Value `steps` is summed with on each step. `1` before finding the focused node, `-1` after.
-        int stepsDirection = 1;
+        /// Value `prioerity` is summed with on each step. `1` before finding the focused node, `-1` after.
+        int priorityDirection = 1;
 
         /// Current tree depth.
         uint depth;
@@ -208,22 +218,18 @@ struct FocusDirection {
     in (current !is null, "Current node must not be null")
     do {
 
-        import std.math : abs;
         import std.algorithm : either;
 
         auto currentFocusable = cast(GluiFocusable) current;
 
-        // Count steps
+        // Count focus priority
         {
 
             // Get depth difference since last time
             const int depthDiff = depth - this.depth;
 
-            // Count number of steps made
-            const stepsMade = 0 + abs(depthDiff);
-
             // Count leaf steps
-            steps += stepsDirection * stepsMade;
+            priority += priorityDirection * abs(depthDiff);
 
             // Update depth
             this.depth = depth;
@@ -233,11 +239,11 @@ struct FocusDirection {
         // Stop if the current node can't take focus
         if (!currentFocusable) return;
 
-        debug (Glui_FocusOrderPriority)
+        debug (Glui_FocusPriority)
         () @trusted {
 
             import std.string;
-            DrawText(format!"%s"(steps).toStringz, cast(int)box.x, cast(int)box.y, 5, Colors.BLACK);
+            DrawText(format!"%s:d%s"(priority, depth).toStringz, cast(int)box.x, cast(int)box.y, 5, Colors.BLACK);
 
         }();
 
@@ -250,8 +256,8 @@ struct FocusDirection {
             // Clear the next node, so it can be overwritten by a correct value.
             next = null;
 
-            // Reverse step direction
-            stepsDirection = -1;
+            // Reverse priority target
+            priorityDirection = -1;
 
         }
 
@@ -277,20 +283,31 @@ struct FocusDirection {
     /// Check the given node's position and update `positional` to match.
     private void updatePositional(GluiFocusable node, Rectangle box) {
 
+        // Note: This might give false-positives if the focused node has changed during this frame
+
         // Check each direction
         foreach (i, ref otherNode; positional) {
 
             const side = cast(Style.Side) i;
+            const dist = distance2(box, side);
 
-            // Ignore the direction if another node was found closer to the focused node
-            // Note: This might give false-positives if the focused node has changed during this frame
-            if (otherNode.node !is null && otherNode.steps >= steps) continue;
+            // If a node took this spot before
+            if (otherNode !is null) {
 
-            // Check this direction
+                // Ignore if the other node has higher priority
+                if (otherNode.priority > priority) continue;
+
+                // If priorities are equal, check if we're closer than the other node
+                if (otherNode.priority == priority
+                    && otherNode.distance2 < dist) continue;
+
+            }
+
+            // Check if this node matches the direction
             if (checkDirection(box, side)) {
 
                 // Replace the node
-                otherNode = WithDistance(steps, node);
+                otherNode = WithPriority(priority, dist, node);
 
             }
 
@@ -300,8 +317,6 @@ struct FocusDirection {
 
     /// Check if the given box is located to the given side of the focus box.
     bool checkDirection(Rectangle box, Style.Side side) {
-
-        import std.math;
 
         // Distance between box sides facing each other.
         //
@@ -336,7 +351,7 @@ struct FocusDirection {
         // ↓ lastFocusBox  ↓ box                             ↓ box           ↓ lastFocusBox
         // +======+        +------+                          +------+        +======+
         // |      | ~~~~~~ :      | external                 | ~~~~~~~~~~~~~~~~~~~~ | external
-        // |      |        :      |                          |      :        :      |
+        // |      |        :      |    <                     |      :        :      |    >
         // |      | ~~~~~~~~~~~~~ | internal                 |      : ~~~~~~~~~~~~~ | internal
         // +======+        +------+                          +------+        +======+
         //   side ↑        ↑ side.reverse                      side ↑          side ↑
@@ -350,9 +365,30 @@ struct FocusDirection {
         // +---|            |---+   the same sign, as it normally would, but not here.
         //     |            |
         //     +============+       One can still navigate to the `box` using controls for the other axis.
-        const sameSign = distanceInternal * distanceExternal >= 0;
+        return condition
+            && distanceInternal * distanceExternal >= 0;
 
-        return sameSign && condition;
+    }
+
+    /// Get the square of the distance between given box and `lastFocusBox`.
+    float distance2(Rectangle box, Style.Side side) {
+
+        /// Get the center of given rectangle on the axis opposite to the results of getSide.
+        float center(Rectangle rect) {
+
+            return side == Style.Side.left || side == Style.Side.right
+                ? rect.y + rect.height
+                : rect.x + rect.width;
+
+        }
+
+        // Distance between box sides facing each other, see `checkDirection`
+        const distanceExternal = lastFocusBox.getSide(side) - box.getSide(side.reverse);
+
+        /// Distance between centers of the boxes on the other axis
+        const distanceOpposite = center(box) - center(lastFocusBox);
+
+        return distanceExternal^^2 + distanceOpposite^^2;
 
     }
 

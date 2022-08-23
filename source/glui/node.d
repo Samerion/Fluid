@@ -344,10 +344,10 @@ abstract class GluiNode : Styleable {
             }
 
             // Check each direction we might
-            else with (Style.Side) foreach (i, pair; tree.focusDirection.positional) {
+            else with (Style.Side) foreach (i, node; tree.focusDirection.positional) {
 
                 // Ignore if there's no node in this direction
-                if (pair.node is null) continue;
+                if (node is null) continue;
 
                 const pressed = i.predSwitch(
                     left,   KeyboardKey.KEY_LEFT,
@@ -360,7 +360,7 @@ abstract class GluiNode : Styleable {
                 if (pressed) {
 
                     // Switch focus
-                    tree.focus = pair.node;
+                    tree.focus = node;
                     break;
 
                 }
