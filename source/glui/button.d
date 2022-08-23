@@ -111,4 +111,12 @@ class GluiButton(T : GluiNode = GluiLabel) : GluiInput!T {
 
     }
 
+    static if (__traits(compiles, text))
+    override string toString() const {
+
+        import std.format;
+        return format!"button(%s)"(text);
+
+    }
+
 }

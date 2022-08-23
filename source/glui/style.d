@@ -15,10 +15,13 @@ import glui.utils;
 public import glui.border;
 public import glui.style_macros;
 
+
 @safe:
 
-/// Node theme.
+
 alias StyleKeyPtr = immutable(StyleKey)*;
+
+/// Node theme.
 alias Theme = Style[StyleKeyPtr];
 
 /// Side array is a static array defining a property separately for each side of a box, for example margin and border
@@ -26,16 +29,16 @@ alias Theme = Style[StyleKeyPtr];
 ///
 /// Because of the default behavior of static arrays, one can set the value for all sides to be equal with a simple
 /// assignment: `array = 8`. Additionally, to make it easier to manipulate the box, one may use the `sideX` and `sideY`
-/// functions to get a `uint[2]` array of the values corresponding to the given array (which can also be assigned like
+/// functions to get a `uint[2]` array of the values corresponding to the given axis (which can also be assigned like
 /// `array.sideX = 8`) or the `sideLeft`, `sideRight`, `sideTop` and `sideBottom` functions corresponding to the given
-/// box.
+/// sides.
 enum isSideArray(T) = is(T == X[4], X);
 
 ///
 unittest {
 
     uint[4] sides;
-    static assert(isSideArray!(typeof(sides)));
+    static assert(isSideArray!uint);
 
     sides.sideX = 4;
 
@@ -709,7 +712,7 @@ T[4] normalizeSideArray(T)(T value) {
 /// Shift the side clockwise (if positive) or counter-clockwise (if negative).
 Style.Side shiftSide(Style.Side side, int shift) {
 
-    // Conver the side to an "angle" — 0 is the top, 1 is right and so on...
+    // Convert the side to an "angle" — 0 is the top, 1 is right and so on...
     const angle = side.predSwitch(
         Style.Side.top, 0,
         Style.Side.right, 1,
@@ -738,5 +741,32 @@ unittest {
     assert(shiftSide(Style.Side.left, 4) == Style.Side.left);
 
     assert(shiftSide(Style.Side.top, 1) == Style.Side.right);
+
+}
+
+/// Make a style point the other way around
+Style.Side reverse(Style.Side side) {
+
+    with (Style.Side)
+    return side.predSwitch(
+        left, right,
+        right, left,
+        top, bottom,
+        bottom, top,
+    );
+
+}
+
+/// Get position of a rectangle's side, on the X axis if `left` or `right`, or on the Y axis if `top` or `bottom`.
+float getSide(Rectangle rectangle, Style.Side side) {
+
+    with (Style.Side)
+    return side.predSwitch(
+        left,   rectangle.x,
+        right,  rectangle.x + rectangle.width,
+        top,    rectangle.y,
+        bottom, rectangle.y + rectangle.height,
+
+    );
 
 }
