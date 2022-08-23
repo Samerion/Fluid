@@ -6,6 +6,7 @@ import std.conv;
 
 import glui.node;
 import glui.input;
+import glui.style;
 
 
 @safe:
@@ -159,54 +160,199 @@ enum NodeAlign {
 ///
 struct FocusDirection {
 
+    struct WithDistance {
+
+        int steps;
+        GluiFocusable node;
+
+    }
+
+    /// Available space box of the focused item after last frame.
+    Rectangle lastFocusBox;
+
     /// Nodes that may get focus with tab navigation.
     GluiFocusable previous, next;
 
     /// First and last focusable nodes in the tree.
     GluiFocusable first, last;
 
-    /// Update focus info with the given nodes. Automatically called when a node is drawn.
+    /// Focusable nodes, by direction from the focused node. Nodes are chosen by tree distance.
+    WithDistance[4] positional;
+
+    /// Iteration steps made towards the focused node.
+    ///
+    /// Increased until the focused node is found, decremented afterwards. As a result, values will be the highest for
+    /// nodes near the focused one.
+    int steps;
+
+    private {
+
+        /// Value `steps` is summed with on each step. `1` before finding the focused node, `-1` after.
+        int stepsDirection = 1;
+
+        /// Current tree depth.
+        uint depth;
+
+    }
+
+    /// Update focus info with the given node. Automatically called when a node is drawn, shouldn't be called manually.
     ///
     /// `previous` will be the last focusable node encountered before the focused node, and `next` will be the first one
     /// after. `first` and `last will be the last focusable nodes in the entire tree.
-    void update(GluiNode current)
+    ///
+    /// Params:
+    ///     current = Node to update the focus info with.
+    ///     box     = Available space box of the node. This is the argument passed to the child in `draw(Rectangle)`
+    ///     depth   = Current tree depth. Pass in `tree.depth`.
+    void update(GluiNode current, Rectangle box, uint depth)
     in (current !is null, "Current node must not be null")
     do {
 
+        import std.math : abs;
         import std.algorithm : either;
 
         auto currentFocusable = cast(GluiFocusable) current;
 
-        // If the current node may take focus
-        if (currentFocusable) {
+        // Count steps
+        {
 
-            // And it DOES have focus
-            if (currentFocusable.isFocused) {
+            // Get depth difference since last time
+            const int depthDiff = depth - this.depth;
 
-                // Mark the node preceding it to the last encountered focusable node
-                previous = last;
+            // Count number of steps made
+            const stepsMade = 0 + abs(depthDiff);
 
-                // Clear the next node, so it can be overwritten by a correct value.
-                next = null;
+            // Count leaf steps
+            steps += stepsDirection * stepsMade;
 
-            }
-
-            // There's no node to take focus next
-            else if (next is null) {
-
-                // Set it now
-                next = currentFocusable;
-
-            }
-
-
-            // Set the current node as the first focusable, if true
-            if (first is null) first = currentFocusable;
-
-            // Replace the last
-            last = currentFocusable;
+            // Update depth
+            this.depth = depth;
 
         }
+
+        // Stop if the current node can't take focus
+        if (!currentFocusable) return;
+
+        debug (Glui_FocusOrderPriority)
+        () @trusted {
+
+            import std.string;
+            DrawText(format!"%s"(steps).toStringz, cast(int)box.x, cast(int)box.y, 5, Colors.BLACK);
+
+        }();
+
+        // And it DOES have focus
+        if (currentFocusable.isFocused) {
+
+            // Mark the node preceding it to the last encountered focusable node
+            previous = last;
+
+            // Clear the next node, so it can be overwritten by a correct value.
+            next = null;
+
+            // Reverse step direction
+            stepsDirection = -1;
+
+        }
+
+        else {
+
+            // Update positional focus
+            updatePositional(currentFocusable, box);
+
+            // There's no node to take focus next, set it now
+            if (next is null) next = currentFocusable;
+
+        }
+
+
+        // Set the current node as the first focusable, if true
+        if (first is null) first = currentFocusable;
+
+        // Replace the last
+        last = currentFocusable;
+
+    }
+
+    /// Check the given node's position and update `positional` to match.
+    private void updatePositional(GluiFocusable node, Rectangle box) {
+
+        // Check each direction
+        foreach (i, ref otherNode; positional) {
+
+            const side = cast(Style.Side) i;
+
+            // Ignore the direction if another node was found closer to the focused node
+            // Note: This might give false-positives if the focused node has changed during this frame
+            if (otherNode.node !is null && otherNode.steps >= steps) continue;
+
+            // Check this direction
+            if (checkDirection(box, side)) {
+
+                // Replace the node
+                otherNode = WithDistance(steps, node);
+
+            }
+
+        }
+
+    }
+
+    /// Check if the given box is located to the given side of the focus box.
+    bool checkDirection(Rectangle box, Style.Side side) {
+
+        import std.math;
+
+        // Distance between box sides facing each other.
+        //
+        // ↓ lastFocusBox  ↓ box
+        // +======+        +------+
+        // |      |        |      |
+        // |      | ~~~~~~ |      |
+        // |      |        |      |
+        // +======+        +------+
+        //   side ↑        ↑ side.reverse
+        const distanceExternal = lastFocusBox.getSide(side) - box.getSide(side.reverse);
+
+        // Distance between corresponding box sides.
+        //
+        // ↓ lastFocusBox  ↓ box
+        // +======+        +------+
+        // |      |        :      |
+        // |      | ~~~~~~~~~~~~~ |
+        // |      |        :      |
+        // +======+        +------+
+        //   side ↑          side ↑
+        const distanceInternal = lastFocusBox.getSide(side) - box.getSide(side);
+
+        // The condition for the return value to be true, is for distanceInternal to be greater than distanceExternal.
+        // This is not the case in the opposite situation.
+        //
+        // For example, if we're checking if the box is on the *right* of lastFocusBox:
+        //
+        // trueish scenario:                                 falseish scenario:
+        // Box is to the right of lastFocusBox               Box is the left of lastFocusBox
+        //
+        // ↓ lastFocusBox  ↓ box                             ↓ box           ↓ lastFocusBox
+        // +======+        +------+                          +------+        +======+
+        // |      | ~~~~~~ :      | external                 | ~~~~~~~~~~~~~~~~~~~~ | external
+        // |      |        :      |                          |      :        :      |
+        // |      | ~~~~~~~~~~~~~ | internal                 |      : ~~~~~~~~~~~~~ | internal
+        // +======+        +------+                          +------+        +======+
+        //   side ↑        ↑ side.reverse                      side ↑          side ↑
+        const condition = abs(distanceInternal) > abs(distanceExternal);
+
+        // ↓ box                    There is an edgecase though. If one box entirely overlaps the other on one axis, we
+        // +--------------------+   might end up with unwanted behavior, for example, in a GluiScrollFrame, focus might
+        // |   ↓ lastFocusBox   |   switch to the scrollbar instead of a child, as we would normally expect.
+        // |   +============+   |
+        // |   |            |   |   For this reason, we require both `distanceInternal` and `distanceExternal` to have
+        // +---|            |---+   the same sign, as it normally would, but not here.
+        //     |            |
+        //     +============+       One can still navigate to the `box` using controls for the other axis.
+        const sameSign = distanceInternal * distanceExternal >= 0;
+
+        return sameSign && condition;
 
     }
 
@@ -227,15 +373,26 @@ struct LayoutTree {
     /// Focus direction data.
     FocusDirection focusDirection;
 
-    /// Padding box of the currently focused node.
+    /// Padding box of the currently focused node. Only available after the node has been drawn.
+    ///
+    /// See_also: `focusDirection.lastFocusBox`.
     Rectangle focusBox;
 
     /// Check if keyboard input was handled after rendering is has completed.
     bool keyboardHandled;
 
+    /// Current node drawing depth.
+    uint depth;
+
+    package uint _disabledDepth;
+
     /// Current depth of "disabled" nodes, incremented for any node descended into, while any of the ancestors is
     /// disabled.
-    uint disabledDepth;
+    deprecated("To be removed in 0.7.0. Use boolean `isBranchDisabled` instead. For iteration depth, check out `depth`")
+    @property
+    ref inout(uint) disabledDepth() inout { return _disabledDepth; }
+
+    bool isBranchDisabled;
 
     /// Scissors stack.
     package Rectangle[] scissors;

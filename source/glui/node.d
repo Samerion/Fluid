@@ -204,9 +204,9 @@ abstract class GluiNode : Styleable {
 
     /// Check if this node is hovered.
     ///
-    /// Returns false if the node or some of its ancestors are disabled.
+    /// Returns false if the node or, while the node is being drawn, some of its ancestors are disabled.
     @property
-    bool isHovered() const { return _isHovered && !_isDisabled && !tree.disabledDepth; }
+    bool isHovered() const { return _isHovered && !_isDisabled && !tree.isBranchDisabled; }
 
     deprecated("hovered has been renamed to isHovered and will be removed in 0.6.0.")
     bool hovered() const { return isHovered; }
@@ -220,7 +220,7 @@ abstract class GluiNode : Styleable {
 
     /// Checks if the node is disabled, either by self, or by any of its ancestors. Only works while the node is being
     /// drawn.
-    protected bool isDisabledInherited() const { return tree.disabledDepth != 0; }
+    protected bool isDisabledInherited() const { return tree.isBranchDisabled; }
 
     /// Recalculate the window size before next draw.
     final void updateSize() scope {
@@ -233,7 +233,7 @@ abstract class GluiNode : Styleable {
     /// Draw this node as a root node.
     final void draw() @trusted {
 
-        import std.algorithm : either;
+        import std.algorithm : either, predSwitch;
 
         // No tree set
         if (tree is null) {
@@ -264,7 +264,8 @@ abstract class GluiNode : Styleable {
         if (!isLMBHeld) tree.hover = null;
 
         // Clear focus info
-        tree.focusDirection = FocusDirection();
+        tree.focusDirection = FocusDirection(tree.focusBox);
+        tree.focusBox = Rectangle(float.nan);
 
 
         // Resize if required
@@ -323,19 +324,48 @@ abstract class GluiNode : Styleable {
         else tree.keyboardHandled = false;
 
 
-        // Keyboard wasn't handled, but pressing tab
-        if (!tree.keyboardHandled && IsKeyPressed(KeyboardKey.KEY_TAB)) {
+        // Keyboard wasn't handled
+        if (!tree.keyboardHandled) {
 
-            auto direction = tree.focusDirection;
+            // Pressing tab
+            if (IsKeyPressed(KeyboardKey.KEY_TAB)) {
 
-            // Try switching focus
-            tree.focus = IsKeyDown(KeyboardKey.KEY_LEFT_SHIFT)
+                auto direction = tree.focusDirection;
 
-                // Requesting previous item
-                ? either(direction.previous, direction.last)
+                // Try switching focus
+                tree.focus = IsKeyDown(KeyboardKey.KEY_LEFT_SHIFT)
 
-                // Requesting next
-                : either(direction.next, direction.first);
+                    // Requesting previous item
+                    ? either(direction.previous, direction.last)
+
+                    // Requesting next
+                    : either(direction.next, direction.first);
+
+            }
+
+            // Check each direction we might
+            else with (Style.Side) foreach (i, pair; tree.focusDirection.positional) {
+
+                // Ignore if there's no node in this direction
+                if (pair.node is null) continue;
+
+                const pressed = i.predSwitch(
+                    left,   KeyboardKey.KEY_LEFT,
+                    right,  KeyboardKey.KEY_RIGHT,
+                    top,    KeyboardKey.KEY_UP,
+                    bottom, KeyboardKey.KEY_DOWN,
+                ).IsKeyPressed;
+
+                // If this key is pressed
+                if (pressed) {
+
+                    // Switch focus
+                    tree.focus = pair.node;
+                    break;
+
+                }
+
+            }
 
         }
 
@@ -411,12 +441,23 @@ abstract class GluiNode : Styleable {
             )
         );
 
-        // Descending into a disabled tree
-        const incrementDisabled = isDisabled || tree.disabledDepth;
+        /// Descending into a disabled tree
+        const branchDisabled = isDisabled || tree.isBranchDisabled;
+
+        /// True if this node is disabled, and none of its ancestors are disabled
+        const disabledRoot = isDisabled && !tree.isBranchDisabled;
+
+        // Toggle disabled branch if we're owning the root
+        if (disabledRoot) tree.isBranchDisabled = true;
+        scope (exit) if (disabledRoot) tree.isBranchDisabled = false;
 
         // Count if disabled or not
-        if (incrementDisabled) tree.disabledDepth++;
-        scope (exit) if (incrementDisabled) tree.disabledDepth--;
+        if (branchDisabled) tree._disabledDepth++;
+        scope (exit) if (branchDisabled) tree._disabledDepth--;
+
+        // Count depth
+        tree.depth++;
+        scope (exit) tree.depth--;
 
         // Draw the node cropped
         // Note: minSize includes margin!
@@ -434,16 +475,16 @@ abstract class GluiNode : Styleable {
 
 
         // If not disabled
-        if (!incrementDisabled) {
+        if (!branchDisabled) {
 
             // Update focus info
-            tree.focusDirection.update(this);
+            tree.focusDirection.update(this, space, tree.depth);
 
             // If this node is focused
             if (this is cast(GluiNode) tree.focus) {
 
                 // Set the focus box
-                tree.focusBox = borderBox;
+                tree.focusBox = space;
 
             }
 
