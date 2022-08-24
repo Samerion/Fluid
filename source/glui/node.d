@@ -6,6 +6,7 @@ import raylib;
 import std.math;
 import std.traits;
 import std.string;
+import std.algorithm;
 
 import glui.style;
 import glui.utils;
@@ -219,7 +220,7 @@ abstract class GluiNode : Styleable {
     ref inout(bool) disabled() inout { return isDisabled; }
 
     /// Checks if the node is disabled, either by self, or by any of its ancestors. Only works while the node is being
-    /// drawn.
+    /// drawn, and during `beforeDraw` and `afterDraw` tree actions.
     protected bool isDisabledInherited() const { return tree.isBranchDisabled; }
 
     /// Recalculate the window size before next draw.
@@ -232,8 +233,6 @@ abstract class GluiNode : Styleable {
 
     /// Draw this node as a root node.
     final void draw() @trusted {
-
-        import std.algorithm : either, predSwitch;
 
         // No tree set
         if (tree is null) {
@@ -276,8 +275,23 @@ abstract class GluiNode : Styleable {
 
         }
 
+        /// Area to render on
+        const viewport = Rectangle(0, 0, space.x, space.y);
+
+
+        // Run beforeTree actions
+        tree.actions.each!(a => a.beforeTree(this, viewport));
+
         // Draw this node
-        draw(Rectangle(0, 0, space.x, space.y));
+        draw(viewport);
+
+        // Run afterTree actions, remove those that have finished
+        const leftovers = tree.actions
+            .filter!(a => a.afterTree)
+            .moveAll(tree.actions);
+
+        // Get rid of removed actions
+        tree.actions.length -= leftovers.length;
 
 
         // Set mouse cursor to match hovered node
@@ -380,8 +394,6 @@ abstract class GluiNode : Styleable {
     ///             If the node can't fit, it will be cropped.
     final protected void draw(Rectangle space) @trusted {
 
-        import std.algorithm : all, min, max, either;
-
         assert(!toRemove, "A toRemove child wasn't removed from container.");
         assert(tree !is null, toString ~ " wasn't resized prior to drawing. You might be missing an `updateSize`"
             ~ " call!");
@@ -459,6 +471,14 @@ abstract class GluiNode : Styleable {
         tree.depth++;
         scope (exit) tree.depth--;
 
+        // Run beforeDraw actions
+        tree.actions.each!((a) {
+
+            a.beforeDraw(this, space);
+            a.beforeDraw(this, space, paddingBox, contentBox);
+
+        });
+
         // Draw the node cropped
         // Note: minSize includes margin!
         if (minSize.x > space.width || minSize.y > space.height) {
@@ -490,6 +510,15 @@ abstract class GluiNode : Styleable {
 
         }
 
+
+        // Run afterDraw actions
+        tree.actions.each!((a) {
+
+            a.afterDraw(this, space);
+            a.afterDraw(this, space, paddingBox, contentBox);
+
+        });
+
     }
 
     /// Recalculate the minimum node size and update the `minSize` property.
@@ -513,7 +542,7 @@ abstract class GluiNode : Styleable {
         // Otherwise perform like normal
         else {
 
-            import std.range, std.algorithm;
+            import std.range;
 
             const fullMargin = style.fullMargin;
             const spacingX = style ? chain(fullMargin.sideX[], style.padding.sideX[]).sum : 0;
