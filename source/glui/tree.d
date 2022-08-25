@@ -251,6 +251,22 @@ struct FocusDirection {
 /// A class for iterating over the node tree.
 abstract class TreeAction {
 
+    public {
+
+        /// If true, this action is complete and no callbacks should be ran.
+        ///
+        /// Overloads of the same callbacks will still be called for the event that prompted stopping.
+        bool toStop;
+
+    }
+
+    /// Stop the action
+    final void stop() {
+
+        toStop = true;
+
+    }
+
     /// Called before the tree is drawn.
     /// Params:
     ///     root     = Root of the tree.
@@ -280,10 +296,11 @@ abstract class TreeAction {
     void afterDraw(GluiNode node, Rectangle space) { }
 
     /// Called after the tree is drawn. Called before input events, so they can safely queue further actions.
-    /// Returns: `true` if the action is to be repeated during the next draw. Defaults to `false`.
-    bool afterTree() {
+    ///
+    /// By default, calls `stop()` preventing the action from evaluating during next draw.
+    void afterTree() {
 
-        return false;
+        stop();
 
     }
 
@@ -330,6 +347,25 @@ struct LayoutTree {
     void queueAction(TreeAction action) {
 
         actions ~= action;
+
+    }
+
+    /// Run an action on the tree.
+    void runAction(void delegate(TreeAction) @safe fun) {
+
+        import std.range, std.algorithm;
+
+        const leftovers = actions
+
+            // Run each action
+            .tee!(a => fun(a))
+
+            // Remove the ones that have finished
+            .filter!(a => !a.toStop)
+            .moveAll(actions);
+
+        // Remove leftovers
+        actions.length -= leftovers.length;
 
     }
 
