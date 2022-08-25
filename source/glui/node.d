@@ -8,6 +8,7 @@ import std.traits;
 import std.string;
 import std.algorithm;
 
+import glui.tree;
 import glui.style;
 import glui.utils;
 import glui.input;
@@ -91,6 +92,11 @@ abstract class GluiNode : Styleable {
 
         /// Theme of this node.
         Theme _theme;
+
+        /// Actions queued for this node; only used for queueing actions before the first `resize`; afterwards, all
+        /// actions are queued directly into the tree.
+        TreeAction[] _queuedActions;
+        // TODO It might be helpful to expose an interface for queuing delegates to be done after resize
 
     }
 
@@ -222,6 +228,20 @@ abstract class GluiNode : Styleable {
     /// Checks if the node is disabled, either by self, or by any of its ancestors. Only works while the node is being
     /// drawn, and during `beforeDraw` and `afterDraw` tree actions.
     bool isDisabledInherited() const { return tree.isBranchDisabled; }
+
+    /// Queue an action to perform within this node's branch.
+    final void queueAction(TreeAction action) {
+
+        // Set this node as the start for the given action
+        action.startNode = this;
+
+        // Insert the action into the tree's queue
+        if (tree) tree.queueAction(action);
+
+        // If there isn't a tree, wait for a resize
+        else _queuedActions ~= action;
+
+    }
 
     /// Recalculate the window size before next draw.
     final void updateSize() scope {
@@ -467,12 +487,7 @@ abstract class GluiNode : Styleable {
         scope (exit) tree.depth--;
 
         // Run beforeDraw actions
-        tree.runAction((a) {
-
-            a.beforeDraw(this, space);
-            a.beforeDraw(this, space, paddingBox, contentBox);
-
-        });
+        tree.runAction(a => a.beforeDrawImpl(this, space, paddingBox, contentBox));
 
         // Draw the node cropped
         // Note: minSize includes margin!
@@ -506,12 +521,7 @@ abstract class GluiNode : Styleable {
         }
 
         // Run afterDraw actions
-        tree.runAction((a) {
-
-            a.afterDraw(this, space);
-            a.afterDraw(this, space, paddingBox, contentBox);
-
-        });
+        tree.runAction(a => a.afterDraw(this, space, paddingBox, contentBox));
 
     }
 
@@ -528,6 +538,10 @@ abstract class GluiNode : Styleable {
         // Inherit tree and theme
         this.tree = tree;
         if (this.theme is null) this.theme = theme;
+
+        // Queue actions into the tree
+        tree.actions ~= _queuedActions;
+        _queuedActions = null;
 
 
         // The node is hidden, reset size

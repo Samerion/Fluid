@@ -3,7 +3,7 @@ module glui.structs;
 
 import std.conv;
 
-public import glui.tree : FocusDirection, LayoutTree;
+public import glui.tree;
 
 
 @safe:

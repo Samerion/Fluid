@@ -12,6 +12,7 @@ import glui.input;
 import glui.space;
 import glui.style;
 import glui.utils;
+import glui.actions;
 import glui.container;
 
 
@@ -153,19 +154,11 @@ class GluiMapSpace : GluiSpace {
         updateSize();
     }
 
-    /// Add a new child to the space and give it focus.
-    void addFocusedChild(GluiFocusable focusable, Position position) {
-
-        addChild(cast(GluiNode) focusable, position);
-        focusable.focus();
-
-    }
-
     /// ditto
-    void addFocusedChild(GluiContainer container, Position position) {
+    void addFocusedChild(GluiNode node, Position position) {
 
-        addChild(container.asNode, position);
-        container.focusChild(tree);
+        addChild(node, position);
+        node.focusRecurse();
 
     }
 
