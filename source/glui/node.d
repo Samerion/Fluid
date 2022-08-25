@@ -325,16 +325,19 @@ abstract class GluiNode : Styleable {
         const mousePressed = IsMouseButtonPressed(MouseButton.MOUSE_LEFT_BUTTON);
 
         // Mouse is hovering an input node
-        if (auto hoverInput = cast(GluiFocusable) tree.hover) {
+        if (auto hoverInput = cast(GluiHoverable) tree.hover) {
 
             // Ignore if the node is disabled
             if (!tree.hover.isDisabledInherited) {
 
+                // Check if the node is focusable
+                auto focusable = cast(GluiFocusable) tree.hover;
+
                 // Pass the input to it
                 hoverInput.mouseImpl();
 
-                // If the left mouse button is pressed down, let it have focus
-                if (mousePressed && !hoverInput.isFocused) hoverInput.focus();
+                // If the left mouse button is pressed down, let it have focus, if it can
+                if (mousePressed && focusable && !focusable.isFocused) focusable.focus();
 
             }
 

@@ -4,6 +4,7 @@ module glui.input;
 import raylib;
 
 import std.meta;
+import std.format;
 
 import glui.node;
 import glui.style;
@@ -12,22 +13,49 @@ import glui.style;
 @safe:
 
 
+/// An interface to be implemented by all nodes that can perform actions when hovered (eg. on click)
+interface GluiHoverable {
+
+    /// Handle mouse input on the node.
+    void mouseImpl();
+
+    /// Check if the node is disabled. `mixin MakeHoverable` to implement.
+    ref inout(bool) isDisabled() inout;
+
+    /// Get the underlying node. `mixin MakeHoverable` to implement.
+    inout(GluiNode) asNode() inout;
+
+    mixin template makeHoverable() {
+
+        import glui.node;
+        import std.format;
+
+        static assert(is(typeof(this) : GluiNode), format!"%s : GluiHoverable must inherit from a Node"(typeid(this)));
+
+        override ref inout(bool) isDisabled() inout {
+
+            return super.isDisabled;
+
+        }
+
+        /// Get the underlying node.
+        inout(GluiNode) asNode() inout {
+
+            return this;
+
+        }
+
+    }
+
+}
 /// An interface to be implemented by all nodes that can take focus.
 ///
 /// Use this interface exclusively for typing, do not subclass it — instead implement GluiInput.
-interface GluiFocusable {
+interface GluiFocusable : GluiHoverable {
 
-    void mouseImpl();
     bool keyboardImpl();
-    ref inout(bool) isDisabled() inout;
     void focus();
     bool isFocused() const;
-
-    final inout(GluiNode) asNode() inout {
-
-        return cast(inout GluiNode) this;
-
-    }
 
 }
 
@@ -40,11 +68,12 @@ interface GluiFocusable {
 /// )
 abstract class GluiInput(Parent : GluiNode) : Parent, GluiFocusable {
 
-    mixin DefineStyles!(
+    mixin defineStyles!(
         "focusStyle", q{ style },
         "hoverStyle", q{ style },
         "disabledStyle", q{ style },
     );
+    mixin makeHoverable;
 
     /// Callback to run when the input value is altered.
     void delegate() changed;
@@ -57,8 +86,6 @@ abstract class GluiInput(Parent : GluiNode) : Parent, GluiFocusable {
         super(sup);
 
     }
-
-    override ref inout(bool) isDisabled() inout { return super.isDisabled; }
 
     override const(Style) pickStyle() const {
 
