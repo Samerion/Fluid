@@ -253,10 +253,22 @@ abstract class TreeAction {
 
     public {
 
+        /// Node to descend into; `beforeDraw` and `afterDraw` will only be emitted for this node and its children.
+        ///
+        /// May be null to enable iteration over the entire tree.
+        GluiNode startNode;
+
         /// If true, this action is complete and no callbacks should be ran.
         ///
         /// Overloads of the same callbacks will still be called for the event that prompted stopping.
         bool toStop;
+
+    }
+
+    private {
+
+        /// Set to true once the action has descended into `startNode`.
+        bool startNodeFound;
 
     }
 
@@ -284,6 +296,26 @@ abstract class TreeAction {
     /// ditto
     void beforeDraw(GluiNode node, Rectangle space) { }
 
+    /// internal
+    final package void beforeDrawImpl(GluiNode node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) {
+
+        // There is a start node set
+        if (startNode !is null) {
+
+            // Check if we're descending into its branch
+            if (node is startNode) startNodeFound = true;
+
+            // Continue only if it was found
+            else if (!startNodeFound) return;
+
+        }
+
+        // Call the hooks
+        beforeDraw(node, space, paddingBox, contentBox);
+        beforeDraw(node, space);
+
+    }
+
     /// Called after each `drawImpl` call of any node in the tree, so supplying children nodes before their parents.
     /// Params:
     ///     node       = Node that's about to be drawn.
@@ -294,6 +326,25 @@ abstract class TreeAction {
 
     /// ditto
     void afterDraw(GluiNode node, Rectangle space) { }
+
+    /// internal
+    final package void afterDrawImpl(GluiNode node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) {
+
+        // There is a start node set
+        if (startNode !is null) {
+
+            // Check if we're leaving the node
+            if (node is startNode) startNodeFound = false;
+
+            // Continue only if it was found
+            else if (!startNodeFound) return;
+            // Note: We still emit afterDraw for that node, hence `else if`
+
+        }
+
+        afterDraw(node, space, paddingBox, contentBox);
+        afterDraw(node, space);
+    }
 
     /// Called after the tree is drawn. Called before input events, so they can safely queue further actions.
     ///
