@@ -221,7 +221,7 @@ abstract class GluiNode : Styleable {
 
     /// Checks if the node is disabled, either by self, or by any of its ancestors. Only works while the node is being
     /// drawn, and during `beforeDraw` and `afterDraw` tree actions.
-    protected bool isDisabledInherited() const { return tree.isBranchDisabled; }
+    bool isDisabledInherited() const { return tree.isBranchDisabled; }
 
     /// Recalculate the window size before next draw.
     final void updateSize() scope {
@@ -280,18 +280,13 @@ abstract class GluiNode : Styleable {
 
 
         // Run beforeTree actions
-        tree.actions.each!(a => a.beforeTree(this, viewport));
+        tree.runAction(a => a.beforeTree(this, viewport));
 
         // Draw this node
         draw(viewport);
 
         // Run afterTree actions, remove those that have finished
-        const leftovers = tree.actions
-            .filter!(a => a.afterTree)
-            .moveAll(tree.actions);
-
-        // Get rid of removed actions
-        tree.actions.length -= leftovers.length;
+        tree.runAction(a => a.afterTree());
 
 
         // Set mouse cursor to match hovered node
@@ -472,7 +467,7 @@ abstract class GluiNode : Styleable {
         scope (exit) tree.depth--;
 
         // Run beforeDraw actions
-        tree.actions.each!((a) {
+        tree.runAction((a) {
 
             a.beforeDraw(this, space);
             a.beforeDraw(this, space, paddingBox, contentBox);
@@ -510,9 +505,8 @@ abstract class GluiNode : Styleable {
 
         }
 
-
         // Run afterDraw actions
-        tree.actions.each!((a) {
+        tree.runAction((a) {
 
             a.afterDraw(this, space);
             a.afterDraw(this, space, paddingBox, contentBox);

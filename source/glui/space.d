@@ -13,6 +13,7 @@ import glui.node;
 import glui.style;
 import glui.utils;
 import glui.children;
+import glui.container;
 
 
 @safe:
@@ -32,7 +33,7 @@ alias hspace = simpleConstructor!(GluiSpace, (a) {
 ///
 /// Space only acts as a container and doesn't implement styles and doesn't take focus. It can be very useful to build
 /// overlaying nodes, eg. with `GluiOnionFrame`.
-class GluiSpace : GluiNode {
+class GluiSpace : GluiNode, GluiContainer {
 
     mixin DefineStyles;
 
