@@ -53,8 +53,16 @@ interface GluiHoverable {
 /// Use this interface exclusively for typing, do not subclass it — instead implement GluiInput.
 interface GluiFocusable : GluiHoverable {
 
+    /// Take keyboard input.
     bool keyboardImpl();
+
+    /// Set focus to this node.
+    ///
+    /// Implementation would usually assign `tree.focus` to self for this to take effect. It is legal, however, for this
+    /// method to redirect the focus at another node (by calling its `focus()` method), or ignore the request.
     void focus();
+
+    /// Check if this node has focus. Recommended implementation: `return tree.focus is this`
     bool isFocused() const;
 
 }
