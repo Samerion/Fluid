@@ -304,7 +304,7 @@ class GluiFilePicker : GluiInput!GluiFrame {
         savedFocus = true;
 
         // Focus the input instead.
-        tree.focus = input;
+        input.focus();
 
     }
 

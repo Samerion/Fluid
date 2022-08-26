@@ -367,6 +367,9 @@ struct LayoutTree {
     GluiNode hover;
 
     /// Currently focused node.
+    ///
+    /// Changing this value directly is discouraged. Some nodes might not want the focus! Be gentle, call
+    /// `GluiFocusable.focus()` instead and let the node set the value on its own.
     GluiFocusable focus;
 
     /// Focus direction data.

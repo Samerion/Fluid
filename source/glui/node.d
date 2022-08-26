@@ -286,7 +286,6 @@ abstract class GluiNode : Styleable {
         tree.focusDirection = FocusDirection(tree.focusBox);
         tree.focusBox = Rectangle(float.nan);
 
-
         // Resize if required
         if (IsWindowResized || _requiresResize) {
 
@@ -365,13 +364,16 @@ abstract class GluiNode : Styleable {
                 auto direction = tree.focusDirection;
 
                 // Try switching focus
-                tree.focus = IsKeyDown(KeyboardKey.KEY_LEFT_SHIFT)
+                auto focusTarget = IsKeyDown(KeyboardKey.KEY_LEFT_SHIFT)
 
                     // Requesting previous item
                     ? either(direction.previous, direction.last)
 
                     // Requesting next
                     : either(direction.next, direction.first);
+
+                // Request focus
+                focusTarget.focus();
 
             }
 
@@ -392,7 +394,7 @@ abstract class GluiNode : Styleable {
                 if (pressed) {
 
                     // Switch focus
-                    tree.focus = node;
+                    node.focus();
                     break;
 
                 }
