@@ -38,7 +38,7 @@ enum isSideArray(T) = is(T == X[4], X);
 unittest {
 
     uint[4] sides;
-    static assert(isSideArray!uint);
+    static assert(isSideArray!(uint[4]));
 
     sides.sideX = 4;
 

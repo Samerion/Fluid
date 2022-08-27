@@ -38,7 +38,7 @@ class GluiButton(T : GluiNode = GluiLabel) : GluiInput!T {
     // Button status
     struct {
 
-        // If true, this button is currenly down.
+        // If true, this button is currenly held down.
         bool isPressed;
 
     }
