@@ -5,6 +5,7 @@ import raylib;
 
 import std.meta;
 import std.format;
+import std.traits;
 
 import glui.node;
 import glui.style;
@@ -12,6 +13,164 @@ import glui.style;
 
 @safe:
 
+
+/// Default input actions one can listen to.
+@InputAction
+enum GluiInputAction {
+
+    // Basic
+    press,   /// Press the input. Used for example to activate buttons.
+    submit,  /// Submit input, eg. finish writing in textInput.
+    cancel,  /// Cancel,
+
+    // Focus
+    focusPrevious,  /// Focus previous input.
+    focusNext,      /// Focus next input.
+    focusLeft,      /// Focus input on the left.
+    focusRight,     /// Focus input on the right.
+    focusUp,        /// Focus input above.
+    focusDown,      /// Focus input below.
+
+    // Input
+    backspace,      /// Erase last character in an input.
+    backspaceWord,  /// Erase last a word in an input.
+    entryPrevious,  /// Navigate to the previous list entry.
+    entryNext,      /// Navigate to the next list entry.
+    entryUp,        /// Navigate up in a tree, eg. in the file picker.
+
+    // Scrolling
+    scrollLeft,     /// Scroll left a bit.
+    scrollRight,    /// Scroll right a bit.
+    scrollUp,       /// Scroll up a bit.
+    scrollDown,     /// Scroll down a bit
+    pageLeft,       /// Scroll left by a page. Unbound by default.
+    pageRight,      /// Scroll right by a page. Unbound by default.
+    pageUp,         /// Scroll up by a page.
+    pageDown,       /// Scroll down by a page.
+
+}
+
+enum InputActionStatus {
+
+    released,
+    pressed,
+    up,
+    down,
+
+}
+
+/// ID of an input action.
+immutable struct InputActionID {
+
+    /// Unique ID of the action.
+    size_t id;
+
+    /// Action name. Only emitted when debugging.
+    debug string name;
+
+    bool opEqual(InputActionID other) {
+
+        return id == other.id;
+
+    }
+
+}
+
+/// Check if the given symbol is an input action type.
+///
+/// The symbol symbol must be a member of an enum marked with `@InputAction`. The enum $(B must not) be a manifest
+/// constant (eg. `enum foo = 123;`).
+template isInputActionType(alias actionType) {
+
+    // Require the action type to be an enum
+    static if (is(typeof(actionType) == enum)) {
+
+        // Search through the enum attributes
+        static foreach (attribute; __traits(getAttributes, typeof(actionType))) {
+
+            // Not yet found
+            static if (!is(typeof(isInputActionType) == bool)) {
+
+                // Check if this is the attribute we're looking for
+                static if (__traits(isSame, attribute, InputAction)) {
+
+                    enum isInputActionType = true;
+
+                }
+
+            }
+
+        }
+
+    }
+
+    // Not found
+    static if (!is(typeof(isInputActionType) == bool)) {
+
+        // Respond as false
+        enum isInputActionType = false;
+
+    }
+
+}
+
+unittest {
+
+    enum MyEnum {
+        foo = 123,
+    }
+
+    @InputAction
+    enum MyAction {
+        foo,
+    }
+
+    static assert(isInputActionType!(GluiInputAction.entryUp));
+    static assert(isInputActionType!(MyAction.foo));
+
+    static assert(!isInputActionType!GluiInput);
+    static assert(!isInputActionType!GluiInputAction);
+    static assert(!isInputActionType!MyEnum);
+    static assert(!isInputActionType!(MyEnum.foo));
+    static assert(!isInputActionType!MyAction);
+
+
+}
+
+/// This UDA can be attached to a GluiInput `bool` returning method to make it listen for actions.
+///
+/// Action types are resolved at compile-time using symbols, so you can supply any `@InputAction`-marked enum defining
+/// input actions. All built-in enums are defined in `GluiInputAction`.
+///
+/// If the method returns `true`, it is understood that the action has been processed and no more actions will be
+/// emitted during the frame. If it returns `false`, other actions and keyboardImpl will be tried until any call returns
+/// `true` or no handlers are left.
+struct InputAction(alias actionType)
+if (isInputActionType!actionType) {
+
+    import std.traits;
+
+    alias type = actionType;
+    auto status = InputActionStatus.released;
+
+    alias id this;
+
+    private static immutable bool _id;
+
+    static InputActionID id() {
+
+        debug return InputActionID(cast(size_t) &_id, fullyQualifiedName!(typeof(this)));
+        else  return InputActionID(cast(size_t) &_id);
+        // Note: we could be directly getting the address of the function itself (&id), but it's possible some linkers
+        // would merge these two declarations, so we're using &_id for safety.
+        // Example of such behavior can be achieved using ld.gold with --icf=all.
+        // It's possible the linker could be aware of taking the address (--icf=safe works correctly), but again, we
+        // prefer to play it safe.
+        // Alternatively, we could test for this behavior when the program starts, but it probably isn't worth it.
+
+    }
+
+}
 
 /// An interface to be implemented by all nodes that can perform actions when hovered (eg. on click)
 interface GluiHoverable {
@@ -48,9 +207,11 @@ interface GluiHoverable {
     }
 
 }
+
 /// An interface to be implemented by all nodes that can take focus.
 ///
-/// Use this interface exclusively for typing, do not subclass it — instead implement GluiInput.
+/// Note: Input nodes often have many things in common. If you want to create an input-taking node, you're likely better
+/// off extending from `GluiInput`.
 interface GluiFocusable : GluiHoverable {
 
     /// Take keyboard input.
@@ -62,8 +223,42 @@ interface GluiFocusable : GluiHoverable {
     /// method to redirect the focus at another node (by calling its `focus()` method), or ignore the request.
     void focus();
 
-    /// Check if this node has focus. Recommended implementation: `return tree.focus is this`
+    /// Check if this node has focus. Recommended implementation: `return tree.focus is this`. Proxy nodes, such as
+    /// `GluiFilePicker` might choose to return the value of the node they hold.
     bool isFocused() const;
+
+    /// Run input actions for the node.
+    ///
+    /// Implement by adding `mixin runInputActions` in your class.
+    void runInputActions();
+
+    /// Mixin template to enable input actions in this class.
+    mixin template enableInputActions() {
+
+        // Implement the interface method
+        override void runInputActions() {
+
+            import glui.input;
+            import std.string, std.traits;
+
+            // Check if this class has implemented this method
+            assert(typeid(this) is typeid(typeof(this)), format!"%s is missing `mixin runInputActions;`"(typeid(this)));
+
+            // Find members with the InputAction UDA
+            static foreach (member; getSymbolsByUDA!(typeof(this), InputAction)) {
+
+                // Find all bound actions
+                static foreach (uda; getUDAs!(member, InputAction)) {
+
+                    static assert(false, "TODO");
+
+                }
+
+            }
+
+        }
+
+    }
 
 }
 
@@ -82,6 +277,7 @@ abstract class GluiInput(Parent : GluiNode) : Parent, GluiFocusable {
         "disabledStyle", q{ style },
     );
     mixin makeHoverable;
+    mixin enableInputActions;
 
     /// Callback to run when the input value is altered.
     void delegate() changed;
