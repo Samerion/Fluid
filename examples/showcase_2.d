@@ -4,7 +4,7 @@ import std.algorithm;
 
 void main() {
 
-    SetConfigFlags(ConfigFlags.FLAG_WINDOW_RESIZABLE | ConfigFlags.FLAG_WINDOW_HIGHDPI);
+    SetConfigFlags(ConfigFlags.FLAG_WINDOW_RESIZABLE);
     SetTraceLogLevel(TraceLogLevel.LOG_WARNING);
     InitWindow(800, 600, "Glui showcase");
     SetTargetFPS(60);

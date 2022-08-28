@@ -383,6 +383,9 @@ struct LayoutTree {
     /// Tree actions queued to execute during next draw.
     TreeAction[] actions;
 
+    /// Input strokes bound to emit given action signals.
+    InputStroke[][InputActionID] boundInputs;
+
     /// Check if keyboard input was handled after rendering is has completed.
     bool keyboardHandled;
 
@@ -401,6 +404,116 @@ struct LayoutTree {
     void queueAction(TreeAction action) {
 
         actions ~= action;
+
+    }
+
+    /// Restore defaults for given actions.
+    void defaultInputBinds() {
+
+        /// Get the ID of an input action.
+        auto idOf(alias a)() {
+
+            return InputAction!a.id;
+
+        }
+
+        // Create the binds
+        with (GluiInputAction) with (MouseButton) with (KeyboardKey)
+        boundInputs = [
+
+            // Basic
+            idOf!press: [
+                InputStroke(MOUSE_BUTTON_LEFT),
+                InputStroke(KEY_ENTER),
+            ],
+            idOf!submit: [
+                InputStroke(KEY_ENTER),
+            ],
+            idOf!cancel: [
+                InputStroke(KEY_ESCAPE),
+            ],
+
+            // Focus
+            idOf!focusPrevious: [
+                InputStroke(KEY_LEFT_SHIFT, KEY_TAB),
+                // TODO: KEY_ANY_SHIFT, KEY_ANY_ALT, KEY_ANY_CONTROL
+                // That'd be a blessing. InputStroke could support those special values.
+            ],
+            idOf!focusNext: [
+                InputStroke(KEY_TAB),
+            ],
+            idOf!focusLeft: [
+                InputStroke(KEY_LEFT),
+            ],
+            idOf!focusRight: [
+                InputStroke(KEY_RIGHT),
+            ],
+            idOf!focusUp: [
+                InputStroke(KEY_UP),
+            ],
+            idOf!focusDown: [
+                InputStroke(KEY_DOWN),
+            ],
+
+            // Input
+            idOf!backspace: [
+                InputStroke(KEY_BACKSPACE),
+            ],
+            idOf!backspaceWord: [
+                InputStroke(KEY_LEFT_CONTROL, KEY_BACKSPACE),
+                InputStroke(KEY_LEFT_CONTROL, KEY_W),  // emacs & vim
+            ],
+            idOf!entryPrevious: [
+                InputStroke(KEY_UP),
+                InputStroke(KEY_LEFT_CONTROL, KEY_K),  // vim
+                InputStroke(KEY_LEFT_CONTROL, KEY_P),  // emacs
+            ],
+            idOf!entryNext: [
+                InputStroke(KEY_DOWN),
+                InputStroke(KEY_LEFT_CONTROL, KEY_J),  // vim
+                InputStroke(KEY_LEFT_CONTROL, KEY_N),  // emacs
+            ],
+            idOf!entryUp: [
+                InputStroke(KEY_LEFT_ALT, KEY_UP),
+            ],
+
+            // Scrolling
+            // TODO: scroll wheel
+            idOf!scrollLeft: [],
+            idOf!scrollRight: [],
+            idOf!scrollUp: [],
+            idOf!scrollDown: [],
+            idOf!pageLeft: [],
+            idOf!pageRight: [],
+            idOf!pageUp: [
+                InputStroke(KEY_PAGE_UP),
+            ],
+            idOf!pageDown: [
+                InputStroke(KEY_PAGE_DOWN),
+            ],
+        ];
+
+    }
+
+    /// Remove any inputs bound to given input action.
+    /// Returns: `true` if the action was cleared.
+    bool clearBoundInput(InputActionID action) {
+
+        return boundInputs.remove(action);
+
+    }
+
+    /// Bind a key stroke or button to given input action. Multiple key strokes are allowed to match given action.
+    void bindInput(InputActionID action, InputStroke stroke) {
+
+        boundInputs.require(action) ~= stroke;
+
+    }
+
+    /// Bind a key stroke or button to given input action, replacing any previously bound inputs.
+    void bindInputReplace(InputActionID action, InputStroke stroke) {
+
+        boundInputs[action] = [stroke];
 
     }
 
