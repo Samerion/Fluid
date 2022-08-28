@@ -259,6 +259,7 @@ abstract class GluiNode : Styleable {
 
             // Create one
             tree = new LayoutTree(this);
+            tree.defaultInputBinds();
 
             // Workaround for a HiDPI scissors mode glitch, which breaks Glui
             version (Glui_Raylib3)
@@ -333,7 +334,7 @@ abstract class GluiNode : Styleable {
                 auto focusable = cast(GluiFocusable) tree.hover;
 
                 // Pass the input to it
-                hoverInput.mouseImpl();
+                hoverInput.runMouseInputActions || hoverInput.mouseImpl;
 
                 // If the left mouse button is pressed down, let it have focus, if it can
                 if (mousePressed && focusable && !focusable.isFocused) focusable.focus();
@@ -349,7 +350,11 @@ abstract class GluiNode : Styleable {
         // Pass keyboard input to the currently focused node
         if (tree.focus && !tree.focus.asNode.isDisabledInherited) {
 
-            tree.keyboardHandled = tree.focus.keyboardImpl();
+            // Let it handle input
+            tree.keyboardHandled = either(
+                tree.focus.runFocusInputActions,
+                tree.focus.focusImpl,
+            );
 
         }
         else tree.keyboardHandled = false;
@@ -624,7 +629,9 @@ abstract class GluiNode : Styleable {
     ///     mousePosition = Current mouse position within the window.
     protected abstract bool hoveredImpl(Rectangle rect, Vector2 mousePosition) const;
 
-    protected mixin template ImplHoveredRect() {
+    alias ImplHoveredRect = implHoveredRect;
+
+    protected mixin template implHoveredRect() {
 
         private import raylib : Rectangle, Vector2;
 

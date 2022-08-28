@@ -31,12 +31,13 @@ class GluiScrollBar : GluiInput!GluiNode {
     /// `backgroundStyle` — style defined for the background part of the scrollbar,
     ///
     /// `pressStyle` — style to activate while the scrollbar is pressed.
-    mixin DefineStyles!(
+    mixin defineStyles!(
         "backgroundStyle", q{ Style.init },
         "pressStyle", q{ style },
     );
 
     mixin ImplHoveredRect;
+    mixin enableInputActions;
 
     public {
 
