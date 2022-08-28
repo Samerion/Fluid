@@ -30,9 +30,6 @@ class GluiButton(T : GluiNode = GluiLabel) : GluiInput!T {
     );
     mixin enableInputActions;
 
-    /// Action to trigger the button
-    alias TriggerAction = InputAction!(GluiInputAction.press);
-
     /// Callback to run when the button is pressed.
     alias pressed = submitted;
 
@@ -57,7 +54,7 @@ class GluiButton(T : GluiNode = GluiLabel) : GluiInput!T {
     protected override void drawImpl(Rectangle outer, Rectangle inner) {
 
         // Check if pressed
-        isPressed = checkIsPressed!TriggerAction;
+        isPressed = checkIsPressed;
 
         // Draw the button
         super.drawImpl(outer, inner);
@@ -65,7 +62,7 @@ class GluiButton(T : GluiNode = GluiLabel) : GluiInput!T {
     }
 
     /// Handle mouse input. By default, this will call the `pressed` delegate if the button is pressed.
-    @TriggerAction
+    @InputAction!(GluiInputAction.press)
     protected void _pressed() @trusted {
 
         // Run the callback
