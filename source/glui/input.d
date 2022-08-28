@@ -40,7 +40,6 @@ enum GluiInputAction {
     entryNext,      /// Navigate to the next list entry.
     entryUp,        /// Navigate up in a tree, eg. in the file picker.
 
-    // TODO scroll wheel events; maybe pass in the scroll float value somehow?
     // Scrolling
     scrollLeft,     /// Scroll left a bit.
     scrollRight,    /// Scroll right a bit.
@@ -263,6 +262,10 @@ struct InputStroke {
 /// `true` or no handlers are left.
 struct InputAction(alias actionType)
 if (isInputActionType!actionType) {
+
+    // TODO Most of the helpers here could be moved to scope above and operate directly on the enums
+    // TODO Similarly, instead of marking stuff `@InputAction!(GluiInputAction.foo)`, we could shorten it to just
+    //      `@GluiInputAction.foo`
 
     alias type = actionType;
 
@@ -537,7 +540,9 @@ abstract class GluiInput(Parent : GluiNode) : Parent, GluiFocusable {
 
     /// Handle mouse input.
     ///
-    /// Only one node can run its `inputImpl` callback per frame, specifically, the last one to register its input.
+    /// Usually, you'd prefer to define an `@InputAction` method. This function is preferred for more advanced usage.
+    ///
+    /// Only one node can run its `mouseImpl` callback per frame, specifically, the last one to register its input.
     /// This is to prevent parents or overlapping children to take input when another node is drawn on them.
     protected override void mouseImpl() { }
 
@@ -550,6 +555,8 @@ abstract class GluiInput(Parent : GluiNode) : Parent, GluiFocusable {
 
     /// Handle keyboard and gamepad input.
     ///
+    /// Usually, you'd prefer to define an `@InputAction` method. This function is preferred for more advanced usage.
+    ///
     /// This will be called each frame as long as this node has focus.
     ///
     /// Returns: True if the input was handled, false if not.
@@ -561,12 +568,12 @@ abstract class GluiInput(Parent : GluiNode) : Parent, GluiFocusable {
 
     /// Check if the node is being pressed. Performs action lookup.
     ///
-    /// This is a helper for nodes that might do something when pressed, for example, buttons. Normally this method
-    /// would be `protected`, but this usage is now being phased out in D. :(
+    /// This is a helper for nodes that might do something when pressed, for example, buttons.
     ///
     /// Preferrably, the node should implement an `isPressed` property and cache the result of this!
-    /* protected is for some reason deprecated for this usecase?? */
-    bool checkIsPressed(AI : InputAction!actionType, alias actionType)() {
+    protected bool checkIsPressed() {
+
+        alias AI = InputAction!(GluiInputAction.press);
 
         return (isHovered && AI.isMouseDown(tree))
             || (isFocused && AI.isFocusDown(tree));

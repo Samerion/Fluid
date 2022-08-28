@@ -478,11 +478,18 @@ struct LayoutTree {
             ],
 
             // Scrolling
-            // TODO: scroll wheel
-            idOf!scrollLeft: [],
-            idOf!scrollRight: [],
-            idOf!scrollUp: [],
-            idOf!scrollDown: [],
+            idOf!scrollLeft: [
+                InputStroke(KEY_LEFT),
+            ],
+            idOf!scrollRight: [
+                InputStroke(KEY_RIGHT),
+            ],
+            idOf!scrollUp: [
+                InputStroke(KEY_UP),
+            ],
+            idOf!scrollDown: [
+                InputStroke(KEY_DOWN),
+            ],
             idOf!pageLeft: [],
             idOf!pageRight: [],
             idOf!pageUp: [
