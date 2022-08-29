@@ -209,7 +209,7 @@ class GluiScrollBar : GluiInput!GluiNode {
         if (availableSpace == 0) return;
 
         // Check if the button is held down
-        const isDown = InputAction!(GluiInputAction.press).isDown(tree);
+        const isDown = tree.isDown!(GluiInputAction.press);
 
         // Update status
         scope (exit) _isPressed = isDown;
@@ -258,7 +258,7 @@ class GluiScrollBar : GluiInput!GluiNode {
         import std.format;
 
         mixin(format!q{
-            @InputAction!actionType
+            @actionType
             protected void _%s() {
 
                 if (!horizontal ^ forHorizontal) emitChange(direction * scrollPageLength);
@@ -293,11 +293,11 @@ class GluiScrollBar : GluiInput!GluiNode {
     override protected bool keyboardImpl() @trusted {
 
         const isPlus = horizontal
-            ? &InputAction!(GluiInputAction.scrollRight).isDown
-            : &InputAction!(GluiInputAction.scrollDown) .isDown;
+            ? &isDown!(GluiInputAction.scrollRight)
+            : &isDown!(GluiInputAction.scrollDown);
         const isMinus = horizontal
-            ? &InputAction!(GluiInputAction.scrollLeft).isDown
-            : &InputAction!(GluiInputAction.scrollUp)  .isDown;
+            ? &isDown!(GluiInputAction.scrollLeft)
+            : &isDown!(GluiInputAction.scrollUp);
 
         const speed = cast(ulong) (scrollSpeed * 20 * GetFrameTime);
         const change

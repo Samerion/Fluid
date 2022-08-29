@@ -226,12 +226,13 @@ class GluiTextInput : GluiInput!GluiNode {
         //
         // This limitation may be removed when #15 is resolved. See: https://git.samerion.com/Samerion/Glui/issues/15
 
-        return !InputAction!(GluiInputAction.focusPrevious).isDown(tree)
-            && !InputAction!(GluiInputAction.focusNext)    .isDown(tree);
+        return !tree.isDown!(GluiInputAction.focusPrevious)
+            && !tree.isDown!(GluiInputAction.focusNext);
+
     }
 
     /// Submit the input.
-    @InputAction!(GluiInputAction.submit)
+    @(GluiInputAction.submit)
     protected void _submit() {
 
         // Clear focus
@@ -243,7 +244,7 @@ class GluiTextInput : GluiInput!GluiNode {
     }
 
     /// Erase last inputted word.
-    @InputAction!(GluiInputAction.backspaceWord)
+    @(GluiInputAction.backspaceWord)
     void chopWord() {
 
         import std.uni;
@@ -283,7 +284,7 @@ class GluiTextInput : GluiInput!GluiNode {
     }
 
     /// Erase last inputted letter.
-    @InputAction!(GluiInputAction.backspace)
+    @(GluiInputAction.backspace)
     void chop() {
 
         // Ignore if the box is empty

@@ -176,7 +176,7 @@ class GluiFilePicker : GluiInput!GluiFrame {
 
         }
 
-        @InputAction!(GluiInputAction.entryUp)
+        @(GluiInputAction.entryUp)
         protected void _entryUp() {
 
             typedFilename = input.value = input.value.dirName;
@@ -184,21 +184,21 @@ class GluiFilePicker : GluiInput!GluiFrame {
 
         }
 
-        @InputAction!(GluiInputAction.cancel)
+        @(GluiInputAction.cancel)
         protected void _cancel() {
 
             cancel();
 
         }
 
-        @InputAction!(GluiInputAction.entryPrevious)
+        @(GluiInputAction.entryPrevious)
         protected void _entryPrevious() {
 
             offsetSuggestion(-1);
 
         }
 
-        @InputAction!(GluiInputAction.entryNext)
+        @(GluiInputAction.entryNext)
         protected void _entryNext() {
 
             offsetSuggestion(+1);
