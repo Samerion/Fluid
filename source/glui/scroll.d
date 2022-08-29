@@ -225,6 +225,9 @@ class GluiScrollable(T : GluiNode, string horizontalExpression) : T {
     /// Implementation of mouse input
     private void inputImpl() @trusted {
 
+        // Ignore if horizontal (For now; TODO)
+        if (isHorizontal) return;
+
         const float move = -GetMouseWheelMove;
         const float totalChange = move * scrollBar.scrollSpeed;
 

@@ -465,11 +465,13 @@ struct LayoutTree {
             ],
             idOf!entryPrevious: [
                 InputStroke(KEY_UP),
+                InputStroke(KEY_LEFT_SHIFT, KEY_TAB),
                 InputStroke(KEY_LEFT_CONTROL, KEY_K),  // vim
                 InputStroke(KEY_LEFT_CONTROL, KEY_P),  // emacs
             ],
             idOf!entryNext: [
                 InputStroke(KEY_DOWN),
+                InputStroke(KEY_TAB),
                 InputStroke(KEY_LEFT_CONTROL, KEY_J),  // vim
                 InputStroke(KEY_LEFT_CONTROL, KEY_N),  // emacs
             ],
