@@ -198,7 +198,7 @@ struct InputStroke {
 
     /// Check if all keys or buttons required for the stroke are held down. This is is to make sure only one action is
     /// performed for each stroke.
-    bool isDown(const(LayoutTree)* tree) const @trusted {
+    bool isDown() const @trusted {
 
         return input.all!isDown;
 
@@ -316,7 +316,8 @@ if (isInputActionType!type) {
 bool isDown(alias type)(const(LayoutTree)* tree)
 if (isInputActionType!type) {
 
-    return getStrokes!type(tree).any!(a => a.isDown(tree));
+    return getStrokes!type(tree).any!"a.isDown";
+    // Maybe this could be faster? Cache the result? Something? No idea.
 
 }
 
@@ -324,8 +325,7 @@ if (isInputActionType!type) {
 bool isMouseDown(alias type)(LayoutTree* tree)
 if (isInputActionType!type) {
 
-    return getMouseStrokes!type(tree).any!(a => a.isDown(tree));
-    // Maybe this could be faster? Cache the result? Something? No idea.
+    return getMouseStrokes!type(tree).any!"a.isDown";
 
 }
 
@@ -333,8 +333,31 @@ if (isInputActionType!type) {
 bool isFocusDown(alias type)(LayoutTree* tree)
 if (isInputActionType!type) {
 
-    return getFocusStrokes!type(tree).any!(a => a.isDown(tree));
-    // Maybe this could be faster? Cache the result? Something? No idea.
+    return getFocusStrokes!type(tree).any!"a.isDown";
+
+}
+
+/// Check if any stroke bound to this action is active.
+bool isActive(alias type)(const(LayoutTree)* tree)
+if (isInputActionType!type) {
+
+    return getStrokes!type(tree).any!"a.isActive";
+
+}
+
+/// Check if a mouse stroke bound to this action is active
+bool isMouseActive(alias type)(LayoutTree* tree)
+if (isInputActionType!type) {
+
+    return getMouseStrokes!type(tree).any!"a.isActive";
+
+}
+
+/// Check if a keyboard or gamepad stroke bound to this action is active.
+bool isFocusActive(alias type)(LayoutTree* tree)
+if (isInputActionType!type) {
+
+    return getFocusStrokes!type(tree).any!"a.isActive";
 
 }
 
@@ -432,7 +455,7 @@ interface GluiHoverable {
                     // Find all bound actions
                     static foreach (actionType; __traits(getAttributes, member)) {
 
-                        static if (isInputActionType!actionType) {
+                        static if (isInputActionType!actionType) {{
 
                             // Get any of held down strokes
                             auto strokes = tree.getStrokes!actionType
@@ -441,7 +464,7 @@ interface GluiHoverable {
                                 .filter!(a => a.isMouseStroke == mouse)
 
                                 // Check if they're held down
-                                .find!"a.isDown(b)"(tree);
+                                .find!"a.isDown";
 
                             // TODO: get a list of possible strokes and pick the longest one
 
@@ -449,14 +472,26 @@ interface GluiHoverable {
                             if (!strokes.empty) {
 
                                 // Run the action if the stroke was performed
-                                if (strokes.front.isActive) member();
+                                if (strokes.front.isActive) {
+
+                                    // Pass the action type if applicable
+                                    static if (__traits(compiles, member(actionType))) {
+
+                                        member(actionType);
+
+                                    }
+
+                                    // Run empty
+                                    else member();
+
+                                }
 
                                 // Mark as handled
                                 return true;
 
                             }
 
-                        }
+                        }}
 
                     }
 
@@ -581,7 +616,7 @@ abstract class GluiInput(Parent : GluiNode) : Parent, GluiFocusable {
     /// Usually, you'd prefer to define a method marked with an `InputAction` enum. This function is preferred for more
     /// advanced usage.
     ///
-    /// This will be called each frame as long as this node has focus.
+    /// This will be called each frame as long as this node has focus, unless an `InputAction` was triggered first.
     ///
     /// Returns: True if the input was handled, false if not.
     override bool focusImpl() {
