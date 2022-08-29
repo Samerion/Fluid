@@ -174,7 +174,15 @@ struct InputStroke {
         input.length = items.length;
         static foreach (i, item; items) {
 
-            input[i] = Item(item);
+            // Make gamepad buttons default to gamepad 0
+            static if (is(typeof(item) : GamepadButton)) {
+
+                input[i] = Item(NthGamepadButton(0, item));
+
+            }
+
+            // Put all remaining stuff directly
+            else input[i] = Item(item);
 
         }
 

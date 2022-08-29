@@ -158,6 +158,9 @@ class GluiScrollBar : GluiInput!GluiNode {
 
         const handlePosition = (scrollbarLength - handleLength) * position / scrollMax;
 
+        // If focused, check for action input
+        if (isFocused) scrollFocusImpl();
+
         // Now get the size of the inner rect
         auto innerRect = contentBox;
 
@@ -252,45 +255,36 @@ class GluiScrollBar : GluiInput!GluiNode {
 
     }
 
-    /// Make an input action handler, we've got a lot of them and they're all the same!
-    private mixin template makeHandler(alias actionType, bool forHorizontal, int direction) {
+    @(GluiInputAction.pageLeft, GluiInputAction.pageRight)
+    @(GluiInputAction.pageUp, GluiInputAction.pageDown)
+    protected void _scrollPage(GluiInputAction action) {
 
-        import std.format;
+        with (GluiInputAction) {
 
-        mixin(format!q{
-            @actionType
-            protected void _%s() {
+            // Check if we're moving horizontally
+            const forHorizontal = action == pageLeft || action == pageRight;
 
-                if (!horizontal ^ forHorizontal) emitChange(direction * scrollPageLength);
+            // Check direction
+            const direction = action == pageLeft || action == pageUp
+                ? -1
+                : 1;
 
-            }
-        }(actionType));
+            // Change
+            if (horizontal ^ forHorizontal) emitChange(direction * scrollPageLength);
 
-    }
-
-    mixin makeHandler!(GluiInputAction.pageUp,    false, -1);
-    mixin makeHandler!(GluiInputAction.pageDown,  false, +1);
-    mixin makeHandler!(GluiInputAction.pageLeft,  true,  -1);
-    mixin makeHandler!(GluiInputAction.pageRight, true,  +1);
-
-    /// Change the value and run the `changed` callback.
-    /// Returns: Does nothing if `move` is 0 and returns `false`. Otherwise returns `true`.
-    protected bool emitChange(ptrdiff_t move) {
-
-        // Ignore if nothing changed.
-        if (move == 0) return false;
-
-        // Update scroll
-        setScroll(position + move);
-
-        // Run the callback
-        if (changed) changed();
-
-        return true;
+        }
 
     }
 
-    override protected bool keyboardImpl() @trusted {
+    @(GluiInputAction.scrollLeft, GluiInputAction.scrollRight)
+    @(GluiInputAction.scrollUp, GluiInputAction.scrollDown)
+    protected void _scroll() {
+
+        // Implemented in scrollFocusImpl called from `drawImpl()` to support holding
+
+    }
+
+    protected void scrollFocusImpl() @trusted {
 
         const isPlus = horizontal
             ? &isDown!(GluiInputAction.scrollRight)
@@ -305,8 +299,22 @@ class GluiScrollBar : GluiInput!GluiNode {
             : isMinus(tree) ? -speed
             : 0;
 
-        return emitChange(change);
+        emitChange(change);
 
+
+    }
+
+    /// Change the value and run the `changed` callback.
+    protected void emitChange(ptrdiff_t move) {
+
+        // Ignore if nothing changed.
+        if (move == 0) return;
+
+        // Update scroll
+        setScroll(position + move);
+
+        // Run the callback
+        if (changed) changed();
 
     }
 

@@ -418,19 +418,22 @@ struct LayoutTree {
         }
 
         // Create the binds
-        with (GluiInputAction) with (MouseButton) with (KeyboardKey)
+        with (GluiInputAction) with (MouseButton) with (KeyboardKey) with (GamepadButton)
         boundInputs = [
 
             // Basic
             idOf!press: [
                 InputStroke(MOUSE_BUTTON_LEFT),
                 InputStroke(KEY_ENTER),
+                InputStroke(GAMEPAD_BUTTON_RIGHT_FACE_DOWN),
             ],
             idOf!submit: [
                 InputStroke(KEY_ENTER),
+                InputStroke(GAMEPAD_BUTTON_RIGHT_FACE_DOWN),
             ],
             idOf!cancel: [
                 InputStroke(KEY_ESCAPE),
+                InputStroke(GAMEPAD_BUTTON_RIGHT_FACE_RIGHT),
             ],
 
             // Focus
@@ -438,21 +441,27 @@ struct LayoutTree {
                 InputStroke(KEY_LEFT_SHIFT, KEY_TAB),
                 // TODO: KEY_ANY_SHIFT, KEY_ANY_ALT, KEY_ANY_CONTROL
                 // That'd be a blessing. InputStroke could support those special values.
+                InputStroke(GAMEPAD_BUTTON_LEFT_TRIGGER_1),
             ],
             idOf!focusNext: [
                 InputStroke(KEY_TAB),
+                InputStroke(GAMEPAD_BUTTON_RIGHT_TRIGGER_1),
             ],
             idOf!focusLeft: [
                 InputStroke(KEY_LEFT),
+                InputStroke(GAMEPAD_BUTTON_LEFT_FACE_LEFT),
             ],
             idOf!focusRight: [
                 InputStroke(KEY_RIGHT),
+                InputStroke(GAMEPAD_BUTTON_LEFT_FACE_RIGHT),
             ],
             idOf!focusUp: [
                 InputStroke(KEY_UP),
+                InputStroke(GAMEPAD_BUTTON_LEFT_FACE_UP),
             ],
             idOf!focusDown: [
                 InputStroke(KEY_DOWN),
+                InputStroke(GAMEPAD_BUTTON_LEFT_FACE_DOWN),
             ],
 
             // Input
@@ -468,12 +477,14 @@ struct LayoutTree {
                 InputStroke(KEY_LEFT_SHIFT, KEY_TAB),
                 InputStroke(KEY_LEFT_CONTROL, KEY_K),  // vim
                 InputStroke(KEY_LEFT_CONTROL, KEY_P),  // emacs
+                InputStroke(GAMEPAD_BUTTON_LEFT_FACE_UP),
             ],
             idOf!entryNext: [
                 InputStroke(KEY_DOWN),
                 InputStroke(KEY_TAB),
                 InputStroke(KEY_LEFT_CONTROL, KEY_J),  // vim
                 InputStroke(KEY_LEFT_CONTROL, KEY_N),  // emacs
+                InputStroke(GAMEPAD_BUTTON_LEFT_FACE_DOWN),
             ],
             idOf!entryUp: [
                 InputStroke(KEY_LEFT_ALT, KEY_UP),
@@ -482,15 +493,19 @@ struct LayoutTree {
             // Scrolling
             idOf!scrollLeft: [
                 InputStroke(KEY_LEFT),
+                InputStroke(GAMEPAD_BUTTON_LEFT_FACE_LEFT),
             ],
             idOf!scrollRight: [
                 InputStroke(KEY_RIGHT),
+                InputStroke(GAMEPAD_BUTTON_LEFT_FACE_RIGHT),
             ],
             idOf!scrollUp: [
                 InputStroke(KEY_UP),
+                InputStroke(GAMEPAD_BUTTON_LEFT_FACE_UP),
             ],
             idOf!scrollDown: [
                 InputStroke(KEY_DOWN),
+                InputStroke(GAMEPAD_BUTTON_LEFT_FACE_DOWN),
             ],
             idOf!pageLeft: [],
             idOf!pageRight: [],
