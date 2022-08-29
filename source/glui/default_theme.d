@@ -65,7 +65,6 @@ shared static this() {
         GluiScrollBar.styleAdd!q{
 
             backgroundColor = color!"#aaa";
-            mouseCursor = MouseCursor.MOUSE_CURSOR_POINTING_HAND;
 
             backgroundStyleAdd.backgroundColor = color!"#eee";
             hoverStyleAdd.backgroundColor = color!"#888";

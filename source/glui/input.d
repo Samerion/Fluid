@@ -130,6 +130,7 @@ unittest {
     static assert(isInputActionType!(MyAction.foo));
 
     static assert(!isInputActionType!GluiInput);
+    static assert(!isInputActionType!(InputAction!(GluiInputAction.entryUp)));
     static assert(!isInputActionType!GluiInputAction);
     static assert(!isInputActionType!MyEnum);
     static assert(!isInputActionType!(MyEnum.foo));
@@ -252,7 +253,8 @@ struct InputStroke {
 
 }
 
-/// This UDA can be attached to a GluiInput method to make it listen for actions.
+/// This meta-UDA can be attached to an enum, so Glui would recognize members of said enum as an UDA defining input
+/// actions.
 ///
 /// Action types are resolved at compile-time using symbols, so you can supply any `@InputAction`-marked enum defining
 /// input actions. All built-in enums are defined in `GluiInputAction`.
@@ -262,10 +264,6 @@ struct InputStroke {
 /// `true` or no handlers are left.
 struct InputAction(alias actionType)
 if (isInputActionType!actionType) {
-
-    // TODO Most of the helpers here could be moved to scope above and operate directly on the enums
-    // TODO Similarly, instead of marking stuff `@InputAction!(GluiInputAction.foo)`, we could shorten it to just
-    //      `@GluiInputAction.foo`
 
     alias type = actionType;
 
@@ -287,52 +285,59 @@ if (isInputActionType!actionType) {
 
     }
 
-    static inout(InputStroke)[] getStrokes(inout(LayoutTree)* tree) {
+}
 
-        // Note: `get` doesn't support `inout`
-        if (auto r = id in tree.boundInputs) return *r;
-        else return null;
+inout(InputStroke)[] getStrokes(alias type)(inout(LayoutTree)* tree)
+if (isInputActionType!type) {
 
-    }
-
-    /// Get all strokes that might be performed with a mouse that may trigger this action.
-    static auto getMouseStrokes(LayoutTree* tree) {
-
-        return getStrokes(tree).filter!"a.isMouseStroke";
-
-    }
-
-    /// Get all strokes that might be performed with a keyboard or gamepad that may trigger this action.
-    static auto getFocusStrokes(LayoutTree* tree) {
-
-        return getStrokes(tree).filter!"!a.isMouseStroke";
-
-    }
-
-    /// Check if any stroke bound to this action is being held.
-    static bool isDown(const(LayoutTree)* tree) {
-
-        return getStrokes(tree).any!(a => a.isDown(tree));
-
-    }
-
-    /// Check if a mouse stroke bound to this action is being held.
-    static bool isMouseDown(LayoutTree* tree) {
-
-        return getMouseStrokes(tree).any!(a => a.isDown(tree));
-        // Maybe this could be faster? Cache the result? Something? No idea.
-
-    }
-
-    /// Check if a keyboard or gamepad stroke bound to this action is being held.
-    static bool isFocusDown(LayoutTree* tree) {
-
-        return getFocusStrokes(tree).any!(a => a.isDown(tree));
-        // Maybe this could be faster? Cache the result? Something? No idea.
-
-    }
+    // Note: `get` doesn't support `inout`
+    if (auto r = InputAction!type in tree.boundInputs) return *r;
+    else return null;
 
 }
+
+/// Get all strokes that might be performed with a mouse that may trigger this action.
+auto getMouseStrokes(alias type)(LayoutTree* tree)
+if (isInputActionType!type) {
+
+    return getStrokes!type(tree).filter!"a.isMouseStroke";
+
+}
+
+/// Get all strokes that might be performed with a keyboard or gamepad that may trigger this action.
+auto getFocusStrokes(alias type)(LayoutTree* tree)
+if (isInputActionType!type) {
+
+    return getStrokes!type(tree).filter!"!a.isMouseStroke";
+
+}
+
+/// Check if any stroke bound to this action is being held.
+bool isDown(alias type)(const(LayoutTree)* tree)
+if (isInputActionType!type) {
+
+    return getStrokes!type(tree).any!(a => a.isDown(tree));
+
+}
+
+/// Check if a mouse stroke bound to this action is being held.
+bool isMouseDown(alias type)(LayoutTree* tree)
+if (isInputActionType!type) {
+
+    return getMouseStrokes!type(tree).any!(a => a.isDown(tree));
+    // Maybe this could be faster? Cache the result? Something? No idea.
+
+}
+
+/// Check if a keyboard or gamepad stroke bound to this action is being held.
+bool isFocusDown(alias type)(LayoutTree* tree)
+if (isInputActionType!type) {
+
+    return getFocusStrokes!type(tree).any!(a => a.isDown(tree));
+    // Maybe this could be faster? Cache the result? Something? No idea.
+
+}
+
 
 unittest {
 
@@ -405,37 +410,59 @@ interface GluiHoverable {
             assert(typeid(this) is typeid(This),
                 format!"%s is missing `mixin enableInputActions;`"(typeid(this)));
 
-            // Find members with the InputAction UDA
-            static foreach (member; getSymbolsByUDA!(This, InputAction)) {
+            // Check each member
+            static foreach (memberName; __traits(allMembers, This)) {{
 
-                // Find all bound actions
-                static foreach (action; getUDAs!(member, InputAction)) {{
+                alias member = __traits(getMember, This, memberName);
 
-                    // Get any of held down strokes
-                    auto strokes = action.getStrokes(tree)
+                // Filter out to functions only, also ignore deprecated functions
+                enum isMethod = !__traits(isDeprecated, member)
+                    && __traits(compiles, isFunction!member)
+                    && isFunction!member;
+                // TODO maybe somehow issue an error if an input action is marked deprecated?
 
-                        // Filter to mouse or keyboard strokes
-                        .filter!(a => a.isMouseStroke == mouse)
+                static if (isMethod) {
 
-                        // Check if they're held down
-                        .find!"a.isDown(b)"(tree);
+                    // Make sure no method is marked `@InputAction`, that's invalid usage
+                    alias inputActionUDAs = getUDAs!(member, InputAction);
 
-                    // TODO: get a list of possible strokes and pick the longest one
+                    static assert(inputActionUDAs.length == 0,
+                        format!"Please use @(%s) instead of @InputAction!(%1$s)"(inputActionUDAs[0].type));
 
-                    // Check if the stoke is being held down
-                    if (!strokes.empty) {
+                    // Find all bound actions
+                    static foreach (actionType; __traits(getAttributes, member)) {
 
-                        // Run the action if the stroke was performed
-                        if (strokes.front.isActive) member();
+                        static if (isInputActionType!actionType) {
 
-                        // Mark as handled
-                        return true;
+                            // Get any of held down strokes
+                            auto strokes = tree.getStrokes!actionType
+
+                                // Filter to mouse or keyboard strokes
+                                .filter!(a => a.isMouseStroke == mouse)
+
+                                // Check if they're held down
+                                .find!"a.isDown(b)"(tree);
+
+                            // TODO: get a list of possible strokes and pick the longest one
+
+                            // Check if the stoke is being held down
+                            if (!strokes.empty) {
+
+                                // Run the action if the stroke was performed
+                                if (strokes.front.isActive) member();
+
+                                // Mark as handled
+                                return true;
+
+                            }
+
+                        }
 
                     }
 
-                }}
+                }
 
-            }
+            }}
 
             return false;
 
@@ -535,7 +562,8 @@ abstract class GluiInput(Parent : GluiNode) : Parent, GluiFocusable {
 
     /// Handle mouse input.
     ///
-    /// Usually, you'd prefer to define an `@InputAction` method. This function is preferred for more advanced usage.
+    /// Usually, you'd prefer to define a method marked with an `InputAction` enum. This function is preferred for more
+    /// advanced usage.
     ///
     /// Only one node can run its `mouseImpl` callback per frame, specifically, the last one to register its input.
     /// This is to prevent parents or overlapping children to take input when another node is drawn on them.
@@ -550,7 +578,8 @@ abstract class GluiInput(Parent : GluiNode) : Parent, GluiFocusable {
 
     /// Handle keyboard and gamepad input.
     ///
-    /// Usually, you'd prefer to define an `@InputAction` method. This function is preferred for more advanced usage.
+    /// Usually, you'd prefer to define a method marked with an `InputAction` enum. This function is preferred for more
+    /// advanced usage.
     ///
     /// This will be called each frame as long as this node has focus.
     ///
@@ -568,10 +597,8 @@ abstract class GluiInput(Parent : GluiNode) : Parent, GluiFocusable {
     /// Preferrably, the node should implement an `isPressed` property and cache the result of this!
     protected bool checkIsPressed() {
 
-        alias AI = InputAction!(GluiInputAction.press);
-
-        return (isHovered && AI.isMouseDown(tree))
-            || (isFocused && AI.isFocusDown(tree));
+        return (isHovered && tree.isMouseDown!(GluiInputAction.press))
+            || (isFocused && tree.isFocusDown!(GluiInputAction.press));
 
     }
 

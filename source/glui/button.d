@@ -62,7 +62,7 @@ class GluiButton(T : GluiNode = GluiLabel) : GluiInput!T {
     }
 
     /// Handle mouse input. By default, this will call the `pressed` delegate if the button is pressed.
-    @InputAction!(GluiInputAction.press)
+    @(GluiInputAction.press)
     protected void _pressed() @trusted {
 
         // Run the callback
