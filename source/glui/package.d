@@ -10,6 +10,7 @@ public import
     glui.grid,
     glui.hover_button,
     glui.image_view,
+    glui.input,
     glui.label,
     glui.map_space,
     glui.node,

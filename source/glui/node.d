@@ -183,7 +183,10 @@ abstract class GluiNode : Styleable {
     }
 
     /// Disable this node.
-    This disable(this This = GluiNode)() return {
+    This disable(this This = GluiNode)() {
+
+        // `scope return` attribute on disable() and enable() is broken, `isDisabled` just can't get return for reasons
+        // unknown
 
         isDisabled = true;
         return cast(This) this;
@@ -191,7 +194,7 @@ abstract class GluiNode : Styleable {
     }
 
     /// Enable this node.
-    This enable(this This = GluiNode)() return {
+    This enable(this This = GluiNode)() {
 
         isDisabled = false;
         return cast(This) this;
@@ -223,7 +226,7 @@ abstract class GluiNode : Styleable {
 
     /// Check if this node is disabled.
     deprecated("disabled has been renamed to isDisabled and will be removed in 0.6.0.")
-    ref inout(bool) disabled() inout { return isDisabled; }
+    ref inout(bool) disabled() inout { return _isDisabled; }
 
     /// Checks if the node is disabled, either by self, or by any of its ancestors. Only works while the node is being
     /// drawn, and during `beforeDraw` and `afterDraw` tree actions.
@@ -349,6 +352,8 @@ abstract class GluiNode : Styleable {
 
         // Pass keyboard input to the currently focused node
         if (tree.focus && !tree.focus.asNode.isDisabledInherited) {
+
+            // TODO BUG: also fires for removed nodes
 
             // Let it handle input
             tree.keyboardHandled = either(

@@ -398,7 +398,7 @@ struct LayoutTree {
     /// disabled.
     deprecated("To be removed in 0.7.0. Use boolean `isBranchDisabled` instead. For iteration depth, check out `depth`")
     @property
-    ref inout(uint) disabledDepth() inout { return _disabledDepth; }
+    ref inout(uint) disabledDepth() inout return { return _disabledDepth; }
 
     /// Queue an action to perform on the tree next time its drawn.
     void queueAction(TreeAction action) {

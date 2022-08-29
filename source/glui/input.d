@@ -65,7 +65,7 @@ immutable struct InputActionID {
     this(IA : InputAction!actionType, alias actionType)(IA) immutable {
 
         this.id = cast(size_t) &IA._id;
-        this.name = fullyQualifiedName!actionType;
+        debug this.name = fullyQualifiedName!actionType;
 
     }
 
@@ -165,7 +165,6 @@ struct InputStroke {
     alias Item = SumType!(KeyboardKey, MouseButton, NthGamepadButton/*, NthGamepadAxis*/);
 
     Item[] input;
-
     invariant(input.length >= 1);
 
     this(T...)(T items)
@@ -383,10 +382,10 @@ interface GluiHoverable {
     /// Handle mouse input on the node.
     void mouseImpl();
 
-    /// Check if the node is disabled. `mixin MakeHoverable` to implement.
+    /// Check if the node is disabled. `mixin makeHoverable` to implement.
     ref inout(bool) isDisabled() inout;
 
-    /// Get the underlying node. `mixin MakeHoverable` to implement.
+    /// Get the underlying node. `mixin makeHoverable` to implement.
     inout(GluiNode) asNode() inout;
 
     /// Run input actions for the node.
