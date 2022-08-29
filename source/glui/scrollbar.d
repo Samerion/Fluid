@@ -36,7 +36,7 @@ class GluiScrollBar : GluiInput!GluiNode {
         "pressStyle", q{ style },
     );
 
-    mixin ImplHoveredRect;
+    mixin implHoveredRect;
     mixin enableInputActions;
 
     public {

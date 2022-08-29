@@ -2,6 +2,7 @@
 module glui.text_input;
 
 import raylib;
+import std.string;
 
 import glui.node;
 import glui.input;
@@ -28,10 +29,11 @@ private extern (C) int GetCharPressed() nothrow @nogc;
 /// )
 class GluiTextInput : GluiInput!GluiNode {
 
-    mixin DefineStyles!(
+    mixin defineStyles!(
         "emptyStyle", q{ style },
     );
-    mixin ImplHoveredRect;
+    mixin implHoveredRect;
+    mixin enableInputActions;
 
     /// Time in seconds before the cursor toggles visibility.
     static immutable float blinkTime = 1;
@@ -47,8 +49,9 @@ class GluiTextInput : GluiInput!GluiNode {
         /// A placeholder text for the field, displayed when the field is empty. Style using `emptyStyle`.
         string placeholder;
 
-        /// TODO. If true, this input accepts multiple lines.
-        bool multiline;
+        deprecated("multiline was never supported and will be deleted in 0.7.0")
+        bool multiline() const { return false; }
+        bool multiline(bool) { return false; }
 
     }
 
@@ -65,7 +68,7 @@ class GluiTextInput : GluiInput!GluiNode {
         /// Params:
         ///     sup         = Node parameters.
         ///     placeholder = Placeholder text for the field.
-        ///     submitted   = Callback for when the field is submitted (enter pressed, ctrl+enter if multiline).
+        ///     submitted   = Callback for when the field is submitted.
         this(BasicNodeParam!index sup, string placeholder = "", void delegate() @trusted submitted = null) {
 
             super(sup);
@@ -98,13 +101,8 @@ class GluiTextInput : GluiInput!GluiNode {
         // Set the size
         minSize = size;
 
-        // Single line
-        if (!multiline) {
-
-            // Set height to at least the font size
-            minSize.y = max(minSize.y, style.fontSize * style.lineHeight);
-
-        }
+        // Set height to at least the font size
+        minSize.y = max(minSize.y, style.fontSize * style.lineHeight);
 
         // Set the label text
         contentLabel.text = (value == "") ? placeholder : value;
@@ -181,67 +179,16 @@ class GluiTextInput : GluiInput!GluiNode {
 
     }
 
-    // There's nothing that can be done with a mouse.
-    protected override void mouseImpl() @trusted {
-
-    }
-
     protected override bool keyboardImpl() @trusted {
 
         import std.uni : isAlpha, isWhite;
         import std.range : back;
         import std.string : chop;
 
-        bool backspace = false;
         string input;
 
         // Get pressed key
         while (true) {
-
-            // Backspace
-            if (value.length && IsKeyPressed(KeyboardKey.KEY_BACKSPACE)) {
-
-                /// If true, delete whole words
-                const word = IsKeyDown(KeyboardKey.KEY_LEFT_CONTROL);
-
-                // Remove the last character
-                do {
-
-                    const lastChar = value.back;
-                    value = value.chop;
-
-                    backspace = true;
-
-                    // Stop instantly if there are no characters left
-                    if (value.length == 0) break;
-
-
-                    // Whitespace, continue deleting
-                    if (lastChar.isWhite) continue;
-
-                    // Matching alpha, continue deleting
-                    else if (value.back.isAlpha == lastChar.isAlpha) continue;
-
-                    // Break in other cases
-                    break;
-
-                }
-
-                // Repeat only if requested to delete whole words
-                while (word);
-
-            }
-
-            // Submit
-            if (!multiline && IsKeyPressed(KeyboardKey.KEY_ENTER)) {
-
-                isFocused = false;
-                if (submitted) submitted();
-
-                return true;
-
-            }
-
 
             // Read text
             if (const key = GetCharPressed()) {
@@ -251,15 +198,16 @@ class GluiTextInput : GluiInput!GluiNode {
 
             }
 
-            // Stop if nothing left
+            // Stop if there's nothing left
             else break;
 
         }
 
-        value ~= input;
-
         // Typed something
-        if (input.length || backspace) {
+        if (input.length) {
+
+            // Update the value
+            value ~= input;
 
             // Trigger the callback
             if (changed) changed();
@@ -274,10 +222,81 @@ class GluiTextInput : GluiInput!GluiNode {
         // Even if nothing changed, user might have held the key for a while which this function probably wouldn't have
         // caught, so we'd be returning false-negatives all the time.
         // The best way would be to check if keys that triggered action in the input were released — but Raylib's input
-        // handling is sadly too limited.
-        // Instead we're returning `false` only if the tab key was pressed.
+        // handling is sadly too limited. Instead we're returning `false` only if a focus change is requested
+        //
+        // This limitation may be removed when #15 is resolved. See: https://git.samerion.com/Samerion/Glui/issues/15
 
-        return IsKeyUp(KeyboardKey.KEY_TAB);
+        return !InputAction!(GluiInputAction.focusPrevious).isDown(tree)
+            && !InputAction!(GluiInputAction.focusNext)    .isDown(tree);
+    }
+
+    /// Submit the input.
+    @InputAction!(GluiInputAction.submit)
+    protected void _submit() {
+
+        // Clear focus
+        isFocused = false;
+
+        // Run the callback
+        if (submitted) submitted();
+
+    }
+
+    /// Erase last inputted word.
+    @InputAction!(GluiInputAction.backspaceWord)
+    void chopWord() {
+
+        import std.uni;
+        import std.range;
+
+        // Run while there's something to process
+        while (value != "") {
+
+            // Remove the last character
+            const lastChar = value.back;
+            value = value.chop;
+
+            // Stop if empty
+            if (value == "") break;
+
+            {
+
+                // Continue if last removed character was whitespace
+                if (lastChar.isWhite) continue;
+
+                // Continue deleting if two last characters were alphanumeric, or neither of them was
+                if (value.back.isAlphaNum == lastChar.isAlphaNum) continue;
+
+            }
+
+            // Break in other cases
+            break;
+
+        }
+
+        // Trigger the callback
+        if (changed) changed();
+
+        // Update the size of the box
+        updateSize();
+
+    }
+
+    /// Erase last inputted letter.
+    @InputAction!(GluiInputAction.backspace)
+    void chop() {
+
+        // Ignore if the box is empty
+        if (value == "") return;
+
+        // Remove the last character
+        value = value.chop;
+
+        // Trigger the callback
+        if (changed) changed();
+
+        // Update the size of the box
+        updateSize();
 
     }
 

@@ -385,10 +385,12 @@ interface GluiHoverable {
 
     mixin template enableInputActions() {
 
-        override bool runMouseInputActions() {
+        import glui.node;
 
-            static assert(is(typeof(this) : GluiNode),
-                format!"%s : GluiHoverable must inherit from GluiNode"(typeid(this)));
+        static assert(is(typeof(this) : GluiNode),
+            format!"%s : GluiHoverable must inherit from GluiNode"(typeid(this)));
+
+        override bool runMouseInputActions() {
 
             return runInputActionsImpl!(true, typeof(this));
 
@@ -473,17 +475,10 @@ interface GluiFocusable : GluiHoverable {
     /// Mixin template to enable input actions in this class.
     mixin template enableInputActions() {
 
-        import glui.input;
-
         mixin GluiHoverable.enableInputActions;
 
         // Implement the interface method
         override bool runFocusInputActions() {
-
-            import std.string;
-
-            static assert(is(typeof(this) : GluiNode),
-                format!"%s : GluiFocusable must inherit from GluiNode"(typeid(this)));
 
             return runInputActionsImpl!(false, typeof(this));
 
