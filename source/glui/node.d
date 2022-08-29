@@ -357,54 +357,93 @@ abstract class GluiNode : Styleable {
             );
 
         }
-        else tree.keyboardHandled = false;
 
+        // Nothing has focus
+        else with (GluiInputAction)
+        tree.keyboardHandled = {
 
-        // Keyboard wasn't handled
-        if (!tree.keyboardHandled) {
+            // Check the first focusable node
+            if (auto first = tree.focusDirection.first) {
 
-            // Pressing tab
-            if (IsKeyPressed(KeyboardKey.KEY_TAB)) {
+                // Check for focus action
+                const focusFirst = tree.isFocusActive!(GluiInputAction.focusNext)
+                    || tree.isFocusActive!(GluiInputAction.focusDown)
+                    || tree.isFocusActive!(GluiInputAction.focusRight)
+                    || tree.isFocusActive!(GluiInputAction.focusLeft);
 
-                auto direction = tree.focusDirection;
+                // Switch focus
+                if (focusFirst) {
 
-                // Try switching focus
-                auto focusTarget = IsKeyDown(KeyboardKey.KEY_LEFT_SHIFT)
-
-                    // Requesting previous item
-                    ? either(direction.previous, direction.last)
-
-                    // Requesting next
-                    : either(direction.next, direction.first);
-
-                // Request focus
-                focusTarget.focus();
-
-            }
-
-            // Check each direction we might
-            else with (Style.Side) foreach (i, node; tree.focusDirection.positional) {
-
-                // Ignore if there's no node in this direction
-                if (node is null) continue;
-
-                const pressed = i.predSwitch(
-                    left,   KeyboardKey.KEY_LEFT,
-                    right,  KeyboardKey.KEY_RIGHT,
-                    top,    KeyboardKey.KEY_UP,
-                    bottom, KeyboardKey.KEY_DOWN,
-                ).IsKeyPressed;
-
-                // If this key is pressed
-                if (pressed) {
-
-                    // Switch focus
-                    node.focus();
-                    break;
+                    first.focus();
+                    return true;
 
                 }
 
             }
+
+            // Or maybe, get the last focusable node
+            if (auto last = tree.focusDirection.last) {
+
+                // Check for focus action
+                const focusLast = tree.isFocusActive!(GluiInputAction.focusPrevious)
+                    || tree.isFocusActive!(GluiInputAction.focusUp);
+
+                // Switch focus
+                if (focusLast) {
+
+                    last.focus();
+                    return true;
+
+                }
+
+            }
+
+            return false;
+
+        }();
+
+    }
+
+    /// Switch to the previous or next focused item
+    @(GluiInputAction.focusPrevious, GluiInputAction.focusNext)
+    protected void _focusPrevNext(GluiInputAction actionType) {
+
+        auto direction = tree.focusDirection;
+
+        // Get the node to switch to
+        auto node = actionType == GluiInputAction.focusPrevious
+
+            // Requesting previous item
+            ? either(direction.previous, direction.last)
+
+            // Requesting next
+            : either(direction.next, direction.first);
+
+        // Switch focus
+        if (node) node.focus();
+
+    }
+
+    /// Switch focus
+    @(GluiInputAction.focusLeft, GluiInputAction.focusRight)
+    @(GluiInputAction.focusUp, GluiInputAction.focusDown)
+    protected void _focusDirection(GluiInputAction action) {
+
+        with (GluiInputAction) {
+
+            // Check which side we're going
+            const side = action.predSwitch(
+                focusLeft,  Style.Side.left,
+                focusRight, Style.Side.right,
+                focusUp,    Style.Side.top,
+                focusDown,  Style.Side.bottom,
+            );
+
+            // Get the node
+            auto node = tree.focusDirection.positional[side];
+
+            // Switch focus to the node
+            if (node !is null) node.focus();
 
         }
 

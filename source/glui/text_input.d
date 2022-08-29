@@ -222,12 +222,10 @@ class GluiTextInput : GluiInput!GluiNode {
         // Even if nothing changed, user might have held the key for a while which this function probably wouldn't have
         // caught, so we'd be returning false-negatives all the time.
         // The best way would be to check if keys that triggered action in the input were released — but Raylib's input
-        // handling is sadly too limited. Instead we're returning `false` only if a focus change is requested
-        //
-        // This limitation may be removed when #15 is resolved. See: https://git.samerion.com/Samerion/Glui/issues/15
+        // handling is sadly too limited. Instead we're always returning `false`.
+        // Note that changing focus is still possible as input actions have higher priority than focusImpl.
 
-        return !tree.isDown!(GluiInputAction.focusPrevious)
-            && !tree.isDown!(GluiInputAction.focusNext);
+        return true;
 
     }
 
