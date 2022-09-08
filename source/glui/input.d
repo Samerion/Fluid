@@ -23,7 +23,7 @@ enum GluiInputAction {
     // Basic
     press,   /// Press the input. Used for example to activate buttons.
     submit,  /// Submit input, eg. finish writing in textInput.
-    cancel,  /// Cancel,
+    cancel,  /// Cancel the input.
 
     // Focus
     focusPrevious,  /// Focus previous input.
