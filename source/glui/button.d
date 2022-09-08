@@ -28,17 +28,15 @@ class GluiButton(T : GluiNode = GluiLabel) : GluiInput!T {
     mixin DefineStyles!(
         "pressStyle", q{ hoverStyle },
     );
-
-    /// Mouse button to trigger the button.
-    private static immutable triggerButton = MouseButton.MOUSE_LEFT_BUTTON;
+    mixin enableInputActions;
 
     /// Callback to run when the button is pressed.
     alias pressed = submitted;
 
     // Button status
-    struct {
+    public {
 
-        // If true, this button is currenly down.
+        // If true, this button is currenly held down.
         bool isPressed;
 
     }
@@ -55,50 +53,28 @@ class GluiButton(T : GluiNode = GluiLabel) : GluiInput!T {
 
     protected override void drawImpl(Rectangle outer, Rectangle inner) {
 
+        // Check if pressed
+        isPressed = checkIsPressed;
+
         // Draw the button
         super.drawImpl(outer, inner);
-
-        // Reset pressed status
-        isPressed = false;
 
     }
 
     /// Handle mouse input. By default, this will call the `pressed` delegate if the button is pressed.
-    protected override void mouseImpl() @trusted {
+    @(GluiInputAction.press)
+    protected void _pressed() @trusted {
 
-        // Just released
-        if (IsMouseButtonReleased(triggerButton)) {
-
-            isPressed = true;
-            pressed();
-
-        }
-
-    }
-
-    /// Handle keyboard input.
-    protected override bool keyboardImpl() @trusted {
-
-        // Pressed enter
-        if (IsKeyReleased(KeyboardKey.KEY_ENTER)) {
-
-            isPressed = true;
-            pressed();
-            return true;
-
-        }
-
-        return IsKeyDown(KeyboardKey.KEY_ENTER);
+        // Run the callback
+        pressed();
 
     }
 
     /// Pick the style.
     protected override const(Style) pickStyle() const {
 
-        alias pressing = () @trusted => IsMouseButtonDown(triggerButton);
-
         // If pressed
-        if (isHovered && pressing()) return pressStyle;
+        if (isPressed) return pressStyle;
 
         // If focused
         if (isFocused) return focusStyle;
@@ -108,6 +84,14 @@ class GluiButton(T : GluiNode = GluiLabel) : GluiInput!T {
 
         // No decision — normal state
         return super.pickStyle();
+
+    }
+
+    static if (__traits(compiles, text))
+    override string toString() const {
+
+        import std.format;
+        return format!"button(%s)"(text);
 
     }
 

@@ -1,15 +1,22 @@
 ///
 module glui.structs;
 
-import raylib;
 import std.conv;
-import glui.node;
+
+public import glui.tree;
+
+
+@safe:
+
 
 // Disable scissors mode on macOS in Raylib 3, it's broken; see #60
 version (Glui_Raylib3) version (OSX) version = Glui_DisableScissors;
 
-@safe:
+enum NodeAlign {
 
+    start, center, end, fill
+
+}
 
 /// Create a new layout
 /// Params:
@@ -140,139 +147,6 @@ struct Layout {
             if (startAlign) return format!"Layout()";
             else if (equalAlign) return format!".layout!%s"(nodeAlign[0]);
             else return format!".layout!(%s, %s)"(nodeAlign[0], nodeAlign[1]);
-
-        }
-
-    }
-
-}
-
-enum NodeAlign {
-
-    start, center, end, fill
-
-}
-
-package interface GluiFocusable {
-
-    void focus();
-    bool isFocused() const;
-    void mouseImpl();
-    bool keyboardImpl();
-    ref inout(bool) isDisabled() inout;
-
-}
-
-/// Global data for the layout tree.
-struct LayoutTree {
-
-    /// Root node of the tree.
-    GluiNode root;
-
-    /// Top-most hovered node in the tree.
-    GluiNode hover;
-
-    /// Currently focused node.
-    GluiFocusable focus;
-
-    /// Check if keyboard input was handled after rendering is has completed.
-    bool keyboardHandled;
-
-    /// Current depth of "disabled" nodes, incremented for any node descended into, while any of the ancestors is
-    /// disabled.
-    uint disabledDepth;
-
-    /// Scissors stack.
-    package Rectangle[] scissors;
-
-    version (Glui_DisableScissors) {
-
-        Rectangle intersectScissors(Rectangle rect) { return rect; }
-        void pushScissors(Rectangle) { }
-        void popScissors() { }
-
-    }
-
-    else {
-
-        /// Intersect the given rectangle against current scissor area.
-        Rectangle intersectScissors(Rectangle rect) {
-
-            import std.algorithm : min, max;
-
-            // No limit applied
-            if (!scissors.length) return rect;
-
-            const b = scissors[$-1];
-
-            Rectangle result;
-
-            // Intersect
-            result.x = max(rect.x, b.x);
-            result.y = max(rect.y, b.y);
-            result.w = min(rect.x + rect.w, b.x + b.w) - result.x;
-            result.h = min(rect.y + rect.h, b.y + b.h) - result.y;
-
-            return result;
-
-        }
-
-        /// Start scissors mode.
-        void pushScissors(Rectangle rect) {
-
-            auto result = rect;
-
-            // There's already something on the stack
-            if (scissors.length) {
-
-                // Intersect
-                result = intersectScissors(rect);
-
-            }
-
-            // Push to the stack
-            scissors ~= result;
-
-            // Start the mode
-            applyScissors(result);
-
-        }
-
-        void popScissors() @trusted {
-
-            // Pop the stack
-            scissors = scissors[0 .. $-1];
-
-            // Pop the mode
-            EndScissorMode();
-
-            // There's still something left
-            if (scissors.length) {
-
-                // Start again
-                applyScissors(scissors[$-1]);
-
-            }
-
-        }
-
-        private void applyScissors(Rectangle rect) @trusted {
-
-            import glui.utils;
-
-            // End the current mode, if any
-            if (scissors.length) EndScissorMode();
-
-            version (Glui_Raylib3) const scale = hidpiScale;
-            else                   const scale = Vector2(1, 1);
-
-            // Start this one
-            BeginScissorMode(
-                to!int(rect.x * scale.x),
-                to!int(rect.y * scale.y),
-                to!int(rect.w * scale.x),
-                to!int(rect.h * scale.y),
-            );
 
         }
 

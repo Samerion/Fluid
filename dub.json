@@ -2,6 +2,28 @@
 	"authors": [
 		"Artha"
 	],
+	"configurations": [
+		{
+			"dependencies": {
+				"raylib-d": ">=3.1.0"
+			},
+			"name": "raylib3",
+			"targetType": "library",
+			"versions": [
+				"Glui_Raylib3"
+			]
+		},
+		{
+			"dependencies": {
+				"raylib-d": "~>4.0.1"
+			},
+			"name": "raylib4",
+			"targetType": "library",
+			"versions": [
+				"Glui_Raylib4"
+			]
+		}
+	],
 	"copyright": "Copyright © 2021, Artha",
 	"description": "A simple UI library designed for IsodiTools and Samerion",
 	"libs": [
@@ -9,22 +31,6 @@
 	],
 	"license": "BSL",
 	"name": "glui",
-	"configurations": [
-		{
-			"name": "raylib3",
-			"dependencies": {
-				"raylib-d": "~>3.1"
-			},
-			"versions": ["Glui_Raylib3"]
-		},
-		{
-			"name": "raylib4",
-			"dependencies": {
-				"raylib-d": "~>4.0.1"
-			},
-			"versions": ["Glui_Raylib4"]
-		}
-	],
 	"subPackages": [
 		{
 			"dependencies": {
@@ -35,11 +41,11 @@
 				"examples/showcase.d"
 			],
 			"sourcePaths": [],
-			"targetPath": "build",
-			"targetType": "executable",
 			"subConfigurations": {
 				"glui": "raylib4"
-			}
+			},
+			"targetPath": "build",
+			"targetType": "executable"
 		},
 		{
 			"dependencies": {
@@ -50,11 +56,11 @@
 				"examples/showcase_2.d"
 			],
 			"sourcePaths": [],
-			"targetPath": "build",
-			"targetType": "executable",
 			"subConfigurations": {
 				"glui": "raylib4"
-			}
+			},
+			"targetPath": "build",
+			"targetType": "executable"
 		},
 		{
 			"dependencies": {
@@ -65,11 +71,11 @@
 				"examples/onions.d"
 			],
 			"sourcePaths": [],
-			"targetPath": "build",
-			"targetType": "executable",
 			"subConfigurations": {
 				"glui": "raylib4"
-			}
+			},
+			"targetPath": "build",
+			"targetType": "executable"
 		},
 		{
 			"dependencies": {
@@ -80,11 +86,11 @@
 				"examples/checks.d"
 			],
 			"sourcePaths": [],
-			"targetPath": "build",
-			"targetType": "executable",
 			"subConfigurations": {
 				"glui": "raylib4"
-			}
+			},
+			"targetPath": "build",
+			"targetType": "executable"
 		},
 		{
 			"dependencies": {
@@ -95,11 +101,11 @@
 				"examples/scroll.d"
 			],
 			"sourcePaths": [],
-			"targetPath": "build",
-			"targetType": "executable",
 			"subConfigurations": {
 				"glui": "raylib4"
-			}
+			},
+			"targetPath": "build",
+			"targetType": "executable"
 		},
 		{
 			"dependencies": {
@@ -110,11 +116,11 @@
 				"examples/margins.d"
 			],
 			"sourcePaths": [],
-			"targetPath": "build",
-			"targetType": "executable",
 			"subConfigurations": {
 				"glui": "raylib4"
-			}
+			},
+			"targetPath": "build",
+			"targetType": "executable"
 		},
 		{
 			"dependencies": {
@@ -125,11 +131,11 @@
 				"examples/hidpi.d"
 			],
 			"sourcePaths": [],
-			"targetPath": "build",
-			"targetType": "executable",
 			"subConfigurations": {
 				"glui": "raylib4"
-			}
+			},
+			"targetPath": "build",
+			"targetType": "executable"
 		},
 		{
 			"dependencies": {
@@ -140,13 +146,14 @@
 				"examples/map.d"
 			],
 			"sourcePaths": [],
-			"targetPath": "build",
-			"targetType": "executable",
 			"subConfigurations": {
 				"glui": "raylib4"
-			}
+			},
+			"targetPath": "build",
+			"targetType": "executable"
 		}
 	],
 	"targetPath": "build",
-	"targetType": "library"
+	"targetType": "library",
+	"dflags": ["-preview=dip1000"]
 }

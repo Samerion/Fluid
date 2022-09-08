@@ -57,10 +57,11 @@ void main() {
 
             auto position = MapPosition(GetMousePosition, dropVector!"auto");
 
-            root.addChild(
+            root.addFocusedChild(
                 popup(
                     label("I'm a dropdown"),
-                    label("Hurray!"),
+                    button("Button 1", delegate { }),
+                    button("Button 2", delegate { }),
                 ),
                 position,
             );
