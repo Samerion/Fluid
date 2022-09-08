@@ -233,6 +233,11 @@ abstract class GluiNode : Styleable {
     bool isDisabledInherited() const { return tree.isBranchDisabled; }
 
     /// Queue an action to perform within this node's branch.
+    ///
+    /// This is recommended to use over `LayoutTree.queueAction`, as it can be used to limit the action to a specific
+    /// branch, and can also work before the first draw.
+    ///
+    /// This function is not safe to use while the tree is being drawn.
     final void queueAction(TreeAction action) {
 
         // Set this node as the start for the given action
