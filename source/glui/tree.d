@@ -279,7 +279,10 @@ abstract class TreeAction {
 
     }
 
-    /// Called before the tree is drawn.
+    // TODO spaw x and xImpl so it matches naming of other interfaces
+
+    /// Called before the tree is drawn. Keep in mind this might not be called if the action is started when tree
+    /// iteration has already begun.
     /// Params:
     ///     root     = Root of the tree.
     ///     viewport = Screen space for the node.
@@ -400,7 +403,10 @@ struct LayoutTree {
     @property
     ref inout(uint) disabledDepth() inout return { return _disabledDepth; }
 
-    /// Queue an action to perform on the tree next time its drawn.
+    /// Queue an action to perform while iterating the tree.
+    ///
+    /// Avoid using this; most of the time `GluiNode.queueAction` is what you want. `LayoutTree.queueAction` might fire
+    /// too early
     void queueAction(TreeAction action) {
 
         actions ~= action;

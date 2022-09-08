@@ -386,7 +386,11 @@ interface GluiHoverable {
     ref inout(bool) isDisabled() inout;
 
     /// Get the underlying node. `mixin makeHoverable` to implement.
-    inout(GluiNode) asNode() inout;
+    final inout(GluiNode) asNode() inout {
+
+        return cast(inout GluiNode) this;
+
+    }
 
     /// Run input actions for the node.
     ///
@@ -406,13 +410,6 @@ interface GluiHoverable {
         override ref inout(bool) isDisabled() inout {
 
             return super.isDisabled;
-
-        }
-
-        /// Get the underlying node.
-        inout(GluiNode) asNode() inout {
-
-            return this;
 
         }
 
@@ -647,10 +644,16 @@ abstract class GluiInput(Parent : GluiNode) : Parent, GluiFocusable {
     /// Change the focus to this node.
     void focus() {
 
+        import glui.actions;
+
         // Ignore if disabled
         if (isDisabled) return;
 
+        // Switch the scroll
         tree.focus = this;
+
+        // Ensure this node gets focus
+        this.scrollIntoView();
 
     }
 

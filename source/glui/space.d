@@ -77,6 +77,13 @@ class GluiSpace : GluiNode, GluiContainer {
 
     }
 
+    override Rectangle shallowScrollTo(const GluiNode, Vector2, Rectangle, Rectangle childBox) {
+
+        // no-op, reordering should not be done without explicit orders
+        return childBox;
+
+    }
+
     protected override void resizeImpl(Vector2 available) {
 
         import std.algorithm : max, map, fold;
