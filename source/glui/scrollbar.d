@@ -31,12 +31,13 @@ class GluiScrollBar : GluiInput!GluiNode {
     /// `backgroundStyle` — style defined for the background part of the scrollbar,
     ///
     /// `pressStyle` — style to activate while the scrollbar is pressed.
-    mixin DefineStyles!(
+    mixin defineStyles!(
         "backgroundStyle", q{ Style.init },
         "pressStyle", q{ style },
     );
 
-    mixin ImplHoveredRect;
+    mixin implHoveredRect;
+    mixin enableInputActions;
 
     public {
 
@@ -54,7 +55,7 @@ class GluiScrollBar : GluiInput!GluiNode {
 
         /// Available space to scroll.
         ///
-        /// Note: page length, and therefore scrollbar handle length, are determined from the space occupied by the
+        /// Note: visible box size, and therefore scrollbar handle length, are determined from the space occupied by the
         /// scrollbar.
         size_t availableSpace;
 
@@ -64,6 +65,9 @@ class GluiScrollBar : GluiInput!GluiNode {
     }
 
     protected {
+
+        /// True if the scrollbar is pressed.
+        bool _isPressed;
 
         /// If true, the inner part of the scrollbar is hovered.
         bool innerHovered;
@@ -94,7 +98,14 @@ class GluiScrollBar : GluiInput!GluiNode {
 
     }
 
-    /// Set the scroll to a value clamped between start and end.
+    @property
+    bool isPressed() const {
+
+        return _isPressed;
+
+    }
+
+    /// Set the scroll to a value clamped between start and end. Doesn't trigger the `changed` event.
     void setScroll(ptrdiff_t value) {
 
         position = cast(size_t) value.clamp(0, scrollMax);
@@ -147,6 +158,9 @@ class GluiScrollBar : GluiInput!GluiNode {
 
         const handlePosition = (scrollbarLength - handleLength) * position / scrollMax;
 
+        // If focused, check for action input
+        if (isFocused) scrollFocusImpl();
+
         // Now get the size of the inner rect
         auto innerRect = contentBox;
 
@@ -194,13 +208,17 @@ class GluiScrollBar : GluiInput!GluiNode {
 
     override protected void mouseImpl() @trusted {
 
-        const triggerButton = MouseButton.MOUSE_LEFT_BUTTON;
-
         // Ignore if we can't scroll
         if (availableSpace == 0) return;
 
-        // Pressed the scrollbar
-        if (IsMouseButtonPressed(triggerButton)) {
+        // Check if the button is held down
+        const isDown = tree.isDown!(GluiInputAction.press);
+
+        // Update status
+        scope (exit) _isPressed = isDown;
+
+        // Pressed the scrollbar just now
+        if (isDown && !isPressed) {
 
             // Remember the grab position
             grabPosition = GetMousePosition;
@@ -221,8 +239,8 @@ class GluiScrollBar : GluiInput!GluiNode {
 
         }
 
-        // Mouse is held down
-        else if (IsMouseButtonDown(triggerButton)) {
+        // Handle is held down
+        else if (isDown) {
 
             const mouse = GetMousePosition;
 
@@ -237,35 +255,73 @@ class GluiScrollBar : GluiInput!GluiNode {
 
     }
 
-    override protected bool keyboardImpl() @trusted {
+    @(GluiInputAction.pageLeft, GluiInputAction.pageRight)
+    @(GluiInputAction.pageUp, GluiInputAction.pageDown)
+    protected void _scrollPage(GluiInputAction action) {
 
-        const plusKey = horizontal
-            ? KeyboardKey.KEY_RIGHT
-            : KeyboardKey.KEY_DOWN;
-        const minusKey = horizontal
-            ? KeyboardKey.KEY_LEFT
-            : KeyboardKey.KEY_UP;
+        with (GluiInputAction) {
 
-        const arrowSpeed = scrollSpeed * 20 * GetFrameTime;
-        const pageSpeed = scrollbarLength * 3/4;
+            // Check if we're moving horizontally
+            const forHorizontal = action == pageLeft || action == pageRight;
 
-        const move = IsKeyPressed(KeyboardKey.KEY_PAGE_DOWN) ? +pageSpeed
-            : IsKeyPressed(KeyboardKey.KEY_PAGE_UP) ? -pageSpeed
-            : IsKeyDown(plusKey) ? +arrowSpeed
-            : IsKeyDown(minusKey) ? -arrowSpeed
-            : 0;
+            // Check direction
+            const direction = action == pageLeft || action == pageUp
+                ? -1
+                : 1;
 
-        if (move != 0) {
-
-            setScroll(position + move);
-
-            if (changed) changed();
-
-            return true;
+            // Change
+            if (horizontal ^ forHorizontal) emitChange(direction * scrollPageLength);
 
         }
 
-        return false;
+    }
+
+    @(GluiInputAction.scrollLeft, GluiInputAction.scrollRight)
+    @(GluiInputAction.scrollUp, GluiInputAction.scrollDown)
+    protected void _scroll() {
+
+        // Implemented in scrollFocusImpl called from `drawImpl()` to support holding
+
+    }
+
+    protected void scrollFocusImpl() @trusted {
+
+        const isPlus = horizontal
+            ? &isDown!(GluiInputAction.scrollRight)
+            : &isDown!(GluiInputAction.scrollDown);
+        const isMinus = horizontal
+            ? &isDown!(GluiInputAction.scrollLeft)
+            : &isDown!(GluiInputAction.scrollUp);
+
+        const speed = cast(ulong) (scrollSpeed * 20 * GetFrameTime);
+        const change
+            = isPlus(tree)  ? +speed
+            : isMinus(tree) ? -speed
+            : 0;
+
+        emitChange(change);
+
+
+    }
+
+    /// Change the value and run the `changed` callback.
+    protected void emitChange(ptrdiff_t move) {
+
+        // Ignore if nothing changed.
+        if (move == 0) return;
+
+        // Update scroll
+        setScroll(position + move);
+
+        // Run the callback
+        if (changed) changed();
+
+    }
+
+    /// Scroll page length used for `pageUp` and `pageDown` navigation.
+    protected ulong scrollPageLength() const {
+
+        return cast(ulong) (scrollbarLength * 3/4);
 
     }
 

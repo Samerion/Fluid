@@ -119,13 +119,16 @@ Style nestStyle(string init, alias styleKey)() {
 
 }
 
+/// `DefineStyles` has been renamed to `defineStyles`. Deprecation warning is not to be issued yet.
+alias DefineStyles = defineStyles;
+
 /// Define style fields for a node and let them be affected by themes.
 ///
 /// Note: This should be used in *every* node, even if empty, to ensure keys are inherited properly.
 ///
 /// Params:
 ///     names = A list of styles to define.
-mixin template DefineStyles(names...) {
+mixin template defineStyles(names...) {
 
     @safe:
 

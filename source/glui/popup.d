@@ -26,6 +26,10 @@ class GluiPopup : GluiFrame {
 
     // TODO: ...unless clicked on another dropdown.
 
+    // Tree actions and recent changes to focusability make it possible to perform a total overhaul of popups. A
+    // GluiFocusable popup, when shown, could queue a popup-check action (if not already queued), which would check if
+    // focus belongs to *any* popup or its children — and close if not.
+
     mixin DefineStyles;
 
     this(T...)(T args) {

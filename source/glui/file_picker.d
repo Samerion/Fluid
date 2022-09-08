@@ -33,7 +33,8 @@ alias filePicker = simpleConstructor!GluiFilePicker;
 /// )
 class GluiFilePicker : GluiInput!GluiFrame {
 
-    mixin DefineStyles!("selectedStyle", q{ Style.init });
+    mixin defineStyles!("selectedStyle", q{ Style.init });
+    mixin enableInputActions;
 
     /// Callback to run when input was cancelled.
     void delegate() cancelled;
@@ -52,7 +53,7 @@ class GluiFilePicker : GluiInput!GluiFrame {
         GluiLabel titleLabel;
 
         /// Text input field containing the currently selected directory or file for the file picker.
-        GluiTextInput input;
+        GluiFilenameInput input;
 
         /// Label with suggestions to the text.
         GluiRichLabel suggestions;
@@ -79,7 +80,7 @@ class GluiFilePicker : GluiInput!GluiFrame {
             theme,
 
             titleLabel  = label(name),
-            input       = textInput("Path to file...", submitted),
+            input       = new GluiFilenameInput("Path to file...", submitted),
             suggestions = richLabel(),
         );
 
@@ -161,6 +162,48 @@ class GluiFilePicker : GluiInput!GluiFrame {
     string value(string newValue) {
 
         return typedFilename = input.value = newValue;
+
+    }
+
+    protected class GluiFilenameInput : GluiTextInput {
+
+        mixin defineStyles;
+        mixin enableInputActions;
+
+        this(T...)(T args) {
+
+            super(args);
+
+        }
+
+        @(GluiInputAction.entryUp)
+        protected void _entryUp() {
+
+            typedFilename = input.value = input.value.dirName;
+            updateSuggestions();
+
+        }
+
+        @(GluiInputAction.cancel)
+        protected void _cancel() {
+
+            cancel();
+
+        }
+
+        @(GluiInputAction.entryPrevious)
+        protected void _entryPrevious() {
+
+            offsetSuggestion(-1);
+
+        }
+
+        @(GluiInputAction.entryNext)
+        protected void _entryNext() {
+
+            offsetSuggestion(+1);
+
+        }
 
     }
 
@@ -304,7 +347,7 @@ class GluiFilePicker : GluiInput!GluiFrame {
         savedFocus = true;
 
         // Focus the input instead.
-        tree.focus = input;
+        input.focus();
 
     }
 
@@ -332,51 +375,6 @@ class GluiFilePicker : GluiInput!GluiFrame {
 
             cancel();
             return;
-
-        }
-
-
-        with (KeyboardKey) {
-
-            // If escape was pressed
-            if (IsKeyPressed(KEY_ESCAPE)) {
-
-                cancel();
-                return;
-
-            }
-
-            // Ctrl
-            else if (IsKeyDown(KEY_LEFT_CONTROL)) {
-
-                // Vim
-                if (IsKeyPressed(KEY_K)) offsetSuggestion(-1);
-                else if (IsKeyPressed(KEY_J)) offsetSuggestion(1);
-
-                // Emacs
-                if (IsKeyPressed(KEY_P)) offsetSuggestion(-1);
-                else if (IsKeyPressed(KEY_N)) offsetSuggestion(1);
-
-            }
-
-            // Alt
-            else if (IsKeyDown(KEY_LEFT_ALT)) {
-
-                // Dir up
-                if (IsKeyPressed(KEY_UP)) {
-
-                    typedFilename = input.value = input.value.dirName;
-                    updateSuggestions();
-
-                }
-
-            }
-
-            // Go up
-            else if (IsKeyPressed(KEY_UP)) offsetSuggestion(-1);
-
-            // Go down
-            else if (IsKeyPressed(KEY_DOWN)) offsetSuggestion(1);
 
         }
 

@@ -13,7 +13,9 @@ import glui.utils;
 import glui.input;
 import glui.style;
 import glui.structs;
-import glui.scrollbar;
+import glui.container;
+
+public import glui.scrollbar;
 
 private extern(C) float GetMouseWheelMove();
 
@@ -36,7 +38,7 @@ alias hscrollFrame = simpleConstructor!(GluiScrollFrame, (a) {
 
 /// Implement scrolling for the given node.
 ///
-/// This only supports scrolling in one side.
+/// This only supports scrolling in one axis.
 class GluiScrollable(T : GluiNode, string horizontalExpression) : T {
 
     mixin DefineStyles;
@@ -100,6 +102,57 @@ class GluiScrollable(T : GluiNode, string horizontalExpression) : T {
     size_t scrollMax() const {
 
         return scrollBar.scrollMax();
+
+    }
+
+    static if (is(typeof(this) : GluiContainer))
+    override Rectangle shallowScrollTo(const GluiNode, Vector2, Rectangle parentBox, Rectangle childBox) {
+
+        struct Position {
+
+            float* start;
+            float end;
+            float viewportStart, viewportEnd;
+
+        }
+
+        // Get the data for the node
+        scope position = isHorizontal
+            ? Position(
+                &childBox.x, childBox.x + childBox.width,
+                parentBox.x, parentBox.x + parentBox.width
+            )
+            : Position(
+                &childBox.y, childBox.y + childBox.height,
+                parentBox.y, parentBox.y + parentBox.height
+            );
+
+        auto scrollBefore = scroll();
+
+        // Calculate the offset
+        auto offset
+
+            // Need to scroll towards the end
+            = *position.start > position.viewportStart && position.end > position.viewportEnd
+            ? to!ptrdiff_t(position.end - position.viewportEnd)
+
+            // Need to scroll towards the start
+            : *position.start < position.viewportStart && position.end < position.viewportEnd
+            ? to!ptrdiff_t(*position.start - position.viewportStart)
+
+            // Already in viewport
+            : 0;
+
+        // Perform the scroll
+        setScroll(scroll.to!ptrdiff_t + offset);
+
+        // Adjust the offset
+        offset = scroll.to!ptrdiff_t - scrollBefore;
+
+        // Apply child position
+        *position.start += offset;
+
+        return childBox;
 
     }
 
@@ -223,6 +276,9 @@ class GluiScrollable(T : GluiNode, string horizontalExpression) : T {
 
     /// Implementation of mouse input
     private void inputImpl() @trusted {
+
+        // Ignore if horizontal (For now; TODO)
+        if (isHorizontal) return;
 
         const float move = -GetMouseWheelMove;
         const float totalChange = move * scrollBar.scrollSpeed;

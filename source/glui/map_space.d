@@ -8,9 +8,12 @@ import std.format;
 import std.algorithm;
 
 import glui.node;
+import glui.input;
 import glui.space;
 import glui.style;
 import glui.utils;
+import glui.actions;
+import glui.container;
 
 
 @safe:
@@ -149,6 +152,14 @@ class GluiMapSpace : GluiSpace {
         children ~= node;
         positions[node] = position;
         updateSize();
+    }
+
+    /// ditto
+    void addFocusedChild(GluiNode node, Position position) {
+
+        addChild(node, position);
+        node.focusRecurse();
+
     }
 
     void moveChild(GluiNode node, Position position)

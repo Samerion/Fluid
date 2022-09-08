@@ -13,6 +13,7 @@ import glui.node;
 import glui.style;
 import glui.utils;
 import glui.children;
+import glui.container;
 
 
 @safe:
@@ -32,7 +33,7 @@ alias hspace = simpleConstructor!(GluiSpace, (a) {
 ///
 /// Space only acts as a container and doesn't implement styles and doesn't take focus. It can be very useful to build
 /// overlaying nodes, eg. with `GluiOnionFrame`.
-class GluiSpace : GluiNode {
+class GluiSpace : GluiNode, GluiContainer {
 
     mixin DefineStyles;
 
@@ -73,6 +74,13 @@ class GluiSpace : GluiNode {
     void opOpAssign(string operator : "~", T)(T nodes) {
 
         children ~= nodes;
+
+    }
+
+    override Rectangle shallowScrollTo(const GluiNode, Vector2, Rectangle, Rectangle childBox) {
+
+        // no-op, reordering should not be done without explicit orders
+        return childBox;
 
     }
 

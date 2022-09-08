@@ -6,9 +6,12 @@ import raylib;
 import std.math;
 import std.traits;
 import std.string;
+import std.algorithm;
 
+import glui.tree;
 import glui.style;
 import glui.utils;
+import glui.input;
 import glui.structs;
 
 @safe:
@@ -90,6 +93,11 @@ abstract class GluiNode : Styleable {
         /// Theme of this node.
         Theme _theme;
 
+        /// Actions queued for this node; only used for queueing actions before the first `resize`; afterwards, all
+        /// actions are queued directly into the tree.
+        TreeAction[] _queuedActions;
+        // TODO It might be helpful to expose an interface for queuing delegates to be done after resize
+
     }
 
     @property {
@@ -161,7 +169,6 @@ abstract class GluiNode : Styleable {
     This show(this This = GluiNode)() return {
 
         // Note: The default value for This is necessary, otherwise virtual calls don't work
-
         isHidden = false;
         return cast(This) this;
 
@@ -171,6 +178,25 @@ abstract class GluiNode : Styleable {
     This hide(this This = GluiNode)() return {
 
         isHidden = true;
+        return cast(This) this;
+
+    }
+
+    /// Disable this node.
+    This disable(this This = GluiNode)() {
+
+        // `scope return` attribute on disable() and enable() is broken, `isDisabled` just can't get return for reasons
+        // unknown
+
+        isDisabled = true;
+        return cast(This) this;
+
+    }
+
+    /// Enable this node.
+    This enable(this This = GluiNode)() {
+
+        isDisabled = false;
         return cast(This) this;
 
     }
@@ -188,9 +214,9 @@ abstract class GluiNode : Styleable {
 
     /// Check if this node is hovered.
     ///
-    /// Returns false if the node or some of its ancestors are disabled.
+    /// Returns false if the node or, while the node is being drawn, some of its ancestors are disabled.
     @property
-    bool isHovered() const { return _isHovered && !_isDisabled && !tree.disabledDepth; }
+    bool isHovered() const { return _isHovered && !_isDisabled && !tree.isBranchDisabled; }
 
     deprecated("hovered has been renamed to isHovered and will be removed in 0.6.0.")
     bool hovered() const { return isHovered; }
@@ -200,11 +226,30 @@ abstract class GluiNode : Styleable {
 
     /// Check if this node is disabled.
     deprecated("disabled has been renamed to isDisabled and will be removed in 0.6.0.")
-    ref inout(bool) disabled() inout { return isDisabled; }
+    ref inout(bool) disabled() inout { return _isDisabled; }
 
     /// Checks if the node is disabled, either by self, or by any of its ancestors. Only works while the node is being
-    /// drawn.
-    protected bool isDisabledInherited() const { return tree.disabledDepth != 0; }
+    /// drawn, and during `beforeDraw` and `afterDraw` tree actions.
+    bool isDisabledInherited() const { return tree.isBranchDisabled; }
+
+    /// Queue an action to perform within this node's branch.
+    ///
+    /// This is recommended to use over `LayoutTree.queueAction`, as it can be used to limit the action to a specific
+    /// branch, and can also work before the first draw.
+    ///
+    /// This function is not safe to use while the tree is being drawn.
+    final void queueAction(TreeAction action) {
+
+        // Set this node as the start for the given action
+        action.startNode = this;
+
+        // Insert the action into the tree's queue
+        if (tree) tree.queueAction(action);
+
+        // If there isn't a tree, wait for a resize
+        else _queuedActions ~= action;
+
+    }
 
     /// Recalculate the window size before next draw.
     final void updateSize() scope {
@@ -222,6 +267,7 @@ abstract class GluiNode : Styleable {
 
             // Create one
             tree = new LayoutTree(this);
+            tree.defaultInputBinds();
 
             // Workaround for a HiDPI scissors mode glitch, which breaks Glui
             version (Glui_Raylib3)
@@ -245,6 +291,9 @@ abstract class GluiNode : Styleable {
         // Clear mouse hover if LMB is up
         if (!isLMBHeld) tree.hover = null;
 
+        // Clear focus info
+        tree.focusDirection = FocusDirection(tree.focusBox);
+        tree.focusBox = Rectangle(float.nan);
 
         // Resize if required
         if (IsWindowResized || _requiresResize) {
@@ -254,8 +303,18 @@ abstract class GluiNode : Styleable {
 
         }
 
+        /// Area to render on
+        const viewport = Rectangle(0, 0, space.x, space.y);
+
+
+        // Run beforeTree actions
+        tree.runAction(a => a.beforeTree(this, viewport));
+
         // Draw this node
-        draw(Rectangle(0, 0, space.x, space.y));
+        draw(viewport);
+
+        // Run afterTree actions, remove those that have finished
+        tree.runAction(a => a.afterTree());
 
 
         // Set mouse cursor to match hovered node
@@ -273,18 +332,22 @@ abstract class GluiNode : Styleable {
         // Note: pressed, not released; released activates input events, pressed activates focus
         const mousePressed = IsMouseButtonPressed(MouseButton.MOUSE_LEFT_BUTTON);
 
-        // TODO: remove hover from disabled nodes (specifically to handle edgecase — node disabled while hovered and LMB
-        // down)
-        // TODO: move focus away from disabled nodes into neighbors along with #8
-
         // Mouse is hovering an input node
-        if (auto hoverInput = cast(GluiFocusable) tree.hover) {
+        if (auto hoverInput = cast(GluiHoverable) tree.hover) {
 
-            // Pass the input to it
-            hoverInput.mouseImpl();
+            // Ignore if the node is disabled
+            if (!tree.hover.isDisabledInherited) {
 
-            // If the left mouse button is pressed down, let it have focus
-            if (mousePressed && !hoverInput.isFocused) hoverInput.focus();
+                // Check if the node is focusable
+                auto focusable = cast(GluiFocusable) tree.hover;
+
+                // Pass the input to it
+                hoverInput.runMouseInputActions || hoverInput.mouseImpl;
+
+                // If the left mouse button is pressed down, let it have focus, if it can
+                if (mousePressed && focusable && !focusable.isFocused) focusable.focus();
+
+            }
 
         }
 
@@ -293,19 +356,117 @@ abstract class GluiNode : Styleable {
 
 
         // Pass keyboard input to the currently focused node
-        if (tree.focus && !tree.focus.isDisabled) tree.keyboardHandled = tree.focus.keyboardImpl();
-        else tree.keyboardHandled = false;
+        if (tree.focus && !tree.focus.asNode.isDisabledInherited) {
+
+            // TODO BUG: also fires for removed nodes
+
+            // Let it handle input
+            tree.keyboardHandled = either(
+                tree.focus.runFocusInputActions,
+                tree.focus.focusImpl,
+            );
+
+        }
+
+        // Nothing has focus
+        else with (GluiInputAction)
+        tree.keyboardHandled = {
+
+            // Check the first focusable node
+            if (auto first = tree.focusDirection.first) {
+
+                // Check for focus action
+                const focusFirst = tree.isFocusActive!(GluiInputAction.focusNext)
+                    || tree.isFocusActive!(GluiInputAction.focusDown)
+                    || tree.isFocusActive!(GluiInputAction.focusRight)
+                    || tree.isFocusActive!(GluiInputAction.focusLeft);
+
+                // Switch focus
+                if (focusFirst) {
+
+                    first.focus();
+                    return true;
+
+                }
+
+            }
+
+            // Or maybe, get the last focusable node
+            if (auto last = tree.focusDirection.last) {
+
+                // Check for focus action
+                const focusLast = tree.isFocusActive!(GluiInputAction.focusPrevious)
+                    || tree.isFocusActive!(GluiInputAction.focusUp);
+
+                // Switch focus
+                if (focusLast) {
+
+                    last.focus();
+                    return true;
+
+                }
+
+            }
+
+            return false;
+
+        }();
 
     }
 
-    /// Draw this node at specified location.
+    /// Switch to the previous or next focused item
+    @(GluiInputAction.focusPrevious, GluiInputAction.focusNext)
+    protected void _focusPrevNext(GluiInputAction actionType) {
+
+        auto direction = tree.focusDirection;
+
+        // Get the node to switch to
+        auto node = actionType == GluiInputAction.focusPrevious
+
+            // Requesting previous item
+            ? either(direction.previous, direction.last)
+
+            // Requesting next
+            : either(direction.next, direction.first);
+
+        // Switch focus
+        if (node) node.focus();
+
+    }
+
+    /// Switch focus
+    @(GluiInputAction.focusLeft, GluiInputAction.focusRight)
+    @(GluiInputAction.focusUp, GluiInputAction.focusDown)
+    protected void _focusDirection(GluiInputAction action) {
+
+        with (GluiInputAction) {
+
+            // Check which side we're going
+            const side = action.predSwitch(
+                focusLeft,  Style.Side.left,
+                focusRight, Style.Side.right,
+                focusUp,    Style.Side.top,
+                focusDown,  Style.Side.bottom,
+            );
+
+            // Get the node
+            auto node = tree.focusDirection.positional[side];
+
+            // Switch focus to the node
+            if (node !is null) node.focus();
+
+        }
+
+    }
+
+    /// Draw this node at the specified location from within of another (parent) node.
+    ///
+    /// The drawn node will be aligned according to the `layout` field within the box given.
+    ///
+    /// Params:
+    ///     space = Space the node should be drawn in. It should be limited to space within the parent node.
+    ///             If the node can't fit, it will be cropped.
     final protected void draw(Rectangle space) @trusted {
-
-        // Given "space" is the amount of space we're given and what we should use at max.
-        // Within this function, we deduce how much of the space we should actually use, and align the node
-        // within the space.
-
-        import std.algorithm : all, min, max, either;
 
         assert(!toRemove, "A toRemove child wasn't removed from container.");
         assert(tree !is null, toString ~ " wasn't resized prior to drawing. You might be missing an `updateSize`"
@@ -316,7 +477,7 @@ abstract class GluiNode : Styleable {
 
         const spaceV = Vector2(space.width, space.height);
 
-        // No style set? Reload styles, the theme might've been set through CTFE
+        // No style set? It likely hasn't been loaded
         if (!style) reloadStyles();
 
         // Get parameters
@@ -366,12 +527,26 @@ abstract class GluiNode : Styleable {
             )
         );
 
-        // Descending into a disabled tree
-        const incrementDisabled = isDisabled || tree.disabledDepth;
+        /// Descending into a disabled tree
+        const branchDisabled = isDisabled || tree.isBranchDisabled;
+
+        /// True if this node is disabled, and none of its ancestors are disabled
+        const disabledRoot = isDisabled && !tree.isBranchDisabled;
+
+        // Toggle disabled branch if we're owning the root
+        if (disabledRoot) tree.isBranchDisabled = true;
+        scope (exit) if (disabledRoot) tree.isBranchDisabled = false;
 
         // Count if disabled or not
-        if (incrementDisabled) tree.disabledDepth++;
-        scope (exit) if (incrementDisabled) tree.disabledDepth--;
+        if (branchDisabled) tree._disabledDepth++;
+        scope (exit) if (branchDisabled) tree._disabledDepth--;
+
+        // Count depth
+        tree.depth++;
+        scope (exit) tree.depth--;
+
+        // Run beforeDraw actions
+        tree.runAction(a => a.beforeDrawImpl(this, space, paddingBox, contentBox));
 
         // Draw the node cropped
         // Note: minSize includes margin!
@@ -386,6 +561,26 @@ abstract class GluiNode : Styleable {
 
         // Draw the node
         else drawImpl(paddingBox, contentBox);
+
+
+        // If not disabled
+        if (!branchDisabled) {
+
+            // Update focus info
+            tree.focusDirection.update(this, space, tree.depth);
+
+            // If this node is focused
+            if (this is cast(GluiNode) tree.focus) {
+
+                // Set the focus box
+                tree.focusBox = space;
+
+            }
+
+        }
+
+        // Run afterDraw actions
+        tree.runAction(a => a.afterDraw(this, space, paddingBox, contentBox));
 
     }
 
@@ -403,6 +598,10 @@ abstract class GluiNode : Styleable {
         this.tree = tree;
         if (this.theme is null) this.theme = theme;
 
+        // Queue actions into the tree
+        tree.actions ~= _queuedActions;
+        _queuedActions = null;
+
 
         // The node is hidden, reset size
         if (isHidden) minSize = Vector2(0, 0);
@@ -410,7 +609,7 @@ abstract class GluiNode : Styleable {
         // Otherwise perform like normal
         else {
 
-            import std.range, std.algorithm;
+            import std.range;
 
             const fullMargin = style.fullMargin;
             const spacingX = style ? chain(fullMargin.sideX[], style.padding.sideX[]).sum : 0;
@@ -479,7 +678,9 @@ abstract class GluiNode : Styleable {
     ///     mousePosition = Current mouse position within the window.
     protected abstract bool hoveredImpl(Rectangle rect, Vector2 mousePosition) const;
 
-    protected mixin template ImplHoveredRect() {
+    alias ImplHoveredRect = implHoveredRect;
+
+    protected mixin template implHoveredRect() {
 
         private import raylib : Rectangle, Vector2;
 
