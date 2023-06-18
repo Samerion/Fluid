@@ -14,7 +14,15 @@ import glui.utils;
 import glui.input;
 import glui.structs;
 
+
 @safe:
+
+
+/// Left mouse button. Used for backwards compatibility
+static if (__traits(compiles, MouseButton.MOUSE_LEFT_BUTTON))
+    private enum lmb = MouseButton.MOUSE_LEFT_BUTTON;
+else
+    private enum lmb = MouseButton.MOUSE_BUTTON_LEFT;
 
 private interface Styleable {
 
@@ -330,7 +338,7 @@ abstract class GluiNode : Styleable {
 
 
         // Note: pressed, not released; released activates input events, pressed activates focus
-        const mousePressed = IsMouseButtonPressed(MouseButton.MOUSE_LEFT_BUTTON);
+        const mousePressed = IsMouseButtonPressed(lmb);
 
         // Mouse is hovering an input node
         if (auto hoverInput = cast(GluiHoverable) tree.hover) {
@@ -508,7 +516,7 @@ abstract class GluiNode : Styleable {
         _isHovered = hoveredImpl(visibleBox, GetMousePosition);
 
         // Check if the mouse stroke started this node
-        const heldElsewhere = !IsMouseButtonPressed(MouseButton.MOUSE_LEFT_BUTTON)
+        const heldElsewhere = !IsMouseButtonPressed(lmb)
             && isLMBHeld;
 
         // Update global hover unless mouse is being held down or mouse focus is disabled for this node
@@ -722,7 +730,6 @@ abstract class GluiNode : Styleable {
 
     private bool isLMBHeld() @trusted {
 
-        const lmb = MouseButton.MOUSE_LEFT_BUTTON;
         return IsMouseButtonDown(lmb) || IsMouseButtonReleased(lmb);
 
     }
