@@ -34,6 +34,28 @@
 	"subPackages": [
 		{
 			"dependencies": {
+				"raylib-d": ">=3.1.0"
+			},
+			"name": "raylib3",
+			"targetPath": "build",
+			"targetType": "library",
+			"versions": [
+				"Glui_Raylib3"
+			]
+		},
+		{
+			"dependencies": {
+				"raylib-d": "~>4.0.1"
+			},
+			"name": "raylib4",
+			"targetPath": "build",
+			"targetType": "library",
+			"versions": [
+				"Glui_Raylib4"
+			]
+		},
+		{
+			"dependencies": {
 				"glui": ">=0.0.0"
 			},
 			"name": "example-showcase",

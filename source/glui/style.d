@@ -358,12 +358,16 @@ class Style {
     do {
 
         auto wrappedLines = wrapText(availableSpace.x, text, !wrap || availableSpace.x == 0);
+        Vector2 result;
 
+        foreach (line; wrappedLines) {
 
-        return Vector2(
-            wrappedLines.map!"a.width".maxElement,
-            wrappedLines.length * fontSize * lineHeight,
-        );
+            result.x = max(result.x, line.width);
+            result.y += fontSize * lineHeight;
+
+        }
+
+        return result;
 
     }
 
@@ -404,7 +408,7 @@ class Style {
 
             const margin = (totalLineHeight - fontSize)/2;
 
-            foreach (word; line.words) {
+            foreach (word; words(line.text)) {
 
                 const position = Vector2(rect.x + left, rect.y + top + margin);
 
@@ -427,17 +431,8 @@ class Style {
 
     }
 
-    /// Split the text into multiple lines in order to fit within given width.
-    ///
-    /// Params:
-    ///     width         = Container width the text should fit in.
-    ///     text          = Text to wrap.
-    ///     lineFeedsOnly = If true, this should only wrap the text on line feeds.
-    TextLine[] wrapText(double width, string text, bool lineFeedsOnly) const {
-
-        const spaceSize = cast(size_t) ceil(fontSize * wordSpacing);
-
-        auto result = [TextLine()];
+    /// Get a range of words present in the given range of text. This is used to wrap and draw text.
+    auto words(string text) const {
 
         /// Get width of the given word.
         float wordWidth(string wordText) @trusted {
@@ -447,73 +442,91 @@ class Style {
 
         }
 
-        TextLine.Word[] words;
+        return text[]
 
-        auto whitespaceSplit = text[]
-            .splitter!((a, string b) => [' ', '\n'].canFind(a), Yes.keepSeparators)(" ");
+            // Split on spaces and newlines
+            .splitter!((a, string b) => [' ', '\n'].canFind(a), Yes.keepSeparators)(" ")
 
-        // Pass 1: split on words, calculate minimum size
-        foreach (chunk; whitespaceSplit.chunks(2)) {
+            // Combine separators with each item
+            .chunks(2)
 
-            const wordText = chunk.front;
-            const size = cast(size_t) wordWidth(wordText).ceil;
+            // Construct the words
+            .map!((chunk) {
 
-            chunk.popFront;
-            const feed = chunk.empty
-                ? false
-                : chunk.front == "\n";
+                const wordText = chunk.front;
+                const size = cast(size_t) wordWidth(wordText).ceil;
 
-            // Push the word
-            words ~= TextLine.Word(wordText, size, feed);
+                chunk.popFront;
 
-            // Update minimum size
-            if (size > width) width = size;
+                const lineFeed = !chunk.empty && chunk.front == "\n";
 
-        }
+                // Encode the word
+                return TextLine.Word(wordText, size, lineFeed);
 
-        // Pass 2: calculate total size
-        foreach (word; words) {
+            });
 
-            scope (success) {
+    }
 
-                // Start a new line if this words is followed by a line feed
-                if (word.lineFeed) result ~= TextLine();
+    /// Split the text into multiple lines in order to fit within given width.
+    ///
+    /// Params:
+    ///     width         = Container width the text should fit in.
+    ///     text          = Text to wrap.
+    ///     lineFeedsOnly = If true, this should only wrap the text on line feeds.
+    auto wrapText(double width, string text, bool lineFeedsOnly) const {
 
-            }
+        const spaceWidth = cast(size_t) ceil(fontSize * wordSpacing);
 
-            auto lastLine = &result[$-1];
+        size_t index = 0;
 
-            // If last line is empty
-            if (lastLine.words == []) {
+        return words(text)
+            .map!((word) {
 
-                // Append to it immediately
-                lastLine.words ~= word;
-                lastLine.width += word.width;
-                continue;
+                // Find the word's index in the text
+                size_t wordIndex = index;
 
-            }
+                // Advance to the next word; omit the space
+                index += word.text.length + 1;
+
+                // Update minimum size
+                if (word.width > width) width = word.width;
+
+                // Create a text line
+                return TextLine(wordIndex, word.text, word.width, word.lineFeed);
+
+            })
+            .cache
+            .splitWhen!((previousLine, nextLine) {
+
+                // Keep the lines separate if there's a line feed in between
+                if (previousLine.lineFeed) return true;
+
+                const combinedWidth = previousLine.width + nextLine.width + spaceWidth;
+
+                import std.stdio;
+                debug writefln!"(%s) ~ (%s): (%s + %s + %s = %s) > %s"(previousLine.text, nextLine.text, previousLine.width, nextLine.width, spaceWidth, combinedWidth, width);
+
+                // Check which lines can be merged
+                return !lineFeedsOnly && combinedWidth > width;
+
+            })
+            .map!((lineRange) {
+
+                assert(!lineRange.empty);
+
+                // Finally, combine all mergeable lines
+                return lineRange.fold!((previousLine, nextLine) {
+
+                    const index = previousLine.index;
+                    const length = previousLine.text.length + nextLine.text.length + 1;
+                    const width = previousLine.width + nextLine.width + spaceWidth;
+
+                    return TextLine(index, text[index .. index+length], width);
+
+                });
 
 
-            // Check if this word can fit
-            if (lineFeedsOnly || lastLine.width + spaceSize + word.width <= width) {
-
-                // Push it to this line
-                lastLine.words ~= word;
-                lastLine.width += spaceSize + word.width;
-
-            }
-
-            // It can't
-            else {
-
-                // Push it to a new line
-                result ~= TextLine([word], word.width);
-
-            }
-
-        }
-
-        return result;
+            });
 
     }
 
@@ -595,11 +608,17 @@ struct TextLine {
 
     }
 
-    /// Words on this line.
-    Word[] words;
+    /// Index of the line within the original text. This is the start of the text.
+    size_t index;
+
+    /// Text on this line.
+    string text;
 
     /// Width of the line (including spaces).
     size_t width = 0;
+
+    /// If true, the line is explicitly terminated with a line feed.
+    bool lineFeed;
 
 }
 
