@@ -4,6 +4,7 @@ import raylib;
 
 import std.conv;
 import std.math;
+import std.container;
 
 import glui.node;
 import glui.input;
@@ -384,7 +385,7 @@ struct LayoutTree {
     Rectangle focusBox;
 
     /// Tree actions queued to execute during next draw.
-    TreeAction[] actions;
+    DList!TreeAction actions;
 
     /// Input strokes bound to emit given action signals.
     InputStroke[][InputActionID] boundInputs;
@@ -547,22 +548,38 @@ struct LayoutTree {
 
     }
 
-    /// Run an action on the tree.
-    void runAction(void delegate(TreeAction) @safe fun) {
+    /// List actions in the tree, remove finished actions while iterating.
+    auto filterActions() {
 
-        import std.range, std.algorithm;
+        struct ActionIterator {
 
-        const leftovers = actions
+            LayoutTree* tree;
 
-            // Run each action
-            .tee!(a => fun(a))
+            int opApply(int delegate(TreeAction) @safe fun) {
 
-            // Remove the ones that have finished
-            .filter!(a => !a.toStop)
-            .moveAll(actions);
+                for (auto range = tree.actions[]; !range.empty; ) {
 
-        // Remove leftovers
-        actions.length -= leftovers.length;
+                    // Yield the item
+                    auto result = fun(range.front);
+
+                    // If finished, remove from the queue
+                    if (range.front.toStop) tree.actions.popFirstOf(range);
+
+                    // Continue to the next item
+                    else range.popFront();
+
+                    // Stop iteration if requested
+                    if (result) return result;
+
+                }
+
+                return 0;
+
+            }
+
+        }
+
+        return ActionIterator(&this);
 
     }
 
