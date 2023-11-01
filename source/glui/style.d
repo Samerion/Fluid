@@ -503,9 +503,6 @@ class Style {
 
                 const combinedWidth = previousLine.width + nextLine.width + spaceWidth;
 
-                import std.stdio;
-                debug writefln!"(%s) ~ (%s): (%s + %s + %s = %s) > %s"(previousLine.text, nextLine.text, previousLine.width, nextLine.width, spaceWidth, combinedWidth, width);
-
                 // Check which lines can be merged
                 return !lineFeedsOnly && combinedWidth > width;
 

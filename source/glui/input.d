@@ -438,70 +438,74 @@ interface GluiHoverable {
                 format!"%s is missing `mixin enableInputActions;`"(typeid(this)));
 
             // Check each member
-            static foreach (memberName; __traits(allMembers, This)) {{
+            static foreach (memberName; __traits(allMembers, This)) {
 
-                alias member = __traits(getMember, This, memberName);
+                static foreach (overload; __traits(getOverloads, This, memberName)) {{
 
-                // Filter out to functions only, also ignore deprecated functions
-                enum isMethod = !__traits(isDeprecated, member)
-                    && __traits(compiles, isFunction!member)
-                    && isFunction!member;
-                // TODO maybe somehow issue an error if an input action is marked deprecated?
+                    alias member = __traits(getMember, This, memberName);
 
-                static if (isMethod) {
+                    // Filter out to functions only, also ignore deprecated functions
+                    enum isMethod = !__traits(isDeprecated, member)
+                        && __traits(compiles, isFunction!member)
+                        && isFunction!member;
+                    // TODO maybe somehow issue an error if an input action is marked deprecated?
 
-                    // Make sure no method is marked `@InputAction`, that's invalid usage
-                    alias inputActionUDAs = getUDAs!(member, InputAction);
+                    static if (isMethod) {
 
-                    static assert(inputActionUDAs.length == 0,
-                        format!"Please use @(%s) instead of @InputAction!(%1$s)"(inputActionUDAs[0].type));
+                        // Make sure no method is marked `@InputAction`, that's invalid usage
+                        alias inputActionUDAs = getUDAs!(overload, InputAction);
 
-                    // Find all bound actions
-                    static foreach (actionType; __traits(getAttributes, member)) {
+                        static assert(inputActionUDAs.length == 0,
+                            format!"Please use @(%s) instead of @InputAction!(%1$s)"(inputActionUDAs[0].type));
 
-                        static if (isInputActionType!actionType) {{
+                        // Find all bound actions
+                        static foreach (actionType; __traits(getAttributes, overload)) {
 
-                            // Get any of held down strokes
-                            auto strokes = tree.getStrokes!actionType
+                            static if (isInputActionType!actionType) {{
 
-                                // Filter to mouse or keyboard strokes
-                                .filter!(a => a.isMouseStroke == mouse)
+                                // Get any of held down strokes
+                                auto strokes = tree.getStrokes!actionType
 
-                                // Check if they're held down
-                                .find!"a.isDown";
+                                    // Filter to mouse or keyboard strokes
+                                    .filter!(a => a.isMouseStroke == mouse)
 
-                            // TODO: get a list of possible strokes and pick the longest one
+                                    // Check if they're held down
+                                    .find!"a.isDown";
 
-                            // Check if the stoke is being held down
-                            if (!strokes.empty) {
+                                // TODO: get a list of possible strokes and pick the longest one
 
-                                // Run the action if the stroke was performed
-                                if (strokes.front.isActive) {
+                                // Check if the stoke is being held down
+                                if (!strokes.empty) {
 
-                                    // Pass the action type if applicable
-                                    static if (__traits(compiles, member(actionType))) {
+                                    // Run the action if the stroke was performed
+                                    if (strokes.front.isActive) {
 
-                                        member(actionType);
+                                        // Pass the action type if applicable
+                                        static if (__traits(compiles, overload(actionType))) {
+
+                                            overload(actionType);
+
+                                        }
+
+                                        // Run empty
+                                        else overload();
 
                                     }
 
-                                    // Run empty
-                                    else member();
+                                    // Mark as handled
+                                    return true;
 
                                 }
 
-                                // Mark as handled
-                                return true;
+                            }}
 
-                            }
-
-                        }}
+                        }
 
                     }
 
-                }
+                }}
 
-            }}
+            }
 
             return false;
 
