@@ -573,8 +573,8 @@ abstract class GluiNode : Styleable {
         // Note: minSize includes margin!
         if (minSize.x > space.width || minSize.y > space.height) {
 
-            tree.pushScissors(paddingBox);
-            scope (exit) tree.popScissors();
+            const lastScissors = tree.pushScissors(paddingBox);
+            scope (exit) tree.popScissors(lastScissors);
 
             drawImpl(paddingBox, contentBox);
 
