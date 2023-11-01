@@ -204,7 +204,7 @@ class GluiGrid : GluiFrame {
         auto position = inner.y;
 
         // Draw the rows
-        drawChildren((child) {
+        foreach (child; filterChildren) {
 
             // Get params
             const rect = Rectangle(
@@ -221,7 +221,7 @@ class GluiGrid : GluiFrame {
             // Offset position
             position += child.minSize.y;
 
-        });
+        }
 
     }
 
@@ -348,7 +348,7 @@ class GluiGridRow : GluiFrame {
         /// Child position.
         auto position = Vector2(inner.x, inner.y);
 
-        drawChildren((child) {
+        foreach (child; filterChildren) {
 
             const segments = either(child.layout.expand, 1);
             const width = parent.segmentSizes[segment..segment+segments].sum;
@@ -363,7 +363,7 @@ class GluiGridRow : GluiFrame {
             segment += segments;
             position.x += width;
 
-        });
+        }
 
     }
 

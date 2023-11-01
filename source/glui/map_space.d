@@ -284,7 +284,7 @@ class GluiMapSpace : GluiSpace {
 
         }();
 
-        drawChildren((child) {
+        foreach (child; filterChildren) {
 
             const position = positions.require(child, Position.init);
             const space = Vector2(inner.w, inner.h);
@@ -306,7 +306,7 @@ class GluiMapSpace : GluiSpace {
             // Draw the child
             child.draw(childRect);
 
-        });
+        }
 
     }
 

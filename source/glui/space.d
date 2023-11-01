@@ -160,7 +160,7 @@ class GluiSpace : GluiNode, GluiContainer {
 
         auto position = Vector2(area.x, area.y);
 
-        drawChildren((child) {
+        foreach (child; filterChildren) {
 
             // Get params
             const size = childSpace(child, Vector2(area.width, area.height));
@@ -176,11 +176,68 @@ class GluiSpace : GluiNode, GluiContainer {
             if (directionHorizontal) position.x += cast(int) size.x;
             else position.y += cast(int) size.y;
 
-        });
+        }
+
+    }
+
+    /// List children in the space, removing all nodes queued for deletion beforehand.
+    protected auto filterChildren() {
+
+        struct ChildIterator {
+
+            GluiSpace node;
+
+            int opApply(int delegate(GluiNode) @safe fun) {
+
+                node.children.lock();
+                scope (exit) node.children.unlock();
+
+                size_t destinationIndex = 0;
+
+                // Iterate through all children. When we come upon ones that are queued for deletion,
+                foreach (sourceIndex, child; node.children) {
+
+                    const toRemove = child.toRemove;
+                    child.toRemove = false;
+
+                    // Ignore children that are to be removed
+                    if (toRemove) continue;
+
+                    // Yield the child
+                    const status = fun(child);
+
+                    // Move the child if needed
+                    if (sourceIndex != destinationIndex) {
+
+                        node.children[destinationIndex] = child;
+
+                    }
+
+                    // Stop iteration if requested
+                    else if (status) return status;
+
+                    // Set space for next nodes
+                    destinationIndex++;
+
+
+                }
+
+                // Adjust length
+                node.children.length = destinationIndex;
+
+                return 0;
+
+            }
+
+        }
+
+        return ChildIterator(this);
 
     }
 
     /// Iterate over every child and perform the painting function. Will automatically remove nodes queued for removal.
+    /// Returns: An iterator that goes over all nodes.
+    deprecated("Use filterChildren instead")
     protected void drawChildren(void delegate(GluiNode) @safe painter) {
 
         GluiNode[] leftovers;
