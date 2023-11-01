@@ -12,6 +12,7 @@ import glui.tree;
 import glui.style;
 import glui.utils;
 import glui.input;
+import glui.actions;
 import glui.structs;
 
 
@@ -316,13 +317,21 @@ abstract class GluiNode : Styleable {
 
 
         // Run beforeTree actions
-        tree.runAction(a => a.beforeTree(this, viewport));
+        foreach (action; tree.filterActions) {
+
+            action.beforeTree(this, viewport);
+
+        }
 
         // Draw this node
         draw(viewport);
 
         // Run afterTree actions, remove those that have finished
-        tree.runAction(a => a.afterTree());
+        foreach (action; tree.filterActions) {
+
+            action.afterTree();
+
+        }
 
 
         // Set mouse cursor to match hovered node
@@ -554,7 +563,11 @@ abstract class GluiNode : Styleable {
         scope (exit) tree.depth--;
 
         // Run beforeDraw actions
-        tree.runAction(a => a.beforeDrawImpl(this, space, paddingBox, contentBox));
+        foreach (action; tree.filterActions) {
+
+            action.beforeDrawImpl(this, space, paddingBox, contentBox);
+
+        }
 
         // Draw the node cropped
         // Note: minSize includes margin!
@@ -588,7 +601,11 @@ abstract class GluiNode : Styleable {
         }
 
         // Run afterDraw actions
-        tree.runAction(a => a.afterDraw(this, space, paddingBox, contentBox));
+        foreach (action; tree.filterActions) {
+
+            action.afterDraw(this, space, paddingBox, contentBox);
+
+        }
 
     }
 
