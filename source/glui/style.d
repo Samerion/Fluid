@@ -11,6 +11,7 @@ import std.algorithm;
 
 import glui.node;
 import glui.utils;
+import glui.typeface;
 
 public import glui.border;
 public import glui.style_macros;
@@ -177,20 +178,27 @@ class Style {
     // Text options
     struct {
 
-        /// Font to be used for the text.
-        Font font;
+        /// Main typeface to be used for text.
+        Typeface typeface;
 
-        /// Font size (height) in pixels.
-        float fontSize;
+        deprecated("Use typeface instead. `font` will be removed in 0.7.0")
+        alias font = typeface;
 
-        /// Line height, as a fraction of `fontSize`.
-        float lineHeight;
+        deprecated("Set font parameters in the typeface. These will be removed in 0.7.0") {
 
-        /// Space between characters, relative to font size.
-        float charSpacing;
+            /// Font size (height) in pixels.
+            float fontSize;
 
-        /// Space between words, relative to the font size.
-        float wordSpacing;
+            /// Line height, as a fraction of `fontSize`.
+            float lineHeight;
+
+            /// Space between characters, relative to font size.
+            float charSpacing;
+
+            /// Space between words, relative to the font size.
+            float wordSpacing;
+
+        }
 
         /// Text color.
         Color textColor;
@@ -328,9 +336,16 @@ class Style {
     }
 
     /// Get the current font
+    deprecated("Use typeface instead")
     inout(Font) getFont() inout @trusted {
 
-        return cast(inout) (font.recs ? font : GetFontDefault);
+        if (auto rt = cast(RaylibTypeface) typeface) {
+
+            return cast(inout) rt.face;
+
+        }
+
+        return cast(inout) GetFontDefault;
 
     }
 
@@ -434,18 +449,10 @@ class Style {
     /// Get a range of words present in the given range of text. This is used to wrap and draw text.
     auto words(string text) const {
 
-        /// Get width of the given word.
-        float wordWidth(string wordText) @trusted {
-
-            // See drawText for cast()
-            return MeasureTextEx(cast() getFont, wordText.toStringz, fontSize, fontSize * charSpacing).x;
-
-        }
-
         return text[]
 
             // Split on spaces and newlines
-            .splitter!((a, string b) => [' ', '\n'].canFind(a), Yes.keepSeparators)(" ")
+            .splitter!((a, b) => a.among(' ', '\n') != 0, Yes.keepSeparators)(' ')
 
             // Combine separators with each item
             .chunks(2)
@@ -464,6 +471,14 @@ class Style {
                 return TextLine.Word(wordText, size, lineFeed);
 
             });
+
+    }
+
+    /// Get width of the given word.
+    private float wordWidth(string wordText) const @trusted {
+
+        // See drawText for cast()
+        return MeasureTextEx(cast() getFont, wordText.toStringz, fontSize, fontSize * charSpacing).x;
 
     }
 
@@ -486,6 +501,7 @@ class Style {
                 size_t wordIndex = index;
 
                 // Advance to the next word; omit the space
+                // TODO What if there's more spaces?
                 index += word.text.length + 1;
 
                 // Update minimum size
