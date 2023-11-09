@@ -720,7 +720,7 @@ abstract class GluiNode : Styleable {
     }
 
     /// Get the current style.
-    protected abstract const(Style) pickStyle() const;
+    abstract const(Style) pickStyle() const;
 
     /// Get the node's position in its space box.
     private Vector2 position(Rectangle space, Vector2 usedSpace) const {

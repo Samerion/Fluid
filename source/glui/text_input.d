@@ -5,6 +5,7 @@ import raylib;
 import std.string;
 
 import glui.node;
+import glui.text;
 import glui.input;
 import glui.label;
 import glui.style;
@@ -333,7 +334,7 @@ private class TextImpl : GluiLabel {
     override void drawImpl(Rectangle outer, Rectangle inner) {
 
         const style = pickStyle();
-        style.drawText(inner, text);
+        text.draw(inner);
 
     }
 
