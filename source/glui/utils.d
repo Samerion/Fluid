@@ -6,9 +6,6 @@ import raylib;
 import std.meta;
 import std.functional;
 
-import glui.style;
-import glui.structs;
-
 @safe:
 
 /// Create a simple node constructor for declarative usage.
@@ -110,6 +107,9 @@ unittest {
 // too lazy to document, used to generate node constructors with variadic or optional arguments.
 alias BasicNodeParamLength = Alias!5;
 template BasicNodeParam(int index) {
+
+    import glui.style;
+    import glui.structs;
 
     static if (index == 0) alias BasicNodeParam = AliasSeq!(Layout, const Theme);
     static if (index == 1) alias BasicNodeParam = AliasSeq!(const Theme, Layout);

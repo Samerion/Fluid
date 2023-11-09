@@ -155,6 +155,7 @@ class GluiRichLabel : GluiNode {
                 // TODO: wrapping+indent
 
                 thisStyle.drawBackground(area);
+                version (none)  // TODO ASAP
                 thisStyle.drawText(area, current);
 
                 // Move the cursor
