@@ -359,7 +359,7 @@ class Style {
         format!"Resulting text space must be finite: %s"(r))
     do {
 
-        return typeface.measureText(availableSpace, text, wrap);
+        return typeface.measure(availableSpace, text, wrap);
 
     }
 

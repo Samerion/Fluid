@@ -43,7 +43,7 @@ void main(string[] flags) {
 
         label("For HiDPI to work correctly, you must use a font you provided yourself. For this reason, instead of "
             ~ "using the default Raylib font, this example uses the Ubuntu font.\n"
-            ~ "The font is under the Ubuntu font licence, see "),
+            ~ "The font is under the Ubuntu font licence, see:"),
         button("https://ubuntu.com/legal/font-licence",
             delegate() @trusted => OpenURL("https://ubuntu.com/legal/font-licence"))
     );

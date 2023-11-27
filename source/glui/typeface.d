@@ -3,7 +3,12 @@ module glui.typeface;
 import raylib;
 import bindbc.freetype;
 
+import std.range;
+import std.traits;
 import std.string;
+import std.algorithm;
+
+import glui.utils;
 
 
 @safe:
@@ -29,31 +34,211 @@ interface Typeface {
     /// Returns: Change in pen position.
     void drawLine(ref Image target, ref Vector2 penPosition, string text, Color tint) const;
 
-    /// Measure space the given text would span.
-    final Vector2 measureText(Vector2 availableSpace, string text, bool wrap = true) const {
+    /// Default word splitter used by measure/draw.
+    final defaultWordChunks(Range)(Range range) const {
 
-        auto span = Vector2(0, lineHeight);
+        import std.uni;
 
-        // TODO multiline
-        // TODO don't fail on decoding errors
-        foreach (dchar glyph; text) {
+        /// Pick the group the character belongs to.
+        static bool pickGroup(dchar a) {
 
-            span += advance(glyph);
+            return a.isAlphaNum || a.isPunctuation;
 
         }
 
-        return span;
+        return range
+            .splitWhen!((a, b) => pickGroup(a) != pickGroup(b) && !b.isWhite)
+            .map!"text(a)"
+            .cache;
+        // TODO string allocation could probably be avoided
+
+    }
+
+    /// Measure space the given text would span.
+    ///
+    /// If `availableSpace` is specified, assumes text wrapping. Text wrapping is only performed on whitespace
+    /// characters.
+    ///
+    /// Params:
+    ///     chunkWords = Algorithm to use to break words when wrapping text; separators must be preserved.
+    ///     availableSpace = Amount of available space the text can take up (pixels), used for text wrapping.
+    ///     text = Text to measure.
+    ///     wrap = Toggle text wrapping.
+    final Vector2 measure(alias chunkWords = defaultWordChunks, String)
+        (Vector2 availableSpace, String text, bool wrap = true) const
+    if (isSomeString!String)
+    do {
+
+        // Wrapping off
+        if (!wrap) return measure(text);
+
+        auto ruler = TextRuler(this, availableSpace.x);
+
+        // TODO don't fail on decoding errors
+        // TODO RTL layouts
+        // TODO vertical text
+        // TODO lineSplitter removes the last line feed if present, which is unwanted behavior
+
+        // Split on lines
+        foreach (line; text.lineSplitter) {
+
+            ruler.startLine();
+
+            // Split on words
+            foreach (word; chunkWords(line)) {
+
+                ruler.addWord(word);
+
+            }
+
+        }
+
+        return ruler.textSize;
+
+    }
+
+    /// ditto
+    final Vector2 measure(String)(String text) const
+    if (isSomeString!String)
+    do {
+
+        // No wrap, only explicit in-text line breaks
+
+        auto ruler = TextRuler(this);
+
+        // TODO don't fail on decoding errors
+
+        // Split on lines
+        foreach (line; text.lineSplitter) {
+
+            ruler.startLine();
+            ruler.addWord(line);
+
+        }
+
+        return ruler.textSize;
 
     }
 
     /// Draw text within the given rectangle in the image.
-    final void draw(ref Image image, Rectangle rectangle, string text, Color tint, bool wrap = true) const {
+    final void draw(alias chunkWords = defaultWordChunks, String)
+        (ref Image image, Rectangle rectangle, String text, Color tint, bool wrap = true)
+    const {
 
-        auto pen = penPosition + Vector2(rectangle.x, rectangle.y);
+        auto ruler = TextRuler(this, rectangle.w);
 
-        // TODO multiline
         // TODO decoding errors
-        drawLine(image, pen, text, tint);
+
+        // Text wrapping on
+        if (wrap) {
+
+            // Split on lines
+            foreach (line; text.lineSplitter) {
+
+                ruler.startLine();
+
+                // Split on words
+                foreach (word; chunkWords(line)) {
+
+                    auto penPosition = rectangle.start + ruler.addWord(word);
+
+                    drawLine(image, penPosition, word, tint);
+
+                }
+
+            }
+
+        }
+
+        // Text wrapping off
+        else {
+
+            // Split on lines
+            foreach (line; text.lineSplitter) {
+
+                ruler.startLine();
+
+                auto penPosition = rectangle.start + ruler.addWord(line);
+
+                drawLine(image, penPosition, line, tint);
+
+            }
+
+        }
+
+    }
+
+}
+
+/// Low level interface for measuring text.
+struct TextRuler {
+
+    /// Typeface to use for the text.
+    const Typeface typeface;
+
+    /// Maximum width for a single line. If `NaN`, no word breaking is performed.
+    float lineWidth;
+
+    /// Current pen position.
+    Vector2 penPosition;
+
+    /// Total size of the text.
+    Vector2 textSize;
+
+    this(const Typeface typeface, float lineWidth = float.init) {
+
+        this.typeface = typeface;
+        this.lineWidth = lineWidth;
+
+        penPosition = typeface.penPosition - typeface.lineHeight;
+
+    }
+
+    /// Begin a new line.
+    void startLine() {
+
+        const lineHeight = typeface.lineHeight;
+
+        // Move the pen to the next line
+        penPosition.x = 0;
+        penPosition.y += lineHeight;
+        textSize.y += lineHeight;
+
+    }
+
+    /// Add the given word to the text. The text must be single line.
+    /// Returns: Pen position for the word.
+    Vector2 addWord(String)(String word) {
+
+        const maxWordWidth = lineWidth - penPosition.x;
+
+        float wordSpan = 0;
+
+        // Measure each glyph
+        foreach (dchar glyph; word) {
+
+            wordSpan += typeface.advance(glyph).x;
+
+        }
+
+        // Exceeded line width
+        // Automatically false if lineWidth is NaN
+        if (maxWordWidth < wordSpan && wordSpan < lineWidth) {
+
+            // Start a new line
+            startLine();
+
+        }
+
+        const wordPosition = penPosition;
+
+        // Update pen position
+        penPosition.x += wordSpan;
+
+        // Allocate space
+        if (penPosition.x > textSize.x) textSize.x = penPosition.x;
+
+        return wordPosition;
 
     }
 
@@ -85,8 +270,6 @@ class FreetypeTypeface : Typeface {
     ///     filename = Filename of the font file.
     ///     size     = Size of the font to load (in points).
     this(string filename, int size) @trusted {
-
-        import glui.utils;
 
         const scale = hidpiScale * 96;
 
@@ -123,7 +306,7 @@ class FreetypeTypeface : Typeface {
 
     }
 
-    /// Get pen position for the given cursor position.
+    /// Get initial pen position.
     Vector2 penPosition() const {
 
         return Vector2(0, face.size.metrics.ascender) / 64;
@@ -184,6 +367,9 @@ class FreetypeTypeface : Typeface {
 
                     const targetX = cast(int) penPosition.x + face.glyph.bitmap_left + x;
                     const targetY = cast(int) penPosition.y - face.glyph.bitmap_top + y;
+
+                    // Don't draw pixels out of bounds
+                    if (targetX >= target.width || targetY >= target.height) continue;
 
                     // Note: ImageDrawPixel overrides the pixel — alpha blending has to be done by us
                     const oldColor = GetImageColor(target, targetX, targetY);
