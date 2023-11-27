@@ -1,18 +1,15 @@
 module glui.text;
 
 import raylib;
+import std.algorithm;
 
 import glui.node;
+import glui.style;
+import glui.typeface;
 
 
 @safe:
 
-
-enum TextWrap {
-
-    none,
-
-}
 
 /// Draws text: handles updates, formatting and styling.
 struct Text(T : GluiNode) {
@@ -26,9 +23,6 @@ struct Text(T : GluiNode) {
 
     /// Underlying text.
     string value;
-
-    /// Wrap mode for the text.
-    TextWrap wrap;
 
     alias value this;
 
@@ -70,14 +64,26 @@ struct Text(T : GluiNode) {
     alias minSize = size;
 
     /// Set new bounding box for the text and redraw it.
-    void resize(Vector2 space) @trusted {
+    void resize() {
 
-        // TODO text wrap
-        const wrap = false;
+        const style = node.pickStyle;
+        const size = style.typeface.measure(value);
 
-        // Measure text size
-        auto style = node.pickStyle;
-        auto size = style.typeface.measureText(space, value, wrap);
+        resizeImpl(style, size, false);
+
+    }
+
+    /// Set new bounding box for the text; wrap the text if it doesn't fit in boundaries. Redraw it.
+    void resize(alias splitter = Typeface.defaultWordChunks)(Vector2 space, bool wrap = true) {
+
+        const style = node.pickStyle;
+        const size = style.typeface.measure!splitter(space, value, wrap);
+
+        resizeImpl(style, size, wrap);
+
+    }
+
+    private void resizeImpl(const Style style, Vector2 size, bool wrap) @trusted {
 
         // Empty, nothing to do
         if (size.x < 1 || size.y < 1) return;

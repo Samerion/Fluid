@@ -27,7 +27,6 @@ class GluiLabel : GluiNode {
         Text!GluiLabel text;
 
         /// If true, the content of the label should not be wrapped into new lines if it's too long to fit into one.
-        deprecated("disableWrap has no effect. Use text.wrap instead (see glui.text). To be removed in 0.7.0.")
         bool disableWrap;
 
     }
@@ -48,7 +47,7 @@ class GluiLabel : GluiNode {
 
         import std.math;
 
-        text.resize(available);
+        text.resize(available, !disableWrap);
         minSize = text.size;
 
     }

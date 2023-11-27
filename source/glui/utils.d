@@ -129,6 +129,20 @@ bool contains(Rectangle rectangle, Vector2 point) {
 
 }
 
+// Extremely useful Rectangle utilities
+
+/// Get the top-left corner of a rectangle.
+Vector2 start(Rectangle r) => Vector2(r.x, r.y);
+
+/// Get the bottom-right corner of a rectangle.
+Vector2 end(Rectangle r) => Vector2(r.x + r.w, r.y + r.h);
+
+/// Get the center of a rectangle.
+Vector2 center(Rectangle r) => Vector2(r.x + r.w/2, r.y + r.h/2);
+
+/// Get the size of a rectangle.
+Vector2 size(Rectangle r) => Vector2(r.w, r.h);
+
 /// Get names of static fields in the given object.
 ///
 /// Ignores deprecated fields.
