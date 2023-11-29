@@ -56,7 +56,7 @@ class GluiLabel : GluiNode {
 
         const style = pickStyle();
         style.drawBackground(outer);
-        text.draw(inner);
+        text.draw(style, inner);
 
     }
 
