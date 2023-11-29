@@ -244,7 +244,11 @@ class Style {
 
     }
 
-    this() { }
+    this() {
+
+        this.font = Typeface.defaultTypeface;
+
+    }
 
     /// Create a style by copying params of others.
     ///
@@ -383,6 +387,13 @@ class Style {
     void drawText(ref Image image, Rectangle rect, string text, bool wrap = true) const {
 
         typeface.draw(image, rect, text, textColor, wrap);
+
+    }
+
+    /// ditto
+    void drawText(ref Image image, Rectangle rect, string text, Color color, bool wrap = true) const {
+
+        typeface.draw(image, rect, text, color, wrap);
 
     }
 

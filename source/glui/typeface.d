@@ -31,8 +31,10 @@ interface Typeface {
 
     /// Draw a line of text
     /// Note: This API is unstable and might change over time.
-    /// Returns: Change in pen position.
     void drawLine(ref Image target, ref Vector2 penPosition, string text, Color tint) const;
+
+    /// Get the default Glui typeface.
+    static defaultTypeface() => RaylibTypeface.defaultTypeface;
 
     /// Default word splitter used by measure/draw.
     final defaultWordChunks(Range)(Range range) const {
@@ -206,7 +208,7 @@ struct TextRuler {
 
     }
 
-    /// Add the given word to the text. The text must be single line.
+    /// Add the given word to the text. The text must be single line.;
     /// Returns: Pen position for the word.
     Vector2 addWord(String)(String word) {
 
@@ -254,14 +256,17 @@ class FreetypeTypeface : Typeface {
 
     }
 
-    /// If true, this typeface has been loaded using this class, making the class responsible for freeing the font.
-    protected bool isOwner;
+    private {
+
+        /// If true, this typeface has been loaded using this class, making the class responsible for freeing the font.
+        bool _isOwner;
+
+    }
 
     /// Use an existing freetype2 font.
     this(FT_Face face) {
 
         this.face = face;
-        this.isOwner = false;
 
     }
 
@@ -299,6 +304,9 @@ class FreetypeTypeface : Typeface {
         FT_Done_Face(face);
 
     }
+
+    bool isOwner() const => _isOwner;
+    bool isOwner(bool value) @system => _isOwner = value;
 
     long glyphCount() const {
 
@@ -391,10 +399,159 @@ class FreetypeTypeface : Typeface {
 
 }
 
-// RaylibTypeface would be here... If I made one!
-// Turns out, drawing text to existing images is incredibly painful in Raylib. `ImageDrawText` temporarily allocates a
-// new image just to draw text to it and then copy to the one we're interested in. That's a TON of overhead to do just
-// that.
+/// Font rendering via Raylib. Discouraged and potentiall slow, use `FreetypeTypeface` instead.
+class RaylibTypeface : Typeface {
+
+    public {
+
+        /// Character spacing, as a fraction of the font size.
+        float spacing = 0.1;
+
+        /// Line height relative to font height.
+        float relativeLineHeight = 1.4;
+
+        /// Scale to apply for the typeface.
+        float scale = 1.0;
+
+    }
+
+    private {
+
+        /// Underlying Raylib font.
+        Font _font;
+
+        /// If true, this is the default font, and has to be available ahead of time.
+        ///
+        /// If the typeface is requested before Raylib is loaded (...and it is...), the default font won't be available,
+        /// so we must use late loading.
+        bool _isDefault;
+
+        /// If true, this typeface has been loaded using this class, making the class responsible for freeing the font.
+        bool _isOwner;
+
+    }
+
+    /// Object holding the default typeface.
+    static RaylibTypeface defaultTypeface() @trusted {
+
+        static RaylibTypeface typeface;
+
+        // Load the typeface
+        if (!typeface) {
+            typeface = new RaylibTypeface(GetFontDefault);
+            typeface._isDefault = true;
+            typeface.scale = 2.0;
+        }
+
+        return typeface;
+
+    }
+
+    /// Load a Raylib font.
+    this(Font font) {
+
+        this._font = font;
+
+    }
+
+    /// Load a Raylib font from file.
+    this(string filename, int size) @trusted {
+
+        this._font = LoadFontEx(filename.toStringz, size, null, 0);
+        this.isOwner = true;
+
+    }
+
+    ~this() @trusted {
+
+        if (isOwner) {
+
+            UnloadFont(_font);
+
+        }
+
+    }
+
+    Font font() @trusted {
+
+        if (_isDefault)
+            return _font = GetFontDefault;
+        else
+            return _font;
+
+    }
+
+    const(Font) font() const @trusted {
+
+        if (_isDefault)
+            return GetFontDefault;
+        else
+            return _font;
+
+    }
+
+    bool isOwner() const => _isOwner;
+    bool isOwner(bool value) @system => _isOwner = value;
+
+    /// List glyphs  in the typeface.
+    long glyphCount() const {
+
+        return font.glyphCount;
+
+    }
+
+    /// Get initial pen position.
+    Vector2 penPosition() const {
+
+        return Vector2(0, 0);
+
+    }
+
+    /// Get font height in pixels.
+    int fontHeight() const {
+
+        return cast(int) (font.baseSize * scale);
+
+    }
+
+    /// Get line height in pixels.
+    int lineHeight() const {
+
+        return cast(int) (fontHeight * relativeLineHeight);
+
+    }
+
+    /// Get advance vector for the given glyph.
+    Vector2 advance(dchar codepoint) const @trusted {
+
+        const glyph = GetGlyphInfo(cast() font, codepoint);
+        const spacing = fontHeight * this.spacing;
+        const baseAdvanceX = glyph.advanceX
+            ? glyph.advanceX
+            : glyph.offsetX + glyph.image.width;
+        const advanceX = baseAdvanceX * scale;
+
+        return Vector2(advanceX + spacing, 0);
+
+    }
+
+    /// Draw a line of text
+    /// Note: This API is unstable and might change over time.
+    void drawLine(ref Image target, ref Vector2 penPosition, string text, Color tint) const @trusted {
+
+        // Note: `DrawTextEx` doesn't scale `spacing`, but `ImageDrawTextEx` DOES. The image is first drawn at base size
+        //       and *then* scaled.
+        const spacing = font.baseSize * this.spacing;
+
+        // We trust Raylib will not mutate the font.
+        // Raylib is single-threaded, so it shouldn't cause much harm anyway...
+        auto font = cast() this.font;
+
+        ImageDrawTextEx(&target, font, text.toStringz, penPosition, fontHeight, spacing, tint);
+
+    }
+
+}
 
 shared static this() @system {
 

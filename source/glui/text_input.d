@@ -103,7 +103,7 @@ class GluiTextInput : GluiInput!GluiNode {
         minSize = size;
 
         // Set height to at least the font size
-        minSize.y = max(minSize.y, style.fontSize * style.lineHeight);
+        minSize.y = max(minSize.y, style.font.lineHeight);
 
         // Set the label text
         contentLabel.text = (value == "") ? placeholder : value;
@@ -334,7 +334,7 @@ private class TextImpl : GluiLabel {
     override void drawImpl(Rectangle outer, Rectangle inner) {
 
         const style = pickStyle();
-        text.draw(inner);
+        text.draw(style, inner);
 
     }
 
