@@ -17,9 +17,6 @@ void main(string[] flags) {
         makeTheme!q{
 
             font = loadFont("examples/ubuntu.ttf", 14);
-            fontSize = 12;
-            charSpacing = 0;
-            wordSpacing = 0.4;
 
             GluiLabel.styleAdd;
             GluiButton!().styleAdd!q{

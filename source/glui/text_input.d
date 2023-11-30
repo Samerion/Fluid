@@ -155,8 +155,8 @@ class GluiTextInput : GluiInput!GluiNode {
         // Add a blinking caret
         if (GetTime % (blinkTime*2) < blinkTime) {
 
-            const lineHeight = style.fontSize * style.lineHeight;
-            const margin = style.fontSize / 10f;
+            const lineHeight = style.typeface.lineHeight;
+            const margin = style.typeface.lineHeight / 10f;
 
             // Put the caret at the start if the placeholder is shown
             const textWidth = value.length

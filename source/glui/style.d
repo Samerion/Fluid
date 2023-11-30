@@ -262,9 +262,9 @@ class Style {
         foreach (i, style; styles) {
 
             // Inherit each field
-            static foreach (field; FieldNameTuple!(typeof(this))) {{
+            static foreach (j, field; FieldNameTuple!(typeof(this))) {{
 
-                auto inheritedField = mixin("style." ~ field);
+                auto inheritedField = style.tupleof[j];
 
                 static if (__traits(compiles, inheritedField is null)) {
 
@@ -280,7 +280,7 @@ class Style {
                 // Ignore if it's set to init (unless it's the first style)
                 if (i == 0 || !isInit) {
 
-                    mixin("this." ~ field) = inheritedField;
+                    this.tupleof[j] = inheritedField;
 
                 }
 
