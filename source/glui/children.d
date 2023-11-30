@@ -17,6 +17,7 @@ debug struct Children {
 
         GluiNode[] _children;
         bool _isLocked;
+        bool _hasChanged;
 
     }
 
@@ -39,7 +40,9 @@ debug struct Children {
 
         size_t length(size_t value) {
 
-            debug assert(!_isLocked, mutateError);
+            assert(!_isLocked, mutateError);
+
+            _hasChanged = true;
 
             return _children.length = value;
 
@@ -57,9 +60,10 @@ debug struct Children {
     /// Remove the first item.
     void popFront() {
 
-        debug assert(!_isLocked, mutateError);
+        assert(!_isLocked, mutateError);
         assert(!empty, "Can't pop an empty children list");
 
+        _hasChanged = true;
         _children.popFront();
 
     }
@@ -75,7 +79,8 @@ debug struct Children {
 
     void opAssign(GluiNode[] newList) {
 
-        debug assert(!_isLocked, mutateError);
+        assert(!_isLocked, mutateError);
+        _hasChanged = true;
         _children = newList;
 
     }
@@ -99,14 +104,13 @@ debug struct Children {
 
     }
 
-    deprecated("getChildren will be removed in 0.6.0, please use Children directly as if it was an array, or try"
-        ~ " using `opIndex`, like `children[]`")
     ref GluiNode[] getChildren() return {
 
         debug assert(!_isLocked, "Can't get a mutable reference to children while rendering. Consider doing this in "
             ~ "input handling methods like mouseImpl/keyboardImpl which happen after rendering is complete. But if "
             ~ "this is necessary, you may use `glui.children.asConst` instead. Note, iterating over the (mutable) "
             ~ "children is still legal. You can also use `node.remove` if you want to simply remove a node.");
+        _hasChanged = true;
         return _children;
 
     }
@@ -143,6 +147,26 @@ else alias Children = GluiNode[];
 
 static assert(isInputRange!Children);
 
+/// Make sure the given children list hasn't changed since the dirty bit was last cleared.
+void assertClean(ref Children children, lazy string message) {
+
+    debug assert(!children._hasChanged, message);
+
+}
+
+/// Make sure the given children list hasn't changed since the dirty bit was last cleared.
+void assertClean(ref Children children) {
+
+    debug assert(!children._hasChanged);
+
+}
+
+/// Clear the dirty bit on the given children list
+void clearDirty(ref Children children) {
+
+    debug children._hasChanged = false;
+
+}
 
 pragma(inline)
 void lock(ref Children children) {
@@ -169,8 +193,6 @@ void unlock(ref Children children) {
 pragma(inline)
 void assertLocked(ref Children children) {
 
-    // debug just to de sure lol
-    // pretty sure you can fiddle with the compiler flags enough to make this not compile
     debug assert(children._isLocked);
 
 }
@@ -184,22 +206,11 @@ const(GluiNode[]) asConst(Children children) {
 
 }
 
-/// Get a reference to the children list forcefully, ignoring the lock.
+/// Get a reference to the children list forcefully, ignoring the lock. Doesn't set the dirty flag.
 pragma(inline)
 ref GluiNode[] forceMutable(return ref Children children) @system {
 
     debug return children._children;
     else  return children;
-
-}
-
-/// Get a reference to child within the parent.
-deprecated("childRef will be removed in 0.6.0. Use the @safe GluiNodeSlot instead.")
-ref GluiNode childRef(ref Children children, size_t index) @system {
-
-    debug assert(!children._isLocked, "Can't get reference to a locked child.");
-
-    debug return children._children[index];
-    else  return children[index];
 
 }

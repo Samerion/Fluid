@@ -88,6 +88,9 @@ class GluiSpace : GluiNode, GluiContainer {
 
         import std.algorithm : max, map, fold;
 
+        // Now that we're recalculating the layout, we can remove the dirty flag from children
+        children.clearDirty;
+
         // Reset size
         minSize = Vector2(0, 0);
         reservedSpace = 0;
@@ -157,6 +160,8 @@ class GluiSpace : GluiNode, GluiContainer {
     }
 
     protected override void drawImpl(Rectangle, Rectangle area) {
+
+        assertClean(children, "Children were changed without calling updateSize().");
 
         auto position = Vector2(area.x, area.y);
 

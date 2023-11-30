@@ -28,6 +28,8 @@ void main() {
 
         override void drawImpl(Rectangle outer, Rectangle inner) @trusted {
 
+            debug assertClean(root.children);
+
             debug {
 
                 assert(root.children.length == 3);
@@ -45,6 +47,8 @@ void main() {
     }
 
     root.children ~= new BrokenFrame;
+
+    debug assertThrown!Error(root.children.assertClean);
 
     BeginDrawing();
 
