@@ -394,7 +394,7 @@ interface GluiHoverable {
 
     /// Run input actions for the node.
     ///
-    /// Internal. `GluiNode` calls this for the focused node every frame, falling back to `keyboardImpl` if this returns
+    /// Internal. `GluiNode` calls this for the focused node every frame, falling back to `mouseImpl` if this returns
     /// false.
     ///
     /// Implement by adding `mixin enableInputActions` in your class.
@@ -544,6 +544,8 @@ interface GluiFocusable : GluiHoverable {
 
     /// Mixin template to enable input actions in this class.
     mixin template enableInputActions() {
+
+        private import glui.input;
 
         mixin GluiHoverable.enableInputActions;
 
