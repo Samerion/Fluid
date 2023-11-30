@@ -58,7 +58,7 @@ void main() {
             auto position = MapPosition(GetMousePosition, dropVector!"auto");
 
             root.addFocusedChild(
-                popup(
+                popupFrame(
                     label("I'm a dropdown"),
                     button("Button 1", delegate { }),
                     button("Button 2", delegate { }),

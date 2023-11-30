@@ -34,7 +34,16 @@ class GluiLabel : GluiNode {
     static foreach (index; 0 .. BasicNodeParamLength) {
 
         /// Initialize the label with given text.
-        this(BasicNodeParam!index sup, string text = "") {
+        this(BasicNodeParam!index sup, string text) {
+
+            super(sup);
+            this.text = Text!GluiLabel(this, text);
+
+        }
+
+        /// Initialize the label with given text.
+        deprecated("text argument for labels is now required. This overload is to be removed in 0.7.0")
+        this(BasicNodeParam!index sup) {
 
             super(sup);
             this.text = Text!GluiLabel(this, text);

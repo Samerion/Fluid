@@ -77,7 +77,7 @@ class GluiTextInput : GluiInput!GluiNode {
             this.submitted = submitted;
 
             // Create the label
-            this.contentLabel = new typeof(contentLabel)(.layout!(1, "fill"));
+            this.contentLabel = new typeof(contentLabel)(.layout!(1, "fill"), "");
 
             with (this.contentLabel) {
 
