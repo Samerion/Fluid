@@ -4,9 +4,6 @@
 	],
 	"configurations": [
 		{
-			"dependencies": {
-				"raylib-d": ">=3.1.0"
-			},
 			"name": "raylib3",
 			"targetType": "library",
 			"versions": [
@@ -14,9 +11,6 @@
 			]
 		},
 		{
-			"dependencies": {
-				"raylib-d": "~>4.0.1"
-			},
 			"name": "raylib4",
 			"targetType": "library",
 			"versions": [
@@ -25,7 +19,14 @@
 		}
 	],
 	"copyright": "Copyright © 2021, Artha",
+	"dependencies": {
+		"bindbc-freetype": "~>1.1.1",
+		"raylib-d": ">=3.1.0 <5.0.0"
+	},
 	"description": "A simple UI library designed for IsodiTools and Samerion",
+	"dflags": [
+		"-preview=dip1000"
+	],
 	"libs": [
 		"raylib"
 	],
@@ -176,6 +177,5 @@
 		}
 	],
 	"targetPath": "build",
-	"targetType": "library",
-	"dflags": ["-preview=dip1000"]
+	"targetType": "library"
 }

@@ -17,7 +17,6 @@ public import
     glui.node,
     glui.onion_frame,
     glui.popup,
-    glui.rich_label,
     glui.scroll,
     glui.scrollbar,
     glui.size_lock,

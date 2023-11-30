@@ -396,6 +396,12 @@ struct LayoutTree {
     /// Current node drawing depth.
     uint depth;
 
+    /// Current rectangle drawing is limited to.
+    Rectangle scissors;
+
+    /// True if the current tree branch is marked as disabled (doesn't take input).
+    bool isBranchDisabled;
+
     package uint _disabledDepth;
 
     /// Current depth of "disabled" nodes, incremented for any node descended into, while any of the ancestors is
@@ -583,16 +589,11 @@ struct LayoutTree {
 
     }
 
-    bool isBranchDisabled;
-
-    /// Scissors stack.
-    package Rectangle[] scissors;
-
     version (Glui_DisableScissors) {
 
         Rectangle intersectScissors(Rectangle rect) { return rect; }
         void pushScissors(Rectangle) { }
-        void popScissors() { }
+        void popScissors(Rectangle) { }
 
     }
 
@@ -604,56 +605,49 @@ struct LayoutTree {
             import std.algorithm : min, max;
 
             // No limit applied
-            if (!scissors.length) return rect;
-
-            const b = scissors[$-1];
+            if (scissors is scissors.init) return rect;
 
             Rectangle result;
 
             // Intersect
-            result.x = max(rect.x, b.x);
-            result.y = max(rect.y, b.y);
-            result.w = min(rect.x + rect.w, b.x + b.w) - result.x;
-            result.h = min(rect.y + rect.h, b.y + b.h) - result.y;
+            result.x = max(rect.x, scissors.x);
+            result.y = max(rect.y, scissors.y);
+            result.w = min(rect.x + rect.w, scissors.x + scissors.w) - result.x;
+            result.h = min(rect.y + rect.h, scissors.y + scissors.h) - result.y;
 
             return result;
 
         }
 
         /// Start scissors mode.
-        void pushScissors(Rectangle rect) {
+        /// Returns: Previous scissors mode value. Pass that value to `popScissors`.
+        Rectangle pushScissors(Rectangle rect) {
 
-            auto result = rect;
+            const lastScissors = scissors;
 
-            // There's already something on the stack
-            if (scissors.length) {
-
-                // Intersect
-                result = intersectScissors(rect);
-
-            }
-
-            // Push to the stack
-            scissors ~= result;
+            // Intersect with the current scissors rectangle.
+            scissors = intersectScissors(rect);
 
             // Start the mode
-            applyScissors(result);
+            applyScissors(scissors);
+
+            return lastScissors;
 
         }
 
-        void popScissors() @trusted {
+        void popScissors(Rectangle lastScissorsMode) @trusted {
 
             // Pop the stack
-            scissors = scissors[0 .. $-1];
+            scissors = lastScissorsMode;
 
             // Pop the mode
             EndScissorMode();
 
             // There's still something left
-            if (scissors.length) {
+            if (scissors !is scissors.init) {
 
                 // Start again
-                applyScissors(scissors[$-1]);
+                applyScissors(scissors);
 
             }
 
@@ -664,7 +658,7 @@ struct LayoutTree {
             import glui.utils;
 
             // End the current mode, if any
-            if (scissors.length) EndScissorMode();
+            if (scissors !is scissors.init) EndScissorMode();
 
             version (Glui_Raylib3) const scale = hidpiScale;
             else                   const scale = Vector2(1, 1);

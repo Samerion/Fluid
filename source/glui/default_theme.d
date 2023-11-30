@@ -8,11 +8,6 @@ shared static this() {
 
     gluiDefaultTheme = cast(immutable) Theme.init.makeTheme!q{
 
-        fontSize = 20;
-        lineHeight = 1.4;
-        charSpacing = 0.1;
-        wordSpacing = 0.5;
-
         textColor = Colors.BLACK;
 
         GluiFrame.styleAdd!q{
@@ -74,6 +69,7 @@ shared static this() {
 
         };
 
+        GluiFilePicker.unselectedStyleAdd.backgroundColor = color!"#fff";
         GluiFilePicker.selectedStyleAdd.backgroundColor = color!"#ff512f";
 
     };
