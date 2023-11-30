@@ -77,9 +77,6 @@ abstract class GluiNode : Styleable {
         /// if the node wasn't there. The mouse will still detect hover like normal.
         bool ignoreMouse;
 
-        deprecated("mousePass has been renamed to ignoreMouse and will be removed in 0.6.0")
-        ref inout(bool) mousePass() inout { return ignoreMouse; }
-
     }
 
     /// Minimum size of the node.
@@ -138,13 +135,6 @@ abstract class GluiNode : Styleable {
             if (_isHidden != value) updateSize();
 
             return _isHidden = value;
-
-        }
-
-        deprecated("hidden has been renamed to isHidden and will be removed in 0.6.0") {
-
-            bool hidden() const { return _isHidden; }
-            bool hidden(bool value) { return _isHidden = value; }
 
         }
 
@@ -227,15 +217,8 @@ abstract class GluiNode : Styleable {
     @property
     bool isHovered() const { return _isHovered && !_isDisabled && !tree.isBranchDisabled; }
 
-    deprecated("hovered has been renamed to isHovered and will be removed in 0.6.0.")
-    bool hovered() const { return isHovered; }
-
     /// Check if this node is disabled.
     ref inout(bool) isDisabled() inout { return _isDisabled; }
-
-    /// Check if this node is disabled.
-    deprecated("disabled has been renamed to isDisabled and will be removed in 0.6.0.")
-    ref inout(bool) disabled() inout { return _isDisabled; }
 
     /// Checks if the node is disabled, either by self, or by any of its ancestors. Only works while the node is being
     /// drawn, and during `beforeDraw` and `afterDraw` tree actions.
