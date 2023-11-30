@@ -27,6 +27,9 @@ class GluiImageView : GluiNode {
 
     }
 
+    /// Set to true if the image view owns the texture and manages its ownership.
+    private bool _isOwner;
+
     static foreach (index; 0 .. BasicNodeParamLength) {
 
         /// Create an image node from given texture or filename.
@@ -43,10 +46,19 @@ class GluiImageView : GluiNode {
 
     }
 
+    ~this() {
+
+        clear();
+
+    }
+
     @property {
 
         /// Set the texture.
         Texture texture(Texture texture) {
+
+            clear();
+            _isOwner = false;
 
             return this._texture = texture;
 
@@ -57,7 +69,9 @@ class GluiImageView : GluiNode {
 
             import std.string : toStringz;
 
-            texture = LoadTexture(filename.toStringz);
+            clear();
+            _texture = LoadTexture(filename.toStringz);
+            _isOwner = true;
             updateSize();
 
             return filename;
@@ -70,6 +84,21 @@ class GluiImageView : GluiNode {
             return _texture;
 
         }
+
+    }
+
+    /// Remove any texture if attached.
+    void clear() @trusted scope {
+
+        // Free the texture
+        if (_isOwner && IsWindowReady()) {
+
+            UnloadTexture(texture);
+
+        }
+
+        // Remove the texture
+        _texture = texture.init;
 
     }
 
@@ -96,6 +125,9 @@ class GluiImageView : GluiNode {
     override protected void drawImpl(Rectangle, Rectangle rect) @trusted {
 
         import std.algorithm : min;
+
+        // Ignore if there is no texture to draw
+        if (texture.id <= 0) return;
 
         // Get the scale
         const scale = min(
