@@ -69,8 +69,8 @@ shared static this() {
 
         };
 
-        GluiFilePicker.unselectedStyleAdd.backgroundColor = color!"#fff";
-        GluiFilePicker.selectedStyleAdd.backgroundColor = color!"#ff512f";
+        GluiFileInput.unselectedStyleAdd.backgroundColor = color!"#fff";
+        GluiFileInput.selectedStyleAdd.backgroundColor = color!"#ff512f";
 
     };
 
