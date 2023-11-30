@@ -18,7 +18,7 @@ public import
     glui.onion_frame,
     glui.popup_frame,
     glui.scroll,
-    glui.scrollbar,
+    glui.scroll_input,
     glui.size_lock,
     glui.slot,
     glui.space,

@@ -15,7 +15,7 @@ import glui.style;
 import glui.structs;
 import glui.container;
 
-public import glui.scrollbar;
+public import glui.scroll_input;
 
 private extern(C) float GetMouseWheelMove();
 
@@ -48,7 +48,7 @@ class GluiScrollable(T : GluiNode, string horizontalExpression) : T {
     public {
 
         /// Scrollbar for the frame. Can be replaced with a customized one.
-        GluiScrollBar scrollBar;
+        GluiScrollInput scrollBar;
 
     }
 
@@ -62,7 +62,7 @@ class GluiScrollable(T : GluiNode, string horizontalExpression) : T {
     this(T...)(T args) {
 
         super(args);
-        this.scrollBar = .vscrollBar();
+        this.scrollBar = .vscrollInput();
 
     }
 

@@ -57,7 +57,7 @@ shared static this() {
 
         };
 
-        GluiScrollBar.styleAdd!q{
+        GluiScrollInput.styleAdd!q{
 
             backgroundColor = color!"#aaa";
 

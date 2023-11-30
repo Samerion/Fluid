@@ -31,7 +31,7 @@ void main() {
 
     };
 
-    GluiScrollBar myScrollBar, disabledScrollbar;
+    GluiScrollInput myScrollbar, disabledScrollbar;
     GluiButton!() myButton;
 
     auto root = hframe(
@@ -65,11 +65,11 @@ void main() {
             vspace(
 
                 label("A useless scrollbar:"),
-                myScrollBar = hscrollBar(.layout!"fill"),
+                myScrollbar = hscrollInput(.layout!"fill"),
 
                 button("Change scrollbar position", {
 
-                    myScrollBar.position = !myScrollBar.position * myScrollBar.scrollMax;
+                    myScrollbar.position = !myScrollbar.position * myScrollbar.scrollMax;
 
                 }),
 
@@ -85,7 +85,7 @@ void main() {
             vspace(
 
                 label("Even more useless scrollbar:"),
-                disabledScrollbar = hscrollBar(.layout!"fill"),
+                disabledScrollbar = hscrollInput(.layout!"fill"),
 
                 textInput("Type something long!"),
 
@@ -94,7 +94,7 @@ void main() {
         )
     );
 
-    myScrollBar.availableSpace = 5_000;
+    myScrollbar.availableSpace = 5_000;
     disabledScrollbar.availableSpace = 5_000;
     disabledScrollbar.isDisabled = true;
 
