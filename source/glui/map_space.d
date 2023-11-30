@@ -83,9 +83,6 @@ class GluiMapSpace : GluiSpace {
     /// If true, the node will prevent its children from leaving the screen space.
     bool preventOverflow;
 
-    deprecated("preventOverlap has been renamed to preventOverflow and will be removed in Glui 0.6.0")
-    ref inout(bool) preventOverlap() inout { return preventOverflow; }
-
     private {
 
         /// Last mouse position

@@ -12,11 +12,6 @@ import glui.utils;
 
 @safe:
 
-deprecated("To be removed in 0.6.0. Use popup() instead")
-alias dropdown = popup;
-
-deprecated("To be removed in 0.6.0. Use GluiPopup instead")
-alias GluiDropdown = GluiPopup;
 
 deprecated("popup has been renamed to popupFrame")
 alias popup = popupFrame;
