@@ -27,7 +27,7 @@ void main() {
 
     };
 
-    GluiFilePicker picker;
+    GluiFileInput picker;
     GluiLabel fileStatus;
     GluiButton!() unrelatedButton;
 
@@ -51,7 +51,7 @@ void main() {
                 unrelatedButton = button("An unrelated button", { unrelatedButton.text = "Huh?"; }),
             ),
         ),
-        picker = filePicker(whiteTheme, "Pick a file...",
+        picker = fileInput(whiteTheme, "Pick a file...",
             () {
                 fileStatus.text = "Picked " ~ picker.value;
             },
