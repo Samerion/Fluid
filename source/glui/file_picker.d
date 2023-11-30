@@ -1,4 +1,4 @@
-///
+//useSu/
 module glui.file_picker;
 
 // To consider: Split into two modules, this plus generic text input with suggestions.
@@ -12,13 +12,14 @@ import std.string;
 import std.typecons;
 import std.algorithm;
 
+import glui.space;
 import glui.frame;
 import glui.label;
 import glui.utils;
 import glui.input;
 import glui.style;
+import glui.button;
 import glui.structs;
-import glui.rich_label;
 import glui.text_input;
 
 alias filePicker = simpleConstructor!GluiFilePicker;
@@ -33,11 +34,21 @@ alias filePicker = simpleConstructor!GluiFilePicker;
 /// )
 class GluiFilePicker : GluiInput!GluiFrame {
 
-    mixin defineStyles!("selectedStyle", q{ Style.init });
+    // TODO maybe create a generic "search all" component? Maybe something that could automatically collect all
+    //      button data?
+
+    mixin defineStyles!(
+        "unselectedStyle", q{ Style.init },
+        "selectedStyle", q{ unselectedStyle },
+        "suggestionHoverStyle", q{ selectedStyle },
+    );
     mixin enableInputActions;
 
     /// Callback to run when input was cancelled.
     void delegate() cancelled;
+
+    /// Callback to run when input was submitted.
+    void delegate() submitted;
 
     /// Max amount of suggestions that can be provided.
     size_t suggestionLimit = 10;
@@ -55,8 +66,15 @@ class GluiFilePicker : GluiInput!GluiFrame {
         /// Text input field containing the currently selected directory or file for the file picker.
         GluiFilenameInput input;
 
-        /// Label with suggestions to the text.
-        GluiRichLabel suggestions;
+        /// Space for all suggestions.
+        ///
+        /// Starts empty, and is filled in as suggestions appear. Buttons are reused, so no more buttons will be
+        /// allocated once the suggestion limit is reached. Buttons are hidden if they don't contain any relevant
+        /// suggestions.
+        GluiSpace suggestions;
+
+        /// Number of available suggestions.
+        int suggestionCount;
 
         /// Filename typed by the user, before choosing suggestions.
         string typedFilename;
@@ -81,10 +99,11 @@ class GluiFilePicker : GluiInput!GluiFrame {
 
             titleLabel  = label(name),
             input       = new GluiFilenameInput("Path to file...", submitted),
-            suggestions = richLabel(),
+            suggestions = vspace(.layout!"fill"),
         );
 
         this.cancelled = cancelled;
+        this.submitted = submitted;
 
         // Hide the node
         hide();
@@ -113,10 +132,7 @@ class GluiFilePicker : GluiInput!GluiFrame {
             // Suggestion checked
             if (currentSuggestion != 0) {
 
-                // Activate it
-                typedFilename = input.value;
-                currentSuggestion = 0;
-                updateSuggestions();
+                reload();
 
                 // Restore focus
                 focus();
@@ -124,19 +140,8 @@ class GluiFilePicker : GluiInput!GluiFrame {
             }
 
             // Final submit
-            else {
+            else submit();
 
-                // Submit the selection
-                if (submitted) submitted();
-
-                // Remove focus
-                super.isFocused = false;
-                savedFocus = false;
-
-                // Automatically hide when submitted
-                hide();
-
-            }
         };
 
     }
@@ -161,6 +166,7 @@ class GluiFilePicker : GluiInput!GluiFrame {
 
     string value(string newValue) {
 
+        updateSize();
         return typedFilename = input.value = newValue;
 
     }
@@ -179,7 +185,7 @@ class GluiFilePicker : GluiInput!GluiFrame {
         @(GluiInputAction.entryUp)
         protected void _entryUp() {
 
-            typedFilename = input.value = input.value.dirName;
+            typedFilename = input.value = input.value.dirName ~ "/";
             updateSuggestions();
 
         }
@@ -221,6 +227,21 @@ class GluiFilePicker : GluiInput!GluiFrame {
 
     }
 
+    /// Clear suggestions
+    void clearSuggestions() {
+
+        updateSize();
+        suggestionCount = 0;
+
+        // Hide all suggestion children
+        foreach (child; suggestions.children) {
+
+            child.hide();
+
+        }
+
+    }
+
     /// Refresh the suggestion list.
     void updateSuggestions() {
 
@@ -228,7 +249,7 @@ class GluiFilePicker : GluiInput!GluiFrame {
         const dir  = values[0];
         const file = values[1];
 
-        suggestions.clear();
+        clearSuggestions();
 
         // Make sure the directory exists
         if (!dir.exists || !dir.isDir) return;
@@ -236,14 +257,24 @@ class GluiFilePicker : GluiInput!GluiFrame {
         // Check the entries
         addSuggestions();
 
-        // This suggestion was removed
-        if (currentSuggestion > suggestions.textParts.length) {
+        // Current suggestion was removed
+        if (currentSuggestion > suggestionCount) {
 
-            currentSuggestion = suggestions.textParts.length;
+            currentSuggestion = suggestionCount;
 
         }
 
-        updateSize();
+    }
+
+    private void submit() {
+
+        // Submit the selection
+        if (submitted) submitted();
+
+        // Remove focus
+        super.isFocused = false;
+        savedFocus = false;
+        hide();
 
     }
 
@@ -261,22 +292,50 @@ class GluiFilePicker : GluiInput!GluiFrame {
             // Ignore hidden directories if not prompted
             if (!file.length && name.startsWith(".")) continue;
 
-            // Stop after 10 entries.
-            if (num++ >= 10) break;
+            // Stop after reaching the limit
+            if (num++ >= suggestionLimit) break;
 
-
-            const prefix = num > 1 ? "\n" : "";
-
-            // Get the style
-            auto style = currentSuggestion == num
-                ? selectedStyle
-                : null;
 
             // Found a directory
-            if (entry.isDir) suggestions.push(style, prefix ~ name ~ "/");
+            if (entry.isDir) pushSuggestion(name ~ "/");
 
             // File
-            else suggestions.push(style, prefix ~ name);
+            else pushSuggestion(name);
+
+        }
+
+    }
+
+    private void pushSuggestion(string text) {
+
+        const index = suggestionCount;
+
+        // Ignore if the suggestion limit was reached
+        if (suggestionCount >= suggestionLimit) return;
+
+        updateSize();
+        suggestionCount += 1;
+
+        // Check if the suggestion button has been allocated
+        if (index >= suggestions.children.length) {
+
+            // Create the button
+            suggestions.children ~= new SuggestionButton(this, index, text, {
+
+                selectSuggestion(index + 1);
+                reload();
+
+            });
+
+        }
+
+        // Set text for the relevant button
+        else {
+
+            auto btn = cast(SuggestionButton) suggestions.children[index];
+
+            btn.text = text;
+            btn.show();
 
         }
 
@@ -307,28 +366,36 @@ class GluiFilePicker : GluiInput!GluiFrame {
 
     }
 
-    /// Offset currently chosen selection by number.
-    private void offsetSuggestion(long n) {
+    // TODO perhaps some of these should be exposed as API.
 
-        const suggestionCount = (suggestions.textParts.length + 1);
+    /// Reload the suggestions using user input.
+    private void reload() {
+
+        typedFilename = input.value;
+        currentSuggestion = 0;
+        updateSuggestions();
+
+    }
+
+    /// Set current suggestion by number.
+    private void selectSuggestion(long n) {
 
         auto previous = currentSuggestion;
-        currentSuggestion = (suggestionCount + currentSuggestion + n) % suggestionCount;
+        currentSuggestion = n;
 
-        // Clear style of the previous selection
-        if (previous != 0 && previous < suggestionCount) {
+        updateSize();
 
-            suggestions.textParts[previous - 1].style = null;
-
-        }
-
-        // Style thew new item
+        // Update input to match suggestion
         if (currentSuggestion != 0) {
 
-            auto part = &suggestions.textParts[currentSuggestion - 1];
-            part.style = selectedStyle;
+            auto btn = cast(SuggestionButton) suggestions.children[currentSuggestion - 1];
+            auto newValue = valueTuple(typedFilename)[0] ~ btn.text.stripLeft;
 
-            input.value = valueTuple(typedFilename)[0] ~ part.text.stripLeft;
+            // Same value, submit
+            if (newValue == input.value) submit();
+
+            // Update the input
+            else input.value = newValue;
 
         }
 
@@ -339,6 +406,15 @@ class GluiFilePicker : GluiInput!GluiFrame {
             input.value = typedFilename;
 
         }
+
+    }
+
+    /// Offset currently chosen selection by number.
+    private void offsetSuggestion(long n) {
+
+        const indexLimit = suggestionCount + 1;
+
+        selectSuggestion((indexLimit + currentSuggestion + n) % indexLimit);
 
     }
 
@@ -353,11 +429,14 @@ class GluiFilePicker : GluiInput!GluiFrame {
 
     override bool isFocused() const {
 
-        return input.isFocused();
+        return input.isFocused()
+            || cast(const SuggestionButton) tree.focus;
 
     }
 
     protected override void drawImpl(Rectangle outer, Rectangle inner) @trusted {
+
+        super.drawImpl(outer, inner);
 
         // Wasn't focused
         if (!savedFocus) {
@@ -377,8 +456,6 @@ class GluiFilePicker : GluiInput!GluiFrame {
             return;
 
         }
-
-        super.drawImpl(outer, inner);
 
     }
 
@@ -409,6 +486,42 @@ class GluiFilePicker : GluiInput!GluiFrame {
     protected override bool keyboardImpl() {
 
         assert(false, "FilePicker cannot directly have focus; call filePicker.focus to resolve automatically");
+
+    }
+
+}
+
+private class SuggestionButton : GluiButton!() {
+
+    mixin enableInputActions;
+
+    private {
+
+        int index;
+        GluiFilePicker filePicker;
+
+    }
+
+    this(T...)(GluiFilePicker filePicker, int index, T args) {
+
+        super(.layout!"fill", args);
+        this.index = index;
+        this.filePicker = filePicker;
+
+    }
+
+    override const(Style) pickStyle() const {
+
+        // Selected
+        if (filePicker.currentSuggestion == index+1)
+            return filePicker.selectedStyle;
+
+        // Hovered
+        if (isHovered)
+            return filePicker.suggestionHoverStyle;
+
+        // Idle
+        return filePicker.unselectedStyle;
 
     }
 

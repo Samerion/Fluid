@@ -9,8 +9,8 @@ import std.string;
 import std.typecons;
 import std.algorithm;
 
-import glui.node;
 import glui.utils;
+import glui.typeface;
 
 public import glui.border;
 public import glui.style_macros;
@@ -177,20 +177,26 @@ class Style {
     // Text options
     struct {
 
-        /// Font to be used for the text.
-        Font font;
+        /// Main typeface to be used for text.
+        Typeface typeface;
 
-        /// Font size (height) in pixels.
-        float fontSize;
+        alias font = typeface;
 
-        /// Line height, as a fraction of `fontSize`.
-        float lineHeight;
+        deprecated("Set font parameters in the typeface. These will be removed in 0.7.0") {
 
-        /// Space between characters, relative to font size.
-        float charSpacing;
+            /// Font size (height) in pixels.
+            float fontSize;
 
-        /// Space between words, relative to the font size.
-        float wordSpacing;
+            /// Line height, as a fraction of `fontSize`.
+            float lineHeight;
+
+            /// Space between characters, relative to font size.
+            float charSpacing;
+
+            /// Space between words, relative to the font size.
+            float wordSpacing;
+
+        }
 
         /// Text color.
         Color textColor;
@@ -238,7 +244,11 @@ class Style {
 
     }
 
-    this() { }
+    this() {
+
+        this.font = Typeface.defaultTypeface;
+
+    }
 
     /// Create a style by copying params of others.
     ///
@@ -252,9 +262,9 @@ class Style {
         foreach (i, style; styles) {
 
             // Inherit each field
-            static foreach (field; FieldNameTuple!(typeof(this))) {{
+            static foreach (j, field; FieldNameTuple!(typeof(this))) {{
 
-                auto inheritedField = mixin("style." ~ field);
+                auto inheritedField = style.tupleof[j];
 
                 static if (__traits(compiles, inheritedField is null)) {
 
@@ -270,7 +280,7 @@ class Style {
                 // Ignore if it's set to init (unless it's the first style)
                 if (i == 0 || !isInit) {
 
-                    mixin("this." ~ field) = inheritedField;
+                    this.tupleof[j] = inheritedField;
 
                 }
 
@@ -289,14 +299,13 @@ class Style {
 
     }
 
-    static Font loadFont(string file, int fontSize, dchar[] fontChars = null) @trusted {
+    static Typeface loadTypeface(string file, int fontSize) @trusted {
 
-        const realSize = fontSize * hidpiScale.y;
-
-        return LoadFontEx(file.toStringz, cast(int) realSize.ceil, cast(int*) fontChars.ptr,
-            cast(int) fontChars.length);
+        return new FreetypeTypeface(file, fontSize);
 
     }
+
+    alias loadFont = loadTypeface;
 
     /// Update the style with given D code.
     ///
@@ -328,9 +337,10 @@ class Style {
     }
 
     /// Get the current font
+    deprecated("Use typeface instead")
     inout(Font) getFont() inout @trusted {
 
-        return cast(inout) (font.recs ? font : GetFontDefault);
+        return cast(inout) GetFontDefault;
 
     }
 
@@ -349,25 +359,11 @@ class Style {
     Vector2 measureText(Vector2 availableSpace, string text, bool wrap = true) const
     in (availableSpace.x.isFinite && availableSpace.y.isFinite,
         format!"Text space given must be finite: %s"(availableSpace))
-    in (fontSize.isFinite,
-        format!"Invalid font size %s"(fontSize))
-    in (lineHeight.isFinite,
-        format!"Invalid line height %s"(lineHeight))
     out (r; r.x.isFinite && r.y.isFinite,
         format!"Resulting text space must be finite: %s"(r))
     do {
 
-        auto wrappedLines = wrapText(availableSpace.x, text, !wrap || availableSpace.x == 0);
-        Vector2 result;
-
-        foreach (line; wrappedLines) {
-
-            result.x = max(result.x, line.width);
-            result.y += fontSize * lineHeight;
-
-        }
-
-        return result;
+        return typeface.measure(availableSpace, text, wrap);
 
     }
 
@@ -388,142 +384,16 @@ class Style {
     }
 
     /// Draw text using the same params as `measureText`.
-    void drawText(Rectangle rect, string text, bool wrap = true) const {
+    void drawText(ref Image image, Rectangle rect, string text, bool wrap = true) const {
 
-        // Text position from top, relative to given rect
-        size_t top;
-
-        const totalLineHeight = fontSize * lineHeight;
-
-        // Draw each line
-        foreach (line; wrapText(rect.width, text, !wrap)) {
-
-            scope (success) top += cast(size_t) ceil(lineHeight * fontSize);
-
-            // Stop if drawing below rect
-            if (top > rect.height) break;
-
-            // Text position from left
-            size_t left;
-
-            const margin = (totalLineHeight - fontSize)/2;
-
-            foreach (word; words(line.text)) {
-
-                const position = Vector2(rect.x + left, rect.y + top + margin);
-
-                () @trusted {
-
-                    // cast(): raylib doesn't mutate the font. The parameter would probably be defined `const`, but
-                    // since it's not transistive in C, and font is a struct with a pointer inside, it only matters
-                    // in D.
-
-                    DrawTextEx(cast() getFont, word.text.toStringz, position, fontSize, fontSize * charSpacing,
-                        textColor);
-
-                }();
-
-                left += cast(size_t) ceil(word.width + fontSize * wordSpacing);
-
-            }
-
-        }
+        typeface.draw(image, rect, text, textColor, wrap);
 
     }
 
-    /// Get a range of words present in the given range of text. This is used to wrap and draw text.
-    auto words(string text) const {
+    /// ditto
+    void drawText(ref Image image, Rectangle rect, string text, Color color, bool wrap = true) const {
 
-        /// Get width of the given word.
-        float wordWidth(string wordText) @trusted {
-
-            // See drawText for cast()
-            return MeasureTextEx(cast() getFont, wordText.toStringz, fontSize, fontSize * charSpacing).x;
-
-        }
-
-        return text[]
-
-            // Split on spaces and newlines
-            .splitter!((a, string b) => [' ', '\n'].canFind(a), Yes.keepSeparators)(" ")
-
-            // Combine separators with each item
-            .chunks(2)
-
-            // Construct the words
-            .map!((chunk) {
-
-                const wordText = chunk.front;
-                const size = cast(size_t) wordWidth(wordText).ceil;
-
-                chunk.popFront;
-
-                const lineFeed = !chunk.empty && chunk.front == "\n";
-
-                // Encode the word
-                return TextLine.Word(wordText, size, lineFeed);
-
-            });
-
-    }
-
-    /// Split the text into multiple lines in order to fit within given width.
-    ///
-    /// Params:
-    ///     width         = Container width the text should fit in.
-    ///     text          = Text to wrap.
-    ///     lineFeedsOnly = If true, this should only wrap the text on line feeds.
-    auto wrapText(double width, string text, bool lineFeedsOnly) const {
-
-        const spaceWidth = cast(size_t) ceil(fontSize * wordSpacing);
-
-        size_t index = 0;
-
-        return words(text)
-            .map!((word) {
-
-                // Find the word's index in the text
-                size_t wordIndex = index;
-
-                // Advance to the next word; omit the space
-                index += word.text.length + 1;
-
-                // Update minimum size
-                if (word.width > width) width = word.width;
-
-                // Create a text line
-                return TextLine(wordIndex, word.text, word.width, word.lineFeed);
-
-            })
-            .cache
-            .splitWhen!((previousLine, nextLine) {
-
-                // Keep the lines separate if there's a line feed in between
-                if (previousLine.lineFeed) return true;
-
-                const combinedWidth = previousLine.width + nextLine.width + spaceWidth;
-
-                // Check which lines can be merged
-                return !lineFeedsOnly && combinedWidth > width;
-
-            })
-            .map!((lineRange) {
-
-                assert(!lineRange.empty);
-
-                // Finally, combine all mergeable lines
-                return lineRange.fold!((previousLine, nextLine) {
-
-                    const index = previousLine.index;
-                    const length = previousLine.text.length + nextLine.text.length + 1;
-                    const width = previousLine.width + nextLine.width + spaceWidth;
-
-                    return TextLine(index, text[index .. index+length], width);
-
-                });
-
-
-            });
+        typeface.draw(image, rect, text, color, wrap);
 
     }
 

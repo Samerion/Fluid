@@ -5,6 +5,7 @@ import raylib;
 import std.string;
 
 import glui.node;
+import glui.text;
 import glui.input;
 import glui.label;
 import glui.style;
@@ -102,7 +103,7 @@ class GluiTextInput : GluiInput!GluiNode {
         minSize = size;
 
         // Set height to at least the font size
-        minSize.y = max(minSize.y, style.fontSize * style.lineHeight);
+        minSize.y = max(minSize.y, style.font.lineHeight);
 
         // Set the label text
         contentLabel.text = (value == "") ? placeholder : value;
@@ -154,8 +155,8 @@ class GluiTextInput : GluiInput!GluiNode {
         // Add a blinking caret
         if (GetTime % (blinkTime*2) < blinkTime) {
 
-            const lineHeight = style.fontSize * style.lineHeight;
-            const margin = style.fontSize / 10f;
+            const lineHeight = style.typeface.lineHeight;
+            const margin = style.typeface.lineHeight / 10f;
 
             // Put the caret at the start if the placeholder is shown
             const textWidth = value.length
@@ -333,7 +334,7 @@ private class TextImpl : GluiLabel {
     override void drawImpl(Rectangle outer, Rectangle inner) {
 
         const style = pickStyle();
-        style.drawText(inner, text);
+        text.draw(style, inner);
 
     }
 

@@ -187,7 +187,7 @@ class GluiSpace : GluiNode, GluiContainer {
 
             GluiSpace node;
 
-            int opApply(int delegate(GluiNode) @safe fun) {
+            int opApply(int delegate(GluiNode) @safe fun) @trusted {
 
                 node.children.lock();
                 scope (exit) node.children.unlock();
@@ -209,7 +209,7 @@ class GluiSpace : GluiNode, GluiContainer {
                     // Move the child if needed
                     if (sourceIndex != destinationIndex) {
 
-                        node.children[destinationIndex] = child;
+                        node.children.forceMutable[destinationIndex] = child;
 
                     }
 
@@ -223,7 +223,7 @@ class GluiSpace : GluiNode, GluiContainer {
                 }
 
                 // Adjust length
-                node.children.length = destinationIndex;
+                node.children.forceMutable.length = destinationIndex;
 
                 return 0;
 

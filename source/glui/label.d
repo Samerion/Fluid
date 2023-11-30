@@ -4,6 +4,7 @@ module glui.label;
 import raylib;
 
 import glui.node;
+import glui.text;
 import glui.utils;
 import glui.style;
 
@@ -23,7 +24,7 @@ class GluiLabel : GluiNode {
     public {
 
         /// Text of this label.
-        string text;
+        Text!GluiLabel text;
 
         /// If true, the content of the label should not be wrapped into new lines if it's too long to fit into one.
         bool disableWrap;
@@ -36,7 +37,7 @@ class GluiLabel : GluiNode {
         this(BasicNodeParam!index sup, string text = "") {
 
             super(sup);
-            this.text = text;
+            this.text = Text!GluiLabel(this, text);
 
         }
 
@@ -46,7 +47,8 @@ class GluiLabel : GluiNode {
 
         import std.math;
 
-        minSize = style.measureText(available, text, !disableWrap);
+        text.resize(available, !disableWrap);
+        minSize = text.size;
 
     }
 
@@ -54,11 +56,11 @@ class GluiLabel : GluiNode {
 
         const style = pickStyle();
         style.drawBackground(outer);
-        style.drawText(inner, text, !disableWrap);
+        text.draw(style, inner);
 
     }
 
-    protected override const(Style) pickStyle() const {
+    override const(Style) pickStyle() const {
 
         return style;
 

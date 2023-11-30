@@ -6,9 +6,6 @@ import raylib;
 import std.meta;
 import std.functional;
 
-import glui.style;
-import glui.structs;
-
 @safe:
 
 /// Create a simple node constructor for declarative usage.
@@ -111,6 +108,9 @@ unittest {
 alias BasicNodeParamLength = Alias!5;
 template BasicNodeParam(int index) {
 
+    import glui.style;
+    import glui.structs;
+
     static if (index == 0) alias BasicNodeParam = AliasSeq!(Layout, const Theme);
     static if (index == 1) alias BasicNodeParam = AliasSeq!(const Theme, Layout);
     static if (index == 2) alias BasicNodeParam = AliasSeq!(Layout);
@@ -128,6 +128,20 @@ bool contains(Rectangle rectangle, Vector2 point) {
         && point.y < rectangle.y + rectangle.height;
 
 }
+
+// Extremely useful Rectangle utilities
+
+/// Get the top-left corner of a rectangle.
+Vector2 start(Rectangle r) => Vector2(r.x, r.y);
+
+/// Get the bottom-right corner of a rectangle.
+Vector2 end(Rectangle r) => Vector2(r.x + r.w, r.y + r.h);
+
+/// Get the center of a rectangle.
+Vector2 center(Rectangle r) => Vector2(r.x + r.w/2, r.y + r.h/2);
+
+/// Get the size of a rectangle.
+Vector2 size(Rectangle r) => Vector2(r.w, r.h);
 
 /// Get names of static fields in the given object.
 ///

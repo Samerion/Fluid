@@ -16,10 +16,7 @@ void main(string[] flags) {
         .layout!(1, "fill"),
         makeTheme!q{
 
-            font = loadFont("examples/ubuntu.ttf", 22);
-            fontSize = 22;
-            charSpacing = 0;
-            wordSpacing = 0.4;
+            font = loadFont("examples/ubuntu.ttf", 14);
 
             GluiLabel.styleAdd;
             GluiButton!().styleAdd!q{
@@ -42,8 +39,8 @@ void main(string[] flags) {
             ~ format!"will scale the content by %s%%x%s%%\n"(scale.x*100 - 100, scale.y*100 - 100)),
 
         label("For HiDPI to work correctly, you must use a font you provided yourself. For this reason, instead of "
-            ~ "using the default Raylib font, this example uses the Ubuntu font instead.\n"
-            ~ "The font is under the Ubuntu font licence, see "),
+            ~ "using the default Raylib font, this example uses the Ubuntu font.\n"
+            ~ "The font is under the Ubuntu font licence, see:"),
         button("https://ubuntu.com/legal/font-licence",
             delegate() @trusted => OpenURL("https://ubuntu.com/legal/font-licence"))
     );
