@@ -44,7 +44,34 @@ struct SimpleConstructor(T, alias fun = "a") {
 
     Type opCall(Args...)(Args args) {
 
-        auto result = new Type(args);
+        import glui.style;
+        import glui.structs;
+
+        // Construct the node via plain arguments
+        static if (__traits(compiles, new Type(args))) {
+
+            auto result = new Type(args);
+
+        }
+
+        // Construct the node via NodeParams
+        else {
+
+            // Determine if an argument is a parameter
+            enum isParam(T) = is(T : const Theme) || is(T : Layout);
+            enum isParamByIndex(size_t i) = i < args.length && isParam!(Args[i]);
+
+            // Count number of parameters
+            enum arity = !isParamByIndex!0 ? 0
+                : !isParamByIndex!1 ? 1
+                : 2;
+
+            // Construct the node
+            auto params = NodeParams(args[0..arity]);
+            auto result = new Type(params, args[arity..$]);
+
+        }
+
         initializer(result);
         return result;
 

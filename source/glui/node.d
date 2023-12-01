@@ -140,20 +140,26 @@ abstract class GluiNode : Styleable {
 
     }
 
-    /// Params:
-    ///     layout = Layout for this node.
-    ///     theme = Theme of this node.
-    this(Layout layout = Layout.init, const Theme theme = null) {
+    deprecated("Overloading layout/theme has been delegated to simpleConstructor. From now on, use super(NodeParams).")
+    {
 
-        this.layout = layout;
-        this.theme  = theme;
+        /// Params:
+        ///     layout = Layout for this node.
+        ///     theme = Theme of this node.
+        this(Layout layout = Layout.init, const Theme theme = null) {
 
-    }
+            this.layout = layout;
+            this.theme  = theme;
 
-    /// Ditto
-    this(const Theme theme = null, Layout layout = Layout.init) {
+        }
 
-        this(layout, theme);
+        /// Ditto
+        deprecated("Use GluiNode(NodeParams) instead.")
+        this(const Theme theme = null, Layout layout = Layout.init) {
+
+            this(layout, theme);
+
+        }
 
     }
 
