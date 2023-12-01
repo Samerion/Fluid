@@ -153,3 +153,27 @@ struct Layout {
     }
 
 }
+
+/// GluiNode core constructor parameters, to be passed from node to node.
+struct NodeParams {
+
+    import glui.style;
+
+    Layout layout;
+    const Theme theme;
+
+    this(Layout layout, const Theme theme = null) {
+
+        this.layout = layout;
+        this.theme  = theme;
+
+    }
+
+    /// Ditto
+    this(const Theme theme, Layout layout = Layout.init) {
+
+        this(layout, theme);
+
+    }
+
+}
