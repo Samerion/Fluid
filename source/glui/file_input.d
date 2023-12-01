@@ -99,11 +99,13 @@ class GluiFileInput : GluiInput!GluiFrame {
     do {
 
         super(
-            .layout(1, NodeAlign.center, NodeAlign.start),
-            theme,
+            NodeParams(
+                .layout(1, NodeAlign.center, NodeAlign.start),
+                theme,
+            ),
 
             titleLabel  = label(name),
-            input       = new GluiFilenameInput("Path to file...", submitted),
+            input       = new GluiFilenameInput(NodeParams.init, "Path to file...", submitted),
             suggestions = vspace(.layout!"fill"),
         );
 
@@ -509,7 +511,7 @@ private class SuggestionButton : GluiButton!() {
 
     this(T...)(GluiFileInput input, int index, T args) {
 
-        super(.layout!"fill", args);
+        super(NodeParams(.layout!"fill"), args);
         this.index = index;
         this.input = input;
 

@@ -256,13 +256,11 @@ class Style {
     /// style from the list — that is, settings from the last style override previous ones.
     this(Style[] styles...) {
 
-        import std.meta, std.traits;
-
         // Check each style
         foreach (i, style; styles) {
 
             // Inherit each field
-            static foreach (j, field; FieldNameTuple!(typeof(this))) {{
+            static foreach (j; 0..this.tupleof.length) {{
 
                 auto inheritedField = style.tupleof[j];
 

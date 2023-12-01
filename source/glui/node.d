@@ -50,6 +50,9 @@ private interface Styleable {
 /// Represents a Glui node.
 abstract class GluiNode : Styleable {
 
+    public import glui.structs : NodeAlign, NodeParams, Layout;
+    public import glui.structs : Align = NodeAlign, Params = NodeParams;
+
     /// This node defines a single style, `style`, which also works as a default style for all other nodes. However,
     /// rather than for that, the purpose of this style is to define the convention of `style` being the node's default,
     /// idle style.
@@ -163,10 +166,32 @@ abstract class GluiNode : Styleable {
 
     }
 
+    /// Construct a new node.
+    ///
+    /// The typical approach to constructing new nodes is via `glui.utils.simpleConstructor`. A node component would
+    /// provide an alias pointing to the `simpleConstructor` instance, which can then be used as a factory function. For
+    /// example, `GluiNode` provides the `label` simpleConstructor. Using these has increased convenience by making it
+    /// possible to omit `NodeParams` or to specify each parameter individually, for example
+    ///
+    /// ---
+    /// auto myLabel = label(.layout!1, .theme, "Hello, World!");
+    /// // Equivalent of:
+    /// auto myLabel = new GluiLabel(NodeParams(.layout!1, .theme), "Hello, World!");
+    /// ---
+    ///
+    /// See_Also:
+    ///     `glui.utils.simpleConstructor`
+    /// Params:
+    ///     params = An optional set of parameters the node accepts, including `layout` and `theme`.
+    this(NodeParams params) {
+
+        this.layout = params.layout;
+        this.theme = params.theme;
+
+    }
+
     /// Ditto
     this() {
-
-        this(Layout.init, null);
 
     }
 

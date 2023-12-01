@@ -63,33 +63,65 @@ class GluiTextInput : GluiInput!GluiNode {
 
     }
 
-    static foreach (index; 0 .. BasicNodeParamLength) {
+    deprecated("Use this(NodeParams, string, void delegate() @safe submitted) instead") {
 
-        /// Create a text input.
-        /// Params:
-        ///     sup         = Node parameters.
-        ///     placeholder = Placeholder text for the field.
-        ///     submitted   = Callback for when the field is submitted.
-        this(BasicNodeParam!index sup, string placeholder = "", void delegate() @trusted submitted = null) {
+        static foreach (index; 0 .. BasicNodeParamLength) {
 
-            super(sup);
-            this.placeholder = placeholder;
-            this.submitted = submitted;
+            /// Create a text input.
+            /// Params:
+            ///     sup         = Node parameters.
+            ///     placeholder = Placeholder text for the field.
+            ///     submitted   = Callback for when the field is submitted.
+            this(BasicNodeParam!index sup, string placeholder = "", void delegate() @trusted submitted = null) {
 
-            // Create the label
-            this.contentLabel = new typeof(contentLabel)(.layout!(1, "fill"), "");
+                super(NodeParams(sup));
+                this.placeholder = placeholder;
+                this.submitted = submitted;
 
-            with (this.contentLabel) {
+                // Create the label
+                this.contentLabel = new typeof(contentLabel)(NodeParams(.layout!(1, "fill")), "");
 
-                // Make the scrollbar invisible
-                scrollBar.disable();
-                scrollBar.width = 0;
-                // Note: We're not hiding the scrollbar, so it may adjust used values to the size of the input
+                with (this.contentLabel) {
 
-                disableWrap = true;
-                ignoreMouse = true;
+                    // Make the scrollbar invisible
+                    scrollBar.disable();
+                    scrollBar.width = 0;
+                    // Note: We're not hiding the scrollbar, so it may adjust used values to the size of the input
+
+                    disableWrap = true;
+                    ignoreMouse = true;
+
+                }
 
             }
+
+        }
+
+    }
+
+    /// Create a text input.
+    /// Params:
+    ///     params      = Node parameters.
+    ///     placeholder = Placeholder text for the field.
+    ///     submitted   = Callback for when the field is submitted.
+    this(NodeParams params, string placeholder = "", void delegate() @trusted submitted = null) {
+
+        super(params);
+        this.placeholder = placeholder;
+        this.submitted = submitted;
+
+        // Create the label
+        this.contentLabel = new typeof(contentLabel)(NodeParams(.layout!(1, "fill")), "");
+
+        with (this.contentLabel) {
+
+            // Make the scrollbar invisible
+            scrollBar.disable();
+            scrollBar.width = 0;
+            // Note: We're not hiding the scrollbar, so it may adjust used values to the size of the input
+
+            disableWrap = true;
+            ignoreMouse = true;
 
         }
 

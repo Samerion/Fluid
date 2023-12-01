@@ -58,14 +58,29 @@ class GluiSpace : GluiNode, GluiContainer {
     }
 
     // Generate constructors
-    static foreach (index; 0 .. BasicNodeParamLength) {
+    deprecated("Use this(NodeParams params, GluiNode[] nodes...) instead") {
 
-        this(BasicNodeParam!index params, GluiNode[] nodes...) {
+        static foreach (index; 0 .. BasicNodeParamLength) {
 
-            super(params);
-            this.children ~= nodes;
+            this(BasicNodeParam!index params, GluiNode[] nodes...) {
+
+                super(params);
+                this.children ~= nodes;
+
+            }
 
         }
+
+    }
+
+    this(NodeParams params, GluiNode[] nodes...) {
+
+        super(params);
+        this.children ~= nodes;
+
+    }
+
+    this() {
 
     }
 

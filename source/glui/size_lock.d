@@ -50,12 +50,23 @@ class GluiSizeLock(T : GluiNode) : T {
     /// If a value is `0`, it will not be limited.
     SizeLimit limit;
 
-    static foreach (i; 0..BasicNodeParamLength) {
+    this(T...)(NodeParams params, SizeLimit limit, T args) {
 
-        this(T...)(BasicNodeParam!i params, SizeLimit limit, T args) {
+        super(params, args);
+        this.limit = limit;
 
-            super(params, args);
-            this.limit = limit;
+    }
+
+    deprecated("BasicNodeParams have been replaced with NodeParams; please use this(NodeParams, SizeLimit, T)") {
+
+        static foreach (i; 0..BasicNodeParamLength) {
+
+            this(T...)(BasicNodeParam!i params, SizeLimit limit, T args) {
+
+                super(params, args);
+                this.limit = limit;
+
+            }
 
         }
 

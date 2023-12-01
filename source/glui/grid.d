@@ -256,24 +256,47 @@ class GluiGridRow : GluiFrame {
     GluiGrid parent;
     ulong segmentCount;
 
-    static foreach (i; 0..BasicNodeParamLength) {
+    deprecated("Please use this(NodeParams, GluiGrid, T args) instead") {
 
-        /// Params:
-        ///     params = Standard Glui constructor parameters.
-        ///     parent = Grid this row will be placed in.
-        ///     args = Children to be placed in the row.
-        this(T...)(BasicNodeParam!i params, GluiGrid parent, T args) {
+        static foreach (i; 0..BasicNodeParamLength) {
 
-            super(params);
-            this.layout.nodeAlign = NodeAlign.fill;
-            this.parent = parent;
-            this.directionHorizontal = true;
+            /// Params:
+            ///     params = Standard Glui constructor parameters.
+            ///     parent = Grid this row will be placed in.
+            ///     args = Children to be placed in the row.
+            this(T...)(BasicNodeParam!i params, GluiGrid parent, T args) {
 
-            foreach (arg; args) {
+                super(params);
+                this.layout.nodeAlign = NodeAlign.fill;
+                this.parent = parent;
+                this.directionHorizontal = true;
 
-                this.children ~= arg;
+                foreach (arg; args) {
+
+                    this.children ~= arg;
+
+                }
 
             }
+
+        }
+
+    }
+
+    /// Params:
+    ///     params = Standard Glui constructor parameters.
+    ///     parent = Grid this row will be placed in.
+    ///     args = Children to be placed in the row.
+    this(T...)(NodeParams params, GluiGrid parent, T args) {
+
+        super(params);
+        this.layout.nodeAlign = NodeAlign.fill;
+        this.parent = parent;
+        this.directionHorizontal = true;
+
+        foreach (arg; args) {
+
+            this.children ~= arg;
 
         }
 
