@@ -30,19 +30,35 @@ class GluiImageView : GluiNode {
     /// Set to true if the image view owns the texture and manages its ownership.
     private bool _isOwner;
 
-    static foreach (index; 0 .. BasicNodeParamLength) {
+    deprecated("Use this(NodeParams, T, Vector2) instead.") {
 
-        /// Create an image node from given texture or filename.
-        /// Params:
-        ///     source  = `Texture` raylib struct to use, or a filename to load from.
-        ///     minSize = Minimum size of the node
-        this(T)(BasicNodeParam!index sup, T source, Vector2 minSize = Vector2(0, 0)) {
+        static foreach (index; 0 .. BasicNodeParamLength) {
 
-            super(sup);
-            texture = source;
-            super.minSize = minSize;
+            /// Create an image node from given texture or filename.
+            /// Params:
+            ///     source  = `Texture` raylib struct to use, or a filename to load from.
+            ///     minSize = Minimum size of the node
+            this(T)(BasicNodeParam!index sup, T source, Vector2 minSize = Vector2(0, 0)) {
+
+                super(sup);
+                texture = source;
+                super.minSize = minSize;
+
+            }
 
         }
+
+    }
+
+    /// Create an image node from given texture or filename.
+    /// Params:
+    ///     source  = `Texture` raylib struct to use, or a filename to load from.
+    ///     minSize = Minimum size of the node
+    this(T)(NodeParams sup, T source, Vector2 minSize = Vector2(0, 0)) {
+
+        super(sup);
+        texture = source;
+        super.minSize = minSize;
 
     }
 

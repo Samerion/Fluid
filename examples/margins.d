@@ -33,7 +33,7 @@ void main() {
             padding = 10;
         };
 
-        GluiScrollBar.styleAdd!q{
+        GluiScrollInput.styleAdd!q{
             margin = 0;
             margin.sideLeft = 4;
             padding = 4;
@@ -100,7 +100,7 @@ void main() {
                 .layout!(1, "fill"),
                 fancyScroll.makeTheme!q{
 
-                    GluiScrollBar.styleAdd!q{
+                    GluiScrollInput.styleAdd!q{
                         margin = 4;
                         margin.sideRight = 0;
                     };

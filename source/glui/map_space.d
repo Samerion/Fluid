@@ -95,43 +95,89 @@ class GluiMapSpace : GluiSpace {
 
     }
 
-    static foreach (index; 0..BasicNodeParamLength) {
+    /// Construct the space. Arguments are either nodes, or positions/vectors affecting the next node added through
+    /// the constructor.
+    this(T...)(NodeParams params, T children)
+    if (!T.length || is(T[0] == Vector2) || is(T[0] == DropVector) || is(T[0] == Position) || is(T[0] : GluiNode)) {
 
-        /// Construct the space. Arguments are either nodes, or positions/vectors affecting the next node added through
-        /// the constructor.
-        this(T...)(BasicNodeParam!index params, T children)
-        if (!T.length || is(T[0] == Vector2) || is(T[0] == DropVector) || is(T[0] == Position) || is(T[0] : GluiNode)) {
+        super(params);
 
-            super(params);
+        Position position;
 
-            Position position;
+        static foreach (child; children) {
 
-            static foreach (child; children) {
+            // Update position
+            static if (is(typeof(child) == Position)) {
 
-                // Update position
-                static if (is(typeof(child) == Position)) {
+                position = child;
 
-                    position = child;
+            }
 
-                }
+            else static if (is(typeof(child) == MapDropVector)) {
 
-                else static if (is(typeof(child) == MapDropVector)) {
+                position.drop = child;
 
-                    position.drop = child;
+            }
 
-                }
+            else static if (is(typeof(child) == Vector2)) {
 
-                else static if (is(typeof(child) == Vector2)) {
+                position.coords = child;
 
-                    position.coords = child;
+            }
 
-                }
+            // Add child
+            else {
 
-                // Add child
-                else {
+                addChild(child, position);
+                position = Position.init;
 
-                    addChild(child, position);
-                    position = Position.init;
+            }
+
+        }
+
+    }
+
+    deprecated("Use this(NodeParams, T) instead") {
+
+        static foreach (index; 0..BasicNodeParamLength) {
+
+            /// Construct the space. Arguments are either nodes, or positions/vectors affecting the next node added through
+            /// the constructor.
+            this(T...)(BasicNodeParam!index params, T children)
+            if (!T.length || is(T[0] == Vector2) || is(T[0] == DropVector) || is(T[0] == Position) || is(T[0] : GluiNode)) {
+
+                super(params);
+
+                Position position;
+
+                static foreach (child; children) {
+
+                    // Update position
+                    static if (is(typeof(child) == Position)) {
+
+                        position = child;
+
+                    }
+
+                    else static if (is(typeof(child) == MapDropVector)) {
+
+                        position.drop = child;
+
+                    }
+
+                    else static if (is(typeof(child) == Vector2)) {
+
+                        position.coords = child;
+
+                    }
+
+                    // Add child
+                    else {
+
+                        addChild(child, position);
+                        position = Position.init;
+
+                    }
 
                 }
 

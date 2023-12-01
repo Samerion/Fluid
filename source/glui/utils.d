@@ -47,28 +47,54 @@ struct SimpleConstructor(T, alias fun = "a") {
         import glui.style;
         import glui.structs;
 
-        // Construct the node via plain arguments
-        static if (__traits(compiles, new Type(args))) {
+        // Determine if an argument is a parameter
+        enum isTheme(T) = is(T : const Theme);
+        enum isLayout(T) = is(T : Layout);
 
-            auto result = new Type(args);
+        // Scan for parameters
+        static if (Args.length >= 1) {
+
+            alias FirstArg = Args[0];
+
+            // Load the second argument with a fallback
+            static if (Args.length >= 2)
+                alias SecondArg = Args[1];
+            else
+                alias SecondArg = void;
+
+            // Check if the first parameter is a parameter
+            static if (isTheme!FirstArg) {
+
+                enum arity = 1 + isLayout!SecondArg;
+
+            }
+
+            else static if (isLayout!FirstArg) {
+
+                enum arity = 1 + isTheme!SecondArg;
+
+            }
+
+            else enum arity = 0;
 
         }
 
-        // Construct the node via NodeParams
+        else enum arity = 0;
+
+        // Construct the node
+        auto params = NodeParams(args[0..arity]);
+
+        // Collect the parameters into NodeParams
+        static if (__traits(compiles, new Type(params, args[arity..$]))) {
+
+            auto result = new Type(params, args[arity..$]);
+
+        }
+
+        // Old-style, plain construction
         else {
 
-            // Determine if an argument is a parameter
-            enum isParam(T) = is(T : const Theme) || is(T : Layout);
-            enum isParamByIndex(size_t i) = i < args.length && isParam!(Args[i]);
-
-            // Count number of parameters
-            enum arity = !isParamByIndex!0 ? 0
-                : !isParamByIndex!1 ? 1
-                : 2;
-
-            // Construct the node
-            auto params = NodeParams(args[0..arity]);
-            auto result = new Type(params, args[arity..$]);
+            auto result = new Type(args);
 
         }
 
@@ -129,20 +155,22 @@ unittest {
 
 }
 
-// lmao
-// AliasSeq!(AliasSeq!(T...)) won't work, this is a workaround
-// too lazy to document, used to generate node constructors with variadic or optional arguments.
-alias BasicNodeParamLength = Alias!5;
-template BasicNodeParam(int index) {
+deprecated("BasicNodeParams are deprecated in favor of simpleConstructor. Define constructors using NodeParams as the "
+    ~ "first argument instead") {
 
-    import glui.style;
-    import glui.structs;
+    alias BasicNodeParamLength = Alias!5;
+    template BasicNodeParam(int index) {
 
-    static if (index == 0) alias BasicNodeParam = AliasSeq!(Layout, const Theme);
-    static if (index == 1) alias BasicNodeParam = AliasSeq!(const Theme, Layout);
-    static if (index == 2) alias BasicNodeParam = AliasSeq!(Layout);
-    static if (index == 3) alias BasicNodeParam = AliasSeq!(const Theme);
-    static if (index == 4) alias BasicNodeParam = AliasSeq!();
+        import glui.style;
+        import glui.structs;
+
+        static if (index == 0) alias BasicNodeParam = AliasSeq!(Layout, const Theme);
+        static if (index == 1) alias BasicNodeParam = AliasSeq!(const Theme, Layout);
+        static if (index == 2) alias BasicNodeParam = AliasSeq!(Layout);
+        static if (index == 3) alias BasicNodeParam = AliasSeq!(const Theme);
+        static if (index == 4) alias BasicNodeParam = AliasSeq!();
+
+    }
 
 }
 
