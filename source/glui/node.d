@@ -465,7 +465,7 @@ abstract class GluiNode : Styleable {
 
     }
 
-    /// Switch focus
+    /// Switch focus towards a specified direction.
     @(GluiInputAction.focusLeft, GluiInputAction.focusRight)
     @(GluiInputAction.focusUp, GluiInputAction.focusDown)
     protected void _focusDirection(GluiInputAction action) {

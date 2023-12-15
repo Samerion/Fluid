@@ -2,10 +2,11 @@
 module glui.hover_button;
 
 import glui.node;
-import glui.utils;
 import glui.frame;
+import glui.input;
 import glui.label;
 import glui.style;
+import glui.utils;
 import glui.button;
 
 alias hoverButton = simpleConstructor!(GluiHoverButton!GluiLabel);
@@ -29,6 +30,11 @@ class GluiHoverButton(T : GluiNode = GluiLabel) : GluiButton!T {
     this(T...)(T sup) {
 
         super(sup);
+
+    }
+
+    // Disable action on `press`.
+    protected override void _pressed() {
 
     }
 

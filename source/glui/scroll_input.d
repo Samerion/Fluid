@@ -166,9 +166,6 @@ class GluiScrollInput : GluiInput!GluiNode {
 
         const handlePosition = (scrollbarLength - handleLength) * position / scrollMax;
 
-        // If focused, check for action input
-        if (isFocused) scrollFocusImpl();
-
         // Now get the size of the inner rect
         auto innerRect = contentBox;
 
@@ -284,15 +281,10 @@ class GluiScrollInput : GluiInput!GluiNode {
 
     }
 
+    @whileDown
     @(GluiInputAction.scrollLeft, GluiInputAction.scrollRight)
     @(GluiInputAction.scrollUp, GluiInputAction.scrollDown)
-    protected void _scroll() {
-
-        // Implemented in scrollFocusImpl called from `drawImpl()` to support holding
-
-    }
-
-    protected void scrollFocusImpl() @trusted {
+    protected void _scroll() @trusted {
 
         const isPlus = horizontal
             ? &isDown!(GluiInputAction.scrollRight)

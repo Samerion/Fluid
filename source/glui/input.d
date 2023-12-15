@@ -16,6 +16,10 @@ import glui.style;
 @safe:
 
 
+/// Make a GluiInputAction handler react to every frame as long as the action is being held (mouse button held down,
+/// key held down, etc.).
+enum whileDown;
+
 /// Default input actions one can listen to.
 @InputAction
 enum GluiInputAction {
@@ -455,6 +459,9 @@ interface GluiHoverable {
                         // Make sure no method is marked `@InputAction`, that's invalid usage
                         alias inputActionUDAs = getUDAs!(overload, InputAction);
 
+                        // Check for `@whileDown`
+                        enum activateWhileDown = hasUDA!(overload, whileDown);
+
                         static assert(inputActionUDAs.length == 0,
                             format!"Please use @(%s) instead of @InputAction!(%1$s)"(inputActionUDAs[0].type));
 
@@ -472,13 +479,19 @@ interface GluiHoverable {
                                     // Check if they're held down
                                     .find!"a.isDown";
 
-                                // TODO: get a list of possible strokes and pick the longest one
+                                // TODO prevent triggering an action if it could be associated with a more complex
+                                //      action: for example, `C` shouldn't trigger actions if `ctrl+C` is bound and
+                                //      pressed.
 
-                                // Check if the stoke is being held down
+                                // Check if the stroke is being held down
                                 if (!strokes.empty) {
 
+                                    const condition = activateWhileDown
+                                        ? strokes.front.isDown
+                                        : strokes.front.isActive;
+
                                     // Run the action if the stroke was performed
-                                    if (strokes.front.isActive) {
+                                    if (condition) {
 
                                         // Pass the action type if applicable
                                         static if (__traits(compiles, overload(actionType))) {
@@ -614,7 +627,6 @@ abstract class GluiInput(Parent : GluiNode) : Parent, GluiFocusable {
     /// This is to prevent parents or overlapping children to take input when another node is drawn on them.
     protected override void mouseImpl() { }
 
-    // deprecate this later
     protected bool keyboardImpl() {
 
         return false;
