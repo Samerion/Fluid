@@ -16,6 +16,10 @@ import glui.style;
 @safe:
 
 
+/// Make a GluiInputAction handler react to every frame as long as the action is being held (mouse button held down,
+/// key held down, etc.).
+enum whileDown;
+
 /// Default input actions one can listen to.
 @InputAction
 enum GluiInputAction {
@@ -455,6 +459,9 @@ interface GluiHoverable {
                         // Make sure no method is marked `@InputAction`, that's invalid usage
                         alias inputActionUDAs = getUDAs!(overload, InputAction);
 
+                        // Check for `@whileDown`
+                        enum activateWhileDown = hasUDA!(overload, whileDown);
+
                         static assert(inputActionUDAs.length == 0,
                             format!"Please use @(%s) instead of @InputAction!(%1$s)"(inputActionUDAs[0].type));
 
@@ -479,9 +486,12 @@ interface GluiHoverable {
                                 // Check if the stroke is being held down
                                 if (!strokes.empty) {
 
+                                    const condition = activateWhileDown
+                                        ? strokes.front.isDown
+                                        : strokes.front.isActive;
+
                                     // Run the action if the stroke was performed
-                                    // TODO should this be `.front` or a foreach?
-                                    if (strokes.front.isActive) {
+                                    if (condition) {
 
                                         // Pass the action type if applicable
                                         static if (__traits(compiles, overload(actionType))) {
