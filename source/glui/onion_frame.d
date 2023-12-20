@@ -50,7 +50,7 @@ class GluiOnionFrame : GluiFrame {
     protected override void drawImpl(Rectangle outer, Rectangle inner) {
 
         const style = pickStyle();
-        style.drawBackground(outer);
+        style.drawBackground(tree.io, outer);
 
         foreach (child; filterChildren) {
 

@@ -30,7 +30,7 @@ void main() {
         GluiScrollFrame.styleAdd!q{
 
             padding.sideX = 6;
-            backgroundColor = Colors.SKYBLUE;
+            backgroundColor = color!"#66bfff";
 
         };
 
@@ -54,7 +54,7 @@ void main() {
 
         BeginDrawing();
 
-            ClearBackground(Colors.BLACK);
+            ClearBackground(color!"#000");
             root.draw();
 
         EndDrawing();
@@ -97,7 +97,7 @@ GluiSpace boxExample() {
                         makeTheme!q{
                             GluiFrame.styleAdd!q{
                                 border = 6;
-                                borderStyle = colorBorder(Colors.BLUE);
+                                borderStyle = colorBorder(color!"#0079f1");
                             };
                         },
                         label("Frame with border"),
@@ -127,7 +127,7 @@ GluiSpace boxExample() {
                             margin = 16;
                             border.sideX = 6;
                             border.sideY = 4;
-                            borderStyle = colorBorder([Colors.DARKBLUE, Colors.BLUE]);
+                            borderStyle = colorBorder([color!"#0052ac", color!"0079f1"]);
                             padding = 16;
                         };
                     },

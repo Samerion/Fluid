@@ -170,7 +170,7 @@ class GluiTextInput : GluiInput!GluiNode {
         const scrollOffset = max(0, contentLabel.scrollMax - inner.w);
 
         // Fill the background
-        style.drawBackground(outer);
+        style.drawBackground(tree.io, outer);
 
         // Copy the style to the label
         contentLabel.activeStyle = style;

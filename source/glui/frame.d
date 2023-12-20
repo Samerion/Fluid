@@ -39,7 +39,7 @@ class GluiFrame : GluiSpace {
     protected override void drawImpl(Rectangle outer, Rectangle inner) {
 
         const style = pickStyle();
-        style.drawBackground(outer);
+        style.drawBackground(tree.io, outer);
 
         super.drawImpl(outer, inner);
 
