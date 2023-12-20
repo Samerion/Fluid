@@ -1,7 +1,5 @@
 module glui.scroll;
 
-import raylib;
-
 import std.meta;
 import std.conv;
 import std.algorithm;
@@ -12,6 +10,7 @@ import glui.space;
 import glui.utils;
 import glui.input;
 import glui.style;
+import glui.backend;
 import glui.structs;
 import glui.container;
 

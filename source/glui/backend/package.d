@@ -46,6 +46,9 @@ interface GluiBackend {
     Vector2 mousePosition(Vector2);
     Vector2 mousePosition() const;
 
+    /// Get time elapsed since last frame in seconds.
+    float deltaTime() const;
+
     /// True if the user has just resized the window.
     bool hasJustResized() const;
 
@@ -56,6 +59,13 @@ interface GluiBackend {
     /// Get HiDPI scale of the window.
     Vector2 hidpiScale() const;
 
+    /// Set area within the window items will be drawn to; any pixel drawn outside will be discarded.
+    Rectangle area(Rectangle rect);
+    Rectangle area() const;
+
+    /// Restore the capability to draw anywhere in the window.
+    void restoreArea();
+
     /// Get or set mouse cursor icon.
     GluiMouseCursor mouseCursor(GluiMouseCursor);
     GluiMouseCursor mouseCursor() const;
@@ -64,8 +74,15 @@ interface GluiBackend {
     Texture loadTexture(Image image) @system;
     Texture loadTexture(string filename) @system;
 
-    /// Destroy a texture created by this backend.
+    /// Destroy a texture created by this backend. `texture.destroy()` is the preferred way of calling this, since it
+    /// will ensure the correct backend is called.
     void unloadTexture(Texture texture) @system;
+
+    /// Draw a line.
+    void drawLine(Vector2 start, Vector2 end, Color color);
+
+    /// Draw a triangle, consisting of 3 vertices with counter-clockwise winding.
+    void drawTriangle(Vector2 a, Vector2 b, Vector2 c, Color color);
 
     /// Draw a rectangle.
     void drawRectangle(Rectangle rectangle, Color color);

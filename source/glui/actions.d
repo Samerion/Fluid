@@ -1,11 +1,10 @@
 /// Definitions for common tree actions; This is the Glui tree equivalent to std.algorithm.
 module glui.actions;
 
-import raylib;
-
 import glui.node;
 import glui.tree;
 import glui.input;
+import glui.backend;
 import glui.container;
 
 
@@ -76,7 +75,7 @@ class ScrollIntoViewAction : TreeAction {
             startNode = null;
 
             // Get viewport size
-            viewport = getViewport;
+            viewport = node.tree.io.windowSize;
 
             // Get the node's padding box
             childBox = paddingBox;
@@ -95,12 +94,6 @@ class ScrollIntoViewAction : TreeAction {
             childBox = container.shallowScrollTo(node, viewport, paddingBox, childBox);
 
         }
-
-    }
-
-    private final Vector2 getViewport() @trusted {
-
-        return Vector2(GetScreenWidth, GetScreenHeight);
 
     }
 

@@ -224,6 +224,12 @@ abstract class GluiNode : Styleable {
 
     }
 
+    inout(GluiBackend) io() inout {
+
+        return tree.io;
+
+    }
+
     /// Toggle the node's visibility.
     final void toggleShow() { isHidden = !isHidden; }
 
@@ -519,7 +525,7 @@ abstract class GluiNode : Styleable {
         const currentStyle = pickStyle;
         if (style && currentStyle && currentStyle.borderStyle) {
 
-            currentStyle.borderStyle.apply(borderBox, style.border);
+            currentStyle.borderStyle.apply(io, borderBox, style.border);
 
         }
 

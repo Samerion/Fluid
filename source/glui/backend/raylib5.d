@@ -17,6 +17,7 @@ class Raylib5Backend : GluiBackend {
     private {
 
         GluiMouseCursor lastMouseCursor;
+        Rectangle drawArea;
 
     }
 
@@ -58,6 +59,12 @@ class Raylib5Backend : GluiBackend {
 
     }
 
+    float deltaTime() const @trusted {
+
+        return GetFrameTime;
+
+    }
+
     bool hasJustResized() const @trusted {
 
         return IsWindowResized;
@@ -80,6 +87,35 @@ class Raylib5Backend : GluiBackend {
     Vector2 hidpiScale() const @trusted {
 
         return GetWindowScaleDPI();
+
+    }
+
+    Rectangle area(Rectangle rect) @trusted {
+
+        BeginScissorMode(
+            cast(int) rect.x,
+            cast(int) rect.y,
+            cast(int) rect.width,
+            cast(int) rect.height,
+        );
+
+        return drawArea = rect;
+
+    }
+
+    Rectangle area() const {
+
+        if (drawArea is drawArea.init)
+            return Rectangle(0, 0, windowSize.tupleof);
+        else
+            return drawArea;
+
+    }
+
+    void restoreArea() @trusted {
+
+        EndScissorMode();
+        drawArea = drawArea.init;
 
     }
 
@@ -138,6 +174,18 @@ class Raylib5Backend : GluiBackend {
             UnloadTexture(texture.toRaylib);
 
         }
+
+    }
+
+    void drawLine(Vector2 start, Vector2 end, Color color) @trusted {
+
+        DrawLineV(start, end, color);
+
+    }
+
+    void drawTriangle(Vector2 a, Vector2 b, Vector2 c, Color color) @trusted {
+
+        DrawTriangle(a, b, c, color);
 
     }
 
