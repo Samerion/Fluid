@@ -6,7 +6,7 @@ import raylib;
 
 import glui.backend;
 
-public import raylib : Vector2, Rectangle, Color, Image;
+public import raylib : Vector2, Rectangle, Color;
 
 
 @safe:
@@ -68,6 +68,12 @@ class Raylib5Backend : GluiBackend {
 
     }
 
+    Vector2 hidpiScale() const @trusted {
+
+        return GetWindowScaleDPI();
+
+    }
+
     GluiMouseCursor mouseCursor(GluiMouseCursor cursor) @trusted {
 
         // Hide the cursor if requested
@@ -90,9 +96,51 @@ class Raylib5Backend : GluiBackend {
 
     }
 
+    glui.backend.Texture loadTexture(glui.backend.Image image) @system {
+
+        return fromRaylib(LoadTextureFromImage(image.toRaylib));
+
+    }
+
+    glui.backend.Texture loadTexture(string filename) @system {
+
+        import std.string;
+
+        return fromRaylib(LoadTexture(filename.toStringz));
+
+    }
+
+    glui.backend.Texture fromRaylib(raylib.Texture texture) {
+
+        glui.backend.Texture result;
+        result.backend = this;
+        result.id = texture.id;
+        result.width = texture.width;
+        result.height = texture.height;
+        return result;
+
+    }
+
+    /// Destroy a texture
+    void unloadTexture(glui.backend.Texture texture) @system {
+
+        if (!__ctfe && IsWindowReady && texture.id != 0) {
+
+            UnloadTexture(texture.toRaylib);
+
+        }
+
+    }
+
     void drawRectangle(Rectangle rectangle, Color color) @trusted {
 
         DrawRectangleRec(rectangle, color);
+
+    }
+
+    void drawTexture(glui.backend.Texture texture, Vector2 position, Color tint) @trusted {
+
+        DrawTextureV(texture.toRaylib, position, tint);
 
     }
 
@@ -162,5 +210,33 @@ raylib.MouseButton toRaylib(GluiMouseButton button) {
         case forward: return MOUSE_BUTTON_FORWARD;
         case back:    return MOUSE_BUTTON_BACK;
     }
+
+}
+
+/// Convert image to a Raylib image. Do not call `UnloadImage` on the result.
+raylib.Image toRaylib(glui.backend.Image image) @trusted {
+
+    raylib.Image result;
+    result.data = cast(void*) image.pixels.ptr;
+    result.width = image.width;
+    result.height = image.height;
+    result.format = PixelFormat.PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
+    result.mipmaps = 1;
+
+    return result;
+
+}
+
+/// Convert a Glui texture to a Raylib texture.
+raylib.Texture toRaylib(glui.backend.Texture texture) @trusted {
+
+    raylib.Texture result;
+    result.id = texture.id;
+    result.width = texture.width;
+    result.height = texture.height;
+    result.format = PixelFormat.PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
+    result.mipmaps = 1;
+
+    return result;
 
 }

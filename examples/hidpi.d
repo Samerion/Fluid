@@ -4,7 +4,7 @@ import std.format;
 
 void main(string[] flags) {
 
-    SetConfigFlags(ConfigFlags.FLAG_WINDOW_RESIZABLE | ConfigFlags.FLAG_WINDOW_HIGHDPI);
+    SetConfigFlags(ConfigFlags.FLAG_WINDOW_RESIZABLE);
     SetTraceLogLevel(TraceLogLevel.LOG_WARNING);
     InitWindow(800, 600, "Glui HiDPI test");
     SetTargetFPS(60);
@@ -16,14 +16,14 @@ void main(string[] flags) {
         .layout!(1, "fill"),
         makeTheme!q{
 
-            font = loadFont("examples/ubuntu.ttf", 14);
+            font = loadFont(defaultGluiBackend, "examples/ubuntu.ttf", 14);
 
             GluiLabel.styleAdd;
             GluiButton!().styleAdd!q{
 
                 padding = 0;
-                textColor = Colors.BLUE;
-                backgroundColor = Colors.BLANK;
+                textColor = color!"0079f1";
+                backgroundColor = color!"0000";
 
                 hoverStyleAdd;
                 pressStyleAdd;

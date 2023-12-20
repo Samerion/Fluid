@@ -1,13 +1,12 @@
 module glui.popup_frame;
 
-import raylib;
-
 import std.traits;
 import std.algorithm;
 
 import glui.frame;
 import glui.style;
 import glui.utils;
+import glui.backend;
 
 
 @safe:
@@ -41,7 +40,7 @@ class GluiPopupFrame : GluiFrame {
 
     override protected void drawImpl(Rectangle outer, Rectangle inner) @trusted {
 
-        const mousePressed = [EnumMembers!MouseButton].any!IsMouseButtonReleased;
+        const mousePressed = tree.io.isReleased(GluiMouseButton.left);
 
         // Pressed outside!
         if (mousePressed && !isHovered) {

@@ -4,12 +4,18 @@
 /// Glui comes with a built-in interface for Raylib.
 module glui.backend;
 
+import std.meta;
+import std.range;
+import std.traits;
+import std.algorithm;
+
 
 @safe:
 
 
 alias VoidDelegate = void delegate() @safe;
 
+static GluiBackend defaultGluiBackend;
 
 interface GluiBackend {
 
@@ -39,12 +45,25 @@ interface GluiBackend {
     Vector2 windowSize(Vector2);
     Vector2 windowSize() const;  /// ditto
 
+    /// Get HiDPI scale of the window.
+    Vector2 hidpiScale() const;
+
     /// Get or set mouse cursor icon.
     GluiMouseCursor mouseCursor(GluiMouseCursor);
     GluiMouseCursor mouseCursor() const;
 
-    // Draw a rectangle
+    /// Load a texture from memory or file.
+    Texture loadTexture(Image image) @system;
+    Texture loadTexture(string filename) @system;
+
+    /// Destroy a texture created by this backend.
+    void unloadTexture(Texture texture) @system;
+
+    /// Draw a rectangle.
     void drawRectangle(Rectangle rectangle, Color color);
+
+    /// Draw a texture.
+    void drawTexture(Texture texture, Vector2 position, Color tint);
 
 }
 
@@ -220,7 +239,185 @@ enum GluiKeyboardKey {
 
 }
 
-static GluiBackend defaultGluiBackend;
+/// Generate an image filled with a given color.
+///
+/// Note: Image data is GC-allocated. Make sure to keep a reference alive when passing to the backend. Do not use
+/// `UnloadImage` if using Raylib.
+static Image generateColorImage(int width, int height, Color color) {
+
+    // Generate each pixel
+    auto data = new Color[width * height];
+    data[] = color;
+
+    // Prepare the result
+    Image image;
+    image.pixels = data;
+    image.width = width;
+    image.height = height;
+
+    return image;
+
+}
+
+/// Image available to the CPU.
+struct Image {
+
+    /// Raw image data.
+    Color[] pixels;
+    int width, height;
+
+    Vector2 size() const => Vector2(width, height);
+
+    ref inout(Color) get(int x, int y) inout {
+
+        return pixels[y * width + x];
+
+    }
+
+    /// Safer alternative to `get`, doesn't draw out of bounds.
+    void set(int x, int y, Color color) {
+
+        if (x < 0 || y < 0) return;
+        if (x >= width || y >= height) return;
+
+        get(x, y) = color;
+
+    }
+
+}
+
+/// Represents a GPU texture.
+///
+/// Textures make use of manual memory management.
+struct Texture {
+
+    /// Backend that created this texture.
+    GluiBackend backend;
+
+    /// GPU/backend ID of the texture.
+    uint id;
+    int width;
+    int height;
+
+    /// Draw this texture.
+    void draw(Vector2 position, Color tint = color!"fff") {
+
+        backend.drawTexture(this, position, tint);
+
+    }
+
+    /// Destroy this texture.
+    void destroy() @system {
+
+        if (backend is null) return;
+
+        backend.unloadTexture(this);
+        backend = null;
+        id = 0;
+
+    }
+
+}
+
+/// Create a color from hex code.
+Color color(string hexCode)() {
+
+    return color(hexCode);
+
+}
+
+/// ditto
+Color color(string hexCode) pure {
+
+    import std.string : chompPrefix;
+    import std.format : format, formattedRead;
+
+    // Remove the # if there is any
+    const hex = hexCode.chompPrefix("#");
+
+    Color result;
+    result.a = 0xff;
+
+    switch (hex.length) {
+
+        // 4 digit RGBA
+        case 4:
+            formattedRead!"%x"(hex[3..4], result.a);
+            result.a *= 17;
+
+            // Parse the rest like RGB
+            goto case;
+
+        // 3 digit RGB
+        case 3:
+            formattedRead!"%x"(hex[0..1], result.r);
+            formattedRead!"%x"(hex[1..2], result.g);
+            formattedRead!"%x"(hex[2..3], result.b);
+            result.r *= 17;
+            result.g *= 17;
+            result.b *= 17;
+            break;
+
+        // 8 digit RGBA
+        case 8:
+            formattedRead!"%x"(hex[6..8], result.a);
+            goto case;
+
+        // 6 digit RGB
+        case 6:
+            formattedRead!"%x"(hex[0..2], result.r);
+            formattedRead!"%x"(hex[2..4], result.g);
+            formattedRead!"%x"(hex[4..6], result.b);
+            break;
+
+        default:
+            assert(false, "Invalid hex code length");
+
+    }
+
+    return result;
+
+}
+
+unittest {
+
+    import std.exception;
+
+    assert(color!"#123" == Color(0x11, 0x22, 0x33, 0xff));
+    assert(color!"#1234" == Color(0x11, 0x22, 0x33, 0x44));
+    assert(color!"1234" == Color(0x11, 0x22, 0x33, 0x44));
+    assert(color!"123456" == Color(0x12, 0x34, 0x56, 0xff));
+    assert(color!"2a5592f0" == Color(0x2a, 0x55, 0x92, 0xf0));
+
+    assertThrown(color!"ag5");
+
+}
+
+/// Set the alpha channel for the given color, as a float.
+Color setAlpha(Color color, float alpha) {
+
+    import std.algorithm : clamp;
+
+    color.a = cast(ubyte) clamp(ubyte.max * alpha, 0, ubyte.max);
+    return color;
+
+}
+
+/// Blend two colors together; apply `top` on top of the `bottom` color. If `top` has maximum alpha, returns `top`. If
+/// alpha is zero, returns `bottom`.
+Color alphaBlend(Color bottom, Color top) {
+
+    auto topA = cast(float) top.a / ubyte.max;
+    auto bottomA = (1 - topA) * cast(float) bottom.a / ubyte.max;
+
+    return Color(
+        cast(ubyte) (bottom.r * bottomA + top.r * topA),
+        cast(ubyte) (bottom.g * bottomA + top.g * topA),
+        cast(ubyte) (bottom.b * bottomA + top.b * topA),
+        cast(ubyte) (bottom.a * bottomA + top.a * topA),
+    );
+
+}
 
 version (Have_raylib_d) {
 
@@ -263,18 +460,6 @@ else {
     struct Color {
 
         ubyte r, g, b, a;
-
-    }
-
-    struct Image {
-
-        /// Raw image data.
-        ubyte[] data;
-        int width, height;
-
-        // TODO pixel format
-
-        Vector2 size() const => Vector2(width, height);
 
     }
 

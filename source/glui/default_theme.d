@@ -19,7 +19,7 @@ shared static this() {
         GluiButton!().styleAdd!q{
 
             backgroundColor = color("eee");
-            mouseCursor = GluiMouseCursor.text;
+            mouseCursor = GluiMouseCursor.pointer;
 
             margin.sideY = 2;
             padding.sideX = 6;

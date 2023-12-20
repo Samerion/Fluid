@@ -1,7 +1,5 @@
 module glui.map_space;
 
-import raylib;
-
 import std.conv;
 import std.math;
 import std.format;
@@ -13,6 +11,7 @@ import glui.space;
 import glui.style;
 import glui.utils;
 import glui.actions;
+import glui.backend;
 import glui.container;
 
 
@@ -303,7 +302,7 @@ class GluiMapSpace : GluiSpace {
             import std.math;
 
             // Update the mouse position
-            auto mouse = GetMousePosition();
+            auto mouse = tree.io.mousePosition;
             scope (exit) _mousePosition = mouse;
 
             // If the previous mouse position was NaN, we've just started dragging
