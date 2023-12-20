@@ -1,8 +1,6 @@
 ///
 module glui.input;
 
-import raylib;
-
 import std.meta;
 import std.format;
 import std.traits;
@@ -11,6 +9,7 @@ import std.algorithm;
 import glui.node;
 import glui.tree;
 import glui.style;
+import glui.backend;
 
 
 @safe:
@@ -147,17 +146,19 @@ unittest {
 struct NthGamepadButton {
 
     int gamepadNumber;
-    GamepadButton button;
+    GluiGamepadButton button;
 
 }
 
 /// Reference to a specific gamepad's axis for `InputStroke`.
 ///
 /// Support to be implemented.
+///
+/// TODO this makes no sense, better to have the backend supply axes as buttons.
 struct NthGamepadAxis {
 
     int gamepadNumber;
-    GamepadAxis axis;
+    GluiGamepadAxis axis;
 
 }
 
@@ -166,7 +167,7 @@ struct InputStroke {
 
     import std.sumtype;
 
-    alias Item = SumType!(KeyboardKey, MouseButton, NthGamepadButton/*, NthGamepadAxis*/);
+    alias Item = SumType!(GluiKeyboardKey, GluiMouseButton, NthGamepadButton/*, NthGamepadAxis*/);
 
     Item[] input;
     invariant(input.length >= 1);
@@ -178,7 +179,7 @@ struct InputStroke {
         static foreach (i, item; items) {
 
             // Make gamepad buttons default to gamepad 0
-            static if (is(typeof(item) : GamepadButton)) {
+            static if (is(typeof(item) : GluiGamepadButton)) {
 
                 input[i] = Item(NthGamepadButton(0, item));
 
@@ -201,7 +202,7 @@ struct InputStroke {
     bool isMouseStroke() const {
 
         return input[$-1].match!(
-            (MouseButton _) => true,
+            (GluiMouseButton _) => true,
             (_) => false,
         );
 
@@ -209,9 +210,9 @@ struct InputStroke {
 
     /// Check if all keys or buttons required for the stroke are held down. This is is to make sure only one action is
     /// performed for each stroke.
-    bool isDown() const @trusted {
+    bool isDown(const GluiBackend backend) const @trusted {
 
-        return input.all!isDown;
+        return input.all!(a => isDown(backend, a));
 
     }
 
@@ -219,19 +220,19 @@ struct InputStroke {
     ///
     /// If the last item of the action is a mouse button, the action will be triggered on release. If it's a keyboard
     /// key or gamepad button, it'll be triggered on press.
-    bool isActive() const @trusted {
+    bool isActive(const GluiBackend backend) const @trusted {
 
         // TODO implement axis by polling its status in isDown and saving in a global
         return (
 
             // For all but the last item, check if it's held down
-            input[0 .. $-1].all!isDown
+            input[0 .. $-1].all!(a => isDown(backend, a))
 
             // For the last item, check if it's pressed or released, depending on the type
             && input[$-1].match!(
-                (KeyboardKey key) => IsKeyPressed(key),
-                (MouseButton button) => IsMouseButtonReleased(button),
-                (NthGamepadButton button) => IsGamepadButtonPressed(button.tupleof),
+                (GluiKeyboardKey key) => backend.isPressed(key),
+                (GluiMouseButton button) => backend.isReleased(button),
+                (NthGamepadButton button) => backend.isPressed(button.tupleof),
                 // (NthGamepadAxis axis) => GetGamepadAxisMovement() ...
             )
 
@@ -239,18 +240,18 @@ struct InputStroke {
 
     }
 
-    private static bool isDown(Item item) @trusted {
+    private static bool isDown(const GluiBackend backend, Item item) @trusted {
 
         return item.match!(
 
             // Keyboard
-            (KeyboardKey key) => IsKeyDown(key),
+            (GluiKeyboardKey key) => backend.isDown(key),
 
             // A released mouse button also counts as down for our purposes, as it might trigger the action
-            (MouseButton button) => IsMouseButtonDown(button) || IsMouseButtonReleased(button),
+            (GluiMouseButton button) => backend.isDown(button) || backend.isReleased(button),
 
             // Gamepad
-            (NthGamepadButton button) => IsGamepadButtonDown(button.tupleof),
+            (NthGamepadButton button) => backend.isDown(button.tupleof),
             // (NthGamepadAxis axis) => GetGamepadAxisMovement() ...
         );
 
@@ -327,7 +328,7 @@ if (isInputActionType!type) {
 bool isDown(alias type)(const(LayoutTree)* tree)
 if (isInputActionType!type) {
 
-    return getStrokes!type(tree).any!"a.isDown";
+    return getStrokes!type(tree).any!(a => a.isDown(tree.backend));
     // Maybe this could be faster? Cache the result? Something? No idea.
 
 }
@@ -336,7 +337,7 @@ if (isInputActionType!type) {
 bool isMouseDown(alias type)(LayoutTree* tree)
 if (isInputActionType!type) {
 
-    return getMouseStrokes!type(tree).any!"a.isDown";
+    return getMouseStrokes!type(tree).any!(a => a.isDown(tree.backend));
 
 }
 
@@ -344,7 +345,7 @@ if (isInputActionType!type) {
 bool isFocusDown(alias type)(LayoutTree* tree)
 if (isInputActionType!type) {
 
-    return getFocusStrokes!type(tree).any!"a.isDown";
+    return getFocusStrokes!type(tree).any!(a => a.isDown(tree.backend));
 
 }
 
@@ -360,7 +361,7 @@ if (isInputActionType!type) {
 bool isMouseActive(alias type)(LayoutTree* tree)
 if (isInputActionType!type) {
 
-    return getMouseStrokes!type(tree).any!"a.isActive";
+    return getMouseStrokes!type(tree).any!(a => a.isActive(tree.backend));
 
 }
 
@@ -368,7 +369,7 @@ if (isInputActionType!type) {
 bool isFocusActive(alias type)(LayoutTree* tree)
 if (isInputActionType!type) {
 
-    return getFocusStrokes!type(tree).any!"a.isActive";
+    return getFocusStrokes!type(tree).any!(a => a.isActive(tree.backend));
 
 }
 
@@ -477,7 +478,7 @@ interface GluiHoverable {
                                     .filter!(a => a.isMouseStroke == mouse)
 
                                     // Check if they're held down
-                                    .find!"a.isDown";
+                                    .find!(a => a.isDown(tree.backend));
 
                                 // TODO prevent triggering an action if it could be associated with a more complex
                                 //      action: for example, `C` shouldn't trigger actions if `ctrl+C` is bound and
@@ -487,8 +488,8 @@ interface GluiHoverable {
                                 if (!strokes.empty) {
 
                                     const condition = activateWhileDown
-                                        ? strokes.front.isDown
-                                        : strokes.front.isActive;
+                                        ? strokes.front.isDown(tree.backend)
+                                        : strokes.front.isActive(tree.backend);
 
                                     // Run the action if the stroke was performed
                                     if (condition) {
