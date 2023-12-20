@@ -1,12 +1,11 @@
 module glui.slot;
 
-import raylib;
-
 import std.traits;
 
 import glui.node;
 import glui.utils;
 import glui.style;
+import glui.backend;
 import glui.structs;
 
 

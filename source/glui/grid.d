@@ -1,6 +1,5 @@
 module glui.grid;
 
-import raylib;
 import std.range;
 import std.algorithm;
 
@@ -8,6 +7,7 @@ import glui.node;
 import glui.frame;
 import glui.style;
 import glui.utils;
+import glui.backend;
 import glui.structs;
 
 

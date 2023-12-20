@@ -2,7 +2,6 @@ module glui.file_input;
 
 // To consider: Split into two modules, this plus generic text input with suggestions.
 
-import raylib;
 import std.conv;
 import std.file;
 import std.path;
@@ -17,6 +16,7 @@ import glui.label;
 import glui.utils;
 import glui.input;
 import glui.style;
+import glui.backend;
 import glui.button;
 import glui.structs;
 import glui.text_input;

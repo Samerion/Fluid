@@ -1,14 +1,13 @@
 ///
 module glui.button;
 
-import raylib;
-
 import glui.node;
 import glui.frame;
 import glui.input;
 import glui.label;
 import glui.utils;
 import glui.style;
+import glui.backend;
 
 alias button = simpleConstructor!(GluiButton!GluiLabel);
 alias frameButton = simpleConstructor!(GluiButton!GluiFrame);

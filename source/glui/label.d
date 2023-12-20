@@ -1,12 +1,11 @@
 ///
 module glui.label;
 
-import raylib;
-
 import glui.node;
 import glui.text;
 import glui.utils;
 import glui.style;
+import glui.backend;
 
 alias label = simpleConstructor!GluiLabel;
 

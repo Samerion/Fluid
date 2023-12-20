@@ -1,8 +1,6 @@
 ///
 module glui.space;
 
-import raylib;
-
 import std.math;
 import std.range;
 import std.string;
@@ -12,6 +10,7 @@ import std.algorithm;
 import glui.node;
 import glui.style;
 import glui.utils;
+import glui.backend;
 import glui.children;
 import glui.container;
 
