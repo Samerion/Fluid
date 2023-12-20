@@ -9,6 +9,7 @@ import std.container;
 import glui.node;
 import glui.input;
 import glui.style;
+import glui.backend;
 
 
 @safe:
@@ -390,6 +391,10 @@ struct LayoutTree {
     /// Input strokes bound to emit given action signals.
     InputStroke[][InputActionID] boundInputs;
 
+    /// Access to core input and output facilities.
+    GluiBackend backend;
+    alias io = backend;
+
     /// Check if keyboard input was handled after rendering is has completed.
     bool keyboardHandled;
 
@@ -421,7 +426,7 @@ struct LayoutTree {
     }
 
     /// Restore defaults for given actions.
-    void defaultInputBinds() {
+    void restoreDefaultInputBinds() {
 
         /// Get the ID of an input action.
         auto idOf(alias a)() {

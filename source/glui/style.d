@@ -1,8 +1,6 @@
 ///
 module glui.style;
 
-import raylib;
-
 import std.math;
 import std.range;
 import std.string;
@@ -10,6 +8,7 @@ import std.typecons;
 import std.algorithm;
 
 import glui.utils;
+import glui.backend;
 import glui.typeface;
 
 public import glui.border;
@@ -240,7 +239,7 @@ class Style {
         /// Cursor icon to use while this node is hovered.
         ///
         /// Custom image cursors are not supported yet.
-        MouseCursor mouseCursor;
+        GluiMouseCursor mouseCursor;
 
     }
 
@@ -334,14 +333,6 @@ class Style {
 
     }
 
-    /// Get the current font
-    deprecated("Use typeface instead")
-    inout(Font) getFont() inout @trusted {
-
-        return cast(inout) GetFontDefault;
-
-    }
-
     /// Measure space given text will use.
     ///
     /// Params:
@@ -396,9 +387,9 @@ class Style {
     }
 
     /// Draw the background
-    void drawBackground(Rectangle rect) const @trusted {
+    void drawBackground(GluiBackend backend, Rectangle rect) const @trusted {
 
-        DrawRectangleRec(rect, backgroundColor);
+        backend.drawRectangle(rect, backgroundColor);
 
     }
 

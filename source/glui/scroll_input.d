@@ -155,7 +155,7 @@ class GluiScrollInput : GluiInput!GluiNode {
         setScroll(position);
 
         // Draw the background
-        backgroundStyle.drawBackground(paddingBox);
+        backgroundStyle.drawBackground(tree.io, paddingBox);
 
         // Calculate the size of the scrollbar
         scrollbarPosition = Vector2(contentBox.x, contentBox.y);
@@ -189,7 +189,7 @@ class GluiScrollInput : GluiInput!GluiNode {
         // Get the inner style
         const innerStyle = pickStyle();
 
-        innerStyle.drawBackground(innerRect);
+        innerStyle.drawBackground(tree.io, innerRect);
 
     }
 

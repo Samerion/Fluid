@@ -74,7 +74,7 @@ class GluiLabel : GluiNode {
     protected override void drawImpl(Rectangle outer, Rectangle inner) {
 
         const style = pickStyle();
-        style.drawBackground(outer);
+        style.drawBackground(tree.io, outer);
         text.draw(style, inner);
 
     }
