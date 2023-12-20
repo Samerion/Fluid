@@ -1,11 +1,10 @@
 ///
 module glui.image_view;
 
-import raylib;
-
 import glui.node;
 import glui.utils;
 import glui.style;
+import glui.backend;
 
 alias imageView = simpleConstructor!GluiImageView;
 
@@ -86,7 +85,7 @@ class GluiImageView : GluiNode {
             import std.string : toStringz;
 
             clear();
-            _texture = LoadTexture(filename.toStringz);
+            _texture = tree.io.loadTexture(filename);
             _isOwner = true;
             updateSize();
 
@@ -107,9 +106,9 @@ class GluiImageView : GluiNode {
     void clear() @trusted scope {
 
         // Free the texture
-        if (_isOwner && IsWindowReady()) {
+        if (_isOwner) {
 
-            UnloadTexture(texture);
+            _texture.destroy();
 
         }
 
@@ -151,15 +150,11 @@ class GluiImageView : GluiNode {
             rect.height / texture.height
         );
 
-        const source = Rectangle(0, 0, texture.width, texture.height);
-        const size   = Vector2(texture.width * scale, texture.height * scale);
+        const size     = Vector2(texture.width * scale, texture.height * scale);
+        const position = center(rect) - size/2;
 
-        _targetArea = Rectangle(
-            rect.x + rect.w/2 - size.x/2, rect.y + rect.h/2 - size.y/2,
-            size.x, size.y
-        );
-
-        DrawTexturePro(texture, source, _targetArea, Vector2(0, 0), 0, Colors.WHITE);
+        _targetArea = Rectangle(position.tupleof, size.tupleof);
+        _texture.draw(position);
 
     }
 

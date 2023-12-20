@@ -1,7 +1,5 @@
 module glui.tree;
 
-import raylib;
-
 import std.conv;
 import std.math;
 import std.container;
@@ -631,10 +629,7 @@ struct LayoutTree {
             const lastScissors = scissors;
 
             // Intersect with the current scissors rectangle.
-            scissors = intersectScissors(rect);
-
-            // Start the mode
-            applyScissors(scissors);
+            io.area = scissors = intersectScissors(rect);
 
             return lastScissors;
 
@@ -645,36 +640,20 @@ struct LayoutTree {
             // Pop the stack
             scissors = lastScissorsMode;
 
-            // Pop the mode
-            EndScissorMode();
+            // No scissors left
+            if (scissors is scissors.init) {
 
-            // There's still something left
-            if (scissors !is scissors.init) {
-
-                // Start again
-                applyScissors(scissors);
+                // Restore full draw area
+                backend.restoreArea();
 
             }
 
-        }
+            else {
 
-        private void applyScissors(Rectangle rect) @trusted {
+                // Start again
+                backend.area = scissors;
 
-            import glui.utils;
-
-            // End the current mode, if any
-            if (scissors !is scissors.init) EndScissorMode();
-
-            version (Glui_Raylib3) const scale = hidpiScale;
-            else                   const scale = Vector2(1, 1);
-
-            // Start this one
-            BeginScissorMode(
-                to!int(rect.x * scale.x),
-                to!int(rect.y * scale.y),
-                to!int(rect.w * scale.x),
-                to!int(rect.h * scale.y),
-            );
+            }
 
         }
 

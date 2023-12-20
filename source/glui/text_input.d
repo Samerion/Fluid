@@ -1,7 +1,6 @@
 ///
 module glui.text_input;
 
-import raylib;
 import std.string;
 
 import glui.node;
@@ -11,6 +10,7 @@ import glui.label;
 import glui.style;
 import glui.utils;
 import glui.scroll;
+import glui.backend;
 import glui.structs;
 
 alias textInput = simpleConstructor!GluiTextInput;
@@ -36,7 +36,7 @@ class GluiTextInput : GluiInput!GluiNode {
     mixin implHoveredRect;
     mixin enableInputActions;
 
-    /// Time in seconds before the cursor toggles visibility.
+    /// Time in seconds between changes in cursor visibility.
     static immutable float blinkTime = 1;
 
     public {
@@ -164,6 +164,7 @@ class GluiTextInput : GluiInput!GluiNode {
 
         // Note: We're drawing the label in `outer` as the presence of the label is meant to be transparent.
 
+        import std.datetime : Clock;
         import std.algorithm : min, max;
 
         const style = pickStyle();
@@ -184,8 +185,10 @@ class GluiTextInput : GluiInput!GluiNode {
         // Ignore the rest if the node isn't focused
         if (!isFocused) return;
 
+        auto timeSecs = Clock.currTime.second;
+
         // Add a blinking caret
-        if (GetTime % (blinkTime*2) < blinkTime) {
+        if (timeSecs % (blinkTime*2) < blinkTime) {
 
             const lineHeight = style.typeface.lineHeight;
             const margin = style.typeface.lineHeight / 10f;
@@ -202,7 +205,7 @@ class GluiTextInput : GluiInput!GluiNode {
             );
 
             // Draw the caret
-            DrawLineV(
+            io.drawLine(
                 end - Vector2(0, lineHeight - margin),
                 end - Vector2(0, margin),
                 focusStyle.textColor

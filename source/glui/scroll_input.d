@@ -1,13 +1,12 @@
 module glui.scroll_input;
 
-import raylib;
-
 import std.algorithm;
 
 import glui.node;
 import glui.utils;
 import glui.input;
 import glui.style;
+import glui.backend;
 
 
 @safe:
@@ -184,7 +183,7 @@ class GluiScrollInput : GluiInput!GluiNode {
         }
 
         // Check if the inner part is hovered
-        innerHovered = innerRect.contains(GetMousePosition);
+        innerHovered = innerRect.contains(io.mousePosition);
 
         // Get the inner style
         const innerStyle = pickStyle();
@@ -226,7 +225,7 @@ class GluiScrollInput : GluiInput!GluiNode {
         if (isDown && !isPressed) {
 
             // Remember the grab position
-            grabPosition = GetMousePosition;
+            grabPosition = io.mousePosition;
             scope (exit) startPosition = position;
 
             // Didn't press the handle
@@ -247,7 +246,7 @@ class GluiScrollInput : GluiInput!GluiNode {
         // Handle is held down
         else if (isDown) {
 
-            const mouse = GetMousePosition;
+            const mouse = io.mousePosition;
 
             const float move = horizontal
                 ? mouse.x - grabPosition.x
@@ -293,7 +292,7 @@ class GluiScrollInput : GluiInput!GluiNode {
             ? &isDown!(GluiInputAction.scrollLeft)
             : &isDown!(GluiInputAction.scrollUp);
 
-        const speed = cast(ulong) (scrollSpeed * 20 * GetFrameTime);
+        const speed = cast(ulong) (scrollSpeed * 20 * io.deltaTime);
         const change
             = isPlus(tree)  ? +speed
             : isMinus(tree) ? -speed
