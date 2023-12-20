@@ -34,6 +34,15 @@ class Raylib5Backend : GluiBackend {
 
         bool isRepeated(GluiKeyboardKey key) const => IsKeyPressedRepeat(key.toRaylib);
 
+        bool isPressed(int controller, GluiGamepadButton button) const
+            => IsGamepadButtonPressed(controller, button.toRaylib);
+        bool isReleased(int controller, GluiGamepadButton button) const
+            => IsGamepadButtonReleased(controller, button.toRaylib);
+        bool isDown(int controller, GluiGamepadButton button) const
+            => IsGamepadButtonDown(controller, button.toRaylib);
+        bool isUp(int controller, GluiGamepadButton button) const
+            => IsGamepadButtonUp(controller, button.toRaylib);
+
     }
 
     Vector2 mousePosition(Vector2 position) @trusted {
@@ -210,6 +219,13 @@ raylib.MouseButton toRaylib(GluiMouseButton button) {
         case forward: return MOUSE_BUTTON_FORWARD;
         case back:    return MOUSE_BUTTON_BACK;
     }
+
+}
+
+/// Get the Raylib enum for a keyboard key.
+raylib.GamepadButton toRaylib(GluiGamepadButton button) {
+
+    return cast(raylib.GamepadButton) button;
 
 }
 

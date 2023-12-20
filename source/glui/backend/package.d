@@ -19,13 +19,13 @@ static GluiBackend defaultGluiBackend;
 
 interface GluiBackend {
 
-    // Check if the given mouse button has just been pressed/released or, if it's held down or not (up).
+    /// Check if the given mouse button has just been pressed/released or, if it's held down or not (up).
     bool isPressed(GluiMouseButton) const;
     bool isReleased(GluiMouseButton) const;
     bool isDown(GluiMouseButton) const;
     bool isUp(GluiMouseButton) const;
 
-    // Check if the given keyboard key has just been pressed/released or, if it's held down or not (up).
+    /// Check if the given keyboard key has just been pressed/released or, if it's held down or not (up).
     bool isPressed(GluiKeyboardKey) const;
     bool isReleased(GluiKeyboardKey) const;
     bool isDown(GluiKeyboardKey) const;
@@ -33,6 +33,14 @@ interface GluiBackend {
 
     /// If true, the given keyboard key has been virtually pressed again, through a long-press.
     bool isRepeated(GluiKeyboardKey) const;
+
+    /// Check if the given gamepad button has been pressed/released or, if it's held down or not (up).
+    ///
+    /// Controllers start at 0.
+    bool isPressed(int controller, GluiGamepadButton button) const;
+    bool isReleased(int controller, GluiGamepadButton button) const;
+    bool isDown(int controller, GluiGamepadButton button) const;
+    bool isUp(int controller, GluiGamepadButton button) const;
 
     /// Get/set mouse position
     Vector2 mousePosition(Vector2);
@@ -118,6 +126,45 @@ enum GluiMouseButton {
 
     primary = left,
     secondary = right,
+
+}
+
+enum GluiGamepadButton {
+
+    none,                // No such button
+    dpadUp,              // Dpad up button.
+    dpadRight,           // Dpad right button
+    dpadDown,            // Dpad down button
+    dpadLeft,            // Dpad left button
+    triangle,            // Triangle (PS) or Y (Xbox)
+    square,              // Square (PS) or X (Xbox)
+    cross,               // Cross (PS) or A (Xbox)
+    circle,              // Circle (PS) or B (Xbox)
+    leftButton,          // Left button behind the controlller (LB).
+    leftTrigger,         // Left trigger (LT).
+    rightButton,         // Right button behind the controller (RB).
+    rightTrigger,        // Right trigger (RT)
+    select,              // "Select" button.
+    vendor,              // Button with the vendor logo.
+    start,               // "Start" button.
+    leftStick,           // Left joystick press.
+    rightStick,          // Right joystick press.
+
+    y = triangle,
+    x = square,
+    a = cross,
+    b = circle,
+
+}
+
+enum GluiGamepadAxis {
+
+    leftX,         // Left joystick, X axis.
+    leftY,         // Left joystick, Y axis.
+    rightX,        // Right joystick, X axis.
+    rightY,        // Right joystick, Y axis.
+    leftTrigger,   // Analog input for the left trigger.
+    rightTrigger,  // Analog input for the right trigger.
 
 }
 
