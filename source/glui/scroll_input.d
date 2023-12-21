@@ -48,11 +48,13 @@ class GluiScrollInput : GluiInput!GluiNode {
 
     public {
 
-        /// Multipler of the scroll speed.
-        ///
-        /// This is actually number of pixels per mouse wheel event, as `GluiScrollable` determines mouse scroll speed
-        /// based on this.
+        /// Mouse scroll speed; Pixels per mouse wheel event in GluiScrollable.
         enum scrollSpeed = 30.0;
+
+        /// Keyboard/gamepad
+        enum actionScrollSpeed = 1000.0;
+
+        // TODO HiDPI should affect scrolling speed
 
         /// If true, the scrollbar will be horizontal.
         bool horizontal;
@@ -280,7 +282,6 @@ class GluiScrollInput : GluiInput!GluiNode {
 
     }
 
-    @whileDown
     @(GluiInputAction.scrollLeft, GluiInputAction.scrollRight)
     @(GluiInputAction.scrollUp, GluiInputAction.scrollDown)
     protected void _scroll() @trusted {
@@ -292,7 +293,7 @@ class GluiScrollInput : GluiInput!GluiNode {
             ? &isDown!(GluiInputAction.scrollLeft)
             : &isDown!(GluiInputAction.scrollUp);
 
-        const speed = cast(ulong) (scrollSpeed * 20 * io.deltaTime);
+        const speed = cast(ulong) (actionScrollSpeed * io.deltaTime);
         const change
             = isPlus(tree)  ? +speed
             : isMinus(tree) ? -speed

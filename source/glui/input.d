@@ -222,7 +222,6 @@ struct InputStroke {
     /// key or gamepad button, it'll be triggered on press.
     bool isActive(const GluiBackend backend) const @trusted {
 
-        // TODO implement axis by polling its status in isDown and saving in a global
         return (
 
             // For all but the last item, check if it's held down
@@ -230,9 +229,9 @@ struct InputStroke {
 
             // For the last item, check if it's pressed or released, depending on the type
             && input[$-1].match!(
-                (GluiKeyboardKey key) => backend.isPressed(key),
+                (GluiKeyboardKey key) => backend.isPressed(key) || backend.isRepeated(key),
                 (GluiMouseButton button) => backend.isReleased(button),
-                (NthGamepadButton button) => backend.isPressed(button.tupleof),
+                (NthGamepadButton button) => backend.isPressed(button.tupleof),  // TODO gamepad repeat
                 // (NthGamepadAxis axis) => GetGamepadAxisMovement() ...
             )
 
