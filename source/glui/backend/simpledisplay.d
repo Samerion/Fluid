@@ -44,6 +44,7 @@ class SimpledisplayBackend : GluiBackend {
         float _deltaTime;
         Rectangle _scissors;
         bool _scissorsEnabled;
+        GluiMouseCursor _cursor;
 
         /// Recent input events for each keyboard and mouse.
         InputState[GluiKeyboardKey.max+1] _keyboardState;
@@ -306,7 +307,6 @@ class SimpledisplayBackend : GluiBackend {
 
     bool hasJustResized() const @trusted {
 
-        // TODO handle resize event
         return _hasJustResized;
 
     }
@@ -380,13 +380,24 @@ class SimpledisplayBackend : GluiBackend {
 
     GluiMouseCursor mouseCursor(GluiMouseCursor cursor) @trusted {
 
-        return cursor;
+        // Hide the cursor
+        if (cursor.system == cursor.system.none) {
+            window.hideCursor();
+        }
+
+        // Show the cursor
+        else {
+            window.showCursor();
+            window.cursor = cursor.toSimpleDisplay;
+        }
+
+        return _cursor = cursor;
 
     }
 
     GluiMouseCursor mouseCursor() const {
 
-        return GluiMouseCursor.init;
+        return _cursor;
 
     }
 
@@ -686,6 +697,29 @@ GluiKeyboardKey toGlui(arsd.simpledisplay.Key key) {
         case key.Pad8: return GluiKeyboardKey.keypad8;
         case key.Pad9: return GluiKeyboardKey.keypad9;
         case key.PadDot: return GluiKeyboardKey.keypadDecimal;
+
+    }
+
+}
+
+MouseCursor toSimpleDisplay(GluiMouseCursor cursor) @trusted {
+
+    switch (cursor.system) {
+
+        default:
+        case cursor.system.systemDefault:
+        case cursor.system.none:
+            return GenericCursor.Default;
+
+        case cursor.system.pointer: return GenericCursor.Hand;
+        case cursor.system.crosshair: return GenericCursor.Cross;
+        case cursor.system.text: return GenericCursor.Text;
+        case cursor.system.allScroll: return GenericCursor.Move;
+        case cursor.system.resizeEW: return GenericCursor.SizeWe;
+        case cursor.system.resizeNS: return GenericCursor.SizeNs;
+        case cursor.system.resizeNESW: return GenericCursor.SizeNesw;
+        case cursor.system.resizeNWSE: return GenericCursor.SizeNwse;
+        case cursor.system.notAllowed: return GenericCursor.NotAllowed;
 
     }
 
