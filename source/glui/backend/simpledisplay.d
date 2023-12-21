@@ -7,6 +7,7 @@ debug (Glui_BuildMessages) {
 }
 
 import arsd.simpledisplay;
+import std.datetime.stopwatch;
 
 import glui.backend;
 
@@ -24,13 +25,93 @@ class SimpledisplayBackend : GluiBackend {
 
     SimpleWindow window;
 
+    private {
+
+        Vector2 _mousePosition;
+        int _dpi;
+        bool _hasJustResized;
+        StopWatch _stopWatch;
+        float _deltaTime;
+        Rectangle _scissors;
+        bool _scissorsEnabled;
+
+        // Missing from simpledisplay at the time of writing
+        extern(C) void function(GLint x, GLint y, GLsizei width, GLsizei height) glScissor;
+
+    }
+
     // TODO non-openGL backend
 
+    /// Initialize the backend using the given window. Please note Glui will register its own event handlers, so if you
+    /// intend to use them, you should make sure to call whatever value was set previously.
+    ///
+    /// ---
+    /// auto oldMouseHandler = window.handleMouseEvent;
+    /// window.handleMouseEvent = (MouseEvent event) {
+    ///     oldMouseHandler(event);
+    ///     // ... do your stuff ...
+    /// };
+    /// ---
     this(SimpleWindow window) {
 
         this.window = window;
 
+        () @trusted {
+            this.glScissor = cast(typeof(glScissor)) glbindGetProcAddress("glScissor");
+        }();
 
+        updateDPI();
+        _stopWatch.start();
+
+        auto oldPaintingFinished = window.paintingFinished;
+        auto oldMouseHandler = window.handleMouseEvent;
+        auto oldWindowResized = window.windowResized;
+        auto oldOnDpiChanged = window.onDpiChanged;
+
+        // Frame event
+        this.window.paintingFinished = () {
+
+            if (oldPaintingFinished) oldPaintingFinished();
+
+            // Calculate delta time
+            _deltaTime = _stopWatch.peek.total!"msecs" / 1000f;
+            _stopWatch.reset();
+
+            // Reset frame state
+            _hasJustResized = false;
+
+        };
+
+        // Register a mouse handler
+        this.window.handleMouseEvent = (MouseEvent event) {
+
+            if (oldMouseHandler) oldMouseHandler(event);
+
+            // Update mouse position
+            _mousePosition = Vector2(event.x, event.y);
+
+        };
+
+        // Register a resize handler
+        this.window.windowResized = (int width, int height) {
+
+            if (oldWindowResized) oldWindowResized(width, height);
+
+            // Update window size
+            _hasJustResized = true;
+            glViewport(0, 0, width, height);
+
+        };
+
+        this.window.onDpiChanged = () {
+
+            if (oldOnDpiChanged) oldOnDpiChanged();
+
+            // Update window size
+            _hasJustResized = true;
+            updateDPI();
+
+        };
 
     }
 
@@ -60,33 +141,43 @@ class SimpledisplayBackend : GluiBackend {
 
     }
 
+    private void updateDPI() @trusted {
+
+        import std.algorithm;
+
+        _dpi = either(window.actualDpi, 96);
+
+    }
+
     Vector2 mousePosition(Vector2 position) @trusted {
 
-        return position;
+        window.warpMouse(cast(int) position.x, cast(int) position.y);
+        return _mousePosition = position;
 
     }
 
     Vector2 mousePosition() const @trusted {
 
-        return Vector2.init;
+        return _mousePosition;
 
     }
 
     float deltaTime() const @trusted {
 
-        // TODO
-        return 1f / 60f;
+        return _deltaTime;
 
     }
 
     bool hasJustResized() const @trusted {
 
-        return false;
+        // TODO handle resize event
+        return _hasJustResized;
 
     }
 
     Vector2 windowSize(Vector2 size) @trusted {
 
+        window.resize(cast(int) size.x, cast(int) size.y);
         return size;
 
     }
@@ -116,24 +207,38 @@ class SimpledisplayBackend : GluiBackend {
 
     Vector2 hidpiScale() const @trusted {
 
-        return Vector2(1, 1);
+        return Vector2(_dpi / 96f, _dpi / 96f);
 
     }
 
     Rectangle area(Rectangle rect) @trusted {
 
-        return rect;
+        glEnable(GL_SCISSOR_TEST);
+        glScissor(
+            cast(int) rect.x,
+            cast(int) (window.height - rect.y - rect.height),
+            cast(int) rect.width,
+            cast(int) rect.height,
+        );
+        _scissorsEnabled = true;
+
+        return _scissors = rect;
 
     }
 
     Rectangle area() const {
 
-        return Rectangle(0, 0, windowSize.tupleof);
+        if (_scissorsEnabled)
+            return _scissors;
+        else
+            return Rectangle(0, 0, windowSize.tupleof);
 
     }
 
     void restoreArea() @trusted {
 
+        glDisable(GL_SCISSOR_TEST);
+        _scissorsEnabled = false;
 
     }
 
@@ -222,6 +327,10 @@ class SimpledisplayBackend : GluiBackend {
 
     /// Destroy a texture
     void unloadTexture(Texture texture) @system {
+
+        if (texture.id == 0) return;
+
+        glDeleteTextures(1, &texture.id);
 
     }
 

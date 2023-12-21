@@ -29,8 +29,8 @@ class Raylib5Backend : GluiBackend {
 
         bool isPressed(GluiMouseButton button) const => IsMouseButtonPressed(button.toRaylib);
         bool isReleased(GluiMouseButton button) const => IsMouseButtonReleased(button.toRaylib);
-        bool isDown(GluiMouseButton button) const => IsMouseButtonUp(button.toRaylib);
-        bool isUp(GluiMouseButton button) const => IsMouseButtonDown(button.toRaylib);
+        bool isDown(GluiMouseButton button) const => IsMouseButtonDown(button.toRaylib);
+        bool isUp(GluiMouseButton button) const => IsMouseButtonUp(button.toRaylib);
 
         bool isPressed(GluiKeyboardKey key) const => IsKeyPressed(key.toRaylib);
         bool isReleased(GluiKeyboardKey key) const => IsKeyReleased(key.toRaylib);

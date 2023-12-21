@@ -8,8 +8,27 @@ void main() {
     SetTraceLogLevel(TraceLogLevel.LOG_WARNING);
     InitWindow(800, 600, "Glui showcase");
     SetTargetFPS(60);
-
     scope (exit) CloseWindow();
+
+    auto root = showcase();
+
+    import std.concurrency;
+    spawn(&spawnSimpledisplay);
+
+    while (!WindowShouldClose) {
+
+        BeginDrawing();
+
+            ClearBackground(color!"#000");
+            root.draw();
+
+        EndDrawing();
+
+    }
+
+}
+
+GluiSpace showcase() {
 
     // Let's customize the theme first
     auto theme = makeTheme!q{
@@ -36,7 +55,7 @@ void main() {
 
     };
 
-    auto root = vscrollFrame(
+    return vscrollFrame(
         .layout!(1, "fill"),
 
         // Customizing the theme...
@@ -50,20 +69,6 @@ void main() {
         slotExample,
         simpledisplayExample,
     );
-
-    spawnSimpledisplay;
-
-    version (none)
-    while (!WindowShouldClose) {
-
-        BeginDrawing();
-
-            ClearBackground(color!"#000");
-            root.draw();
-
-        EndDrawing();
-
-    }
 
 }
 
@@ -455,20 +460,16 @@ void spawnSimpledisplay() {
     SimpleWindow window;
     GluiSpace sdpyRoot;
 
-    window = new SimpleWindow(800, 600, "Glui showcase: arsd.simpledisplay", OpenGlOptions.yes);
+    window = new SimpleWindow(800, 600, "Glui showcase: arsd.simpledisplay",
+        OpenGlOptions.yes,
+        Resizeability.allowResizing);
 
-    sdpyRoot = vframe(
-        .layout!"fill",
-        label("Hello from arsd.simpledisplay!"),
-        textInput(),
-        button("Close this window", delegate() { }),
-    );
+    sdpyRoot = showcase();
 
     sdpyRoot.backend = new SimpledisplayBackend(window);
 
     window.redrawOpenGlScene = delegate() {
         sdpyRoot.draw();
-        //sdpyRoot.io.drawRectangle(glui.Rectangle(0, 0, 50, 50), color!"fff");
     };
 
     // 1 frame every 16 ms ≈ 60 FPS
