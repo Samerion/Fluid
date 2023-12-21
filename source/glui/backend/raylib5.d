@@ -264,6 +264,7 @@ raylib.MouseButton toRaylib(GluiMouseButton button) {
     with (raylib.MouseButton)
     with (GluiMouseButton)
     final switch (button) {
+        case none:    assert(false);
         case left:    return MOUSE_BUTTON_LEFT;
         case right:   return MOUSE_BUTTON_RIGHT;
         case middle:  return MOUSE_BUTTON_MIDDLE;
