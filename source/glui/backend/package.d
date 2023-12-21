@@ -9,6 +9,9 @@ import std.range;
 import std.traits;
 import std.algorithm;
 
+public import glui.backend.raylib5;
+public import glui.backend.simpledisplay;
+
 
 @safe:
 
@@ -33,6 +36,10 @@ interface GluiBackend {
 
     /// If true, the given keyboard key has been virtually pressed again, through a long-press.
     bool isRepeated(GluiKeyboardKey) const;
+
+    /// Get next queued character from user's input. The queue should be cleared every frame. Return null if no
+    /// character was pressed.
+    dchar inputCharacter();
 
     /// Check if the given gamepad button has been pressed/released or, if it's held down or not (up).
     ///
@@ -485,11 +492,11 @@ Color alphaBlend(Color bottom, Color top) {
 
 version (Have_raylib_d) {
 
-    debug (Glui_BuildMessages) {
-        pragma(msg, "Building with Raylib 5 support");
-    }
+    import raylib;
 
-    public import glui.backend.raylib5;
+    debug (Glui_BuildMessages) {
+        pragma(msg, "Glui: Using Raylib 5 as the default backend");
+    }
 
     static this() {
 
@@ -497,17 +504,23 @@ version (Have_raylib_d) {
 
     }
 
+    alias Rectangle = raylib.Rectangle;
+    alias Vector2 = raylib.Vector2;
+    alias Color = raylib.Color;
+
 }
 
 else {
 
     debug (Glui_BuildMessages) {
-        pragma(msg, "Building with no backend");
+        pragma(msg, "Glui: No built-in backend in use");
     }
 
     struct Vector2 {
 
         float x, y;
+
+        mixin Linear;
 
     }
 
@@ -525,6 +538,105 @@ else {
 
         ubyte r, g, b, a;
 
+    }
+
+    /// `mixin Linear` taken from [raylib-d](https://github.com/schveiguy/raylib-d), reformatted and without Rotor3
+    /// support.
+    ///
+    /// Licensed under the [z-lib license](https://github.com/schveiguy/raylib-d/blob/master/LICENSE).
+    private mixin template Linear() {
+
+        private static alias T = typeof(this);
+        private import std.traits : FieldNameTuple;
+
+        static T zero() {
+
+            enum fragment = {
+                string result;
+                static foreach(i; 0 .. T.tupleof.length)
+                    result ~= "0,";
+                return result;
+            }();
+
+            return mixin("T(", fragment, ")");
+        }
+
+        static T one() {
+
+            enum fragment = {
+                string result;
+                static foreach(i; 0 .. T.tupleof.length)
+                    result ~= "1,";
+                return result;
+            }();
+            return mixin("T(", fragment, ")");
+
+        }
+
+        inout T opUnary(string op)() if (op == "+" || op == "-") {
+
+            enum fragment = {
+                string result;
+                static foreach(fn; FieldNameTuple!T)
+                    result ~= op ~ fn ~ ",";
+                return result;
+            }();
+            return mixin("T(", fragment, ")");
+
+        }
+
+        inout T opBinary(string op)(inout T rhs) if (op == "+" || op == "-") {
+
+            enum fragment = {
+                string result;
+                foreach(fn; FieldNameTuple!T)
+                    result ~= fn ~ op ~ "rhs." ~ fn ~ ",";
+                return result;
+            }();
+            return mixin("T(", fragment, ")");
+
+        }
+
+        ref T opOpAssign(string op)(inout T rhs) if (op == "+" || op == "-") {
+
+            foreach (field; FieldNameTuple!T)
+                mixin(field, op,  "= rhs.", field, ";");
+
+            return this;
+
+        }
+
+        inout T opBinary(string op)(inout float rhs) if (op == "+" || op == "-" || op == "*" || op ==  "/") {
+
+            enum fragment = {
+                string result;
+                foreach(fn; FieldNameTuple!T)
+                    result ~= fn ~ op ~ "rhs,";
+                return result;
+            }();
+            return mixin("T(", fragment, ")");
+
+        }
+
+        inout T opBinaryRight(string op)(inout float lhs) if (op == "+" || op == "-" || op == "*" || op ==  "/") {
+
+            enum fragment = {
+                string result;
+                foreach(fn; FieldNameTuple!T)
+                    result ~= "lhs" ~ op ~ fn ~ ",";
+                return result;
+            }();
+            return mixin("T(", fragment, ")");
+
+        }
+
+        ref T opOpAssign(string op)(inout float rhs) if (op == "+" || op == "-" || op == "*" || op ==  "/") {
+
+            foreach (field; FieldNameTuple!T)
+                mixin(field, op, "= rhs;");
+            return this;
+
+        }
     }
 
 }

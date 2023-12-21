@@ -413,6 +413,24 @@ struct LayoutTree {
     @property
     ref inout(uint) disabledDepth() inout return { return _disabledDepth; }
 
+    /// Create a new tree with the given node as its root, and using the given backend for I/O.
+    this(GluiNode root, GluiBackend backend) {
+
+        this.root = root;
+        this.backend = backend;
+        this.restoreDefaultInputBinds();
+
+    }
+
+    /// Create a new tree with the given node as its root. Use the default backend, if any is present.
+    this(GluiNode root) {
+
+        assert(defaultGluiBackend, "Cannot create LayoutTree; no backend was chosen, and no default is set.");
+
+        this(root, defaultGluiBackend);
+
+    }
+
     /// Queue an action to perform while iterating the tree.
     ///
     /// Avoid using this; most of the time `GluiNode.queueAction` is what you want. `LayoutTree.queueAction` might fire

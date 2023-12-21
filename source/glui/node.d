@@ -224,11 +224,27 @@ abstract class GluiNode : Styleable {
 
     }
 
-    inout(GluiBackend) io() inout {
+    inout(GluiBackend) backend() inout {
 
-        return tree.io;
+        return tree.backend;
 
     }
+
+    GluiBackend backend(GluiBackend backend) {
+
+        // Create the tree if not present
+        if (tree is null) {
+
+            tree = new LayoutTree(this, backend);
+            return backend;
+
+        }
+
+        else return tree.backend = backend;
+
+    }
+
+    alias io = backend;
 
     /// Toggle the node's visibility.
     final void toggleShow() { isHidden = !isHidden; }
@@ -284,17 +300,10 @@ abstract class GluiNode : Styleable {
     /// Draw this node as a root node.
     final void draw() @trusted {
 
-        // No tree set
+        // No tree set, create one
         if (tree is null) {
 
-            // Create one
             tree = new LayoutTree(this);
-            tree.backend = new Raylib5Backend;
-            tree.restoreDefaultInputBinds();
-
-            // Workaround for a HiDPI scissors mode glitch, which breaks Glui
-            version (Glui_Raylib3)
-            SetWindowSize(GetScreenWidth, GetScreenHeight);
 
         }
 

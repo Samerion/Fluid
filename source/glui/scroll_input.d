@@ -49,7 +49,7 @@ class GluiScrollInput : GluiInput!GluiNode {
     public {
 
         /// Mouse scroll speed; Pixels per mouse wheel event in GluiScrollable.
-        enum scrollSpeed = 30.0;
+        enum scrollSpeed = 60.0;
 
         /// Keyboard/gamepad
         enum actionScrollSpeed = 1000.0;
