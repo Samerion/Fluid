@@ -461,12 +461,18 @@ void spawnSimpledisplay() {
     GluiSpace sdpyRoot;
     SimpledisplayBackend backend;
 
+    // Create the window
     window = new SimpleWindow(800, 600, "Glui showcase: arsd.simpledisplay",
         OpenGlOptions.yes,
         Resizeability.allowResizing);
+
+    // Prepare UI
     sdpyRoot = showcase();
+
+    // Setup the backend
     sdpyRoot.backend = backend = new SimpledisplayBackend(window);
 
+    // Simpledisplay's design is more sophisticated and requires more config than Raylib
     window.redrawOpenGlScene = {
         sdpyRoot.draw();
         backend.poll();

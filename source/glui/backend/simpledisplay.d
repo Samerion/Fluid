@@ -50,12 +50,15 @@ class SimpledisplayBackend : GluiBackend {
         InputState[GluiMouseButton.max+1] _mouseState;
         // gamepads?
 
+        /// Characters typed by the user, awaiting consumption.
+        const(dchar)[] _characterQueue;
+
         // Missing from simpledisplay at the time of writing
         extern(C) void function(GLint x, GLint y, GLsizei width, GLsizei height) glScissor;
 
     }
 
-    // TODO non-openGL backend
+    // TODO non-openGL backend, maybe...
 
     /// Initialize the backend using the given window.
     ///
@@ -72,6 +75,8 @@ class SimpledisplayBackend : GluiBackend {
     ///     // ... do your stuff ...
     /// };
     /// ---
+    ///
+    /// Gamepad input is not supported for simpledisplay.
     this(SimpleWindow window) {
 
         this.window = window;
@@ -84,6 +89,8 @@ class SimpledisplayBackend : GluiBackend {
         _stopWatch.start();
 
         auto oldMouseHandler = window.handleMouseEvent;
+        auto oldKeyHandler = window.handleKeyEvent;
+        auto oldCharHandler = window.handleCharEvent;
         auto oldWindowResized = window.windowResized;
         auto oldOnDpiChanged = window.onDpiChanged;
 
@@ -112,6 +119,42 @@ class SimpledisplayBackend : GluiBackend {
 
         };
 
+        // Register a keyboard handler
+        this.window.handleKeyEvent = (KeyEvent event) {
+
+            if (oldKeyHandler) oldKeyHandler(event);
+
+            const key = event.key.toGlui;
+
+            // Released
+            if (!event.pressed)
+                _keyboardState[key] = InputState.released;
+
+            // Repeat
+            else if (isDown(key))
+                _keyboardState[key] = InputState.repeated;
+
+            // Pressed
+            else
+                _keyboardState[key] = InputState.pressed;
+
+        };
+
+        // Register character handler
+        this.window.handleCharEvent = (dchar character) {
+
+            import std.uni;
+
+            if (oldCharHandler) oldCharHandler(character);
+
+            // Ignore control characters
+            if (character.isControl) return;
+
+            // Send new characters
+            _characterQueue ~= character;
+
+        };
+
         // Register a resize handler
         this.window.windowResized = (int width, int height) {
 
@@ -135,26 +178,73 @@ class SimpledisplayBackend : GluiBackend {
 
     }
 
-    bool isPressed(GluiMouseButton button) const
-        => _mouseState[button] == InputState.pressed;
-    bool isReleased(GluiMouseButton button) const
-        => _mouseState[button] == InputState.released;
-    bool isDown(GluiMouseButton button) const
-        => _mouseState[button].among(InputState.pressed, InputState.down) != 0;
-    bool isUp(GluiMouseButton button) const
-        => _mouseState[button].among(InputState.released, InputState.up) != 0;
+    bool isPressed(GluiMouseButton button) const {
 
-    bool isPressed(GluiKeyboardKey key) const
-        => _keyboardState[key] == InputState.pressed;
-    bool isReleased(GluiKeyboardKey key) const
-        => _keyboardState[key] == InputState.released;
-    bool isDown(GluiKeyboardKey key) const
-        => _keyboardState[key].among(InputState.pressed, InputState.repeated, InputState.repeated) != 0;
-    bool isUp(GluiKeyboardKey key) const
-        => _keyboardState[key].among(InputState.released, InputState.up) != 0;
+        return _mouseState[button] == InputState.pressed;
 
-    bool isRepeated(GluiKeyboardKey key) const => false;
-    dchar inputCharacter() => '\0';
+    }
+
+    bool isReleased(GluiMouseButton button) const {
+
+        return _mouseState[button] == InputState.released;
+
+    }
+
+    bool isDown(GluiMouseButton button) const {
+
+        return _mouseState[button].among(InputState.pressed, InputState.down) != 0;
+
+    }
+
+    bool isUp(GluiMouseButton button) const {
+
+        return _mouseState[button].among(InputState.released, InputState.up) != 0;
+
+    }
+
+    bool isPressed(GluiKeyboardKey key) const {
+
+        return _keyboardState[key] == InputState.pressed;
+
+    }
+
+    bool isReleased(GluiKeyboardKey key) const {
+
+        return _keyboardState[key] == InputState.released;
+
+    }
+
+    bool isDown(GluiKeyboardKey key) const {
+
+        return _keyboardState[key].among(InputState.pressed, InputState.repeated, InputState.down) != 0;
+
+    }
+
+    bool isUp(GluiKeyboardKey key) const {
+
+        return _keyboardState[key].among(InputState.released, InputState.up) != 0;
+
+    }
+
+    bool isRepeated(GluiKeyboardKey key) const {
+
+        return _keyboardState[key] == InputState.repeated;
+
+    }
+
+
+    dchar inputCharacter() {
+
+        // No characters in queue
+        if (_characterQueue.length == 0)
+            return '\0';
+
+        // Pop the first character
+        auto result = _characterQueue[0];
+        _characterQueue = _characterQueue[1..$];
+        return result;
+
+    }
 
     bool isPressed(int controller, GluiGamepadButton button) const
         => false;
@@ -180,6 +270,7 @@ class SimpledisplayBackend : GluiBackend {
 
         // Reset frame state
         _hasJustResized = false;
+        _characterQueue = null;
 
         foreach (ref state; _keyboardState) {
             if (state == state.pressed) state = state.down;
@@ -492,6 +583,7 @@ GluiKeyboardKey toGlui(arsd.simpledisplay.Key key) {
 
         default: return GluiKeyboardKey.none;
         case key.Escape: return GluiKeyboardKey.escape;
+        case key.Backspace: return GluiKeyboardKey.backspace;
         case key.F1: return GluiKeyboardKey.f1;
         case key.F2: return GluiKeyboardKey.f2;
         case key.F3: return GluiKeyboardKey.f3;
