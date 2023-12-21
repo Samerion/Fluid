@@ -459,17 +459,17 @@ void spawnSimpledisplay() {
 
     SimpleWindow window;
     GluiSpace sdpyRoot;
+    SimpledisplayBackend backend;
 
     window = new SimpleWindow(800, 600, "Glui showcase: arsd.simpledisplay",
         OpenGlOptions.yes,
         Resizeability.allowResizing);
-
     sdpyRoot = showcase();
+    sdpyRoot.backend = backend = new SimpledisplayBackend(window);
 
-    sdpyRoot.backend = new SimpledisplayBackend(window);
-
-    window.redrawOpenGlScene = delegate() {
+    window.redrawOpenGlScene = {
         sdpyRoot.draw();
+        backend.poll();
     };
 
     // 1 frame every 16 ms ≈ 60 FPS

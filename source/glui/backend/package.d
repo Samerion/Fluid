@@ -140,6 +140,7 @@ struct GluiMouseCursor {
 }
 
 enum GluiMouseButton {
+    none,
     left,     // Left (primary) mouse button.
     right,    // Right (secondary) mouse button.
     middle,   // Middle mouse button.
@@ -196,6 +197,7 @@ enum GluiKeyboardKey {
     none               = 0,        // No key pressed
     apostrophe         = 39,       // '
     comma              = 44,       // ,
+    dash               = comma,
     minus              = 45,       // -
     period             = 46,       // .
     slash              = 47,       // /
@@ -302,8 +304,8 @@ enum GluiKeyboardKey {
     keypadSum          = 334,      // Keypad +
     keypadEnter        = 335,      // Keypad Enter
     keypadEqual        = 336,      // Keypad =
-    back               = 4,        // Android back button
-    menu               = 82,       // Android menu button
+    androidBack        = 4,        // Android back button
+    androidMenu        = 82,       // Android menu button
     volumeUp           = 24,       // Android volume up button
     volumeDown         = 25        // Android volume down button
     // Function keys for volume?

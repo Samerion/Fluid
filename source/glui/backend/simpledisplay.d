@@ -7,6 +7,8 @@ debug (Glui_BuildMessages) {
 }
 
 import arsd.simpledisplay;
+
+import std.algorithm;
 import std.datetime.stopwatch;
 
 import glui.backend;
@@ -25,6 +27,14 @@ class SimpledisplayBackend : GluiBackend {
 
     SimpleWindow window;
 
+    private enum InputState {
+        up,
+        pressed,
+        down,
+        released,
+        repeated,
+    }
+
     private {
 
         Vector2 _mousePosition;
@@ -35,6 +45,11 @@ class SimpledisplayBackend : GluiBackend {
         Rectangle _scissors;
         bool _scissorsEnabled;
 
+        /// Recent input events for each keyboard and mouse.
+        InputState[GluiKeyboardKey.max+1] _keyboardState;
+        InputState[GluiMouseButton.max+1] _mouseState;
+        // gamepads?
+
         // Missing from simpledisplay at the time of writing
         extern(C) void function(GLint x, GLint y, GLsizei width, GLsizei height) glScissor;
 
@@ -42,7 +57,12 @@ class SimpledisplayBackend : GluiBackend {
 
     // TODO non-openGL backend
 
-    /// Initialize the backend using the given window. Please note Glui will register its own event handlers, so if you
+    /// Initialize the backend using the given window.
+    ///
+    /// Make sure to call `SimpledisplayBackend.poll()` *after* the Glui `draw` call, and only do it once per frame,
+    /// other Glui might not be able to keep itself up to date with latest events.
+    ///
+    /// Please note Glui will register its own event handlers, so if you
     /// intend to use them, you should make sure to call whatever value was set previously.
     ///
     /// ---
@@ -63,32 +83,32 @@ class SimpledisplayBackend : GluiBackend {
         updateDPI();
         _stopWatch.start();
 
-        auto oldPaintingFinished = window.paintingFinished;
         auto oldMouseHandler = window.handleMouseEvent;
         auto oldWindowResized = window.windowResized;
         auto oldOnDpiChanged = window.onDpiChanged;
-
-        // Frame event
-        this.window.paintingFinished = () {
-
-            if (oldPaintingFinished) oldPaintingFinished();
-
-            // Calculate delta time
-            _deltaTime = _stopWatch.peek.total!"msecs" / 1000f;
-            _stopWatch.reset();
-
-            // Reset frame state
-            _hasJustResized = false;
-
-        };
 
         // Register a mouse handler
         this.window.handleMouseEvent = (MouseEvent event) {
 
             if (oldMouseHandler) oldMouseHandler(event);
 
-            // Update mouse position
-            _mousePosition = Vector2(event.x, event.y);
+            final switch (event.type) {
+
+                // Update mouse position
+                case event.type.motion:
+                    _mousePosition = Vector2(event.x, event.y);
+                    return;
+
+                // Update button state
+                case event.type.buttonPressed:
+                    _mouseState[event.button.toGlui] = InputState.pressed;
+                    return;
+
+                case event.type.buttonReleased:
+                    _mouseState[event.button.toGlui] = InputState.released;
+                    return;
+
+            }
 
         };
 
@@ -115,37 +135,62 @@ class SimpledisplayBackend : GluiBackend {
 
     }
 
-    @trusted {
+    bool isPressed(GluiMouseButton button) const
+        => _mouseState[button] == InputState.pressed;
+    bool isReleased(GluiMouseButton button) const
+        => _mouseState[button] == InputState.released;
+    bool isDown(GluiMouseButton button) const
+        => _mouseState[button].among(InputState.pressed, InputState.down) != 0;
+    bool isUp(GluiMouseButton button) const
+        => _mouseState[button].among(InputState.released, InputState.up) != 0;
 
-        bool isPressed(GluiMouseButton button) const => false;
-        bool isReleased(GluiMouseButton button) const => false;
-        bool isDown(GluiMouseButton button) const => false;
-        bool isUp(GluiMouseButton button) const => false;
+    bool isPressed(GluiKeyboardKey key) const
+        => _keyboardState[key] == InputState.pressed;
+    bool isReleased(GluiKeyboardKey key) const
+        => _keyboardState[key] == InputState.released;
+    bool isDown(GluiKeyboardKey key) const
+        => _keyboardState[key].among(InputState.pressed, InputState.repeated, InputState.repeated) != 0;
+    bool isUp(GluiKeyboardKey key) const
+        => _keyboardState[key].among(InputState.released, InputState.up) != 0;
 
-        bool isPressed(GluiKeyboardKey key) const => false;
-        bool isReleased(GluiKeyboardKey key) const => false;
-        bool isDown(GluiKeyboardKey key) const => false;
-        bool isUp(GluiKeyboardKey key) const => false;
+    bool isRepeated(GluiKeyboardKey key) const => false;
+    dchar inputCharacter() => '\0';
 
-        bool isRepeated(GluiKeyboardKey key) const => false;
-        dchar inputCharacter() => '\0';
-
-        bool isPressed(int controller, GluiGamepadButton button) const
-            => false;
-        bool isReleased(int controller, GluiGamepadButton button) const
-            => false;
-        bool isDown(int controller, GluiGamepadButton button) const
-            => false;
-        bool isUp(int controller, GluiGamepadButton button) const
-            => false;
-
-    }
+    bool isPressed(int controller, GluiGamepadButton button) const
+        => false;
+    bool isReleased(int controller, GluiGamepadButton button) const
+        => false;
+    bool isDown(int controller, GluiGamepadButton button) const
+        => false;
+    bool isUp(int controller, GluiGamepadButton button) const
+        => true;
 
     private void updateDPI() @trusted {
 
-        import std.algorithm;
-
         _dpi = either(window.actualDpi, 96);
+
+    }
+
+    /// Update event state.
+    void poll() {
+
+        // Calculate delta time
+        _deltaTime = _stopWatch.peek.total!"msecs" / 1000f;
+        _stopWatch.reset();
+
+        // Reset frame state
+        _hasJustResized = false;
+
+        foreach (ref state; _keyboardState) {
+            if (state == state.pressed) state = state.down;
+            if (state == state.repeated) state = state.down;
+            if (state == state.released) state = state.up;
+        }
+
+        foreach (ref state; _mouseState) {
+            if (state == state.pressed) state = state.down;
+            if (state == state.released) state = state.up;
+        }
 
     }
 
@@ -418,6 +463,137 @@ class SimpledisplayBackend : GluiBackend {
         glBindTexture(GL_TEXTURE_2D, texture.id);
         drawRectangle(rectangle, tint);
         glBindTexture(GL_TEXTURE_2D, 0);
+
+    }
+
+}
+
+GluiMouseButton toGlui(arsd.simpledisplay.MouseButton button) {
+
+     switch (button) {
+
+        default:
+        case button.none: return GluiMouseButton.none;
+        case button.left: return GluiMouseButton.left;
+        case button.middle: return GluiMouseButton.middle;
+        case button.right: return GluiMouseButton.right;
+        case button.wheelUp: return GluiMouseButton.none;  // TODO
+        case button.wheelDown: return GluiMouseButton.none;  // TODO
+        case button.backButton: return GluiMouseButton.back;
+        case button.forwardButton: return GluiMouseButton.forward;
+
+    }
+
+}
+
+GluiKeyboardKey toGlui(arsd.simpledisplay.Key key) {
+
+     switch (key) {
+
+        default: return GluiKeyboardKey.none;
+        case key.Escape: return GluiKeyboardKey.escape;
+        case key.F1: return GluiKeyboardKey.f1;
+        case key.F2: return GluiKeyboardKey.f2;
+        case key.F3: return GluiKeyboardKey.f3;
+        case key.F4: return GluiKeyboardKey.f4;
+        case key.F5: return GluiKeyboardKey.f5;
+        case key.F6: return GluiKeyboardKey.f6;
+        case key.F7: return GluiKeyboardKey.f7;
+        case key.F8: return GluiKeyboardKey.f8;
+        case key.F9: return GluiKeyboardKey.f9;
+        case key.F10: return GluiKeyboardKey.f10;
+        case key.F11: return GluiKeyboardKey.f11;
+        case key.F12: return GluiKeyboardKey.f12;
+        case key.PrintScreen: return GluiKeyboardKey.printScreen;
+        case key.ScrollLock: return GluiKeyboardKey.scrollLock;
+        case key.Pause: return GluiKeyboardKey.pause;
+        case key.Grave: return GluiKeyboardKey.grave;
+        case key.N0: return GluiKeyboardKey.digit0;
+        case key.N1: return GluiKeyboardKey.digit1;
+        case key.N2: return GluiKeyboardKey.digit2;
+        case key.N3: return GluiKeyboardKey.digit3;
+        case key.N4: return GluiKeyboardKey.digit4;
+        case key.N5: return GluiKeyboardKey.digit5;
+        case key.N6: return GluiKeyboardKey.digit6;
+        case key.N7: return GluiKeyboardKey.digit7;
+        case key.N8: return GluiKeyboardKey.digit8;
+        case key.N9: return GluiKeyboardKey.digit9;
+        case key.Dash: return GluiKeyboardKey.dash;
+        case key.Equals: return GluiKeyboardKey.equal;
+        case key.Backslash: return GluiKeyboardKey.backslash;
+        case key.Insert: return GluiKeyboardKey.insert;
+        case key.Home: return GluiKeyboardKey.home;
+        case key.PageUp: return GluiKeyboardKey.pageUp;
+        case key.PageDown: return GluiKeyboardKey.pageDown;
+        case key.Delete: return GluiKeyboardKey.del;
+        case key.End: return GluiKeyboardKey.end;
+        case key.Up: return GluiKeyboardKey.up;
+        case key.Down: return GluiKeyboardKey.down;
+        case key.Left: return GluiKeyboardKey.left;
+        case key.Right: return GluiKeyboardKey.right;
+        case key.Tab: return GluiKeyboardKey.tab;
+        case key.Q: return GluiKeyboardKey.q;
+        case key.W: return GluiKeyboardKey.w;
+        case key.E: return GluiKeyboardKey.e;
+        case key.R: return GluiKeyboardKey.r;
+        case key.T: return GluiKeyboardKey.t;
+        case key.Y: return GluiKeyboardKey.y;
+        case key.U: return GluiKeyboardKey.u;
+        case key.I: return GluiKeyboardKey.i;
+        case key.O: return GluiKeyboardKey.o;
+        case key.P: return GluiKeyboardKey.p;
+        case key.LeftBracket: return GluiKeyboardKey.leftBracket;
+        case key.RightBracket: return GluiKeyboardKey.rightBracket;
+        case key.CapsLock: return GluiKeyboardKey.capsLock;
+        case key.A: return GluiKeyboardKey.a;
+        case key.S: return GluiKeyboardKey.s;
+        case key.D: return GluiKeyboardKey.d;
+        case key.F: return GluiKeyboardKey.f;
+        case key.G: return GluiKeyboardKey.g;
+        case key.H: return GluiKeyboardKey.h;
+        case key.J: return GluiKeyboardKey.j;
+        case key.K: return GluiKeyboardKey.k;
+        case key.L: return GluiKeyboardKey.l;
+        case key.Semicolon: return GluiKeyboardKey.semicolon;
+        case key.Apostrophe: return GluiKeyboardKey.apostrophe;
+        case key.Enter: return GluiKeyboardKey.enter;
+        case key.Shift: return GluiKeyboardKey.leftShift;
+        case key.Z: return GluiKeyboardKey.z;
+        case key.X: return GluiKeyboardKey.x;
+        case key.C: return GluiKeyboardKey.c;
+        case key.V: return GluiKeyboardKey.v;
+        case key.B: return GluiKeyboardKey.b;
+        case key.N: return GluiKeyboardKey.n;
+        case key.M: return GluiKeyboardKey.m;
+        case key.Comma: return GluiKeyboardKey.comma;
+        case key.Period: return GluiKeyboardKey.period;
+        case key.Slash: return GluiKeyboardKey.slash;
+        case key.Shift_r: return GluiKeyboardKey.rightShift;
+        case key.Ctrl: return GluiKeyboardKey.leftControl;
+        case key.Windows: return GluiKeyboardKey.leftSuper;
+        case key.Alt: return GluiKeyboardKey.leftAlt;
+        case key.Space: return GluiKeyboardKey.space;
+        case key.Alt_r: return GluiKeyboardKey.rightAlt;
+        case key.Windows_r: return GluiKeyboardKey.rightSuper;
+        case key.Menu: return GluiKeyboardKey.contextMenu;
+        case key.Ctrl_r: return GluiKeyboardKey.rightControl;
+        case key.NumLock: return GluiKeyboardKey.numLock;
+        case key.Divide: return GluiKeyboardKey.keypadDivide;
+        case key.Multiply: return GluiKeyboardKey.keypadMultiply;
+        case key.Minus: return GluiKeyboardKey.keypadSubtract;
+        case key.Plus: return GluiKeyboardKey.keypadSum;
+        case key.PadEnter: return GluiKeyboardKey.keypadEnter;
+        case key.Pad0: return GluiKeyboardKey.keypad0;
+        case key.Pad1: return GluiKeyboardKey.keypad1;
+        case key.Pad2: return GluiKeyboardKey.keypad2;
+        case key.Pad3: return GluiKeyboardKey.keypad3;
+        case key.Pad4: return GluiKeyboardKey.keypad4;
+        case key.Pad5: return GluiKeyboardKey.keypad5;
+        case key.Pad6: return GluiKeyboardKey.keypad6;
+        case key.Pad7: return GluiKeyboardKey.keypad7;
+        case key.Pad8: return GluiKeyboardKey.keypad8;
+        case key.Pad9: return GluiKeyboardKey.keypad9;
+        case key.PadDot: return GluiKeyboardKey.keypadDecimal;
 
     }
 
