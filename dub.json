@@ -12,9 +12,6 @@
 		}
 	},
 	"description": "A straightforward and easy to use GUI library.",
-	"dflags": [
-		"-preview=dip1000"
-	],
 	"license": "BSL",
 	"name": "glui",
 	"subPackages": [
