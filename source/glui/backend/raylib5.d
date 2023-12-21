@@ -2,6 +2,10 @@ module glui.backend.raylib5;
 
 version (Have_raylib_d):
 
+debug (Glui_BuildMessages) {
+    pragma(msg, "Glui: Building with Raylib 5 support");
+}
+
 import raylib;
 
 import glui.backend;
@@ -34,6 +38,7 @@ class Raylib5Backend : GluiBackend {
         bool isUp(GluiKeyboardKey key) const => IsKeyUp(key.toRaylib);
 
         bool isRepeated(GluiKeyboardKey key) const => IsKeyPressedRepeat(key.toRaylib);
+        dchar inputCharacter() => cast(dchar) GetCharPressed();
 
         bool isPressed(int controller, GluiGamepadButton button) const
             => IsGamepadButtonPressed(controller, button.toRaylib);

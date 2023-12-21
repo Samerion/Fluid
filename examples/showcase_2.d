@@ -48,8 +48,12 @@ void main() {
         gridExample,
         sizeLimitExample,
         slotExample,
+        simpledisplayExample,
     );
 
+    spawnSimpledisplay;
+
+    version (none)
     while (!WindowShouldClose) {
 
         BeginDrawing();
@@ -441,5 +445,65 @@ void addRow(GluiGrid myGrid) @safe {
 
     myGrid ~= row;
     myGrid.updateSize();
+
+}
+
+void spawnSimpledisplay() {
+
+    import arsd.simpledisplay;
+
+    SimpleWindow window;
+    GluiSpace sdpyRoot;
+
+    window = new SimpleWindow(800, 600, "Glui showcase: arsd.simpledisplay", OpenGlOptions.yes);
+
+    sdpyRoot = vframe(
+        .layout!"fill",
+        label("Hello from arsd.simpledisplay!"),
+        textInput(),
+        button("Close this window", delegate() { }),
+    );
+
+    sdpyRoot.backend = new SimpledisplayBackend(window);
+
+    window.redrawOpenGlScene = delegate() {
+        sdpyRoot.draw();
+        //sdpyRoot.io.drawRectangle(glui.Rectangle(0, 0, 50, 50), color!"fff");
+    };
+
+    // 1 frame every 16 ms ≈ 60 FPS
+    window.eventLoop(16, {
+        window.redrawOpenGlSceneSoon();
+    });
+
+}
+
+GluiSpace simpledisplayExample() {
+
+    import std.concurrency;
+
+    GluiSpace root;
+
+    // Create information box in the showcase
+    root = vspace(
+        .layout!"fill",
+
+        label(.layout!"center", "Switching backends"),
+
+        vframe(
+            label(
+                "While Glui was made with Raylib in mind, it supports using different rendering libraries as a backend."
+                ~ " Press the button below to create a new window with arsd.simpledisplay as the backend."
+            ),
+            button("Open new window", delegate () @trusted {
+
+                spawn(&spawnSimpledisplay);
+
+            }),
+        ),
+
+    );
+
+    return root;
 
 }

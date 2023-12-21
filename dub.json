@@ -6,9 +6,19 @@
 	"dependencies": {
 		"bindbc-freetype": "~>1.1.1",
 		"raylib-d": {
-			"version": "~>5.0",
+			"default": true,
 			"optional": true,
-			"default": true
+			"version": "~>5.0"
+		},
+		"arsd-official:simpledisplay": {
+			"version": "~>11.3",
+			"optional": true,
+			"default": false
+		},
+		"arsd-official:image_files": {
+			"version": "~>11.3",
+			"optional": true,
+			"default": false
 		}
 	},
 	"description": "A straightforward and easy to use GUI library.",
@@ -19,105 +29,123 @@
 			"dependencies": {
 				"glui": ">=0.0.0"
 			},
+			"libs": [
+				"raylib"
+			],
 			"name": "example-showcase",
 			"sourceFiles": [
 				"examples/showcase.d"
 			],
 			"sourcePaths": [],
 			"targetPath": "build",
-			"targetType": "executable",
-			"libs": ["raylib"]
+			"targetType": "executable"
 		},
 		{
 			"dependencies": {
-				"glui": ">=0.0.0"
+				"glui": ">=0.0.0",
+				"arsd-official:simpledisplay": "~>11.3",
+				"arsd-official:image_files": "~>11.3"
 			},
+			"libs": [
+				"raylib"
+			],
 			"name": "example-showcase-2",
 			"sourceFiles": [
 				"examples/showcase_2.d"
 			],
 			"sourcePaths": [],
 			"targetPath": "build",
-			"targetType": "executable",
-			"libs": ["raylib"]
+			"targetType": "executable"
 		},
 		{
 			"dependencies": {
 				"glui": ">=0.0.0"
 			},
+			"libs": [
+				"raylib"
+			],
 			"name": "example-onions",
 			"sourceFiles": [
 				"examples/onions.d"
 			],
 			"sourcePaths": [],
 			"targetPath": "build",
-			"targetType": "executable",
-			"libs": ["raylib"]
+			"targetType": "executable"
 		},
 		{
 			"dependencies": {
 				"glui": ">=0.0.0"
 			},
+			"libs": [
+				"raylib"
+			],
 			"name": "example-checks",
 			"sourceFiles": [
 				"examples/checks.d"
 			],
 			"sourcePaths": [],
 			"targetPath": "build",
-			"targetType": "executable",
-			"libs": ["raylib"]
+			"targetType": "executable"
 		},
 		{
 			"dependencies": {
 				"glui": ">=0.0.0"
 			},
+			"libs": [
+				"raylib"
+			],
 			"name": "example-scroll",
 			"sourceFiles": [
 				"examples/scroll.d"
 			],
 			"sourcePaths": [],
 			"targetPath": "build",
-			"targetType": "executable",
-			"libs": ["raylib"]
+			"targetType": "executable"
 		},
 		{
 			"dependencies": {
 				"glui": ">=0.0.0"
 			},
+			"libs": [
+				"raylib"
+			],
 			"name": "example-margins",
 			"sourceFiles": [
 				"examples/margins.d"
 			],
 			"sourcePaths": [],
 			"targetPath": "build",
-			"targetType": "executable",
-			"libs": ["raylib"]
+			"targetType": "executable"
 		},
 		{
 			"dependencies": {
 				"glui": ">=0.0.0"
 			},
+			"libs": [
+				"raylib"
+			],
 			"name": "example-hidpi",
 			"sourceFiles": [
 				"examples/hidpi.d"
 			],
 			"sourcePaths": [],
 			"targetPath": "build",
-			"targetType": "executable",
-			"libs": ["raylib"]
+			"targetType": "executable"
 		},
 		{
 			"dependencies": {
 				"glui": ">=0.0.0"
 			},
+			"libs": [
+				"raylib"
+			],
 			"name": "example-map",
 			"sourceFiles": [
 				"examples/map.d"
 			],
 			"sourcePaths": [],
 			"targetPath": "build",
-			"targetType": "executable",
-			"libs": ["raylib"]
+			"targetType": "executable"
 		}
 	],
 	"targetPath": "build",

@@ -15,9 +15,6 @@ import glui.structs;
 
 alias textInput = simpleConstructor!GluiTextInput;
 
-/// Raylib: Get pressed char
-private extern (C) int GetCharPressed() nothrow @nogc;
-
 @safe:
 
 /// Text input field.
@@ -227,7 +224,7 @@ class GluiTextInput : GluiInput!GluiNode {
         while (true) {
 
             // Read text
-            if (const key = GetCharPressed()) {
+            if (const key = io.inputCharacter) {
 
                 // Append to char arrays
                 input ~= cast(dchar) key;
@@ -254,12 +251,6 @@ class GluiTextInput : GluiInput!GluiNode {
             return true;
 
         }
-
-        // Even if nothing changed, user might have held the key for a while which this function probably wouldn't have
-        // caught, so we'd be returning false-negatives all the time.
-        // The best way would be to check if keys that triggered action in the input were released — but Raylib's input
-        // handling is sadly too limited. Instead we're always returning `false`.
-        // Note that changing focus is still possible as input actions have higher priority than focusImpl.
 
         return true;
 
