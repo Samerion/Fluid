@@ -118,7 +118,6 @@ struct Text(T : GluiNode) {
         // Load texture
         texture = backend.loadTexture(image);
 
-
     }
 
     /// Draw the text.
