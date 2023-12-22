@@ -1,13 +1,12 @@
 module glui.scroll_input;
 
-import raylib;
-
 import std.algorithm;
 
 import glui.node;
 import glui.utils;
 import glui.input;
 import glui.style;
+import glui.backend;
 
 
 @safe:
@@ -49,11 +48,13 @@ class GluiScrollInput : GluiInput!GluiNode {
 
     public {
 
-        /// Multipler of the scroll speed.
-        ///
-        /// This is actually number of pixels per mouse wheel event, as `GluiScrollable` determines mouse scroll speed
-        /// based on this.
-        enum scrollSpeed = 30.0;
+        /// Mouse scroll speed; Pixels per mouse wheel event in GluiScrollable.
+        enum scrollSpeed = 60.0;
+
+        /// Keyboard/gamepad
+        enum actionScrollSpeed = 1000.0;
+
+        // TODO HiDPI should affect scrolling speed
 
         /// If true, the scrollbar will be horizontal.
         bool horizontal;
@@ -155,7 +156,7 @@ class GluiScrollInput : GluiInput!GluiNode {
         setScroll(position);
 
         // Draw the background
-        backgroundStyle.drawBackground(paddingBox);
+        backgroundStyle.drawBackground(tree.io, paddingBox);
 
         // Calculate the size of the scrollbar
         scrollbarPosition = Vector2(contentBox.x, contentBox.y);
@@ -184,12 +185,12 @@ class GluiScrollInput : GluiInput!GluiNode {
         }
 
         // Check if the inner part is hovered
-        innerHovered = innerRect.contains(GetMousePosition);
+        innerHovered = innerRect.contains(io.mousePosition);
 
         // Get the inner style
         const innerStyle = pickStyle();
 
-        innerStyle.drawBackground(innerRect);
+        innerStyle.drawBackground(tree.io, innerRect);
 
     }
 
@@ -226,7 +227,7 @@ class GluiScrollInput : GluiInput!GluiNode {
         if (isDown && !isPressed) {
 
             // Remember the grab position
-            grabPosition = GetMousePosition;
+            grabPosition = io.mousePosition;
             scope (exit) startPosition = position;
 
             // Didn't press the handle
@@ -247,7 +248,7 @@ class GluiScrollInput : GluiInput!GluiNode {
         // Handle is held down
         else if (isDown) {
 
-            const mouse = GetMousePosition;
+            const mouse = io.mousePosition;
 
             const float move = horizontal
                 ? mouse.x - grabPosition.x
@@ -281,7 +282,6 @@ class GluiScrollInput : GluiInput!GluiNode {
 
     }
 
-    @whileDown
     @(GluiInputAction.scrollLeft, GluiInputAction.scrollRight)
     @(GluiInputAction.scrollUp, GluiInputAction.scrollDown)
     protected void _scroll() @trusted {
@@ -293,7 +293,7 @@ class GluiScrollInput : GluiInput!GluiNode {
             ? &isDown!(GluiInputAction.scrollLeft)
             : &isDown!(GluiInputAction.scrollUp);
 
-        const speed = cast(ulong) (scrollSpeed * 20 * GetFrameTime);
+        const speed = cast(ulong) (actionScrollSpeed * io.deltaTime);
         const change
             = isPlus(tree)  ? +speed
             : isMinus(tree) ? -speed

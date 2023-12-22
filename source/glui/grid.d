@@ -1,6 +1,5 @@
 module glui.grid;
 
-import raylib;
 import std.range;
 import std.algorithm;
 
@@ -8,6 +7,7 @@ import glui.node;
 import glui.frame;
 import glui.style;
 import glui.utils;
+import glui.backend;
 import glui.structs;
 
 
@@ -198,7 +198,7 @@ class GluiGrid : GluiFrame {
         }
 
         // Draw the background
-        pickStyle.drawBackground(outer);
+        pickStyle.drawBackground(tree.io, outer);
 
         // Get the position
         auto position = inner.y;
@@ -366,7 +366,7 @@ class GluiGridRow : GluiFrame {
 
         ulong segment;
 
-        pickStyle.drawBackground(outer);
+        pickStyle.drawBackground(tree.io, outer);
 
         /// Child position.
         auto position = Vector2(inner.x, inner.y);

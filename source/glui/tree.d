@@ -1,7 +1,5 @@
 module glui.tree;
 
-import raylib;
-
 import std.conv;
 import std.math;
 import std.container;
@@ -9,6 +7,7 @@ import std.container;
 import glui.node;
 import glui.input;
 import glui.style;
+import glui.backend;
 
 
 @safe:
@@ -390,6 +389,10 @@ struct LayoutTree {
     /// Input strokes bound to emit given action signals.
     InputStroke[][InputActionID] boundInputs;
 
+    /// Access to core input and output facilities.
+    GluiBackend backend;
+    alias io = backend;
+
     /// Check if keyboard input was handled after rendering is has completed.
     bool keyboardHandled;
 
@@ -410,6 +413,24 @@ struct LayoutTree {
     @property
     ref inout(uint) disabledDepth() inout return { return _disabledDepth; }
 
+    /// Create a new tree with the given node as its root, and using the given backend for I/O.
+    this(GluiNode root, GluiBackend backend) {
+
+        this.root = root;
+        this.backend = backend;
+        this.restoreDefaultInputBinds();
+
+    }
+
+    /// Create a new tree with the given node as its root. Use the default backend, if any is present.
+    this(GluiNode root) {
+
+        assert(defaultGluiBackend, "Cannot create LayoutTree; no backend was chosen, and no default is set.");
+
+        this(root, defaultGluiBackend);
+
+    }
+
     /// Queue an action to perform while iterating the tree.
     ///
     /// Avoid using this; most of the time `GluiNode.queueAction` is what you want. `LayoutTree.queueAction` might fire
@@ -421,7 +442,7 @@ struct LayoutTree {
     }
 
     /// Restore defaults for given actions.
-    void defaultInputBinds() {
+    void restoreDefaultInputBinds() {
 
         /// Get the ID of an input action.
         auto idOf(alias a)() {
@@ -431,102 +452,106 @@ struct LayoutTree {
         }
 
         // Create the binds
-        with (GluiInputAction) with (MouseButton) with (KeyboardKey) with (GamepadButton)
+        with (GluiInputAction)
         boundInputs = [
 
             // Basic
             idOf!press: [
-                InputStroke(MOUSE_BUTTON_LEFT),
-                InputStroke(KEY_ENTER),
-                InputStroke(GAMEPAD_BUTTON_RIGHT_FACE_DOWN),
+                InputStroke(GluiMouseButton.left),
+                InputStroke(GluiKeyboardKey.enter),
+                InputStroke(GluiGamepadButton.circle),
             ],
             idOf!submit: [
-                InputStroke(KEY_ENTER),
-                InputStroke(GAMEPAD_BUTTON_RIGHT_FACE_DOWN),
+                InputStroke(GluiKeyboardKey.enter),
+                InputStroke(GluiGamepadButton.circle),
             ],
             idOf!cancel: [
-                InputStroke(KEY_ESCAPE),
-                InputStroke(GAMEPAD_BUTTON_RIGHT_FACE_RIGHT),
+                InputStroke(GluiKeyboardKey.escape),
+                InputStroke(GluiGamepadButton.circle),
             ],
 
             // Focus
             idOf!focusPrevious: [
-                InputStroke(KEY_LEFT_SHIFT, KEY_TAB),
+                InputStroke(GluiKeyboardKey.leftShift, GluiKeyboardKey.tab),
                 // TODO: KEY_ANY_SHIFT, KEY_ANY_ALT, KEY_ANY_CONTROL
                 // That'd be a blessing. InputStroke could support those special values.
-                InputStroke(GAMEPAD_BUTTON_LEFT_TRIGGER_1),
+                InputStroke(GluiGamepadButton.leftButton),
             ],
             idOf!focusNext: [
-                InputStroke(KEY_TAB),
-                InputStroke(GAMEPAD_BUTTON_RIGHT_TRIGGER_1),
+                InputStroke(GluiKeyboardKey.tab),
+                InputStroke(GluiGamepadButton.rightButton),
             ],
             idOf!focusLeft: [
-                InputStroke(KEY_LEFT),
-                InputStroke(GAMEPAD_BUTTON_LEFT_FACE_LEFT),
+                InputStroke(GluiKeyboardKey.left),
+                InputStroke(GluiGamepadButton.dpadLeft),
             ],
             idOf!focusRight: [
-                InputStroke(KEY_RIGHT),
-                InputStroke(GAMEPAD_BUTTON_LEFT_FACE_RIGHT),
+                InputStroke(GluiKeyboardKey.right),
+                InputStroke(GluiGamepadButton.dpadRight),
             ],
             idOf!focusUp: [
-                InputStroke(KEY_UP),
-                InputStroke(GAMEPAD_BUTTON_LEFT_FACE_UP),
+                InputStroke(GluiKeyboardKey.up),
+                InputStroke(GluiGamepadButton.dpadUp),
             ],
             idOf!focusDown: [
-                InputStroke(KEY_DOWN),
-                InputStroke(GAMEPAD_BUTTON_LEFT_FACE_DOWN),
+                InputStroke(GluiKeyboardKey.down),
+                InputStroke(GluiGamepadButton.dpadDown),
             ],
 
             // Input
             idOf!backspace: [
-                InputStroke(KEY_BACKSPACE),
+                InputStroke(GluiKeyboardKey.backspace),
             ],
             idOf!backspaceWord: [
-                InputStroke(KEY_LEFT_CONTROL, KEY_BACKSPACE),
-                InputStroke(KEY_LEFT_CONTROL, KEY_W),  // emacs & vim
+                InputStroke(GluiKeyboardKey.leftControl, GluiKeyboardKey.backspace),
+                InputStroke(GluiKeyboardKey.leftControl, GluiKeyboardKey.w),  // emacs & vim
             ],
             idOf!entryPrevious: [
-                InputStroke(KEY_UP),
-                InputStroke(KEY_LEFT_SHIFT, KEY_TAB),
-                InputStroke(KEY_LEFT_CONTROL, KEY_K),  // vim
-                InputStroke(KEY_LEFT_CONTROL, KEY_P),  // emacs
-                InputStroke(GAMEPAD_BUTTON_LEFT_FACE_UP),
+                InputStroke(GluiKeyboardKey.up),
+                InputStroke(GluiKeyboardKey.leftShift, GluiKeyboardKey.tab),
+                InputStroke(GluiKeyboardKey.leftControl, GluiKeyboardKey.k),  // vim
+                InputStroke(GluiKeyboardKey.leftControl, GluiKeyboardKey.p),  // emacs
+                InputStroke(GluiGamepadButton.dpadUp),
             ],
             idOf!entryNext: [
-                InputStroke(KEY_DOWN),
-                InputStroke(KEY_TAB),
-                InputStroke(KEY_LEFT_CONTROL, KEY_J),  // vim
-                InputStroke(KEY_LEFT_CONTROL, KEY_N),  // emacs
-                InputStroke(GAMEPAD_BUTTON_LEFT_FACE_DOWN),
+                InputStroke(GluiKeyboardKey.down),
+                InputStroke(GluiKeyboardKey.tab),
+                InputStroke(GluiKeyboardKey.leftControl, GluiKeyboardKey.j),  // vim
+                InputStroke(GluiKeyboardKey.leftControl, GluiKeyboardKey.n),  // emacs
+                InputStroke(GluiGamepadButton.dpadDown),
             ],
             idOf!entryUp: [
-                InputStroke(KEY_LEFT_ALT, KEY_UP),
+                InputStroke(GluiKeyboardKey.leftAlt, GluiKeyboardKey.up),
             ],
 
             // Scrolling
             idOf!scrollLeft: [
-                InputStroke(KEY_LEFT),
-                InputStroke(GAMEPAD_BUTTON_LEFT_FACE_LEFT),
+                InputStroke(GluiKeyboardKey.left),
+                InputStroke(GluiGamepadButton.dpadLeft),
+                InputStroke(GluiMouseButton.scrollLeft),
             ],
             idOf!scrollRight: [
-                InputStroke(KEY_RIGHT),
-                InputStroke(GAMEPAD_BUTTON_LEFT_FACE_RIGHT),
+                InputStroke(GluiKeyboardKey.right),
+                InputStroke(GluiGamepadButton.dpadRight),
+                InputStroke(GluiMouseButton.scrollRight),
             ],
             idOf!scrollUp: [
-                InputStroke(KEY_UP),
-                InputStroke(GAMEPAD_BUTTON_LEFT_FACE_UP),
+                InputStroke(GluiKeyboardKey.up),
+                InputStroke(GluiGamepadButton.dpadUp),
+                InputStroke(GluiMouseButton.scrollUp),
             ],
             idOf!scrollDown: [
-                InputStroke(KEY_DOWN),
-                InputStroke(GAMEPAD_BUTTON_LEFT_FACE_DOWN),
+                InputStroke(GluiKeyboardKey.down),
+                InputStroke(GluiGamepadButton.dpadDown),
+                InputStroke(GluiMouseButton.scrollDown),
             ],
             idOf!pageLeft: [],
             idOf!pageRight: [],
             idOf!pageUp: [
-                InputStroke(KEY_PAGE_UP),
+                InputStroke(GluiKeyboardKey.pageUp),
             ],
             idOf!pageDown: [
-                InputStroke(KEY_PAGE_DOWN),
+                InputStroke(GluiKeyboardKey.pageDown),
             ],
         ];
 
@@ -626,10 +651,7 @@ struct LayoutTree {
             const lastScissors = scissors;
 
             // Intersect with the current scissors rectangle.
-            scissors = intersectScissors(rect);
-
-            // Start the mode
-            applyScissors(scissors);
+            io.area = scissors = intersectScissors(rect);
 
             return lastScissors;
 
@@ -640,36 +662,20 @@ struct LayoutTree {
             // Pop the stack
             scissors = lastScissorsMode;
 
-            // Pop the mode
-            EndScissorMode();
+            // No scissors left
+            if (scissors is scissors.init) {
 
-            // There's still something left
-            if (scissors !is scissors.init) {
-
-                // Start again
-                applyScissors(scissors);
+                // Restore full draw area
+                backend.restoreArea();
 
             }
 
-        }
+            else {
 
-        private void applyScissors(Rectangle rect) @trusted {
+                // Start again
+                backend.area = scissors;
 
-            import glui.utils;
-
-            // End the current mode, if any
-            if (scissors !is scissors.init) EndScissorMode();
-
-            version (Glui_Raylib3) const scale = hidpiScale;
-            else                   const scale = Vector2(1, 1);
-
-            // Start this one
-            BeginScissorMode(
-                to!int(rect.x * scale.x),
-                to!int(rect.y * scale.y),
-                to!int(rect.w * scale.x),
-                to!int(rect.h * scale.y),
-            );
+            }
 
         }
 

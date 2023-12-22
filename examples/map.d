@@ -82,7 +82,7 @@ void main() {
         Vector2(300, 30),
         draggableButton = hoverButton("Drag this button!", () @trusted {
 
-            enum mouseButton = MouseButton.MOUSE_LEFT_BUTTON;
+            enum mouseButton = MouseButton.MOUSE_BUTTON_LEFT;
 
             // Pressing the button
             if (IsMouseButtonPressed(mouseButton)) {

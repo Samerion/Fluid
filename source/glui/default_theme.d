@@ -8,29 +8,29 @@ shared static this() {
 
     gluiDefaultTheme = cast(immutable) Theme.init.makeTheme!q{
 
-        textColor = Colors.BLACK;
+        textColor = color("000");
 
         GluiFrame.styleAdd!q{
 
-            backgroundColor = Colors.WHITE;
+            backgroundColor = color("fff");
 
         };
 
         GluiButton!().styleAdd!q{
 
-            backgroundColor = color!"#eee";
-            mouseCursor = MouseCursor.MOUSE_CURSOR_POINTING_HAND;
+            backgroundColor = color("eee");
+            mouseCursor = GluiMouseCursor.pointer;
 
             margin.sideY = 2;
             padding.sideX = 6;
 
-            focusStyleAdd.backgroundColor = color!"#ddd";
-            hoverStyleAdd.backgroundColor = color!"#ccc";
-            pressStyleAdd.backgroundColor = color!"#aaa";
+            focusStyleAdd.backgroundColor = color("ddd");
+            hoverStyleAdd.backgroundColor = color("ccc");
+            pressStyleAdd.backgroundColor = color("aaa");
             disabledStyleAdd!q{
 
-                textColor = color!"#000a";
-                backgroundColor = color!"#eee5";
+                textColor = color("000a");
+                backgroundColor = color("eee5");
 
             };
 
@@ -38,20 +38,20 @@ shared static this() {
 
         GluiTextInput.styleAdd!q{
 
-            backgroundColor = color!"#fffc";
-            borderStyle = colorBorder(color!"#aaa");
-            mouseCursor = MouseCursor.MOUSE_CURSOR_IBEAM;
+            backgroundColor = color("fffc");
+            borderStyle = colorBorder(color("aaa"));
+            mouseCursor = GluiMouseCursor.text;
 
             margin.sideY = 2;
             padding.sideX = 6;
             border.sideBottom = 2;
 
-            emptyStyleAdd.textColor = color!"#000a";
-            focusStyleAdd.backgroundColor = color!"#fff";
+            emptyStyleAdd.textColor = color("000a");
+            focusStyleAdd.backgroundColor = color("fff");
             disabledStyleAdd!q{
 
-                textColor = color!"#000a";
-                backgroundColor = color!"#fff5";
+                textColor = color("000a");
+                backgroundColor = color("fff5");
 
             };
 
@@ -59,18 +59,18 @@ shared static this() {
 
         GluiScrollInput.styleAdd!q{
 
-            backgroundColor = color!"#aaa";
+            backgroundColor = color("aaa");
 
-            backgroundStyleAdd.backgroundColor = color!"#eee";
-            hoverStyleAdd.backgroundColor = color!"#888";
-            focusStyleAdd.backgroundColor = color!"#777";
-            pressStyleAdd.backgroundColor = color!"#555";
-            disabledStyleAdd.backgroundColor = color!"#aaa5";
+            backgroundStyleAdd.backgroundColor = color("eee");
+            hoverStyleAdd.backgroundColor = color("888");
+            focusStyleAdd.backgroundColor = color("777");
+            pressStyleAdd.backgroundColor = color("555");
+            disabledStyleAdd.backgroundColor = color("aaa5");
 
         };
 
-        GluiFileInput.unselectedStyleAdd.backgroundColor = color!"#fff";
-        GluiFileInput.selectedStyleAdd.backgroundColor = color!"#ff512f";
+        GluiFileInput.unselectedStyleAdd.backgroundColor = color("fff");
+        GluiFileInput.selectedStyleAdd.backgroundColor = color("ff512f");
 
     };
 

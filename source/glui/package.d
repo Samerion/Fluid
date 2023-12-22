@@ -2,6 +2,7 @@
 module glui;
 
 public import
+    glui.backend,
     glui.actions,
     glui.button,
     glui.children,

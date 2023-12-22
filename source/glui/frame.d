@@ -1,11 +1,10 @@
 ///
 module glui.frame;
 
-import raylib;
-
 import glui.space;
 import glui.style;
 import glui.utils;
+import glui.backend;
 
 
 @safe:
@@ -39,7 +38,7 @@ class GluiFrame : GluiSpace {
     protected override void drawImpl(Rectangle outer, Rectangle inner) {
 
         const style = pickStyle();
-        style.drawBackground(outer);
+        style.drawBackground(tree.io, outer);
 
         super.drawImpl(outer, inner);
 

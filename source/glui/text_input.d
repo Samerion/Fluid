@@ -1,7 +1,6 @@
 ///
 module glui.text_input;
 
-import raylib;
 import std.string;
 
 import glui.node;
@@ -11,12 +10,10 @@ import glui.label;
 import glui.style;
 import glui.utils;
 import glui.scroll;
+import glui.backend;
 import glui.structs;
 
 alias textInput = simpleConstructor!GluiTextInput;
-
-/// Raylib: Get pressed char
-private extern (C) int GetCharPressed() nothrow @nogc;
 
 @safe:
 
@@ -36,7 +33,7 @@ class GluiTextInput : GluiInput!GluiNode {
     mixin implHoveredRect;
     mixin enableInputActions;
 
-    /// Time in seconds before the cursor toggles visibility.
+    /// Time in seconds between changes in cursor visibility.
     static immutable float blinkTime = 1;
 
     public {
@@ -164,13 +161,14 @@ class GluiTextInput : GluiInput!GluiNode {
 
         // Note: We're drawing the label in `outer` as the presence of the label is meant to be transparent.
 
+        import std.datetime : Clock;
         import std.algorithm : min, max;
 
         const style = pickStyle();
         const scrollOffset = max(0, contentLabel.scrollMax - inner.w);
 
         // Fill the background
-        style.drawBackground(outer);
+        style.drawBackground(tree.io, outer);
 
         // Copy the style to the label
         contentLabel.activeStyle = style;
@@ -184,8 +182,10 @@ class GluiTextInput : GluiInput!GluiNode {
         // Ignore the rest if the node isn't focused
         if (!isFocused) return;
 
+        auto timeSecs = Clock.currTime.second;
+
         // Add a blinking caret
-        if (GetTime % (blinkTime*2) < blinkTime) {
+        if (timeSecs % (blinkTime*2) < blinkTime) {
 
             const lineHeight = style.typeface.lineHeight;
             const margin = style.typeface.lineHeight / 10f;
@@ -202,7 +202,7 @@ class GluiTextInput : GluiInput!GluiNode {
             );
 
             // Draw the caret
-            DrawLineV(
+            io.drawLine(
                 end - Vector2(0, lineHeight - margin),
                 end - Vector2(0, margin),
                 focusStyle.textColor
@@ -224,7 +224,7 @@ class GluiTextInput : GluiInput!GluiNode {
         while (true) {
 
             // Read text
-            if (const key = GetCharPressed()) {
+            if (const key = io.inputCharacter) {
 
                 // Append to char arrays
                 input ~= cast(dchar) key;
@@ -251,12 +251,6 @@ class GluiTextInput : GluiInput!GluiNode {
             return true;
 
         }
-
-        // Even if nothing changed, user might have held the key for a while which this function probably wouldn't have
-        // caught, so we'd be returning false-negatives all the time.
-        // The best way would be to check if keys that triggered action in the input were released — but Raylib's input
-        // handling is sadly too limited. Instead we're always returning `false`.
-        // Note that changing focus is still possible as input actions have higher priority than focusImpl.
 
         return true;
 

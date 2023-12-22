@@ -8,8 +8,24 @@ void main() {
     SetTraceLogLevel(TraceLogLevel.LOG_WARNING);
     InitWindow(800, 600, "Glui showcase");
     SetTargetFPS(60);
-
     scope (exit) CloseWindow();
+
+    auto root = showcase();
+
+    while (!WindowShouldClose) {
+
+        BeginDrawing();
+
+            ClearBackground(color!"#000");
+            root.draw();
+
+        EndDrawing();
+
+    }
+
+}
+
+GluiSpace showcase(bool withSimpleDisplay = true) {
 
     // Let's customize the theme first
     auto theme = makeTheme!q{
@@ -30,13 +46,13 @@ void main() {
         GluiScrollFrame.styleAdd!q{
 
             padding.sideX = 6;
-            backgroundColor = Colors.SKYBLUE;
+            backgroundColor = color!"#66bfff";
 
         };
 
     };
 
-    auto root = vscrollFrame(
+    return vscrollFrame(
         .layout!(1, "fill"),
 
         // Customizing the theme...
@@ -48,18 +64,10 @@ void main() {
         gridExample,
         sizeLimitExample,
         slotExample,
+        withSimpleDisplay
+            ? simpledisplayExample.show()
+            : simpledisplayExample.hide(),
     );
-
-    while (!WindowShouldClose) {
-
-        BeginDrawing();
-
-            ClearBackground(Colors.BLACK);
-            root.draw();
-
-        EndDrawing();
-
-    }
 
 }
 
@@ -97,7 +105,7 @@ GluiSpace boxExample() {
                         makeTheme!q{
                             GluiFrame.styleAdd!q{
                                 border = 6;
-                                borderStyle = colorBorder(Colors.BLUE);
+                                borderStyle = colorBorder(color!"#0079f1");
                             };
                         },
                         label("Frame with border"),
@@ -127,7 +135,7 @@ GluiSpace boxExample() {
                             margin = 16;
                             border.sideX = 6;
                             border.sideY = 4;
-                            borderStyle = colorBorder([Colors.DARKBLUE, Colors.BLUE]);
+                            borderStyle = colorBorder([color!"#0052ac", color!"0079f1"]);
                             padding = 16;
                         };
                     },
@@ -441,5 +449,67 @@ void addRow(GluiGrid myGrid) @safe {
 
     myGrid ~= row;
     myGrid.updateSize();
+
+}
+
+void spawnSimpledisplay() {
+
+    import arsd.simpledisplay;
+
+    SimpleWindow window;
+    GluiSpace sdpyRoot;
+    SimpledisplayBackend backend;
+
+    // Create the window
+    window = new SimpleWindow(800, 600, "Glui showcase: arsd.simpledisplay",
+        OpenGlOptions.yes,
+        Resizeability.allowResizing);
+
+    // Prepare UI
+    sdpyRoot = showcase(false);
+
+    // Setup the backend
+    sdpyRoot.backend = backend = new SimpledisplayBackend(window);
+
+    // Simpledisplay's design is more sophisticated and requires more config than Raylib
+    window.redrawOpenGlScene = {
+        sdpyRoot.draw();
+        backend.poll();
+    };
+
+    // 1 frame every 16 ms ≈ 60 FPS
+    window.eventLoop(16, {
+        window.redrawOpenGlSceneSoon();
+    });
+
+}
+
+GluiSpace simpledisplayExample() {
+
+    import std.concurrency;
+
+    GluiSpace root;
+
+    // Create information box in the showcase
+    root = vspace(
+        .layout!"fill",
+
+        label(.layout!"center", "Switching backends"),
+
+        vframe(
+            label(
+                "While Glui was made with Raylib in mind, it supports using different rendering libraries as a backend."
+                ~ " Press the button below to create a new window with arsd.simpledisplay as the backend."
+            ),
+            button("Open new window", delegate () @trusted {
+
+                spawn(&spawnSimpledisplay);
+
+            }),
+        ),
+
+    );
+
+    return root;
 
 }

@@ -23,7 +23,7 @@ void main() {
     };
     auto whiteTheme = gluiDefaultTheme.makeTheme!q{
 
-        GluiFrame.styleAdd.backgroundColor = Colors.WHITE;
+        GluiFrame.styleAdd.backgroundColor = color!"#fff";
 
     };
 

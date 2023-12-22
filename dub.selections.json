@@ -1,12 +1,13 @@
 {
 	"fileVersion": 1,
 	"versions": {
+		"arsd-official": "11.3.0",
 		"bindbc-freetype": "1.1.1",
 		"bindbc-loader": "1.1.3",
 		"ddmp": "0.0.1-0.dev.3",
 		"fluent-asserts": "0.13.3",
 		"libdparse": "0.14.0",
-		"raylib-d": "4.0.1",
+		"raylib-d": "5.0.0",
 		"stdx-allocator": "2.77.5"
 	}
 }
