@@ -579,8 +579,8 @@ GluiMouseButton toGlui(arsd.simpledisplay.MouseButton button) {
         case button.left: return GluiMouseButton.left;
         case button.middle: return GluiMouseButton.middle;
         case button.right: return GluiMouseButton.right;
-        case button.wheelUp: return GluiMouseButton.none;  // TODO
-        case button.wheelDown: return GluiMouseButton.none;  // TODO
+        case button.wheelUp: return GluiMouseButton.scrollUp;
+        case button.wheelDown: return GluiMouseButton.scrollDown;
         case button.backButton: return GluiMouseButton.back;
         case button.forwardButton: return GluiMouseButton.forward;
 

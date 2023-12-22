@@ -141,16 +141,27 @@ struct GluiMouseCursor {
 
 enum GluiMouseButton {
     none,
-    left,     // Left (primary) mouse button.
-    right,    // Right (secondary) mouse button.
-    middle,   // Middle mouse button.
-    extra1,   // Additional mouse button.
-    extra2,   // ditto.
-    forward,  // Mouse button going forward in browser history.
-    back,     // Mouse button going back in browser history.
+    left,         // Left (primary) mouse button.
+    right,        // Right (secondary) mouse button.
+    middle,       // Middle mouse button.
+    extra1,       // Additional mouse button.
+    extra2,       // ditto.
+    forward,      // Mouse button going forward in browser history.
+    back,         // Mouse button going back in browser history.
+    scrollUp,     // Scroll one step up.
+    scrollDown,   // Scroll one step down.
+    scrollLeft,   // Scroll one step left.
+    scrollRight,  // Scroll one step right.
 
     primary = left,
     secondary = right,
+
+}
+
+/// Check if the given mouse button is a scroll wheel step.
+bool isScroll(GluiMouseButton button) {
+
+    return button.scrollUp <= button && button <= button.scrollRight;
 
 }
 

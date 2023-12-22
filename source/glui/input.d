@@ -624,7 +624,7 @@ abstract class GluiInput(Parent : GluiNode) : Parent, GluiFocusable {
     /// advanced usage.
     ///
     /// Only one node can run its `mouseImpl` callback per frame, specifically, the last one to register its input.
-    /// This is to prevent parents or overlapping children to take input when another node is drawn on them.
+    /// This is to prevent parents or overlapping children to take input when another node is drawn on top.
     protected override void mouseImpl() { }
 
     protected bool keyboardImpl() {

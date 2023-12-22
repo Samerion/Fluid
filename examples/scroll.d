@@ -15,7 +15,7 @@ void main() {
 
     immutable theme2 = makeTheme!q{
 
-        GluiFrame.styleAdd.backgroundColor = Colors.RED;
+        GluiFrame.styleAdd.backgroundColor = color!"#e62937";
 
     };
 
