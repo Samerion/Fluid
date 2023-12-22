@@ -12,9 +12,6 @@ void main() {
 
     auto root = showcase();
 
-    import std.concurrency;
-    spawn(&spawnSimpledisplay);
-
     while (!WindowShouldClose) {
 
         BeginDrawing();
@@ -28,7 +25,7 @@ void main() {
 
 }
 
-GluiSpace showcase() {
+GluiSpace showcase(bool withSimpleDisplay = true) {
 
     // Let's customize the theme first
     auto theme = makeTheme!q{
@@ -67,7 +64,9 @@ GluiSpace showcase() {
         gridExample,
         sizeLimitExample,
         slotExample,
-        simpledisplayExample,
+        withSimpleDisplay
+            ? simpledisplayExample.show()
+            : simpledisplayExample.hide(),
     );
 
 }
@@ -467,7 +466,7 @@ void spawnSimpledisplay() {
         Resizeability.allowResizing);
 
     // Prepare UI
-    sdpyRoot = showcase();
+    sdpyRoot = showcase(false);
 
     // Setup the backend
     sdpyRoot.backend = backend = new SimpledisplayBackend(window);
