@@ -1,13 +1,12 @@
 ///
 module glui.node;
 
-import raylib;
-
 import std.math;
 import std.traits;
 import std.string;
 import std.algorithm;
 
+import glui.backend;
 import glui.tree;
 import glui.style;
 import glui.utils;
@@ -18,12 +17,6 @@ import glui.structs;
 
 @safe:
 
-
-/// Left mouse button. Used for backwards compatibility
-static if (__traits(compiles, MouseButton.MOUSE_LEFT_BUTTON))
-    private enum lmb = MouseButton.MOUSE_LEFT_BUTTON;
-else
-    private enum lmb = MouseButton.MOUSE_BUTTON_LEFT;
 
 private interface Styleable {
 
@@ -231,6 +224,28 @@ abstract class GluiNode : Styleable {
 
     }
 
+    inout(GluiBackend) backend() inout {
+
+        return tree.backend;
+
+    }
+
+    GluiBackend backend(GluiBackend backend) {
+
+        // Create the tree if not present
+        if (tree is null) {
+
+            tree = new LayoutTree(this, backend);
+            return backend;
+
+        }
+
+        else return tree.backend = backend;
+
+    }
+
+    alias io = backend;
+
     /// Toggle the node's visibility.
     final void toggleShow() { isHidden = !isHidden; }
 
@@ -285,16 +300,10 @@ abstract class GluiNode : Styleable {
     /// Draw this node as a root node.
     final void draw() @trusted {
 
-        // No tree set
+        // No tree set, create one
         if (tree is null) {
 
-            // Create one
             tree = new LayoutTree(this);
-            tree.defaultInputBinds();
-
-            // Workaround for a HiDPI scissors mode glitch, which breaks Glui
-            version (Glui_Raylib3)
-            SetWindowSize(GetScreenWidth, GetScreenHeight);
 
         }
 
@@ -306,10 +315,7 @@ abstract class GluiNode : Styleable {
 
         }
 
-        version (Glui_Raylib3) const scale = hidpiScale();
-        else                   const scale = Vector2(1, 1);
-
-        const space = Vector2(GetScreenWidth / scale.x, GetScreenHeight / scale.y);
+        const space = tree.io.windowSize;
 
         // Clear mouse hover if LMB is up
         if (!isLMBHeld) tree.hover = null;
@@ -319,7 +325,7 @@ abstract class GluiNode : Styleable {
         tree.focusBox = Rectangle(float.nan);
 
         // Resize if required
-        if (IsWindowResized || _requiresResize) {
+        if (tree.io.hasJustResized || _requiresResize) {
 
             resize(tree, theme, space);
             _requiresResize = false;
@@ -353,7 +359,7 @@ abstract class GluiNode : Styleable {
 
             if (auto style = tree.hover.pickStyle) {
 
-                SetMouseCursor(style.mouseCursor);
+                tree.io.mouseCursor = style.mouseCursor;
 
             }
 
@@ -361,7 +367,7 @@ abstract class GluiNode : Styleable {
 
 
         // Note: pressed, not released; released activates input events, pressed activates focus
-        const mousePressed = IsMouseButtonPressed(lmb);
+        const mousePressed = tree.io.isPressed(GluiMouseButton.left);
 
         // Mouse is hovering an input node
         if (auto hoverInput = cast(GluiHoverable) tree.hover) {
@@ -528,7 +534,7 @@ abstract class GluiNode : Styleable {
         const currentStyle = pickStyle;
         if (style && currentStyle && currentStyle.borderStyle) {
 
-            currentStyle.borderStyle.apply(borderBox, style.border);
+            currentStyle.borderStyle.apply(io, borderBox, style.border);
 
         }
 
@@ -536,10 +542,10 @@ abstract class GluiNode : Styleable {
         const visibleBox = tree.intersectScissors(paddingBox);
 
         // Check if hovered
-        _isHovered = hoveredImpl(visibleBox, GetMousePosition);
+        _isHovered = hoveredImpl(visibleBox, tree.io.mousePosition);
 
         // Check if the mouse stroke started this node
-        const heldElsewhere = !IsMouseButtonPressed(lmb)
+        const heldElsewhere = !tree.io.isPressed(GluiMouseButton.left)
             && isLMBHeld;
 
         // Update global hover unless mouse is being held down or mouse focus is disabled for this node
@@ -721,7 +727,7 @@ abstract class GluiNode : Styleable {
 
     protected mixin template implHoveredRect() {
 
-        private import raylib : Rectangle, Vector2;
+        private import glui.backend : Rectangle, Vector2;
 
         protected override bool hoveredImpl(Rectangle rect, Vector2 mousePosition) const {
 
@@ -761,7 +767,8 @@ abstract class GluiNode : Styleable {
 
     private bool isLMBHeld() @trusted {
 
-        return IsMouseButtonDown(lmb) || IsMouseButtonReleased(lmb);
+        return tree.io.isDown(GluiMouseButton.left)
+            || tree.io.isReleased(GluiMouseButton.left);
 
     }
 

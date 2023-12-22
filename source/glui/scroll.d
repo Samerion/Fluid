@@ -1,7 +1,5 @@
 module glui.scroll;
 
-import raylib;
-
 import std.meta;
 import std.conv;
 import std.algorithm;
@@ -12,12 +10,11 @@ import glui.space;
 import glui.utils;
 import glui.input;
 import glui.style;
+import glui.backend;
 import glui.structs;
 import glui.container;
 
 public import glui.scroll_input;
-
-private extern(C) float GetMouseWheelMove();
 
 
 @safe:
@@ -277,13 +274,21 @@ class GluiScrollable(T : GluiNode, string horizontalExpression) : T {
     /// Implementation of mouse input
     private void inputImpl() @trusted {
 
-        // Ignore if horizontal (For now; TODO)
-        if (isHorizontal) return;
+        // TODO do this via input actions somehow https://git.samerion.com/Samerion/Glui/issues/89
+        const isPlus = isHorizontal
+            ? io.isReleased(GluiMouseButton.scrollRight)
+            : io.isReleased(GluiMouseButton.scrollDown);
+        const isMinus = isHorizontal
+            ? io.isReleased(GluiMouseButton.scrollLeft)
+            : io.isReleased(GluiMouseButton.scrollUp);
 
-        const float move = -GetMouseWheelMove;
-        const float totalChange = move * scrollBar.scrollSpeed;
+        const speed = scrollBar.scrollSpeed;
+        const move
+            = isPlus  ? +speed
+            : isMinus ? -speed
+            : 0;
 
-        scrollBar.setScroll(scroll.to!ptrdiff_t + totalChange.to!ptrdiff_t);
+        scrollBar.setScroll(scroll.to!ptrdiff_t + move.to!ptrdiff_t);
 
     }
 

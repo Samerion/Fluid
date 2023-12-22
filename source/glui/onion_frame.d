@@ -1,11 +1,10 @@
 ///
 module glui.onion_frame;
 
-import raylib;
-
 import glui.frame;
 import glui.utils;
 import glui.style;
+import glui.backend;
 
 /// Make a new onion frame
 alias onionFrame = simpleConstructor!GluiOnionFrame;
@@ -50,7 +49,7 @@ class GluiOnionFrame : GluiFrame {
     protected override void drawImpl(Rectangle outer, Rectangle inner) {
 
         const style = pickStyle();
-        style.drawBackground(outer);
+        style.drawBackground(tree.io, outer);
 
         foreach (child; filterChildren) {
 

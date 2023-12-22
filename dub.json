@@ -2,86 +2,58 @@
 	"authors": [
 		"Artha"
 	],
-	"configurations": [
-		{
-			"name": "raylib3",
-			"targetType": "library",
-			"versions": [
-				"Glui_Raylib3"
-			]
-		},
-		{
-			"name": "raylib4",
-			"targetType": "library",
-			"versions": [
-				"Glui_Raylib4"
-			]
-		}
-	],
 	"copyright": "Copyright © 2021, Artha",
 	"dependencies": {
 		"bindbc-freetype": "~>1.1.1",
-		"raylib-d": ">=3.1.0 <5.0.0"
+		"raylib-d": {
+			"default": true,
+			"optional": true,
+			"version": "~>5.0"
+		},
+		"arsd-official:simpledisplay": {
+			"version": "~>11.3",
+			"optional": true,
+			"default": false
+		},
+		"arsd-official:image_files": {
+			"version": "~>11.3",
+			"optional": true,
+			"default": false
+		}
 	},
-	"description": "A simple UI library designed for IsodiTools and Samerion",
-	"dflags": [
-		"-preview=dip1000"
-	],
-	"libs": [
-		"raylib"
-	],
+	"description": "A straightforward and easy to use GUI library.",
 	"license": "BSL",
 	"name": "glui",
 	"subPackages": [
 		{
 			"dependencies": {
-				"raylib-d": ">=3.1.0"
-			},
-			"name": "raylib3",
-			"targetPath": "build",
-			"targetType": "library",
-			"versions": [
-				"Glui_Raylib3"
-			]
-		},
-		{
-			"dependencies": {
-				"raylib-d": "~>4.0.1"
-			},
-			"name": "raylib4",
-			"targetPath": "build",
-			"targetType": "library",
-			"versions": [
-				"Glui_Raylib4"
-			]
-		},
-		{
-			"dependencies": {
 				"glui": ">=0.0.0"
 			},
+			"libs": [
+				"raylib"
+			],
 			"name": "example-showcase",
 			"sourceFiles": [
 				"examples/showcase.d"
 			],
 			"sourcePaths": [],
-			"subConfigurations": {
-				"glui": "raylib4"
-			},
 			"targetPath": "build",
 			"targetType": "executable"
 		},
 		{
 			"dependencies": {
-				"glui": ">=0.0.0"
+				"glui": ">=0.0.0",
+				"arsd-official:simpledisplay": "~>11.3",
+				"arsd-official:image_files": "~>11.3"
 			},
+			"libs": [
+				"raylib"
+			],
 			"name": "example-showcase-2",
 			"sourceFiles": [
 				"examples/showcase_2.d"
 			],
 			"sourcePaths": [],
-			"subConfigurations": {
-				"glui": "raylib4"
-			},
 			"targetPath": "build",
 			"targetType": "executable"
 		},
@@ -89,14 +61,14 @@
 			"dependencies": {
 				"glui": ">=0.0.0"
 			},
+			"libs": [
+				"raylib"
+			],
 			"name": "example-onions",
 			"sourceFiles": [
 				"examples/onions.d"
 			],
 			"sourcePaths": [],
-			"subConfigurations": {
-				"glui": "raylib4"
-			},
 			"targetPath": "build",
 			"targetType": "executable"
 		},
@@ -104,14 +76,14 @@
 			"dependencies": {
 				"glui": ">=0.0.0"
 			},
+			"libs": [
+				"raylib"
+			],
 			"name": "example-checks",
 			"sourceFiles": [
 				"examples/checks.d"
 			],
 			"sourcePaths": [],
-			"subConfigurations": {
-				"glui": "raylib4"
-			},
 			"targetPath": "build",
 			"targetType": "executable"
 		},
@@ -119,14 +91,14 @@
 			"dependencies": {
 				"glui": ">=0.0.0"
 			},
+			"libs": [
+				"raylib"
+			],
 			"name": "example-scroll",
 			"sourceFiles": [
 				"examples/scroll.d"
 			],
 			"sourcePaths": [],
-			"subConfigurations": {
-				"glui": "raylib4"
-			},
 			"targetPath": "build",
 			"targetType": "executable"
 		},
@@ -134,14 +106,14 @@
 			"dependencies": {
 				"glui": ">=0.0.0"
 			},
+			"libs": [
+				"raylib"
+			],
 			"name": "example-margins",
 			"sourceFiles": [
 				"examples/margins.d"
 			],
 			"sourcePaths": [],
-			"subConfigurations": {
-				"glui": "raylib4"
-			},
 			"targetPath": "build",
 			"targetType": "executable"
 		},
@@ -149,14 +121,14 @@
 			"dependencies": {
 				"glui": ">=0.0.0"
 			},
+			"libs": [
+				"raylib"
+			],
 			"name": "example-hidpi",
 			"sourceFiles": [
 				"examples/hidpi.d"
 			],
 			"sourcePaths": [],
-			"subConfigurations": {
-				"glui": "raylib4"
-			},
 			"targetPath": "build",
 			"targetType": "executable"
 		},
@@ -164,14 +136,14 @@
 			"dependencies": {
 				"glui": ">=0.0.0"
 			},
+			"libs": [
+				"raylib"
+			],
 			"name": "example-map",
 			"sourceFiles": [
 				"examples/map.d"
 			],
 			"sourcePaths": [],
-			"subConfigurations": {
-				"glui": "raylib4"
-			},
 			"targetPath": "build",
 			"targetType": "executable"
 		}

@@ -1,8 +1,7 @@
 module glui.border;
 
-import raylib;
-
 import glui.style;
+import glui.backend;
 
 
 @safe:
@@ -12,7 +11,7 @@ import glui.style;
 interface GluiBorder {
 
     /// Apply the border, drawing it in the given box.
-    abstract void apply(Rectangle borderBox, uint[4] size) const;
+    abstract void apply(GluiBackend backend, Rectangle borderBox, uint[4] size) const;
 
     /// Get the rectangle for the given side of the border.
     final Rectangle sideRect(Rectangle source, uint[4] size, Style.Side side) const {
@@ -123,7 +122,7 @@ class ColorBorder : GluiBorder {
 
     Color[4] color;
 
-    void apply(Rectangle borderBox, uint[4] size) const @trusted {
+    void apply(GluiBackend io, Rectangle borderBox, uint[4] size) const @trusted {
 
         // For each side
         foreach (sideIndex; 0..4) {
@@ -132,7 +131,7 @@ class ColorBorder : GluiBorder {
             const nextSide = cast(Style.Side) ((sideIndex + 1) % 4);
 
             // Draw all the fragments
-            DrawRectangleRec(sideRect(borderBox, size, side), color[side]);
+            io.drawRectangle(sideRect(borderBox, size, side), color[side]);
 
             // Draw triangles in the corner
             foreach (shift; 0..2) {
@@ -150,7 +149,7 @@ class ColorBorder : GluiBorder {
 
                 // Draw the first triangle
                 if (!shift)
-                DrawTriangle(
+                io.drawTriangle(
                     cornerStart,
                     cornerStart + cornerSize,
                     cornerStart + cornerEnd,
@@ -159,7 +158,7 @@ class ColorBorder : GluiBorder {
 
                 // Draw the second one
                 else
-                DrawTriangle(
+                io.drawTriangle(
                     cornerStart,
                     cornerStart + cornerEnd,
                     cornerStart + cornerSize,

@@ -1,19 +1,19 @@
 ///
 module glui.style;
 
-import raylib;
-
 import std.math;
 import std.range;
-import std.string;
+import std.format;
 import std.typecons;
 import std.algorithm;
 
 import glui.utils;
+import glui.backend;
 import glui.typeface;
 
 public import glui.border;
 public import glui.style_macros;
+public import glui.backend : color;
 
 
 @safe:
@@ -81,79 +81,6 @@ Style style(string init)(Style[] parents...) {
     result.update!init;
 
     return result;
-
-}
-
-/// Create a color from hex code.
-Color color(string hexCode)() {
-
-    return color(hexCode);
-
-}
-
-/// ditto
-Color color(string hexCode) pure {
-
-    import std.format;
-
-    // Remove the # if there is any
-    const hex = hexCode.chompPrefix("#");
-
-    Color result;
-    result.a = 0xff;
-
-    switch (hex.length) {
-
-        // 4 digit RGBA
-        case 4:
-            formattedRead!"%x"(hex[3..4], result.a);
-            result.a *= 17;
-
-            // Parse the rest like RGB
-            goto case;
-
-        // 3 digit RGB
-        case 3:
-            formattedRead!"%x"(hex[0..1], result.r);
-            formattedRead!"%x"(hex[1..2], result.g);
-            formattedRead!"%x"(hex[2..3], result.b);
-            result.r *= 17;
-            result.g *= 17;
-            result.b *= 17;
-            break;
-
-        // 8 digit RGBA
-        case 8:
-            formattedRead!"%x"(hex[6..8], result.a);
-            goto case;
-
-        // 6 digit RGB
-        case 6:
-            formattedRead!"%x"(hex[0..2], result.r);
-            formattedRead!"%x"(hex[2..4], result.g);
-            formattedRead!"%x"(hex[4..6], result.b);
-            break;
-
-        default:
-            assert(false, "Invalid hex code length");
-
-    }
-
-    return result;
-
-}
-
-unittest {
-
-    import std.exception;
-
-    assert(color!"#123" == Color(0x11, 0x22, 0x33, 0xff));
-    assert(color!"#1234" == Color(0x11, 0x22, 0x33, 0x44));
-    assert(color!"1234" == Color(0x11, 0x22, 0x33, 0x44));
-    assert(color!"123456" == Color(0x12, 0x34, 0x56, 0xff));
-    assert(color!"2a5592f0" == Color(0x2a, 0x55, 0x92, 0xf0));
-
-    assertThrown(color!"ag5");
 
 }
 
@@ -240,7 +167,7 @@ class Style {
         /// Cursor icon to use while this node is hovered.
         ///
         /// Custom image cursors are not supported yet.
-        MouseCursor mouseCursor;
+        GluiMouseCursor mouseCursor;
 
     }
 
@@ -297,9 +224,9 @@ class Style {
 
     }
 
-    static Typeface loadTypeface(string file, int fontSize) @trusted {
+    static Typeface loadTypeface(GluiBackend backend, string file, int fontSize) @trusted {
 
-        return new FreetypeTypeface(file, fontSize);
+        return new FreetypeTypeface(backend, file, fontSize);
 
     }
 
@@ -331,14 +258,6 @@ class Style {
         import glui;
 
         with (T) mixin(init.format!"{ %s }");
-
-    }
-
-    /// Get the current font
-    deprecated("Use typeface instead")
-    inout(Font) getFont() inout @trusted {
-
-        return cast(inout) GetFontDefault;
 
     }
 
@@ -396,9 +315,9 @@ class Style {
     }
 
     /// Draw the background
-    void drawBackground(Rectangle rect) const @trusted {
+    void drawBackground(GluiBackend backend, Rectangle rect) const @trusted {
 
-        DrawRectangleRec(rect, backgroundColor);
+        backend.drawRectangle(rect, backgroundColor);
 
     }
 

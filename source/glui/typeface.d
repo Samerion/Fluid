@@ -1,6 +1,5 @@
 module glui.typeface;
 
-import raylib;
 import bindbc.freetype;
 
 import std.range;
@@ -9,6 +8,7 @@ import std.string;
 import std.algorithm;
 
 import glui.utils;
+import glui.backend;
 
 
 @safe:
@@ -272,11 +272,12 @@ class FreetypeTypeface : Typeface {
 
     /// Load a font from a file.
     /// Params:
+    ///     backend  = I/O Glui backend, used to adjust the scale of the font.
     ///     filename = Filename of the font file.
     ///     size     = Size of the font to load (in points).
-    this(string filename, int size) @trusted {
+    this(GluiBackend backend, string filename, int size) @trusted {
 
-        const scale = hidpiScale * 96;
+        const scale = backend.hidpiScale * 96;
 
         this.isOwner = true;
 
@@ -380,11 +381,11 @@ class FreetypeTypeface : Typeface {
                     if (targetX >= target.width || targetY >= target.height) continue;
 
                     // Note: ImageDrawPixel overrides the pixel — alpha blending has to be done by us
-                    const oldColor = GetImageColor(target, targetX, targetY);
-                    const newColor = ColorAlpha(tint, cast(float) pixel / pixel.max);
-                    const color = ColorAlphaBlend(oldColor, newColor, Colors.WHITE);
+                    const oldColor = target.get(targetX, targetY);
+                    const newColor = tint.setAlpha(cast(float) pixel / pixel.max);
+                    const color = alphaBlend(oldColor, newColor);
 
-                    ImageDrawPixel(&target, targetX, targetY, color);
+                    target.get(targetX, targetY) = color;
 
                 }
 
@@ -399,8 +400,11 @@ class FreetypeTypeface : Typeface {
 
 }
 
-/// Font rendering via Raylib. Discouraged and potentiall slow, use `FreetypeTypeface` instead.
+/// Font rendering via Raylib. Discouraged, potentially slow, and not HiDPI-compatible. Use `FreetypeTypeface` instead.
+version (Have_raylib_d)
 class RaylibTypeface : Typeface {
+
+    import raylib;
 
     public {
 
@@ -537,17 +541,20 @@ class RaylibTypeface : Typeface {
 
     /// Draw a line of text
     /// Note: This API is unstable and might change over time.
-    void drawLine(ref Image target, ref Vector2 penPosition, string text, Color tint) const @trusted {
+    void drawLine(ref glui.backend.Image target, ref Vector2 penPosition, string text, Color tint) const @trusted {
 
         // Note: `DrawTextEx` doesn't scale `spacing`, but `ImageDrawTextEx` DOES. The image is first drawn at base size
         //       and *then* scaled.
         const spacing = font.baseSize * this.spacing;
 
-        // We trust Raylib will not mutate the font.
+        // We trust Raylib will not mutate the font
         // Raylib is single-threaded, so it shouldn't cause much harm anyway...
         auto font = cast() this.font;
 
-        ImageDrawTextEx(&target, font, text.toStringz, penPosition, fontHeight, spacing, tint);
+        // Make a Raylib-compatible wrapper for image data
+        auto result = target.toRaylib;
+
+        ImageDrawTextEx(&result, font, text.toStringz, penPosition, fontHeight, spacing, tint);
 
     }
 
