@@ -18,7 +18,7 @@ void main() {
     auto redTheme = makeTheme!q{
 
         GluiFrame.styleAdd.backgroundColor = color!"#c01212";
-        GluiButton!().styleAdd.backgroundColor = Colors.WHITE;
+        GluiButton!().styleAdd.backgroundColor = color!"#fff";
 
     };
     auto greenTheme = redTheme.makeTheme!q{

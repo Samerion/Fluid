@@ -23,6 +23,7 @@ class GluiImageView : GluiNode {
 
         Texture _texture;
         Rectangle _targetArea;  // Rectangle occupied by this node after all calculations
+        string _texturePath;
 
     }
 
@@ -74,6 +75,7 @@ class GluiImageView : GluiNode {
 
             clear();
             _isOwner = false;
+            _texturePath = null;
 
             return this._texture = texture;
 
@@ -84,9 +86,16 @@ class GluiImageView : GluiNode {
 
             import std.string : toStringz;
 
-            clear();
-            _texture = tree.io.loadTexture(filename);
-            _isOwner = true;
+            _texturePath = filename;
+
+            if (tree) {
+
+                clear();
+                _texture = tree.io.loadTexture(filename);
+                _isOwner = true;
+
+            }
+
             updateSize();
 
             return filename;
@@ -133,7 +142,15 @@ class GluiImageView : GluiNode {
 
     }
 
-    override protected void resizeImpl(Vector2 space) {
+    override protected void resizeImpl(Vector2 space) @trusted {
+
+        // Lazy-load the texture if the backend wasn't present earlier
+        if (_texture == _texture.init && _texturePath) {
+
+            _texture = tree.io.loadTexture(_texturePath);
+            _isOwner = true;
+
+        }
 
     }
 
