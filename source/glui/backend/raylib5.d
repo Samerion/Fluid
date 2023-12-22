@@ -27,10 +27,22 @@ class Raylib5Backend : GluiBackend {
 
     @trusted {
 
-        bool isPressed(GluiMouseButton button) const => IsMouseButtonPressed(button.toRaylib);
-        bool isReleased(GluiMouseButton button) const => IsMouseButtonReleased(button.toRaylib);
-        bool isDown(GluiMouseButton button) const => IsMouseButtonDown(button.toRaylib);
-        bool isUp(GluiMouseButton button) const => IsMouseButtonUp(button.toRaylib);
+        bool isPressed(GluiMouseButton button) const
+            => isScroll(button)
+            ?  isScrollPressed(button)
+            :  IsMouseButtonPressed(button.toRaylib);
+        bool isReleased(GluiMouseButton button) const
+            => isScroll(button)
+            ?  isScrollPressed(button)
+            :  IsMouseButtonReleased(button.toRaylib);
+        bool isDown(GluiMouseButton button) const
+            => isScroll(button)
+            ?  isScrollPressed(button)
+            :  IsMouseButtonDown(button.toRaylib);
+        bool isUp(GluiMouseButton button) const
+            => isScroll(button)
+            ?  !isScrollPressed(button)
+            :  IsMouseButtonUp(button.toRaylib);
 
         bool isPressed(GluiKeyboardKey key) const => IsKeyPressed(key.toRaylib);
         bool isReleased(GluiKeyboardKey key) const => IsKeyReleased(key.toRaylib);
@@ -48,6 +60,20 @@ class Raylib5Backend : GluiBackend {
             => IsGamepadButtonDown(controller, button.toRaylib);
         bool isUp(int controller, GluiGamepadButton button) const
             => IsGamepadButtonUp(controller, button.toRaylib);
+
+    }
+
+    private bool isScrollPressed(GluiMouseButton btn) const @trusted {
+
+        const wheelMove = GetMouseWheelMoveV;
+
+        switch (btn) {
+            case btn.scrollUp:    return wheelMove.y > 0;
+            case btn.scrollDown:  return wheelMove.y < 0;
+            case btn.scrollLeft:  return wheelMove.x > 0;
+            case btn.scrollRight: return wheelMove.x < 0;
+            default:              assert(false);
+        }
 
     }
 
@@ -264,6 +290,10 @@ raylib.MouseButton toRaylib(GluiMouseButton button) {
     with (raylib.MouseButton)
     with (GluiMouseButton)
     final switch (button) {
+        case scrollLeft:
+        case scrollRight:
+        case scrollUp:
+        case scrollDown:
         case none:    assert(false);
         case left:    return MOUSE_BUTTON_LEFT;
         case right:   return MOUSE_BUTTON_RIGHT;

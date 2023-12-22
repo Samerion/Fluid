@@ -528,18 +528,22 @@ struct LayoutTree {
             idOf!scrollLeft: [
                 InputStroke(GluiKeyboardKey.left),
                 InputStroke(GluiGamepadButton.dpadLeft),
+                InputStroke(GluiMouseButton.scrollLeft),
             ],
             idOf!scrollRight: [
                 InputStroke(GluiKeyboardKey.right),
                 InputStroke(GluiGamepadButton.dpadRight),
+                InputStroke(GluiMouseButton.scrollRight),
             ],
             idOf!scrollUp: [
                 InputStroke(GluiKeyboardKey.up),
                 InputStroke(GluiGamepadButton.dpadUp),
+                InputStroke(GluiMouseButton.scrollUp),
             ],
             idOf!scrollDown: [
                 InputStroke(GluiKeyboardKey.down),
                 InputStroke(GluiGamepadButton.dpadDown),
+                InputStroke(GluiMouseButton.scrollDown),
             ],
             idOf!pageLeft: [],
             idOf!pageRight: [],
