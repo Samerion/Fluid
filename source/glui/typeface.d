@@ -42,7 +42,7 @@ interface Typeface {
     void drawLine(ref Image target, ref Vector2 penPosition, string text, Color tint) const;
 
     /// Get the default Glui typeface.
-    static defaultTypeface() => RaylibTypeface.defaultTypeface;
+    static defaultTypeface() => FreetypeTypeface.defaultTypeface;
 
     /// Default word splitter used by measure/draw.
     final defaultWordChunks(Range)(Range range) const {
@@ -277,10 +277,13 @@ class FreetypeTypeface : Typeface {
 
     }
 
+    static FreetypeTypeface defaultTypeface;
+
     /// Use an existing freetype2 font.
-    this(FT_Face face) {
+    this(FT_Face face, int size) {
 
         this.face = face;
+        this._size = size;
 
     }
 
@@ -621,6 +624,25 @@ shared static this() @system {
         }
 
     }
+
+}
+
+static this() @trusted {
+
+    // Load the font
+    const typefaceFile = cast(ubyte[]) import("ruda-regular.ttf");
+
+    FT_Face typeface;
+
+    if (auto error = FT_New_Memory_Face(freetype, typefaceFile.ptr, typefaceFile.length, 0, &typeface)) {
+
+        assert(false, format!"Failed to load default Glui typeface, error no. %s"(error));
+
+    }
+
+    // Set the default typeface
+    FreetypeTypeface.defaultTypeface = new FreetypeTypeface(typeface, 14);
+    FreetypeTypeface.defaultTypeface.isOwner = true;
 
 }
 
