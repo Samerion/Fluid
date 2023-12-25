@@ -94,7 +94,7 @@ class GluiFileInput : GluiInput!GluiFrame {
     /// Note: This is an "overlay" node, so it's expected to be placed in a global `onionFrame`. The constructor doesn't
     /// accept a layout parameter, as there is a default, constant one, required for the node to work correctly. This
     /// node is also hidden by default.
-    this(const Theme theme, string name, void delegate() @trusted submitted,
+    this(Theme theme, string name, void delegate() @trusted submitted,
         void delegate() @trusted cancelled = null)
     do {
 
@@ -517,7 +517,7 @@ private class SuggestionButton : GluiButton!() {
 
     }
 
-    override const(Style) pickStyle() const {
+    override inout(Style) pickStyle() inout {
 
         // Selected
         if (input.currentSuggestion == index+1)

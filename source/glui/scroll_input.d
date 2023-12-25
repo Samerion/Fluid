@@ -194,9 +194,9 @@ class GluiScrollInput : GluiInput!GluiNode {
 
     }
 
-    override protected const(Style) pickStyle() const {
+    override protected inout(Style) pickStyle() inout {
 
-        const up = super.pickStyle();
+        auto up = super.pickStyle();
 
         // The outer part is being hovered...
         if (up is hoverStyle) {
