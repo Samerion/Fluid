@@ -16,7 +16,7 @@ void main(string[] flags) {
         .layout!(1, "fill"),
         makeTheme!q{
 
-            font = loadFont(defaultGluiBackend, "examples/ubuntu.ttf", 14);
+            font = loadFont("examples/ubuntu.ttf", 14);
 
             GluiLabel.styleAdd;
             GluiButton!().styleAdd!q{

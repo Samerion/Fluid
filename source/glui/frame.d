@@ -44,7 +44,7 @@ class GluiFrame : GluiSpace {
 
     }
 
-    protected override const(Style) pickStyle() const {
+    protected override inout(Style) pickStyle() inout {
 
         return style;
 

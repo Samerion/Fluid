@@ -602,7 +602,7 @@ abstract class GluiInput(Parent : GluiNode) : Parent, GluiFocusable {
 
     }
 
-    override const(Style) pickStyle() const {
+    override inout(Style) pickStyle() inout {
 
         // Disabled
         if (isDisabledInherited) return disabledStyle;

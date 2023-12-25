@@ -70,7 +70,7 @@ class GluiButton(T : GluiNode = GluiLabel) : GluiInput!T {
     }
 
     /// Pick the style.
-    protected override const(Style) pickStyle() const {
+    protected override inout(Style) pickStyle() inout {
 
         // If pressed
         if (isPressed) return pressStyle;

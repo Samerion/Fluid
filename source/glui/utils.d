@@ -48,7 +48,7 @@ struct SimpleConstructor(T, alias fun = "a") {
         import glui.structs;
 
         // Determine if an argument is a parameter
-        enum isTheme(T) = is(T : const Theme);
+        enum isTheme(T) = is(T : Theme);
         enum isLayout(T) = is(T : Layout);
 
         // Scan for parameters
@@ -164,10 +164,10 @@ deprecated("BasicNodeParams are deprecated in favor of simpleConstructor. Define
         import glui.style;
         import glui.structs;
 
-        static if (index == 0) alias BasicNodeParam = AliasSeq!(Layout, const Theme);
-        static if (index == 1) alias BasicNodeParam = AliasSeq!(const Theme, Layout);
+        static if (index == 0) alias BasicNodeParam = AliasSeq!(Layout, Theme);
+        static if (index == 1) alias BasicNodeParam = AliasSeq!(Theme, Layout);
         static if (index == 2) alias BasicNodeParam = AliasSeq!(Layout);
-        static if (index == 3) alias BasicNodeParam = AliasSeq!(const Theme);
+        static if (index == 3) alias BasicNodeParam = AliasSeq!(Theme);
         static if (index == 4) alias BasicNodeParam = AliasSeq!();
 
     }

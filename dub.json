@@ -24,6 +24,7 @@
 	"description": "A straightforward and easy to use GUI library.",
 	"license": "BSL",
 	"name": "glui",
+	"stringImportPaths": ["resources"],
 	"subPackages": [
 		{
 			"dependencies": {

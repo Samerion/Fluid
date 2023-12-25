@@ -76,7 +76,10 @@ struct Text(T : GluiNode) {
     /// Set new bounding box for the text and redraw it.
     void resize() {
 
-        const style = node.pickStyle;
+        auto style = node.pickStyle;
+
+        style.setDPI(backend.hidpiScale);
+
         const size = style.typeface.measure(value);
 
         resizeImpl(style, size, false);
@@ -86,7 +89,10 @@ struct Text(T : GluiNode) {
     /// Set new bounding box for the text; wrap the text if it doesn't fit in boundaries. Redraw it.
     void resize(alias splitter = Typeface.defaultWordChunks)(Vector2 space, bool wrap = true) {
 
-        const style = node.pickStyle;
+        auto style = node.pickStyle;
+
+        style.setDPI(backend.hidpiScale);
+
         const size = style.typeface.measure!splitter(space, value, wrap);
 
         resizeImpl(style, size, wrap);

@@ -63,7 +63,7 @@ interface GluiBackend {
     Vector2 windowSize(Vector2);
     Vector2 windowSize() const;  /// ditto
 
-    /// Get HiDPI scale of the window.
+    /// Get HiDPI scale of the window. A value of 1 should be equivalent to 96 DPI.
     Vector2 hidpiScale() const;
 
     /// Set area within the window items will be drawn to; any pixel drawn outside will be discarded.
