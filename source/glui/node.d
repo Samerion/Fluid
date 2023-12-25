@@ -106,10 +106,10 @@ abstract class GluiNode : Styleable {
 
         /// Get the current theme.
         pragma(inline)
-        const(Theme) theme() const { return _theme; }
+        inout(Theme) theme() inout { return _theme; }
 
         /// Set the theme.
-        const(Theme) theme(const Theme value) @trusted {
+        Theme theme(Theme value) @trusted {
 
             _theme = cast(Theme) value;
             reloadStyles();
@@ -142,7 +142,7 @@ abstract class GluiNode : Styleable {
         /// Params:
         ///     layout = Layout for this node.
         ///     theme = Theme of this node.
-        this(Layout layout = Layout.init, const Theme theme = null) {
+        this(Layout layout = Layout.init, Theme theme = null) {
 
             this.layout = layout;
             this.theme  = theme;
@@ -151,7 +151,7 @@ abstract class GluiNode : Styleable {
 
         /// Ditto
         deprecated("Use GluiNode(NodeParams) instead.")
-        this(const Theme theme = null, Layout layout = Layout.init) {
+        this(Theme theme = null, Layout layout = Layout.init) {
 
             this(layout, theme);
 
@@ -634,7 +634,7 @@ abstract class GluiNode : Styleable {
     ///     tree  = The parent's tree to pass down to this node.
     ///     theme = Theme to inherit from the parent.
     ///     space = Available space.
-    protected final void resize(LayoutTree* tree, const Theme theme, Vector2 space)
+    protected final void resize(LayoutTree* tree, Theme theme, Vector2 space)
     in(tree, "Tree for Node.resize() must not be null.")
     in(theme, "Theme for Node.resize() must not be null.")
     do {
@@ -740,7 +740,7 @@ abstract class GluiNode : Styleable {
     }
 
     /// Get the current style.
-    abstract const(Style) pickStyle() const;
+    abstract inout(Style) pickStyle() inout;
 
     /// Get the node's position in its space box.
     private Vector2 position(Rectangle space, Vector2 usedSpace) const {

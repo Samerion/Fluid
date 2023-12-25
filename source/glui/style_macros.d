@@ -3,7 +3,6 @@ module glui.style_macros;
 import std.range;
 import std.traits;
 import std.string;
-import std.typecons;
 
 import glui.style;
 import glui.default_theme;
@@ -29,7 +28,7 @@ template makeTheme(string init) {
     // This ugly template is a workaround for https://issues.dlang.org/show_bug.cgi?id=22208
     // We can't use inout here, sorry...
 
-    Theme makeTheme(Theme theme) {
+    Theme makeTheme(Theme theme = gluiDefaultTheme) {
 
         makeThemeImpl!init(theme.dup);
         return currentTheme;
@@ -43,7 +42,7 @@ template makeTheme(string init) {
 
     }
 
-    immutable(Theme) makeTheme(immutable Theme theme = gluiDefaultTheme) @trusted {
+    immutable(Theme) makeTheme(immutable Theme theme) @trusted {
 
         makeThemeImpl!init(cast(Theme) theme.dup);
         return cast(immutable) currentTheme;
@@ -134,7 +133,6 @@ mixin template defineStyles(names...) {
 
     import std.meta : Filter;
     import std.format : format;
-    import std.typecons : Rebindable;
     import std.traits : BaseClassesTuple;
 
     import glui.utils : StaticFieldNames;
@@ -176,7 +174,7 @@ mixin template defineStyles(names...) {
             mixin(name.format!q{ static immutable StyleKey %sKey; });
 
             // Define the value
-            mixin(name.format!q{ protected Rebindable!(const Style) %s; });
+            mixin(name.format!q{ protected Style %s; });
 
             // Helper function to declare nested styles
             mixin(name.format!q{

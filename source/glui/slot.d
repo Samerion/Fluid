@@ -115,7 +115,7 @@ class GluiNodeSlot(T : GluiNode) : GluiNode {
 
     }
 
-    override const(Style) pickStyle() const {
+    override inout(Style) pickStyle() inout {
 
         return style;
 

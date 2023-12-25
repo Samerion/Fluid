@@ -2,11 +2,11 @@ module glui.default_theme;
 
 import glui.style;
 
-immutable Theme gluiDefaultTheme;
+Theme gluiDefaultTheme;
 
-shared static this() {
+static this() {
 
-    gluiDefaultTheme = cast(immutable) Theme.init.makeTheme!q{
+    gluiDefaultTheme = Theme.init.makeTheme!q{
 
         textColor = color("000");
 

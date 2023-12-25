@@ -26,15 +26,23 @@ interface Typeface {
     /// Get line height.
     int lineHeight() const;
 
-    /// Get advance vector for the given glyph
+    /// Get advance vector for the given glyph.
     Vector2 advance(dchar glyph) const;
 
-    /// Draw a line of text
+    /// Set font scale. This should be called at least once before drawing.
+    ///
+    /// Font renderer should cache this and not change the scale unless updated.
+    ///
+    /// Params:
+    ///     scale = Horizontal and vertical DPI scale. A value of 1 should be equivalent to 96 DPI.
+    void setDPI(Vector2 scale);
+
+    /// Draw a line of text.
     /// Note: This API is unstable and might change over time.
     void drawLine(ref Image target, ref Vector2 penPosition, string text, Color tint) const;
 
     /// Get the default Glui typeface.
-    static defaultTypeface() => RaylibTypeface.defaultTypeface;
+    static defaultTypeface() => FreetypeTypeface.defaultTypeface;
 
     /// Default word splitter used by measure/draw.
     final defaultWordChunks(Range)(Range range) const {
@@ -261,12 +269,21 @@ class FreetypeTypeface : Typeface {
         /// If true, this typeface has been loaded using this class, making the class responsible for freeing the font.
         bool _isOwner;
 
+        /// Font size loaded (points).
+        int _size;
+
+        /// Current DPI set for the typeface.
+        int _dpiX, _dpiY;
+
     }
 
+    static FreetypeTypeface defaultTypeface;
+
     /// Use an existing freetype2 font.
-    this(FT_Face face) {
+    this(FT_Face face, int size) {
 
         this.face = face;
+        this._size = size;
 
     }
 
@@ -275,11 +292,10 @@ class FreetypeTypeface : Typeface {
     ///     backend  = I/O Glui backend, used to adjust the scale of the font.
     ///     filename = Filename of the font file.
     ///     size     = Size of the font to load (in points).
-    this(GluiBackend backend, string filename, int size) @trusted {
+    this(string filename, int size) @trusted {
 
-        const scale = backend.hidpiScale * 96;
-
-        this.isOwner = true;
+        this._isOwner = true;
+        this._size = size;
 
         // TODO proper exceptions
         if (auto error = FT_New_Face(freetype, filename.toStringz, 0, &this.face)) {
@@ -288,19 +304,12 @@ class FreetypeTypeface : Typeface {
 
         }
 
-        // Load size
-        if (auto error = FT_Set_Char_Size(face, 0, size*64, cast(int) scale.x, cast(int) scale.y)) {
-
-            throw new Exception(format!"Failed to load `%s` at size %s, error no. %s"(filename, size, error));
-
-        }
-
     }
 
     ~this() @trusted {
 
         // Ignore if the resources used by the class have been borrowed
-        if (!isOwner) return;
+        if (!_isOwner) return;
 
         FT_Done_Face(face);
 
@@ -330,8 +339,32 @@ class FreetypeTypeface : Typeface {
 
     }
 
+    void setDPI(Vector2 dpi) @trusted {
+
+        const dpiX = cast(int) (dpi.x * 96);
+        const dpiY = cast(int) (dpi.y * 96);
+
+        // Ignore if there's no change
+        if (dpiX == _dpiX && dpiY == _dpiY) return;
+
+        _dpiX = dpiX;
+        _dpiY = dpiY;
+
+        // Load size
+        if (auto error = FT_Set_Char_Size(face, 0, _size*64, dpiX, dpiY)) {
+
+            throw new Exception(
+                format!"Failed to load font at size %s at DPI %sx%s, error no. %s"(_size, dpiX, dpiY, error)
+            );
+
+        }
+
+    }
+
     /// Get advance vector for the given glyph
     Vector2 advance(dchar glyph) const @trusted {
+
+        assert(_dpiX && _dpiY, "Font DPI hasn't been set");
 
         // Sadly, there is no way to make FreeType operate correctly in `const` environment.
 
@@ -351,7 +384,7 @@ class FreetypeTypeface : Typeface {
     /// Draw a line of text
     void drawLine(ref Image target, ref Vector2 penPosition, string text, Color tint) const @trusted {
 
-        // TODO Maybe it would be a better idea to draw characters in batch? This could improve Raylib compatibility.
+        assert(_dpiX && _dpiY, "Font DPI hasn't been set");
 
         foreach (dchar glyph; text) {
 
@@ -459,6 +492,7 @@ class RaylibTypeface : Typeface {
     }
 
     /// Load a Raylib font from file.
+    deprecated("Raylib font rendering is inefficient and lacks scaling. Use FreetypeTypeface instead")
     this(string filename, int size) @trusted {
 
         this._font = LoadFontEx(filename.toStringz, size, null, 0);
@@ -525,6 +559,13 @@ class RaylibTypeface : Typeface {
 
     }
 
+    /// Changing DPI at runtime is not supported for Raylib typefaces.
+    void setDPI(Vector2 dpi) {
+
+        // Not supported for Raylib typefaces.
+
+    }
+
     /// Get advance vector for the given glyph.
     Vector2 advance(dchar codepoint) const @trusted {
 
@@ -583,6 +624,25 @@ shared static this() @system {
         }
 
     }
+
+}
+
+static this() @trusted {
+
+    // Load the font
+    const typefaceFile = cast(ubyte[]) import("ruda-regular.ttf");
+
+    FT_Face typeface;
+
+    if (auto error = FT_New_Memory_Face(freetype, typefaceFile.ptr, typefaceFile.length, 0, &typeface)) {
+
+        assert(false, format!"Failed to load default Glui typeface, error no. %s"(error));
+
+    }
+
+    // Set the default typeface
+    FreetypeTypeface.defaultTypeface = new FreetypeTypeface(typeface, 14);
+    FreetypeTypeface.defaultTypeface.isOwner = true;
 
 }
 
