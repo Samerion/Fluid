@@ -224,9 +224,9 @@ class Style {
 
     }
 
-    static Typeface loadTypeface(GluiBackend backend, string file, int fontSize) @trusted {
+    static Typeface loadTypeface(string file, int fontSize) @trusted {
 
-        return new FreetypeTypeface(backend, file, fontSize);
+        return new FreetypeTypeface(file, fontSize);
 
     }
 
@@ -258,6 +258,18 @@ class Style {
         import glui;
 
         with (T) mixin(init.format!"{ %s }");
+
+    }
+
+    /// Set current DPI scale. A value of 1 should correspond to DPI of 96.
+    void setDPI(Vector2 scale) {
+
+        // Update the typeface
+        if (typeface) {
+
+            typeface.setDPI(scale);
+
+        }
 
     }
 
