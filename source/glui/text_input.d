@@ -139,7 +139,7 @@ class GluiTextInput : GluiInput!GluiNode {
 
         // Inherit main style
         // TODO reuse the hashmap maybe?
-        const childTheme = theme.makeTheme!q{
+        auto childTheme = theme.makeTheme!q{
 
             GluiLabel.styleAdd!q{
 
@@ -164,7 +164,8 @@ class GluiTextInput : GluiInput!GluiNode {
         import std.datetime : Clock;
         import std.algorithm : min, max;
 
-        const style = pickStyle();
+        auto style = pickStyle();
+
         const scrollOffset = max(0, contentLabel.scrollMax - inner.w);
 
         // Fill the background
@@ -326,7 +327,7 @@ class GluiTextInput : GluiInput!GluiNode {
 
     }
 
-    override const(Style) pickStyle() const {
+    override inout(Style) pickStyle() inout {
 
         // Disabled
         if (isDisabledInherited) return disabledStyle;
@@ -364,7 +365,7 @@ private class TextImpl : GluiLabel {
 
     }
 
-    override const(Style) pickStyle() const {
+    override inout(Style) pickStyle() inout {
 
         return activeStyle;
 

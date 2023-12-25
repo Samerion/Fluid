@@ -160,9 +160,9 @@ struct NodeParams {
     import glui.style;
 
     Layout layout;
-    const Theme theme;
+    Theme theme;
 
-    this(Layout layout, const Theme theme = null) {
+    this(Layout layout, Theme theme = null) {
 
         this.layout = layout;
         this.theme  = theme;
@@ -170,7 +170,7 @@ struct NodeParams {
     }
 
     /// Ditto
-    this(const Theme theme, Layout layout = Layout.init) {
+    this(Theme theme, Layout layout = Layout.init) {
 
         this(layout, theme);
 

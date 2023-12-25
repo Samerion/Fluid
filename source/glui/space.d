@@ -296,7 +296,7 @@ class GluiSpace : GluiNode, GluiContainer {
 
     }
 
-    protected override const(Style) pickStyle() const {
+    protected override inout(Style) pickStyle() inout {
 
         return null;
 
