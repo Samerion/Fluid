@@ -327,6 +327,13 @@ abstract class GluiNode : Styleable {
         // Resize if required
         if (tree.io.hasJustResized || _requiresResize) {
 
+            // Run beforeResize actions
+            foreach (action; tree.filterActions) {
+
+                action.beforeResize(this, space);
+
+            }
+
             resize(tree, theme, space);
             _requiresResize = false;
 

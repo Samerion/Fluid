@@ -43,7 +43,7 @@ struct FocusDirection {
     /// Focusable nodes, by direction from the focused node.
     WithPriority[4] positional;
 
-    /// Focus priority for the node.
+    /// Focus priority for the currently drawn node.
     ///
     /// Increased until the focused node is found, decremented afterwards. As a result, values will be the highest for
     /// nodes near the focused one.
@@ -279,7 +279,8 @@ abstract class TreeAction {
 
     }
 
-    // TODO spaw x and xImpl so it matches naming of other interfaces
+    /// Called before the tree is resized. Called before `beforeTree`.
+    void beforeResize(GluiNode root, Vector2 viewportSpace) { }
 
     /// Called before the tree is drawn. Keep in mind this might not be called if the action is started when tree
     /// iteration has already begun.
@@ -393,7 +394,7 @@ struct LayoutTree {
     GluiBackend backend;
     alias io = backend;
 
-    /// Check if keyboard input was handled after rendering is has completed.
+    /// Check if keyboard input was handled; updated after rendering has completed.
     bool keyboardHandled;
 
     /// Current node drawing depth.
@@ -614,68 +615,56 @@ struct LayoutTree {
 
     }
 
-    version (Glui_DisableScissors) {
+    /// Intersect the given rectangle against current scissor area.
+    Rectangle intersectScissors(Rectangle rect) {
 
-        Rectangle intersectScissors(Rectangle rect) { return rect; }
-        void pushScissors(Rectangle) { }
-        void popScissors(Rectangle) { }
+        import std.algorithm : min, max;
+
+        // No limit applied
+        if (scissors is scissors.init) return rect;
+
+        Rectangle result;
+
+        // Intersect
+        result.x = max(rect.x, scissors.x);
+        result.y = max(rect.y, scissors.y);
+        result.w = min(rect.x + rect.w, scissors.x + scissors.w) - result.x;
+        result.h = min(rect.y + rect.h, scissors.y + scissors.h) - result.y;
+
+        return result;
 
     }
 
-    else {
+    /// Start scissors mode.
+    /// Returns: Previous scissors mode value. Pass that value to `popScissors`.
+    Rectangle pushScissors(Rectangle rect) {
 
-        /// Intersect the given rectangle against current scissor area.
-        Rectangle intersectScissors(Rectangle rect) {
+        const lastScissors = scissors;
 
-            import std.algorithm : min, max;
+        // Intersect with the current scissors rectangle.
+        io.area = scissors = intersectScissors(rect);
 
-            // No limit applied
-            if (scissors is scissors.init) return rect;
+        return lastScissors;
 
-            Rectangle result;
+    }
 
-            // Intersect
-            result.x = max(rect.x, scissors.x);
-            result.y = max(rect.y, scissors.y);
-            result.w = min(rect.x + rect.w, scissors.x + scissors.w) - result.x;
-            result.h = min(rect.y + rect.h, scissors.y + scissors.h) - result.y;
+    void popScissors(Rectangle lastScissorsMode) @trusted {
 
-            return result;
+        // Pop the stack
+        scissors = lastScissorsMode;
 
-        }
+        // No scissors left
+        if (scissors is scissors.init) {
 
-        /// Start scissors mode.
-        /// Returns: Previous scissors mode value. Pass that value to `popScissors`.
-        Rectangle pushScissors(Rectangle rect) {
-
-            const lastScissors = scissors;
-
-            // Intersect with the current scissors rectangle.
-            io.area = scissors = intersectScissors(rect);
-
-            return lastScissors;
+            // Restore full draw area
+            backend.restoreArea();
 
         }
 
-        void popScissors(Rectangle lastScissorsMode) @trusted {
+        else {
 
-            // Pop the stack
-            scissors = lastScissorsMode;
-
-            // No scissors left
-            if (scissors is scissors.init) {
-
-                // Restore full draw area
-                backend.restoreArea();
-
-            }
-
-            else {
-
-                // Start again
-                backend.area = scissors;
-
-            }
+            // Start again
+            backend.area = scissors;
 
         }
 
