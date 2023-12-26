@@ -61,6 +61,7 @@ GluiSpace showcase(bool withSimpleDisplay = true) {
         // Add children nodes
         boxExample,
         inputExample,
+        popupExample,
         gridExample,
         sizeLimitExample,
         slotExample,
@@ -250,6 +251,34 @@ GluiSpace inputExample() {
                 textInput("Disabled input", never).disable(),
             ),
 
+        ),
+
+    );
+
+    return root;
+
+}
+
+GluiSpace popupExample() {
+
+    GluiSpace root;
+
+    root = vspace(
+        .layout!"fill",
+
+        label(.layout!"center", "Popups"),
+
+        vspace(
+            button("Click me to open a popup!", delegate {
+
+                root.tree.spawnPopup(
+                    popupFrame(
+                        label("This is my popup"),
+                        button("Click me!", delegate { }),
+                    ),
+                );
+
+            }),
         ),
 
     );
