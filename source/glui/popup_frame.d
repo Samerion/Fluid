@@ -6,8 +6,10 @@ import std.algorithm;
 import glui.node;
 import glui.tree;
 import glui.frame;
+import glui.input;
 import glui.style;
 import glui.utils;
+import glui.actions;
 import glui.backend;
 
 
@@ -23,6 +25,8 @@ alias GluiPopup = GluiPopupFrame;
 alias popupFrame = simpleConstructor!GluiPopupFrame;
 
 /// Spawn a new popup attached to the given tree.
+///
+/// The popup automatically gains focus.
 void spawnPopup(LayoutTree* tree, GluiPopupFrame popup) {
 
     // Set anchor
@@ -39,17 +43,22 @@ void spawnPopup(LayoutTree* tree, GluiPopupFrame popup) {
 
 /// This is an override of GluiFrame to simplify creating popups: if clicked outside of it, it will disappear from
 /// the node tree.
-class GluiPopupFrame : GluiFrame {
+class GluiPopupFrame : GluiFrame, GluiFocusable {
 
     mixin defineStyles;
+    mixin makeHoverable;
+    mixin enableInputActions;
 
     public {
 
         /// Position the frame is "anchored" to. A corner of the frame will be chosen to match this position.
         Vector2 anchor;
 
-        /// If true, the popup will not hide if clicked outside.
-        bool isProtected;
+    }
+
+    private {
+
+        bool childHasFocus;
 
     }
 
@@ -133,18 +142,32 @@ class GluiPopupFrame : GluiFrame {
 
     }
 
-    override protected void drawImpl(Rectangle outer, Rectangle inner) @trusted {
+    protected void mouseImpl() {
 
-        const mousePressed = tree.io.isReleased(GluiMouseButton.left);
+    }
 
-        // Pressed outside!
-        if (mousePressed && !isHovered && !isProtected) {
+    protected bool focusImpl() {
 
-            remove();
+        return false;
 
-        }
+    }
 
-        super.drawImpl(outer, inner);
+    void focus() {
+
+        // Ignore if already focused
+        if (isFocused) return;
+
+        // Set focus to self
+        tree.focus = this;
+
+        // Prefer if children get it, though
+        this.focusRecurseChildren();
+
+    }
+
+    bool isFocused() const {
+
+        return childHasFocus || tree.focus is this;
 
     }
 
@@ -155,8 +178,7 @@ class PopupNodeAction : TreeAction {
 
     public {
 
-        /// Popup frames activated by this action.
-        GluiPopupFrame[] popups;
+        GluiPopupFrame popup;
 
     }
 
@@ -169,21 +191,27 @@ class PopupNodeAction : TreeAction {
 
     this(GluiPopupFrame popup) {
 
-        this.startNode = popup;
-        this.popups ~= popup;
+        this.startNode = this.popup = popup;
 
     }
 
     override void beforeResize(GluiNode root, Vector2 viewportSize) {
 
-        // Resize the popups
-        foreach (popup; popups) {
+        // Perform the resize
+        popup.resizeInternal(root.tree, root.theme, viewportSize);
 
-            popup.resizeInternal(root.tree, root.theme, viewportSize);
+        // First resize
+        if (!hasResized) {
+
+            // Give that popup focus
+            popup.focus();
+            hasResized = true;
 
         }
 
-        hasResized = true;
+    }
+
+    override void beforeTree(GluiNode root, Rectangle viewport) {
 
     }
 
@@ -193,26 +221,36 @@ class PopupNodeAction : TreeAction {
         // Don't draw without a resize
         if (!hasResized) return;
 
-        bool anyPopupVisible;
+        // Stop if the popup requested removal
+        if (popup.toRemove) { stop; return; }
+        if (popup.isHidden) { stop; return; }
 
-        // Draw each popup
-        foreach (popup; popups) {
+        // Draw the popup
+        popup.childHasFocus = false;
+        popup.drawAnchored();
 
-            // Ignore popups that are hidden or queued for removal
-            if (popup.toRemove) continue;
-            if (popup.isHidden) continue;
-
-            popup.drawAnchored();
-            anyPopupVisible = true;
-
-        }
-
-        // All popups have been hidden, stop the action
-        if (!anyPopupVisible) stop;
+        // Remove the popup if it has no focus
+        if (!popup.isFocused) stop;
 
 
     }
 
-    override void afterDraw(GluiNode node, Rectangle space) { }
+    override void afterDraw(GluiNode node, Rectangle space) {
+
+        // Require at least one resize to search for focus
+        if (!hasResized) return;
+
+        // Ignore if a focused node has already been found
+        if (popup.isFocused) return;
+
+        const focusable = cast(GluiFocusable) node;
+
+        if (focusable && focusable.isFocused) {
+
+            popup.childHasFocus = focusable.isFocused;
+
+        }
+
+    }
 
 }

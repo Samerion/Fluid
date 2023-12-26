@@ -93,14 +93,6 @@ struct FocusDirection {
         // Stop if the current node can't take focus
         if (!currentFocusable) return;
 
-        debug (Glui_FocusPriority)
-        () @trusted {
-
-            import std.string;
-            DrawText(format!"%s:d%s"(priority, depth).toStringz, cast(int)box.x, cast(int)box.y, 5, Colors.BLACK);
-
-        }();
-
         // And it DOES have focus
         if (currentFocusable.isFocused) {
 
@@ -408,6 +400,9 @@ struct LayoutTree {
 
     package uint _disabledDepth;
 
+    /// Incremented for every `filterActions` access to prevent nested accesses from breaking previously made ranges.
+    private int _actionAccessCounter;
+
     /// Current depth of "disabled" nodes, incremented for any node descended into, while any of the ancestors is
     /// disabled.
     deprecated("To be removed in 0.7.0. Use boolean `isBranchDisabled` instead. For iteration depth, check out `depth`")
@@ -436,7 +431,9 @@ struct LayoutTree {
     ///
     /// Avoid using this; most of the time `GluiNode.queueAction` is what you want. `LayoutTree.queueAction` might fire
     /// too early
-    void queueAction(TreeAction action) {
+    void queueAction(TreeAction action)
+    in (action, "Invalid action queued")
+    do {
 
         actions ~= action;
 
@@ -589,19 +586,49 @@ struct LayoutTree {
 
             int opApply(int delegate(TreeAction) @safe fun) {
 
-                for (auto range = tree.actions[]; !range.empty; ) {
+                tree._actionAccessCounter++;
+                scope (exit) tree._actionAccessCounter--;
 
-                    // Yield the item
-                    auto result = fun(range.front);
+                // Regular access
+                if (tree._actionAccessCounter == 1) {
 
-                    // If finished, remove from the queue
-                    if (range.front.toStop) tree.actions.popFirstOf(range);
+                    for (auto range = tree.actions[]; !range.empty; ) {
 
-                    // Continue to the next item
-                    else range.popFront();
+                        // Yield the item
+                        auto result = fun(range.front);
 
-                    // Stop iteration if requested
-                    if (result) return result;
+                        // If finished, remove from the queue
+                        if (range.front.toStop) tree.actions.popFirstOf(range);
+
+                        // Continue to the next item
+                        else range.popFront();
+
+                        // Stop iteration if requested
+                        if (result) return result;
+
+                    }
+
+                }
+
+                // Nested access
+                else {
+
+                    for (auto range = tree.actions[]; !range.empty; ) {
+
+                        auto front = range.front;
+                        range.popFront();
+
+                        // Ignore stopped items
+                        if (front.toStop) continue;
+
+                        // Yield the item
+                        if (auto result = fun(front)) {
+
+                            return result;
+
+                        }
+
+                    }
 
                 }
 

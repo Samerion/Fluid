@@ -389,7 +389,7 @@ interface GluiHoverable {
     /// Check if the node is disabled. `mixin makeHoverable` to implement.
     ref inout(bool) isDisabled() inout;
 
-    /// Get the underlying node. `mixin makeHoverable` to implement.
+    /// Get the underlying node.
     final inout(GluiNode) asNode() inout {
 
         return cast(inout GluiNode) this;
@@ -534,13 +534,13 @@ interface GluiHoverable {
 /// off extending from `GluiInput`.
 interface GluiFocusable : GluiHoverable {
 
-    /// Take input when focused.
+    /// Handle input. Called each frame when focused.
     bool focusImpl();
 
     /// Set focus to this node.
     ///
     /// Implementation would usually assign `tree.focus` to self for this to take effect. It is legal, however, for this
-    /// method to redirect the focus at another node (by calling its `focus()` method), or ignore the request.
+    /// method to redirect the focus to another node (by calling its `focus()` method), or ignore the request.
     void focus();
 
     /// Check if this node has focus. Recommended implementation: `return tree.focus is this`. Proxy nodes, such as

@@ -274,7 +274,8 @@ GluiSpace popupExample() {
                 root.tree.spawnPopup(
                     popupFrame(
                         label("This is my popup"),
-                        button("Click me!", delegate { }),
+                        button("Click me!", delegate {
+                        }),
                     ),
                 );
 

@@ -54,6 +54,7 @@ class GluiButton(T : GluiNode = GluiLabel) : GluiInput!T {
 
         // Check if pressed
         isPressed = checkIsPressed;
+        // TODO this should be *false* if key is held down, but wasn't pressed while in focus
 
         // Draw the button
         super.drawImpl(outer, inner);
