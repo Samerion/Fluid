@@ -280,6 +280,14 @@ GluiSpace popupExample() {
                     button("Find", delegate { }),
                     button("Backup", delegate { }),
                 ),
+                popupButton("View",
+                    button("Cascade", delegate () @trusted {
+                        OpenURL("https://geohashing.site/geohashing/Mt._St._Helens,_Washington");
+                    }),
+                    button("Tile", delegate () @trusted {
+                        OpenURL("https://xkcd.com/245/");
+                    }),
+                ),
 
             ),
 
