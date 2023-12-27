@@ -41,6 +41,21 @@ void spawnPopup(LayoutTree* tree, GluiPopupFrame popup) {
 
 }
 
+/// Spawn a new popup, as a child of another. While the child is active, the parent will also remain so.
+///
+/// The newly spawned popup automatically gains focus.
+void spawnChildPopup(GluiPopupFrame parent, GluiPopupFrame popup) {
+
+    auto tree = parent.tree;
+
+    // Assign the child
+    parent.childPopup = popup;
+
+    // Spawn the popup
+    spawnPopup(tree, popup);
+
+}
+
 /// This is an override of GluiFrame to simplify creating popups: if clicked outside of it, it will disappear from
 /// the node tree.
 class GluiPopupFrame : GluiFrame, GluiFocusable {
@@ -53,6 +68,11 @@ class GluiPopupFrame : GluiFrame, GluiFocusable {
 
         /// Position the frame is "anchored" to. A corner of the frame will be chosen to match this position.
         Vector2 anchor;
+
+        /// A child popup will keep this focus alive while focused.
+        /// Typically, child popups are spawned as a result of actions within the popup itself, for example in context
+        /// menus, an action can spawn a submenu. Use `spawnChildPopup` to spawn child popups.
+        GluiPopupFrame childPopup;
 
     }
 
@@ -154,9 +174,6 @@ class GluiPopupFrame : GluiFrame, GluiFocusable {
 
     void focus() {
 
-        // Ignore if already focused
-        if (isFocused) return;
-
         // Set focus to self
         tree.focus = this;
 
@@ -167,7 +184,9 @@ class GluiPopupFrame : GluiFrame, GluiFocusable {
 
     bool isFocused() const {
 
-        return childHasFocus || tree.focus is this;
+        return childHasFocus
+            || tree.focus is this
+            || (childPopup && childPopup.isFocused);
 
     }
 
