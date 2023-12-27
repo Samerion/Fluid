@@ -387,7 +387,7 @@ abstract class GluiNode : Styleable {
                 auto focusable = cast(GluiFocusable) tree.hover;
 
                 // If the left mouse button is pressed down, let it have focus, if it can
-                if (mousePressed && focusable && !focusable.isFocused) focusable.focus();
+                if (mousePressed && focusable) focusable.focus();
 
                 // Pass the input to it
                 hoverInput.runMouseInputActions || hoverInput.mouseImpl;
