@@ -7,6 +7,7 @@ void main() {
     SetConfigFlags(ConfigFlags.FLAG_WINDOW_RESIZABLE);
     SetTraceLogLevel(TraceLogLevel.LOG_WARNING);
     InitWindow(800, 600, "Glui showcase");
+    SetExitKey(0);
     SetTargetFPS(60);
     scope (exit) CloseWindow();
 
@@ -61,6 +62,7 @@ GluiSpace showcase(bool withSimpleDisplay = true) {
         // Add children nodes
         boxExample,
         inputExample,
+        popupExample,
         gridExample,
         sizeLimitExample,
         slotExample,
@@ -248,6 +250,45 @@ GluiSpace inputExample() {
             vspace(
                 frontInput = textInput("Input custom text", { frontLabel.text = frontInput.value; }),
                 textInput("Disabled input", never).disable(),
+            ),
+
+        ),
+
+    );
+
+    return root;
+
+}
+
+GluiSpace popupExample() {
+
+    GluiSpace root;
+
+    root = vspace(
+        .layout!"fill",
+
+        label(.layout!"center", "Popups"),
+
+        vspace(
+
+            popupButton("Click me to open a popup!",
+
+                label("This is a popup! It will close if you click outside of it."),
+                popupButton("File",
+                    button("Close", delegate { }),
+                    button("Open", delegate { }),
+                    button("Find", delegate { }),
+                    button("Backup", delegate { }),
+                ),
+                popupButton("View",
+                    button("Cascade", delegate () @trusted {
+                        OpenURL("https://geohashing.site/geohashing/Mt._St._Helens,_Washington");
+                    }),
+                    button("Tile", delegate () @trusted {
+                        OpenURL("https://xkcd.com/245/");
+                    }),
+                ),
+
             ),
 
         ),

@@ -297,7 +297,7 @@ class GluiMapSpace : GluiSpace {
         }
 
         // Drag the current child
-        if (_mouseDrag) () @trusted {
+        if (_mouseDrag) {
 
             import std.math;
 
@@ -324,7 +324,7 @@ class GluiMapSpace : GluiSpace {
 
             }
 
-        }();
+        }
 
         foreach (child; filterChildren) {
 

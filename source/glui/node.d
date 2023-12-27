@@ -98,7 +98,6 @@ abstract class GluiNode : Styleable {
         /// Actions queued for this node; only used for queueing actions before the first `resize`; afterwards, all
         /// actions are queued directly into the tree.
         TreeAction[] _queuedActions;
-        // TODO It might be helpful to expose an interface for queuing delegates to be done after resize
 
     }
 
@@ -276,7 +275,9 @@ abstract class GluiNode : Styleable {
     /// branch, and can also work before the first draw.
     ///
     /// This function is not safe to use while the tree is being drawn.
-    final void queueAction(TreeAction action) {
+    final void queueAction(TreeAction action)
+    in (action, "Invalid action queued (null)")
+    do {
 
         // Set this node as the start for the given action
         action.startNode = this;
@@ -327,6 +328,13 @@ abstract class GluiNode : Styleable {
         // Resize if required
         if (tree.io.hasJustResized || _requiresResize) {
 
+            // Run beforeResize actions
+            foreach (action; tree.filterActions) {
+
+                action.beforeResize(this, space);
+
+            }
+
             resize(tree, theme, space);
             _requiresResize = false;
 
@@ -346,7 +354,7 @@ abstract class GluiNode : Styleable {
         // Draw this node
         draw(viewport);
 
-        // Run afterTree actions, remove those that have finished
+        // Run afterTree actions
         foreach (action; tree.filterActions) {
 
             action.afterTree();
@@ -378,11 +386,11 @@ abstract class GluiNode : Styleable {
                 // Check if the node is focusable
                 auto focusable = cast(GluiFocusable) tree.hover;
 
+                // If the left mouse button is pressed down, let it have focus, if it can
+                if (mousePressed && focusable) focusable.focus();
+
                 // Pass the input to it
                 hoverInput.runMouseInputActions || hoverInput.mouseImpl;
-
-                // If the left mouse button is pressed down, let it have focus, if it can
-                if (mousePressed && focusable && !focusable.isFocused) focusable.focus();
 
             }
 
@@ -448,6 +456,12 @@ abstract class GluiNode : Styleable {
             return false;
 
         }();
+
+        foreach (action; tree.filterActions) {
+
+            action.afterInput(tree.keyboardHandled);
+
+        }
 
     }
 
@@ -623,7 +637,7 @@ abstract class GluiNode : Styleable {
         // Run afterDraw actions
         foreach (action; tree.filterActions) {
 
-            action.afterDraw(this, space, paddingBox, contentBox);
+            action.afterDrawImpl(this, space, paddingBox, contentBox);
 
         }
 
