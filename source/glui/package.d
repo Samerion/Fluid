@@ -17,6 +17,7 @@ public import
     glui.map_space,
     glui.node,
     glui.onion_frame,
+    glui.popup_button,
     glui.popup_frame,
     glui.scroll,
     glui.scroll_input,

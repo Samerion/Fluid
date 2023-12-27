@@ -135,6 +135,7 @@ mixin template defineStyles(names...) {
     import std.format : format;
     import std.traits : BaseClassesTuple;
 
+    import glui.style : StyleKey;
     import glui.utils : StaticFieldNames;
 
     private alias Parent = BaseClassesTuple!(typeof(this))[0];

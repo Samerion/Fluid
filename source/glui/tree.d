@@ -43,10 +43,10 @@ struct FocusDirection {
     /// Focusable nodes, by direction from the focused node.
     WithPriority[4] positional;
 
-    /// Focus priority for the node.
+    /// Focus priority for the currently drawn node.
     ///
     /// Increased until the focused node is found, decremented afterwards. As a result, values will be the highest for
-    /// nodes near the focused one.
+    /// nodes near the focused one. Changes with tree depth rather than individual nodes.
     int priority;
 
     private {
@@ -82,7 +82,7 @@ struct FocusDirection {
             // Get depth difference since last time
             const int depthDiff = depth - this.depth;
 
-            // Count leaf steps
+            // Count steps in change of depth
             priority += priorityDirection * abs(depthDiff);
 
             // Update depth
@@ -93,16 +93,8 @@ struct FocusDirection {
         // Stop if the current node can't take focus
         if (!currentFocusable) return;
 
-        debug (Glui_FocusPriority)
-        () @trusted {
-
-            import std.string;
-            DrawText(format!"%s:d%s"(priority, depth).toStringz, cast(int)box.x, cast(int)box.y, 5, Colors.BLACK);
-
-        }();
-
         // And it DOES have focus
-        if (currentFocusable.isFocused) {
+        if (current.tree.focus is currentFocusable) {
 
             // Mark the node preceding it to the last encountered focusable node
             previous = last;
@@ -279,7 +271,8 @@ abstract class TreeAction {
 
     }
 
-    // TODO spaw x and xImpl so it matches naming of other interfaces
+    /// Called before the tree is resized. Called before `beforeTree`.
+    void beforeResize(GluiNode root, Vector2 viewportSpace) { }
 
     /// Called before the tree is drawn. Keep in mind this might not be called if the action is started when tree
     /// iteration has already begun.
@@ -349,7 +342,7 @@ abstract class TreeAction {
         afterDraw(node, space);
     }
 
-    /// Called after the tree is drawn. Called before input events, so they can safely queue further actions.
+    /// Called after the tree is drawn. Called before input events, so they can assume actions have completed.
     ///
     /// By default, calls `stop()` preventing the action from evaluating during next draw.
     void afterTree() {
@@ -357,6 +350,17 @@ abstract class TreeAction {
         stop();
 
     }
+
+    /// Hook that triggers after processing input. Useful if post-processing is necessary to, perhaps, implement
+    /// fallback input.
+    ///
+    /// Warning: This will **not trigger** unless `afterTree` is overrided not to stop the action. If you make use of
+    /// this, make sure to make the action stop in this method.
+    ///
+    /// Params:
+    ///     keyboardHandled = If true, keyboard input was handled. Passed by reference, so if you react to input, change
+    ///         this to true.
+    void afterInput(ref bool keyboardHandled) { }
 
 }
 
@@ -393,7 +397,7 @@ struct LayoutTree {
     GluiBackend backend;
     alias io = backend;
 
-    /// Check if keyboard input was handled after rendering is has completed.
+    /// Check if keyboard input was handled; updated after rendering has completed.
     bool keyboardHandled;
 
     /// Current node drawing depth.
@@ -406,6 +410,9 @@ struct LayoutTree {
     bool isBranchDisabled;
 
     package uint _disabledDepth;
+
+    /// Incremented for every `filterActions` access to prevent nested accesses from breaking previously made ranges.
+    private int _actionAccessCounter;
 
     /// Current depth of "disabled" nodes, incremented for any node descended into, while any of the ancestors is
     /// disabled.
@@ -435,7 +442,9 @@ struct LayoutTree {
     ///
     /// Avoid using this; most of the time `GluiNode.queueAction` is what you want. `LayoutTree.queueAction` might fire
     /// too early
-    void queueAction(TreeAction action) {
+    void queueAction(TreeAction action)
+    in (action, "Invalid action queued")
+    do {
 
         actions ~= action;
 
@@ -588,19 +597,49 @@ struct LayoutTree {
 
             int opApply(int delegate(TreeAction) @safe fun) {
 
-                for (auto range = tree.actions[]; !range.empty; ) {
+                tree._actionAccessCounter++;
+                scope (exit) tree._actionAccessCounter--;
 
-                    // Yield the item
-                    auto result = fun(range.front);
+                // Regular access
+                if (tree._actionAccessCounter == 1) {
 
-                    // If finished, remove from the queue
-                    if (range.front.toStop) tree.actions.popFirstOf(range);
+                    for (auto range = tree.actions[]; !range.empty; ) {
 
-                    // Continue to the next item
-                    else range.popFront();
+                        // Yield the item
+                        auto result = fun(range.front);
 
-                    // Stop iteration if requested
-                    if (result) return result;
+                        // If finished, remove from the queue
+                        if (range.front.toStop) tree.actions.popFirstOf(range);
+
+                        // Continue to the next item
+                        else range.popFront();
+
+                        // Stop iteration if requested
+                        if (result) return result;
+
+                    }
+
+                }
+
+                // Nested access
+                else {
+
+                    for (auto range = tree.actions[]; !range.empty; ) {
+
+                        auto front = range.front;
+                        range.popFront();
+
+                        // Ignore stopped items
+                        if (front.toStop) continue;
+
+                        // Yield the item
+                        if (auto result = fun(front)) {
+
+                            return result;
+
+                        }
+
+                    }
 
                 }
 
@@ -614,68 +653,56 @@ struct LayoutTree {
 
     }
 
-    version (Glui_DisableScissors) {
+    /// Intersect the given rectangle against current scissor area.
+    Rectangle intersectScissors(Rectangle rect) {
 
-        Rectangle intersectScissors(Rectangle rect) { return rect; }
-        void pushScissors(Rectangle) { }
-        void popScissors(Rectangle) { }
+        import std.algorithm : min, max;
+
+        // No limit applied
+        if (scissors is scissors.init) return rect;
+
+        Rectangle result;
+
+        // Intersect
+        result.x = max(rect.x, scissors.x);
+        result.y = max(rect.y, scissors.y);
+        result.w = min(rect.x + rect.w, scissors.x + scissors.w) - result.x;
+        result.h = min(rect.y + rect.h, scissors.y + scissors.h) - result.y;
+
+        return result;
 
     }
 
-    else {
+    /// Start scissors mode.
+    /// Returns: Previous scissors mode value. Pass that value to `popScissors`.
+    Rectangle pushScissors(Rectangle rect) {
 
-        /// Intersect the given rectangle against current scissor area.
-        Rectangle intersectScissors(Rectangle rect) {
+        const lastScissors = scissors;
 
-            import std.algorithm : min, max;
+        // Intersect with the current scissors rectangle.
+        io.area = scissors = intersectScissors(rect);
 
-            // No limit applied
-            if (scissors is scissors.init) return rect;
+        return lastScissors;
 
-            Rectangle result;
+    }
 
-            // Intersect
-            result.x = max(rect.x, scissors.x);
-            result.y = max(rect.y, scissors.y);
-            result.w = min(rect.x + rect.w, scissors.x + scissors.w) - result.x;
-            result.h = min(rect.y + rect.h, scissors.y + scissors.h) - result.y;
+    void popScissors(Rectangle lastScissorsMode) @trusted {
 
-            return result;
+        // Pop the stack
+        scissors = lastScissorsMode;
 
-        }
+        // No scissors left
+        if (scissors is scissors.init) {
 
-        /// Start scissors mode.
-        /// Returns: Previous scissors mode value. Pass that value to `popScissors`.
-        Rectangle pushScissors(Rectangle rect) {
-
-            const lastScissors = scissors;
-
-            // Intersect with the current scissors rectangle.
-            io.area = scissors = intersectScissors(rect);
-
-            return lastScissors;
+            // Restore full draw area
+            backend.restoreArea();
 
         }
 
-        void popScissors(Rectangle lastScissorsMode) @trusted {
+        else {
 
-            // Pop the stack
-            scissors = lastScissorsMode;
-
-            // No scissors left
-            if (scissors is scissors.init) {
-
-                // Restore full draw area
-                backend.restoreArea();
-
-            }
-
-            else {
-
-                // Start again
-                backend.area = scissors;
-
-            }
+            // Start again
+            backend.area = scissors;
 
         }
 

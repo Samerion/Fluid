@@ -12,7 +12,7 @@ import glui.container;
 
 
 /// Set focus on the given node, if focusable, or the first of its focusable children. This will be done lazily during
-/// the next draw.
+/// the next draw. If calling `focusRecurseChildren`, the subject of the call will be excluded from taking focus.
 /// Params:
 ///     parent = Container node to search in.
 void focusRecurse(GluiNode parent) {
@@ -22,12 +22,31 @@ void focusRecurse(GluiNode parent) {
 
 }
 
+/// ditto
+void focusRecurseChildren(GluiNode parent) {
+
+    auto action = new FocusRecurseAction;
+    action.excludeStartNode = true;
+
+    parent.queueAction(action);
+
+}
+
 class FocusRecurseAction : TreeAction {
+
+    public {
+
+        bool excludeStartNode;
+
+    }
 
     override void beforeDraw(GluiNode node, Rectangle) {
 
         // Ignore if the branch is disabled
         if (node.isDisabledInherited) return;
+
+        // Ignore the start node if excluded
+        if (excludeStartNode && node is startNode) return;
 
         // Check if the node is focusable
         if (auto focusable = cast(GluiFocusable) node) {
