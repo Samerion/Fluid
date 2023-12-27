@@ -46,7 +46,7 @@ struct FocusDirection {
     /// Focus priority for the currently drawn node.
     ///
     /// Increased until the focused node is found, decremented afterwards. As a result, values will be the highest for
-    /// nodes near the focused one.
+    /// nodes near the focused one. Changes with tree depth rather than individual nodes.
     int priority;
 
     private {
@@ -82,7 +82,7 @@ struct FocusDirection {
             // Get depth difference since last time
             const int depthDiff = depth - this.depth;
 
-            // Count leaf steps
+            // Count steps in change of depth
             priority += priorityDirection * abs(depthDiff);
 
             // Update depth

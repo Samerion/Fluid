@@ -170,6 +170,29 @@ class GluiPopupFrame : GluiFrame, GluiFocusable {
 
     }
 
+    protected override void drawImpl(Rectangle outer, Rectangle inner) {
+
+        // Clear directional focus data; give the popup a separate context
+        tree.focusDirection = FocusDirection(tree.focusDirection.lastFocusBox);
+
+        super.drawImpl(outer, inner);
+
+        // Forcibly register previous & next focus if missing
+        // The popup will register itself just after it gets drawn without this — and it'll be better if it doesn't
+        if (tree.focusDirection.previous is null) {
+
+            tree.focusDirection.previous = tree.focusDirection.last;
+
+        }
+
+        if (tree.focusDirection.next is null) {
+
+            tree.focusDirection.next = tree.focusDirection.first;
+
+        }
+
+    }
+
     protected void mouseImpl() {
 
     }
