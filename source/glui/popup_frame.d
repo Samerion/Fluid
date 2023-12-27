@@ -277,8 +277,17 @@ class PopupNodeAction : TreeAction {
 
     override void afterDraw(GluiNode node, Rectangle space) {
 
+        import glui.popup_button;
+
         // Require at least one resize to search for focus
         if (!hasResized) return;
+
+        // Mark popup buttons
+        if (auto button = cast(GluiPopupButton) node) {
+
+            button.parentPopup = popup;
+
+        }
 
         // Ignore if a focused node has already been found
         if (popup.isFocused) return;

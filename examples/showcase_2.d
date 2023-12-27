@@ -270,30 +270,18 @@ GluiSpace popupExample() {
         label(.layout!"center", "Popups"),
 
         vspace(
-            button("Click me to open a popup!", delegate {
 
-                GluiPopupFrame popup;
+            popupButton("Click me to open a popup!",
 
-                root.tree.spawnPopup(
-                    popup = popupFrame(
-                        label("This is a popup! It will close if you click outside of it."),
-                        button("File", delegate {
+                label("This is a popup! It will close if you click outside of it."),
+                popupButton("File",
+                    button("Close", delegate { }),
+                    button("Open", delegate { }),
+                    button("Find", delegate { }),
+                    button("Backup", delegate { }),
+                ),
 
-                            popup.spawnChildPopup(
-                                popupFrame(
-                                    button("Close", delegate { }),
-                                    button("Open", delegate { }),
-                                    button("Find", delegate { }),
-                                    button("Backup", delegate { }),
-                                ),
-                            );
-
-                        }),
-
-                    ),
-                );
-
-            }),
+            ),
 
         ),
 
