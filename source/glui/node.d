@@ -457,6 +457,12 @@ abstract class GluiNode : Styleable {
 
         }();
 
+        foreach (action; tree.filterActions) {
+
+            action.afterInput(tree.keyboardHandled);
+
+        }
+
     }
 
     /// Switch to the previous or next focused item

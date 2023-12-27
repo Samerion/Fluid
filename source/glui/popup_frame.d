@@ -29,6 +29,8 @@ alias popupFrame = simpleConstructor!GluiPopupFrame;
 /// The popup automatically gains focus.
 void spawnPopup(LayoutTree* tree, GluiPopupFrame popup) {
 
+    popup.tree = tree;
+
     // Set anchor
     popup.anchor = Vector2(
         tree.focusBox.x,
@@ -73,6 +75,12 @@ class GluiPopupFrame : GluiFrame, GluiFocusable {
         /// Typically, child popups are spawned as a result of actions within the popup itself, for example in context
         /// menus, an action can spawn a submenu. Use `spawnChildPopup` to spawn child popups.
         GluiPopupFrame childPopup;
+
+        /// Node that had focus before `popupFrame` took over. When the popup is closed using a keyboard shortcut, this
+        /// node will take focus again.
+        ///
+        /// Assigned automatically if `spawnPopup` or `spawnChildPopup` is used, but otherwise not.
+        GluiFocusable previousFocus;
 
     }
 
@@ -182,6 +190,22 @@ class GluiPopupFrame : GluiFrame, GluiFocusable {
 
     }
 
+    /// Give focus to whatever node had focus before this one.
+    @(GluiInputAction.cancel)
+    void restorePreviousFocus() {
+
+        // Restore focus if possible
+        if (previousFocus) {
+
+            previousFocus.focus();
+
+        }
+
+        // Clear focus
+        else tree.focus = null;
+
+    }
+
     bool isFocused() const {
 
         return childHasFocus
@@ -223,14 +247,11 @@ class PopupNodeAction : TreeAction {
         if (!hasResized) {
 
             // Give that popup focus
+            popup.previousFocus = root.tree.focus;
             popup.focus();
             hasResized = true;
 
         }
-
-    }
-
-    override void beforeTree(GluiNode root, Rectangle viewport) {
 
     }
 
@@ -269,6 +290,22 @@ class PopupNodeAction : TreeAction {
             popup.childHasFocus = focusable.isFocused;
 
         }
+
+    }
+
+    override void afterInput(ref bool keyboardHandled) {
+
+        // Require at least one resize
+        if (!hasResized) return;
+
+        // Ignore if input was already handled
+        if (keyboardHandled) return;
+
+        // Ignore input in child popups
+        if (popup.childPopup && popup.childPopup.isFocused) return;
+
+        // Run actions for the popup
+        keyboardHandled = popup.runFocusInputActions;
 
     }
 
