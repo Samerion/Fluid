@@ -3,8 +3,6 @@ module glui.structs;
 
 import std.conv;
 
-public import glui.tree;
-
 
 @safe:
 

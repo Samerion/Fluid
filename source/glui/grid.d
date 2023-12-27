@@ -4,6 +4,7 @@ import std.range;
 import std.algorithm;
 
 import glui.node;
+import glui.tree;
 import glui.frame;
 import glui.style;
 import glui.utils;
