@@ -7,6 +7,7 @@ void main() {
     SetConfigFlags(ConfigFlags.FLAG_WINDOW_RESIZABLE);
     SetTraceLogLevel(TraceLogLevel.LOG_WARNING);
     InitWindow(800, 600, "Glui showcase");
+    SetExitKey(0);
     SetTargetFPS(60);
     scope (exit) CloseWindow();
 

@@ -94,7 +94,7 @@ struct FocusDirection {
         if (!currentFocusable) return;
 
         // And it DOES have focus
-        if (currentFocusable.isFocused) {
+        if (current.tree.focus is currentFocusable) {
 
             // Mark the node preceding it to the last encountered focusable node
             previous = last;
@@ -342,7 +342,7 @@ abstract class TreeAction {
         afterDraw(node, space);
     }
 
-    /// Called after the tree is drawn. Called before input events, so they can safely queue further actions.
+    /// Called after the tree is drawn. Called before input events, so they can assume actions have completed.
     ///
     /// By default, calls `stop()` preventing the action from evaluating during next draw.
     void afterTree() {
@@ -350,6 +350,17 @@ abstract class TreeAction {
         stop();
 
     }
+
+    /// Hook that triggers after processing input. Useful if post-processing is necessary to, perhaps, implement
+    /// fallback input.
+    ///
+    /// Warning: This will **not trigger** unless `afterTree` is overrided not to stop the action. If you make use of
+    /// this, make sure to make the action stop in this method.
+    ///
+    /// Params:
+    ///     keyboardHandled = If true, keyboard input was handled. Passed by reference, so if you react to input, change
+    ///         this to true.
+    void afterInput(ref bool keyboardHandled) { }
 
 }
 
