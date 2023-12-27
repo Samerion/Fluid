@@ -25,6 +25,15 @@
 	"license": "BSL",
 	"name": "glui",
 	"stringImportPaths": ["resources"],
+	"configurations": [
+		{
+			"name": "default"
+		},
+		{
+			"name": "unittest",
+			"libs": ["raylib"]
+		}
+	],
 	"subPackages": [
 		{
 			"dependencies": {
