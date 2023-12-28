@@ -7,6 +7,7 @@ debug (Glui_BuildMessages) {
 import std.array;
 import std.range;
 import std.string;
+import std.sumtype;
 import std.algorithm;
 
 import glui.backend;
@@ -46,15 +47,57 @@ class HeadlessBackend : GluiBackend {
         Rectangle rectangle;
         Color color;
 
+        alias rectangle this;
+
+        bool isClose(Rectangle rectangle) const
+
+            => isClose(
+                cast(int) rectangle.x,
+                cast(int) rectangle.y,
+                cast(int) rectangle.width,
+                cast(int) rectangle.height,
+            );
+
+
+        bool isClose(int x, int y, int width, int height) const
+
+            => cast(int) this.rectangle.x == x
+            && cast(int) this.rectangle.y == y
+            && cast(int) this.rectangle.width == width
+            && cast(int) this.rectangle.height == height;
+
     }
 
     struct DrawnTexture {
 
-        Texture texture;
+        uint id;
+        int width;
+        int height;
         Vector2 position;
-        Color color;
+        Color tint;
+
+        alias rectangle this;
+
+        this(Texture texture, Vector2 position, Color tint) {
+
+            // Omit the "backend" Texture field to make `canvas` @safe
+            this.tupleof[0..3] = texture.tupleof[1..4];
+            this.position = position;
+            this.tint = tint;
+
+        }
+
+        Texture texture(HeadlessBackend backend) const
+
+            => Texture(backend, id, width, height);
+
+        Rectangle rectangle() const
+
+            => Rectangle(position.tupleof, width, height);
 
     }
+
+    alias Drawing = SumType!(DrawnLine, DrawnTriangle, DrawnRectangle, DrawnTexture);
 
     private {
 
@@ -81,14 +124,12 @@ class HeadlessBackend : GluiBackend {
 
     public {
 
-        Appender!(DrawnLine[]) lines;
-        Appender!(DrawnTriangle[]) triangles;
-        Appender!(DrawnRectangle[]) rectangles;
-        Appender!(DrawnTexture[]) textures;
+        /// All items drawn during the last frame
+        Appender!(Drawing[]) canvas;
 
     }
 
-    this(Vector2 windowSize, Vector2 hidpiScale = Vector2(1, 1)) {
+    this(Vector2 windowSize = Vector2(800, 600), Vector2 hidpiScale = Vector2(1, 1)) {
 
         this._windowSize = windowSize;
         this._hidpiScale = hidpiScale;
@@ -103,12 +144,7 @@ class HeadlessBackend : GluiBackend {
         // Clear temporary data
         characterQueue = null;
         _justResized = false;
-
-        // Clear the "canvas"
-        lines.clear();
-        triangles.clear();
-        rectangles.clear();
-        textures.clear();
+        canvas.clear();
 
         // Update input
         foreach (ref state; chain(mouse[], keyboard[], gamepad[])) {
@@ -210,22 +246,22 @@ class HeadlessBackend : GluiBackend {
     /// Check if the given keyboard key has just been pressed/released or, if it's held down or not (up).
     bool isPressed(GluiKeyboardKey key) const
 
-        => mouse[key] == State.pressed;
+        => keyboard[key] == State.pressed;
 
     bool isReleased(GluiKeyboardKey key) const
 
-        => mouse[key] == State.released;
+        => keyboard[key] == State.released;
 
     bool isDown(GluiKeyboardKey key) const
 
-        => mouse[key] == State.pressed
-        || mouse[key] == State.repeated
-        || mouse[key] == State.down;
+        => keyboard[key] == State.pressed
+        || keyboard[key] == State.repeated
+        || keyboard[key] == State.down;
 
     bool isUp(GluiKeyboardKey key) const
 
-        => mouse[key] == State.released
-        || mouse[key] == State.up;
+        => keyboard[key] == State.released
+        || keyboard[key] == State.up;
 
     /// If true, the given keyboard key has been virtually pressed again, through a long-press.
     bool isRepeated(GluiKeyboardKey key) const
@@ -382,28 +418,186 @@ class HeadlessBackend : GluiBackend {
     /// Draw a line.
     void drawLine(Vector2 start, Vector2 end, Color color) {
 
-        lines ~= DrawnLine(start, end, color);
+        canvas ~= Drawing(DrawnLine(start, end, color));
 
     }
 
     /// Draw a triangle, consisting of 3 vertices with counter-clockwise winding.
     void drawTriangle(Vector2 a, Vector2 b, Vector2 c, Color color) {
 
-        triangles ~= DrawnTriangle(a, b, c, color);
+        canvas ~= Drawing(DrawnTriangle(a, b, c, color));
 
     }
 
     /// Draw a rectangle.
     void drawRectangle(Rectangle rectangle, Color color) {
 
-        rectangles ~= DrawnRectangle(rectangle, color);
+        canvas ~= Drawing(DrawnRectangle(rectangle, color));
 
     }
 
     /// Draw a texture.
     void drawTexture(Texture texture, Vector2 position, Color tint) {
 
-        textures ~= DrawnTexture(texture, position, tint);
+        canvas ~= Drawing(DrawnTexture(texture, position, tint));
+
+    }
+
+    /// Get items from the canvas that match the given type.
+    auto filterCanvas(T)()
+
+        => canvas[]
+
+        // Filter out items that don't match what was requested
+        .filter!(a => a.match!(
+            (T item) => true,
+            (_) => false
+        ))
+
+        // Return items that match
+        .map!(a => a.match!(
+            (T item) => item,
+            (_) => assert(false),
+        ));
+
+    alias lines = filterCanvas!DrawnLine;
+    alias triangles = filterCanvas!DrawnTriangle;
+    alias rectangles = filterCanvas!DrawnRectangle;
+    alias textures = filterCanvas!DrawnTexture;
+
+    version (Have_elemi) {
+
+        import std.conv;
+        import elemi.xml;
+
+        /// Convert the canvas to SVG. Intended for debugging only.
+        ///
+        /// Note that rendering textures and text is NOT implemented. They will render as rectangles instead with
+        /// whatever tint color they have been assigned.
+        string toSVG() const
+
+            => Element.XMLDeclaration1_0 ~ this.toSVGElement;
+
+        /// ditto
+        Element toSVGElement() const
+
+            => elem!"svg"(
+                attr("xmlns") = "http://www.w3.org/2000/svg",
+                attr("version") = "1.1",
+                attr("width") = text(cast(int) windowSize.x),
+                attr("height") = text(cast(int) windowSize.y),
+
+                canvas[].map!(a => a.match!(
+                    (DrawnLine line) => elem!"line"(
+                        attr("x1") = line.start.x.text,
+                        attr("y1") = line.start.y.text,
+                        attr("x2") = line.end.x.text,
+                        attr("y2") = line.end.y.text,
+                        attr("stroke") = line.color.toHex,
+                    ),
+                    (DrawnTriangle trig) => elem!"polygon"(
+                        attr("points") = [
+                            format!"%s,%s"(trig.a.tupleof),
+                            format!"%s,%s"(trig.b.tupleof),
+                            format!"%s,%s"(trig.c.tupleof),
+                        ],
+                        attr("fill") = trig.color.toHex,
+                    ),
+                    (DrawnRectangle rect) => elem!"rect"(
+                        attr("x") = rect.x.text,
+                        attr("y") = rect.y.text,
+                        attr("width") = rect.width.text,
+                        attr("height") = rect.height.text,
+                        attr("fill") = rect.color.toHex,
+                    ),
+                    (DrawnTexture texture) => elem!"rect"(
+                        attr("x") = texture.position.x.text,
+                        attr("y") = texture.position.y.text,
+                        attr("width") = texture.width.text,
+                        attr("height") = texture.height.text,
+                        attr("fill") = texture.tint.toHex,
+                        // TODO draw the texture?
+                    ),
+                ))
+            );
+
+    }
+
+}
+
+unittest {
+
+    auto backend = new HeadlessBackend(Vector2(800, 600));
+
+    with (backend) {
+
+        press(GluiMouseButton.left);
+
+        assert(isPressed(GluiMouseButton.left));
+        assert(isDown(GluiMouseButton.left));
+        assert(!isUp(GluiMouseButton.left));
+        assert(!isReleased(GluiMouseButton.left));
+
+        press(GluiKeyboardKey.enter);
+
+        assert(isPressed(GluiKeyboardKey.enter));
+        assert(isDown(GluiKeyboardKey.enter));
+        assert(!isUp(GluiKeyboardKey.enter));
+        assert(!isReleased(GluiKeyboardKey.enter));
+        assert(!isRepeated(GluiKeyboardKey.enter));
+
+        nextFrame;
+
+        assert(!isPressed(GluiMouseButton.left));
+        assert(isDown(GluiMouseButton.left));
+        assert(!isUp(GluiMouseButton.left));
+        assert(!isReleased(GluiMouseButton.left));
+
+        assert(!isPressed(GluiKeyboardKey.enter));
+        assert(isDown(GluiKeyboardKey.enter));
+        assert(!isUp(GluiKeyboardKey.enter));
+        assert(!isReleased(GluiKeyboardKey.enter));
+        assert(!isRepeated(GluiKeyboardKey.enter));
+
+        nextFrame;
+
+        press(GluiKeyboardKey.enter);
+
+        assert(!isPressed(GluiKeyboardKey.enter));
+        assert(isDown(GluiKeyboardKey.enter));
+        assert(!isUp(GluiKeyboardKey.enter));
+        assert(!isReleased(GluiKeyboardKey.enter));
+        assert(isRepeated(GluiKeyboardKey.enter));
+
+        nextFrame;
+
+        release(GluiMouseButton.left);
+
+        assert(!isPressed(GluiMouseButton.left));
+        assert(!isDown(GluiMouseButton.left));
+        assert(isUp(GluiMouseButton.left));
+        assert(isReleased(GluiMouseButton.left));
+
+        release(GluiKeyboardKey.enter);
+
+        assert(!isPressed(GluiKeyboardKey.enter));
+        assert(!isDown(GluiKeyboardKey.enter));
+        assert(isUp(GluiKeyboardKey.enter));
+        assert(isReleased(GluiKeyboardKey.enter));
+        assert(!isRepeated(GluiKeyboardKey.enter));
+
+        nextFrame;
+
+        assert(!isPressed(GluiMouseButton.left));
+        assert(!isDown(GluiMouseButton.left));
+        assert(isUp(GluiMouseButton.left));
+        assert(!isReleased(GluiMouseButton.left));
+
+        assert(!isPressed(GluiKeyboardKey.enter));
+        assert(!isDown(GluiKeyboardKey.enter));
+        assert(isUp(GluiKeyboardKey.enter));
+        assert(!isReleased(GluiKeyboardKey.enter));
+        assert(!isRepeated(GluiKeyboardKey.enter));
 
     }
 

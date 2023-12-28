@@ -33,6 +33,9 @@ alias hscrollInput = simpleConstructor!(GluiScrollInput, (a) {
 ///
 class GluiScrollInput : GluiInput!GluiNode {
 
+    // TODO Hiding a scrollbar makes it completely unusable, since it cannot scan the viewport. Perhaps override
+    // `isHidden` to virtually hide the scrollbar, and keep it always "visible" as such?
+
     /// Styles defined by this node:
     ///
     /// `backgroundStyle` — style defined for the background part of the scrollbar,
