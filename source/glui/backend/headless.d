@@ -4,6 +4,7 @@ debug (Glui_BuildMessages) {
     pragma(msg, "Glui: Building with headless backend");
 }
 
+import std.math;
 import std.array;
 import std.range;
 import std.string;
@@ -40,6 +41,15 @@ class HeadlessBackend : GluiBackend {
         Vector2 a, b, c;
         Color color;
 
+        bool isClose(Vector2 a, Vector2 b, Vector2 c) const
+            => .isClose(a.x, this.a.x)
+            && .isClose(a.y, this.a.y)
+            && .isClose(b.x, this.b.x)
+            && .isClose(b.y, this.b.y)
+            && .isClose(c.x, this.c.x)
+            && .isClose(c.y, this.c.y);
+
+
     }
 
     struct DrawnRectangle {
@@ -61,10 +71,10 @@ class HeadlessBackend : GluiBackend {
 
         bool isClose(int x, int y, int width, int height) const
 
-            => cast(int) this.rectangle.x == x
-            && cast(int) this.rectangle.y == y
-            && cast(int) this.rectangle.width == width
-            && cast(int) this.rectangle.height == height;
+            => .isClose(this.rectangle.x, x)
+            && .isClose(this.rectangle.y, y)
+            && .isClose(this.rectangle.width, width)
+            && .isClose(this.rectangle.height, height);
 
     }
 
@@ -464,6 +474,26 @@ class HeadlessBackend : GluiBackend {
     alias triangles = filterCanvas!DrawnTriangle;
     alias rectangles = filterCanvas!DrawnRectangle;
     alias textures = filterCanvas!DrawnTexture;
+
+    /// Throw an `AssertError` if given triangle was never drawn.
+    void assertTriangle(Vector2 a, Vector2 b, Vector2 c, Color color) {
+
+        assert(
+            !triangles.filter!(trig => trig.isClose(a, b, c) && trig.color == color).empty,
+            "No matching triangle"
+        );
+
+    }
+
+    /// Throw an `AssertError` if given rectangle was never drawn.
+    void assertRectangle(Rectangle r, Color color) {
+
+        assert(
+            !rectangles.filter!(rect => rect.isClose(r) && rect.color == color).empty,
+            "No matching rectangle"
+        );
+
+    }
 
     version (Have_elemi) {
 

@@ -172,3 +172,70 @@ class ColorBorder : GluiBorder {
     }
 
 }
+
+unittest {
+
+    import glui;
+    import std.format;
+    import std.algorithm;
+
+    const viewportSize = Vector2(100, 100);
+
+    auto io = new HeadlessBackend(viewportSize);
+    auto root = vframe(
+        layout!(1, "fill"),
+    );
+
+    root.io = io;
+
+    // First frame: Solid border on one side only
+    root.theme = Theme.init.makeTheme!q{
+        GluiFrame.styleAdd!q{
+            border.sideBottom = 4;
+            borderStyle = colorBorder(color!"018b8d");
+        };
+    };
+    root.draw();
+
+    assert(
+        io.rectangles.find!(a => a.isClose(0, 100 - 4, 100, 4))
+            .front.color == color!"018b8d",
+        "Border must be present underneath the rectangle"
+    );
+
+    enum colorCode = q{ [color!"018b8d", color!"8d7006", color!"038d23", color!"6b048d"] };
+
+    Color[4] borderColor = mixin(colorCode);
+
+    // Second frame: Border on all sides
+    // TODO optimize monochrome borders, and test them as well
+    io.nextFrame;
+    root.theme = Theme.init.makeTheme!(colorCode.format!q{
+        GluiFrame.styleAdd!q{
+            border = 4;
+            borderStyle = colorBorder(%s);
+        };
+    });
+    root.reloadStyles();
+    root.draw();
+
+    import fs = std.file;
+    debug fs.write("/tmp/glui-canvas.svg", io.toSVG);
+
+    // Rectangles
+    io.assertRectangle(Rectangle(0, 4, 4, 92), borderColor.sideLeft);
+    io.assertRectangle(Rectangle(96, 4, 4, 92), borderColor.sideRight);
+    io.assertRectangle(Rectangle(4, 0, 92, 4), borderColor.sideTop);
+    io.assertRectangle(Rectangle(4, 96, 92, 4), borderColor.sideBottom);
+
+    // Triangles
+    io.assertTriangle(Vector2(0, 100), Vector2(4, 96), Vector2(0, 96), borderColor.sideLeft);
+    io.assertTriangle(Vector2(0, 0), Vector2(0, 4), Vector2(4, 4), borderColor.sideLeft);
+    io.assertTriangle(Vector2(100, 0), Vector2(96, 4), Vector2(100, 4), borderColor.sideRight);
+    io.assertTriangle(Vector2(100, 100), Vector2(100, 96), Vector2(96, 96), borderColor.sideRight);
+    io.assertTriangle(Vector2(0, 0), Vector2(4, 4), Vector2(4, 0), borderColor.sideTop);
+    io.assertTriangle(Vector2(100, 0), Vector2(96, 0), Vector2(96, 4), borderColor.sideTop);
+    io.assertTriangle(Vector2(100, 100), Vector2(96, 96), Vector2(96, 100), borderColor.sideBottom);
+    io.assertTriangle(Vector2(0, 100), Vector2(4, 100), Vector2(4, 96), borderColor.sideBottom);
+
+}
