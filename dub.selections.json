@@ -8,6 +8,7 @@
 		"fluent-asserts": "0.13.3",
 		"libdparse": "0.14.0",
 		"raylib-d": "5.0.0",
-		"stdx-allocator": "2.77.5"
+		"stdx-allocator": "2.77.5",
+		"elemi": "1.2.2"
 	}
 }

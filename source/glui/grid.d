@@ -235,9 +235,9 @@ class GluiGrid : GluiFrame {
         // 2. Each 3 segments
         // 3. Each 2 segments
         auto g = grid(
-            [ label() ],
-            [ label(), label() ],
-            [ label(), label(), label() ],
+            [ label("") ],
+            [ label(""), label("") ],
+            [ label(""), label(""), label("") ],
         );
 
         g.tree = new LayoutTree(g);
