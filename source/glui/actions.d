@@ -187,6 +187,8 @@ unittest {
     // Make sure all the labels are scrolled
     assert(equal!((a, b) => isClose(a.y - root.scroll, b.y))(positions, scrolledPositions));
 
+    // TODO more tests. Scrolling while already in the viewport, scrolling while partially out of the view, etc.
+
 }
 
 class ScrollIntoViewAction : TreeAction {
