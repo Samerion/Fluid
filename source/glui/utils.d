@@ -97,11 +97,14 @@ struct SimpleConstructor(T, alias fun = "a") {
         }
 
         // Old-style, plain construction
-        else {
+        else static if (__traits(compiles, new Type(args))) {
 
             auto result = new Type(args);
 
         }
+
+        // If neither compile, try the new call convention again to make sure it emits an error message
+        else auto result = new Type(params, args[arity..$]);
 
         initializer(result);
         return result;
