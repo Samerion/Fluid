@@ -2,9 +2,20 @@ module glui.default_theme;
 
 import glui.style;
 
+/// Theme with no properties set.
+///
+/// Unlike `Theme.init` or `null`, which will be replaced by gluiDefaultTheme or the parent's theme, this can be used as
+/// a valid theme for any node. This makes it useful for automatic tests, since it has guaranteed no margins, padding,
+/// or other properties that may confuse the tester.
+Theme nullTheme;
+
+/// Default theme that Glui will use if no theme is supplied. It is a very simple theme that does the minimum to make
+/// the role of each node understandable.
 Theme gluiDefaultTheme;
 
 static this() {
+
+    nullTheme = Theme.init.makeTheme!q{};
 
     gluiDefaultTheme = Theme.init.makeTheme!q{
 
