@@ -96,7 +96,8 @@ interface GluiBackend {
     void drawRectangle(Rectangle rectangle, Color color);
 
     /// Draw a texture.
-    void drawTexture(Texture texture, Vector2 position, Color tint);
+    void drawTexture(Texture texture, Vector2 position, Color tint)
+    in (texture.backend is this, "Given texture comes from a different backend");
 
 }
 
@@ -383,6 +384,12 @@ struct Texture {
     uint id;
     int width;
     int height;
+
+    bool opEquals(const Texture other) const
+
+        => id == other.id
+        && width == other.width
+        && height == other.height;
 
     /// Draw this texture.
     void draw(Vector2 position, Color tint = color!"fff") {
