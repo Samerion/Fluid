@@ -61,20 +61,23 @@ class HeadlessBackend : GluiBackend {
 
         bool isClose(Rectangle rectangle) const
 
-            => isClose(
-                cast(int) rectangle.x,
-                cast(int) rectangle.y,
-                cast(int) rectangle.width,
-                cast(int) rectangle.height,
-            );
+            => isClose(rectangle.tupleof);
 
-
-        bool isClose(int x, int y, int width, int height) const
+        bool isClose(float x, float y, float width, float height) const
 
             => .isClose(this.rectangle.x, x)
             && .isClose(this.rectangle.y, y)
             && .isClose(this.rectangle.width, width)
             && .isClose(this.rectangle.height, height);
+
+        bool isStartClose(Vector2 start) const
+
+            => isStartClose(start.tupleof);
+
+        bool isStartClose(float x, float y) const
+
+            => .isClose(this.rectangle.x, x)
+            && .isClose(this.rectangle.y, y);
 
     }
 
@@ -86,7 +89,7 @@ class HeadlessBackend : GluiBackend {
         Vector2 position;
         Color tint;
 
-        alias rectangle this;
+        alias drawnRectangle this;
 
         this(Texture texture, Vector2 position, Color tint) {
 
@@ -100,6 +103,10 @@ class HeadlessBackend : GluiBackend {
         Texture texture(HeadlessBackend backend) const
 
             => Texture(backend, id, width, height);
+
+        DrawnRectangle drawnRectangle() const
+
+            => DrawnRectangle(rectangle, tint);
 
         Rectangle rectangle() const
 
@@ -479,7 +486,7 @@ class HeadlessBackend : GluiBackend {
     void assertTriangle(Vector2 a, Vector2 b, Vector2 c, Color color) {
 
         assert(
-            !triangles.filter!(trig => trig.isClose(a, b, c) && trig.color == color).empty,
+            triangles.canFind!(trig => trig.isClose(a, b, c) && trig.color == color),
             "No matching triangle"
         );
 
@@ -489,8 +496,18 @@ class HeadlessBackend : GluiBackend {
     void assertRectangle(Rectangle r, Color color) {
 
         assert(
-            !rectangles.filter!(rect => rect.isClose(r) && rect.color == color).empty,
+            rectangles.canFind!(rect => rect.isClose(r) && rect.color == color),
             "No matching rectangle"
+        );
+
+    }
+
+    /// Throw an `AssertError` if given texture was never drawn.
+    void assertTexture(Rectangle r, Color color) {
+
+        assert(
+            textures.canFind!(rect => rect.isClose(r) && rect.color == color),
+            "No matching texture"
         );
 
     }
@@ -533,13 +550,6 @@ class HeadlessBackend : GluiBackend {
                         ],
                         attr("fill") = trig.color.toHex,
                     ),
-                    (DrawnRectangle rect) => elem!"rect"(
-                        attr("x") = rect.x.text,
-                        attr("y") = rect.y.text,
-                        attr("width") = rect.width.text,
-                        attr("height") = rect.height.text,
-                        attr("fill") = rect.color.toHex,
-                    ),
                     (DrawnTexture texture) => elem!"rect"(
                         attr("x") = texture.position.x.text,
                         attr("y") = texture.position.y.text,
@@ -547,6 +557,13 @@ class HeadlessBackend : GluiBackend {
                         attr("height") = texture.height.text,
                         attr("fill") = texture.tint.toHex,
                         // TODO draw the texture?
+                    ),
+                    (DrawnRectangle rect) => elem!"rect"(
+                        attr("x") = rect.x.text,
+                        attr("y") = rect.y.text,
+                        attr("width") = rect.width.text,
+                        attr("height") = rect.height.text,
+                        attr("fill") = rect.color.toHex,
                     ),
                 ))
             );

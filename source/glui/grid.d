@@ -56,7 +56,49 @@ class GluiGrid : GluiFrame {
 
     }
 
-    this(T...)(T args) {
+    this(Ts...)(NodeParams params, Segments segments, Ts children) {
+
+        this.segmentCount = segments.layout.expand;
+        this(params, children);
+
+    }
+
+    this(Ts...)(NodeParams params, Ts children)
+    if (children.length == 0 || !is(typeof(children[0]) == Segments))
+    do {
+
+        super(params);
+
+        this.children.length = children.length;
+
+        // Check the other arguments
+        static foreach (i, arg; children) {{
+
+            // Grid row (via array)
+            static if (is(typeof(arg) : U[], U)) {
+
+                this.children[i] = gridRow(this, arg);
+
+            }
+
+            // Other stuff
+            else {
+
+                this.children[i] = arg;
+
+            }
+
+        }}
+
+    }
+
+    version (none)
+    deprecated("Pass NodeParams as the first argument or use simpleConstructor")
+    this(T...)(T args)
+    if (args.length == 0 || !is(typeof(args[0]) == NodeParams))
+    do {
+
+        // TODO get rid of Number and extractParams
 
         // First arguments
         const params = extractParams(args);
@@ -82,6 +124,90 @@ class GluiGrid : GluiFrame {
 
     }
 
+    unittest {
+
+        import std.math;
+        import std.array;
+        import std.typecons;
+        import glui.label;
+
+        auto io = new HeadlessBackend;
+        auto root = grid(
+            .Theme.init,
+            .layout!"fill",
+            .segments!4,
+
+            label("You can make tables and grids with GluiGrid"),
+            [
+                label("This"),
+                label("Is"),
+                label("A"),
+                label("Grid"),
+            ],
+            [
+                label(.segments!2, "Multiple columns"),
+                label(.segments!2, "For a single cell"),
+            ]
+        );
+
+        root.io = io;
+        root.draw();
+
+        // Check layout parameters
+
+        assert(root.layout == .layout!"fill");
+        assert(root.segmentCount == 4);
+        assert(root.children.length == 3);
+
+        assert(cast(GluiLabel) root.children[0]);
+
+        auto row1 = cast(GluiGridRow) root.children[1];
+
+        assert(row1);
+        assert(row1.segmentCount == 4);
+        assert(row1.children.all!"a.layout.expand == 0");
+
+        auto row2 = cast(GluiGridRow) root.children[2];
+
+        assert(row2);
+        assert(row2.segmentCount == 4);
+        assert(row2.children.all!"a.layout.expand == 2");
+
+        // Current implementation requires an extra frame to settle. This shouldn't be necessary.
+        io.nextFrame;
+        root.draw();
+
+        // Each column should be 200px wide
+        assert(root.segmentSizes == [200, 200, 200, 200]);
+
+        const rowEnds = root.children.map!(a => a.minSize.y)
+            .cumulativeFold!"a + b"
+            .array;
+
+        // Check if the drawing is correct
+        // Row 0
+        io.assertTexture(Rectangle(0, 0, root.children[0].minSize.tupleof), color!"000");
+
+        // Row 1
+        foreach (i; 0..4) {
+
+            const start = Vector2(i * 200, rowEnds[0]);
+
+            assert(io.textures.canFind!(tex => tex.isStartClose(start)));
+
+        }
+
+        // Row 2
+        foreach (i; 0..2) {
+
+            const start = Vector2(i * 400, rowEnds[1]);
+
+            assert(io.textures.canFind!(tex => tex.isStartClose(start)));
+
+        }
+
+    }
+
     /// Magic to extract return value of extractParams at compile time.
     private struct Number(ulong num) {
 
@@ -94,7 +220,9 @@ class GluiGrid : GluiFrame {
     /// Returns: An instance of `Number` with said index as parameter.
     private auto extractParams(Args...)(Args args) {
 
-        static foreach (i, arg; args[0..min(args.length, 3)]) {
+        enum maxInitialArgs = min(args.length, 3);
+
+        static foreach (i, arg; args[0..maxInitialArgs]) {
 
             // Complete; wait to the end
             static if (__traits(compiles, endIndex)) { }
@@ -127,7 +255,7 @@ class GluiGrid : GluiFrame {
 
         static if (!__traits(compiles, endIndex)) {
 
-            enum endIndex = args.length;
+            enum endIndex = maxInitialArgs;
 
         }
 
@@ -177,6 +305,7 @@ class GluiGrid : GluiFrame {
 
     override void drawImpl(Rectangle outer, Rectangle inner) {
 
+        // TODO WHY is this done here and not in resizeImpl?
         void expand(GluiNode child) {
 
             // Given more grid space than we allocated
@@ -240,8 +369,8 @@ class GluiGrid : GluiFrame {
             [ label(""), label(""), label("") ],
         );
 
-        g.tree = new LayoutTree(g);
-        g.resize(g.tree, makeTheme!q{ }, Vector2());
+        g.backend = new HeadlessBackend;
+        g.draw();
 
         assert(g.segmentCount == 6);
 
