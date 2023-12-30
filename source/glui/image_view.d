@@ -51,8 +51,12 @@ class GluiImageView : GluiNode {
     }
 
     /// Create an image node from given texture or filename.
+    ///
+    /// Note, if a string is given, the texture will be loaded when resizing. This ensures a Glui backend is available
+    /// to load the texture.
+    ///
     /// Params:
-    ///     source  = `Texture` raylib struct to use, or a filename to load from.
+    ///     source  = `Texture` struct to use, or a filename to load from.
     ///     minSize = Minimum size of the node
     this(T)(NodeParams sup, T source, Vector2 minSize = Vector2(0, 0)) {
 
@@ -99,6 +103,24 @@ class GluiImageView : GluiNode {
             updateSize();
 
             return filename;
+
+        }
+
+        unittest {
+
+            auto io = new HeadlessBackend;
+            auto root = imageView(.nullTheme, "logo.png");
+
+            // The texture will lazy-load
+            assert(root.texture == Texture.init);
+
+            root.io = io;
+            root.draw();
+
+            // Texture should be loaded by now
+            assert(root.texture != Texture.init);
+
+            io.assertTexture(root.texture, Vector2(0, 0), color!"fff");
 
         }
 

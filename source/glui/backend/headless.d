@@ -112,6 +112,17 @@ class HeadlessBackend : GluiBackend {
 
             => Rectangle(position.tupleof, width, height);
 
+        alias isPositionClose = isStartClose;
+
+        bool isStartClose(Vector2 start) const
+
+            => isStartClose(start.tupleof);
+
+        bool isStartClose(float x, float y) const
+
+            => .isClose(this.position.x, x)
+            && .isClose(this.position.y, y);
+
     }
 
     alias Drawing = SumType!(DrawnLine, DrawnTriangle, DrawnRectangle, DrawnTexture);
@@ -454,7 +465,9 @@ class HeadlessBackend : GluiBackend {
     }
 
     /// Draw a texture.
-    void drawTexture(Texture texture, Vector2 position, Color tint) {
+    void drawTexture(Texture texture, Vector2 position, Color tint)
+    in (false)
+    do {
 
         canvas ~= Drawing(DrawnTexture(texture, position, tint));
 
@@ -502,6 +515,22 @@ class HeadlessBackend : GluiBackend {
 
     }
 
+    /// Throw an `AssertError` if the texture was never drawn with given parameters.
+    void assertTexture(const Texture texture, Vector2 position, Color tint) {
+
+        assert(texture.backend is this, "Given texture comes from a different backend");
+        assert(
+            textures.canFind!(tex
+                => tex.id == texture.id
+                && tex.width == texture.width
+                && tex.height == texture.height
+                && tex.isPositionClose(position)
+                && tex.tint == tint),
+            "No matching texture"
+        );
+
+    }
+
     /// Throw an `AssertError` if given texture was never drawn.
     void assertTexture(Rectangle r, Color color) {
 
@@ -519,8 +548,20 @@ class HeadlessBackend : GluiBackend {
 
         /// Convert the canvas to SVG. Intended for debugging only.
         ///
+        /// `toSVG` provides the document as a string (including the XML prolog), `toSVGElement` provides a Glui element
+        /// (without the prolog) and `saveSVG` saves it to a file.
+        ///
         /// Note that rendering textures and text is NOT implemented. They will render as rectangles instead with
         /// whatever tint color they have been assigned.
+        void saveSVG(string filename) const {
+
+            import std.file : write;
+
+            write(filename, toSVG);
+
+        }
+
+        /// ditto
         string toSVG() const
 
             => Element.XMLDeclaration1_0 ~ this.toSVGElement;

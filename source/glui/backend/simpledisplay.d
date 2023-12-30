@@ -557,7 +557,9 @@ class SimpledisplayBackend : GluiBackend {
 
     }
 
-    void drawTexture(Texture texture, Vector2 position, Color tint) @trusted {
+    void drawTexture(Texture texture, Vector2 position, Color tint) @trusted
+    in (false)
+    do {
 
         auto rectangle = Rectangle(position.tupleof, texture.width, texture.height);
 
