@@ -17,6 +17,13 @@ import glui.backend;
 @safe:
 
 
+/// Rendering textures in SVG requires arsd.image
+version (Have_arsd_official_image_files)
+    enum svgTextures = true;
+else
+    enum svgTextures = false;
+
+
 class HeadlessBackend : GluiBackend {
 
     enum State {
@@ -142,8 +149,10 @@ class HeadlessBackend : GluiBackend {
         bool _justResized;
         bool _scissorsOn;
 
-        /// IDs used for textures.
-        uint[] allocatedTextures;
+        /// Currently allocated/used textures as URLs.
+        ///
+        /// Textures loaded from images are `null` if arsd.image isn't present.
+        string[uint] allocatedTextures;
 
         /// Last used texture ID.
         uint lastTextureID;
@@ -403,29 +412,67 @@ class HeadlessBackend : GluiBackend {
 
         => _cursor;
 
-    /// Load a texture from memory or file.
     Texture loadTexture(Image image) @system {
+
+        // It's probably desirable to have this toggleable at class level
+        static if (svgTextures) {
+
+            import std.base64;
+            import arsd.png;
+            import arsd.image;
+
+            // Load the image
+            auto data = cast(ubyte[]) image.pixels;
+            auto arsdImage = new TrueColorImage(image.width, image.height, data);
+
+            // Encode as a PNG in a data URL
+            auto png = arsdImage.writePngToArray();
+            auto base64 = Base64.encode(png);
+            auto url = format!"data:image/png;base64,%s"(base64);
+
+            // Convert to a Glui image
+            return loadTexture(url, arsdImage.width, arsdImage.height);
+
+        }
+
+        // Can't load the texture, pretend to load a 16px texture
+        else return loadTexture(null, image.width, image.height);
+
+    }
+
+    Texture loadTexture(string filename) @system {
+
+        static if (svgTextures) {
+
+            import std.uri : encodeURI = encode;
+            import std.path;
+            import arsd.image;
+
+            // Load the image to check its size
+            auto image = loadImageFromFile(filename);
+            auto url = format!"file:///%s"(filename.absolutePath.encodeURI);
+
+            return loadTexture(url, image.width, image.height);
+
+        }
+
+        // Can't load the texture, pretend to load a 16px texture
+        else return loadTexture(null, 16, 16);
+
+    }
+
+    Texture loadTexture(string url, int width, int height) {
 
         Texture texture;
         texture.backend = this;
         texture.id = ++lastTextureID;
-        texture.width = image.width;
-        texture.height = image.height;
+        texture.width = width;
+        texture.height = height;
 
-        allocatedTextures ~= texture.id;
+        // Allocate the texture
+        allocatedTextures[texture.id] = url;
 
         return texture;
-
-    }
-
-    /// Dummy function: does NOT load any textures.
-    Texture loadTexture(string filename) @system {
-
-        Image image;
-        image.width = 100;
-        image.height = 100;
-
-        return loadTexture(image);
 
     }
 
@@ -433,15 +480,13 @@ class HeadlessBackend : GluiBackend {
     /// will ensure the correct backend is called.
     void unloadTexture(Texture texture) @system {
 
-        auto index = allocatedTextures.countUntil(texture.id);
+        const found = texture.id in allocatedTextures;
 
-        assert(index != -1, format!"headless: Attempted to free nonexistent texture %s"(texture));
+        assert(found, format!"headless: Attempted to free nonexistent texture %s"(texture));
 
-        allocatedTextures = allocatedTextures.remove(index);
+        allocatedTextures.remove(texture.id);
 
     }
-
-    // TODO make these store data
 
     /// Draw a line.
     void drawLine(Vector2 start, Vector2 end, Color color) {
@@ -567,9 +612,52 @@ class HeadlessBackend : GluiBackend {
             => Element.XMLDeclaration1_0 ~ this.toSVGElement;
 
         /// ditto
-        Element toSVGElement() const
+        Element toSVGElement() const {
 
-            => elem!"svg"(
+            /// Colors available as tint filters in the document.
+            bool[Color] tints;
+
+            /// Generate a tint filter for the given color
+            Element useTint(Color color) {
+
+                // Ignore if the given filter already exists
+                if (color in tints) return elems();
+
+                tints[color] = true;
+
+                // <pain>
+                return elem!"filter"(
+
+                    // Use the color as the filter ID, prefixed with "t" instead of "#"
+                    attr("id") = color.toHex!"t",
+
+                    // Create a layer full of that color
+                    elem!"feFlood"(
+                        attr("x") = "0",
+                        attr("y") = "0",
+                        attr("width") = "100%",
+                        attr("height") = "100%",
+                        attr("flood-color") = color.toHex,
+                    ),
+
+                    // Blend in with the original image
+                    elem!"feBlend"(
+                        attr("in2") = "SourceGraphic",
+                        attr("mode") = "multiply",
+                    ),
+
+                    // Use the source image for opacity
+                    elem!"feComposite"(
+                        attr("in2") = "SourceGraphic",
+                        attr("operator") = "in",
+                    ),
+
+                );
+                // </pain>
+
+            }
+
+            return elem!"svg"(
                 attr("xmlns") = "http://www.w3.org/2000/svg",
                 attr("version") = "1.1",
                 attr("width") = text(cast(int) windowSize.x),
@@ -591,14 +679,36 @@ class HeadlessBackend : GluiBackend {
                         ],
                         attr("fill") = trig.color.toHex,
                     ),
-                    (DrawnTexture texture) => elem!"rect"(
-                        attr("x") = texture.position.x.text,
-                        attr("y") = texture.position.y.text,
-                        attr("width") = texture.width.text,
-                        attr("height") = texture.height.text,
-                        attr("fill") = texture.tint.toHex,
-                        // TODO draw the texture?
-                    ),
+                    (DrawnTexture texture) {
+
+                        auto url = texture.id in allocatedTextures;
+                        // TODO tint?
+
+                        // URL given, valid image
+                        if (url && *url)
+                            return elems(
+                                useTint(texture.tint),
+                                elem!"image"(
+                                    attr("x") = texture.position.x.text,
+                                    attr("y") = texture.position.y.text,
+                                    attr("width") = texture.width.text,
+                                    attr("height") = texture.height.text,
+                                    attr("href") = *url,
+                                    attr("style") = format!"filter:url(#%s)"(texture.tint.toHex!"t"),
+                                ),
+                            );
+
+                        // No image, draw a placeholder rect
+                        else
+                            return elem!"rect"(
+                                attr("x") = texture.position.x.text,
+                                attr("y") = texture.position.y.text,
+                                attr("width") = texture.width.text,
+                                attr("height") = texture.height.text,
+                                attr("fill") = texture.tint.toHex,
+                            );
+
+                    },
                     (DrawnRectangle rect) => elem!"rect"(
                         attr("x") = rect.x.text,
                         attr("y") = rect.y.text,
@@ -608,6 +718,8 @@ class HeadlessBackend : GluiBackend {
                     ),
                 ))
             );
+
+        }
 
     }
 

@@ -412,19 +412,19 @@ struct Texture {
 }
 
 /// Get a hex code from color.
-string toHex(Color color) {
+string toHex(string prefix = "#")(Color color) {
 
     import std.format;
 
     // Full alpha, use a six digit code
     if (color.a == 0xff) {
 
-        return format!"#%02x%02x%02x"(color.r, color.g, color.b);
+        return format!(prefix ~ "%02x%02x%02x")(color.r, color.g, color.b);
 
     }
 
     // Include alpha otherwise
-    else return format!"#%02x%02x%02x%02x"(color.tupleof);
+    else return format!(prefix ~ "%02x%02x%02x%02x")(color.tupleof);
 
 }
 
