@@ -13,6 +13,7 @@ import glui.typeface;
 
 public import glui.border;
 public import glui.style_macros;
+public import glui.default_theme;
 public import glui.backend : color;
 
 

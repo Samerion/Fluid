@@ -55,3 +55,67 @@ class GluiHoverButton(T : GluiNode = GluiLabel) : GluiButton!T {
 }
 
 // TODO Needs an example
+
+unittest {
+
+    import glui.backend;
+
+    int hoverFrameCount;
+
+    auto io = new HeadlessBackend;
+    auto root = hoverButton(.nullTheme, "Hello, World!", delegate { hoverFrameCount += 1; });
+
+    root.io = io;
+
+    // Move the mouse away from the button
+    io.mousePosition = io.windowSize;
+    root.draw();
+
+    assert(hoverFrameCount == 0);
+
+    // Hover the button now
+    io.nextFrame;
+    io.mousePosition = Vector2(0, 0);
+    root.draw();
+
+    assert(hoverFrameCount == 1);
+
+    // Press the button
+    io.nextFrame;
+    io.press(GluiMouseButton.left);
+    root.draw();
+
+    assert(io.isDown(GluiMouseButton.left));
+    assert(hoverFrameCount == 2);
+
+    // Wait while the button is pressed
+    io.nextFrame;
+    root.draw();
+
+    assert(io.isDown(GluiMouseButton.left));
+    assert(hoverFrameCount == 3);
+
+    // Release the button
+    io.nextFrame;
+    io.release(GluiMouseButton.left);
+    root.draw();
+
+    assert(io.isUp(GluiMouseButton.left));
+    assert(hoverFrameCount == 4);
+
+    // Move the mouse elsewhere
+    io.nextFrame;
+    io.mousePosition = Vector2(-1, -1);
+    root.draw();
+
+    assert(hoverFrameCount == 4);
+
+    // Press the button outside
+    io.nextFrame;
+    io.press(GluiMouseButton.left);
+    root.draw();
+
+    assert(hoverFrameCount == 4);
+
+
+}

@@ -133,7 +133,11 @@ class GluiGrid : GluiFrame {
 
         auto io = new HeadlessBackend;
         auto root = grid(
-            .Theme.init,
+            .Theme.init.makeTheme!q{
+                GluiLabel.styleAdd!q{
+                    textColor = color!"000";
+                };
+            },
             .layout!"fill",
             .segments!4,
 

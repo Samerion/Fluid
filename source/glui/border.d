@@ -219,9 +219,6 @@ unittest {
     root.reloadStyles();
     root.draw();
 
-    import fs = std.file;
-    debug fs.write("/tmp/glui-canvas.svg", io.toSVG);
-
     // Rectangles
     io.assertRectangle(Rectangle(0, 4, 4, 92), borderColor.sideLeft);
     io.assertRectangle(Rectangle(96, 4, 4, 92), borderColor.sideRight);
