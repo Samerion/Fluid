@@ -64,6 +64,13 @@ struct Text(T : GluiNode) {
 
     }
 
+    string opOpAssign(string operator)(string text) {
+
+        node.updateSize;
+        return mixin("value ", operator, "= text");
+
+    }
+
     /// Get the size of the text.
     Vector2 size() const {
 
