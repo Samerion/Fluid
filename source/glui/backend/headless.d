@@ -596,8 +596,9 @@ class HeadlessBackend : GluiBackend {
         /// `toSVG` provides the document as a string (including the XML prolog), `toSVGElement` provides a Glui element
         /// (without the prolog) and `saveSVG` saves it to a file.
         ///
-        /// Note that rendering textures and text is NOT implemented. They will render as rectangles instead with
-        /// whatever tint color they have been assigned.
+        /// Note that rendering textures and text is only done if arsd.image is available. Otherwise, they will display
+        /// as rectangles filled with whatever tint color was set. Text, if rendered, is rasterized, because it occurs
+        /// earlier in the pipeline, and is not available to the backend.
         void saveSVG(string filename) const {
 
             import std.file : write;
@@ -682,7 +683,6 @@ class HeadlessBackend : GluiBackend {
                     (DrawnTexture texture) {
 
                         auto url = texture.id in allocatedTextures;
-                        // TODO tint?
 
                         // URL given, valid image
                         if (url && *url)
