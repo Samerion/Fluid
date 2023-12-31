@@ -208,18 +208,59 @@ struct InputStroke {
 
     }
 
-    /// Check if all keys or buttons required for the stroke are held down. This is is to make sure only one action is
-    /// performed for each stroke.
+    unittest {
+
+        assert(!InputStroke(GluiKeyboardKey.leftControl).isMouseStroke);
+        assert(!InputStroke(GluiKeyboardKey.w).isMouseStroke);
+        assert(!InputStroke(GluiKeyboardKey.leftControl, GluiKeyboardKey.w).isMouseStroke);
+
+        assert(InputStroke(GluiMouseButton.left).isMouseStroke);
+        assert(InputStroke(GluiKeyboardKey.leftControl, GluiMouseButton.left).isMouseStroke);
+
+        assert(!InputStroke(GluiGamepadButton.triangle).isMouseStroke);
+        assert(!InputStroke(GluiKeyboardKey.leftControl, GluiGamepadButton.triangle).isMouseStroke);
+
+    }
+
+    /// Check if all keys or buttons required for the stroke are held down.
     bool isDown(const GluiBackend backend) const @trusted {
 
         return input.all!(a => isDown(backend, a));
 
     }
 
+    ///
+    unittest {
+
+        auto stroke = InputStroke(GluiKeyboardKey.leftControl, GluiKeyboardKey.w);
+        auto io = new HeadlessBackend;
+
+        // No keys pressed
+        assert(!stroke.isDown(io));
+
+        // Control pressed
+        io.press(GluiKeyboardKey.leftControl);
+        assert(!stroke.isDown(io));
+
+        // Both keys pressed
+        io.press(GluiKeyboardKey.w);
+        assert(stroke.isDown(io));
+
+        // Still pressed, but not immediately
+        io.nextFrame;
+        assert(stroke.isDown(io));
+
+        // W pressed
+        io.release(GluiKeyboardKey.leftControl);
+        assert(!stroke.isDown(io));
+
+    }
+
     /// Check if the stroke has been triggered during this frame.
     ///
     /// If the last item of the action is a mouse button, the action will be triggered on release. If it's a keyboard
-    /// key or gamepad button, it'll be triggered on press.
+    /// key or gamepad button, it'll be triggered on press. All previous items, if present, have to be held down at the
+    /// time.
     bool isActive(const GluiBackend backend) const @trusted {
 
         return (
@@ -236,6 +277,71 @@ struct InputStroke {
             )
 
         );
+
+    }
+
+    unittest {
+
+        auto singleKey = InputStroke(GluiKeyboardKey.w);
+        auto stroke = InputStroke(GluiKeyboardKey.leftControl, GluiKeyboardKey.leftShift, GluiKeyboardKey.w);
+        auto io = new HeadlessBackend;
+
+        // No key pressed
+        assert(!singleKey.isActive(io));
+        assert(!stroke.isActive(io));
+
+        io.press(GluiKeyboardKey.w);
+
+        // Just pressed the "W" key
+        assert(singleKey.isActive(io));
+        assert(!stroke.isActive(io));
+
+        io.nextFrame;
+
+        // The stroke stops being active on the next frame
+        assert(!singleKey.isActive(io));
+        assert(!stroke.isActive(io));
+
+        io.press(GluiKeyboardKey.leftControl);
+        io.press(GluiKeyboardKey.leftShift);
+
+        assert(!singleKey.isActive(io));
+        assert(!stroke.isActive(io));
+
+        // The last key needs to be pressed during the current frame
+        io.press(GluiKeyboardKey.w);
+
+        assert(singleKey.isActive(io));
+        assert(stroke.isActive(io));
+
+        io.release(GluiKeyboardKey.w);
+
+        assert(!singleKey.isActive(io));
+        assert(!stroke.isActive(io));
+
+    }
+
+    /// Mouse actions are activated on release
+    unittest {
+
+        auto stroke = InputStroke(GluiKeyboardKey.leftControl, GluiMouseButton.left);
+        auto io = new HeadlessBackend;
+
+        assert(!stroke.isActive(io));
+
+        io.press(GluiKeyboardKey.leftControl);
+        io.press(GluiMouseButton.left);
+
+        assert(!stroke.isActive(io));
+
+        io.release(GluiMouseButton.left);
+
+        assert(stroke.isActive(io));
+
+        // The action won't trigger if previous keys aren't held down
+        io.release(GluiKeyboardKey.leftControl);
+
+        assert(!stroke.isActive(io));
 
     }
 
@@ -265,7 +371,10 @@ struct InputStroke {
 }
 
 /// This meta-UDA can be attached to an enum, so Glui would recognize members of said enum as an UDA defining input
-/// actions.
+/// actions. As an UDA, this template should be used without instantiating.
+///
+/// This template also serves to provide unique identifiers for each action type, generated on startup. For example,
+/// `InputAction!(GluiInputAction.press).id` will have the same value anywhere in the program.
 ///
 /// Action types are resolved at compile-time using symbols, so you can supply any `@InputAction`-marked enum defining
 /// input actions. All built-in enums are defined in `GluiInputAction`.
@@ -283,8 +392,8 @@ if (isInputActionType!actionType) {
     /// **The pointer** to `_id` serves as ID of the input actions.
     ///
     /// Note: we could be directly getting the address of the ID function itself (`&id`), but it's possible some linkers
-    /// would merge these two declarations, so we're using `&_id` for safety. Example of such behavior can be achieved
-    /// using `ld.gold` with `--icf=all`. It's possible the linker could be aware we're checking the function address
+    /// would merge declarations, so we're using `&_id` for safety. Example of such behavior can be achieved using
+    /// `ld.gold` with `--icf=all`. It's possible the linker could be aware we're checking the function address
     // (`--icf=safe` works correctly), but again, we prefer to play it safe. Alternatively, we could test for this
     /// behavior when the program starts, but it probably isn't worth it.
     align(1)
@@ -298,12 +407,107 @@ if (isInputActionType!actionType) {
 
 }
 
+unittest {
+
+    assert(InputAction!(GluiInputAction.press).id == InputAction!(GluiInputAction.press).id);
+    assert(InputAction!(GluiInputAction.press).id != InputAction!(GluiInputAction.entryUp).id);
+
+    // IDs should have the same equality as the enum members, within the same enum
+    // This will not be the case for enum values with explicitly assigned values (but probably should be!)
+    foreach (left; EnumMembers!GluiInputAction) {
+
+        foreach (right; EnumMembers!GluiInputAction) {
+
+            if (left == right)
+                assert(InputAction!left.id == InputAction!right.id);
+            else
+                assert(InputAction!left.id != InputAction!right.id);
+
+        }
+
+    }
+
+    // Enum values don't have to have globally unique
+    @InputAction
+    enum FooActions {
+        action = 0,
+    }
+
+    @InputAction
+    enum BarActions {
+        action = 0,
+    }
+
+    assert(InputAction!(FooActions.action).id == InputAction!(FooActions.action).id);
+    assert(InputAction!(FooActions.action).id != InputAction!(BarActions.action).id);
+    assert(InputAction!(FooActions.action).id != InputAction!(GluiInputAction.press).id);
+    assert(InputAction!(BarActions.action).id != InputAction!(GluiInputAction.press).id);
+
+}
+
+@system
+unittest {
+
+    import std.concurrency;
+
+    // IDs are global across threads
+    auto t0 = InputAction!(GluiInputAction.press).id;
+
+    spawn({
+
+        ownerTid.send(InputAction!(GluiInputAction.press).id);
+
+        spawn({
+
+            ownerTid.send(InputAction!(GluiInputAction.press).id);
+
+        });
+
+        ownerTid.send(receiveOnly!InputActionID);
+
+        ownerTid.send(InputAction!(GluiInputAction.cancel).id);
+
+    });
+
+    auto t1 = receiveOnly!InputActionID;
+    auto t2 = receiveOnly!InputActionID;
+
+    auto c0 = InputAction!(GluiInputAction.cancel).id;
+    auto c1 = receiveOnly!InputActionID;
+
+    assert(t0 == t1);
+    assert(t1 == t2);
+
+    assert(c0 != t0);
+    assert(c1 != t1);
+    assert(c0 != t1);
+    assert(c1 != t0);
+
+    assert(t0 == t1);
+
+}
+
 inout(InputStroke)[] getStrokes(alias type)(inout(LayoutTree)* tree)
 if (isInputActionType!type) {
 
     // Note: `get` doesn't support `inout`
     if (auto r = InputAction!type in tree.boundInputs) return *r;
     else return null;
+
+}
+
+unittest {
+
+    import glui.space;
+
+    auto tree = new LayoutTree(vspace());
+    auto strokes = tree.getStrokes!(GluiInputAction.press);
+
+    // "press" can be activated with the left mouse button
+    assert(strokes.canFind(InputStroke(GluiMouseButton.left)));
+
+    // It can also be activated with the enter key
+    assert(strokes.canFind(InputStroke(GluiKeyboardKey.enter)));
 
 }
 
@@ -315,11 +519,38 @@ if (isInputActionType!type) {
 
 }
 
+unittest {
+
+    import glui.space;
+
+    auto tree = new LayoutTree(vspace());
+    auto strokes = tree.getMouseStrokes!(GluiInputAction.press);
+
+    // Out of all mouse buttons, "press" can only be activated with the left button, at least with the default bindings
+    assert(strokes.equal([InputStroke(GluiMouseButton.left)]));
+
+}
+
 /// Get all strokes that might be performed with a keyboard or gamepad that may trigger this action.
 auto getFocusStrokes(alias type)(LayoutTree* tree)
 if (isInputActionType!type) {
 
     return getStrokes!type(tree).filter!"!a.isMouseStroke";
+
+}
+
+unittest {
+
+    import glui.space;
+
+    auto tree = new LayoutTree(vspace());
+    auto strokes = tree.getFocusStrokes!(GluiInputAction.press);
+
+    // "press" can be activated with the enter key
+    assert(strokes.canFind(InputStroke(GluiKeyboardKey.enter)));
+
+    // Because mouse strokes are filtered out, they will not appear in the result
+    assert(!strokes.canFind(InputStroke(GluiMouseButton.left)));
 
 }
 
@@ -332,6 +563,37 @@ if (isInputActionType!type) {
 
 }
 
+unittest {
+
+    import glui.space;
+
+    auto tree = new LayoutTree(vspace());
+    auto io = new HeadlessBackend;
+
+    tree.io = io;
+
+    // Nothing pressed, action not activated
+    assert(!tree.isDown!(GluiInputAction.backspaceWord));
+
+    io.press(GluiKeyboardKey.leftControl);
+    io.press(GluiKeyboardKey.backspace);
+
+    // The action is now held down with the ctrl+blackspace stroke
+    assert(tree.isDown!(GluiInputAction.backspaceWord));
+
+    io.release(GluiKeyboardKey.backspace);
+    io.press(GluiKeyboardKey.w);
+
+    // ctrl+W also activates the stroke
+    assert(tree.isDown!(GluiInputAction.backspaceWord));
+
+    io.release(GluiKeyboardKey.leftControl);
+
+    // Control up, won't match any stroke now
+    assert(!tree.isDown!(GluiInputAction.backspaceWord));
+
+}
+
 /// Check if a mouse stroke bound to this action is being held.
 bool isMouseDown(alias type)(LayoutTree* tree)
 if (isInputActionType!type) {
@@ -340,11 +602,78 @@ if (isInputActionType!type) {
 
 }
 
+unittest {
+
+    import glui.space;
+
+    auto tree = new LayoutTree(vspace());
+    auto io = new HeadlessBackend;
+
+    tree.io = io;
+
+    assert(!tree.isDown!(GluiInputAction.press));
+
+    io.press(GluiMouseButton.left);
+
+    // Pressing with a mouse
+    assert(tree.isDown!(GluiInputAction.press));
+    assert(tree.isMouseDown!(GluiInputAction.press));
+
+    io.release(GluiMouseButton.left);
+
+    // Releasing a mouse key still counts as holding it down
+    // This is important — a released mouse is used to trigger the action
+    assert(tree.isDown!(GluiInputAction.press));
+    assert(tree.isMouseDown!(GluiInputAction.press));
+
+    // Need to wait a frame
+    io.nextFrame;
+
+    assert(!tree.isDown!(GluiInputAction.press));
+
+    io.press(GluiKeyboardKey.enter);
+
+    // Pressing with a keyboard
+    assert(tree.isDown!(GluiInputAction.press));
+    assert(!tree.isMouseDown!(GluiInputAction.press));
+
+    io.release(GluiKeyboardKey.enter);
+
+    assert(!tree.isDown!(GluiInputAction.press));
+
+}
+
 /// Check if a keyboard or gamepad stroke bound to this action is being held.
 bool isFocusDown(alias type)(LayoutTree* tree)
 if (isInputActionType!type) {
 
     return getFocusStrokes!type(tree).any!(a => a.isDown(tree.backend));
+
+}
+
+unittest {
+
+    import glui.space;
+
+    auto tree = new LayoutTree(vspace());
+    auto io = new HeadlessBackend;
+
+    tree.io = io;
+
+    assert(!tree.isDown!(GluiInputAction.press));
+
+    io.press(GluiKeyboardKey.enter);
+
+    // Pressing with a keyboard
+    assert(tree.isDown!(GluiInputAction.press));
+    assert(tree.isFocusDown!(GluiInputAction.press));
+
+    io.release(GluiKeyboardKey.enter);
+    io.press(GluiMouseButton.left);
+
+    // Pressing with a mouse
+    assert(tree.isDown!(GluiInputAction.press));
+    assert(!tree.isFocusDown!(GluiInputAction.press));
 
 }
 
@@ -369,14 +698,6 @@ bool isFocusActive(alias type)(LayoutTree* tree)
 if (isInputActionType!type) {
 
     return getFocusStrokes!type(tree).any!(a => a.isActive(tree.backend));
-
-}
-
-
-unittest {
-
-    assert(InputAction!(GluiInputAction.press).id == InputAction!(GluiInputAction.press).id);
-    assert(InputAction!(GluiInputAction.press).id != InputAction!(GluiInputAction.entryUp).id);
 
 }
 
