@@ -70,7 +70,7 @@ abstract class GluiNode : Styleable {
         bool toRemove;
 
         /// If true, mouse focus will be disabled for this node, so mouse signals will "go through" to its parents, as
-        /// if the node wasn't there. The mouse will still detect hover like normal.
+        /// if the node wasn't there. The node will still detect hover like normal.
         bool ignoreMouse;
 
     }
