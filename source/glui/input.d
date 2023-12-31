@@ -1018,3 +1018,227 @@ abstract class GluiInput(Parent : GluiNode) : Parent, GluiFocusable {
     }
 
 }
+
+unittest {
+
+    import glui.label;
+
+    // This test checks triggering and running actions bound via UDAs, including reacting to keyboard and mouse input.
+
+    int pressCount;
+    int cancelCount;
+
+    auto io = new HeadlessBackend;
+    auto root = new class GluiInput!GluiLabel {
+
+        @safe:
+
+        mixin enableInputActions;
+
+        this() {
+            super(NodeParams(), "");
+        }
+
+        override void resizeImpl(Vector2 space) {
+
+            minSize = Vector2(10, 10);
+
+        }
+
+        @(GluiInputAction.press)
+        void _pressed() {
+
+            pressCount++;
+
+        }
+
+        @(GluiInputAction.cancel)
+        void _cancelled() {
+
+            cancelCount++;
+
+        }
+
+    };
+
+    root.io = io;
+    root.theme = nullTheme;
+    root.focus();
+
+    // Press the node via focus
+    io.press(GluiKeyboardKey.enter);
+
+    assert(root.tree.isFocusActive!(GluiInputAction.press));
+
+    root.draw();
+
+    assert(pressCount == 1);
+
+    io.nextFrame;
+
+    // Holding shouldn't trigger the callback multiple times
+    root.draw();
+
+    assert(pressCount == 1);
+
+    // Hover the node and press it with the mouse
+    io.nextFrame;
+    io.release(GluiKeyboardKey.enter);
+    io.mousePosition = Vector2(5, 5);
+    io.press(GluiMouseButton.left);
+
+    root.draw();
+    root.tree.focus = null;
+
+    // This shouldn't be enough to activate the action
+    assert(pressCount == 1);
+
+    // If we now drag away from the button and release...
+    io.nextFrame;
+    io.mousePosition = Vector2(15, 15);
+    io.release(GluiMouseButton.left);
+
+    root.draw();
+
+    // ...the action shouldn't trigger
+    assert(pressCount == 1);
+
+    // But if we release the mouse on the button
+    io.nextFrame;
+    io.mousePosition = Vector2(5, 5);
+    io.release(GluiMouseButton.left);
+
+    root.draw();
+
+    assert(pressCount == 2);
+    assert(cancelCount == 0);
+
+    // Focus the node again
+    root.focus();
+
+    // Press escape to cancel
+    io.nextFrame;
+    io.press(GluiKeyboardKey.escape);
+
+    root.draw();
+
+    assert(pressCount == 2);
+    assert(cancelCount == 1);
+
+}
+
+unittest {
+
+    import glui.space;
+    import glui.button;
+
+    // This test checks if "hover slipping" happens; namely, if the user clicks and holds on an object, then hovers on
+    // something else and releases, the click should be cancelled, and no other object should react to the same click.
+
+    class SquareButton : GluiButton!() {
+
+        mixin enableInputActions;
+
+        this(T...)(T t) {
+            super(NodeParams(), t);
+        }
+
+        override void resizeImpl(Vector2) {
+            minSize = Vector2(10, 10);
+        }
+
+    }
+
+    int[2] pressCount;
+    SquareButton[2] buttons;
+
+    auto io = new HeadlessBackend;
+    auto root = hspace(
+        .nullTheme,
+        buttons[0] = new SquareButton("", delegate { pressCount[0]++; }),
+        buttons[1] = new SquareButton("", delegate { pressCount[1]++; }),
+    );
+
+    root.io = io;
+
+    // Press the left button
+    io.mousePosition = Vector2(5, 5);
+    io.press(GluiMouseButton.left);
+
+    root.draw();
+
+    // Release it
+    io.release(GluiMouseButton.left);
+
+    root.draw();
+
+    assert(root.tree.hover is buttons[0]);
+    assert(pressCount == [1, 0], "Left button should trigger");
+
+    // Press the right button
+    io.nextFrame;
+    io.mousePosition = Vector2(15, 5);
+    io.press(GluiMouseButton.left);
+
+    root.draw();
+
+    // Release it
+    io.release(GluiMouseButton.left);
+
+    root.draw();
+
+    assert(pressCount == [1, 1], "Right button should trigger");
+
+    // Press the left button, but don't release
+    io.nextFrame;
+    io.mousePosition = Vector2(5, 5);
+    io.press(GluiMouseButton.left);
+
+    root.draw();
+
+    assert( buttons[0].isPressed);
+    assert(!buttons[1].isPressed);
+
+    // Move the cursor over the right button
+    io.nextFrame;
+    io.mousePosition = Vector2(15, 5);
+
+    root.draw();
+
+    // Left button should have tree-scope hover, but isHovered status is undefined. At the time of writing, only the
+    // right button will be isHovered and neither will be isPressed.
+    //
+    // TODO It might be a good idea to make neither isHovered. Consider new condition:
+    //
+    //      (_isHovered && tree.hover is this && !_isDisabled && !tree.isBranchDisabled)
+    //
+    // This should also fix having two nodes visually hovered in case they overlap.
+    //
+    // Other frameworks might retain isPressed status on the left button, but it might good idea to keep current
+    // behavior as a visual clue it wouldn't trigger.
+    assert(root.tree.hover is buttons[0]);
+
+    // Release the button on the next frame
+    io.nextFrame;
+    io.release(GluiMouseButton.left);
+
+    root.draw();
+
+    assert(pressCount == [1, 1], "Neither button should trigger on lost hover");
+
+    // Things should go to normal next frame
+    io.nextFrame;
+    io.press(GluiMouseButton.left);
+
+    root.draw();
+
+    // So we can expect the right button to trigger now
+    io.nextFrame;
+    io.release(GluiMouseButton.left);
+
+    root.draw();
+
+    assert(root.tree.hover is buttons[1]);
+    assert(pressCount == [1, 2]);
+
+}

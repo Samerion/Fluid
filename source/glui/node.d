@@ -380,8 +380,10 @@ abstract class GluiNode : Styleable {
         // Mouse is hovering an input node
         if (auto hoverInput = cast(GluiHoverable) tree.hover) {
 
-            // Ignore if the node is disabled
-            if (!tree.hover.isDisabledInherited) {
+            // Ignore if the node is disabled or hover is prolonged:
+            // Note that nodes will remain in tree.hover if LMB is pressed to prevent "hover stealing" — actions should
+            // only trigger if the button was both pressed and released on the node.
+            if (!tree.hover.isDisabledInherited && tree.hover.isHovered) {
 
                 // Check if the node is focusable
                 auto focusable = cast(GluiFocusable) tree.hover;
