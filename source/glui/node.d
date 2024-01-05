@@ -187,6 +187,12 @@ abstract class GluiNode : Styleable {
 
     }
 
+    bool opEquals(const GluiNode otherNode) const {
+
+        return this is otherNode;
+
+    }
+
     /// Show the node.
     This show(this This = GluiNode)() return {
 
@@ -201,6 +207,38 @@ abstract class GluiNode : Styleable {
 
         isHidden = true;
         return cast(This) this;
+
+    }
+
+    unittest {
+
+        auto io = new HeadlessBackend;
+        auto root = new class GluiNode {
+
+            mixin implHoveredRect;
+
+            override void resizeImpl(Vector2) {
+                minSize = Vector2(10, 10);
+            }
+
+            override void drawImpl(Rectangle outer, Rectangle inner) {
+                io.drawRectangle(inner, color!"123");
+            }
+
+        };
+
+        root.io = io;
+        root.theme = nullTheme;
+        root.draw();
+
+        io.assertRectangle(Rectangle(0, 0, 10, 10), color!"123");
+        io.nextFrame;
+
+        // Hide the node now
+        root.hide();
+        root.draw();
+
+        assert(io.rectangles.empty);
 
     }
 
@@ -246,7 +284,11 @@ abstract class GluiNode : Styleable {
     alias io = backend;
 
     /// Toggle the node's visibility.
-    final void toggleShow() { isHidden = !isHidden; }
+    final void toggleShow() {
+
+        isHidden = !isHidden;
+
+    }
 
     /// Remove this node from the tree before the next draw.
     final void remove() {
@@ -290,11 +332,112 @@ abstract class GluiNode : Styleable {
 
     }
 
+    unittest {
+
+        import glui.space;
+
+        GluiNode[4] allNodes;
+        GluiNode[] visitedNodes;
+
+        auto io = new HeadlessBackend;
+        auto root = allNodes[0] = vspace(
+            allNodes[1] = hspace(
+                allNodes[2] = hspace(),
+            ),
+            allNodes[3] = hspace(),
+        );
+        auto action = new class TreeAction {
+
+            override void beforeDraw(GluiNode node, Rectangle) {
+
+                visitedNodes ~= node;
+
+            }
+
+        };
+
+        // Queue the action before creating the tree
+        root.queueAction(action);
+
+        // Assign the backend; note this would create a tree
+        root.io = io;
+
+        root.draw();
+
+        assert(visitedNodes == allNodes);
+
+        // Clear visited nodes
+        io.nextFrame;
+        visitedNodes = [];
+        action.toStop = false;
+
+        // Queue an action in a branch
+        allNodes[1].queueAction(action);
+
+        root.draw();
+
+        assert(visitedNodes == allNodes[1..3]);
+
+    }
+
     /// Recalculate the window size before next draw.
     final void updateSize() scope {
 
         if (tree) tree.root._requiresResize = true;
         // Tree might be null — if so, the node will be resized regardless
+
+    }
+
+    unittest {
+
+        int resizes;
+
+        auto io = new HeadlessBackend;
+        auto root = new class GluiNode {
+
+            mixin implHoveredRect;
+
+            override void resizeImpl(Vector2) {
+
+                resizes++;
+
+            }
+            override void drawImpl(Rectangle, Rectangle) { }
+
+        };
+
+        root.io = io;
+        assert(resizes == 0);
+
+        // Resizes are only done on request
+        foreach (i; 0..10) {
+
+            root.draw();
+            assert(resizes == 1);
+            io.nextFrame;
+
+        }
+
+        // Perform such a request
+        root.updateSize();
+        assert(resizes == 1);
+
+        // Resize will be done right before next draw
+        root.draw();
+        assert(resizes == 2);
+        io.nextFrame;
+
+        // This prevents unnecessary resizes if multiple things change in a single branch
+        root.updateSize();
+        root.updateSize();
+
+        root.draw();
+        assert(resizes == 3);
+        io.nextFrame;
+
+        // Another draw, no more resizes
+        root.draw();
+        assert(resizes == 3);
 
     }
 
@@ -467,6 +610,79 @@ abstract class GluiNode : Styleable {
 
     }
 
+    unittest {
+
+        import glui.space;
+        import glui.button;
+
+        auto io = new HeadlessBackend;
+        auto root = vspace(
+            button("1", delegate { }),
+            button("2", delegate { }),
+            button("3", delegate { }),
+        );
+
+        root.io = io;
+
+        root.draw();
+
+        assert(root.tree.focus is null);
+
+        // Autofocus first
+        {
+
+            io.nextFrame;
+            io.press(GluiKeyboardKey.tab);
+            root.draw();
+
+            // Glui will automatically try to find the first focusable node
+            assert(root.tree.focus.asNode is root.children[0]);
+
+            io.nextFrame;
+            io.release(GluiKeyboardKey.tab);
+            root.draw();
+
+            assert(root.tree.focus.asNode is root.children[0]);
+
+        }
+
+        // Tab into the next node
+        {
+
+            io.nextFrame;
+            io.press(GluiKeyboardKey.tab);
+            root.draw();
+            io.release(GluiKeyboardKey.tab);
+
+            assert(root.tree.focus.asNode is root.children[1]);
+
+        }
+
+        // Autofocus last
+        {
+
+            // TODO Glui cannot
+
+            root.tree.focus = null;
+
+            io.nextFrame;
+            io.press(GluiGamepadButton.leftButton);
+            root.draw();
+
+            // If left-shift is pressed, the last focusable node will be used
+            assert(root.tree.focus.asNode is root.children[$-1]);
+
+            io.nextFrame;
+            io.release(GluiKeyboardKey.leftShift);
+            io.release(GluiKeyboardKey.tab);
+            root.draw();
+
+            assert(root.tree.focus.asNode is root.children[$-1]);
+
+        }
+
+    }
+
     /// Switch to the previous or next focused item
     @(GluiInputAction.focusPrevious, GluiInputAction.focusNext)
     protected void _focusPrevNext(GluiInputAction actionType) {
@@ -535,8 +751,8 @@ abstract class GluiNode : Styleable {
 
         // Get parameters
         const size = Vector2(
-            layout.nodeAlign[0] == NodeAlign.fill ? space.width  : min(space.width,  minSize.x),
-            layout.nodeAlign[1] == NodeAlign.fill ? space.height : min(space.height, minSize.y),
+            round(layout.nodeAlign[0] == NodeAlign.fill ? space.width  : min(space.width,  minSize.x)),
+            round(layout.nodeAlign[1] == NodeAlign.fill ? space.height : min(space.height, minSize.y)),
         );
         const position = position(space, size);
 
@@ -756,7 +972,11 @@ abstract class GluiNode : Styleable {
     }
 
     /// Get the current style.
-    abstract inout(Style) pickStyle() inout;
+    inout(Style) pickStyle() inout {
+
+        return style;
+
+    }
 
     /// Get the node's position in its space box.
     private Vector2 position(Rectangle space, Vector2 usedSpace) const {
@@ -778,6 +998,136 @@ abstract class GluiNode : Styleable {
             round(space.x + positionImpl(layout.nodeAlign[0], space.width  - usedSpace.x)),
             round(space.y + positionImpl(layout.nodeAlign[1], space.height - usedSpace.y)),
         );
+
+    }
+
+    @system  // cathing Error
+    unittest {
+
+        import std.exception;
+        import core.exception;
+        import glui.frame;
+
+        static class Square : GluiFrame {
+            @safe:
+            Color color;
+            this(NodeParams params, Color color) {
+                super(params);
+                this.color = color;
+            }
+            override void resizeImpl(Vector2) {
+                minSize = Vector2(100, 100);
+            }
+            override void drawImpl(Rectangle, Rectangle inner) {
+                io.drawRectangle(inner, color);
+            }
+        }
+
+        alias square = simpleConstructor!Square;
+
+        auto io = new HeadlessBackend;
+        auto colors = [
+            color!"7ff0a5",
+            color!"17cccc",
+            color!"a6a415",
+            color!"cd24cf",
+        ];
+        auto root = vframe(
+            .layout!"fill",
+            square(.layout!"start",  colors[0]),
+            square(.layout!"center", colors[1]),
+            square(.layout!"end",    colors[2]),
+            square(.layout!"fill",   colors[3]),
+        );
+
+        root.theme = Theme.init.makeTheme!q{
+            GluiFrame.styleAdd.backgroundColor = color!"1c1c1c";
+        };
+        root.io = io;
+
+        // Test the layout
+        {
+
+            root.draw();
+
+            // Each square in order
+            io.assertRectangle(Rectangle(0, 0, 100, 100), colors[0]);
+            io.assertRectangle(Rectangle(350, 100, 100, 100), colors[1]);
+            io.assertRectangle(Rectangle(700, 200, 100, 100), colors[2]);
+
+            // Except the last one, which is turned into a rectangle by "fill"
+            // A proper rectangle class would change its target rectangles to keep aspect ratio
+            io.assertRectangle(Rectangle(0, 300, 800, 100), colors[3]);
+
+        }
+
+        // Now do the same, but expand each node
+        {
+
+            io.nextFrame;
+
+            foreach (child; root.children) {
+                child.layout.expand = 1;
+            }
+
+            root.draw().assertThrown!AssertError;  // Oops, forgot to resize!
+            root.updateSize;
+            root.draw();
+
+            io.assertRectangle(Rectangle(0, 0, 100, 100), colors[0]);
+            io.assertRectangle(Rectangle(350, 175, 100, 100), colors[1]);
+            io.assertRectangle(Rectangle(700, 350, 100, 100), colors[2]);
+            io.assertRectangle(Rectangle(0, 450, 800, 150), colors[3]);
+
+        }
+
+        // Change Y alignment
+        {
+
+            io.nextFrame;
+
+            root.children[0].layout = .layout!(1, "start", "end");
+            root.children[1].layout = .layout!(1, "center", "fill");
+            root.children[2].layout = .layout!(1, "end", "start");
+            root.children[3].layout = .layout!(1, "fill", "center");
+
+            root.updateSize;
+            root.draw();
+
+            io.assertRectangle(Rectangle(0, 50, 100, 100), colors[0]);
+            io.assertRectangle(Rectangle(350, 150, 100, 150), colors[1]);
+            io.assertRectangle(Rectangle(700, 300, 100, 100), colors[2]);
+            io.assertRectangle(Rectangle(0, 475, 800, 100), colors[3]);
+
+        }
+
+        // Try different expand values
+        {
+
+            io.nextFrame;
+
+            root.children[0].layout = .layout!(0, "center", "fill");
+            root.children[1].layout = .layout!(1, "center", "fill");
+            root.children[2].layout = .layout!(2, "center", "fill");
+            root.children[3].layout = .layout!(3, "center", "fill");
+
+            root.updateSize;
+            root.draw();
+
+            io.saveSVG("/tmp/glui.svg");
+
+            // The first rectangle doesn't expand so it should be exactly 100×100 in size
+            io.assertRectangle(Rectangle(350, 0, 100, 100), colors[0]);
+
+            // The remaining space is 500px, so divided into 1+2+3=6 pieces, it should be about 83px per piece
+            // TODO Make sure Glui fills in every pixel while filling in the gaps
+            //      (this will make this test fail)
+            //      Practically, that means making `space` track remaining space, rather than available space
+            io.assertRectangle(Rectangle(350, 100, 100, 83), colors[1]);
+            io.assertRectangle(Rectangle(350, 183, 100, 167), colors[2]);
+            io.assertRectangle(Rectangle(350, 349, 100, 250), colors[3]);
+
+        }
 
     }
 
