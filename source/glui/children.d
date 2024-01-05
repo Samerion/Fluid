@@ -115,7 +115,7 @@ debug struct Children {
 
     }
 
-    int opApply(scope int delegate(GluiNode node) @trusted dg) {
+    int opApply(scope int delegate(GluiNode node) @safe dg) {
 
         foreach (child; _children) {
 
@@ -127,7 +127,31 @@ debug struct Children {
 
     }
 
-    int opApply(scope int delegate(size_t index, GluiNode node) @trusted dg) {
+    int opApply(scope int delegate(size_t index, GluiNode node) @safe dg) {
+
+        foreach (i, child; _children) {
+
+            if (auto result = dg(i, child)) return result;
+
+        }
+
+        return 0;
+
+    }
+
+    int opApply(scope int delegate(GluiNode node) @system dg) @system {
+
+        foreach (child; _children) {
+
+            if (auto result = dg(child)) return result;
+
+        }
+
+        return 0;
+
+    }
+
+    int opApply(scope int delegate(size_t index, GluiNode node) @system dg) @system {
 
         foreach (i, child; _children) {
 
