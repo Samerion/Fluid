@@ -391,6 +391,11 @@ struct Texture {
         && width == other.width
         && height == other.height;
 
+    /// Get texture size as a vector.
+    Vector2 size() const
+
+        => Vector2(width, height);
+
     /// Draw this texture.
     void draw(Vector2 position, Color tint = color!"fff") {
 
