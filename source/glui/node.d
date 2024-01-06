@@ -1114,8 +1114,6 @@ abstract class GluiNode : Styleable {
             root.updateSize;
             root.draw();
 
-            io.saveSVG("/tmp/glui.svg");
-
             // The first rectangle doesn't expand so it should be exactly 100×100 in size
             io.assertRectangle(Rectangle(350, 0, 100, 100), colors[0]);
 
