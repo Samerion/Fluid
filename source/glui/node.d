@@ -840,13 +840,13 @@ abstract class GluiNode : Styleable {
         if (!branchDisabled) {
 
             // Update focus info
-            tree.focusDirection.update(this, space, tree.depth);
+            tree.focusDirection.update(this, paddingBox, tree.depth);
 
             // If this node is focused
             if (this is cast(GluiNode) tree.focus) {
 
                 // Set the focus box
-                tree.focusBox = space;
+                tree.focusBox = paddingBox;
 
             }
 
@@ -978,7 +978,7 @@ abstract class GluiNode : Styleable {
 
     }
 
-    /// Get the node's position in its space box.
+    /// Get the node's position in its  box.
     private Vector2 position(Rectangle space, Vector2 usedSpace) const {
 
         float positionImpl(NodeAlign align_, lazy float spaceLeft) {

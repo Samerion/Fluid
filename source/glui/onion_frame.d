@@ -112,8 +112,6 @@ unittest {
     root.io = io;
     root.draw();
 
-    io.saveSVG("/tmp/glui.svg");
-
     // imageView
     io.assertTexture(view.texture, Vector2(0, 0), color!"fff");
 
