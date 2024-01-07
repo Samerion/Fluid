@@ -355,9 +355,6 @@ GluiSpace slotExample() {
         slot3.swapSlots(slot2)
     ));
 
-    // For ease of use we can also instantiate the node slot with simple constructors like `label`
-    static assert(is(typeof(nodeSlot!GluiLabel()) == typeof(nodeSlot!label())));
-
     // Example B
     auto exampleB = vspace(
         .layout!"fill",
