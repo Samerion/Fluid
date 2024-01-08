@@ -309,6 +309,8 @@ class HeadlessBackend : GluiBackend {
     /// character was pressed.
     dchar inputCharacter() {
 
+        if (characterQueue.empty) return '\0';
+
         auto c = characterQueue.front;
         characterQueue.popFront;
         return c;

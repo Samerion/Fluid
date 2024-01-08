@@ -552,8 +552,6 @@ unittest {
     root.io = io;
     root.draw();
 
-    io.saveSVG("/tmp/glui.svg");
-
     io.assertRectangle(Rectangle(  0,   0, 270, 270), color!"0004");
     io.assertRectangle(Rectangle(180,   0,  90, 270), color!"0004");
     io.assertRectangle(Rectangle(180, 180,  90,  90), color!"0004");

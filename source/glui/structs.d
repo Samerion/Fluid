@@ -7,9 +7,6 @@ import std.conv;
 @safe:
 
 
-// Disable scissors mode on macOS in Raylib 3, it's broken; see #60
-version (Glui_Raylib3) version (OSX) version = Glui_DisableScissors;
-
 enum NodeAlign {
 
     start, center, end, fill
