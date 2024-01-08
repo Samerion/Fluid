@@ -10,6 +10,7 @@ import std.traits;
 import std.algorithm;
 
 public import glui.backend.raylib5;
+public import glui.backend.headless;
 public import glui.backend.simpledisplay;
 
 
@@ -95,7 +96,8 @@ interface GluiBackend {
     void drawRectangle(Rectangle rectangle, Color color);
 
     /// Draw a texture.
-    void drawTexture(Texture texture, Vector2 position, Color tint);
+    void drawTexture(Texture texture, Vector2 position, Color tint)
+    in (texture.backend is this, "Given texture comes from a different backend");
 
 }
 
@@ -383,6 +385,17 @@ struct Texture {
     int width;
     int height;
 
+    bool opEquals(const Texture other) const
+
+        => id == other.id
+        && width == other.width
+        && height == other.height;
+
+    /// Get texture size as a vector.
+    Vector2 size() const
+
+        => Vector2(width, height);
+
     /// Draw this texture.
     void draw(Vector2 position, Color tint = color!"fff") {
 
@@ -400,6 +413,41 @@ struct Texture {
         id = 0;
 
     }
+
+}
+
+/// Get a hex code from color.
+string toHex(string prefix = "#")(Color color) {
+
+    import std.format;
+
+    // Full alpha, use a six digit code
+    if (color.a == 0xff) {
+
+        return format!(prefix ~ "%02x%02x%02x")(color.r, color.g, color.b);
+
+    }
+
+    // Include alpha otherwise
+    else return format!(prefix ~ "%02x%02x%02x%02x")(color.tupleof);
+
+}
+
+unittest {
+
+    // No relevant alpha
+    assert(color("fff").toHex == "#ffffff");
+    assert(color("ffff").toHex == "#ffffff");
+    assert(color("ffffff").toHex == "#ffffff");
+    assert(color("ffffffff").toHex == "#ffffff");
+    assert(color("fafbfc").toHex == "#fafbfc");
+    assert(color("123").toHex == "#112233");
+
+    // Alpha set
+    assert(color("c0fe").toHex == "#cc00ffee");
+    assert(color("1234").toHex == "#11223344");
+    assert(color("0000").toHex == "#00000000");
+    assert(color("12345678").toHex == "#12345678");
 
 }
 

@@ -3,14 +3,9 @@ module glui.structs;
 
 import std.conv;
 
-public import glui.tree;
-
 
 @safe:
 
-
-// Disable scissors mode on macOS in Raylib 3, it's broken; see #60
-version (Glui_Raylib3) version (OSX) version = Glui_DisableScissors;
 
 enum NodeAlign {
 
@@ -24,42 +19,42 @@ enum NodeAlign {
 ///     align_ = Align of the node (horizontal and vertical).
 ///     alignX = Horizontal align of the node.
 ///     alignY = Vertical align of the node.
-Layout layout(uint expand, NodeAlign alignX, NodeAlign alignY) {
+Layout layout(uint expand, NodeAlign alignX, NodeAlign alignY) pure {
 
     return Layout(expand, [alignX, alignY]);
 
 }
 
 /// Ditto
-Layout layout(uint expand, NodeAlign align_) {
+Layout layout(uint expand, NodeAlign align_) pure {
 
     return Layout(expand, align_);
 
 }
 
 /// Ditto
-Layout layout(NodeAlign alignX, NodeAlign alignY) {
+Layout layout(NodeAlign alignX, NodeAlign alignY) pure {
 
     return Layout(0, [alignX, alignY]);
 
 }
 
 /// Ditto
-Layout layout(NodeAlign align_) {
+Layout layout(NodeAlign align_) pure {
 
     return Layout(0, align_);
 
 }
 
 /// Ditto
-Layout layout(uint expand) {
+Layout layout(uint expand) pure {
 
     return Layout(expand);
 
 }
 
 /// CTFE version of the layout constructor, allows using strings instead of enum members, to avoid boilerplate.
-Layout layout(uint expand, string alignX, string alignY)() {
+Layout layout(uint expand, string alignX, string alignY)() pure {
 
     enum valueX = alignX.to!NodeAlign;
     enum valueY = alignY.to!NodeAlign;
@@ -69,7 +64,7 @@ Layout layout(uint expand, string alignX, string alignY)() {
 }
 
 /// Ditto
-Layout layout(uint expand, string align_)() {
+Layout layout(uint expand, string align_)() pure {
 
     enum valueXY = align_.to!NodeAlign;
 
@@ -78,7 +73,7 @@ Layout layout(uint expand, string align_)() {
 }
 
 /// Ditto
-Layout layout(string alignX, string alignY)() {
+Layout layout(string alignX, string alignY)() pure {
 
     enum valueX = alignX.to!NodeAlign;
     enum valueY = alignY.to!NodeAlign;
@@ -88,7 +83,7 @@ Layout layout(string alignX, string alignY)() {
 }
 
 /// Ditto
-Layout layout(string align_)() {
+Layout layout(string align_)() pure {
 
     enum valueXY = align_.to!NodeAlign;
 
@@ -97,7 +92,7 @@ Layout layout(string align_)() {
 }
 
 /// Ditto
-Layout layout(uint expand)() {
+Layout layout(uint expand)() pure {
 
     return Layout(expand);
 

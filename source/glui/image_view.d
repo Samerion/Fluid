@@ -18,12 +18,24 @@ class GluiImageView : GluiNode {
 
     mixin DefineStyles;
 
-    /// Texture for this node.
+    public {
+
+        /// If true, size of this imageView is adjusted automatically. Changes made to `minSize` will be reversed on
+        /// size update.
+        bool isSizeAutomatic;
+
+    }
+
     protected {
 
+        /// Texture for this node.
         Texture _texture;
-        Rectangle _targetArea;  // Rectangle occupied by this node after all calculations
+
+        /// If set, path in the filesystem the texture is to be loaded from.
         string _texturePath;
+
+        /// Rectangle occupied by this node after all calculations.
+        Rectangle _targetArea;
 
     }
 
@@ -37,7 +49,7 @@ class GluiImageView : GluiNode {
             /// Create an image node from given texture or filename.
             /// Params:
             ///     source  = `Texture` raylib struct to use, or a filename to load from.
-            ///     minSize = Minimum size of the node
+            ///     minSize = Minimum size of the node.
             this(T)(BasicNodeParam!index sup, T source, Vector2 minSize = Vector2(0, 0)) {
 
                 super(sup);
@@ -51,14 +63,28 @@ class GluiImageView : GluiNode {
     }
 
     /// Create an image node from given texture or filename.
+    ///
+    /// Note, if a string is given, the texture will be loaded when resizing. This ensures a Glui backend is available
+    /// to load the texture.
+    ///
     /// Params:
-    ///     source  = `Texture` raylib struct to use, or a filename to load from.
-    ///     minSize = Minimum size of the node
-    this(T)(NodeParams sup, T source, Vector2 minSize = Vector2(0, 0)) {
+    ///     source  = `Texture` struct to use, or a filename to load from.
+    ///     minSize = Minimum size of the node. Defaults to image size.
+    this(T)(NodeParams sup, T source, Vector2 minSize) {
 
         super(sup);
-        texture = source;
         super.minSize = minSize;
+        this.texture = source;
+
+    }
+
+    /// ditto
+    this(T)(NodeParams sup, T source) {
+
+        super(sup);
+        super.minSize = minSize;
+        this.texture = source;
+        this.isSizeAutomatic = true;
 
     }
 
@@ -99,6 +125,24 @@ class GluiImageView : GluiNode {
             updateSize();
 
             return filename;
+
+        }
+
+        unittest {
+
+            auto io = new HeadlessBackend;
+            auto root = imageView(.nullTheme, "logo.png");
+
+            // The texture will lazy-load
+            assert(root.texture == Texture.init);
+
+            root.io = io;
+            root.draw();
+
+            // Texture should be loaded by now
+            assert(root.texture != Texture.init);
+
+            io.assertTexture(root.texture, Vector2(0, 0), color!"fff");
 
         }
 
@@ -149,6 +193,13 @@ class GluiImageView : GluiNode {
 
             _texture = tree.io.loadTexture(_texturePath);
             _isOwner = true;
+
+        }
+
+        // Adjust size
+        if (isSizeAutomatic) {
+
+            minSize = _texture.size;
 
         }
 

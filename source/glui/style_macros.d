@@ -5,7 +5,6 @@ import std.traits;
 import std.string;
 
 import glui.style;
-import glui.default_theme;
 
 @safe:
 
@@ -24,6 +23,8 @@ private static {
 ///     parent = Inherit styles from a parent theme.
 /// Returns: The created theme.
 template makeTheme(string init) {
+
+    import glui.default_theme;
 
     // This ugly template is a workaround for https://issues.dlang.org/show_bug.cgi?id=22208
     // We can't use inout here, sorry...

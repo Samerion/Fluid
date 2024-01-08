@@ -226,7 +226,9 @@ class Raylib5Backend : GluiBackend {
 
     }
 
-    void drawTexture(glui.backend.Texture texture, Vector2 position, Color tint) @trusted {
+    void drawTexture(glui.backend.Texture texture, Vector2 position, Color tint) @trusted
+    in (false)
+    do {
 
         DrawTextureV(texture.toRaylib, position, tint);
 

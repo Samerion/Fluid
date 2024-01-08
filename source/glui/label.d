@@ -7,14 +7,16 @@ import glui.utils;
 import glui.style;
 import glui.backend;
 
-alias label = simpleConstructor!GluiLabel;
-
 @safe:
 
 /// A label can be used to display text on the screen.
+///
 /// Styles: $(UL
 ///     $(LI `style` = Default style for this node.)
 /// )
+alias label = simpleConstructor!GluiLabel;
+
+/// ditto
 class GluiLabel : GluiNode {
 
     mixin DefineStyles;
@@ -83,5 +85,46 @@ class GluiLabel : GluiNode {
         return style;
 
     }
+
+    unittest {
+
+        auto io = new HeadlessBackend;
+        auto root = label("Hello, World!");
+
+        root.theme = nullTheme.makeTheme!q{
+            GluiLabel.styleAdd.textColor = color!"000";
+        };
+        root.io = io;
+        root.draw();
+
+        const initialTextArea = root.text.size.x * root.text.size.y;
+
+        io.assertTexture(root.text.texture, Vector2(0, 0), color!"000");
+        io.nextFrame;
+
+        root.text ~= " It's a nice day today!";
+        root.draw();
+
+        io.assertTexture(root.text.texture, Vector2(0, 0), color!"000");
+
+        const newTextArea = root.text.size.x * root.text.size.y;
+
+        assert(newTextArea > initialTextArea);
+
+    }
+
+}
+
+///
+unittest {
+
+    // Label takes just a single argument: the text to display
+    auto myLabel = label("Hello, World!");
+
+    // You can access and change label text
+    myLabel.text ~= " It's a nice day today!";
+
+    // Text will automatically wrap if it's too long to fit, but you can toggle it off
+    myLabel.disableWrap = true;
 
 }

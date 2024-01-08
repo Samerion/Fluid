@@ -18,20 +18,22 @@ import glui.container;
 @safe:
 
 
-/// Make a new vertical space.
+/// This is a space, a basic container for other nodes.
+///
+/// Nodes are laid in a column (`vframe`) or in a row (`hframe`).
+///
+/// Space only acts as a container and doesn't implement styles and doesn't take focus. It's very useful as a helper for
+/// building layout, while `GluiFrame` remains to provide styling.
 alias vspace = simpleConstructor!GluiSpace;
 
-/// Make a new horizontal space.
+/// ditto
 alias hspace = simpleConstructor!(GluiSpace, (a) {
 
     a.directionHorizontal = true;
 
 });
 
-/// This is a space, a basic container for other nodes.
-///
-/// Space only acts as a container and doesn't implement styles and doesn't take focus. It can be very useful to build
-/// overlaying nodes, eg. with `GluiOnionFrame`.
+/// ditto
 class GluiSpace : GluiNode, GluiContainer {
 
     mixin DefineStyles;
@@ -378,5 +380,182 @@ class GluiSpace : GluiNode, GluiContainer {
         }
 
     }
+
+}
+
+///
+unittest {
+
+    import glui;
+
+    // A vspace will align all its content in a column
+    vspace(
+        label("First entry"),
+        label("Second entry"),
+        label("Third entry"),
+    );
+
+    // hspace will lay out the nodes in a row
+    hspace(
+        label("One, "),
+        label("Two, "),
+        label("Three!"),
+    );
+
+    // Combine them to quickly build layouts!
+    vspace(
+        label("Are you sure you want to proceed?"),
+        hspace(
+            button("Yes", delegate { }),
+            button("Cancel", delegate { }),
+        ),
+    );
+
+}
+
+unittest {
+
+    class Square : GluiNode {
+
+        mixin implHoveredRect;
+
+        Color color;
+
+        this(Color color) {
+            this.color = color;
+        }
+
+        override void resizeImpl(Vector2) {
+            minSize = Vector2(50, 50);
+        }
+
+        override void drawImpl(Rectangle, Rectangle inner) {
+            io.drawRectangle(inner, this.color);
+        }
+
+    }
+
+    auto io = new HeadlessBackend;
+    auto root = vspace(
+        new Square(color!"000"),
+        new Square(color!"001"),
+        new Square(color!"002"),
+        hspace(
+            new Square(color!"010"),
+            new Square(color!"011"),
+            new Square(color!"012"),
+        ),
+    );
+
+    root.io = io;
+    root.theme = nullTheme;
+    root.draw();
+
+    // vspace
+    io.assertRectangle(Rectangle(0,   0, 50, 50), color!"000");
+    io.assertRectangle(Rectangle(0,  50, 50, 50), color!"001");
+    io.assertRectangle(Rectangle(0, 100, 50, 50), color!"002");
+
+    // hspace
+    io.assertRectangle(Rectangle(  0, 150, 50, 50), color!"010");
+    io.assertRectangle(Rectangle( 50, 150, 50, 50), color!"011");
+    io.assertRectangle(Rectangle(100, 150, 50, 50), color!"012");
+
+}
+
+unittest {
+
+    import glui.frame;
+    import glui.structs;
+
+    auto io = new HeadlessBackend;
+    auto root = hspace(
+        layout!"fill",
+        vframe(layout!1),
+        vframe(layout!2),
+        vframe(layout!1),
+    );
+
+    root.io = io;
+    root.theme = nullTheme.makeTheme!q{
+        GluiFrame.styleAdd.backgroundColor = color!"7d9";
+    };
+
+    // Frame 1
+    {
+        root.draw();
+        io.assertRectangle(Rectangle(0,   0, 0, 0), color!"7d9");
+        io.assertRectangle(Rectangle(200, 0, 0, 0), color!"7d9");
+        io.assertRectangle(Rectangle(600, 0, 0, 0), color!"7d9");
+    }
+
+    // Fill all nodes
+    foreach (child; root.children) {
+        child.layout.nodeAlign = NodeAlign.fill;
+    }
+    root.updateSize();
+
+    {
+        io.nextFrame;
+        root.draw();
+        io.assertRectangle(Rectangle(  0, 0, 200, 600), color!"7d9");
+        io.assertRectangle(Rectangle(200, 0, 400, 600), color!"7d9");
+        io.assertRectangle(Rectangle(600, 0, 200, 600), color!"7d9");
+    }
+
+    const alignments = [NodeAlign.start, NodeAlign.center, NodeAlign.end];
+
+    // Make Y alignment different across all three
+    foreach (pair; root.children.zip(alignments)) {
+        pair[0].layout.nodeAlign = pair[1];
+    }
+
+    {
+        io.nextFrame;
+        root.draw();
+        io.assertRectangle(Rectangle(  0,   0, 0, 0), color!"7d9");
+        io.assertRectangle(Rectangle(400, 300, 0, 0), color!"7d9");
+        io.assertRectangle(Rectangle(800, 600, 0, 0), color!"7d9");
+    }
+
+}
+
+unittest {
+
+    import glui.frame;
+    import glui.structs;
+
+    auto io = new HeadlessBackend(Vector2(270, 270));
+    auto root = hframe(
+        layout!"fill",
+        vspace(layout!2),
+        vframe(
+            layout!(1, "fill"),
+            hspace(layout!2),
+            hframe(
+                layout!(1, "fill"),
+                vframe(
+                    layout!(1, "fill"),
+                    hframe(
+                        layout!(1, "fill")
+                    ),
+                    hspace(layout!2),
+                ),
+                vspace(layout!2),
+            )
+        ),
+    );
+
+    root.theme = nullTheme.makeTheme!q{
+        GluiFrame.styleAdd.backgroundColor = color!"0004";
+    };
+    root.io = io;
+    root.draw();
+
+    io.assertRectangle(Rectangle(  0,   0, 270, 270), color!"0004");
+    io.assertRectangle(Rectangle(180,   0,  90, 270), color!"0004");
+    io.assertRectangle(Rectangle(180, 180,  90,  90), color!"0004");
+    io.assertRectangle(Rectangle(180, 180,  30,  90), color!"0004");
+    io.assertRectangle(Rectangle(180, 180,  30,  30), color!"0004");
 
 }

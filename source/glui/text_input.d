@@ -47,9 +47,12 @@ class GluiTextInput : GluiInput!GluiNode {
         /// A placeholder text for the field, displayed when the field is empty. Style using `emptyStyle`.
         string placeholder;
 
-        deprecated("multiline was never supported and will be deleted in 0.7.0")
-        bool multiline() const { return false; }
-        bool multiline(bool) { return false; }
+        deprecated("multiline was never supported and will be deleted in 0.7.0") {
+
+            bool multiline() const { return false; }
+            bool multiline(bool) { return false; }
+
+        }
 
     }
 
@@ -181,7 +184,7 @@ class GluiTextInput : GluiInput!GluiNode {
         contentLabel.draw(inner);
 
         // Ignore the rest if the node isn't focused
-        if (!isFocused) return;
+        if (!isFocused || isDisabledInherited) return;
 
         auto timeSecs = Clock.currTime.second;
 
@@ -257,6 +260,43 @@ class GluiTextInput : GluiInput!GluiNode {
 
     }
 
+    unittest {
+
+        auto io = new HeadlessBackend;
+        auto root = textInput("placeholder");
+
+        root.io = io;
+
+        // Empty text
+        {
+            root.draw();
+
+            assert(root.value == "");
+            assert(root.contentLabel.text == "placeholder");
+            assert(root.contentLabel.activeStyle is root.emptyStyle);
+        }
+
+        // Focus the box and input stuff
+        {
+            io.nextFrame;
+            io.inputCharacter("¡Hola, mundo!");
+            root.focus();
+            root.draw();
+
+            assert(root.value == "¡Hola, mundo!");
+        }
+
+        // Input stuff
+        {
+            io.nextFrame;
+            root.draw();
+
+            assert(root.contentLabel.text == "¡Hola, mundo!");
+            assert(root.contentLabel.activeStyle is root.focusStyle);
+        }
+
+    }
+
     /// Submit the input.
     @(GluiInputAction.submit)
     protected void _submit() {
@@ -266,6 +306,43 @@ class GluiTextInput : GluiInput!GluiNode {
 
         // Run the callback
         if (submitted) submitted();
+
+    }
+
+    unittest {
+
+        int submitted;
+
+        auto io = new HeadlessBackend;
+        GluiTextInput root;
+
+        root = textInput("placeholder", delegate {
+            submitted++;
+            assert(root.value == "Hello World");
+        });
+
+        root.io = io;
+
+        // Type stuff
+        {
+            root.value = "Hello World";
+            root.focus();
+            root.updateSize();
+            root.draw();
+
+            assert(submitted == 0);
+            assert(root.value == "Hello World");
+            assert(root.contentLabel.text == "Hello World");
+        }
+
+        // Submit
+        {
+            io.nextFrame;
+            io.press(GluiKeyboardKey.enter);
+            root.draw();
+
+            assert(submitted == 1);
+        }
 
     }
 
@@ -309,6 +386,61 @@ class GluiTextInput : GluiInput!GluiNode {
 
     }
 
+    unittest {
+
+        auto io = new HeadlessBackend;
+        auto root = textInput();
+
+        root.io = io;
+
+        // Type stuff
+        {
+            root.value = "Hello World";
+            root.focus();
+            root.updateSize();
+            root.draw();
+
+            assert(root.value == "Hello World");
+            assert(root.contentLabel.text == "Hello World");
+        }
+
+        // Erase a word
+        {
+            io.nextFrame;
+            root.chopWord;
+            root.draw();
+
+            assert(root.value == "Hello ");
+            assert(root.contentLabel.text == "Hello ");
+            assert(root.contentLabel.activeStyle is root.focusStyle);
+        }
+
+        // Erase a word
+        {
+            io.nextFrame;
+            root.chopWord;
+            root.draw();
+
+            assert(root.value == "");
+            assert(root.contentLabel.text == "");
+            assert(root.contentLabel.activeStyle is root.emptyStyle);
+        }
+
+        // Typing should be disabled while erasing
+        {
+            io.press(GluiKeyboardKey.leftControl);
+            io.press(GluiKeyboardKey.w);
+            io.inputCharacter('w');
+
+            root.draw();
+
+            assert(root.value == "");
+            assert(root.contentLabel.text == "");
+            assert(root.contentLabel.activeStyle is root.emptyStyle);
+        }
+
+    }
+
     /// Erase last inputted letter.
     @(GluiInputAction.backspace)
     void chop() {
@@ -324,6 +456,59 @@ class GluiTextInput : GluiInput!GluiNode {
 
         // Update the size of the box
         updateSize();
+
+    }
+
+    unittest {
+
+        auto io = new HeadlessBackend;
+        auto root = textInput();
+
+        root.io = io;
+
+        // Type stuff
+        {
+            root.value = "hello‽";
+            root.focus();
+            root.updateSize();
+            root.draw();
+
+            assert(root.value == "hello‽");
+            assert(root.contentLabel.text == "hello‽");
+        }
+
+        // Erase a letter
+        {
+            io.nextFrame;
+            root.chop;
+            root.draw();
+
+            assert(root.value == "hello");
+            assert(root.contentLabel.text == "hello");
+            assert(root.contentLabel.activeStyle is root.focusStyle);
+        }
+
+        // Erase a letter
+        {
+            io.nextFrame;
+            root.chop;
+            root.draw();
+
+            assert(root.value == "hell");
+            assert(root.contentLabel.text == "hell");
+            assert(root.contentLabel.activeStyle is root.focusStyle);
+        }
+
+        // Typing should be disabled while erasing
+        {
+            io.press(GluiKeyboardKey.backspace);
+            io.inputCharacter("o, world");
+
+            root.draw();
+
+            assert(root.value == "hel");
+            assert(root.contentLabel.activeStyle is root.focusStyle);
+        }
 
     }
 
