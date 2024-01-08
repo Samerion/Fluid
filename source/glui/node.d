@@ -92,6 +92,9 @@ abstract class GluiNode : Styleable {
         /// If true, this node is currently disabled.
         bool _isDisabled;
 
+        /// Check if this node is disabled, or has inherited the status.
+        bool _isDisabledInherited;
+
         /// Theme of this node.
         Theme _theme;
 
@@ -261,6 +264,120 @@ abstract class GluiNode : Styleable {
 
     }
 
+    unittest {
+
+        import glui.space;
+        import glui.button;
+        import glui.text_input;
+
+        int submitted;
+
+        auto io = new HeadlessBackend;
+        auto button = glui.button.button("Hello!", delegate { submitted++; });
+        auto input = glui.textInput("Placeholder", delegate { submitted++; });
+        auto root = vspace(button, input);
+
+        root.io = io;
+        root.draw();
+
+        // Press the button
+        {
+            io.nextFrame;
+            io.press(GluiKeyboardKey.enter);
+            button.focus();
+            root.draw();
+
+            assert(submitted == 1);
+        }
+
+        // Press the button while disabled
+        {
+            io.nextFrame;
+            io.press(GluiKeyboardKey.enter);
+            button.disable();
+            root.draw();
+
+            assert(button.isDisabled);
+            assert(submitted == 1, "Button shouldn't trigger again");
+        }
+
+        // Enable the button and hit it again
+        {
+            io.nextFrame;
+            io.press(GluiKeyboardKey.enter);
+            button.enable();
+            root.draw();
+
+            assert(!button.isDisabledInherited);
+            assert(submitted == 2);
+        }
+
+        // Try typing into the input box
+        {
+            io.nextFrame;
+            io.release(GluiKeyboardKey.enter);
+            io.inputCharacter("Hello, ");
+            input.focus();
+            root.draw();
+
+            assert(input.value == "Hello, ");
+        }
+
+        // Disable the box and try typing again
+        {
+            io.nextFrame;
+            io.inputCharacter("World!");
+            input.disable();
+            root.draw();
+
+            assert(input.value == "Hello, ", "Input should remain unchanged");
+        }
+
+        // Attempt disabling the nodes recursively
+        {
+            io.nextFrame;
+            io.press(GluiKeyboardKey.enter);
+            button.focus();
+            input.enable();
+            root.disable();
+            root.draw();
+
+            assert(root.isDisabled);
+            assert(!button.isDisabled);
+            assert(!input.isDisabled);
+            assert(button.isDisabledInherited);
+            assert(input.isDisabledInherited);
+            assert(submitted == 2);
+        }
+
+        // Check the input box
+        {
+            io.nextFrame;
+            io.press(GluiKeyboardKey.enter);
+            io.inputCharacter("World!");
+            input.focus();
+
+            root.draw();
+
+            assert(submitted == 2);
+            assert(input.value == "Hello, ");
+        }
+
+        // Enable input once again
+        {
+            io.nextFrame;
+            io.press(GluiKeyboardKey.enter);
+            root.enable();
+            root.draw();
+
+            assert(submitted == 3);
+            assert(input.value == "Hello, ");
+        }
+
+        io.saveSVG("/tmp/glui.svg");
+
+    }
+
     inout(GluiBackend) backend() inout {
 
         return tree.backend;
@@ -307,9 +424,8 @@ abstract class GluiNode : Styleable {
     /// Check if this node is disabled.
     ref inout(bool) isDisabled() inout { return _isDisabled; }
 
-    /// Checks if the node is disabled, either by self, or by any of its ancestors. Only works while the node is being
-    /// drawn, and during `beforeDraw` and `afterDraw` tree actions.
-    bool isDisabledInherited() const { return tree.isBranchDisabled; }
+    /// Checks if the node is disabled, either by self, or by any of its ancestors. Updated when drawn.
+    bool isDisabledInherited() const { return _isDisabledInherited; }
 
     /// Queue an action to perform within this node's branch.
     ///
@@ -809,6 +925,9 @@ abstract class GluiNode : Styleable {
         // Count if disabled or not
         if (branchDisabled) tree._disabledDepth++;
         scope (exit) if (branchDisabled) tree._disabledDepth--;
+
+        // Save disabled status
+        _isDisabledInherited = branchDisabled;
 
         // Count depth
         tree.depth++;

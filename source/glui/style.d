@@ -586,3 +586,14 @@ float getSide(Rectangle rectangle, Style.Side side) {
     );
 
 }
+
+unittest {
+
+    const rect = Rectangle(0, 5, 10, 15);
+
+    assert(rect.x == rect.getSide(Style.Side.left));
+    assert(rect.y == rect.getSide(Style.Side.top));
+    assert(rect.end.x == rect.getSide(Style.Side.right));
+    assert(rect.end.y == rect.getSide(Style.Side.bottom));
+
+}
