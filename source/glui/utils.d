@@ -8,6 +8,11 @@ import glui.backend;
 
 @safe:
 
+
+// For saner testing and debugging.
+version (unittest)
+private extern(C) __gshared string[] rt_options = ["oncycle=ignore"];
+
 /// Create a simple node constructor for declarative usage.
 ///
 /// Initial properties can be provided in the function provided in the second argument.
@@ -92,11 +97,14 @@ struct SimpleConstructor(T, alias fun = "a") {
         }
 
         // Old-style, plain construction
-        else {
+        else static if (__traits(compiles, new Type(args))) {
 
             auto result = new Type(args);
 
         }
+
+        // If neither compile, try the new call convention again to make sure it emits an error message
+        else auto result = new Type(params, args[arity..$]);
 
         initializer(result);
         return result;

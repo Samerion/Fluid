@@ -31,7 +31,7 @@ interface GluiContainer {
     /// Set focus on the first available focusable node in this tree.
     final void focusChild() {
 
-        asNode.focusRecurse();
+        asNode.focusRecurseChildren();
 
     }
 

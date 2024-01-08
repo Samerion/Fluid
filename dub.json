@@ -2,29 +2,46 @@
 	"authors": [
 		"Artha"
 	],
+	"configurations": [
+		{
+			"name": "default",
+			"targetType": "library"
+		},
+		{
+			"libs": [
+				"raylib"
+			],
+			"name": "unittest",
+			"targetType": "library"
+		}
+	],
 	"copyright": "Copyright © 2021, Artha",
 	"dependencies": {
+		"arsd-official:image_files": {
+			"optional": true,
+			"version": "~>11.3"
+		},
+		"arsd-official:simpledisplay": {
+			"optional": true,
+			"version": "~>11.3"
+		},
 		"bindbc-freetype": "~>1.1.1",
+		"elemi": {
+			"optional": true,
+			"version": "~>1.2.2"
+		},
 		"raylib-d": {
 			"default": true,
 			"optional": true,
-			"version": "~>5.0"
-		},
-		"arsd-official:simpledisplay": {
-			"version": "~>11.3",
-			"optional": true,
-			"default": false
-		},
-		"arsd-official:image_files": {
-			"version": "~>11.3",
-			"optional": true,
-			"default": false
+			"version": "~>5"
 		}
 	},
 	"description": "A straightforward and easy to use GUI library.",
 	"license": "BSL",
 	"name": "glui",
-	"stringImportPaths": ["resources"],
+	"stringImportPaths": [
+		"resources"
+	],
 	"subPackages": [
 		{
 			"dependencies": {
@@ -43,9 +60,9 @@
 		},
 		{
 			"dependencies": {
-				"glui": ">=0.0.0",
+				"arsd-official:image_files": "~>11.3",
 				"arsd-official:simpledisplay": "~>11.3",
-				"arsd-official:image_files": "~>11.3"
+				"glui": ">=0.0.0"
 			},
 			"libs": [
 				"raylib"

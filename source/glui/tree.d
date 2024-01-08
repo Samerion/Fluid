@@ -66,7 +66,7 @@ struct FocusDirection {
     ///
     /// Params:
     ///     current = Node to update the focus info with.
-    ///     box     = Available space box of the node. This is the argument passed to the child in `draw(Rectangle)`
+    ///     box     = Box defining node boundaries (padding box)
     ///     depth   = Current tree depth. Pass in `tree.depth`.
     void update(GluiNode current, Rectangle box, uint depth)
     in (current !is null, "Current node must not be null")

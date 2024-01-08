@@ -22,6 +22,37 @@ void focusRecurse(GluiNode parent) {
 
 }
 
+unittest {
+
+    import glui.space;
+    import glui.label;
+    import glui.button;
+
+    auto io = new HeadlessBackend;
+    auto root = vspace(
+        label(""),
+        button("", delegate { }),
+        button("", delegate { }),
+        button("", delegate { }),
+    );
+
+    // First paint: no node focused
+    root.io = io;
+    root.draw();
+
+    assert(root.tree.focus is null, "No focus assigned on the first frame");
+
+    io.nextFrame;
+
+    // Recurse into the tree to focus on the first node
+    root.focusRecurse();
+    root.draw();
+
+    assert(root.tree.focus.asNode is root.children[1], "First child is now focused");
+    assert((cast(GluiFocusable) root.children[1]).isFocused);
+
+}
+
 /// ditto
 void focusRecurseChildren(GluiNode parent) {
 
@@ -29,6 +60,36 @@ void focusRecurseChildren(GluiNode parent) {
     action.excludeStartNode = true;
 
     parent.queueAction(action);
+
+}
+
+unittest {
+
+    import glui.space;
+    import glui.button;
+
+    auto io = new HeadlessBackend;
+    auto root = frameButton(
+        button("", delegate { }),
+        button("", delegate { }),
+        delegate { }
+    );
+
+    root.io = io;
+
+    // Typical focusRecurse call will focus the button
+    root.focusRecurse;
+    root.draw();
+
+    assert(root.tree.focus is root);
+
+    io.nextFrame;
+
+    // If we want to make sure the action descends below the root, we must
+    root.focusRecurseChildren;
+    root.draw();
+
+    assert(root.tree.focus.asNode is root.children[0]);
 
 }
 
@@ -69,6 +130,64 @@ class FocusRecurseAction : TreeAction {
 void scrollIntoView(GluiNode node) {
 
     node.queueAction(new ScrollIntoViewAction);
+
+}
+
+unittest {
+
+    import glui;
+    import std.math;
+    import std.array;
+    import std.range;
+    import std.algorithm;
+
+    const viewportHeight = 10;
+
+    auto io = new HeadlessBackend(Vector2(10, viewportHeight));
+    auto root = vscrollFrame(
+        layout!(1, "fill"),
+        cast(Theme) null,
+
+        label("a"),
+        label("b"),
+        label("c"),
+    );
+
+    root.io = io;
+    root.scrollBar.width = 0;  // TODO replace this with scrollBar.hide()
+
+    // Prepare scrolling
+    // Note: Changes made when scrolling will be visible during the next frame
+    root.children[1].scrollIntoView;
+    root.draw();
+
+    auto getPositions() => io.textures.map!(a => a.position).array;
+
+    // Find label positions
+    auto positions = getPositions();
+
+    // No theme so everything is as compact as it can be: the first label should be at the very top
+    assert(positions[0].y.isClose(0));
+    assert(positions[1].y > positions[0].y);
+    assert(positions[2].y > positions[1].y);
+
+    // It is reasonable to assume the text will be larger than 10 pixels (viewport height)
+    assert(positions[1].y > viewportHeight);
+
+    // TODO Because the label was hidden below the viewport, Glui will align the bottom of the selected node with the
+    // viewport which probably isn't appropriate in case *like this* where it should reveal the top of the node.
+    auto texture1 = io.textures.dropOne.front;
+    assert(root.scroll.isClose(texture1.position.y + texture1.height - viewportHeight));
+
+    io.nextFrame;
+    root.draw();
+
+    auto scrolledPositions = getPositions();
+
+    // Make sure all the labels are scrolled
+    assert(equal!((a, b) => isClose(a.y - root.scroll, b.y))(positions, scrolledPositions));
+
+    // TODO more tests. Scrolling while already in the viewport, scrolling while partially out of the view, etc.
 
 }
 

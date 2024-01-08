@@ -13,6 +13,7 @@ import glui.typeface;
 
 public import glui.border;
 public import glui.style_macros;
+public import glui.default_theme;
 public import glui.backend : color;
 
 
@@ -419,7 +420,7 @@ struct TextLine {
 }
 
 /// Get a reference to the left, right, top or bottom side of the given side array.
-ref inout(uint) sideLeft(T)(return ref inout T sides)
+ref inout(ElementType!T) sideLeft(T)(return ref inout T sides)
 if (isSideArray!T) {
 
     return sides[Style.Side.left];
@@ -427,7 +428,7 @@ if (isSideArray!T) {
 }
 
 /// ditto
-ref inout(uint) sideRight(T)(return ref inout T sides)
+ref inout(ElementType!T) sideRight(T)(return ref inout T sides)
 if (isSideArray!T) {
 
     return sides[Style.Side.right];
@@ -435,7 +436,7 @@ if (isSideArray!T) {
 }
 
 /// ditto
-ref inout(uint) sideTop(T)(return ref inout T sides)
+ref inout(ElementType!T) sideTop(T)(return ref inout T sides)
 if (isSideArray!T) {
 
     return sides[Style.Side.top];
@@ -443,7 +444,7 @@ if (isSideArray!T) {
 }
 
 /// ditto
-ref inout(uint) sideBottom(T)(return ref inout T sides)
+ref inout(ElementType!T) sideBottom(T)(return ref inout T sides)
 if (isSideArray!T) {
 
     return sides[Style.Side.bottom];
@@ -583,5 +584,16 @@ float getSide(Rectangle rectangle, Style.Side side) {
         bottom, rectangle.y + rectangle.height,
 
     );
+
+}
+
+unittest {
+
+    const rect = Rectangle(0, 5, 10, 15);
+
+    assert(rect.x == rect.getSide(Style.Side.left));
+    assert(rect.y == rect.getSide(Style.Side.top));
+    assert(rect.end.x == rect.getSide(Style.Side.right));
+    assert(rect.end.y == rect.getSide(Style.Side.bottom));
 
 }
