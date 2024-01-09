@@ -92,38 +92,6 @@ class GluiGrid : GluiFrame {
 
     }
 
-    version (none)
-    deprecated("Pass NodeParams as the first argument or use simpleConstructor")
-    this(T...)(T args)
-    if (args.length == 0 || !is(typeof(args[0]) == NodeParams))
-    do {
-
-        // TODO get rid of Number and extractParams
-
-        // First arguments
-        const params = extractParams(args);
-        const initialArgs = params.value;
-
-        // Prepare children
-        children.length = args.length - initialArgs;
-
-        // Check the other arguments
-        static foreach (i, arg; args[initialArgs..$]) {{
-
-            // Grid row (via array)
-            static if (is(typeof(arg) : U[], U)) {
-
-                children[i] = gridRow(this, arg);
-
-            }
-
-            // Other stuff
-            else children[i] = arg;
-
-        }}
-
-    }
-
     unittest {
 
         import std.math;

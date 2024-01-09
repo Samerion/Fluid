@@ -2,8 +2,8 @@ module glui.tree;
 
 import std.conv;
 import std.math;
-import std.datetime;
 import std.container;
+import std.algorithm;
 
 import glui.node;
 import glui.input;
@@ -392,7 +392,17 @@ struct LayoutTree {
     DList!TreeAction actions;
 
     /// Input strokes bound to emit given action signals.
-    InputStroke[][InputActionID] boundInputs;
+    ///
+    /// Input layers have to be sorted.
+    InputLayer[] boundInputs;
+
+    invariant(boundInputs.isSorted);
+
+    /// Actions that are currently held down.
+    DList!InputBinding downActions;
+
+    /// Actions that have just triggered.
+    DList!InputBinding activeActions;
 
     /// Access to core input and output facilities.
     GluiBackend backend;
@@ -455,114 +465,100 @@ struct LayoutTree {
     void restoreDefaultInputBinds() {
 
         /// Get the ID of an input action.
-        auto idOf(alias a)() {
+        auto bind(alias a, T)(T arg) {
 
-            return InputAction!a.id;
+            return InputBinding(InputAction!a.id, InputStroke.Item(arg));
 
         }
 
-        // Create the binds
+        // TODO universal left/right key
         with (GluiInputAction)
         boundInputs = [
 
-            // Basic
-            idOf!press: [
-                InputStroke(GluiMouseButton.left),
-                InputStroke(GluiKeyboardKey.enter),
-                InputStroke(GluiGamepadButton.cross),
-            ],
-            idOf!submit: [
-                InputStroke(GluiKeyboardKey.enter),
-                InputStroke(GluiGamepadButton.cross),
-            ],
-            idOf!cancel: [
-                InputStroke(GluiKeyboardKey.escape),
-                InputStroke(GluiGamepadButton.circle),
-            ],
+            InputLayer(
+                InputStroke(GluiKeyboardKey.leftControl),
+                [
+                    bind!backspaceWord(GluiKeyboardKey.backspace),
+                    bind!backspaceWord(GluiKeyboardKey.w),  // emacs & vim
+                    bind!entryPrevious(GluiKeyboardKey.k),  // vim
+                    bind!entryPrevious(GluiKeyboardKey.p),  // emacs
+                    bind!entryNext(GluiKeyboardKey.j),  // vim
+                    bind!entryNext(GluiKeyboardKey.n),  // emacs
+                ]
+            ),
 
-            // Focus
-            idOf!focusPrevious: [
-                InputStroke(GluiKeyboardKey.leftShift, GluiKeyboardKey.tab),
-                // TODO: KEY_ANY_SHIFT, KEY_ANY_ALT, KEY_ANY_CONTROL
-                // That'd be a blessing. InputStroke could support those special values.
-                InputStroke(GluiGamepadButton.leftButton),
-            ],
-            idOf!focusNext: [
-                InputStroke(GluiKeyboardKey.tab),
-                InputStroke(GluiGamepadButton.rightButton),
-            ],
-            idOf!focusLeft: [
-                InputStroke(GluiKeyboardKey.left),
-                InputStroke(GluiGamepadButton.dpadLeft),
-            ],
-            idOf!focusRight: [
-                InputStroke(GluiKeyboardKey.right),
-                InputStroke(GluiGamepadButton.dpadRight),
-            ],
-            idOf!focusUp: [
-                InputStroke(GluiKeyboardKey.up),
-                InputStroke(GluiGamepadButton.dpadUp),
-            ],
-            idOf!focusDown: [
-                InputStroke(GluiKeyboardKey.down),
-                InputStroke(GluiGamepadButton.dpadDown),
-            ],
+            InputLayer(
+                InputStroke(GluiKeyboardKey.leftShift),
+                [
+                    bind!focusPrevious(GluiKeyboardKey.tab),
+                    bind!entryPrevious(GluiKeyboardKey.tab),
+                ]
+            ),
 
-            // Input
-            idOf!backspace: [
-                InputStroke(GluiKeyboardKey.backspace),
-            ],
-            idOf!backspaceWord: [
-                InputStroke(GluiKeyboardKey.leftControl, GluiKeyboardKey.backspace),
-                InputStroke(GluiKeyboardKey.leftControl, GluiKeyboardKey.w),  // emacs & vim
-            ],
-            idOf!entryPrevious: [
-                InputStroke(GluiKeyboardKey.up),
-                InputStroke(GluiKeyboardKey.leftShift, GluiKeyboardKey.tab),
-                InputStroke(GluiKeyboardKey.leftControl, GluiKeyboardKey.k),  // vim
-                InputStroke(GluiKeyboardKey.leftControl, GluiKeyboardKey.p),  // emacs
-                InputStroke(GluiGamepadButton.dpadUp),
-            ],
-            idOf!entryNext: [
-                InputStroke(GluiKeyboardKey.down),
-                InputStroke(GluiKeyboardKey.tab),
-                InputStroke(GluiKeyboardKey.leftControl, GluiKeyboardKey.j),  // vim
-                InputStroke(GluiKeyboardKey.leftControl, GluiKeyboardKey.n),  // emacs
-                InputStroke(GluiGamepadButton.dpadDown),
-            ],
-            idOf!entryUp: [
-                InputStroke(GluiKeyboardKey.leftAlt, GluiKeyboardKey.up),
-            ],
+            InputLayer(
+                InputStroke(GluiKeyboardKey.leftAlt),
+                [
+                    bind!entryUp(GluiKeyboardKey.up),
+                ]
+            ),
 
-            // Scrolling
-            idOf!scrollLeft: [
-                InputStroke(GluiKeyboardKey.left),
-                InputStroke(GluiGamepadButton.dpadLeft),
-                InputStroke(GluiMouseButton.scrollLeft),
-            ],
-            idOf!scrollRight: [
-                InputStroke(GluiKeyboardKey.right),
-                InputStroke(GluiGamepadButton.dpadRight),
-                InputStroke(GluiMouseButton.scrollRight),
-            ],
-            idOf!scrollUp: [
-                InputStroke(GluiKeyboardKey.up),
-                InputStroke(GluiGamepadButton.dpadUp),
-                InputStroke(GluiMouseButton.scrollUp),
-            ],
-            idOf!scrollDown: [
-                InputStroke(GluiKeyboardKey.down),
-                InputStroke(GluiGamepadButton.dpadDown),
-                InputStroke(GluiMouseButton.scrollDown),
-            ],
-            idOf!pageLeft: [],
-            idOf!pageRight: [],
-            idOf!pageUp: [
-                InputStroke(GluiKeyboardKey.pageUp),
-            ],
-            idOf!pageDown: [
-                InputStroke(GluiKeyboardKey.pageDown),
-            ],
+            InputLayer(
+                InputStroke(),
+                [
+                    // Press
+                    bind!press(GluiMouseButton.left),
+                    bind!press(GluiKeyboardKey.enter),
+                    bind!press(GluiGamepadButton.cross),
+
+                    // Submit
+                    bind!submit(GluiKeyboardKey.enter),
+                    bind!submit(GluiGamepadButton.cross),
+
+                    // Cancel
+                    bind!cancel(GluiKeyboardKey.escape),
+                    bind!cancel(GluiGamepadButton.circle),
+
+                    // Tabbing; index-focus
+                    bind!focusPrevious(GluiGamepadButton.leftButton),
+                    bind!focusNext(GluiKeyboardKey.tab),
+                    bind!focusNext(GluiGamepadButton.rightButton),
+
+                    // Directional focus
+                    bind!focusLeft(GluiKeyboardKey.left),
+                    bind!focusLeft(GluiGamepadButton.dpadLeft),
+                    bind!focusRight(GluiKeyboardKey.right),
+                    bind!focusRight(GluiGamepadButton.dpadRight),
+                    bind!focusUp(GluiKeyboardKey.up),
+                    bind!focusUp(GluiGamepadButton.dpadUp),
+                    bind!focusDown(GluiKeyboardKey.down),
+                    bind!focusDown(GluiGamepadButton.dpadDown),
+
+                    // Text input
+                    bind!backspace(GluiKeyboardKey.backspace),
+                    bind!entryPrevious(GluiKeyboardKey.up),
+                    bind!entryPrevious(GluiGamepadButton.dpadUp),
+                    bind!entryNext(GluiKeyboardKey.down),
+                    bind!entryNext(GluiKeyboardKey.tab),
+                    bind!entryNext(GluiGamepadButton.dpadDown),
+
+                    // Scrolling
+                    bind!scrollLeft(GluiKeyboardKey.left),
+                    bind!scrollLeft(GluiGamepadButton.dpadLeft),
+                    bind!scrollLeft(GluiMouseButton.scrollLeft),
+                    bind!scrollRight(GluiKeyboardKey.right),
+                    bind!scrollRight(GluiGamepadButton.dpadRight),
+                    bind!scrollRight(GluiMouseButton.scrollRight),
+                    bind!scrollUp(GluiKeyboardKey.up),
+                    bind!scrollUp(GluiGamepadButton.dpadUp),
+                    bind!scrollUp(GluiMouseButton.scrollUp),
+                    bind!scrollDown(GluiKeyboardKey.down),
+                    bind!scrollDown(GluiGamepadButton.dpadDown),
+                    bind!scrollDown(GluiMouseButton.scrollDown),
+                    bind!pageUp(GluiKeyboardKey.pageUp),
+                    bind!pageDown(GluiKeyboardKey.pageDown),
+                ]
+            )
+
         ];
 
     }
@@ -571,21 +567,116 @@ struct LayoutTree {
     /// Returns: `true` if the action was cleared.
     bool clearBoundInput(InputActionID action) {
 
-        return boundInputs.remove(action);
+        import std.array;
+
+        // TODO test
+
+        bool found;
+
+        foreach (ref layer; boundInputs) {
+
+            const oldLength = layer.bindings.length;
+
+            layer.bindings = layer.bindings.filter!(a => a.action == action).array;
+
+            if (layer.bindings.length != oldLength) {
+                found = true;
+            }
+
+        }
+
+        return found;
+
+    }
+
+    /// Find a layer for the given input stroke.
+    /// Returns: Layer found for the given input stroke. `null` if none found.
+    inout(InputLayer)* layerForStroke(InputStroke stroke) inout scope return {
+
+        auto modifiers = stroke.modifiers;
+
+        foreach (i, layer; boundInputs) {
+
+            // Found a matching layer
+            if (modifiers == layer.modifiers) {
+
+                return &boundInputs[i];
+
+            }
+
+            // Stop if other layers are less complex
+            if (modifiers.length > layer.modifiers.length) break;
+
+        }
+
+        return null;
 
     }
 
     /// Bind a key stroke or button to given input action. Multiple key strokes are allowed to match given action.
-    void bindInput(InputActionID action, InputStroke stroke) {
+    void bindInput(InputActionID action, InputStroke stroke)
+    in (stroke.length != 0)
+    do {
 
-        boundInputs.require(action) ~= stroke;
+        // TODO tests
+
+        auto binding = InputBinding(action, stroke.input[$-1]);
+
+        // Layer exists, add the binding
+        if (auto layer = layerForStroke(stroke)) {
+
+            layer.bindings ~= binding;
+
+        }
+
+        // Layer doesn't exist, create it
+        else {
+
+            auto modifiers = stroke.modifiers;
+            auto newLayer = InputLayer(modifiers, [binding]);
+            bool found;
+
+            // Insert the layer before any layer that is less complex
+            foreach (i, layer; boundInputs) {
+
+                if (modifiers.length > layer.modifiers.length) {
+
+                    boundInputs = boundInputs[0..i] ~ newLayer ~ boundInputs[i..$];
+                    found = true;
+                    break;
+
+                }
+
+            }
+
+            if (!found) boundInputs ~= newLayer;
+
+            assert(isSorted(boundInputs));
+
+        }
 
     }
 
     /// Bind a key stroke or button to given input action, replacing any previously bound inputs.
-    void bindInputReplace(InputActionID action, InputStroke stroke) {
+    void bindInputReplace(InputActionID action, InputStroke stroke)
+    in (stroke.length != 0)
+    do {
 
-        boundInputs[action] = [stroke];
+        import std.array;
+
+        // Find a matching layer
+        if (auto layer = layerForStroke(stroke)) {
+
+            // Remove any stroke that matches
+            layer.bindings = layer.bindings.filter!(a => a.trigger == stroke.input[$-1]).array;
+
+            // Insert the binding
+            layer.bindings ~= InputBinding(action, stroke.input[$-1]);
+
+        }
+
+        // Layer doesn't exist, bind it the straightforward way
+        else bindInput(action, stroke);
 
     }
 
@@ -704,6 +795,46 @@ struct LayoutTree {
 
             // Start again
             backend.area = scissors;
+
+        }
+
+    }
+
+    /// Fetch tree events (e.g. actions)
+    package void poll() {
+
+        // Reset all actions
+        downActions.clear();
+        activeActions.clear();
+
+        // Test all bindings
+        foreach (layer; boundInputs) {
+
+            // Check if the layer is active
+            if (!layer.modifiers.isDown(backend)) continue;
+
+            // Found an active layer, test all bound strokes
+            foreach (binding; layer.bindings) {
+
+                // Register held-down actions
+                if (InputStroke.isItemDown(backend, binding.trigger)) {
+
+                    downActions ~= binding;
+
+                }
+
+                // Register triggered actions
+                if (InputStroke.isItemActive(backend, binding.trigger)) {
+
+                    activeActions ~= binding;
+
+
+                }
+
+            }
+
+            // End on this layer
+            break;
 
         }
 
