@@ -337,26 +337,28 @@ class HeadlessBackend : GluiBackend {
     }
 
     /// Check if the given gamepad button has been pressed/released or, if it's held down or not (up).
-    ///
-    /// Controllers start at 0.
-    bool isPressed(int controller, GluiGamepadButton button) const
+    int isPressed(GluiGamepadButton button) const
 
         => gamepad[button] == State.pressed;
 
-    bool isReleased(int controller, GluiGamepadButton button) const
+    int isReleased(GluiGamepadButton button) const
 
         => gamepad[button] == State.released;
 
-    bool isDown(int controller, GluiGamepadButton button) const
+    int isDown(GluiGamepadButton button) const
 
         => gamepad[button] == State.pressed
         || gamepad[button] == State.repeated
         || gamepad[button] == State.down;
 
-    bool isUp(int controller, GluiGamepadButton button) const
+    int isUp(GluiGamepadButton button) const
 
         => gamepad[button] == State.released
         || gamepad[button] == State.up;
+
+    int isRepeated(GluiGamepadButton button) const
+
+        => gamepad[button] == State.repeated;
 
     /// Get/set mouse position
     Vector2 mousePosition(Vector2 value)

@@ -8,6 +8,9 @@ debug (Glui_BuildMessages) {
 
 import raylib;
 
+import std.range;
+import std.algorithm;
+
 import glui.backend;
 
 public import raylib : Vector2, Rectangle, Color;
@@ -49,18 +52,32 @@ class Raylib5Backend : GluiBackend {
         bool isReleased(GluiKeyboardKey key) const => IsKeyReleased(key.toRaylib);
         bool isDown(GluiKeyboardKey key) const => IsKeyDown(key.toRaylib);
         bool isUp(GluiKeyboardKey key) const => IsKeyUp(key.toRaylib);
-
         bool isRepeated(GluiKeyboardKey key) const => IsKeyPressedRepeat(key.toRaylib);
+
         dchar inputCharacter() => cast(dchar) GetCharPressed();
 
-        bool isPressed(int controller, GluiGamepadButton button) const
-            => IsGamepadButtonPressed(controller, button.toRaylib);
-        bool isReleased(int controller, GluiGamepadButton button) const
-            => IsGamepadButtonReleased(controller, button.toRaylib);
-        bool isDown(int controller, GluiGamepadButton button) const
-            => IsGamepadButtonDown(controller, button.toRaylib);
-        bool isUp(int controller, GluiGamepadButton button) const
-            => IsGamepadButtonUp(controller, button.toRaylib);
+        int isPressed(GluiGamepadButton button) const {
+            auto btn = button.toRaylib;
+            return 1 + cast(int) iota(0, 4).countUntil!(a => IsGamepadButtonPressed(a, btn));
+        }
+
+        int isReleased(GluiGamepadButton button) const {
+            auto btn = button.toRaylib;
+            return 1 + cast(int) iota(0, 4).countUntil!(a => IsGamepadButtonReleased(a, btn));
+        }
+
+        int isDown(GluiGamepadButton button) const {
+            auto btn = button.toRaylib;
+            return 1 + cast(int) iota(0, 4).countUntil!(a => IsGamepadButtonDown(a, btn));
+        }
+
+        int isUp(GluiGamepadButton button) const {
+            auto btn = button.toRaylib;
+            return 1 + cast(int) iota(0, 4).countUntil!(a => IsGamepadButtonUp(a, btn));
+        }
+
+        int isRepeated(GluiGamepadButton button) const
+            => 0;
 
     }
 

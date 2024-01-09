@@ -2,6 +2,7 @@ module glui.tree;
 
 import std.conv;
 import std.math;
+import std.datetime;
 import std.container;
 
 import glui.node;
