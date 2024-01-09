@@ -72,6 +72,12 @@ immutable struct InputActionID {
 
     }
 
+    static InputActionID from(alias item)() {
+
+        return InputAction!item.id;
+
+    }
+
     bool opEqual(InputActionID other) {
 
         return id == other.id;
@@ -150,7 +156,6 @@ struct InputStroke {
     alias Item = SumType!(GluiKeyboardKey, GluiMouseButton, GluiGamepadButton);
 
     Item[] input;
-    invariant(input.length >= 1);
 
     this(T...)(T items)
     if (!is(items : Item[])) {
@@ -170,13 +175,24 @@ struct InputStroke {
 
     }
 
+    /// Get number of items in the stroke.
+    size_t length() const => input.length;
+
+    /// Get a copy of the input stroke with the last item removed, if any.
+    ///
+    /// For example, for a `leftShift+w` stroke, this will return `leftShift`.
+    InputStroke modifiers() {
+
+        return input.length
+            ? InputStroke(input[0..$-1])
+            : InputStroke();
+
+    }
+
     /// Check if the last item of this input stroke is done with a mouse
     bool isMouseStroke() const {
 
-        return input[$-1].match!(
-            (GluiMouseButton _) => true,
-            (_) => false,
-        );
+        return isMouseItem(input[$-1]);
 
     }
 
@@ -194,10 +210,20 @@ struct InputStroke {
 
     }
 
-    /// Check if all keys or buttons required for the stroke are held down.
-    bool isDown(const GluiBackend backend) const @trusted {
+    /// Check if the given item is done with a mouse.
+    static bool isMouseItem(Item item) {
 
-        return input.all!(a => isDown(backend, a));
+        return item.match!(
+            (GluiMouseButton _) => true,
+            (_) => false,
+        );
+
+    }
+
+    /// Check if all keys or buttons required for the stroke are held down.
+    bool isDown(const GluiBackend backend) const {
+
+        return input.all!(a => isItemDown(backend, a));
 
     }
 
@@ -235,19 +261,11 @@ struct InputStroke {
     /// time.
     bool isActive(const GluiBackend backend) const @trusted {
 
-        return (
-
-            // For all but the last item, check if it's held down
-            input[0 .. $-1].all!(a => isDown(backend, a))
+        // For all but the last item, check if it's held down
+        return input[0 .. $-1].all!(a => isItemDown(backend, a))
 
             // For the last item, check if it's pressed or released, depending on the type
-            && input[$-1].match!(
-                (GluiKeyboardKey key) => backend.isPressed(key) || backend.isRepeated(key),
-                (GluiMouseButton button) => backend.isReleased(button),
-                (GluiGamepadButton button) => backend.isPressed(button) || backend.isRepeated(button),
-            )
-
-        );
+            && isItemActive(backend, input[$-1]);
 
     }
 
@@ -316,7 +334,8 @@ struct InputStroke {
 
     }
 
-    private static bool isDown(const GluiBackend backend, Item item) @trusted {
+    /// Check if the given is held down.
+    static bool isItemDown(const GluiBackend backend, Item item) {
 
         return item.match!(
 
@@ -332,9 +351,47 @@ struct InputStroke {
 
     }
 
+    /// Check if the given item is triggered.
+    ///
+    /// If the item is a mouse button, it will be triggered on release. If it's a keyboard key or gamepad button, it'll
+    /// be triggered on press.
+    static bool isItemActive(const GluiBackend backend, Item item) {
+
+        return item.match!(
+            (GluiKeyboardKey key) => backend.isPressed(key) || backend.isRepeated(key),
+            (GluiMouseButton button) => backend.isReleased(button),
+            (GluiGamepadButton button) => backend.isPressed(button) || backend.isRepeated(button),
+        );
+
+    }
+
     string toString() const {
 
         return format!"InputStroke(%(%s + %))"(input);
+
+    }
+
+}
+
+/// Binding of an input stroke to an input action.
+struct InputBinding {
+
+    InputActionID action;
+    InputStroke.Item trigger;
+
+}
+
+/// A layer groups input bindings by common key modifiers.
+struct InputLayer {
+
+    InputStroke modifiers;
+    InputBinding[] bindings;
+
+    /// When sorting ascending, the lowest value is given to the InputLayer with greatest number of bindings
+    int opCmp(const InputLayer other) const {
+
+        // You're not going to put 2,147,483,646 modifiers in a single input stroke, are you?
+        return cast(int) (other.modifiers.length - modifiers.length);
 
     }
 
@@ -457,79 +514,11 @@ unittest {
 
 }
 
-inout(InputStroke)[] getStrokes(alias type)(inout(LayoutTree)* tree)
-if (isInputActionType!type) {
-
-    // Note: `get` doesn't support `inout`
-    if (auto r = InputAction!type in tree.boundInputs) return *r;
-    else return null;
-
-}
-
-unittest {
-
-    import glui.space;
-
-    auto tree = new LayoutTree(vspace());
-    auto strokes = tree.getStrokes!(GluiInputAction.press);
-
-    // "press" can be activated with the left mouse button
-    assert(strokes.canFind(InputStroke(GluiMouseButton.left)));
-
-    // It can also be activated with the enter key
-    assert(strokes.canFind(InputStroke(GluiKeyboardKey.enter)));
-
-}
-
-/// Get all strokes that might be performed with a mouse that may trigger this action.
-auto getMouseStrokes(alias type)(LayoutTree* tree)
-if (isInputActionType!type) {
-
-    return getStrokes!type(tree).filter!"a.isMouseStroke";
-
-}
-
-unittest {
-
-    import glui.space;
-
-    auto tree = new LayoutTree(vspace());
-    auto strokes = tree.getMouseStrokes!(GluiInputAction.press);
-
-    // Out of all mouse buttons, "press" can only be activated with the left button, at least with the default bindings
-    assert(strokes.equal([InputStroke(GluiMouseButton.left)]));
-
-}
-
-/// Get all strokes that might be performed with a keyboard or gamepad that may trigger this action.
-auto getFocusStrokes(alias type)(LayoutTree* tree)
-if (isInputActionType!type) {
-
-    return getStrokes!type(tree).filter!"!a.isMouseStroke";
-
-}
-
-unittest {
-
-    import glui.space;
-
-    auto tree = new LayoutTree(vspace());
-    auto strokes = tree.getFocusStrokes!(GluiInputAction.press);
-
-    // "press" can be activated with the enter key
-    assert(strokes.canFind(InputStroke(GluiKeyboardKey.enter)));
-
-    // Because mouse strokes are filtered out, they will not appear in the result
-    assert(!strokes.canFind(InputStroke(GluiMouseButton.left)));
-
-}
-
 /// Check if any stroke bound to this action is being held.
-bool isDown(alias type)(const(LayoutTree)* tree)
+bool isDown(alias type)(LayoutTree* tree)
 if (isInputActionType!type) {
 
-    return getStrokes!type(tree).any!(a => a.isDown(tree.backend));
-    // Maybe this could be faster? Cache the result? Something? No idea.
+    return tree.downActions[].canFind!"a.action == b"(InputActionID.from!type);
 
 }
 
@@ -547,17 +536,20 @@ unittest {
 
     io.press(GluiKeyboardKey.leftControl);
     io.press(GluiKeyboardKey.backspace);
+    tree.poll();
 
     // The action is now held down with the ctrl+blackspace stroke
     assert(tree.isDown!(GluiInputAction.backspaceWord));
 
     io.release(GluiKeyboardKey.backspace);
     io.press(GluiKeyboardKey.w);
+    tree.poll();
 
     // ctrl+W also activates the stroke
     assert(tree.isDown!(GluiInputAction.backspaceWord));
 
     io.release(GluiKeyboardKey.leftControl);
+    tree.poll();
 
     // Control up, won't match any stroke now
     assert(!tree.isDown!(GluiInputAction.backspaceWord));
@@ -568,7 +560,9 @@ unittest {
 bool isMouseDown(alias type)(LayoutTree* tree)
 if (isInputActionType!type) {
 
-    return getMouseStrokes!type(tree).any!(a => a.isDown(tree.backend));
+    return tree.downActions[].canFind!(a
+        => a.action == InputActionID.from!type
+        && InputStroke.isMouseItem(a.trigger));
 
 }
 
@@ -584,12 +578,14 @@ unittest {
     assert(!tree.isDown!(GluiInputAction.press));
 
     io.press(GluiMouseButton.left);
+    tree.poll();
 
     // Pressing with a mouse
     assert(tree.isDown!(GluiInputAction.press));
     assert(tree.isMouseDown!(GluiInputAction.press));
 
     io.release(GluiMouseButton.left);
+    tree.poll();
 
     // Releasing a mouse key still counts as holding it down
     // This is important — a released mouse is used to trigger the action
@@ -598,16 +594,19 @@ unittest {
 
     // Need to wait a frame
     io.nextFrame;
+    tree.poll();
 
     assert(!tree.isDown!(GluiInputAction.press));
 
     io.press(GluiKeyboardKey.enter);
+    tree.poll();
 
     // Pressing with a keyboard
     assert(tree.isDown!(GluiInputAction.press));
     assert(!tree.isMouseDown!(GluiInputAction.press));
 
     io.release(GluiKeyboardKey.enter);
+    tree.poll();
 
     assert(!tree.isDown!(GluiInputAction.press));
 
@@ -617,7 +616,9 @@ unittest {
 bool isFocusDown(alias type)(LayoutTree* tree)
 if (isInputActionType!type) {
 
-    return getFocusStrokes!type(tree).any!(a => a.isDown(tree.backend));
+    return tree.downActions[].canFind!(a
+        => a.action == InputActionID.from!type
+        && !InputStroke.isMouseItem(a.trigger));
 
 }
 
@@ -633,6 +634,7 @@ unittest {
     assert(!tree.isDown!(GluiInputAction.press));
 
     io.press(GluiKeyboardKey.enter);
+    tree.poll();
 
     // Pressing with a keyboard
     assert(tree.isDown!(GluiInputAction.press));
@@ -640,6 +642,7 @@ unittest {
 
     io.release(GluiKeyboardKey.enter);
     io.press(GluiMouseButton.left);
+    tree.poll();
 
     // Pressing with a mouse
     assert(tree.isDown!(GluiInputAction.press));
@@ -651,7 +654,8 @@ unittest {
 bool isActive(alias type)(const(LayoutTree)* tree)
 if (isInputActionType!type) {
 
-    return getStrokes!type(tree).any!"a.isActive";
+    return tree.activeActions[].canFind!(a
+        => a.action == InputActionID.from!type);
 
 }
 
@@ -659,7 +663,9 @@ if (isInputActionType!type) {
 bool isMouseActive(alias type)(LayoutTree* tree)
 if (isInputActionType!type) {
 
-    return getMouseStrokes!type(tree).any!(a => a.isActive(tree.backend));
+    return tree.activeActions[].canFind!(a
+        => a.action == InputActionID.from!type
+        && InputStroke.isMouseItem(a.trigger));
 
 }
 
@@ -667,7 +673,9 @@ if (isInputActionType!type) {
 bool isFocusActive(alias type)(LayoutTree* tree)
 if (isInputActionType!type) {
 
-    return getFocusStrokes!type(tree).any!(a => a.isActive(tree.backend));
+    return tree.activeActions[].canFind!(a
+        => a.action == InputActionID.from!type
+        && !InputStroke.isMouseItem(a.trigger));
 
 }
 
@@ -761,25 +769,19 @@ interface GluiHoverable {
 
                             static if (isInputActionType!actionType) {{
 
-                                // Get any of held down strokes
-                                auto strokes = tree.getStrokes!actionType
-
-                                    // Filter to mouse or keyboard strokes
-                                    .filter!(a => a.isMouseStroke == mouse)
-
-                                    // Check if they're held down
-                                    .find!(a => a.isDown(tree.backend));
-
-                                // TODO prevent triggering an action if it could be associated with a more complex
-                                //      action: for example, `C` shouldn't trigger actions if `ctrl+C` is bound and
-                                //      pressed.
+                                // Find out if there's any
+                                const down = mouse
+                                    ? tree.isMouseDown!actionType
+                                    : tree.isFocusDown!actionType;
 
                                 // Check if the stroke is being held down
-                                if (!strokes.empty) {
+                                if (down) {
 
-                                    const condition = activateWhileDown
-                                        ? strokes.front.isDown(tree.backend)
-                                        : strokes.front.isActive(tree.backend);
+                                    // Find the correct trigger condition
+                                    const condition
+                                        = activateWhileDown ? down
+                                        : mouse ? tree.isMouseActive!actionType
+                                        : tree.isFocusActive!actionType;
 
                                     // Run the action if the stroke was performed
                                     if (condition) {
@@ -1038,10 +1040,9 @@ unittest {
     // Press the node via focus
     io.press(GluiKeyboardKey.enter);
 
-    assert(root.tree.isFocusActive!(GluiInputAction.press));
-
     root.draw();
 
+    assert(root.tree.isFocusActive!(GluiInputAction.press));
     assert(pressCount == 1);
 
     io.nextFrame;

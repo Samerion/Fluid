@@ -584,6 +584,9 @@ abstract class GluiNode : Styleable {
         tree.focusDirection = FocusDirection(tree.focusBox);
         tree.focusBox = Rectangle(float.nan);
 
+        // Update input
+        tree.poll();
+
         // Resize if required
         if (tree.io.hasJustResized || _requiresResize) {
 
@@ -776,16 +779,14 @@ abstract class GluiNode : Styleable {
 
         // Autofocus last
         {
-
-            // TODO Glui cannot
-
             root.tree.focus = null;
 
             io.nextFrame;
-            io.press(GluiGamepadButton.leftButton);
+            io.press(GluiKeyboardKey.leftShift);
+            io.press(GluiKeyboardKey.tab);
             root.draw();
 
-            // If left-shift is pressed, the last focusable node will be used
+            // If left-shift tab is pressed, the last focusable node will be used
             assert(root.tree.focus.asNode is root.children[$-1]);
 
             io.nextFrame;
