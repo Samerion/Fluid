@@ -21,6 +21,11 @@ alias VoidDelegate = void delegate() @safe;
 
 static GluiBackend defaultGluiBackend;
 
+/// `GluiBackend` is an interface making it possible to bind Glui to a library other than Raylib. Another built-in
+/// backend is `glui.simpledisplay.SimpledisplayBackend` for `arsd.simpledisplay`.
+///
+/// The default unit in graphical space is a **pixel** (`px`), here defined as **1/96 of an inch**. This is unless
+/// stated otherwise, as in `Texture`.
 interface GluiBackend {
 
     /// Check if the given mouse button has just been pressed/released or, if it's held down or not (up).
@@ -348,7 +353,7 @@ static Image generateColorImage(int width, int height, Color color) {
 /// Image available to the CPU.
 struct Image {
 
-    /// Raw image data.
+    /// Image data.
     Color[] pixels;
     int width, height;
 
@@ -382,8 +387,12 @@ struct Texture {
 
     /// GPU/backend ID of the texture.
     uint id;
-    int width;
-    int height;
+
+    /// Width and height of the texture, **in dots**. The meaning of a dot is defined by `dpiX` and `dpiY`
+    int width, height;
+
+    /// Dots per inch for the X and Y axis. Defaults to 96, thus making a dot in the texture equivalent to a pixel.
+    int dpiX = 96, dpiY = 96;
 
     bool opEquals(const Texture other) const
 

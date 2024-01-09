@@ -93,6 +93,8 @@ class HeadlessBackend : GluiBackend {
         uint id;
         int width;
         int height;
+        int dpiX;
+        int dpiY;
         Vector2 position;
         Color tint;
 
@@ -101,7 +103,11 @@ class HeadlessBackend : GluiBackend {
         this(Texture texture, Vector2 position, Color tint) {
 
             // Omit the "backend" Texture field to make `canvas` @safe
-            this.tupleof[0..3] = texture.tupleof[1..4];
+            this.id = texture.id;
+            this.width = texture.width;
+            this.height = texture.height;
+            this.dpiX = texture.dpiX;
+            this.dpiY = texture.dpiY;
             this.position = position;
             this.tint = tint;
 
@@ -381,7 +387,7 @@ class HeadlessBackend : GluiBackend {
 
         => _windowSize;
 
-    /// Get HiDPI scale of the window. A value of 1 should be equivalent to 96 DPI.
+    /// Get HiDPI scale of the window. This does nothing in the headless backend.
     Vector2 hidpiScale() const
 
         => _hidpiScale;
@@ -571,6 +577,8 @@ class HeadlessBackend : GluiBackend {
                 => tex.id == texture.id
                 && tex.width == texture.width
                 && tex.height == texture.height
+                && tex.dpiX == texture.dpiX
+                && tex.dpiY == texture.dpiY
                 && tex.isPositionClose(position)
                 && tex.tint == tint),
             "No matching texture"
