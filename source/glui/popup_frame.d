@@ -258,6 +258,8 @@ class PopupNodeAction : TreeAction {
     this(GluiPopupFrame popup) {
 
         this.startNode = this.popup = popup;
+        popup.show();
+        popup.toRemove = false;
 
     }
 

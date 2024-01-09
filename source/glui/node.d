@@ -1236,12 +1236,14 @@ abstract class GluiNode : Styleable {
             // The first rectangle doesn't expand so it should be exactly 100×100 in size
             io.assertRectangle(Rectangle(350, 0, 100, 100), colors[0]);
 
+            debug io.saveSVG("/tmp/glui.svg");
+
             // The remaining space is 500px, so divided into 1+2+3=6 pieces, it should be about 83px per piece
             // TODO Make sure Glui fills in every pixel while filling in the gaps
             //      (this will make this test fail)
             //      Practically, that means making `space` track remaining space, rather than available space
-            io.assertRectangle(Rectangle(350, 100, 100, 83), colors[1]);
-            io.assertRectangle(Rectangle(350, 183, 100, 167), colors[2]);
+            io.assertRectangle(Rectangle(350, 100, 100, 83.33), colors[1]);
+            io.assertRectangle(Rectangle(350, 183, 100, 166.66), colors[2]);
             io.assertRectangle(Rectangle(350, 349, 100, 250), colors[3]);
 
         }

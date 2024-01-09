@@ -468,11 +468,11 @@ struct LayoutTree {
             idOf!press: [
                 InputStroke(GluiMouseButton.left),
                 InputStroke(GluiKeyboardKey.enter),
-                InputStroke(GluiGamepadButton.circle),
+                InputStroke(GluiGamepadButton.cross),
             ],
             idOf!submit: [
                 InputStroke(GluiKeyboardKey.enter),
-                InputStroke(GluiGamepadButton.circle),
+                InputStroke(GluiGamepadButton.cross),
             ],
             idOf!cancel: [
                 InputStroke(GluiKeyboardKey.escape),

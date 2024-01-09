@@ -200,9 +200,9 @@ enum GluiGamepadButton {
     dpadDown,            // Dpad down button
     dpadLeft,            // Dpad left button
     triangle,            // Triangle (PS) or Y (Xbox)
-    square,              // Square (PS) or X (Xbox)
-    cross,               // Cross (PS) or A (Xbox)
     circle,              // Circle (PS) or B (Xbox)
+    cross,               // Cross (PS) or A (Xbox)
+    square,              // Square (PS) or X (Xbox)
     leftButton,          // Left button behind the controlller (LB).
     leftTrigger,         // Left trigger (LT).
     rightButton,         // Right button behind the controller (RB).
