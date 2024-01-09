@@ -290,14 +290,15 @@ class SimpledisplayBackend : GluiBackend {
 
     Vector2 mousePosition(Vector2 position) @trusted {
 
-        window.warpMouse(cast(int) position.x, cast(int) position.y);
+        auto positionRay = toSdpyCoords(position);
+        window.warpMouse(cast(int) positionRay.x, cast(int) positionRay.y);
         return _mousePosition = position;
 
     }
 
     Vector2 mousePosition() const @trusted {
 
-        return _mousePosition;
+        return toGluiCoords(_mousePosition);
 
     }
 
@@ -315,23 +316,24 @@ class SimpledisplayBackend : GluiBackend {
 
     Vector2 windowSize(Vector2 size) @trusted {
 
-        window.resize(cast(int) size.x, cast(int) size.y);
+        auto sizeRay = toSdpyCoords(size);
+        window.resize(cast(int) sizeRay.x, cast(int) sizeRay.y);
         return size;
 
     }
 
     Vector2 windowSize() const @trusted {
 
-        return Vector2(window.width, window.height);
+        return toGluiCoords(Vector2(window.width, window.height));
 
     }
 
-    /// Convert window coordinates to OpenGL coordinates.
+    /// Convert window coordinates to OpenGL coordinates; done *after* toSdpyCoords.
     Vector2 toGL(Vector2 coords) {
 
         return Vector2(
-            coords.x / windowSize.x * 2 - 1,
-            1 - coords.y / windowSize.y * 2
+            coords.x / window.width * 2 - 1,
+            1 - coords.y / window.height * 2
         );
 
     }
@@ -361,14 +363,56 @@ class SimpledisplayBackend : GluiBackend {
 
     }
 
+    Vector2 toSdpyCoords(Vector2 position) const @trusted {
+
+        return Vector2(position.x * hidpiScale.x, position.y * hidpiScale.y);
+
+    }
+
+    Rectangle toSdpyCoords(Rectangle rec) const @trusted {
+
+        return Rectangle(
+            rec.x * hidpiScale.x,
+            rec.y * hidpiScale.y,
+            rec.width * hidpiScale.x,
+            rec.height * hidpiScale.y,
+        );
+
+    }
+
+    Vector2 toGluiCoords(Vector2 position) const @trusted {
+
+        return Vector2(position.x / hidpiScale.x, position.y / hidpiScale.y);
+
+    }
+
+    Vector2 toGluiCoords(float x, float y) const @trusted {
+
+        return Vector2(x / hidpiScale.x, y / hidpiScale.y);
+
+    }
+
+    Rectangle toGluiCoords(Rectangle rec) const @trusted {
+
+        return Rectangle(
+            rec.x / hidpiScale.x,
+            rec.y / hidpiScale.y,
+            rec.width / hidpiScale.x,
+            rec.height / hidpiScale.y,
+        );
+
+    }
+
     Rectangle area(Rectangle rect) @trusted {
+
+        auto rectRay = toSdpyCoords(rect);
 
         glEnable(GL_SCISSOR_TEST);
         glScissor(
-            cast(int) rect.x,
-            cast(int) (window.height - rect.y - rect.height),
-            cast(int) rect.width,
-            cast(int) rect.height,
+            cast(int) rectRay.x,
+            cast(int) (window.height - rectRay.y - rectRay.height),
+            cast(int) rectRay.width,
+            cast(int) rectRay.height,
         );
         _scissorsEnabled = true;
 
@@ -509,8 +553,8 @@ class SimpledisplayBackend : GluiBackend {
         glBegin(GL_LINES);
 
         glColor4ub(color.tupleof);
-        vertex(start);
-        vertex(end);
+        vertex(toSdpyCoords(start));
+        vertex(toSdpyCoords(end));
 
         glEnd();
 
@@ -521,14 +565,20 @@ class SimpledisplayBackend : GluiBackend {
         openglDraw();
         glBegin(GL_TRIANGLES);
         glColor4ub(color.tupleof);
-        vertex(a);
-        vertex(b);
-        vertex(c);
+        vertex(toSdpyCoords(a));
+        vertex(toSdpyCoords(b));
+        vertex(toSdpyCoords(c));
         glEnd();
 
     }
 
     void drawRectangle(Rectangle rectangle, Color color) @trusted {
+
+        drawRectangleImpl(toSdpyCoords(rectangle), color);
+
+    }
+
+    private void drawRectangleImpl(Rectangle rectangle, Color color) @trusted {
 
         import glui.utils;
 
@@ -575,12 +625,7 @@ class SimpledisplayBackend : GluiBackend {
     in (false)
     do {
 
-        auto rectangle = Rectangle(position.tupleof, texture.width, texture.height);
-
-        glEnable(GL_TEXTURE_2D);
-        glBindTexture(GL_TEXTURE_2D, texture.id);
-        drawRectangle(rectangle, tint);
-        glBindTexture(GL_TEXTURE_2D, 0);
+        drawTextureImpl(texture, position, tint, altText, false);
 
     }
 
@@ -588,7 +633,30 @@ class SimpledisplayBackend : GluiBackend {
     in (false)
     do {
 
-        drawTexture(texture, position, tint, altText);
+        drawTextureImpl(texture, position, tint, altText, true);
+
+    }
+
+    @trusted
+    private void drawTextureImpl(Texture texture, Vector2 position, Color tint, string altText, bool alignPixels) {
+
+        import std.math;
+
+        auto rectangle = Rectangle(
+            toSdpyCoords(position).tupleof,
+            texture.width * dpi.x / texture.dpiX,
+            texture.height * dpi.y / texture.dpiY,
+        );
+
+        if (alignPixels) {
+            rectangle.x = floor(rectangle.x);
+            rectangle.y = floor(rectangle.y);
+        }
+
+        glEnable(GL_TEXTURE_2D);
+        glBindTexture(GL_TEXTURE_2D, texture.id);
+        drawRectangleImpl(rectangle, tint);
+        glBindTexture(GL_TEXTURE_2D, 0);
 
     }
 
