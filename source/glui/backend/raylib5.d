@@ -80,8 +80,8 @@ class Raylib5Backend : GluiBackend {
 
     Vector2 mousePosition(Vector2 position) @trusted {
 
-        position = toRaylibCoords(position);
-        SetMousePosition(cast(int) position.x, cast(int) position.y);
+        auto positionRay = toRaylibCoords(position);
+        SetMousePosition(cast(int) positionRay.x, cast(int) positionRay.y);
         return position;
 
     }
