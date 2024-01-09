@@ -22,6 +22,7 @@ class Raylib5Backend : GluiBackend {
 
         GluiMouseCursor lastMouseCursor;
         Rectangle drawArea;
+        float _scale = 1;
 
     }
 
@@ -79,14 +80,15 @@ class Raylib5Backend : GluiBackend {
 
     Vector2 mousePosition(Vector2 position) @trusted {
 
-        SetMousePosition(cast(int) position.x, cast(int) position.y);
+        auto positionRay = toRaylibCoords(position);
+        SetMousePosition(cast(int) positionRay.x, cast(int) positionRay.y);
         return position;
 
     }
 
     Vector2 mousePosition() const @trusted {
 
-        return GetMousePosition;
+        return toGluiCoords(GetMousePosition);
 
     }
 
@@ -98,36 +100,102 @@ class Raylib5Backend : GluiBackend {
 
     bool hasJustResized() const @trusted {
 
+        // TODO detect and react to DPI changes
         return IsWindowResized;
 
     }
 
     Vector2 windowSize(Vector2 size) @trusted {
 
-        SetWindowSize(cast(int) size.x, cast(int) size.y);
+        auto sizeRay = toRaylibCoords(size);
+        SetWindowSize(cast(int) sizeRay.x, cast(int) sizeRay.y);
         return size;
 
     }
 
     Vector2 windowSize() const @trusted {
 
-        return Vector2(GetScreenWidth, GetScreenHeight);
+        return toGluiCoords(GetScreenWidth, GetScreenHeight);
 
     }
 
-    Vector2 hidpiScale() const @trusted {
+    float scale() const {
 
-        return GetWindowScaleDPI();
+        return _scale;
+
+    }
+
+    float scale(float value) {
+
+        return _scale = value;
+
+    }
+
+    Vector2 dpi() const @trusted {
+
+        static Vector2 value;
+
+        if (value == value.init) {
+
+            value = GetWindowScaleDPI;
+            value.x *= 96;
+            value.y *= 96;
+
+        }
+
+        return value * _scale;
+
+    }
+
+    Vector2 toRaylibCoords(Vector2 position) const @trusted {
+
+        return Vector2(position.x * hidpiScale.x, position.y * hidpiScale.y);
+
+    }
+
+    Rectangle toRaylibCoords(Rectangle rec) const @trusted {
+
+        return Rectangle(
+            rec.x * hidpiScale.x,
+            rec.y * hidpiScale.y,
+            rec.width * hidpiScale.x,
+            rec.height * hidpiScale.y,
+        );
+
+    }
+
+    Vector2 toGluiCoords(Vector2 position) const @trusted {
+
+        return Vector2(position.x / hidpiScale.x, position.y / hidpiScale.y);
+
+    }
+
+    Vector2 toGluiCoords(float x, float y) const @trusted {
+
+        return Vector2(x / hidpiScale.x, y / hidpiScale.y);
+
+    }
+
+    Rectangle toGluiCoords(Rectangle rec) const @trusted {
+
+        return Rectangle(
+            rec.x / hidpiScale.x,
+            rec.y / hidpiScale.y,
+            rec.width / hidpiScale.x,
+            rec.height / hidpiScale.y,
+        );
 
     }
 
     Rectangle area(Rectangle rect) @trusted {
 
+        auto rectRay = toRaylibCoords(rect);
+
         BeginScissorMode(
-            cast(int) rect.x,
-            cast(int) rect.y,
-            cast(int) rect.width,
-            cast(int) rect.height,
+            cast(int) rectRay.x,
+            cast(int) rectRay.y,
+            cast(int) rectRay.width,
+            cast(int) rectRay.height,
         );
 
         return drawArea = rect;
@@ -210,27 +278,61 @@ class Raylib5Backend : GluiBackend {
 
     void drawLine(Vector2 start, Vector2 end, Color color) @trusted {
 
-        DrawLineV(start, end, color);
+        DrawLineV(toRaylibCoords(start), toRaylibCoords(end), color);
 
     }
 
     void drawTriangle(Vector2 a, Vector2 b, Vector2 c, Color color) @trusted {
 
-        DrawTriangle(a, b, c, color);
+        DrawTriangle(toRaylibCoords(a), toRaylibCoords(b), toRaylibCoords(c), color);
 
     }
 
     void drawRectangle(Rectangle rectangle, Color color) @trusted {
 
-        DrawRectangleRec(rectangle, color);
+        DrawRectangleRec(toRaylibCoords(rectangle), color);
 
     }
 
-    void drawTexture(glui.backend.Texture texture, Vector2 position, Color tint) @trusted
+    void drawTexture(glui.backend.Texture texture, Vector2 position, Color tint, string alt = "")
     in (false)
     do {
 
-        DrawTextureV(texture.toRaylib, position, tint);
+        drawTexture(texture, position, tint, alt, false);
+
+    }
+
+    void drawTextureAlign(glui.backend.Texture texture, Vector2 position, Color tint, string alt = "")
+    in (false)
+    do {
+
+        drawTexture(texture, position, tint, alt, true);
+
+    }
+
+    protected
+    void drawTexture(glui.backend.Texture texture, Vector2 position, Color tint, string alt, bool alignPixels) @trusted
+    do {
+
+        import std.math;
+
+        position = toRaylibCoords(position);
+
+        // Align texture to pixel boundaries
+        if (alignPixels) {
+            position.x = floor(position.x);
+            position.y = floor(position.y);
+        }
+
+        const dpi = this.dpi;
+        const size = Vector2(
+            texture.width * dpi.x / texture.dpiX,
+            texture.height * dpi.y / texture.dpiY,
+        );
+        const source = Rectangle(0, 0, texture.width, texture.height);
+        const destination = Rectangle(position.tupleof, size.tupleof);
+
+        DrawTexturePro(texture.toRaylib, source, destination, Vector2(0, 0), 0, tint);
 
     }
 

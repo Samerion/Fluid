@@ -21,6 +21,11 @@ alias VoidDelegate = void delegate() @safe;
 
 static GluiBackend defaultGluiBackend;
 
+/// `GluiBackend` is an interface making it possible to bind Glui to a library other than Raylib. Another built-in
+/// backend is `glui.simpledisplay.SimpledisplayBackend` for `arsd.simpledisplay`.
+///
+/// The default unit in graphical space is a **pixel** (`px`), here defined as **1/96 of an inch**. This is unless
+/// stated otherwise, as in `Texture`.
 interface GluiBackend {
 
     /// Check if the given mouse button has just been pressed/released or, if it's held down or not (up).
@@ -64,8 +69,24 @@ interface GluiBackend {
     Vector2 windowSize(Vector2);
     Vector2 windowSize() const;  /// ditto
 
-    /// Get HiDPI scale of the window. A value of 1 should be equivalent to 96 DPI.
-    Vector2 hidpiScale() const;
+    /// Set scale to apply to whatever is drawn next.
+    ///
+    /// Suggested implementation is to increase return value of `dpi`.
+    float scale() const;
+
+    /// ditto
+    float scale(float);
+
+    /// Get horizontal and vertical DPI of the window.
+    Vector2 dpi() const;
+
+    /// Get the DPI value for the window as a scale relative to 96 DPI.
+    final Vector2 hidpiScale() const {
+
+        const dpi = this.dpi;
+        return Vector2(dpi.x / 96f, dpi.y / 96f);
+
+    }
 
     /// Set area within the window items will be drawn to; any pixel drawn outside will be discarded.
     Rectangle area(Rectangle rect);
@@ -96,7 +117,11 @@ interface GluiBackend {
     void drawRectangle(Rectangle rectangle, Color color);
 
     /// Draw a texture.
-    void drawTexture(Texture texture, Vector2 position, Color tint)
+    void drawTexture(Texture texture, Vector2 position, Color tint, string altText = "")
+    in (texture.backend is this, "Given texture comes from a different backend");
+
+    /// Draw a texture, but ensure it aligns with pixel boundaries, recommended for text.
+    void drawTextureAlign(Texture texture, Vector2 position, Color tint, string altText = "")
     in (texture.backend is this, "Given texture comes from a different backend");
 
 }
@@ -348,7 +373,7 @@ static Image generateColorImage(int width, int height, Color color) {
 /// Image available to the CPU.
 struct Image {
 
-    /// Raw image data.
+    /// Image data.
     Color[] pixels;
     int width, height;
 
@@ -382,8 +407,12 @@ struct Texture {
 
     /// GPU/backend ID of the texture.
     uint id;
-    int width;
-    int height;
+
+    /// Width and height of the texture, **in dots**. The meaning of a dot is defined by `dpiX` and `dpiY`
+    int width, height;
+
+    /// Dots per inch for the X and Y axis. Defaults to 96, thus making a dot in the texture equivalent to a pixel.
+    int dpiX = 96, dpiY = 96;
 
     bool opEquals(const Texture other) const
 
@@ -391,10 +420,23 @@ struct Texture {
         && width == other.width
         && height == other.height;
 
+    /// DPI value of the texture.
+    Vector2 dpi() const
+
+        => Vector2(dpiX, dpiY);
+
     /// Get texture size as a vector.
-    Vector2 size() const
+    Vector2 canvasSize() const
 
         => Vector2(width, height);
+
+    /// Get the size the texture will occupy within the viewport.
+    Vector2 viewportSize() const
+
+        => Vector2(
+            width * 96 / dpiX,
+            height * 96 / dpiY
+        );
 
     /// Draw this texture.
     void draw(Vector2 position, Color tint = color!"fff") {
