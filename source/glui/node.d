@@ -867,8 +867,8 @@ abstract class GluiNode : Styleable {
 
         // Get parameters
         const size = Vector2(
-            round(layout.nodeAlign[0] == NodeAlign.fill ? space.width  : min(space.width,  minSize.x)),
-            round(layout.nodeAlign[1] == NodeAlign.fill ? space.height : min(space.height, minSize.y)),
+            layout.nodeAlign[0] == NodeAlign.fill ? space.width  : min(space.width,  minSize.x),
+            layout.nodeAlign[1] == NodeAlign.fill ? space.height : min(space.height, minSize.y),
         );
         const position = position(space, size);
 
@@ -1114,8 +1114,8 @@ abstract class GluiNode : Styleable {
         }
 
         return Vector2(
-            round(space.x + positionImpl(layout.nodeAlign[0], space.width  - usedSpace.x)),
-            round(space.y + positionImpl(layout.nodeAlign[1], space.height - usedSpace.y)),
+            space.x + positionImpl(layout.nodeAlign[0], space.width  - usedSpace.x),
+            space.y + positionImpl(layout.nodeAlign[1], space.height - usedSpace.y),
         );
 
     }

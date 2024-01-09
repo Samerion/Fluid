@@ -199,7 +199,7 @@ class GluiImageView : GluiNode {
         // Adjust size
         if (isSizeAutomatic) {
 
-            minSize = _texture.size;
+            minSize = _texture.viewportSize;
 
         }
 

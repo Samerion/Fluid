@@ -59,6 +59,7 @@ class SimpledisplayBackend : GluiBackend {
 
     }
 
+    // TODO HiDPI
     // TODO non-openGL backend, maybe...
 
     /// Initialize the backend using the given window.
@@ -341,9 +342,9 @@ class SimpledisplayBackend : GluiBackend {
 
     }
 
-    Vector2 hidpiScale() const @trusted {
+    Vector2 dpi() const @trusted {
 
-        return Vector2(_dpi / 96f, _dpi / 96f);
+        return Vector2(_dpi, _dpi);
 
     }
 
@@ -557,7 +558,7 @@ class SimpledisplayBackend : GluiBackend {
 
     }
 
-    void drawTexture(Texture texture, Vector2 position, Color tint) @trusted
+    void drawTexture(Texture texture, Vector2 position, Color tint, string altText) @trusted
     in (false)
     do {
 
@@ -567,6 +568,14 @@ class SimpledisplayBackend : GluiBackend {
         glBindTexture(GL_TEXTURE_2D, texture.id);
         drawRectangle(rectangle, tint);
         glBindTexture(GL_TEXTURE_2D, 0);
+
+    }
+
+    void drawTextureAlign(Texture texture, Vector2 position, Color tint, string altText) @trusted
+    in (false)
+    do {
+
+        drawTexture(texture, position, tint, altText);
 
     }
 
