@@ -832,3 +832,22 @@ unittest {
     }
 
 }
+
+/// std.math.isClose adjusted for the most common use-case.
+private bool isClose(float a, float b) {
+
+    return std.math.isClose(a, b, 0.0, 0.01);
+
+}
+
+unittest {
+
+    assert(isClose(1, 1));
+    assert(isClose(1.004, 1));
+    assert(isClose(1.01, 1.008));
+
+    assert(!isClose(1, 2));
+    assert(!isClose(1.02, 1));
+    assert(!isClose(1.01, 1.03));
+
+}
