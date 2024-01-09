@@ -149,6 +149,7 @@ class HeadlessBackend : GluiBackend {
         Vector2 _mousePosition;
         Vector2 _windowSize;
         Vector2 _dpi = Vector2(96, 96);
+        float _scale = 1;
         Rectangle _area;
         GluiMouseCursor _cursor;
         float _deltaTime = 1f / 60f;
@@ -385,10 +386,18 @@ class HeadlessBackend : GluiBackend {
 
         => _windowSize;
 
+    float scale() const
+
+        => _scale;
+
+    float scale(float value)
+
+        => _scale = value;
+
     /// Get HiDPI scale of the window. This is not currently supported by this backend.
     Vector2 dpi() const
 
-        => _dpi;
+        => _dpi * _scale;
 
     /// Set area within the window items will be drawn to; any pixel drawn outside will be discarded.
     Rectangle area(Rectangle rect) {

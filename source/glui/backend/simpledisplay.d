@@ -39,6 +39,7 @@ class SimpledisplayBackend : GluiBackend {
 
         Vector2 _mousePosition;
         int _dpi;
+        float _scale = 1;
         bool _hasJustResized;
         StopWatch _stopWatch;
         float _deltaTime;
@@ -342,9 +343,21 @@ class SimpledisplayBackend : GluiBackend {
 
     }
 
+    float scale() const {
+
+        return _scale;
+
+    }
+
+    float scale(float value) {
+
+        return _scale = value;
+
+    }
+
     Vector2 dpi() const @trusted {
 
-        return Vector2(_dpi, _dpi);
+        return Vector2(_dpi, _dpi) * scale;
 
     }
 

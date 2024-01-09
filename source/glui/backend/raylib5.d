@@ -22,6 +22,7 @@ class Raylib5Backend : GluiBackend {
 
         GluiMouseCursor lastMouseCursor;
         Rectangle drawArea;
+        float _scale = 1;
 
     }
 
@@ -118,6 +119,18 @@ class Raylib5Backend : GluiBackend {
 
     }
 
+    float scale() const {
+
+        return _scale;
+
+    }
+
+    float scale(float value) {
+
+        return _scale = value;
+
+    }
+
     Vector2 dpi() const @trusted {
 
         static Vector2 value;
@@ -130,7 +143,7 @@ class Raylib5Backend : GluiBackend {
 
         }
 
-        return value;
+        return value * _scale;
 
     }
 
