@@ -249,14 +249,16 @@ class SimpledisplayBackend : GluiBackend {
 
     }
 
-    bool isPressed(int controller, GluiGamepadButton button) const
-        => false;
-    bool isReleased(int controller, GluiGamepadButton button) const
-        => false;
-    bool isDown(int controller, GluiGamepadButton button) const
-        => false;
-    bool isUp(int controller, GluiGamepadButton button) const
-        => true;
+    int isPressed(GluiGamepadButton button) const
+        => 0;
+    int isReleased(GluiGamepadButton button) const
+        => 0;
+    int isDown(GluiGamepadButton button) const
+        => 0;
+    int isUp(GluiGamepadButton button) const
+        => 1;
+    int isRepeated(GluiGamepadButton button) const
+        => 0;
 
     private void updateDPI() @trusted {
 

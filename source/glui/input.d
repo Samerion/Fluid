@@ -142,32 +142,12 @@ unittest {
 
 }
 
-/// Reference to a specific gamepad's button for `InputStroke`.
-struct NthGamepadButton {
-
-    int gamepadNumber;
-    GluiGamepadButton button;
-
-}
-
-/// Reference to a specific gamepad's axis for `InputStroke`.
-///
-/// Support to be implemented.
-///
-/// TODO this makes no sense, better to have the backend supply axes as buttons.
-struct NthGamepadAxis {
-
-    int gamepadNumber;
-    GluiGamepadAxis axis;
-
-}
-
 /// Represents a key or button input combination.
 struct InputStroke {
 
     import std.sumtype;
 
-    alias Item = SumType!(GluiKeyboardKey, GluiMouseButton, NthGamepadButton/*, NthGamepadAxis*/);
+    alias Item = SumType!(GluiKeyboardKey, GluiMouseButton, GluiGamepadButton);
 
     Item[] input;
     invariant(input.length >= 1);
@@ -178,15 +158,7 @@ struct InputStroke {
         input.length = items.length;
         static foreach (i, item; items) {
 
-            // Make gamepad buttons default to gamepad 0
-            static if (is(typeof(item) : GluiGamepadButton)) {
-
-                input[i] = Item(NthGamepadButton(0, item));
-
-            }
-
-            // Put all remaining stuff directly
-            else input[i] = Item(item);
+            input[i] = Item(item);
 
         }
 
@@ -272,8 +244,7 @@ struct InputStroke {
             && input[$-1].match!(
                 (GluiKeyboardKey key) => backend.isPressed(key) || backend.isRepeated(key),
                 (GluiMouseButton button) => backend.isReleased(button),
-                (NthGamepadButton button) => backend.isPressed(button.tupleof),  // TODO gamepad repeat
-                // (NthGamepadAxis axis) => GetGamepadAxisMovement() ...
+                (GluiGamepadButton button) => backend.isPressed(button) || backend.isRepeated(button),
             )
 
         );
@@ -356,8 +327,7 @@ struct InputStroke {
             (GluiMouseButton button) => backend.isDown(button) || backend.isReleased(button),
 
             // Gamepad
-            (NthGamepadButton button) => backend.isDown(button.tupleof),
-            // (NthGamepadAxis axis) => GetGamepadAxisMovement() ...
+            (GluiGamepadButton button) => backend.isDown(button) != 0
         );
 
     }

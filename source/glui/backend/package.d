@@ -47,13 +47,19 @@ interface GluiBackend {
     /// character was pressed.
     dchar inputCharacter();
 
-    /// Check if the given gamepad button has been pressed/released or, if it's held down or not (up).
+    /// Check if the given gamepad button has been pressed/released or, if it's held down or not (up) on any of the
+    /// connected gamepads.
     ///
-    /// Controllers start at 0.
-    bool isPressed(int controller, GluiGamepadButton button) const;
-    bool isReleased(int controller, GluiGamepadButton button) const;
-    bool isDown(int controller, GluiGamepadButton button) const;
-    bool isUp(int controller, GluiGamepadButton button) const;
+    /// Returns: 0 if the event isn't taking place on any controller, or number of the controller.
+    int isPressed(GluiGamepadButton button) const;
+    int isReleased(GluiGamepadButton button) const;
+    int isDown(GluiGamepadButton button) const;
+    int isUp(GluiGamepadButton button) const;
+
+    /// If true, the given gamepad button has been virtually pressed again, through a long-press.
+    ///
+    /// Returns: 0 if no controller had a button repeat this frame, or number of the controller.
+    int isRepeated(GluiGamepadButton button) const;
 
     /// Get/set mouse position
     Vector2 mousePosition(Vector2);
