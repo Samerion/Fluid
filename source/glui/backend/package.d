@@ -69,6 +69,14 @@ interface GluiBackend {
     Vector2 windowSize(Vector2);
     Vector2 windowSize() const;  /// ditto
 
+    /// Set scale to apply to whatever is drawn next.
+    ///
+    /// Suggested implementation is to increase return value of `dpi`.
+    float scale() const;
+
+    /// ditto
+    float scale(float);
+
     /// Get horizontal and vertical DPI of the window.
     Vector2 dpi() const;
 
