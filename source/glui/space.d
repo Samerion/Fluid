@@ -135,7 +135,7 @@ class GluiSpace : GluiNode, GluiContainer {
             // Check non-expand nodes now
             else {
 
-                child.resize(tree, theme, childSpace(child, available));
+                child.resize(tree, theme, childSpace(child, available, false));
                 minSize = childPosition(child.minSize, minSize);
 
                 // Reserve space for this node
@@ -151,7 +151,7 @@ class GluiSpace : GluiNode, GluiContainer {
         foreach (child; expandChildren) {
 
             // Resize the child
-            child.resize(tree, theme, childSpace(child, available));
+            child.resize(tree, theme, childSpace(child, available, false));
 
             const childSize = child.minSize;
             const childExpand = child.layout.expand;
@@ -184,7 +184,7 @@ class GluiSpace : GluiNode, GluiContainer {
         foreach (child; filterChildren) {
 
             // Get params
-            const size = childSpace(child, Vector2(area.width, area.height));
+            const size = childSpace(child, Vector2(area.width, area.height), true);
             const rect = Rectangle(
                 position.x, position.y,
                 size.x, size.y
@@ -333,7 +333,7 @@ class GluiSpace : GluiNode, GluiContainer {
     /// Params:
     ///     child     = Child to place
     ///     available = Available space
-    private Vector2 childSpace(const GluiNode child, Vector2 available) const
+    private Vector2 childSpace(const GluiNode child, Vector2 available, bool stateful) const
     in(
         child.isHidden || child.layout.expand <= denominator,
         format!"Nodes %s/%s sizes are out of date, call updateSize after updating the tree or layout (%s/%s)"(
@@ -355,11 +355,14 @@ class GluiSpace : GluiNode, GluiContainer {
         if (directionHorizontal) {
 
             const avail = (available.x - reservedSpace);
+            const minSize = stateful
+                ? child.minSize.x
+                : 0;
 
             return Vector2(
                 child.layout.expand
                     ? avail * child.layout.expand / denominator
-                    : child.minSize.x,
+                    : minSize,
                 available.y,
             );
 
@@ -369,12 +372,15 @@ class GluiSpace : GluiNode, GluiContainer {
         else {
 
             const avail = (available.y - reservedSpace);
+            const minSize = stateful
+                ? child.minSize.y
+                : 0;
 
             return Vector2(
                 available.x,
                 child.layout.expand
                     ? avail * child.layout.expand / denominator
-                    : child.minSize.y,
+                    : minSize,
             );
 
         }

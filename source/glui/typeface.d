@@ -14,7 +14,11 @@ import glui.backend;
 @safe:
 
 
-/// Represents a single typeface in Glui.
+/// Low-level interface for drawing text. Represents a single typeface.
+///
+/// Unlike the rest of Glui, Typeface doesn't define pixels as 1/96th of an inch. DPI must also be specified manually.
+///
+/// See: [glui.text.Text] for an interface on a higher level.
 interface Typeface {
 
     /// List glyphs  in the typeface.
@@ -26,7 +30,7 @@ interface Typeface {
     /// Get line height.
     int lineHeight() const;
 
-    /// Get advance vector for the given glyph.
+    /// Get advance vector for the given glyph. Uses dots, not pixels, as the unit.
     Vector2 advance(dchar glyph) const;
 
     /// Set font scale. This should be called at least once before drawing.
@@ -34,8 +38,11 @@ interface Typeface {
     /// Font renderer should cache this and not change the scale unless updated.
     ///
     /// Params:
-    ///     scale = Horizontal and vertical DPI scale. A value of 1 should be equivalent to 96 DPI.
-    void setDPI(Vector2 scale);
+    ///     scale = Horizontal and vertical DPI value, for example (96, 96)
+    Vector2 dpi(Vector2 scale);
+
+    /// Get curently set DPI.
+    Vector2 dpi() const;
 
     /// Draw a line of text.
     /// Note: This API is unstable and might change over time.
@@ -64,14 +71,14 @@ interface Typeface {
 
     }
 
-    /// Measure space the given text would span.
+    /// Measure space the given text would span. Uses dots as the unit.
     ///
     /// If `availableSpace` is specified, assumes text wrapping. Text wrapping is only performed on whitespace
     /// characters.
     ///
     /// Params:
     ///     chunkWords = Algorithm to use to break words when wrapping text; separators must be preserved.
-    ///     availableSpace = Amount of available space the text can take up (pixels), used for text wrapping.
+    ///     availableSpace = Amount of available space the text can take up (dots), used to wrap text.
     ///     text = Text to measure.
     ///     wrap = Toggle text wrapping.
     final Vector2 measure(alias chunkWords = defaultWordChunks, String)
@@ -195,7 +202,7 @@ struct TextRuler {
     /// Total size of the text.
     Vector2 textSize;
 
-    this(const Typeface typeface, float lineWidth = float.init) {
+    this(const Typeface typeface, float lineWidth = float.nan) {
 
         this.typeface = typeface;
         this.lineWidth = lineWidth;
@@ -339,13 +346,19 @@ class FreetypeTypeface : Typeface {
 
     }
 
-    void setDPI(Vector2 dpi) @trusted {
+    Vector2 dpi() const {
 
-        const dpiX = cast(int) (dpi.x * 96);
-        const dpiY = cast(int) (dpi.y * 96);
+        return Vector2(_dpiX, _dpiY);
+
+    }
+
+    Vector2 dpi(Vector2 dpi) @trusted {
+
+        const dpiX = cast(int) dpi.x;
+        const dpiY = cast(int) dpi.y;
 
         // Ignore if there's no change
-        if (dpiX == _dpiX && dpiY == _dpiY) return;
+        if (dpiX == _dpiX && dpiY == _dpiY) return dpi;
 
         _dpiX = dpiX;
         _dpiY = dpiY;
@@ -358,6 +371,8 @@ class FreetypeTypeface : Typeface {
             );
 
         }
+
+        return dpi;
 
     }
 
@@ -560,9 +575,16 @@ class RaylibTypeface : Typeface {
     }
 
     /// Changing DPI at runtime is not supported for Raylib typefaces.
-    void setDPI(Vector2 dpi) {
+    Vector2 dpi(Vector2 dpi) {
 
         // Not supported for Raylib typefaces.
+        return Vector2(96, 96);
+
+    }
+
+    Vector2 dpi() const {
+
+        return Vector2(96, 96);
 
     }
 
