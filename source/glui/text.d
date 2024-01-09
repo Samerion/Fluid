@@ -74,7 +74,7 @@ struct Text(T : GluiNode) {
     /// Get the size of the text.
     Vector2 size() const {
 
-        return Vector2(texture.width, texture.height);
+        return texture.viewportSize;
 
     }
 
@@ -84,13 +84,13 @@ struct Text(T : GluiNode) {
     void resize() {
 
         auto style = node.pickStyle;
-        auto scale = backend.hidpiScale;
+        auto dpi = backend.dpi;
 
-        style.setDPI(scale);
+        style.setDPI(dpi);
 
         const size = style.typeface.measure(value);
 
-        resizeImpl(style, size, scale, false);
+        resizeImpl(style, size, dpi, false);
 
     }
 
@@ -98,17 +98,21 @@ struct Text(T : GluiNode) {
     void resize(alias splitter = Typeface.defaultWordChunks)(Vector2 space, bool wrap = true) {
 
         auto style = node.pickStyle;
+        auto dpi = backend.dpi;
         auto scale = backend.hidpiScale;
 
-        style.setDPI(scale);
+        // Apply DPI
+        style.setDPI(dpi);
+        space.x *= scale.x;
+        space.y *= scale.y;
 
         const size = style.typeface.measure!splitter(space, value, wrap);
 
-        resizeImpl(style, size, scale, wrap);
+        resizeImpl(style, size, dpi, wrap);
 
     }
 
-    private void resizeImpl(const Style style, Vector2 size, Vector2 dpiScale, bool wrap) @trusted {
+    private void resizeImpl(const Style style, Vector2 size, Vector2 dpi, bool wrap) @trusted {
 
         // Empty, nothing to do
         if (size.x < 1 || size.y < 1) return;
@@ -119,7 +123,7 @@ struct Text(T : GluiNode) {
             color!"0000"
         );
 
-        style.drawText(image, Rectangle(0, 0, size.tupleof), value, color!"fff", wrap);
+        style.typeface.draw(image, Rectangle(0, 0, size.tupleof), value, color!"fff", wrap);
 
         auto oldtexture = texture.id;
 
@@ -132,8 +136,8 @@ struct Text(T : GluiNode) {
 
         // Load texture
         texture = backend.loadTexture(image);
-        texture.dpiX = cast(int) (96 * dpiScale.x);
-        texture.dpiY = cast(int) (96 * dpiScale.y);
+        texture.dpiX = cast(int) dpi.x;
+        texture.dpiY = cast(int) dpi.y;
 
     }
 
@@ -144,11 +148,7 @@ struct Text(T : GluiNode) {
 
         if (texture !is texture.init) {
 
-            // Round down to keep correct hinting
-            position.x = floor(position.x);
-            position.y = floor(position.y);
-
-            backend.drawTexture(texture, position, style.textColor);
+            backend.drawTextureAlign(texture, position, style.textColor, value);
 
         }
 

@@ -95,12 +95,12 @@ class HeadlessBackend : GluiBackend {
         int height;
         int dpiX;
         int dpiY;
-        Vector2 position;
+        Rectangle rectangle;
         Color tint;
 
         alias drawnRectangle this;
 
-        this(Texture texture, Vector2 position, Color tint) {
+        this(Texture texture, Rectangle rectangle, Color tint) {
 
             // Omit the "backend" Texture field to make `canvas` @safe
             this.id = texture.id;
@@ -108,10 +108,14 @@ class HeadlessBackend : GluiBackend {
             this.height = texture.height;
             this.dpiX = texture.dpiX;
             this.dpiY = texture.dpiY;
-            this.position = position;
+            this.rectangle = rectangle;
             this.tint = tint;
 
         }
+
+        Vector2 position() const
+
+            => Vector2(rectangle.x, rectangle.y);
 
         Texture texture(HeadlessBackend backend) const
 
@@ -121,10 +125,6 @@ class HeadlessBackend : GluiBackend {
 
             => DrawnRectangle(rectangle, tint);
 
-        Rectangle rectangle() const
-
-            => Rectangle(position.tupleof, width, height);
-
         alias isPositionClose = isStartClose;
 
         bool isStartClose(Vector2 start) const
@@ -133,8 +133,8 @@ class HeadlessBackend : GluiBackend {
 
         bool isStartClose(float x, float y) const
 
-            => .isClose(this.position.x, x)
-            && .isClose(this.position.y, y);
+            => .isClose(rectangle.x, x)
+            && .isClose(rectangle.y, y);
 
     }
 
@@ -148,7 +148,7 @@ class HeadlessBackend : GluiBackend {
         State[GluiGamepadButton.max+1] gamepad;
         Vector2 _mousePosition;
         Vector2 _windowSize;
-        Vector2 _hidpiScale;
+        Vector2 _dpi = Vector2(96, 96);
         Rectangle _area;
         GluiMouseCursor _cursor;
         float _deltaTime = 1f / 60f;
@@ -172,10 +172,9 @@ class HeadlessBackend : GluiBackend {
 
     }
 
-    this(Vector2 windowSize = Vector2(800, 600), Vector2 hidpiScale = Vector2(1, 1)) {
+    this(Vector2 windowSize = Vector2(800, 600)) {
 
         this._windowSize = windowSize;
-        this._hidpiScale = hidpiScale;
 
     }
 
@@ -213,10 +212,9 @@ class HeadlessBackend : GluiBackend {
     }
 
     /// Resize the window.
-    void resize(Vector2 size, Vector2 hidpiScale = Vector2(1, 1)) {
+    void resize(Vector2 size) {
 
         _windowSize = size;
-        _hidpiScale = hidpiScale;
         _justResized = true;
 
     }
@@ -387,10 +385,10 @@ class HeadlessBackend : GluiBackend {
 
         => _windowSize;
 
-    /// Get HiDPI scale of the window. This does nothing in the headless backend.
-    Vector2 hidpiScale() const
+    /// Get HiDPI scale of the window. This is not currently supported by this backend.
+    Vector2 dpi() const
 
-        => _hidpiScale;
+        => _dpi;
 
     /// Set area within the window items will be drawn to; any pixel drawn outside will be discarded.
     Rectangle area(Rectangle rect) {
@@ -518,11 +516,24 @@ class HeadlessBackend : GluiBackend {
     }
 
     /// Draw a texture.
-    void drawTexture(Texture texture, Vector2 position, Color tint)
+    void drawTexture(Texture texture, Vector2 position, Color tint, string altText = "")
     in (false)
     do {
 
-        canvas ~= Drawing(DrawnTexture(texture, position, tint));
+        const rect = Rectangle(position.tupleof, texture.width, texture.height);
+
+        canvas ~= Drawing(DrawnTexture(texture, rect, tint));
+
+    }
+
+    /// Draw a texture, but keep it aligned to pixel boundaries.
+    void drawTextureAlign(Texture texture, Vector2 position, Color tint, string altText = "")
+    in (false)
+    do {
+
+        const rect = Rectangle(position.tupleof, texture.width, texture.height);
+
+        canvas ~= Drawing(DrawnTexture(texture, rect, tint));
 
     }
 
