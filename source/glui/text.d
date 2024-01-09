@@ -84,12 +84,13 @@ struct Text(T : GluiNode) {
     void resize() {
 
         auto style = node.pickStyle;
+        auto scale = backend.hidpiScale;
 
-        style.setDPI(backend.hidpiScale);
+        style.setDPI(scale);
 
         const size = style.typeface.measure(value);
 
-        resizeImpl(style, size, false);
+        resizeImpl(style, size, scale, false);
 
     }
 
@@ -97,16 +98,17 @@ struct Text(T : GluiNode) {
     void resize(alias splitter = Typeface.defaultWordChunks)(Vector2 space, bool wrap = true) {
 
         auto style = node.pickStyle;
+        auto scale = backend.hidpiScale;
 
-        style.setDPI(backend.hidpiScale);
+        style.setDPI(scale);
 
         const size = style.typeface.measure!splitter(space, value, wrap);
 
-        resizeImpl(style, size, wrap);
+        resizeImpl(style, size, scale, wrap);
 
     }
 
-    private void resizeImpl(const Style style, Vector2 size, bool wrap) @trusted {
+    private void resizeImpl(const Style style, Vector2 size, Vector2 dpiScale, bool wrap) @trusted {
 
         // Empty, nothing to do
         if (size.x < 1 || size.y < 1) return;
@@ -130,6 +132,8 @@ struct Text(T : GluiNode) {
 
         // Load texture
         texture = backend.loadTexture(image);
+        texture.dpiX = cast(int) (96 * dpiScale.x);
+        texture.dpiY = cast(int) (96 * dpiScale.y);
 
     }
 
