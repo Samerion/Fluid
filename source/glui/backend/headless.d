@@ -510,6 +510,19 @@ class HeadlessBackend : GluiBackend {
 
     }
 
+    /// Check if the given texture has a valid ID
+    bool isTextureValid(Texture texture) {
+
+        return cast(bool) (texture.id in allocatedTextures);
+
+    }
+
+    bool isTextureValid(uint id) {
+
+        return cast(bool) (id in allocatedTextures);
+
+    }
+
     /// Draw a line.
     void drawLine(Vector2 start, Vector2 end, Color color) {
 

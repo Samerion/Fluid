@@ -299,8 +299,8 @@ shared struct TextureTombstone {
     /// There are two relevant scenarios:
     ///
     /// * The texture is marked for destruction via a tombstone, then finalized from the main thread and disowned.
-    /// * The texture is finalized after the layout tree (for example, if they are both destroyed during the same GC
-    ///   collection). The layout tree disowns and frees the texture. The tombstone, however, remains alive to
+    /// * The texture is finalized after the backend (for example, if they are both destroyed during the same GC
+    ///   collection). The backend disowns and frees the texture. The tombstone, however, remains alive to
     ///   witness marking the texture as deleted.
     ///
     /// In both scenarios, this behavior ensures the tombstone will be freed.
@@ -315,6 +315,95 @@ shared struct TextureTombstone {
         }
 
     }
+
+}
+
+@system
+unittest {
+
+    // This unittest checks if textures will be correctly destroyed, even if the destruction call comes from another
+    // thread.
+
+    import std.concurrency;
+    import glui.space;
+    import glui.image_view;
+
+    auto io = new HeadlessBackend;
+    auto image = imageView("logo.png");
+    auto root = vspace(image);
+
+    // Draw the frame once to let everything load
+    root.io = io;
+    root.draw();
+
+    // Tune the reaper to run every frame
+    io.reaper.period = 1;
+
+    // The texture is const but we'll cheat around it
+    auto texture = cast() image.texture;
+    auto textureID = texture.id;
+    auto tombstone = texture.tombstone;
+
+    // Texture should be allocated and assigned a tombstone
+    assert(texture.backend is io);
+    assert(!texture.tombstone.isDestroyed);
+    assert(io.isTextureValid(texture));
+
+    // Destroy the texture on another thread
+    spawn((Texture texture) {
+
+        texture.destroy();
+        ownerTid.send(true);
+
+    }, texture);
+
+    // Wait for confirmation
+    receiveOnly!bool;
+
+    // The texture should be marked for deletion but remain alive
+    assert(texture.tombstone.isDestroyed);
+    assert(io.isTextureValid(texture));
+
+    // Draw a frame, during which the reaper should destroy the texture
+    io.nextFrame;
+    root.children = [];
+    root.updateSize();
+    root.draw();
+
+    assert(!io.isTextureValid(texture));
+    // There is no way to test if the tombstone has been freed
+
+}
+
+@system
+unittest {
+
+    // This unittest checks if tombstones work correctly even if the backend is destroyed before the texture.
+
+    import std.concurrency;
+    import core.atomic;
+    import glui.image_view;
+
+    auto io = new HeadlessBackend;
+    auto root = imageView("logo.png");
+
+    // Load the texture and draw
+    root.io = io;
+    root.draw();
+
+    // Destroy the backend
+    destroy(io);
+
+    auto texture = cast() root.texture;
+
+    // The texture should have been automatically freed, but not marked for destruction
+    assert(!texture.tombstone.isDestroyed);
+    assert(texture.tombstone._disowned.atomicLoad);
+
+    // Now, destroy the image
+    // If this operation succeeds, we're good
+    destroy(root);
+    // There is no way to test if the tombstone and texture have truly been freed
 
 }
 
@@ -644,7 +733,7 @@ struct Texture {
 
     }
 
-    /// Destroy this texture.
+    /// Destroy this texture. This function is thread-safe.
     void destroy() @system {
 
         if (tombstone is null) return;
