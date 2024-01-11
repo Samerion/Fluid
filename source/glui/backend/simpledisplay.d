@@ -47,6 +47,8 @@ class SimpledisplayBackend : GluiBackend {
         bool _scissorsEnabled;
         GluiMouseCursor _cursor;
 
+        TextureReaper _reaper;
+
         /// Recent input events for each keyboard and mouse.
         InputState[GluiKeyboardKey.max+1] _keyboardState;
         InputState[GluiMouseButton.max+1] _mouseState;
@@ -461,16 +463,24 @@ class SimpledisplayBackend : GluiBackend {
 
     }
 
+    TextureReaper* reaper() return scope {
+
+        return &_reaper;
+
+    }
+
     Texture loadTexture(Image image) @system {
 
         Texture result;
-        result.backend = this;
         result.width = image.width;
         result.height = image.height;
 
         // Create an OpenGL texture
         glGenTextures(1, &result.id);
         glBindTexture(GL_TEXTURE_2D, result.id);
+
+        // Prepare the tombstone
+        result.tombstone = reaper.makeTombstone(this, result.id);
 
         // No filtering
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -533,11 +543,11 @@ class SimpledisplayBackend : GluiBackend {
     }
 
     /// Destroy a texture
-    void unloadTexture(Texture texture) @system {
+    void unloadTexture(uint id) @system {
 
-        if (texture.id == 0) return;
+        if (id == 0) return;
 
-        glDeleteTextures(1, &texture.id);
+        glDeleteTextures(1, &id);
 
     }
 

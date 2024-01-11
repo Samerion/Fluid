@@ -117,10 +117,6 @@ class HeadlessBackend : GluiBackend {
 
             => Vector2(rectangle.x, rectangle.y);
 
-        Texture texture(HeadlessBackend backend) const
-
-            => Texture(backend, id, width, height);
-
         DrawnRectangle drawnRectangle() const
 
             => DrawnRectangle(rectangle, tint);
@@ -160,6 +156,9 @@ class HeadlessBackend : GluiBackend {
         ///
         /// Textures loaded from images are `null` if arsd.image isn't present.
         string[uint] allocatedTextures;
+
+        /// Texture reaper.
+        TextureReaper _reaper;
 
         /// Last used texture ID.
         uint lastTextureID;
@@ -429,6 +428,12 @@ class HeadlessBackend : GluiBackend {
 
         => _cursor;
 
+    TextureReaper* reaper() return scope {
+
+        return &_reaper;
+
+    }
+
     Texture loadTexture(Image image) @system {
 
         // It's probably desirable to have this toggleable at class level
@@ -481,8 +486,8 @@ class HeadlessBackend : GluiBackend {
     Texture loadTexture(string url, int width, int height) {
 
         Texture texture;
-        texture.backend = this;
         texture.id = ++lastTextureID;
+        texture.tombstone = reaper.makeTombstone(this, texture.id);
         texture.width = width;
         texture.height = height;
 
@@ -495,13 +500,13 @@ class HeadlessBackend : GluiBackend {
 
     /// Destroy a texture created by this backend. `texture.destroy()` is the preferred way of calling this, since it
     /// will ensure the correct backend is called.
-    void unloadTexture(Texture texture) @system {
+    void unloadTexture(uint id) @system {
 
-        const found = texture.id in allocatedTextures;
+        const found = id in allocatedTextures;
 
-        assert(found, format!"headless: Attempted to free nonexistent texture %s"(texture));
+        assert(found, format!"headless: Attempted to free nonexistent texture ID %s (double free?)"(id));
 
-        allocatedTextures.remove(texture.id);
+        allocatedTextures.remove(id);
 
     }
 

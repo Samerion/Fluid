@@ -803,6 +803,9 @@ struct LayoutTree {
     /// Fetch tree events (e.g. actions)
     package void poll() {
 
+        // Run texture reaper
+        io.reaper.check();
+
         // Reset all actions
         downActions.clear();
         activeActions.clear();
