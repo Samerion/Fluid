@@ -545,24 +545,20 @@ class HeadlessBackend : GluiBackend {
     }
 
     /// Draw a texture.
-    void drawTexture(Texture texture, Vector2 position, Color tint, string altText = "")
+    void drawTexture(Texture texture, Rectangle rectangle, Color tint, string altText = "")
     in (false)
     do {
 
-        const rect = Rectangle(position.tupleof, texture.width, texture.height);
-
-        canvas ~= Drawing(DrawnTexture(texture, rect, tint));
+        canvas ~= Drawing(DrawnTexture(texture, rectangle, tint));
 
     }
 
     /// Draw a texture, but keep it aligned to pixel boundaries.
-    void drawTextureAlign(Texture texture, Vector2 position, Color tint, string altText = "")
+    void drawTextureAlign(Texture texture, Rectangle rectangle, Color tint, string altText = "")
     in (false)
     do {
 
-        const rect = Rectangle(position.tupleof, texture.width, texture.height);
-
-        canvas ~= Drawing(DrawnTexture(texture, rect, tint));
+        drawTexture(texture, rectangle, tint, altText);
 
     }
 
@@ -739,10 +735,10 @@ class HeadlessBackend : GluiBackend {
                             return elems(
                                 useTint(texture.tint),
                                 elem!"image"(
-                                    attr("x") = texture.position.x.text,
-                                    attr("y") = texture.position.y.text,
-                                    attr("width") = texture.width.text,
-                                    attr("height") = texture.height.text,
+                                    attr("x") = texture.rectangle.x.text,
+                                    attr("y") = texture.rectangle.y.text,
+                                    attr("width") = texture.rectangle.width.text,
+                                    attr("height") = texture.rectangle.height.text,
                                     attr("href") = *url,
                                     attr("style") = format!"filter:url(#%s)"(texture.tint.toHex!"t"),
                                 ),

@@ -62,3 +62,27 @@ unittest {
     );
 
 }
+
+unittest {
+
+    import std.math;
+
+    auto io = new HeadlessBackend;
+    auto root = hspace(
+        .layout!"center",
+        label(.layout!"end", "Hello, "),
+        imageView("./logo.png", Vector2(96, 96)),
+    );
+
+    root.io = io;
+    root.draw();
+
+    // This should render two textures
+    auto textTexture = io.textures.front;
+    io.textures.popFront;
+    auto imageView = io.textures.front;
+
+    // Both textures should have the same bottom line
+    assert(textTexture.rectangle.end.y.isClose(imageView.rectangle.end.y));
+
+}
