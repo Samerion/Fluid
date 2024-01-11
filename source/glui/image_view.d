@@ -222,7 +222,7 @@ class GluiImageView : GluiNode {
         const position = center(rect) - size/2;
 
         _targetArea = Rectangle(position.tupleof, size.tupleof);
-        _texture.draw(position);
+        _texture.draw(_targetArea);
 
     }
 

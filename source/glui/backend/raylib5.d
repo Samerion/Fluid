@@ -318,43 +318,39 @@ class Raylib5Backend : GluiBackend {
 
     }
 
-    void drawTexture(glui.backend.Texture texture, Vector2 position, Color tint, string alt = "")
+    void drawTexture(glui.backend.Texture texture, Rectangle rectangle, Color tint, string alt = "")
     in (false)
     do {
 
-        drawTexture(texture, position, tint, alt, false);
+        // TODO filtering?
+        drawTexture(texture, rectangle, tint, alt, true);
 
     }
 
-    void drawTextureAlign(glui.backend.Texture texture, Vector2 position, Color tint, string alt = "")
+    void drawTextureAlign(glui.backend.Texture texture, Rectangle rectangle, Color tint, string alt = "")
     in (false)
     do {
 
-        drawTexture(texture, position, tint, alt, true);
+        drawTexture(texture, rectangle, tint, alt, true);
 
     }
 
-    protected
-    void drawTexture(glui.backend.Texture texture, Vector2 position, Color tint, string alt, bool alignPixels) @trusted
+    protected @trusted
+    void drawTexture(glui.backend.Texture texture, Rectangle destination, Color tint, string alt, bool alignPixels)
     do {
 
         import std.math;
 
-        position = toRaylibCoords(position);
+        destination = toRaylibCoords(destination);
 
         // Align texture to pixel boundaries
         if (alignPixels) {
-            position.x = floor(position.x);
-            position.y = floor(position.y);
+            destination.x = floor(destination.x);
+            destination.y = floor(destination.y);
         }
 
         const dpi = this.dpi;
-        const size = Vector2(
-            texture.width * dpi.x / texture.dpiX,
-            texture.height * dpi.y / texture.dpiY,
-        );
         const source = Rectangle(0, 0, texture.width, texture.height);
-        const destination = Rectangle(position.tupleof, size.tupleof);
 
         DrawTexturePro(texture.toRaylib, source, destination, Vector2(0, 0), 0, tint);
 

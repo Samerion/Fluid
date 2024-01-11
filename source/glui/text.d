@@ -148,7 +148,9 @@ struct Text(T : GluiNode) {
 
         if (texture !is texture.init) {
 
-            backend.drawTextureAlign(texture, position, style.textColor, value);
+            auto rectangle = Rectangle(position.tupleof, texture.viewportSize.tupleof);
+
+            backend.drawTextureAlign(texture, rectangle, style.textColor, value);
 
         }
 

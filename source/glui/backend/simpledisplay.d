@@ -633,32 +633,29 @@ class SimpledisplayBackend : GluiBackend {
 
     }
 
-    void drawTexture(Texture texture, Vector2 position, Color tint, string altText) @trusted
+    void drawTexture(Texture texture, Rectangle rectangle, Color tint, string altText) @trusted
     in (false)
     do {
 
-        drawTextureImpl(texture, position, tint, altText, false);
+        // TODO filtering?
+        drawTextureImpl(texture, rectangle, tint, altText, true);
 
     }
 
-    void drawTextureAlign(Texture texture, Vector2 position, Color tint, string altText) @trusted
+    void drawTextureAlign(Texture texture, Rectangle rectangle, Color tint, string altText) @trusted
     in (false)
     do {
 
-        drawTextureImpl(texture, position, tint, altText, true);
+        drawTextureImpl(texture, rectangle, tint, altText, true);
 
     }
 
     @trusted
-    private void drawTextureImpl(Texture texture, Vector2 position, Color tint, string altText, bool alignPixels) {
+    private void drawTextureImpl(Texture texture, Rectangle rectangle, Color tint, string altText, bool alignPixels) {
 
         import std.math;
 
-        auto rectangle = Rectangle(
-            toSdpyCoords(position).tupleof,
-            texture.width * dpi.x / texture.dpiX,
-            texture.height * dpi.y / texture.dpiY,
-        );
+        rectangle = toSdpyCoords(rectangle);
 
         if (alignPixels) {
             rectangle.x = floor(rectangle.x);

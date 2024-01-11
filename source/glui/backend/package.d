@@ -135,11 +135,11 @@ interface GluiBackend {
     void drawRectangle(Rectangle rectangle, Color color);
 
     /// Draw a texture.
-    void drawTexture(Texture texture, Vector2 position, Color tint, string altText = "")
+    void drawTexture(Texture texture, Rectangle rectangle, Color tint, string altText = "")
     in (texture.backend is this, "Given texture comes from a different backend");
 
     /// Draw a texture, but ensure it aligns with pixel boundaries, recommended for text.
-    void drawTextureAlign(Texture texture, Vector2 position, Color tint, string altText = "")
+    void drawTextureAlign(Texture texture, Rectangle rectangle, Color tint, string altText = "")
     in (texture.backend is this, "Given texture comes from a different backend");
 
 }
@@ -729,7 +729,15 @@ struct Texture {
     /// Draw this texture.
     void draw(Vector2 position, Color tint = color!"fff") {
 
-        backend.drawTexture(this, position, tint);
+        auto rectangle = Rectangle(position.tupleof, viewportSize.tupleof);
+
+        backend.drawTexture(this, rectangle, tint);
+
+    }
+
+    void draw(Rectangle rectangle, Color tint = color!"fff") {
+
+        backend.drawTexture(this, rectangle, tint);
 
     }
 

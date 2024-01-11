@@ -1,19 +1,47 @@
-<img src="./logo.png" alt="Glui" height="144" align="left" />
+<img src="./resources/hello-glui.png" alt="Hello, Glui!" align="right"/>
 
-A simple and declarative high-level UI library for [Raylib](https://www.raylib.com/) & [Dlang](https://dlang.org/).
+A declarative high-level UI library for game development in [the D programming language](https://dlang.org/) that works
+out of the box. Minimal setup. Non-intrusive.
 
-It implements a tree node structure, but doesn't provide an event loop and doesn't create a window, making it easier
-to integrate in other projects.
+```d
+auto root = hspace(
+    .layout!"center",
+    label(.layout!"end", "Hello, "),
+    imageView("./logo.png", Vector2(96, 96)),
+);
+```
 
-Glui has a decent feature set at the moment, but new features will still be added over time. It's mostly stable as of
-now and ready to be used, but you may still encounter important changes in minor versions. What Glui is lacking the
-most, is decent examples, tutorials and documentation on its design.
+Glui comes with [Raylib 5][raylib] and [arsd.simpledisplay][sdpy] support. Integration is seamless: one or two calls do
+the job.
 
-## Notes
+```d
+while (!WindowShouldClose) {
 
-* Glui currently defaults to bindings for Raylib 3.7.0, if you're using Raylib 4.0 or newer, you should use the
-  `raylib4` configuration.
-* Glui cannot reliably implement scrolling nodes on macOS.
-  * For this reason, those are disabled if using Raylib 3.
-  * If you're using Raylib 4 you have to disable them manually using version `Glui_DisableScissors` or you can switch to
-    an unstable version of Raylib (`master` branch) which has the issue fixed.
+    BeginDrawing();
+
+        ClearBackground(color!"#fff");
+        root.draw();
+
+    EndDrawing();
+
+}
+```
+
+[raylib]: https://www.raylib.com/
+[sdpy]: https://arsd-official.dpldocs.info/arsd.simpledisplay.html
+
+Glui has a decent feature set at the moment and new features will still be added over time. Glui is already mostly
+stable and ready for use, but is still likely to receive multiple breaking changes before leaving its pre-release stage.
+
+**Support Glui development on Patreon: https://www.patreon.com/samerion**
+
+* Straightforward, high-level API
+* Responsive layout
+* Extensible
+* Components easily combined together
+* Reliable mouse and keyboard input
+* Separate layout and styling
+* Scrolling support
+* Out-of-the-box Unicode support
+* Full HiDPI support
+* Partial gamepad support
