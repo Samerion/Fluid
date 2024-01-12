@@ -6,10 +6,19 @@ import glui;
 @safe:
 
 
-GluiSpace basics() {
+@(() => label("To start from the basics, user interfaces in Glui are built using Nodes. There's a number of different "
+    ~ "node types; Each serves a different purpose and does something different. A good initial example is the "
+    ~ "label node, which can be used to display text. Let's recreate the classic Hello World program."))
+GluiNode helloWorldExample() {
 
-    return vframe(
-        label("First example!"),
-    );
+    if (1) {
+        label("a");
+    }
+    else {
+        label("b");
+    }
+
+    // Stuff
+    return label("Hello, World!");
 
 }
