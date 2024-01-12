@@ -105,13 +105,25 @@ interface GluiBackend {
     GluiMouseCursor mouseCursor(GluiMouseCursor);
     GluiMouseCursor mouseCursor() const;
 
+    /// Texture reaper used by this backend. May be null.
+    ///
+    /// Highly recommended for OpenGL-based backends.
+    TextureReaper* reaper() return scope;
+
     /// Load a texture from memory or file.
     Texture loadTexture(Image image) @system;
     Texture loadTexture(string filename) @system;
 
-    /// Destroy a texture created by this backend. `texture.destroy()` is the preferred way of calling this, since it
-    /// will ensure the correct backend is called.
-    void unloadTexture(Texture texture) @system;
+    /// Destroy a texture created by this backend. Always use `texture.destroy()` to ensure thread safety and invoking
+    /// the correct backend.
+    protected void unloadTexture(uint id) @system;
+
+    /// ditto
+    final void unloadTexture(Texture texture) @system {
+
+        unloadTexture(texture.id);
+
+    }
 
     /// Draw a line.
     void drawLine(Vector2 start, Vector2 end, Color color);
@@ -129,6 +141,269 @@ interface GluiBackend {
     /// Draw a texture, but ensure it aligns with pixel boundaries, recommended for text.
     void drawTextureAlign(Texture texture, Vector2 position, Color tint, string altText = "")
     in (texture.backend is this, "Given texture comes from a different backend");
+
+}
+
+/// Struct that maintains a registry of all allocated textures. It's used to finalize textures once they have been
+/// marked for destruction. This makes it possible to mark them from any thread, while the reaper runs only on the main
+/// thread, ensuring thread safety in OpenGL backends.
+struct TextureReaper {
+
+    /// Number of cycles between runs of the reaper.
+    int period = 60 * 5;
+
+    int cycleAccumulator;
+
+    @system shared(TextureTombstone)*[uint] textures;
+
+    @disable this(ref TextureReaper);
+    @disable this(this);
+
+    ~this() @trusted {
+
+        destroyAll();
+
+    }
+
+    /// Create a tombstone.
+    shared(TextureTombstone)* makeTombstone(GluiBackend backend, uint textureID) @trusted {
+
+        return textures[textureID] = TextureTombstone.make(backend);
+
+    }
+
+    /// Count number of cycles since last collection and collect if configured period has passed.
+    void check() {
+
+        // Count cycles
+        if (++cycleAccumulator >= period) {
+
+            // Run collection
+            collect();
+
+        }
+
+    }
+
+    /// Collect all destroyed textures immediately.
+    void collect() @trusted {
+
+        // Reset the cycle accumulator
+        cycleAccumulator = 0;
+
+        // Find all destroyed textures
+        foreach (id, tombstone; textures) {
+
+            // Texture marked for deletion
+            if (tombstone.isDestroyed) {
+
+                auto backend = cast() tombstone.backend;
+
+                // Unload it
+                backend.unloadTexture(id);
+                tombstone.markDisowned();
+
+                // Remove the texture from registry
+                textures.remove(id);
+
+            }
+
+        }
+
+    }
+
+    /// Destroy all textures.
+    void destroyAll() @system {
+
+        cycleAccumulator = 0;
+        scope (exit) textures.clear();
+
+        // Find all textures
+        foreach (id, tombstone; textures) {
+
+            auto backend = cast() tombstone.backend;
+
+            // Unload the texture, even if it wasn't marked for deletion
+            backend.unloadTexture(id);
+
+            // Disown all textures
+            tombstone.markDisowned();
+
+        }
+
+    }
+
+}
+
+/// Tombstones are used to ensure textures are freed on the same thread they have been created on.
+///
+/// Tombstones are kept alive until the texture is explicitly destroyed and then finalized (disowned) from the main
+/// thread by a periodically-running `TextureReaper`. This is necessary to make Glui safe in multithreaded
+/// environments.
+shared struct TextureTombstone {
+
+    import core.memory;
+    import core.atomic;
+    import core.stdc.stdlib;
+
+    /// Backend that created this texture.
+    private GluiBackend _backend;
+
+    private bool _destroyed, _disowned;
+
+    static TextureTombstone* make(GluiBackend backend) @system {
+
+        import core.exception;
+
+        // Allocate the tombstone
+        auto data = malloc(TextureTombstone.sizeof);
+        if (data is null) throw new OutOfMemoryError("Failed to allocate a tombstone");
+
+        // Initialize the tombstone
+        shared tombstone = cast(shared TextureTombstone*) data;
+        *tombstone = TextureTombstone.init;
+        tombstone._backend = cast(shared) backend;
+
+        // Make sure the backend isn't freed while the tombstone is alive
+        GC.addRoot(cast(void*) backend);
+
+        return tombstone;
+
+    }
+
+    /// Check if the texture has been destroyed.
+    bool isDestroyed() @system => _destroyed.atomicLoad;
+
+    /// Get the backend owning this texture.
+    inout(shared GluiBackend) backend() inout => _backend;
+
+    /// Mark the texture as destroyed.
+    void markDestroyed() @system {
+
+        _destroyed.atomicStore(true);
+        tryDestroy();
+
+    }
+
+    /// Mark the texture as disowned.
+    void markDisowned() @system {
+
+        _disowned.atomicStore(true);
+        tryDestroy();
+
+    }
+
+    /// As soon as the texture is both marked for destruction and disowned, the tombstone controlling its life is
+    /// destroyed.
+    ///
+    /// There are two relevant scenarios:
+    ///
+    /// * The texture is marked for destruction via a tombstone, then finalized from the main thread and disowned.
+    /// * The texture is finalized after the backend (for example, if they are both destroyed during the same GC
+    ///   collection). The backend disowns and frees the texture. The tombstone, however, remains alive to
+    ///   witness marking the texture as deleted.
+    ///
+    /// In both scenarios, this behavior ensures the tombstone will be freed.
+    private void tryDestroy() @system {
+
+        // Destroyed and disowned
+        if (_destroyed.atomicLoad && _disowned.atomicLoad) {
+
+            GC.removeRoot(cast(void*) _backend);
+            free(cast(void*) &this);
+
+        }
+
+    }
+
+}
+
+@system
+unittest {
+
+    // This unittest checks if textures will be correctly destroyed, even if the destruction call comes from another
+    // thread.
+
+    import std.concurrency;
+    import glui.space;
+    import glui.image_view;
+
+    auto io = new HeadlessBackend;
+    auto image = imageView("logo.png");
+    auto root = vspace(image);
+
+    // Draw the frame once to let everything load
+    root.io = io;
+    root.draw();
+
+    // Tune the reaper to run every frame
+    io.reaper.period = 1;
+
+    // The texture is const but we'll cheat around it
+    auto texture = cast() image.texture;
+    auto textureID = texture.id;
+    auto tombstone = texture.tombstone;
+
+    // Texture should be allocated and assigned a tombstone
+    assert(texture.backend is io);
+    assert(!texture.tombstone.isDestroyed);
+    assert(io.isTextureValid(texture));
+
+    // Destroy the texture on another thread
+    spawn((Texture texture) {
+
+        texture.destroy();
+        ownerTid.send(true);
+
+    }, texture);
+
+    // Wait for confirmation
+    receiveOnly!bool;
+
+    // The texture should be marked for deletion but remain alive
+    assert(texture.tombstone.isDestroyed);
+    assert(io.isTextureValid(texture));
+
+    // Draw a frame, during which the reaper should destroy the texture
+    io.nextFrame;
+    root.children = [];
+    root.updateSize();
+    root.draw();
+
+    assert(!io.isTextureValid(texture));
+    // There is no way to test if the tombstone has been freed
+
+}
+
+@system
+unittest {
+
+    // This unittest checks if tombstones work correctly even if the backend is destroyed before the texture.
+
+    import std.concurrency;
+    import core.atomic;
+    import glui.image_view;
+
+    auto io = new HeadlessBackend;
+    auto root = imageView("logo.png");
+
+    // Load the texture and draw
+    root.io = io;
+    root.draw();
+
+    // Destroy the backend
+    destroy(io);
+
+    auto texture = cast() root.texture;
+
+    // The texture should have been automatically freed, but not marked for destruction
+    assert(!texture.tombstone.isDestroyed);
+    assert(texture.tombstone._disowned.atomicLoad);
+
+    // Now, destroy the image
+    // If this operation succeeds, we're good
+    destroy(root);
+    // There is no way to test if the tombstone and texture have truly been freed
 
 }
 
@@ -408,8 +683,8 @@ struct Image {
 /// Textures make use of manual memory management.
 struct Texture {
 
-    /// Backend that created this texture.
-    GluiBackend backend;
+    /// Tombstone for this texture
+    shared(TextureTombstone)* tombstone;
 
     /// GPU/backend ID of the texture.
     uint id;
@@ -424,7 +699,14 @@ struct Texture {
 
         => id == other.id
         && width == other.width
-        && height == other.height;
+        && height == other.height
+        && dpiX == other.dpiX
+        && dpiY == other.dpiY;
+
+    /// Get the backend for this texture. Doesn't work after freeing the tombstone.
+    inout(GluiBackend) backend() inout @trusted
+
+        => cast(inout GluiBackend) tombstone.backend;
 
     /// DPI value of the texture.
     Vector2 dpi() const
@@ -451,13 +733,13 @@ struct Texture {
 
     }
 
-    /// Destroy this texture.
+    /// Destroy this texture. This function is thread-safe.
     void destroy() @system {
 
-        if (backend is null) return;
+        if (tombstone is null) return;
 
-        backend.unloadTexture(this);
-        backend = null;
+        tombstone.markDestroyed();
+        tombstone = null;
         id = 0;
 
     }
