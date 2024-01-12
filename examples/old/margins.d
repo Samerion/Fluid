@@ -5,6 +5,8 @@ import std.array;
 import std.range;
 import std.format;
 
+version (none):
+
 void main() {
 
     SetConfigFlags(ConfigFlags.FLAG_WINDOW_RESIZABLE);

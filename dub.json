@@ -15,7 +15,7 @@
 			"targetType": "library"
 		}
 	],
-	"copyright": "Copyright © 2021, Artha",
+	"copyright": "Copyright © 2021–2024, Artha",
 	"dependencies": {
 		"arsd-official:image_files": {
 			"optional": true,
@@ -50,118 +50,8 @@
 			"libs": [
 				"raylib"
 			],
-			"name": "example-showcase",
-			"sourceFiles": [
-				"examples/showcase.d"
-			],
-			"sourcePaths": [],
-			"targetPath": "build",
-			"targetType": "executable"
-		},
-		{
-			"dependencies": {
-				"arsd-official:image_files": "~>11.3",
-				"arsd-official:simpledisplay": "~>11.3",
-				"glui": ">=0.0.0"
-			},
-			"libs": [
-				"raylib"
-			],
-			"name": "example-showcase-2",
-			"sourceFiles": [
-				"examples/showcase_2.d"
-			],
-			"sourcePaths": [],
-			"targetPath": "build",
-			"targetType": "executable"
-		},
-		{
-			"dependencies": {
-				"glui": ">=0.0.0"
-			},
-			"libs": [
-				"raylib"
-			],
-			"name": "example-onions",
-			"sourceFiles": [
-				"examples/onions.d"
-			],
-			"sourcePaths": [],
-			"targetPath": "build",
-			"targetType": "executable"
-		},
-		{
-			"dependencies": {
-				"glui": ">=0.0.0"
-			},
-			"libs": [
-				"raylib"
-			],
-			"name": "example-checks",
-			"sourceFiles": [
-				"examples/checks.d"
-			],
-			"sourcePaths": [],
-			"targetPath": "build",
-			"targetType": "executable"
-		},
-		{
-			"dependencies": {
-				"glui": ">=0.0.0"
-			},
-			"libs": [
-				"raylib"
-			],
-			"name": "example-scroll",
-			"sourceFiles": [
-				"examples/scroll.d"
-			],
-			"sourcePaths": [],
-			"targetPath": "build",
-			"targetType": "executable"
-		},
-		{
-			"dependencies": {
-				"glui": ">=0.0.0"
-			},
-			"libs": [
-				"raylib"
-			],
-			"name": "example-margins",
-			"sourceFiles": [
-				"examples/margins.d"
-			],
-			"sourcePaths": [],
-			"targetPath": "build",
-			"targetType": "executable"
-		},
-		{
-			"dependencies": {
-				"glui": ">=0.0.0"
-			},
-			"libs": [
-				"raylib"
-			],
-			"name": "example-hidpi",
-			"sourceFiles": [
-				"examples/hidpi.d"
-			],
-			"sourcePaths": [],
-			"targetPath": "build",
-			"targetType": "executable"
-		},
-		{
-			"dependencies": {
-				"glui": ">=0.0.0"
-			},
-			"libs": [
-				"raylib"
-			],
-			"name": "example-map",
-			"sourceFiles": [
-				"examples/map.d"
-			],
-			"sourcePaths": [],
+			"name": "showcase",
+			"sourcePaths": ["examples"],
 			"targetPath": "build",
 			"targetType": "executable"
 		}
