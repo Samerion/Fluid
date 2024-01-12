@@ -44,14 +44,23 @@
 	],
 	"subPackages": [
 		{
+			"copyFiles": [
+				"examples/sometype-mono.ttf"
+			],
 			"dependencies": {
-				"glui": ">=0.0.0"
+				"glui": ">=0.0.0",
+				"libdparse": "~>0.23.2"
 			},
 			"libs": [
 				"raylib"
 			],
 			"name": "showcase",
-			"sourcePaths": ["examples"],
+			"sourcePaths": [
+				"examples"
+			],
+			"stringImportPaths": [
+				"examples"
+			],
 			"targetPath": "build",
 			"targetType": "executable"
 		}
