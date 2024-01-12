@@ -23,6 +23,7 @@ class Raylib5Backend : GluiBackend {
 
     private {
 
+        TextureReaper _reaper;
         GluiMouseCursor lastMouseCursor;
         Rectangle drawArea;
         float _scale = 1;
@@ -257,6 +258,12 @@ class Raylib5Backend : GluiBackend {
 
     }
 
+    TextureReaper* reaper() return scope {
+
+        return &_reaper;
+
+    }
+
     glui.backend.Texture loadTexture(glui.backend.Image image) @system {
 
         return fromRaylib(LoadTextureFromImage(image.toRaylib));
@@ -274,8 +281,8 @@ class Raylib5Backend : GluiBackend {
     glui.backend.Texture fromRaylib(raylib.Texture texture) {
 
         glui.backend.Texture result;
-        result.backend = this;
         result.id = texture.id;
+        result.tombstone = reaper.makeTombstone(this, result.id);
         result.width = texture.width;
         result.height = texture.height;
         return result;
@@ -283,11 +290,11 @@ class Raylib5Backend : GluiBackend {
     }
 
     /// Destroy a texture
-    void unloadTexture(glui.backend.Texture texture) @system {
+    void unloadTexture(uint id) @system {
 
-        if (!__ctfe && IsWindowReady && texture.id != 0) {
+        if (!__ctfe && IsWindowReady && id != 0) {
 
-            UnloadTexture(texture.toRaylib);
+            rlUnloadTexture(id);
 
         }
 
