@@ -269,6 +269,9 @@ class FreetypeTypeface : Typeface {
         /// Underlying face.
         FT_Face face;
 
+        /// Adjust line height. `1` uses the original line height, `2` doubles it.
+        float lineHeightFactor = 1;
+
     }
 
     private {
@@ -308,6 +311,7 @@ class FreetypeTypeface : Typeface {
         // Mark self as the owner
         this._size = size;
         this.isOwner = true;
+        this.lineHeightFactor = 1.16;
 
     }
 
@@ -367,7 +371,7 @@ class FreetypeTypeface : Typeface {
     int lineHeight() const {
 
         // +1 is an error margin
-        return cast(int) (face.size.metrics.height / 64) + 1;
+        return cast(int) (face.size.metrics.height * lineHeightFactor / 64) + 1;
 
     }
 
