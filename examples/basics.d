@@ -7,19 +7,25 @@ import glui.showcase;
 @safe:
 
 
-@(() => label("To start from the basics, user interfaces in Glui are built using Nodes. There's a number of different "
-    ~ "node types; Each serves a different purpose and does something different. A good initial example is the "
-    ~ "Label node, which can be used to display text. Let's recreate the classic Hello World program."))
+@(
+    () => label("Glui is a library for creating user user interfaces. The focus of the library is ease of use, making "
+        ~ "it possible to design menus, input forms, controls and displays while minimizing amount of effort and "
+        ~ "time."),
+    () => label("To start from the basics, Glui programs are built using Nodes. There's a number of "
+        ~ "different node types; Each serves a different purpose and does something different. A good "
+        ~ "initial example is the Label node, which can be used to display text. Let's recreate the classic Hello "
+        ~ "World program.")
+)
 GluiNode helloWorldExample() {
 
     return label("Hello, World!");
 
 }
 
-@(() => label("Nodes as such do nothing and the code above, while used to create a Label, won't display it on the "
-    ~ "screen. Typically, you'd like to create a window the user interface can live in. Because Glui is made with "
-    ~ "game development in mind, it can integrate with Raylib to do this. A minimal example of using Glui in Raylib "
-    ~ "will thus look like this:"))
+@(() => label("Nodes as such do nothing, and the code above, while used to create a Label, won't display it on the "
+    ~ "screen by itself. Typically, you'd like to create a window the user interface can live in. Because Glui is made "
+    ~ "with game development in mind, it can integrate with Raylib to do this. A minimal example of using Glui in "
+    ~ "Raylib will thus look like this:"))
 void raylibExample() @system {
 
     import raylib;

@@ -68,6 +68,7 @@ void main() {
 
         GluiFrame.styleAdd.padding = 0;
         GluiLabel.styleAdd!q{
+            margin = 0;
             padding.sideX = 12;
             padding.sideY = 16;
         };
@@ -102,6 +103,15 @@ void main() {
 GluiSpace createUI() @safe {
 
     auto content = nodeSlot!GluiNode(.layout!(1, "fill"));
+    GluiSpace navigationBar;
+
+    void changeChapter(GluiNode root) {
+
+        // Change the content root and show the back button
+        content = root;
+        navigationBar.show();
+
+    }
 
     // All content is scrollable
     return vscrollFrame(
@@ -112,30 +122,35 @@ GluiSpace createUI() @safe {
             .maxContentSize,
 
             // Back button
-            sizeLock!hspace(
+            navigationBar = sizeLock!hspace(
                 .layout!"center",
                 .contentSize,
-                button("← Back to navigation", delegate { content = exampleList(content); }),
-            ),
+                button("← Back to navigation", delegate {
+                    content = exampleList(&changeChapter);
+                    navigationBar.hide();
+                }),
+            ).hide(),
 
             // Content
-            content = exampleList(content),
+            content = exampleList(&changeChapter),
         )
     );
 
 }
 
-GluiSpace exampleList(GluiNodeSlot!GluiNode content) @safe {
+GluiSpace exampleList(void delegate(GluiNode) @safe changeChapter) @safe {
 
     return sizeLock!vspace(
         .layout!"center",
         .contentSize,
-        label(.layout!"center", "Hello, World!"),
+        label(.layout!"center", .headingTheme, "Hello, World!"),
+        label("Pick a chapter of the tutorial to get started. Start with the first one or browse the chapters that "
+            ~ "interest you! Output previews are shown next to code samples to help you understand the content."),
         grid(
             .layout!"fill",
             .segments(3),
             [
-                button(.layout!"fill", "Basics", { content = renderExample!"basics"; }),
+                button(.layout!"fill", "Basics", () => changeChapter(renderExample!"basics")),
             ],
         ),
     );
