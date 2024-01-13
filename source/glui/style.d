@@ -231,6 +231,12 @@ class Style {
 
     }
 
+    static Typeface loadTypeface(int fontSize) @trusted {
+
+        return new FreetypeTypeface(fontSize);
+
+    }
+
     alias loadFont = loadTypeface;
 
     /// Update the style with given D code.

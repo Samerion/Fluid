@@ -286,6 +286,31 @@ class FreetypeTypeface : Typeface {
 
     static FreetypeTypeface defaultTypeface;
 
+    static this() @trusted {
+
+        // Set the default typeface
+        FreetypeTypeface.defaultTypeface = new FreetypeTypeface(14);
+
+    }
+
+    /// Load the default typeface
+    this(int size) @trusted {
+
+        static typefaceFile = cast(ubyte[]) import("ruda-regular.ttf");
+
+        // Load the font
+        if (auto error = FT_New_Memory_Face(freetype, typefaceFile.ptr, typefaceFile.length, 0, &face)) {
+
+            assert(false, format!"Failed to load default Glui typeface at size %s, error no. %s"(size, error));
+
+        }
+
+        // Mark self as the owner
+        this._size = size;
+        this.isOwner = true;
+
+    }
+
     /// Use an existing freetype2 font.
     this(FT_Face face, int size) {
 
@@ -646,25 +671,6 @@ shared static this() @system {
         }
 
     }
-
-}
-
-static this() @trusted {
-
-    // Load the font
-    const typefaceFile = cast(ubyte[]) import("ruda-regular.ttf");
-
-    FT_Face typeface;
-
-    if (auto error = FT_New_Memory_Face(freetype, typefaceFile.ptr, typefaceFile.length, 0, &typeface)) {
-
-        assert(false, format!"Failed to load default Glui typeface, error no. %s"(error));
-
-    }
-
-    // Set the default typeface
-    FreetypeTypeface.defaultTypeface = new FreetypeTypeface(typeface, 14);
-    FreetypeTypeface.defaultTypeface.isOwner = true;
 
 }
 
