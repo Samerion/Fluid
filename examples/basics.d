@@ -11,14 +11,6 @@ import glui;
     ~ "label node, which can be used to display text. Let's recreate the classic Hello World program."))
 GluiNode helloWorldExample() {
 
-    if (1) {
-        label("a");
-    }
-    else {
-        label("b");
-    }
-
-    // Stuff
     return label("Hello, World!");
 
 }

@@ -169,7 +169,7 @@ GluiSpace renderExample(string name)() @trusted {
 
     // Parse it
     auto m = parseModule(tokens, filename, &rba);
-    auto visitor = new FunctionVisitor();
+    auto visitor = new FunctionVisitor(sourceCode.splitLines);
     visitor.visit(m);
 
     // Begin creating the document
@@ -214,25 +214,69 @@ class FunctionVisitor : ASTVisitor {
 
     int indentLevel;
 
+    /// Source code divided by lines.
+    string[] sourceLines;
+
     /// Mapping of function names to their bodies.
     string[string] functions;
+
+    this(string[] sourceLines) {
+
+        this.sourceLines = sourceLines;
+
+    }
 
     alias visit = ASTVisitor.visit;
 
     override void visit(const FunctionDeclaration decl) {
 
         import std.array;
+        import std.range;
+        import std.string;
+        import std.algorithm;
+        import dparse.lexer;
         import dparse.formatter;
 
-        // Fetch the inside of the function
-        auto output = appender!string();
-        auto content = decl.functionBody.specifiedFunctionBody.blockStatement.declarationsAndStatements;
+        struct Location {
+            size_t line;
+            size_t column;
 
-        // Format it
-        output.format(content);
+            this(T)(T t) {
+                this.line = t.line - 1;
+                this.column = t.column - 1;
+            }
+        }
+
+        // Get function boundaries
+        auto content = decl.functionBody.specifiedFunctionBody.blockStatement;
+        auto tokens = content.tokens;
+
+        // Convert to 0-indexing
+        auto start = Location(content.tokens[0]);
+        auto end = Location(content.tokens[$-1]);
+        auto rangeLines = sourceLines[start.line..end.line+1];
+
+        // Extract the text from original source code to preserve original formatting and comments
+        auto output = rangeLines
+            .enumerate
+            .map!((value) {
+
+                auto i = value[0], line = value[1];
+
+                // First line, skip past "{"
+                if (i == 0) return line[start.column+1..$];
+
+                // Middle line, write whole
+                else if (i+1 != rangeLines.length) return line;
+
+                // Last line, end before "}"
+                else return line[0..end.column];
+
+            })
+            .join("\n");
 
         // Save the result
-        functions[decl.name.text] = output[].strip;
+        functions[decl.name.text] = output[].outdent.strip;
         decl.accept(this);
 
     }
