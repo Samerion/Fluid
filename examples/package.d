@@ -8,7 +8,7 @@
 /// To get started with the showcase, use `dub run glui:showcase`, which should compile and run the showcase. The
 /// program explains different components of the library and provides code examples, but you're free to browse through
 /// its files if you like! basics.d might be a good start. I hope this directory proves as a useful learning resource.
-module glui.showcase.main;
+module glui.showcase;
 
 import glui;
 import raylib;
@@ -23,6 +23,8 @@ enum maxContentSize = .sizeLimitX(800);
 enum contentSize = .sizeLimitX(700);
 
 Theme mainTheme;
+Theme headingTheme;
+Theme subheadingTheme;
 Theme codeTheme;
 
 /// The entrypoint prepares the Raylib window. The UI is build in `createUI()`.
@@ -37,16 +39,35 @@ void main() {
             GluiGridRow.styleAdd.padding = 0;
         };
         GluiLabel.styleAdd!q{
-            margin.sideY = 14;
-            GluiButton!().styleAdd.margin = 0;
+            margin.sideY = 7;
+            GluiButton!().styleAdd;
         };
     };
 
-    codeTheme = makeTheme!q{
+    headingTheme = mainTheme.makeTheme!q{
         GluiLabel.styleAdd!q{
-            import std.file, std.path;
-            typeface = Style.loadTypeface(thisExePath.dirName.buildPath("sometype-mono.ttf"), 13);
-            backgroundColor = color!"dedede";
+            typeface = Style.loadTypeface(20);
+            margin.sideTop = 20;
+            margin.sideBottom = 10;
+        };
+    };
+
+    subheadingTheme = mainTheme.makeTheme!q{
+        GluiLabel.styleAdd!q{
+            typeface = Style.loadTypeface(16);
+            margin.sideTop = 16;
+            margin.sideBottom = 8;
+        };
+    };
+
+    codeTheme = mainTheme.makeTheme!q{
+        import std.file, std.path;
+
+        typeface = Style.loadTypeface(thisExePath.dirName.buildPath("sometype-mono.ttf"), 13);
+        backgroundColor = color!"dedede";
+
+        GluiFrame.styleAdd.padding = 0;
+        GluiLabel.styleAdd!q{
             padding.sideX = 12;
             padding.sideY = 16;
         };
@@ -121,6 +142,21 @@ GluiSpace exampleList(GluiNodeSlot!GluiNode content) @safe {
 
 }
 
+/// Create a code block
+GluiSpace showcaseCode(string code) {
+
+    return vframe(
+        .layout!"fill",
+        .codeTheme,
+        sizeLock!label(
+            .layout!"center",
+            .contentSize,
+            code,
+        ),
+    );
+
+}
+
 /// Showcase code and its result.
 GluiSpace showcaseCode(string code, GluiNode node) {
 
@@ -186,6 +222,7 @@ GluiSpace renderExample(string name)() @trusted {
         static foreach (overload; __traits(getOverloads, mod, member)) {
 
             auto documentation = sizeLock!vspace(.layout!"center", .contentSize);
+            auto code = visitor.functions[member];
 
             // Load documentation attributes
             static foreach (uda; __traits(getAttributes, overload)) {
@@ -198,9 +235,16 @@ GluiSpace renderExample(string name)() @trusted {
 
             }
 
-            // Build code example
+            // Insert the documentation
             document ~= documentation;
-            document ~= showcaseCode(visitor.functions[member], overload());
+
+            // Add and run a code example if it returns a node
+            static if (is(ReturnType!overload : GluiNode))
+                document ~= showcaseCode(code, overload());
+
+            // Otherwise, show just the code
+            else if (code != "")
+                document ~= showcaseCode(code);
 
         }
 
@@ -237,7 +281,7 @@ class FunctionVisitor : ASTVisitor {
         import dparse.lexer;
         import dparse.formatter;
 
-        struct Location {
+        static struct Location {
             size_t line;
             size_t column;
 
@@ -262,6 +306,9 @@ class FunctionVisitor : ASTVisitor {
             .map!((value) {
 
                 auto i = value[0], line = value[1];
+
+                // One line code
+                if (rangeLines.length == 1) return line[start.column+1..end.column];
 
                 // First line, skip past "{"
                 if (i == 0) return line[start.column+1..$];
