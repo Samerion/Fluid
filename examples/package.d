@@ -17,6 +17,7 @@ import dparse.ast;
 
 import std.string;
 import std.traits;
+import std.algorithm;
 
 
 /// Maximum content width, used for code samples, since they require more space.
@@ -123,6 +124,7 @@ GluiSpace createUI(string initialChapter = null) @safe {
     import std.conv;
 
     Chapter currentChapter;
+    GluiScrollable!GluiFrame root;
     GluiSpace navigationBar;
     GluiLabel titleLabel;
     GluiButton!() leftButton, rightButton;
@@ -141,10 +143,13 @@ GluiSpace createUI(string initialChapter = null) @safe {
         leftButton.isHidden = chapter == 0;
         rightButton.isHidden = chapter == Chapter.max;
 
+        // Scroll back to top
+        root.scrollStart();
+
     }
 
     // All content is scrollable
-    auto root = vscrollFrame(
+    root = vscrollFrame(
         .layout!"fill",
         .mainTheme,
         sizeLock!vspace(
@@ -195,7 +200,6 @@ GluiSpace exampleList(void delegate(Chapter) @safe changeChapter) @safe {
 
     import std.array;
     import std.range;
-    import std.algorithm;
 
     return sizeLock!vspace(
         .layout!"center",
@@ -235,11 +239,11 @@ GluiSpace showcaseCode(string code) {
 }
 
 /// Showcase code and its result.
-GluiSpace showcaseCode(string code, GluiNode node) {
+GluiSpace showcaseCode(string code, GluiNode node, Theme theme = null) {
 
     // Make the node inherit the default theme rather than the one we set
     if (node.theme is null) {
-        node.theme = gluiDefaultTheme;
+        node.theme = either(theme, gluiDefaultTheme);
     }
 
     return hspace(
@@ -343,15 +347,18 @@ GluiSpace render(Chapter chapter)() @trusted {
 
             auto documentation = sizeLock!vspace(.layout!"center", .contentSize);
             auto code = visitor.functions[member];
+            auto theme = gluiDefaultTheme;
 
             // Load documentation attributes
             static foreach (uda; __traits(getAttributes, overload)) {
 
-                static if (isCallable!uda) {
-
+                // Node
+                static if (is(typeof(uda()) : GluiNode))
                     documentation ~= uda();
 
-                }
+                // Theme
+                else static if (is(typeof(uda()) : Theme))
+                    theme = uda();
 
             }
 
@@ -360,7 +367,7 @@ GluiSpace render(Chapter chapter)() @trusted {
 
             // Add and run a code example if it returns a node
             static if (is(ReturnType!overload : GluiNode))
-                document ~= showcaseCode(code, overload());
+                document ~= showcaseCode(code, overload(), theme);
 
             // Otherwise, show just the code
             else if (code != "")
@@ -397,7 +404,6 @@ class FunctionVisitor : ASTVisitor {
         import std.array;
         import std.range;
         import std.string;
-        import std.algorithm;
         import dparse.lexer;
         import dparse.formatter;
 

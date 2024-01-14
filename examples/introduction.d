@@ -89,7 +89,8 @@ GluiFrame hframeExample() {
 
 @(
     () => label("The example above makes it look like if there was only a single label. Let's try something more "
-        ~ "exciting and insert a vframe inside of the hframe"),
+        ~ `exciting and insert a vframe inside of the hframe. Notice here, how "down under" appears immediately under `
+        ~ `"right", instead of being aligned to the start of the line.`),
 )
 GluiFrame bothFramesExample() {
 

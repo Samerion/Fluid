@@ -7,6 +7,17 @@ import glui.showcase;
 @safe:
 
 
+Theme highlightBoxTheme;
+
+static this() {
+
+    highlightBoxTheme = makeTheme!q{
+        border = 1;
+        borderStyle = colorBorder(color!"#e62937");
+    };
+
+}
+
 @(
     () => label("Every Glui node can provide hints on how it should be laid out by the node its inside of, its parent. "
         ~ "These are provided by passing the '.layout' setting as the first argument to the node."),
@@ -55,6 +66,26 @@ GluiLabel symmetricalLayoutExample() {
 
 @(
     () => label(`You might be curious about the "fill" option now. This one, instead of changing the node's alignment, `
-        ~ `forces the node to take over all of its available space.`),
+        ~ `forces the node to take over all of its available space. This is useful when you consider nodes that have `
+        ~ `background, borders or are intended to store child nodes with their own layout — but we'll talk about it `
+        ~ `later. For the purpose of this example, the box of each label node will be highlighted in red.`),
+    () => highlightBoxTheme,
+)
+GluiSpace fillExample() {
+
+    return vframe(
+        .layout!"fill",
+        label("Start-aligned node"),
+        label(.layout!"fill", "Fill-aligned node"),
+    );
+
+}
+
+@(
+    () => label(.headingTheme, `Shrinking and expanding`),
+    () => label(`You might have noticed something is off in the previous example. Despite the '.layout!"fill"' `
+        ~ `option, the label did not expand to the end of the container, but only used up a single line. This has to `
+        ~ `do with "expanding".`),
+    // TODO
 )
 void endExample() { }
