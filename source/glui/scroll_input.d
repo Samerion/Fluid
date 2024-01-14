@@ -279,7 +279,7 @@ class GluiScrollInput : GluiInput!GluiNode {
                 : 1;
 
             // Change
-            if (horizontal ^ forHorizontal) emitChange(direction * scrollPageLength);
+            if (horizontal == forHorizontal) emitChange(direction * scrollPageLength);
 
         }
 

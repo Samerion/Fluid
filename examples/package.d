@@ -7,28 +7,37 @@
 ///
 /// To get started with the showcase, use `dub run glui:showcase`, which should compile and run the showcase. The
 /// program explains different components of the library and provides code examples, but you're free to browse through
-/// its files if you like! basics.d might be a good start. I hope this directory proves as a useful learning resource.
+/// its files if you like! introduction.d might be a good start. I hope this directory proves as a useful learning
+/// resource.
 module glui.showcase;
 
 import glui;
 import raylib;
-import std.string;
 import dparse.ast;
+
+import std.string;
+import std.traits;
 
 
 /// Maximum content width, used for code samples, since they require more space.
-enum maxContentSize = .sizeLimitX(800);
+enum maxContentSize = .sizeLimitX(1000);
 
 /// Reduced content width, used for document text.
-enum contentSize = .sizeLimitX(700);
+enum contentSize = .sizeLimitX(800);
 
 Theme mainTheme;
 Theme headingTheme;
 Theme subheadingTheme;
 Theme codeTheme;
+Theme previewWrapperTheme;
+
+enum Chapter {
+    @"Introduction" introduction,
+    @"Frames" frames,
+};
 
 /// The entrypoint prepares the Raylib window. The UI is build in `createUI()`.
-void main() {
+void main(string[] args) {
 
     // Prepare themes
     mainTheme = makeTheme!q{
@@ -40,7 +49,7 @@ void main() {
         };
         GluiLabel.styleAdd!q{
             margin.sideY = 7;
-            GluiButton!().styleAdd;
+            GluiButton!().styleAdd.margin.sideX = 2;
         };
     };
 
@@ -74,15 +83,24 @@ void main() {
         };
     };
 
+    previewWrapperTheme = mainTheme.makeTheme!q{
+        GluiNodeSlot!GluiNode.styleAdd!q{
+            border = 1;
+            borderStyle = colorBorder(color!"dedede");
+        };
+    };
+
     // Prepare the window
     SetConfigFlags(ConfigFlags.FLAG_WINDOW_RESIZABLE);
     SetTraceLogLevel(TraceLogLevel.LOG_WARNING);
-    InitWindow(800, 600, "Glui showcase");
+    InitWindow(1000, 750, "Glui showcase");
     SetTargetFPS(60);
     scope (exit) CloseWindow();
 
     // Create the UI
-    auto ui = createUI();
+    auto ui = args.length > 1
+        ? createUI(args[1])
+        : createUI();
 
     // Event loop
     while (!WindowShouldClose) {
@@ -100,21 +118,33 @@ void main() {
 
 }
 
-GluiSpace createUI() @safe {
+GluiSpace createUI(string initialChapter = null) @safe {
+
+    import std.conv;
+
+    Chapter currentChapter;
+    GluiSpace navigationBar;
+    GluiLabel titleLabel;
+    GluiButton!() leftButton, rightButton;
 
     auto content = nodeSlot!GluiNode(.layout!(1, "fill"));
-    GluiSpace navigationBar;
 
-    void changeChapter(GluiNode root) {
+    void changeChapter(Chapter chapter) {
 
         // Change the content root and show the back button
-        content = root;
+        currentChapter = chapter;
+        content = render(chapter);
+        titleLabel.text = title(chapter);
+
+        // Show navigation
         navigationBar.show();
+        leftButton.isHidden = chapter == 0;
+        rightButton.isHidden = chapter == Chapter.max;
 
     }
 
     // All content is scrollable
-    return vscrollFrame(
+    auto root = vscrollFrame(
         .layout!"fill",
         .mainTheme,
         sizeLock!vspace(
@@ -128,17 +158,44 @@ GluiSpace createUI() @safe {
                 button("← Back to navigation", delegate {
                     content = exampleList(&changeChapter);
                     navigationBar.hide();
+                    leftButton.hide();
+                    rightButton.hide();
                 }),
+                titleLabel = label(""),
             ).hide(),
 
             // Content
             content = exampleList(&changeChapter),
+
+            hframe(
+                .layout!"fill",
+
+                // Left button
+                leftButton = button("Previous chapter", delegate {
+                    changeChapter(to!Chapter(currentChapter-1));
+                }).hide(),
+
+                // Right button
+                rightButton = button(.layout!(1, "end"), "Next chapter", delegate {
+                    changeChapter(to!Chapter(currentChapter+1));
+                }).hide(),
+            ),
         )
     );
 
+    if (initialChapter) {
+        changeChapter(to!Chapter(initialChapter));
+    }
+
+    return root;
+
 }
 
-GluiSpace exampleList(void delegate(GluiNode) @safe changeChapter) @safe {
+GluiSpace exampleList(void delegate(Chapter) @safe changeChapter) @safe {
+
+    import std.array;
+    import std.range;
+    import std.algorithm;
 
     return sizeLock!vspace(
         .layout!"center",
@@ -149,9 +206,14 @@ GluiSpace exampleList(void delegate(GluiNode) @safe changeChapter) @safe {
         grid(
             .layout!"fill",
             .segments(3),
-            [
-                button(.layout!"fill", "Basics", () => changeChapter(renderExample!"basics")),
-            ],
+            array(
+                only(EnumMembers!Chapter)
+                    .map!(a => button(
+                        .layout!"fill",
+                        title(a),
+                        () => changeChapter(a)
+                    ))
+            ),
         ),
     );
 
@@ -188,16 +250,57 @@ GluiSpace showcaseCode(string code, GluiNode node) {
             .codeTheme,
             code,
         ),
-        vframe(
+        nodeSlot!GluiNode(
             .layout!(1, "fill"),
-            node
+            .previewWrapperTheme,
+            node,
         ),
     );
 
 }
 
-GluiSpace renderExample(string name)() @trusted {
+/// Get the title of the given chapter.
+string title(Chapter query) @safe {
 
+    import std.traits;
+
+    switch (query) {
+
+        static foreach (chapter; EnumMembers!Chapter) {
+
+            case chapter:
+                return __traits(getAttributes, chapter)[0];
+
+        }
+
+        default: return null;
+
+    }
+
+}
+
+/// Render the given chapter.
+GluiSpace render(Chapter query) @safe {
+
+    switch (query) {
+
+        static foreach (chapter; EnumMembers!Chapter) {
+
+            case chapter:
+                return render!chapter;
+
+        }
+
+        default: return null;
+
+    }
+
+}
+
+/// ditto
+GluiSpace render(Chapter chapter)() @trusted {
+
+    import std.conv;
     import std.traits;
     import dparse.lexer;
     import dparse.parser : parseModule;
@@ -205,6 +308,8 @@ GluiSpace renderExample(string name)() @trusted {
 
     LexerConfig config;
     RollbackAllocator rba;
+
+    enum name = chapter.to!string;
 
     // Import the module
     mixin("import glui.showcase.", name, ";");
