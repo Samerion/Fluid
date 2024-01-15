@@ -2,8 +2,8 @@ module fluid.backend.raylib5;
 
 version (Have_raylib_d):
 
-debug (Glui_BuildMessages) {
-    pragma(msg, "Glui: Building with Raylib 5 support");
+debug (Fluid_BuildMessages) {
+    pragma(msg, "Fluid: Building with Raylib 5 support");
 }
 
 import raylib;
@@ -19,12 +19,16 @@ public import raylib : Vector2, Rectangle, Color;
 @safe:
 
 
-class Raylib5Backend : GluiBackend {
+class Raylib5Backend : FluidBackend {
 
     private {
 
+<<<<<<< HEAD
         TextureReaper _reaper;
         GluiMouseCursor lastMouseCursor;
+=======
+        FluidMouseCursor lastMouseCursor;
+>>>>>>> 6dc1768 (sed s/Glui/Fluid)
         Rectangle drawArea;
         float _scale = 1;
 
@@ -32,57 +36,57 @@ class Raylib5Backend : GluiBackend {
 
     @trusted {
 
-        bool isPressed(GluiMouseButton button) const
+        bool isPressed(FluidMouseButton button) const
             => isScroll(button)
             ?  isScrollPressed(button)
             :  IsMouseButtonPressed(button.toRaylib);
-        bool isReleased(GluiMouseButton button) const
+        bool isReleased(FluidMouseButton button) const
             => isScroll(button)
             ?  isScrollPressed(button)
             :  IsMouseButtonReleased(button.toRaylib);
-        bool isDown(GluiMouseButton button) const
+        bool isDown(FluidMouseButton button) const
             => isScroll(button)
             ?  isScrollPressed(button)
             :  IsMouseButtonDown(button.toRaylib);
-        bool isUp(GluiMouseButton button) const
+        bool isUp(FluidMouseButton button) const
             => isScroll(button)
             ?  !isScrollPressed(button)
             :  IsMouseButtonUp(button.toRaylib);
 
-        bool isPressed(GluiKeyboardKey key) const => IsKeyPressed(key.toRaylib);
-        bool isReleased(GluiKeyboardKey key) const => IsKeyReleased(key.toRaylib);
-        bool isDown(GluiKeyboardKey key) const => IsKeyDown(key.toRaylib);
-        bool isUp(GluiKeyboardKey key) const => IsKeyUp(key.toRaylib);
-        bool isRepeated(GluiKeyboardKey key) const => IsKeyPressedRepeat(key.toRaylib);
+        bool isPressed(FluidKeyboardKey key) const => IsKeyPressed(key.toRaylib);
+        bool isReleased(FluidKeyboardKey key) const => IsKeyReleased(key.toRaylib);
+        bool isDown(FluidKeyboardKey key) const => IsKeyDown(key.toRaylib);
+        bool isUp(FluidKeyboardKey key) const => IsKeyUp(key.toRaylib);
+        bool isRepeated(FluidKeyboardKey key) const => IsKeyPressedRepeat(key.toRaylib);
 
         dchar inputCharacter() => cast(dchar) GetCharPressed();
 
-        int isPressed(GluiGamepadButton button) const {
+        int isPressed(FluidGamepadButton button) const {
             auto btn = button.toRaylib;
             return 1 + cast(int) iota(0, 4).countUntil!(a => IsGamepadButtonPressed(a, btn));
         }
 
-        int isReleased(GluiGamepadButton button) const {
+        int isReleased(FluidGamepadButton button) const {
             auto btn = button.toRaylib;
             return 1 + cast(int) iota(0, 4).countUntil!(a => IsGamepadButtonReleased(a, btn));
         }
 
-        int isDown(GluiGamepadButton button) const {
+        int isDown(FluidGamepadButton button) const {
             auto btn = button.toRaylib;
             return 1 + cast(int) iota(0, 4).countUntil!(a => IsGamepadButtonDown(a, btn));
         }
 
-        int isUp(GluiGamepadButton button) const {
+        int isUp(FluidGamepadButton button) const {
             auto btn = button.toRaylib;
             return 1 + cast(int) iota(0, 4).countUntil!(a => IsGamepadButtonUp(a, btn));
         }
 
-        int isRepeated(GluiGamepadButton button) const
+        int isRepeated(FluidGamepadButton button) const
             => 0;
 
     }
 
-    private bool isScrollPressed(GluiMouseButton btn) const @trusted {
+    private bool isScrollPressed(FluidMouseButton btn) const @trusted {
 
         const wheelMove = GetMouseWheelMoveV;
 
@@ -106,7 +110,7 @@ class Raylib5Backend : GluiBackend {
 
     Vector2 mousePosition() const @trusted {
 
-        return toGluiCoords(GetMousePosition);
+        return toFluidCoords(GetMousePosition);
 
     }
 
@@ -133,7 +137,7 @@ class Raylib5Backend : GluiBackend {
 
     Vector2 windowSize() const @trusted {
 
-        return toGluiCoords(GetScreenWidth, GetScreenHeight);
+        return toFluidCoords(GetScreenWidth, GetScreenHeight);
 
     }
 
@@ -182,19 +186,19 @@ class Raylib5Backend : GluiBackend {
 
     }
 
-    Vector2 toGluiCoords(Vector2 position) const @trusted {
+    Vector2 toFluidCoords(Vector2 position) const @trusted {
 
         return Vector2(position.x / hidpiScale.x, position.y / hidpiScale.y);
 
     }
 
-    Vector2 toGluiCoords(float x, float y) const @trusted {
+    Vector2 toFluidCoords(float x, float y) const @trusted {
 
         return Vector2(x / hidpiScale.x, y / hidpiScale.y);
 
     }
 
-    Rectangle toGluiCoords(Rectangle rec) const @trusted {
+    Rectangle toFluidCoords(Rectangle rec) const @trusted {
 
         return Rectangle(
             rec.x / hidpiScale.x,
@@ -236,7 +240,7 @@ class Raylib5Backend : GluiBackend {
 
     }
 
-    GluiMouseCursor mouseCursor(GluiMouseCursor cursor) @trusted {
+    FluidMouseCursor mouseCursor(FluidMouseCursor cursor) @trusted {
 
         // Hide the cursor if requested
         if (cursor.system == cursor.system.none) {
@@ -252,7 +256,7 @@ class Raylib5Backend : GluiBackend {
 
     }
 
-    GluiMouseCursor mouseCursor() const {
+    FluidMouseCursor mouseCursor() const {
 
         return lastMouseCursor;
 
@@ -359,10 +363,10 @@ class Raylib5Backend : GluiBackend {
 }
 
 /// Get the Raylib enum for a mouse cursor.
-raylib.MouseCursor toRaylib(GluiMouseCursor.SystemCursors cursor) {
+raylib.MouseCursor toRaylib(FluidMouseCursor.SystemCursors cursor) {
 
     with (raylib.MouseCursor)
-    with (GluiMouseCursor.SystemCursors)
+    with (FluidMouseCursor.SystemCursors)
     switch (cursor) {
 
         default:
@@ -402,17 +406,17 @@ raylib.MouseCursor toRaylib(GluiMouseCursor.SystemCursors cursor) {
 }
 
 /// Get the Raylib enum for a keyboard key.
-raylib.KeyboardKey toRaylib(GluiKeyboardKey key) {
+raylib.KeyboardKey toRaylib(FluidKeyboardKey key) {
 
     return cast(raylib.KeyboardKey) key;
 
 }
 
 /// Get the Raylib enum for a mouse button.
-raylib.MouseButton toRaylib(GluiMouseButton button) {
+raylib.MouseButton toRaylib(FluidMouseButton button) {
 
     with (raylib.MouseButton)
-    with (GluiMouseButton)
+    with (FluidMouseButton)
     final switch (button) {
         case scrollLeft:
         case scrollRight:
@@ -431,7 +435,7 @@ raylib.MouseButton toRaylib(GluiMouseButton button) {
 }
 
 /// Get the Raylib enum for a keyboard key.
-raylib.GamepadButton toRaylib(GluiGamepadButton button) {
+raylib.GamepadButton toRaylib(FluidGamepadButton button) {
 
     return cast(raylib.GamepadButton) button;
 

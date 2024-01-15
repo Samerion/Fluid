@@ -16,22 +16,22 @@ deprecated("scrollBars have been renamed to scrollInputs, please update referenc
 
     alias vscrollBar = vscrollInput;
     alias hscrollBar = hscrollInput;
-    alias GluiScrollBar = GluiScrollInput;
+    alias FluidScrollBar = FluidScrollInput;
 
 }
 
 /// Create a new vertical scroll bar.
-alias vscrollInput = simpleConstructor!GluiScrollInput;
+alias vscrollInput = simpleConstructor!FluidScrollInput;
 
 /// Create a new horizontal scroll bar.
-alias hscrollInput = simpleConstructor!(GluiScrollInput, (a) {
+alias hscrollInput = simpleConstructor!(FluidScrollInput, (a) {
 
     a.horizontal = true;
 
 });
 
 ///
-class GluiScrollInput : GluiInput!GluiNode {
+class FluidScrollInput : FluidInput!FluidNode {
 
     // TODO Hiding a scrollbar makes it completely unusable, since it cannot scan the viewport. Perhaps override
     // `isHidden` to virtually hide the scrollbar, and keep it always "visible" as such?
@@ -51,7 +51,7 @@ class GluiScrollInput : GluiInput!GluiNode {
 
     public {
 
-        /// Mouse scroll speed; Pixels per mouse wheel event in GluiScrollable.
+        /// Mouse scroll speed; Pixels per mouse wheel event in FluidScrollable.
         enum scrollSpeed = 60.0;
 
         /// Keyboard/gamepad
@@ -221,7 +221,7 @@ class GluiScrollInput : GluiInput!GluiNode {
         if (availableSpace == 0) return;
 
         // Check if the button is held down
-        const isDown = tree.isDown!(GluiInputAction.press);
+        const isDown = tree.isDown!(FluidInputAction.press);
 
         // Update status
         scope (exit) _isPressed = isDown;
@@ -264,11 +264,11 @@ class GluiScrollInput : GluiInput!GluiNode {
 
     }
 
-    @(GluiInputAction.pageLeft, GluiInputAction.pageRight)
-    @(GluiInputAction.pageUp, GluiInputAction.pageDown)
-    protected void _scrollPage(GluiInputAction action) {
+    @(FluidInputAction.pageLeft, FluidInputAction.pageRight)
+    @(FluidInputAction.pageUp, FluidInputAction.pageDown)
+    protected void _scrollPage(FluidInputAction action) {
 
-        with (GluiInputAction) {
+        with (FluidInputAction) {
 
             // Check if we're moving horizontally
             const forHorizontal = action == pageLeft || action == pageRight;
@@ -285,16 +285,16 @@ class GluiScrollInput : GluiInput!GluiNode {
 
     }
 
-    @(GluiInputAction.scrollLeft, GluiInputAction.scrollRight)
-    @(GluiInputAction.scrollUp, GluiInputAction.scrollDown)
+    @(FluidInputAction.scrollLeft, FluidInputAction.scrollRight)
+    @(FluidInputAction.scrollUp, FluidInputAction.scrollDown)
     protected void _scroll() @trusted {
 
         const isPlus = horizontal
-            ? &isDown!(GluiInputAction.scrollRight)
-            : &isDown!(GluiInputAction.scrollDown);
+            ? &isDown!(FluidInputAction.scrollRight)
+            : &isDown!(FluidInputAction.scrollDown);
         const isMinus = horizontal
-            ? &isDown!(GluiInputAction.scrollLeft)
-            : &isDown!(GluiInputAction.scrollUp);
+            ? &isDown!(FluidInputAction.scrollLeft)
+            : &isDown!(FluidInputAction.scrollUp);
 
         const speed = cast(ulong) (actionScrollSpeed * io.deltaTime);
         const change

@@ -13,10 +13,10 @@ import fluid.backend;
 /// An onion frame places its children as layers, drawing one on top of the other, instead of on the side.
 ///
 /// Children are placed in order of drawing — the last child will be drawn last, and so, will appear on top.
-alias onionFrame = simpleConstructor!GluiOnionFrame;
+alias onionFrame = simpleConstructor!FluidOnionFrame;
 
 /// ditto
-class GluiOnionFrame : GluiFrame {
+class FluidOnionFrame : FluidFrame {
 
     mixin DefineStyles;
 
@@ -74,7 +74,7 @@ unittest {
         // Draw a label in the middle of the frame
         label(
             layout!(1, "center"),
-            "Hello, Glui!"
+            "Hello, Fluid!"
         ),
 
     );
@@ -87,8 +87,8 @@ unittest {
     import fluid.structs;
     import fluid.image_view;
 
-    GluiImageView view;
-    GluiLabel[2] labels;
+    FluidImageView view;
+    FluidLabel[2] labels;
 
     auto io = new HeadlessBackend;
     auto root = onionFrame(
@@ -96,18 +96,18 @@ unittest {
         view = imageView("logo.png"),
 
         labels[0] = label(
-            "Hello, Glui!"
+            "Hello, Fluid!"
         ),
 
         labels[1] = label(
             layout!(1, "center"),
-            "Hello, Glui! This text should fit the image."
+            "Hello, Fluid! This text should fit the image."
         ),
 
     );
 
     root.theme = nullTheme.makeTheme!q{
-        GluiLabel.styleAdd.textColor = color!"000";
+        FluidLabel.styleAdd.textColor = color!"000";
     };
     root.io = io;
     root.draw();

@@ -18,7 +18,7 @@ import fluid.container;
 @safe:
 
 
-alias mapSpace = simpleConstructor!GluiMapSpace;
+alias mapSpace = simpleConstructor!FluidMapSpace;
 
 /// Defines the direction the node is "dropped from", that is, which corner of the object will be the anchor.
 /// Defaults to `start, start`, therefore, the supplied coordinate refers to the top-left of the object.
@@ -68,7 +68,7 @@ MapDropVector dropVector(string dropX, string dropY)() {
 
 }
 
-class GluiMapSpace : GluiSpace {
+class FluidMapSpace : FluidSpace {
 
     mixin DefineStyles;
 
@@ -77,7 +77,7 @@ class GluiMapSpace : GluiSpace {
     alias Position = MapPosition;
 
     /// Mapping of nodes to their positions.
-    Position[GluiNode] positions;
+    Position[FluidNode] positions;
 
     /// If true, the node will prevent its children from leaving the screen space.
     bool preventOverflow;
@@ -90,14 +90,14 @@ class GluiMapSpace : GluiSpace {
         /// Child currently dragged with the mouse.
         ///
         /// The child will move along with mouse movements performed by the user.
-        GluiNode _mouseDrag;
+        FluidNode _mouseDrag;
 
     }
 
     /// Construct the space. Arguments are either nodes, or positions/vectors affecting the next node added through
     /// the constructor.
     this(T...)(NodeParams params, T children)
-    if (!T.length || is(T[0] == Vector2) || is(T[0] == DropVector) || is(T[0] == Position) || is(T[0] : GluiNode)) {
+    if (!T.length || is(T[0] == Vector2) || is(T[0] == DropVector) || is(T[0] == Position) || is(T[0] : FluidNode)) {
 
         super(params);
 
@@ -143,7 +143,7 @@ class GluiMapSpace : GluiSpace {
             /// Construct the space. Arguments are either nodes, or positions/vectors affecting the next node added through
             /// the constructor.
             this(T...)(BasicNodeParam!index params, T children)
-            if (!T.length || is(T[0] == Vector2) || is(T[0] == DropVector) || is(T[0] == Position) || is(T[0] : GluiNode)) {
+            if (!T.length || is(T[0] == Vector2) || is(T[0] == DropVector) || is(T[0] == Position) || is(T[0] : FluidNode)) {
 
                 super(params);
 
@@ -187,7 +187,7 @@ class GluiMapSpace : GluiSpace {
     }
 
     /// Add a new child to the space and assign it some position.
-    void addChild(GluiNode node, Position position)
+    void addChild(FluidNode node, Position position)
     in ([position.coords.tupleof].any!isFinite, format!"Given %s isn't valid, values must be finite"(position))
     do {
 
@@ -197,14 +197,14 @@ class GluiMapSpace : GluiSpace {
     }
 
     /// ditto
-    void addFocusedChild(GluiNode node, Position position) {
+    void addFocusedChild(FluidNode node, Position position) {
 
         addChild(node, position);
         node.focusRecurse();
 
     }
 
-    void moveChild(GluiNode node, Position position)
+    void moveChild(FluidNode node, Position position)
     in ([position.coords.tupleof].any!isFinite, format!"Given %s isn't valid, values must be finite"(position))
     do {
 
@@ -212,7 +212,7 @@ class GluiMapSpace : GluiSpace {
 
     }
 
-    void moveChild(GluiNode node, Vector2 vector)
+    void moveChild(FluidNode node, Vector2 vector)
     in ([vector.tupleof].any!isFinite, format!"Given %s isn't valid, values must be finite"(vector))
     do {
 
@@ -220,7 +220,7 @@ class GluiMapSpace : GluiSpace {
 
     }
 
-    void moveChild(GluiNode node, DropVector vector) {
+    void moveChild(FluidNode node, DropVector vector) {
 
         positions[node].drop = vector;
 
@@ -228,7 +228,7 @@ class GluiMapSpace : GluiSpace {
 
     /// Make a node move relatively according to mouse position changes, making it behave as if it was being dragged by
     /// the mouse.
-    GluiNode mouseDrag(GluiNode node) @trusted {
+    FluidNode mouseDrag(FluidNode node) @trusted {
 
         assert(node in positions, "Requested node is not present in the map");
 
@@ -240,7 +240,7 @@ class GluiMapSpace : GluiSpace {
     }
 
     /// Get the node currently affected by mouseDrag.
-    inout(GluiNode) mouseDrag() inout { return _mouseDrag; }
+    inout(FluidNode) mouseDrag() inout { return _mouseDrag; }
 
     /// Stop current mouse movements
     final void stopMouseDrag() {
@@ -250,7 +250,7 @@ class GluiMapSpace : GluiSpace {
     }
 
     /// Drag the given child, changing its position relatively.
-    void dragChildBy(GluiNode node, Vector2 delta) {
+    void dragChildBy(FluidNode node, Vector2 delta) {
 
         auto position = node in positions;
         assert(position, "Dragged node is not present in the map");
@@ -355,7 +355,7 @@ class GluiMapSpace : GluiSpace {
     private alias getStartCorner = getCorner!false;
     private alias getEndCorner   = getCorner!true;
 
-    private Vector2 getCorner(bool end)(Vector2 space, GluiNode child, Position position) {
+    private Vector2 getCorner(bool end)(Vector2 space, FluidNode child, Position position) {
 
         Vector2 result;
 
@@ -417,7 +417,7 @@ class GluiMapSpace : GluiSpace {
 
         import fluid.structs : layout;
 
-        class RectangleSpace : GluiSpace {
+        class RectangleSpace : FluidSpace {
 
             Color color;
 

@@ -1,7 +1,7 @@
 module fluid.backend.headless;
 
-debug (Glui_BuildMessages) {
-    pragma(msg, "Glui: Building with headless backend");
+debug (Fluid_BuildMessages) {
+    pragma(msg, "Fluid: Building with headless backend");
 }
 
 import std.math;
@@ -24,7 +24,7 @@ else
     enum svgTextures = false;
 
 
-class HeadlessBackend : GluiBackend {
+class HeadlessBackend : FluidBackend {
 
     enum State {
 
@@ -139,15 +139,15 @@ class HeadlessBackend : GluiBackend {
     private {
 
         dstring characterQueue;
-        State[GluiMouseButton.max+1] mouse;
-        State[GluiKeyboardKey.max+1] keyboard;
-        State[GluiGamepadButton.max+1] gamepad;
+        State[FluidMouseButton.max+1] mouse;
+        State[FluidKeyboardKey.max+1] keyboard;
+        State[FluidGamepadButton.max+1] gamepad;
         Vector2 _mousePosition;
         Vector2 _windowSize;
         Vector2 _dpi = Vector2(96, 96);
         float _scale = 1;
         Rectangle _area;
-        GluiMouseCursor _cursor;
+        FluidMouseCursor _cursor;
         float _deltaTime = 1f / 60f;
         bool _justResized;
         bool _scissorsOn;
@@ -220,7 +220,7 @@ class HeadlessBackend : GluiBackend {
     }
 
     /// Press the given key, and hold it until `release`. Marks as repeated if already down.
-    void press(GluiKeyboardKey key) {
+    void press(FluidKeyboardKey key) {
 
         if (isDown(key))
             keyboard[key] = State.repeated;
@@ -230,82 +230,82 @@ class HeadlessBackend : GluiBackend {
     }
 
     /// Release the given keyboard key.
-    void release(GluiKeyboardKey key) {
+    void release(FluidKeyboardKey key) {
 
         keyboard[key] = State.released;
 
     }
 
     /// Press the given button, and hold it until `release`.
-    void press(GluiMouseButton button) {
+    void press(FluidMouseButton button) {
 
         mouse[button] = State.pressed;
 
     }
 
     /// Release the given mouse button.
-    void release(GluiMouseButton button) {
+    void release(FluidMouseButton button) {
 
         mouse[button] = State.released;
 
     }
 
     /// Press the given button, and hold it until `release`.
-    void press(GluiGamepadButton button) {
+    void press(FluidGamepadButton button) {
 
         gamepad[button] = State.pressed;
 
     }
 
     /// Release the given mouse button.
-    void release(GluiGamepadButton button) {
+    void release(FluidGamepadButton button) {
 
         gamepad[button] = State.released;
 
     }
 
     /// Check if the given mouse button has just been pressed/released or, if it's held down or not (up).
-    bool isPressed(GluiMouseButton button) const
+    bool isPressed(FluidMouseButton button) const
 
         => mouse[button] == State.pressed;
 
-    bool isReleased(GluiMouseButton button) const
+    bool isReleased(FluidMouseButton button) const
 
         => mouse[button] == State.released;
 
-    bool isDown(GluiMouseButton button) const
+    bool isDown(FluidMouseButton button) const
 
         => mouse[button] == State.pressed
         || mouse[button] == State.repeated
         || mouse[button] == State.down;
 
-    bool isUp(GluiMouseButton button) const
+    bool isUp(FluidMouseButton button) const
 
         => mouse[button] == State.released
         || mouse[button] == State.up;
 
     /// Check if the given keyboard key has just been pressed/released or, if it's held down or not (up).
-    bool isPressed(GluiKeyboardKey key) const
+    bool isPressed(FluidKeyboardKey key) const
 
         => keyboard[key] == State.pressed;
 
-    bool isReleased(GluiKeyboardKey key) const
+    bool isReleased(FluidKeyboardKey key) const
 
         => keyboard[key] == State.released;
 
-    bool isDown(GluiKeyboardKey key) const
+    bool isDown(FluidKeyboardKey key) const
 
         => keyboard[key] == State.pressed
         || keyboard[key] == State.repeated
         || keyboard[key] == State.down;
 
-    bool isUp(GluiKeyboardKey key) const
+    bool isUp(FluidKeyboardKey key) const
 
         => keyboard[key] == State.released
         || keyboard[key] == State.up;
 
     /// If true, the given keyboard key has been virtually pressed again, through a long-press.
-    bool isRepeated(GluiKeyboardKey key) const
+    bool isRepeated(FluidKeyboardKey key) const
 
         => keyboard[key] == State.repeated;
 
@@ -336,26 +336,26 @@ class HeadlessBackend : GluiBackend {
     }
 
     /// Check if the given gamepad button has been pressed/released or, if it's held down or not (up).
-    int isPressed(GluiGamepadButton button) const
+    int isPressed(FluidGamepadButton button) const
 
         => gamepad[button] == State.pressed;
 
-    int isReleased(GluiGamepadButton button) const
+    int isReleased(FluidGamepadButton button) const
 
         => gamepad[button] == State.released;
 
-    int isDown(GluiGamepadButton button) const
+    int isDown(FluidGamepadButton button) const
 
         => gamepad[button] == State.pressed
         || gamepad[button] == State.repeated
         || gamepad[button] == State.down;
 
-    int isUp(GluiGamepadButton button) const
+    int isUp(FluidGamepadButton button) const
 
         => gamepad[button] == State.released
         || gamepad[button] == State.up;
 
-    int isRepeated(GluiGamepadButton button) const
+    int isRepeated(FluidGamepadButton button) const
 
         => gamepad[button] == State.repeated;
 
@@ -420,11 +420,11 @@ class HeadlessBackend : GluiBackend {
     }
 
     /// Get or set mouse cursor icon.
-    GluiMouseCursor mouseCursor(GluiMouseCursor cursor)
+    FluidMouseCursor mouseCursor(FluidMouseCursor cursor)
 
         => _cursor = cursor;
 
-    GluiMouseCursor mouseCursor() const
+    FluidMouseCursor mouseCursor() const
 
         => _cursor;
 
@@ -452,7 +452,7 @@ class HeadlessBackend : GluiBackend {
             auto base64 = Base64.encode(png);
             auto url = format!"data:image/png;base64,%s"(base64);
 
-            // Convert to a Glui image
+            // Convert to a Fluid image
             return loadTexture(url, arsdImage.width, arsdImage.height);
 
         }
@@ -639,7 +639,7 @@ class HeadlessBackend : GluiBackend {
 
         /// Convert the canvas to SVG. Intended for debugging only.
         ///
-        /// `toSVG` provides the document as a string (including the XML prolog), `toSVGElement` provides a Glui element
+        /// `toSVG` provides the document as a string (including the XML prolog), `toSVGElement` provides a Fluid element
         /// (without the prolog) and `saveSVG` saves it to a file.
         ///
         /// Note that rendering textures and text is only done if arsd.image is available. Otherwise, they will display
@@ -777,73 +777,73 @@ unittest {
 
     with (backend) {
 
-        press(GluiMouseButton.left);
+        press(FluidMouseButton.left);
 
-        assert(isPressed(GluiMouseButton.left));
-        assert(isDown(GluiMouseButton.left));
-        assert(!isUp(GluiMouseButton.left));
-        assert(!isReleased(GluiMouseButton.left));
+        assert(isPressed(FluidMouseButton.left));
+        assert(isDown(FluidMouseButton.left));
+        assert(!isUp(FluidMouseButton.left));
+        assert(!isReleased(FluidMouseButton.left));
 
-        press(GluiKeyboardKey.enter);
+        press(FluidKeyboardKey.enter);
 
-        assert(isPressed(GluiKeyboardKey.enter));
-        assert(isDown(GluiKeyboardKey.enter));
-        assert(!isUp(GluiKeyboardKey.enter));
-        assert(!isReleased(GluiKeyboardKey.enter));
-        assert(!isRepeated(GluiKeyboardKey.enter));
-
-        nextFrame;
-
-        assert(!isPressed(GluiMouseButton.left));
-        assert(isDown(GluiMouseButton.left));
-        assert(!isUp(GluiMouseButton.left));
-        assert(!isReleased(GluiMouseButton.left));
-
-        assert(!isPressed(GluiKeyboardKey.enter));
-        assert(isDown(GluiKeyboardKey.enter));
-        assert(!isUp(GluiKeyboardKey.enter));
-        assert(!isReleased(GluiKeyboardKey.enter));
-        assert(!isRepeated(GluiKeyboardKey.enter));
+        assert(isPressed(FluidKeyboardKey.enter));
+        assert(isDown(FluidKeyboardKey.enter));
+        assert(!isUp(FluidKeyboardKey.enter));
+        assert(!isReleased(FluidKeyboardKey.enter));
+        assert(!isRepeated(FluidKeyboardKey.enter));
 
         nextFrame;
 
-        press(GluiKeyboardKey.enter);
+        assert(!isPressed(FluidMouseButton.left));
+        assert(isDown(FluidMouseButton.left));
+        assert(!isUp(FluidMouseButton.left));
+        assert(!isReleased(FluidMouseButton.left));
 
-        assert(!isPressed(GluiKeyboardKey.enter));
-        assert(isDown(GluiKeyboardKey.enter));
-        assert(!isUp(GluiKeyboardKey.enter));
-        assert(!isReleased(GluiKeyboardKey.enter));
-        assert(isRepeated(GluiKeyboardKey.enter));
-
-        nextFrame;
-
-        release(GluiMouseButton.left);
-
-        assert(!isPressed(GluiMouseButton.left));
-        assert(!isDown(GluiMouseButton.left));
-        assert(isUp(GluiMouseButton.left));
-        assert(isReleased(GluiMouseButton.left));
-
-        release(GluiKeyboardKey.enter);
-
-        assert(!isPressed(GluiKeyboardKey.enter));
-        assert(!isDown(GluiKeyboardKey.enter));
-        assert(isUp(GluiKeyboardKey.enter));
-        assert(isReleased(GluiKeyboardKey.enter));
-        assert(!isRepeated(GluiKeyboardKey.enter));
+        assert(!isPressed(FluidKeyboardKey.enter));
+        assert(isDown(FluidKeyboardKey.enter));
+        assert(!isUp(FluidKeyboardKey.enter));
+        assert(!isReleased(FluidKeyboardKey.enter));
+        assert(!isRepeated(FluidKeyboardKey.enter));
 
         nextFrame;
 
-        assert(!isPressed(GluiMouseButton.left));
-        assert(!isDown(GluiMouseButton.left));
-        assert(isUp(GluiMouseButton.left));
-        assert(!isReleased(GluiMouseButton.left));
+        press(FluidKeyboardKey.enter);
 
-        assert(!isPressed(GluiKeyboardKey.enter));
-        assert(!isDown(GluiKeyboardKey.enter));
-        assert(isUp(GluiKeyboardKey.enter));
-        assert(!isReleased(GluiKeyboardKey.enter));
-        assert(!isRepeated(GluiKeyboardKey.enter));
+        assert(!isPressed(FluidKeyboardKey.enter));
+        assert(isDown(FluidKeyboardKey.enter));
+        assert(!isUp(FluidKeyboardKey.enter));
+        assert(!isReleased(FluidKeyboardKey.enter));
+        assert(isRepeated(FluidKeyboardKey.enter));
+
+        nextFrame;
+
+        release(FluidMouseButton.left);
+
+        assert(!isPressed(FluidMouseButton.left));
+        assert(!isDown(FluidMouseButton.left));
+        assert(isUp(FluidMouseButton.left));
+        assert(isReleased(FluidMouseButton.left));
+
+        release(FluidKeyboardKey.enter);
+
+        assert(!isPressed(FluidKeyboardKey.enter));
+        assert(!isDown(FluidKeyboardKey.enter));
+        assert(isUp(FluidKeyboardKey.enter));
+        assert(isReleased(FluidKeyboardKey.enter));
+        assert(!isRepeated(FluidKeyboardKey.enter));
+
+        nextFrame;
+
+        assert(!isPressed(FluidMouseButton.left));
+        assert(!isDown(FluidMouseButton.left));
+        assert(isUp(FluidMouseButton.left));
+        assert(!isReleased(FluidMouseButton.left));
+
+        assert(!isPressed(FluidKeyboardKey.enter));
+        assert(!isDown(FluidKeyboardKey.enter));
+        assert(isUp(FluidKeyboardKey.enter));
+        assert(!isReleased(FluidKeyboardKey.enter));
+        assert(!isRepeated(FluidKeyboardKey.enter));
 
     }
 

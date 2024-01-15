@@ -11,10 +11,10 @@ import fluid.backend;
 
 
 /// Make a new vertical frame.
-alias vframe = simpleConstructor!GluiFrame;
+alias vframe = simpleConstructor!FluidFrame;
 
 /// Make a new horizontal frame.
-alias hframe = simpleConstructor!(GluiFrame, (a) {
+alias hframe = simpleConstructor!(FluidFrame, (a) {
 
     a.directionHorizontal = true;
 
@@ -24,7 +24,7 @@ alias hframe = simpleConstructor!(GluiFrame, (a) {
 /// Styles: $(UL
 ///     $(LI `style` = Default style for this node.)
 /// )
-class GluiFrame : GluiSpace {
+class FluidFrame : FluidSpace {
 
     mixin DefineStyles;
     mixin ImplHoveredRect;

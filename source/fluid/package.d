@@ -1,6 +1,6 @@
-/// Glui is a somewhat minimalistic and declarative high-level UI library for D.
+/// Fluid is a somewhat minimalistic and declarative high-level UI library for D.
 ///
-/// Glui aims to be as simple in usage as it can be making as much possible with no excess of code. It's built
+/// Fluid aims to be as simple in usage as it can be making as much possible with no excess of code. It's built
 /// empirically, making each component suitable for all the most common needs out of the box.
 ///
 /// ---

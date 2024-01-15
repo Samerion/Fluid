@@ -11,10 +11,10 @@ import fluid.style_macros;
 @safe:
 
 /// A button made to open popups.
-alias popupButton = simpleConstructor!(GluiPopupButton);
+alias popupButton = simpleConstructor!(FluidPopupButton);
 
 /// ditto
-class GluiPopupButton : GluiButton!GluiLabel {
+class FluidPopupButton : FluidButton!FluidLabel {
 
     mixin defineStyles;
     mixin enableInputActions;
@@ -22,10 +22,10 @@ class GluiPopupButton : GluiButton!GluiLabel {
     public {
 
         /// Popup enabled by this button.
-        GluiPopupFrame popup;
+        FluidPopupFrame popup;
 
         /// Popup this button belongs to, if any. Set automatically if the popup is spawned with `spawnPopup`.
-        GluiPopupFrame parentPopup;
+        FluidPopupFrame parentPopup;
 
     }
 
@@ -34,7 +34,7 @@ class GluiPopupButton : GluiButton!GluiLabel {
     ///     params        = Generic node parameters for the button.
     ///     text          = Text for the button.
     ///     popupChildren = Children to appear within the button.
-    this(NodeParams params, string text, GluiNode[] popupChildren...) {
+    this(NodeParams params, string text, FluidNode[] popupChildren...) {
 
         // Craft the popup
         popup = popupFrame(popupChildren);
@@ -87,7 +87,7 @@ unittest {
         lastAction = text;
     }
 
-    GluiButton!()[6] buttons;
+    FluidButton!()[6] buttons;
 
     auto io = new HeadlessBackend;
     auto root = popupButton("Options",
@@ -100,7 +100,7 @@ unittest {
         ),
     );
 
-    auto sharePopupButton = cast(GluiPopupButton) buttons[2];
+    auto sharePopupButton = cast(FluidPopupButton) buttons[2];
     auto sharePopup = sharePopupButton.popup;
 
     root.io = io;
@@ -111,7 +111,7 @@ unittest {
     // Focus the button
     {
         io.nextFrame;
-        io.press(GluiKeyboardKey.down);
+        io.press(FluidKeyboardKey.down);
 
         root.draw();
 
@@ -121,8 +121,8 @@ unittest {
     // Press it
     {
         io.nextFrame;
-        io.release(GluiKeyboardKey.down);
-        io.press(GluiKeyboardKey.enter);
+        io.release(FluidKeyboardKey.down);
+        io.press(FluidKeyboardKey.enter);
 
         root.draw();
     }
@@ -130,7 +130,7 @@ unittest {
     // Popup opens
     {
         io.nextFrame;
-        io.release(GluiKeyboardKey.enter);
+        io.release(FluidKeyboardKey.enter);
 
         root.draw();
 
@@ -140,8 +140,8 @@ unittest {
     // Go to the previous button, expecting wrap
     {
         io.nextFrame;
-        io.press(GluiKeyboardKey.leftShift);
-        io.press(GluiKeyboardKey.tab);
+        io.press(FluidKeyboardKey.leftShift);
+        io.press(FluidKeyboardKey.tab);
 
         root.draw();
 
@@ -151,9 +151,9 @@ unittest {
     // Press it
     {
         io.nextFrame;
-        io.release(GluiKeyboardKey.leftShift);
-        io.release(GluiKeyboardKey.tab);
-        io.press(GluiKeyboardKey.enter);
+        io.release(FluidKeyboardKey.leftShift);
+        io.release(FluidKeyboardKey.tab);
+        io.press(FluidKeyboardKey.enter);
 
         root.draw();
     }
@@ -161,7 +161,7 @@ unittest {
     // Wait for the popup to appear
     {
         io.nextFrame;
-        io.release(GluiKeyboardKey.enter);
+        io.release(FluidKeyboardKey.enter);
 
         root.draw();
         assert(buttons[3].isFocused, "The first button of the second menu should be focused");
@@ -170,7 +170,7 @@ unittest {
     // Press the up arrow, it should do nothing
     {
         io.nextFrame;
-        io.press(GluiKeyboardKey.up);
+        io.press(FluidKeyboardKey.up);
 
         root.draw();
         assert(buttons[3].isFocused);
@@ -179,8 +179,8 @@ unittest {
     // Press the down arrow
     {
         io.nextFrame;
-        io.release(GluiKeyboardKey.up);
-        io.press(GluiKeyboardKey.down);
+        io.release(FluidKeyboardKey.up);
+        io.press(FluidKeyboardKey.down);
 
         root.draw();
         assert(buttons[4].isFocused);
@@ -189,8 +189,8 @@ unittest {
     // Press the button
     {
         io.nextFrame;
-        io.release(GluiKeyboardKey.down);
-        io.press(GluiKeyboardKey.enter);
+        io.release(FluidKeyboardKey.down);
+        io.press(FluidKeyboardKey.enter);
 
         root.draw();
         assert(buttons[4].isFocused);
@@ -202,8 +202,8 @@ unittest {
     // Close the popup by pressing escape
     {
         io.nextFrame;
-        io.release(GluiKeyboardKey.enter);
-        io.press(GluiKeyboardKey.escape);
+        io.release(FluidKeyboardKey.enter);
+        io.press(FluidKeyboardKey.escape);
 
         root.draw();
 

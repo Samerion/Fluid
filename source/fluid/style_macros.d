@@ -29,7 +29,7 @@ template makeTheme(string init) {
     // This ugly template is a workaround for https://issues.dlang.org/show_bug.cgi?id=22208
     // We can't use inout here, sorry...
 
-    Theme makeTheme(Theme theme = gluiDefaultTheme) {
+    Theme makeTheme(Theme theme = fluidDefaultTheme) {
 
         makeThemeImpl!init(theme.dup);
         return currentTheme;
@@ -63,7 +63,7 @@ private void makeThemeImpl(string init)(Theme parent) {
     {
 
         // If the theme has a default style definition, push it
-        if (auto nodeStyle = &GluiNode.styleKey in currentTheme) {
+        if (auto nodeStyle = &FluidNode.styleKey in currentTheme) {
 
             styleStack ~= *nodeStyle;
 
@@ -76,7 +76,7 @@ private void makeThemeImpl(string init)(Theme parent) {
         scope (exit) styleStack.popBack();
 
         // Add the node style
-        nestStyle!(init, GluiNode.styleKey);
+        nestStyle!(init, FluidNode.styleKey);
 
     }
 

@@ -6,7 +6,7 @@ import fluid.utils;
 import fluid.style;
 import fluid.backend;
 
-alias imageView = simpleConstructor!GluiImageView;
+alias imageView = simpleConstructor!FluidImageView;
 
 @safe:
 
@@ -14,7 +14,7 @@ alias imageView = simpleConstructor!GluiImageView;
 ///
 /// The image will automatically scale to fit available space. It will keep aspect ratio by default and will be
 /// displayed in the middle of the available box.
-class GluiImageView : GluiNode {
+class FluidImageView : FluidNode {
 
     mixin DefineStyles;
 
@@ -64,7 +64,7 @@ class GluiImageView : GluiNode {
 
     /// Create an image node from given texture or filename.
     ///
-    /// Note, if a string is given, the texture will be loaded when resizing. This ensures a Glui backend is available
+    /// Note, if a string is given, the texture will be loaded when resizing. This ensures a Fluid backend is available
     /// to load the texture.
     ///
     /// Params:

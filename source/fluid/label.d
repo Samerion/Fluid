@@ -14,10 +14,10 @@ import fluid.backend;
 /// Styles: $(UL
 ///     $(LI `style` = Default style for this node.)
 /// )
-alias label = simpleConstructor!GluiLabel;
+alias label = simpleConstructor!FluidLabel;
 
 /// ditto
-class GluiLabel : GluiNode {
+class FluidLabel : FluidNode {
 
     mixin DefineStyles;
     mixin ImplHoveredRect;
@@ -25,7 +25,7 @@ class GluiLabel : GluiNode {
     public {
 
         /// Text of this label.
-        Text!GluiLabel text;
+        Text!FluidLabel text;
 
         /// If true, the content of the label should not be wrapped into new lines if it's too long to fit into one.
         bool disableWrap;
@@ -40,7 +40,7 @@ class GluiLabel : GluiNode {
             this(BasicNodeParam!index sup, string text = "") {
 
                 super(sup);
-                this.text = Text!GluiLabel(this, text);
+                this.text = Text!FluidLabel(this, text);
 
             }
 
@@ -51,7 +51,7 @@ class GluiLabel : GluiNode {
     this(NodeParams params, string text) {
 
         super(params);
-        this.text = Text!GluiLabel(this, text);
+        this.text = Text!FluidLabel(this, text);
 
     }
 
@@ -59,7 +59,7 @@ class GluiLabel : GluiNode {
     this(NodeParams params) {
 
         super(params);
-        this.text = Text!GluiLabel(this, text);
+        this.text = Text!FluidLabel(this, text);
 
     }
 
@@ -92,7 +92,7 @@ class GluiLabel : GluiNode {
         auto root = label("Hello, World!");
 
         root.theme = nullTheme.makeTheme!q{
-            GluiLabel.styleAdd.textColor = color!"000";
+            FluidLabel.styleAdd.textColor = color!"000";
         };
         root.io = io;
         root.draw();

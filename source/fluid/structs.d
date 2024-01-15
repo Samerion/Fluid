@@ -149,7 +149,7 @@ struct Layout {
 
 }
 
-/// GluiNode core constructor parameters, to be passed from node to node.
+/// FluidNode core constructor parameters, to be passed from node to node.
 struct NodeParams {
 
     import fluid.style;

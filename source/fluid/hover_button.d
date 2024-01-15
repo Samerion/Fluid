@@ -9,8 +9,8 @@ import fluid.style;
 import fluid.utils;
 import fluid.button;
 
-alias hoverButton = simpleConstructor!(GluiHoverButton!GluiLabel);
-alias frameHoverButton = simpleConstructor!(GluiHoverButton!GluiFrame);
+alias hoverButton = simpleConstructor!(FluidHoverButton!FluidLabel);
+alias frameHoverButton = simpleConstructor!(FluidHoverButton!FluidFrame);
 
 @safe:
 
@@ -19,7 +19,7 @@ alias frameHoverButton = simpleConstructor!(GluiHoverButton!GluiFrame);
 ///
 /// Note, this is a somewhat low-level node and the hover event, as stated, triggers every frame. There are no hover
 /// entry nor hover leave events. Make sure you know what you're doing when using this node!
-class GluiHoverButton(T : GluiNode = GluiLabel) : GluiButton!T {
+class FluidHoverButton(T : FluidNode = FluidLabel) : FluidButton!T {
 
     mixin defineStyles;
     mixin enableInputActions;
@@ -82,25 +82,25 @@ unittest {
 
     // Press the button
     io.nextFrame;
-    io.press(GluiMouseButton.left);
+    io.press(FluidMouseButton.left);
     root.draw();
 
-    assert(io.isDown(GluiMouseButton.left));
+    assert(io.isDown(FluidMouseButton.left));
     assert(hoverFrameCount == 2);
 
     // Wait while the button is pressed
     io.nextFrame;
     root.draw();
 
-    assert(io.isDown(GluiMouseButton.left));
+    assert(io.isDown(FluidMouseButton.left));
     assert(hoverFrameCount == 3);
 
     // Release the button
     io.nextFrame;
-    io.release(GluiMouseButton.left);
+    io.release(FluidMouseButton.left);
     root.draw();
 
-    assert(io.isUp(GluiMouseButton.left));
+    assert(io.isUp(FluidMouseButton.left));
     assert(hoverFrameCount == 4);
 
     // Move the mouse elsewhere
@@ -112,7 +112,7 @@ unittest {
 
     // Press the button outside
     io.nextFrame;
-    io.press(GluiMouseButton.left);
+    io.press(FluidMouseButton.left);
     root.draw();
 
     assert(hoverFrameCount == 4);
