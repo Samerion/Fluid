@@ -1,4 +1,4 @@
-import glui;
+import fluid;
 import raylib;
 import std.format;
 
@@ -6,7 +6,7 @@ void main(string[] flags) {
 
     SetConfigFlags(ConfigFlags.FLAG_WINDOW_RESIZABLE);
     SetTraceLogLevel(TraceLogLevel.LOG_WARNING);
-    InitWindow(800, 600, "Glui HiDPI test");
+    InitWindow(800, 600, "Fluid HiDPI test");
     SetTargetFPS(60);
     scope (exit) CloseWindow();
 
@@ -18,8 +18,8 @@ void main(string[] flags) {
 
             font = loadFont("examples/ubuntu.ttf", 14);
 
-            GluiLabel.styleAdd;
-            GluiButton!().styleAdd!q{
+            Label.styleAdd;
+            Button!().styleAdd!q{
 
                 padding = 0;
                 textColor = color!"0079f1";

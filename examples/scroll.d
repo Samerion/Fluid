@@ -1,4 +1,4 @@
-import glui;
+import fluid;
 import raylib;
 
 import std.stdio;
@@ -13,26 +13,26 @@ void main() {
     SetExitKey(0);
     scope (exit) CloseWindow();
 
-    immutable theme2 = makeTheme!q{
+    auto theme2 = makeTheme!q{
 
-        GluiFrame.styleAdd.backgroundColor = color!"#e62937";
+        Frame.styleAdd.backgroundColor = color!"#e62937";
 
     };
 
-    immutable rightTheme = makeTheme!q{
+    auto rightTheme = makeTheme!q{
 
-        GluiSpace.styleAdd!q{
+        Space.styleAdd!q{
             margin = 5;
             margin.sideY = 10;
         };
-        GluiButton!().styleAdd!q{
+        Button!().styleAdd!q{
             margin.sideTop = 10;
         };
 
     };
 
-    GluiScrollInput myScrollbar, disabledScrollbar;
-    GluiButton!() myButton;
+    ScrollInput myScrollbar, disabledScrollbar;
+    Button!() myButton;
 
     auto root = hframe(
         .layout!(1, "fill"),
