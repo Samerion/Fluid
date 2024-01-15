@@ -1,7 +1,7 @@
 // This is more of a test rather than an example.
-// It will be moved to a separate directory for automated tests once Glui gets a headless mode.
+// It will be moved to a separate directory for automated tests once Fluid gets a headless mode.
 
-import glui;
+import fluid;
 import raylib;
 
 import std.stdio;
@@ -16,7 +16,7 @@ void main() {
     SetExitKey(0);
     scope (exit) CloseWindow();
 
-    immutable theme = makeTheme!q{ };
+    auto theme = makeTheme!q{ };
 
     auto root = vframe(
         theme,
@@ -24,7 +24,7 @@ void main() {
         label("Gone!"),
     );
 
-    class BrokenFrame : GluiFrame {
+    class BrokenFrame : Frame {
 
         override void drawImpl(Rectangle outer, Rectangle inner) @trusted {
 
@@ -33,7 +33,7 @@ void main() {
             debug {
 
                 assert(root.children.length == 3);
-                assert(cast(GluiLabel) root.children[1]),
+                assert(cast(Label) root.children[1]),
                 assertLocked(root.children);
 
                 assertThrown!Error(root.children = root.children[1..$]);

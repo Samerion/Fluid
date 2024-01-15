@@ -1,4 +1,4 @@
-import glui;
+import fluid;
 import raylib;
 
 void main() {
@@ -10,13 +10,13 @@ void main() {
 
     scope (exit) CloseWindow();
 
-    GluiMapSpace root;
-    GluiHoverButton!() draggableButton;
+    MapSpace root;
+    HoverButton!() draggableButton;
 
     root = mapSpace(
         .layout!(1, "fill"),
         makeTheme!q{
-            GluiFrame.styleAdd.backgroundColor = color!"#aaa";
+            Frame.styleAdd.backgroundColor = color!"#aaa";
         },
 
         // A button to toggle overlap

@@ -1,4 +1,4 @@
-import glui;
+import fluid;
 import raylib;
 import std.algorithm;
 
@@ -6,7 +6,7 @@ void main() {
 
     SetConfigFlags(ConfigFlags.FLAG_WINDOW_RESIZABLE);
     SetTraceLogLevel(TraceLogLevel.LOG_WARNING);
-    InitWindow(800, 600, "Glui showcase");
+    InitWindow(800, 600, "Fluid showcase");
     SetExitKey(0);
     SetTargetFPS(60);
     scope (exit) CloseWindow();
@@ -26,16 +26,16 @@ void main() {
 
 }
 
-GluiSpace showcase(bool withSimpleDisplay = true) {
+Space showcase(bool withSimpleDisplay = true) {
 
     // Let's customize the theme first
     auto theme = makeTheme!q{
 
         // Vertical margin for spaces
-        GluiSpace.styleAdd.margin.sideY = 6;
+        Space.styleAdd.margin.sideY = 6;
 
         // Some nice padding for frames
-        GluiFrame.styleAdd!q{
+        Frame.styleAdd!q{
 
             margin.sideRight = 4;
             padding.sideX = 6;
@@ -44,7 +44,7 @@ GluiSpace showcase(bool withSimpleDisplay = true) {
         };
 
         // Get some nicer background for the main frame
-        GluiScrollFrame.styleAdd!q{
+        ScrollFrame.styleAdd!q{
 
             padding.sideX = 6;
             backgroundColor = color!"#66bfff";
@@ -73,14 +73,14 @@ GluiSpace showcase(bool withSimpleDisplay = true) {
 
 }
 
-GluiSpace boxExample() {
+Space boxExample() {
 
     auto root = vspace(
         .layout!"fill",
 
         label(.layout!"center", "Boxes"),
 
-        label("To make it easier to style your interface, Glui has a box system similar to HTML."),
+        label("To make it easier to style your interface, Fluid has a box system similar to HTML."),
 
         // Space for the boxes so we can make their width align
         vspace(
@@ -94,7 +94,7 @@ GluiSpace boxExample() {
                     .layout!"fill",
                     vframe(
                         makeTheme!q{
-                            GluiFrame.styleAdd.margin = 16;
+                            Frame.styleAdd.margin = 16;
                         },
                         label("Frame with margin"),
                     ),
@@ -105,7 +105,7 @@ GluiSpace boxExample() {
                     .layout!"fill",
                     vframe(
                         makeTheme!q{
-                            GluiFrame.styleAdd!q{
+                            Frame.styleAdd!q{
                                 border = 6;
                                 borderStyle = colorBorder(color!"#0079f1");
                             };
@@ -119,7 +119,7 @@ GluiSpace boxExample() {
                     .layout!"fill",
                     vframe(
                         makeTheme!q{
-                            GluiFrame.styleAdd.padding = 16;
+                            Frame.styleAdd.padding = 16;
                         },
                         label("Frame with padding"),
                     ),
@@ -133,7 +133,7 @@ GluiSpace boxExample() {
                 vframe(
                     .layout!"fill",
                     makeTheme!q{
-                        GluiFrame.styleAdd!q{
+                        Frame.styleAdd!q{
                             margin = 16;
                             border.sideX = 6;
                             border.sideY = 4;
@@ -151,12 +151,12 @@ GluiSpace boxExample() {
 
 }
 
-GluiSpace inputExample() {
+Space inputExample() {
 
     const firstText = "Press one of the buttons below to change text";
 
-    GluiLabel frontLabel;
-    GluiTextInput frontInput;
+    Label frontLabel;
+    TextInput frontInput;
 
     enum never = delegate() => assert(0);
 
@@ -208,7 +208,7 @@ GluiSpace inputExample() {
                 button(
                     makeTheme!q{
 
-                        GluiButton!().styleAdd!q{
+                        Button!().styleAdd!q{
 
                             // Default style
                             backgroundColor = color!"#ccc";
@@ -260,9 +260,9 @@ GluiSpace inputExample() {
 
 }
 
-GluiSpace popupExample() {
+Space popupExample() {
 
-    GluiSpace root;
+    Space root;
 
     root = vspace(
         .layout!"fill",
@@ -299,27 +299,27 @@ GluiSpace popupExample() {
 
 }
 
-GluiSpace slotExample() {
+Space slotExample() {
 
-    GluiNodeSlot!GluiNode slot;
-    GluiNodeSlot!GluiNode emptiedSlot;
-    GluiNodeSlot!GluiNode[5] slots;
+    NodeSlot!Node slot;
+    NodeSlot!Node emptiedSlot;
+    NodeSlot!Node[5] slots;
 
     // Example A
     auto exampleA = vspace(
         label("Press a button to place a node below"),
-        slot = nodeSlot!GluiNode(),
+        slot = nodeSlot!Node(),
 
         hspace(
             vframe(
-                slots[0] = nodeSlot!GluiNode(
+                slots[0] = nodeSlot!Node(
                     label("Hello, World!")
                 ),
                 button("SWAP", { slot.swapSlots(slots[0]); }),
             ),
 
             vframe(
-                slots[1] = nodeSlot!GluiNode(
+                slots[1] = nodeSlot!Node(
                     vframe(
                         label("Hi!")
                     ),
@@ -328,13 +328,13 @@ GluiSpace slotExample() {
             ),
 
             vframe(
-                slots[2] = nodeSlot!GluiNode(
+                slots[2] = nodeSlot!Node(
                     hspace(
                         // Nested slots!
-                        slots[3] = nodeSlot!GluiNode(
+                        slots[3] = nodeSlot!Node(
                             button("Swap", { slots[4].swapSlots(slots[3]); })
                         ),
-                        slots[4] = nodeSlot!GluiNode(
+                        slots[4] = nodeSlot!Node(
                             label("Text")
                         ),
                     ),
@@ -345,11 +345,11 @@ GluiSpace slotExample() {
     );
 
     // We can swap between two differently typed slots if they hold nodes of compatible virtual type
-    auto slot1 = nodeSlot!GluiNode(.layout!(1, "start"), label("Label 1"));
-    auto slot2 = nodeSlot!GluiLabel(.layout!(1, "end"), label("Label 2"));
+    auto slot1 = nodeSlot!Node(.layout!(1, "start"), label("Label 1"));
+    auto slot2 = nodeSlot!Label(.layout!(1, "end"), label("Label 2"));
 
     // But they will fail to compile if the types cannot intersect
-    auto slot3 = nodeSlot!GluiFrame();
+    auto slot3 = nodeSlot!Frame();
 
     static assert(!__traits(compiles,  // Therefore, this fails to compile
         slot3.swapSlots(slot2)
@@ -380,7 +380,7 @@ GluiSpace slotExample() {
 
 }
 
-GluiSpace sizeLimitExample() {
+Space sizeLimitExample() {
 
     auto root = vspace(
         .layout!"fill",
@@ -418,7 +418,7 @@ GluiSpace sizeLimitExample() {
                 // Creating size-locked nodes is easy and convenient and works with any node type through a
                 // template! It accepts any node class or node constructor like hframe.
                 //
-                //      sizeLock!GluiLabel
+                //      sizeLock!Label
                 //      sizeLock!label
                 //      sizeLock!vframe
                 //      sizeLock!hframe
@@ -431,10 +431,10 @@ GluiSpace sizeLimitExample() {
 
 }
 
-GluiSpace gridExample() {
+Space gridExample() {
 
-    GluiSpace root;
-    GluiGrid myGrid;
+    Space root;
+    Grid myGrid;
 
     // Create the grid
     root = vspace(
@@ -446,7 +446,7 @@ GluiSpace gridExample() {
             .layout!"fill",
             .segments!4,
 
-            label("You can make tables and grids with GluiGrid"),
+            label("You can make tables and grids with Grid"),
             [
                 label("This"),
                 label("Is"),
@@ -466,7 +466,7 @@ GluiSpace gridExample() {
 }
 
 /// Advanced: Create a new row with randomly sized buttons
-void addRow(GluiGrid myGrid) @safe {
+void addRow(Grid myGrid) @safe {
 
     import std.random;
 
@@ -495,11 +495,11 @@ void spawnSimpledisplay() {
     import arsd.simpledisplay;
 
     SimpleWindow window;
-    GluiSpace sdpyRoot;
+    Space sdpyRoot;
     SimpledisplayBackend backend;
 
     // Create the window
-    window = new SimpleWindow(800, 600, "Glui showcase: arsd.simpledisplay",
+    window = new SimpleWindow(800, 600, "Fluid showcase: arsd.simpledisplay",
         OpenGlOptions.yes,
         Resizeability.allowResizing);
 
@@ -522,11 +522,11 @@ void spawnSimpledisplay() {
 
 }
 
-GluiSpace simpledisplayExample() {
+Space simpledisplayExample() {
 
     import std.concurrency;
 
-    GluiSpace root;
+    Space root;
 
     // Create information box in the showcase
     root = vspace(
@@ -536,7 +536,7 @@ GluiSpace simpledisplayExample() {
 
         vframe(
             label(
-                "While Glui was made with Raylib in mind, it supports using different rendering libraries as a backend."
+                "While Fluid was made with Raylib in mind, it supports using different rendering libraries as a backend."
                 ~ " Press the button below to create a new window with arsd.simpledisplay as the backend."
             ),
             button("Open new window", delegate () @trusted {

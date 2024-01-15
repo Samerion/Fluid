@@ -15,7 +15,7 @@
 			"targetType": "library"
 		}
 	],
-	"copyright": "Copyright © 2021, Artha",
+	"copyright": "Copyright © 2021–2024, Artha",
 	"dependencies": {
 		"arsd-official:image_files": {
 			"optional": true,
@@ -38,14 +38,14 @@
 	},
 	"description": "A straightforward and easy to use GUI library.",
 	"license": "BSL",
-	"name": "glui",
+	"name": "fluid",
 	"stringImportPaths": [
 		"resources"
 	],
 	"subPackages": [
 		{
 			"dependencies": {
-				"glui": ">=0.0.0"
+				"fluid": ">=0.0.0"
 			},
 			"libs": [
 				"raylib"
@@ -62,7 +62,7 @@
 			"dependencies": {
 				"arsd-official:image_files": "~>11.3",
 				"arsd-official:simpledisplay": "~>11.3",
-				"glui": ">=0.0.0"
+				"fluid": ">=0.0.0"
 			},
 			"libs": [
 				"raylib"
@@ -77,7 +77,7 @@
 		},
 		{
 			"dependencies": {
-				"glui": ">=0.0.0"
+				"fluid": ">=0.0.0"
 			},
 			"libs": [
 				"raylib"
@@ -92,7 +92,7 @@
 		},
 		{
 			"dependencies": {
-				"glui": ">=0.0.0"
+				"fluid": ">=0.0.0"
 			},
 			"libs": [
 				"raylib"
@@ -107,7 +107,7 @@
 		},
 		{
 			"dependencies": {
-				"glui": ">=0.0.0"
+				"fluid": ">=0.0.0"
 			},
 			"libs": [
 				"raylib"
@@ -122,7 +122,7 @@
 		},
 		{
 			"dependencies": {
-				"glui": ">=0.0.0"
+				"fluid": ">=0.0.0"
 			},
 			"libs": [
 				"raylib"
@@ -137,7 +137,7 @@
 		},
 		{
 			"dependencies": {
-				"glui": ">=0.0.0"
+				"fluid": ">=0.0.0"
 			},
 			"libs": [
 				"raylib"
@@ -152,7 +152,7 @@
 		},
 		{
 			"dependencies": {
-				"glui": ">=0.0.0"
+				"fluid": ">=0.0.0"
 			},
 			"libs": [
 				"raylib"
