@@ -20,14 +20,14 @@ public import fluid.scroll_input;
 @safe:
 
 
-alias GluiScrollFrame = GluiScrollable!GluiFrame;
-alias GluiScrollable(T : GluiSpace) = GluiScrollable!(T, "directionHorizontal");
+alias FluidScrollFrame = FluidScrollable!FluidFrame;
+alias FluidScrollable(T : FluidSpace) = FluidScrollable!(T, "directionHorizontal");
 
 /// Create a new vertical scroll frame.
-alias vscrollFrame = simpleConstructor!GluiScrollFrame;
+alias vscrollFrame = simpleConstructor!FluidScrollFrame;
 
 /// Create a new horizontal scroll frame.
-alias hscrollFrame = simpleConstructor!(GluiScrollFrame, (a) {
+alias hscrollFrame = simpleConstructor!(FluidScrollFrame, (a) {
 
     a.directionHorizontal = true;
 
@@ -36,16 +36,16 @@ alias hscrollFrame = simpleConstructor!(GluiScrollFrame, (a) {
 /// Implement scrolling for the given node.
 ///
 /// This only supports scrolling in one axis.
-class GluiScrollable(T : GluiNode, string horizontalExpression) : T {
+class FluidScrollable(T : FluidNode, string horizontalExpression) : T {
 
     mixin DefineStyles;
 
-    // TODO: move keyboard input to GluiScrollBar.
+    // TODO: move keyboard input to FluidScrollBar.
 
     public {
 
         /// Scrollbar for the frame. Can be replaced with a customized one.
-        GluiScrollInput scrollBar;
+        FluidScrollInput scrollBar;
 
     }
 
@@ -102,8 +102,8 @@ class GluiScrollable(T : GluiNode, string horizontalExpression) : T {
 
     }
 
-    static if (is(typeof(this) : GluiContainer))
-    override Rectangle shallowScrollTo(const GluiNode, Vector2, Rectangle parentBox, Rectangle childBox) {
+    static if (is(typeof(this) : FluidContainer))
+    override Rectangle shallowScrollTo(const FluidNode, Vector2, Rectangle parentBox, Rectangle childBox) {
 
         struct Position {
 
@@ -155,7 +155,7 @@ class GluiScrollable(T : GluiNode, string horizontalExpression) : T {
 
     override void resizeImpl(Vector2 space) {
 
-        assert(scrollBar !is null, "No scrollbar has been set for GluiScrollable");
+        assert(scrollBar !is null, "No scrollbar has been set for FluidScrollable");
         assert(theme !is null);
         assert(tree !is null);
 
@@ -207,9 +207,9 @@ class GluiScrollable(T : GluiNode, string horizontalExpression) : T {
         // Note: Mouse input detection is primitive, awaiting #13 and #14 to help better identify when should the mouse
         // affect this frame.
 
-        // This node doesn't use GluiInput because it doesn't take focus, and we don't want to cause related
+        // This node doesn't use FluidInput because it doesn't take focus, and we don't want to cause related
         // accessibility issues. It can function perfectly without it, or at least until above note gets fixed.
-        // Then, a "GluiHoverable" interface could possibly become a thing.
+        // Then, a "FluidHoverable" interface could possibly become a thing.
 
         // TODO Is the above still true?
 
@@ -274,13 +274,13 @@ class GluiScrollable(T : GluiNode, string horizontalExpression) : T {
     /// Implementation of mouse input
     private void inputImpl() @trusted {
 
-        // TODO do this via input actions somehow https://git.samerion.com/Samerion/Glui/issues/89
+        // TODO do this via input actions somehow https://git.samerion.com/Samerion/Fluid/issues/89
         const isPlus = isHorizontal
-            ? io.isReleased(GluiMouseButton.scrollRight)
-            : io.isReleased(GluiMouseButton.scrollDown);
+            ? io.isReleased(FluidMouseButton.scrollRight)
+            : io.isReleased(FluidMouseButton.scrollDown);
         const isMinus = isHorizontal
-            ? io.isReleased(GluiMouseButton.scrollLeft)
-            : io.isReleased(GluiMouseButton.scrollUp);
+            ? io.isReleased(FluidMouseButton.scrollLeft)
+            : io.isReleased(FluidMouseButton.scrollUp);
 
         const speed = scrollBar.scrollSpeed;
         const move

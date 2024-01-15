@@ -13,7 +13,7 @@ import fluid.scroll;
 import fluid.backend;
 import fluid.structs;
 
-alias textInput = simpleConstructor!GluiTextInput;
+alias textInput = simpleConstructor!FluidTextInput;
 
 @safe:
 
@@ -25,7 +25,7 @@ alias textInput = simpleConstructor!GluiTextInput;
 ///     $(LI `emptyStyle` = Style for when the input is empty, i.e. the placeholder is visible. Text should usually be
 ///         grayed out.)
 /// )
-class GluiTextInput : GluiInput!GluiNode {
+class FluidTextInput : FluidInput!FluidNode {
 
     mixin defineStyles!(
         "emptyStyle", q{ style },
@@ -59,7 +59,7 @@ class GluiTextInput : GluiInput!GluiNode {
     private {
 
         /// Underlying label controlling the content. Needed to properly adjust it to scroll.
-        GluiScrollable!(TextImpl, "true") contentLabel;
+        FluidScrollable!(TextImpl, "true") contentLabel;
 
     }
 
@@ -144,7 +144,7 @@ class GluiTextInput : GluiInput!GluiNode {
         // TODO reuse the hashmap maybe?
         auto childTheme = theme.makeTheme!q{
 
-            GluiLabel.styleAdd!q{
+            FluidLabel.styleAdd!q{
 
                 // Those are already included in our theme, we should remove them
                 margin = 0;
@@ -298,7 +298,7 @@ class GluiTextInput : GluiInput!GluiNode {
     }
 
     /// Submit the input.
-    @(GluiInputAction.submit)
+    @(FluidInputAction.submit)
     protected void _submit() {
 
         // Clear focus
@@ -314,7 +314,7 @@ class GluiTextInput : GluiInput!GluiNode {
         int submitted;
 
         auto io = new HeadlessBackend;
-        GluiTextInput root;
+        FluidTextInput root;
 
         root = textInput("placeholder", delegate {
             submitted++;
@@ -338,7 +338,7 @@ class GluiTextInput : GluiInput!GluiNode {
         // Submit
         {
             io.nextFrame;
-            io.press(GluiKeyboardKey.enter);
+            io.press(FluidKeyboardKey.enter);
             root.draw();
 
             assert(submitted == 1);
@@ -347,7 +347,7 @@ class GluiTextInput : GluiInput!GluiNode {
     }
 
     /// Erase last inputted word.
-    @(GluiInputAction.backspaceWord)
+    @(FluidInputAction.backspaceWord)
     void chopWord() {
 
         import std.uni;
@@ -428,8 +428,8 @@ class GluiTextInput : GluiInput!GluiNode {
 
         // Typing should be disabled while erasing
         {
-            io.press(GluiKeyboardKey.leftControl);
-            io.press(GluiKeyboardKey.w);
+            io.press(FluidKeyboardKey.leftControl);
+            io.press(FluidKeyboardKey.w);
             io.inputCharacter('w');
 
             root.draw();
@@ -442,7 +442,7 @@ class GluiTextInput : GluiInput!GluiNode {
     }
 
     /// Erase last inputted letter.
-    @(GluiInputAction.backspace)
+    @(FluidInputAction.backspace)
     void chop() {
 
         // Ignore if the box is empty
@@ -501,7 +501,7 @@ class GluiTextInput : GluiInput!GluiNode {
 
         // Typing should be disabled while erasing
         {
-            io.press(GluiKeyboardKey.backspace);
+            io.press(FluidKeyboardKey.backspace);
             io.inputCharacter("o, world");
 
             root.draw();
@@ -530,7 +530,7 @@ class GluiTextInput : GluiInput!GluiNode {
 
 }
 
-private class TextImpl : GluiLabel {
+private class TextImpl : FluidLabel {
 
     mixin DefineStyles!(
         "activeStyle", q{ style }

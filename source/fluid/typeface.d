@@ -16,9 +16,9 @@ import fluid.backend;
 
 /// Low-level interface for drawing text. Represents a single typeface.
 ///
-/// Unlike the rest of Glui, Typeface doesn't define pixels as 1/96th of an inch. DPI must also be specified manually.
+/// Unlike the rest of Fluid, Typeface doesn't define pixels as 1/96th of an inch. DPI must also be specified manually.
 ///
-/// See: [glui.text.Text] for an interface on a higher level.
+/// See: [fluid.text.Text] for an interface on a higher level.
 interface Typeface {
 
     /// List glyphs  in the typeface.
@@ -48,7 +48,7 @@ interface Typeface {
     /// Note: This API is unstable and might change over time.
     void drawLine(ref Image target, ref Vector2 penPosition, string text, Color tint) const;
 
-    /// Get the default Glui typeface.
+    /// Get the default Fluid typeface.
     static defaultTypeface() => FreetypeTypeface.defaultTypeface;
 
     /// Default word splitter used by measure/draw.
@@ -296,7 +296,7 @@ class FreetypeTypeface : Typeface {
 
     /// Load a font from a file.
     /// Params:
-    ///     backend  = I/O Glui backend, used to adjust the scale of the font.
+    ///     backend  = I/O Fluid backend, used to adjust the scale of the font.
     ///     filename = Filename of the font file.
     ///     size     = Size of the font to load (in points).
     this(string filename, int size) @trusted {
@@ -658,7 +658,7 @@ static this() @trusted {
 
     if (auto error = FT_New_Memory_Face(freetype, typefaceFile.ptr, typefaceFile.length, 0, &typeface)) {
 
-        assert(false, format!"Failed to load default Glui typeface, error no. %s"(error));
+        assert(false, format!"Failed to load default Fluid typeface, error no. %s"(error));
 
     }
 

@@ -8,10 +8,10 @@ import fluid.backend;
 
 
 /// Interface for borders
-interface GluiBorder {
+interface FluidBorder {
 
     /// Apply the border, drawing it in the given box.
-    abstract void apply(GluiBackend backend, Rectangle borderBox, uint[4] size) const;
+    abstract void apply(FluidBackend backend, Rectangle borderBox, uint[4] size) const;
 
     /// Get the rectangle for the given side of the border.
     final Rectangle sideRect(Rectangle source, uint[4] size, Style.Side side) const {
@@ -118,11 +118,11 @@ ColorBorder colorBorder(size_t n)(Color[n] color) {
 
 }
 
-class ColorBorder : GluiBorder {
+class ColorBorder : FluidBorder {
 
     Color[4] color;
 
-    void apply(GluiBackend io, Rectangle borderBox, uint[4] size) const @trusted {
+    void apply(FluidBackend io, Rectangle borderBox, uint[4] size) const @trusted {
 
         // For each side
         foreach (sideIndex; 0..4) {
@@ -190,7 +190,7 @@ unittest {
 
     // First frame: Solid border on one side only
     root.theme = Theme.init.makeTheme!q{
-        GluiFrame.styleAdd!q{
+        FluidFrame.styleAdd!q{
             border.sideBottom = 4;
             borderStyle = colorBorder(color!"018b8d");
         };
@@ -211,7 +211,7 @@ unittest {
     // TODO optimize monochrome borders, and test them as well
     io.nextFrame;
     root.theme = Theme.init.makeTheme!(colorCode.format!q{
-        GluiFrame.styleAdd!q{
+        FluidFrame.styleAdd!q{
             border = 4;
             borderStyle = colorBorder(%s);
         };

@@ -19,15 +19,15 @@ import fluid.backend;
 deprecated("popup has been renamed to popupFrame")
 alias popup = popupFrame;
 
-deprecated("GluiPopup has been renamed to GluiPopupFrame")
-alias GluiPopup = GluiPopupFrame;
+deprecated("FluidPopup has been renamed to FluidPopupFrame")
+alias FluidPopup = FluidPopupFrame;
 
-alias popupFrame = simpleConstructor!GluiPopupFrame;
+alias popupFrame = simpleConstructor!FluidPopupFrame;
 
 /// Spawn a new popup attached to the given tree.
 ///
 /// The popup automatically gains focus.
-void spawnPopup(LayoutTree* tree, GluiPopupFrame popup) {
+void spawnPopup(LayoutTree* tree, FluidPopupFrame popup) {
 
     popup.tree = tree;
 
@@ -46,7 +46,7 @@ void spawnPopup(LayoutTree* tree, GluiPopupFrame popup) {
 /// Spawn a new popup, as a child of another. While the child is active, the parent will also remain so.
 ///
 /// The newly spawned popup automatically gains focus.
-void spawnChildPopup(GluiPopupFrame parent, GluiPopupFrame popup) {
+void spawnChildPopup(FluidPopupFrame parent, FluidPopupFrame popup) {
 
     auto tree = parent.tree;
 
@@ -58,9 +58,9 @@ void spawnChildPopup(GluiPopupFrame parent, GluiPopupFrame popup) {
 
 }
 
-/// This is an override of GluiFrame to simplify creating popups: if clicked outside of it, it will disappear from
+/// This is an override of FluidFrame to simplify creating popups: if clicked outside of it, it will disappear from
 /// the node tree.
-class GluiPopupFrame : GluiFrame, GluiFocusable {
+class FluidPopupFrame : FluidFrame, FluidFocusable {
 
     mixin defineStyles;
     mixin makeHoverable;
@@ -74,13 +74,13 @@ class GluiPopupFrame : GluiFrame, GluiFocusable {
         /// A child popup will keep this focus alive while focused.
         /// Typically, child popups are spawned as a result of actions within the popup itself, for example in context
         /// menus, an action can spawn a submenu. Use `spawnChildPopup` to spawn child popups.
-        GluiPopupFrame childPopup;
+        FluidPopupFrame childPopup;
 
         /// Node that had focus before `popupFrame` took over. When the popup is closed using a keyboard shortcut, this
         /// node will take focus again.
         ///
         /// Assigned automatically if `spawnPopup` or `spawnChildPopup` is used, but otherwise not.
-        GluiFocusable previousFocus;
+        FluidFocusable previousFocus;
 
     }
 
@@ -90,7 +90,7 @@ class GluiPopupFrame : GluiFrame, GluiFocusable {
 
     }
 
-    this(NodeParams params, GluiNode[] nodes...) {
+    this(NodeParams params, FluidNode[] nodes...) {
 
         super(params, nodes);
 
@@ -120,7 +120,7 @@ class GluiPopupFrame : GluiFrame, GluiFocusable {
 
         const viewportSize = io.windowSize;
 
-        // This method is very similar to GluiMapSpace.getStartCorner, but simplified to handle the "automatic" case
+        // This method is very similar to FluidMapSpace.getStartCorner, but simplified to handle the "automatic" case
         // only.
 
         // Define important points on the screen: center is our anchor, left is the other corner of the popup if we
@@ -214,7 +214,7 @@ class GluiPopupFrame : GluiFrame, GluiFocusable {
     }
 
     /// Give focus to whatever node had focus before this one.
-    @(GluiInputAction.cancel)
+    @(FluidInputAction.cancel)
     void restorePreviousFocus() {
 
         // Restore focus if possible
@@ -244,7 +244,7 @@ class PopupNodeAction : TreeAction {
 
     public {
 
-        GluiPopupFrame popup;
+        FluidPopupFrame popup;
 
     }
 
@@ -255,7 +255,7 @@ class PopupNodeAction : TreeAction {
 
     }
 
-    this(GluiPopupFrame popup) {
+    this(FluidPopupFrame popup) {
 
         this.startNode = this.popup = popup;
         popup.show();
@@ -263,7 +263,7 @@ class PopupNodeAction : TreeAction {
 
     }
 
-    override void beforeResize(GluiNode root, Vector2 viewportSize) {
+    override void beforeResize(FluidNode root, Vector2 viewportSize) {
 
         // Perform the resize
         popup.resizeInternal(root.tree, root.theme, viewportSize);
@@ -302,7 +302,7 @@ class PopupNodeAction : TreeAction {
 
     }
 
-    override void afterDraw(GluiNode node, Rectangle space) {
+    override void afterDraw(FluidNode node, Rectangle space) {
 
         import fluid.popup_button;
 
@@ -310,7 +310,7 @@ class PopupNodeAction : TreeAction {
         if (!hasResized) return;
 
         // Mark popup buttons
-        if (auto button = cast(GluiPopupButton) node) {
+        if (auto button = cast(FluidPopupButton) node) {
 
             button.parentPopup = popup;
 
@@ -319,7 +319,7 @@ class PopupNodeAction : TreeAction {
         // Ignore if a focused node has already been found
         if (popup.isFocused) return;
 
-        const focusable = cast(GluiFocusable) node;
+        const focusable = cast(FluidFocusable) node;
 
         if (focusable && focusable.isFocused) {
 

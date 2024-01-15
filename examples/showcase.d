@@ -14,35 +14,35 @@ void main() {
     scope (exit) CloseWindow();
 
     // Create sub-themes for colored backgrounds
-    // Tip: To make a new theme from scratch without inheriting Glui defaults, use `Theme.init.makeTheme`
+    // Tip: To make a new theme from scratch without inheriting Fluid defaults, use `Theme.init.makeTheme`
     auto redTheme = makeTheme!q{
 
-        GluiFrame.styleAdd.backgroundColor = color!"#c01212";
-        GluiButton!().styleAdd.backgroundColor = color!"#fff";
+        FluidFrame.styleAdd.backgroundColor = color!"#c01212";
+        FluidButton!().styleAdd.backgroundColor = color!"#fff";
 
     };
     auto greenTheme = redTheme.makeTheme!q{
 
-        GluiFrame.styleAdd.backgroundColor = color!"#12c012";
+        FluidFrame.styleAdd.backgroundColor = color!"#12c012";
 
     };
     auto blueTheme = redTheme.makeTheme!q{
 
-        GluiFrame.styleAdd.backgroundColor = color!"#1212c0";
+        FluidFrame.styleAdd.backgroundColor = color!"#1212c0";
 
     };
 
     Layout fill = .layout!(1, "fill");
 
     // Save IDs
-    GluiFrame secondColumn;
+    FluidFrame secondColumn;
 
     /// A button which will disappear on click.
-    GluiButton!() hidingButton() {
+    FluidButton!() hidingButton() {
 
         static size_t number;
 
-        GluiButton!() result;
+        FluidButton!() result;
         result = button(format!"Click me! %s"(++number), { result.remove; });
         return result;
 
@@ -56,7 +56,7 @@ void main() {
                 .layout!"center",
 
                 imageView("./logo.png", Vector2(48, 48)),
-                label(.layout!"center", "Hello, Glui!"),
+                label(.layout!"center", "Hello, Fluid!"),
             )
 
         ),
@@ -103,7 +103,7 @@ void main() {
                         .layout!(1, "fill", "center"),
                         makeTheme!q{
 
-                            GluiLabel.styleAdd!q{
+                            FluidLabel.styleAdd!q{
                                 margin = 6;
                                 padding = 12;
                                 backgroundColor = color!"#fffa";
@@ -124,7 +124,7 @@ void main() {
                     ),
 
                 ),
-                label(.layout!("center"), "Welcome to Glui!"),
+                label(.layout!("center"), "Welcome to Fluid!"),
 
             )
 

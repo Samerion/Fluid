@@ -9,8 +9,8 @@ import fluid.utils;
 import fluid.style;
 import fluid.backend;
 
-alias button = simpleConstructor!(GluiButton!GluiLabel);
-alias frameButton = simpleConstructor!(GluiButton!GluiFrame);
+alias button = simpleConstructor!(FluidButton!FluidLabel);
+alias frameButton = simpleConstructor!(FluidButton!FluidFrame);
 
 @safe:
 
@@ -22,7 +22,7 @@ alias frameButton = simpleConstructor!(GluiButton!GluiFrame);
 ///   $(LI `pressStyleKey` = Style to apply when the button is pressed.)
 ///   $(LI `focusStyleKey` = Style to apply when the button is focused.)
 /// )
-class GluiButton(T : GluiNode = GluiLabel) : GluiInput!T {
+class FluidButton(T : FluidNode = FluidLabel) : FluidInput!T {
 
     mixin DefineStyles!(
         "pressStyle", q{ hoverStyle },
@@ -62,7 +62,7 @@ class GluiButton(T : GluiNode = GluiLabel) : GluiInput!T {
     }
 
     /// Handle mouse input. By default, this will call the `pressed` delegate if the button is pressed.
-    @(GluiInputAction.press)
+    @(FluidInputAction.press)
     protected void _pressed() @trusted {
 
         // Run the callback

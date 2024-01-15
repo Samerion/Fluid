@@ -11,25 +11,25 @@ void main() {
 
     scope (exit) CloseWindow();
 
-    auto redTheme = gluiDefaultTheme.makeTheme!q{
+    auto redTheme = fluidDefaultTheme.makeTheme!q{
 
-        GluiFrame.styleAdd.backgroundColor = color!"#c01212";
-
-    };
-    auto greenTheme = gluiDefaultTheme.makeTheme!q{
-
-        GluiFrame.styleAdd.backgroundColor = color!"#12c012";
+        FluidFrame.styleAdd.backgroundColor = color!"#c01212";
 
     };
-    auto whiteTheme = gluiDefaultTheme.makeTheme!q{
+    auto greenTheme = fluidDefaultTheme.makeTheme!q{
 
-        GluiFrame.styleAdd.backgroundColor = color!"#fff";
+        FluidFrame.styleAdd.backgroundColor = color!"#12c012";
+
+    };
+    auto whiteTheme = fluidDefaultTheme.makeTheme!q{
+
+        FluidFrame.styleAdd.backgroundColor = color!"#fff";
 
     };
 
-    GluiFileInput picker;
-    GluiLabel fileStatus;
-    GluiButton!() unrelatedButton;
+    FluidFileInput picker;
+    FluidLabel fileStatus;
+    FluidButton!() unrelatedButton;
 
     auto root = onionFrame(
         layout(NodeAlign.fill),

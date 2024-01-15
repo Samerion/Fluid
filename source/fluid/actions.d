@@ -1,4 +1,4 @@
-/// Definitions for common tree actions; This is the Glui tree equivalent to std.algorithm.
+/// Definitions for common tree actions; This is the Fluid tree equivalent to std.algorithm.
 module fluid.actions;
 
 import fluid.node;
@@ -15,7 +15,7 @@ import fluid.container;
 /// the next draw. If calling `focusRecurseChildren`, the subject of the call will be excluded from taking focus.
 /// Params:
 ///     parent = Container node to search in.
-void focusRecurse(GluiNode parent) {
+void focusRecurse(FluidNode parent) {
 
     // Perform a tree action to find the child
     parent.queueAction(new FocusRecurseAction);
@@ -49,12 +49,12 @@ unittest {
     root.draw();
 
     assert(root.tree.focus.asNode is root.children[1], "First child is now focused");
-    assert((cast(GluiFocusable) root.children[1]).isFocused);
+    assert((cast(FluidFocusable) root.children[1]).isFocused);
 
 }
 
 /// ditto
-void focusRecurseChildren(GluiNode parent) {
+void focusRecurseChildren(FluidNode parent) {
 
     auto action = new FocusRecurseAction;
     action.excludeStartNode = true;
@@ -101,7 +101,7 @@ class FocusRecurseAction : TreeAction {
 
     }
 
-    override void beforeDraw(GluiNode node, Rectangle) {
+    override void beforeDraw(FluidNode node, Rectangle) {
 
         // Ignore if the branch is disabled
         if (node.isDisabledInherited) return;
@@ -110,7 +110,7 @@ class FocusRecurseAction : TreeAction {
         if (excludeStartNode && node is startNode) return;
 
         // Check if the node is focusable
-        if (auto focusable = cast(GluiFocusable) node) {
+        if (auto focusable = cast(FluidFocusable) node) {
 
             // Give it focus
             focusable.focus();
@@ -127,7 +127,7 @@ class FocusRecurseAction : TreeAction {
 /// Scroll so the given node becomes visible.
 /// Params:
 ///     node = Node to scroll to.
-void scrollIntoView(GluiNode node) {
+void scrollIntoView(FluidNode node) {
 
     node.queueAction(new ScrollIntoViewAction);
 
@@ -174,7 +174,7 @@ unittest {
     // It is reasonable to assume the text will be larger than 10 pixels (viewport height)
     assert(positions[1].y > viewportHeight);
 
-    // TODO Because the label was hidden below the viewport, Glui will align the bottom of the selected node with the
+    // TODO Because the label was hidden below the viewport, Fluid will align the bottom of the selected node with the
     // viewport which probably isn't appropriate in case *like this* where it should reveal the top of the node.
     auto texture1 = io.textures.dropOne.front;
     assert(root.scroll.isClose(texture1.position.y + texture1.height - viewportHeight));
@@ -196,14 +196,14 @@ class ScrollIntoViewAction : TreeAction {
     private {
 
         /// The node this action attempts to put into view.
-        GluiNode target;
+        FluidNode target;
 
         Vector2 viewport;
         Rectangle childBox;
 
     }
 
-    override void afterDraw(GluiNode node, Rectangle, Rectangle paddingBox, Rectangle) {
+    override void afterDraw(FluidNode node, Rectangle, Rectangle paddingBox, Rectangle) {
 
         // Target node was drawn
         if (node is startNode) {
@@ -226,7 +226,7 @@ class ScrollIntoViewAction : TreeAction {
         else if (startNode !is null) return;
 
         // Reached a container node
-        else if (auto container = cast(GluiContainer) node) {
+        else if (auto container = cast(FluidContainer) node) {
 
             // Perform the scroll
             childBox = container.shallowScrollTo(node, viewport, paddingBox, childBox);

@@ -15,13 +15,13 @@ import fluid.backend;
 @safe:
 
 
-/// Make a GluiInputAction handler react to every frame as long as the action is being held (mouse button held down,
+/// Make a FluidInputAction handler react to every frame as long as the action is being held (mouse button held down,
 /// key held down, etc.).
 enum whileDown;
 
 /// Default input actions one can listen to.
 @InputAction
-enum GluiInputAction {
+enum FluidInputAction {
 
     // Basic
     press,   /// Press the input. Used for example to activate buttons.
@@ -135,12 +135,12 @@ unittest {
         foo,
     }
 
-    static assert(isInputActionType!(GluiInputAction.entryUp));
+    static assert(isInputActionType!(FluidInputAction.entryUp));
     static assert(isInputActionType!(MyAction.foo));
 
-    static assert(!isInputActionType!GluiInput);
-    static assert(!isInputActionType!(InputAction!(GluiInputAction.entryUp)));
-    static assert(!isInputActionType!GluiInputAction);
+    static assert(!isInputActionType!FluidInput);
+    static assert(!isInputActionType!(InputAction!(FluidInputAction.entryUp)));
+    static assert(!isInputActionType!FluidInputAction);
     static assert(!isInputActionType!MyEnum);
     static assert(!isInputActionType!(MyEnum.foo));
     static assert(!isInputActionType!MyAction);
@@ -153,7 +153,7 @@ struct InputStroke {
 
     import std.sumtype;
 
-    alias Item = SumType!(GluiKeyboardKey, GluiMouseButton, GluiGamepadButton);
+    alias Item = SumType!(FluidKeyboardKey, FluidMouseButton, FluidGamepadButton);
 
     Item[] input;
 
@@ -198,15 +198,15 @@ struct InputStroke {
 
     unittest {
 
-        assert(!InputStroke(GluiKeyboardKey.leftControl).isMouseStroke);
-        assert(!InputStroke(GluiKeyboardKey.w).isMouseStroke);
-        assert(!InputStroke(GluiKeyboardKey.leftControl, GluiKeyboardKey.w).isMouseStroke);
+        assert(!InputStroke(FluidKeyboardKey.leftControl).isMouseStroke);
+        assert(!InputStroke(FluidKeyboardKey.w).isMouseStroke);
+        assert(!InputStroke(FluidKeyboardKey.leftControl, FluidKeyboardKey.w).isMouseStroke);
 
-        assert(InputStroke(GluiMouseButton.left).isMouseStroke);
-        assert(InputStroke(GluiKeyboardKey.leftControl, GluiMouseButton.left).isMouseStroke);
+        assert(InputStroke(FluidMouseButton.left).isMouseStroke);
+        assert(InputStroke(FluidKeyboardKey.leftControl, FluidMouseButton.left).isMouseStroke);
 
-        assert(!InputStroke(GluiGamepadButton.triangle).isMouseStroke);
-        assert(!InputStroke(GluiKeyboardKey.leftControl, GluiGamepadButton.triangle).isMouseStroke);
+        assert(!InputStroke(FluidGamepadButton.triangle).isMouseStroke);
+        assert(!InputStroke(FluidKeyboardKey.leftControl, FluidGamepadButton.triangle).isMouseStroke);
 
     }
 
@@ -214,14 +214,14 @@ struct InputStroke {
     static bool isMouseItem(Item item) {
 
         return item.match!(
-            (GluiMouseButton _) => true,
+            (FluidMouseButton _) => true,
             (_) => false,
         );
 
     }
 
     /// Check if all keys or buttons required for the stroke are held down.
-    bool isDown(const GluiBackend backend) const {
+    bool isDown(const FluidBackend backend) const {
 
         return input.all!(a => isItemDown(backend, a));
 
@@ -230,18 +230,18 @@ struct InputStroke {
     ///
     unittest {
 
-        auto stroke = InputStroke(GluiKeyboardKey.leftControl, GluiKeyboardKey.w);
+        auto stroke = InputStroke(FluidKeyboardKey.leftControl, FluidKeyboardKey.w);
         auto io = new HeadlessBackend;
 
         // No keys pressed
         assert(!stroke.isDown(io));
 
         // Control pressed
-        io.press(GluiKeyboardKey.leftControl);
+        io.press(FluidKeyboardKey.leftControl);
         assert(!stroke.isDown(io));
 
         // Both keys pressed
-        io.press(GluiKeyboardKey.w);
+        io.press(FluidKeyboardKey.w);
         assert(stroke.isDown(io));
 
         // Still pressed, but not immediately
@@ -249,7 +249,7 @@ struct InputStroke {
         assert(stroke.isDown(io));
 
         // W pressed
-        io.release(GluiKeyboardKey.leftControl);
+        io.release(FluidKeyboardKey.leftControl);
         assert(!stroke.isDown(io));
 
     }
@@ -259,7 +259,7 @@ struct InputStroke {
     /// If the last item of the action is a mouse button, the action will be triggered on release. If it's a keyboard
     /// key or gamepad button, it'll be triggered on press. All previous items, if present, have to be held down at the
     /// time.
-    bool isActive(const GluiBackend backend) const @trusted {
+    bool isActive(const FluidBackend backend) const @trusted {
 
         // For all but the last item, check if it's held down
         return input[0 .. $-1].all!(a => isItemDown(backend, a))
@@ -271,15 +271,15 @@ struct InputStroke {
 
     unittest {
 
-        auto singleKey = InputStroke(GluiKeyboardKey.w);
-        auto stroke = InputStroke(GluiKeyboardKey.leftControl, GluiKeyboardKey.leftShift, GluiKeyboardKey.w);
+        auto singleKey = InputStroke(FluidKeyboardKey.w);
+        auto stroke = InputStroke(FluidKeyboardKey.leftControl, FluidKeyboardKey.leftShift, FluidKeyboardKey.w);
         auto io = new HeadlessBackend;
 
         // No key pressed
         assert(!singleKey.isActive(io));
         assert(!stroke.isActive(io));
 
-        io.press(GluiKeyboardKey.w);
+        io.press(FluidKeyboardKey.w);
 
         // Just pressed the "W" key
         assert(singleKey.isActive(io));
@@ -291,19 +291,19 @@ struct InputStroke {
         assert(!singleKey.isActive(io));
         assert(!stroke.isActive(io));
 
-        io.press(GluiKeyboardKey.leftControl);
-        io.press(GluiKeyboardKey.leftShift);
+        io.press(FluidKeyboardKey.leftControl);
+        io.press(FluidKeyboardKey.leftShift);
 
         assert(!singleKey.isActive(io));
         assert(!stroke.isActive(io));
 
         // The last key needs to be pressed during the current frame
-        io.press(GluiKeyboardKey.w);
+        io.press(FluidKeyboardKey.w);
 
         assert(singleKey.isActive(io));
         assert(stroke.isActive(io));
 
-        io.release(GluiKeyboardKey.w);
+        io.release(FluidKeyboardKey.w);
 
         assert(!singleKey.isActive(io));
         assert(!stroke.isActive(io));
@@ -313,40 +313,40 @@ struct InputStroke {
     /// Mouse actions are activated on release
     unittest {
 
-        auto stroke = InputStroke(GluiKeyboardKey.leftControl, GluiMouseButton.left);
+        auto stroke = InputStroke(FluidKeyboardKey.leftControl, FluidMouseButton.left);
         auto io = new HeadlessBackend;
 
         assert(!stroke.isActive(io));
 
-        io.press(GluiKeyboardKey.leftControl);
-        io.press(GluiMouseButton.left);
+        io.press(FluidKeyboardKey.leftControl);
+        io.press(FluidMouseButton.left);
 
         assert(!stroke.isActive(io));
 
-        io.release(GluiMouseButton.left);
+        io.release(FluidMouseButton.left);
 
         assert(stroke.isActive(io));
 
         // The action won't trigger if previous keys aren't held down
-        io.release(GluiKeyboardKey.leftControl);
+        io.release(FluidKeyboardKey.leftControl);
 
         assert(!stroke.isActive(io));
 
     }
 
     /// Check if the given is held down.
-    static bool isItemDown(const GluiBackend backend, Item item) {
+    static bool isItemDown(const FluidBackend backend, Item item) {
 
         return item.match!(
 
             // Keyboard
-            (GluiKeyboardKey key) => backend.isDown(key),
+            (FluidKeyboardKey key) => backend.isDown(key),
 
             // A released mouse button also counts as down for our purposes, as it might trigger the action
-            (GluiMouseButton button) => backend.isDown(button) || backend.isReleased(button),
+            (FluidMouseButton button) => backend.isDown(button) || backend.isReleased(button),
 
             // Gamepad
-            (GluiGamepadButton button) => backend.isDown(button) != 0
+            (FluidGamepadButton button) => backend.isDown(button) != 0
         );
 
     }
@@ -355,12 +355,12 @@ struct InputStroke {
     ///
     /// If the item is a mouse button, it will be triggered on release. If it's a keyboard key or gamepad button, it'll
     /// be triggered on press.
-    static bool isItemActive(const GluiBackend backend, Item item) {
+    static bool isItemActive(const FluidBackend backend, Item item) {
 
         return item.match!(
-            (GluiKeyboardKey key) => backend.isPressed(key) || backend.isRepeated(key),
-            (GluiMouseButton button) => backend.isReleased(button),
-            (GluiGamepadButton button) => backend.isPressed(button) || backend.isRepeated(button),
+            (FluidKeyboardKey key) => backend.isPressed(key) || backend.isRepeated(key),
+            (FluidMouseButton button) => backend.isReleased(button),
+            (FluidGamepadButton button) => backend.isPressed(button) || backend.isRepeated(button),
         );
 
     }
@@ -397,14 +397,14 @@ struct InputLayer {
 
 }
 
-/// This meta-UDA can be attached to an enum, so Glui would recognize members of said enum as an UDA defining input
+/// This meta-UDA can be attached to an enum, so Fluid would recognize members of said enum as an UDA defining input
 /// actions. As an UDA, this template should be used without instantiating.
 ///
 /// This template also serves to provide unique identifiers for each action type, generated on startup. For example,
-/// `InputAction!(GluiInputAction.press).id` will have the same value anywhere in the program.
+/// `InputAction!(FluidInputAction.press).id` will have the same value anywhere in the program.
 ///
 /// Action types are resolved at compile-time using symbols, so you can supply any `@InputAction`-marked enum defining
-/// input actions. All built-in enums are defined in `GluiInputAction`.
+/// input actions. All built-in enums are defined in `FluidInputAction`.
 ///
 /// If the method returns `true`, it is understood that the action has been processed and no more actions will be
 /// emitted during the frame. If it returns `false`, other actions and keyboardImpl will be tried until any call returns
@@ -436,14 +436,14 @@ if (isInputActionType!actionType) {
 
 unittest {
 
-    assert(InputAction!(GluiInputAction.press).id == InputAction!(GluiInputAction.press).id);
-    assert(InputAction!(GluiInputAction.press).id != InputAction!(GluiInputAction.entryUp).id);
+    assert(InputAction!(FluidInputAction.press).id == InputAction!(FluidInputAction.press).id);
+    assert(InputAction!(FluidInputAction.press).id != InputAction!(FluidInputAction.entryUp).id);
 
     // IDs should have the same equality as the enum members, within the same enum
     // This will not be the case for enum values with explicitly assigned values (but probably should be!)
-    foreach (left; EnumMembers!GluiInputAction) {
+    foreach (left; EnumMembers!FluidInputAction) {
 
-        foreach (right; EnumMembers!GluiInputAction) {
+        foreach (right; EnumMembers!FluidInputAction) {
 
             if (left == right)
                 assert(InputAction!left.id == InputAction!right.id);
@@ -467,8 +467,8 @@ unittest {
 
     assert(InputAction!(FooActions.action).id == InputAction!(FooActions.action).id);
     assert(InputAction!(FooActions.action).id != InputAction!(BarActions.action).id);
-    assert(InputAction!(FooActions.action).id != InputAction!(GluiInputAction.press).id);
-    assert(InputAction!(BarActions.action).id != InputAction!(GluiInputAction.press).id);
+    assert(InputAction!(FooActions.action).id != InputAction!(FluidInputAction.press).id);
+    assert(InputAction!(BarActions.action).id != InputAction!(FluidInputAction.press).id);
 
 }
 
@@ -478,28 +478,28 @@ unittest {
     import std.concurrency;
 
     // IDs are global across threads
-    auto t0 = InputAction!(GluiInputAction.press).id;
+    auto t0 = InputAction!(FluidInputAction.press).id;
 
     spawn({
 
-        ownerTid.send(InputAction!(GluiInputAction.press).id);
+        ownerTid.send(InputAction!(FluidInputAction.press).id);
 
         spawn({
 
-            ownerTid.send(InputAction!(GluiInputAction.press).id);
+            ownerTid.send(InputAction!(FluidInputAction.press).id);
 
         });
 
         ownerTid.send(receiveOnly!InputActionID);
 
-        ownerTid.send(InputAction!(GluiInputAction.cancel).id);
+        ownerTid.send(InputAction!(FluidInputAction.cancel).id);
 
     });
 
     auto t1 = receiveOnly!InputActionID;
     auto t2 = receiveOnly!InputActionID;
 
-    auto c0 = InputAction!(GluiInputAction.cancel).id;
+    auto c0 = InputAction!(FluidInputAction.cancel).id;
     auto c1 = receiveOnly!InputActionID;
 
     assert(t0 == t1);
@@ -532,27 +532,27 @@ unittest {
     tree.io = io;
 
     // Nothing pressed, action not activated
-    assert(!tree.isDown!(GluiInputAction.backspaceWord));
+    assert(!tree.isDown!(FluidInputAction.backspaceWord));
 
-    io.press(GluiKeyboardKey.leftControl);
-    io.press(GluiKeyboardKey.backspace);
+    io.press(FluidKeyboardKey.leftControl);
+    io.press(FluidKeyboardKey.backspace);
     tree.poll();
 
     // The action is now held down with the ctrl+blackspace stroke
-    assert(tree.isDown!(GluiInputAction.backspaceWord));
+    assert(tree.isDown!(FluidInputAction.backspaceWord));
 
-    io.release(GluiKeyboardKey.backspace);
-    io.press(GluiKeyboardKey.w);
+    io.release(FluidKeyboardKey.backspace);
+    io.press(FluidKeyboardKey.w);
     tree.poll();
 
     // ctrl+W also activates the stroke
-    assert(tree.isDown!(GluiInputAction.backspaceWord));
+    assert(tree.isDown!(FluidInputAction.backspaceWord));
 
-    io.release(GluiKeyboardKey.leftControl);
+    io.release(FluidKeyboardKey.leftControl);
     tree.poll();
 
     // Control up, won't match any stroke now
-    assert(!tree.isDown!(GluiInputAction.backspaceWord));
+    assert(!tree.isDown!(FluidInputAction.backspaceWord));
 
 }
 
@@ -575,40 +575,40 @@ unittest {
 
     tree.io = io;
 
-    assert(!tree.isDown!(GluiInputAction.press));
+    assert(!tree.isDown!(FluidInputAction.press));
 
-    io.press(GluiMouseButton.left);
+    io.press(FluidMouseButton.left);
     tree.poll();
 
     // Pressing with a mouse
-    assert(tree.isDown!(GluiInputAction.press));
-    assert(tree.isMouseDown!(GluiInputAction.press));
+    assert(tree.isDown!(FluidInputAction.press));
+    assert(tree.isMouseDown!(FluidInputAction.press));
 
-    io.release(GluiMouseButton.left);
+    io.release(FluidMouseButton.left);
     tree.poll();
 
     // Releasing a mouse key still counts as holding it down
     // This is important — a released mouse is used to trigger the action
-    assert(tree.isDown!(GluiInputAction.press));
-    assert(tree.isMouseDown!(GluiInputAction.press));
+    assert(tree.isDown!(FluidInputAction.press));
+    assert(tree.isMouseDown!(FluidInputAction.press));
 
     // Need to wait a frame
     io.nextFrame;
     tree.poll();
 
-    assert(!tree.isDown!(GluiInputAction.press));
+    assert(!tree.isDown!(FluidInputAction.press));
 
-    io.press(GluiKeyboardKey.enter);
+    io.press(FluidKeyboardKey.enter);
     tree.poll();
 
     // Pressing with a keyboard
-    assert(tree.isDown!(GluiInputAction.press));
-    assert(!tree.isMouseDown!(GluiInputAction.press));
+    assert(tree.isDown!(FluidInputAction.press));
+    assert(!tree.isMouseDown!(FluidInputAction.press));
 
-    io.release(GluiKeyboardKey.enter);
+    io.release(FluidKeyboardKey.enter);
     tree.poll();
 
-    assert(!tree.isDown!(GluiInputAction.press));
+    assert(!tree.isDown!(FluidInputAction.press));
 
 }
 
@@ -631,22 +631,22 @@ unittest {
 
     tree.io = io;
 
-    assert(!tree.isDown!(GluiInputAction.press));
+    assert(!tree.isDown!(FluidInputAction.press));
 
-    io.press(GluiKeyboardKey.enter);
+    io.press(FluidKeyboardKey.enter);
     tree.poll();
 
     // Pressing with a keyboard
-    assert(tree.isDown!(GluiInputAction.press));
-    assert(tree.isFocusDown!(GluiInputAction.press));
+    assert(tree.isDown!(FluidInputAction.press));
+    assert(tree.isFocusDown!(FluidInputAction.press));
 
-    io.release(GluiKeyboardKey.enter);
-    io.press(GluiMouseButton.left);
+    io.release(FluidKeyboardKey.enter);
+    io.press(FluidMouseButton.left);
     tree.poll();
 
     // Pressing with a mouse
-    assert(tree.isDown!(GluiInputAction.press));
-    assert(!tree.isFocusDown!(GluiInputAction.press));
+    assert(tree.isDown!(FluidInputAction.press));
+    assert(!tree.isFocusDown!(FluidInputAction.press));
 
 }
 
@@ -680,7 +680,7 @@ if (isInputActionType!type) {
 }
 
 /// An interface to be implemented by all nodes that can perform actions when hovered (eg. on click)
-interface GluiHoverable {
+interface FluidHoverable {
 
     /// Handle mouse input on the node.
     void mouseImpl();
@@ -689,15 +689,15 @@ interface GluiHoverable {
     ref inout(bool) isDisabled() inout;
 
     /// Get the underlying node.
-    final inout(GluiNode) asNode() inout {
+    final inout(FluidNode) asNode() inout {
 
-        return cast(inout GluiNode) this;
+        return cast(inout FluidNode) this;
 
     }
 
     /// Run input actions for the node.
     ///
-    /// Internal. `GluiNode` calls this for the focused node every frame, falling back to `mouseImpl` if this returns
+    /// Internal. `FluidNode` calls this for the focused node every frame, falling back to `mouseImpl` if this returns
     /// false.
     ///
     /// Implement by adding `mixin enableInputActions` in your class.
@@ -708,7 +708,7 @@ interface GluiHoverable {
         import fluid.node;
         import std.format;
 
-        static assert(is(typeof(this) : GluiNode), format!"%s : GluiHoverable must inherit from a Node"(typeid(this)));
+        static assert(is(typeof(this) : FluidNode), format!"%s : FluidHoverable must inherit from a Node"(typeid(this)));
 
         override ref inout(bool) isDisabled() inout {
 
@@ -722,8 +722,8 @@ interface GluiHoverable {
 
         import fluid.node;
 
-        static assert(is(typeof(this) : GluiNode),
-            format!"%s : GluiHoverable must inherit from GluiNode"(typeid(this)));
+        static assert(is(typeof(this) : FluidNode),
+            format!"%s : FluidHoverable must inherit from FluidNode"(typeid(this)));
 
         override bool runMouseInputActions() {
 
@@ -824,8 +824,8 @@ interface GluiHoverable {
 /// An interface to be implemented by all nodes that can take focus.
 ///
 /// Note: Input nodes often have many things in common. If you want to create an input-taking node, you're likely better
-/// off extending from `GluiInput`.
-interface GluiFocusable : GluiHoverable {
+/// off extending from `FluidInput`.
+interface FluidFocusable : FluidHoverable {
 
     /// Handle input. Called each frame when focused.
     bool focusImpl();
@@ -837,12 +837,12 @@ interface GluiFocusable : GluiHoverable {
     void focus();
 
     /// Check if this node has focus. Recommended implementation: `return tree.focus is this`. Proxy nodes, such as
-    /// `GluiFilePicker` might choose to return the value of the node they hold.
+    /// `FluidFilePicker` might choose to return the value of the node they hold.
     bool isFocused() const;
 
     /// Run input actions for the node.
     ///
-    /// Internal. `GluiNode` calls this for the focused node every frame, falling back to `keyboardImpl` if this returns
+    /// Internal. `FluidNode` calls this for the focused node every frame, falling back to `keyboardImpl` if this returns
     /// false.
     ///
     /// Implement by adding `mixin enableInputActions` in your class.
@@ -853,7 +853,7 @@ interface GluiFocusable : GluiHoverable {
 
         private import fluid.input;
 
-        mixin GluiHoverable.enableInputActions;
+        mixin FluidHoverable.enableInputActions;
 
         // Implement the interface method
         override bool runFocusInputActions() {
@@ -873,7 +873,7 @@ interface GluiFocusable : GluiHoverable {
 ///     $(LI `focusStyleKey` = Style for when the input is focused.)
 ///     $(LI `disabledStyleKey` = Style for when the input is disabled.)
 /// )
-abstract class GluiInput(Parent : GluiNode) : Parent, GluiFocusable {
+abstract class FluidInput(Parent : FluidNode) : Parent, FluidFocusable {
 
     mixin defineStyles!(
         "focusStyle", q{ style },
@@ -947,8 +947,8 @@ abstract class GluiInput(Parent : GluiNode) : Parent, GluiFocusable {
     /// Preferrably, the node should implement an `isPressed` property and cache the result of this!
     protected bool checkIsPressed() {
 
-        return (isHovered && tree.isMouseDown!(GluiInputAction.press))
-            || (isFocused && tree.isFocusDown!(GluiInputAction.press));
+        return (isHovered && tree.isMouseDown!(FluidInputAction.press))
+            || (isFocused && tree.isFocusDown!(FluidInputAction.press));
 
     }
 
@@ -1001,7 +1001,7 @@ unittest {
     int cancelCount;
 
     auto io = new HeadlessBackend;
-    auto root = new class GluiInput!GluiLabel {
+    auto root = new class FluidInput!FluidLabel {
 
         @safe:
 
@@ -1017,14 +1017,14 @@ unittest {
 
         }
 
-        @(GluiInputAction.press)
+        @(FluidInputAction.press)
         void _pressed() {
 
             pressCount++;
 
         }
 
-        @(GluiInputAction.cancel)
+        @(FluidInputAction.cancel)
         void _cancelled() {
 
             cancelCount++;
@@ -1038,11 +1038,11 @@ unittest {
     root.focus();
 
     // Press the node via focus
-    io.press(GluiKeyboardKey.enter);
+    io.press(FluidKeyboardKey.enter);
 
     root.draw();
 
-    assert(root.tree.isFocusActive!(GluiInputAction.press));
+    assert(root.tree.isFocusActive!(FluidInputAction.press));
     assert(pressCount == 1);
 
     io.nextFrame;
@@ -1054,9 +1054,9 @@ unittest {
 
     // Hover the node and press it with the mouse
     io.nextFrame;
-    io.release(GluiKeyboardKey.enter);
+    io.release(FluidKeyboardKey.enter);
     io.mousePosition = Vector2(5, 5);
-    io.press(GluiMouseButton.left);
+    io.press(FluidMouseButton.left);
 
     root.draw();
     root.tree.focus = null;
@@ -1067,7 +1067,7 @@ unittest {
     // If we now drag away from the button and release...
     io.nextFrame;
     io.mousePosition = Vector2(15, 15);
-    io.release(GluiMouseButton.left);
+    io.release(FluidMouseButton.left);
 
     root.draw();
 
@@ -1077,7 +1077,7 @@ unittest {
     // But if we release the mouse on the button
     io.nextFrame;
     io.mousePosition = Vector2(5, 5);
-    io.release(GluiMouseButton.left);
+    io.release(FluidMouseButton.left);
 
     root.draw();
 
@@ -1089,7 +1089,7 @@ unittest {
 
     // Press escape to cancel
     io.nextFrame;
-    io.press(GluiKeyboardKey.escape);
+    io.press(FluidKeyboardKey.escape);
 
     root.draw();
 
@@ -1106,7 +1106,7 @@ unittest {
     // This test checks if "hover slipping" happens; namely, if the user clicks and holds on an object, then hovers on
     // something else and releases, the click should be cancelled, and no other object should react to the same click.
 
-    class SquareButton : GluiButton!() {
+    class SquareButton : FluidButton!() {
 
         mixin enableInputActions;
 
@@ -1134,12 +1134,12 @@ unittest {
 
     // Press the left button
     io.mousePosition = Vector2(5, 5);
-    io.press(GluiMouseButton.left);
+    io.press(FluidMouseButton.left);
 
     root.draw();
 
     // Release it
-    io.release(GluiMouseButton.left);
+    io.release(FluidMouseButton.left);
 
     root.draw();
 
@@ -1149,12 +1149,12 @@ unittest {
     // Press the right button
     io.nextFrame;
     io.mousePosition = Vector2(15, 5);
-    io.press(GluiMouseButton.left);
+    io.press(FluidMouseButton.left);
 
     root.draw();
 
     // Release it
-    io.release(GluiMouseButton.left);
+    io.release(FluidMouseButton.left);
 
     root.draw();
 
@@ -1163,7 +1163,7 @@ unittest {
     // Press the left button, but don't release
     io.nextFrame;
     io.mousePosition = Vector2(5, 5);
-    io.press(GluiMouseButton.left);
+    io.press(FluidMouseButton.left);
 
     root.draw();
 
@@ -1191,7 +1191,7 @@ unittest {
 
     // Release the button on the next frame
     io.nextFrame;
-    io.release(GluiMouseButton.left);
+    io.release(FluidMouseButton.left);
 
     root.draw();
 
@@ -1199,13 +1199,13 @@ unittest {
 
     // Things should go to normal next frame
     io.nextFrame;
-    io.press(GluiMouseButton.left);
+    io.press(FluidMouseButton.left);
 
     root.draw();
 
     // So we can expect the right button to trigger now
     io.nextFrame;
-    io.release(GluiMouseButton.left);
+    io.release(FluidMouseButton.left);
 
     root.draw();
 

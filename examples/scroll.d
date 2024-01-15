@@ -15,24 +15,24 @@ void main() {
 
     immutable theme2 = makeTheme!q{
 
-        GluiFrame.styleAdd.backgroundColor = color!"#e62937";
+        FluidFrame.styleAdd.backgroundColor = color!"#e62937";
 
     };
 
     immutable rightTheme = makeTheme!q{
 
-        GluiSpace.styleAdd!q{
+        FluidSpace.styleAdd!q{
             margin = 5;
             margin.sideY = 10;
         };
-        GluiButton!().styleAdd!q{
+        FluidButton!().styleAdd!q{
             margin.sideTop = 10;
         };
 
     };
 
-    GluiScrollInput myScrollbar, disabledScrollbar;
-    GluiButton!() myButton;
+    FluidScrollInput myScrollbar, disabledScrollbar;
+    FluidButton!() myButton;
 
     auto root = hframe(
         .layout!(1, "fill"),

@@ -15,13 +15,13 @@ import fluid.structs;
 /// A "node slot" node, which displays the node given to it. Allows safely swapping nodes in the layout by reference,
 /// even during drawing. Useful for creating tabs and menus.
 ///
-/// Because GluiNodeSlot does not inherit from T, it uses the single-parameter overload of simpleConstructor.
-alias nodeSlot(alias T) = simpleConstructor!(GluiNodeSlot!T);
+/// Because FluidNodeSlot does not inherit from T, it uses the single-parameter overload of simpleConstructor.
+alias nodeSlot(alias T) = simpleConstructor!(FluidNodeSlot!T);
 
 /// ditto
-class GluiNodeSlot(T : GluiNode) : GluiNode {
+class FluidNodeSlot(T : FluidNode) : FluidNode {
 
-    /// GluiNodeSlot defines its own styles, which will only apply to the slot itself, not the contents. Most of the
+    /// FluidNodeSlot defines its own styles, which will only apply to the slot itself, not the contents. Most of the
     /// styling options will have no effect, but padding and margin will.
     mixin DefineStyles;
 
@@ -110,7 +110,7 @@ class GluiNodeSlot(T : GluiNode) : GluiNode {
         if (value.ignoreMouse) return false;
 
         // hoveredImpl may be private... uhhh
-        return (cast(const GluiNode) value).hoveredImpl(rect, position);
+        return (cast(const FluidNode) value).hoveredImpl(rect, position);
 
     }
 
@@ -121,9 +121,9 @@ class GluiNodeSlot(T : GluiNode) : GluiNode {
     }
 
     /// Swap contents of the two slots.
-    void swapSlots(Slot : GluiNode)(Slot other) {
+    void swapSlots(Slot : FluidNode)(Slot other) {
 
-        static if (is(Slot : GluiNodeSlot!U, U)) {
+        static if (is(Slot : FluidNodeSlot!U, U)) {
 
             import std.format;
             import std.algorithm;
@@ -167,14 +167,14 @@ class GluiNodeSlot(T : GluiNode) : GluiNode {
         import fluid.space;
         import fluid.button;
 
-        GluiNodeSlot!GluiLabel slot1, slot2;
+        FluidNodeSlot!FluidLabel slot1, slot2;
 
         auto io = new HeadlessBackend;
         auto root = hspace(
             label("Hello, "),
-            slot1 = nodeSlot!GluiLabel(.layout!"fill"),
+            slot1 = nodeSlot!FluidLabel(.layout!"fill"),
             label(" and "),
-            slot2 = nodeSlot!GluiLabel(.layout!"fill"),
+            slot2 = nodeSlot!FluidLabel(.layout!"fill"),
         );
 
         slot1 = label("John");
@@ -185,7 +185,7 @@ class GluiNodeSlot(T : GluiNode) : GluiNode {
         });
 
         root.theme = nullTheme.makeTheme!q{
-            GluiLabel.styleAdd.textColor = color!"000";
+            FluidLabel.styleAdd.textColor = color!"000";
         };
         root.io = io;
 
@@ -202,7 +202,7 @@ class GluiNodeSlot(T : GluiNode) : GluiNode {
         // Focus the second button
         {
             io.nextFrame;
-            io.press(GluiKeyboardKey.up);
+            io.press(FluidKeyboardKey.up);
 
             root.draw();
 
@@ -212,8 +212,8 @@ class GluiNodeSlot(T : GluiNode) : GluiNode {
         // Press it
         {
             io.nextFrame;
-            io.release(GluiKeyboardKey.up);
-            io.press(GluiKeyboardKey.enter);
+            io.release(FluidKeyboardKey.up);
+            io.press(FluidKeyboardKey.enter);
 
             root.draw();
 
@@ -226,7 +226,7 @@ class GluiNodeSlot(T : GluiNode) : GluiNode {
         // Nodes can be unassigned
         {
             io.nextFrame;
-            io.release(GluiKeyboardKey.enter);
+            io.release(FluidKeyboardKey.enter);
 
             slot1.clear();
 
@@ -261,14 +261,14 @@ unittest {
 
     import fluid;
 
-    GluiNodeSlot!GluiLabel slot1, slot2;
+    FluidNodeSlot!FluidLabel slot1, slot2;
 
     // Slots can be empty, with no node inside
     auto root = vspace(
         label("Hello, "),
-        slot1 = nodeSlot!GluiLabel(.layout!"fill"),
+        slot1 = nodeSlot!FluidLabel(.layout!"fill"),
         label(" and "),
-        slot2 = nodeSlot!GluiLabel(.layout!"fill"),
+        slot2 = nodeSlot!FluidLabel(.layout!"fill"),
     );
 
     // Slots can be assigned other nodes

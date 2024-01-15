@@ -158,7 +158,7 @@ class Style {
         uint[4] padding;
 
         /// Border style to use.
-        GluiBorder borderStyle;
+        FluidBorder borderStyle;
 
     }
 
@@ -168,7 +168,7 @@ class Style {
         /// Cursor icon to use while this node is hovered.
         ///
         /// Custom image cursors are not supported yet.
-        GluiMouseCursor mouseCursor;
+        FluidMouseCursor mouseCursor;
 
     }
 
@@ -235,7 +235,7 @@ class Style {
 
     /// Update the style with given D code.
     ///
-    /// This allows each init code to have a consistent default scope, featuring `glui`, `raylib` and chosen `std`
+    /// This allows each init code to have a consistent default scope, featuring `fluid`, `raylib` and chosen `std`
     /// modules.
     ///
     /// Params:
@@ -332,7 +332,7 @@ class Style {
     }
 
     /// Draw the background
-    void drawBackground(GluiBackend backend, Rectangle rect) const @trusted {
+    void drawBackground(FluidBackend backend, Rectangle rect) const @trusted {
 
         backend.drawRectangle(rect, backgroundColor);
 

@@ -1,7 +1,7 @@
-/// This module handles input/output facilities Glui requires to operate. It connects backends like Raylib, exposing
+/// This module handles input/output facilities Fluid requires to operate. It connects backends like Raylib, exposing
 /// them under a common interface so they can be changed at will.
 ///
-/// Glui comes with a built-in interface for Raylib.
+/// Fluid comes with a built-in interface for Raylib.
 module fluid.backend;
 
 import std.meta;
@@ -19,29 +19,29 @@ public import fluid.backend.simpledisplay;
 
 alias VoidDelegate = void delegate() @safe;
 
-static GluiBackend defaultGluiBackend;
+static FluidBackend defaultFluidBackend;
 
-/// `GluiBackend` is an interface making it possible to bind Glui to a library other than Raylib. Another built-in
-/// backend is `glui.simpledisplay.SimpledisplayBackend` for `arsd.simpledisplay`.
+/// `FluidBackend` is an interface making it possible to bind Fluid to a library other than Raylib. Another built-in
+/// backend is `fluid.simpledisplay.SimpledisplayBackend` for `arsd.simpledisplay`.
 ///
 /// The default unit in graphical space is a **pixel** (`px`), here defined as **1/96 of an inch**. This is unless
 /// stated otherwise, as in `Texture`.
-interface GluiBackend {
+interface FluidBackend {
 
     /// Check if the given mouse button has just been pressed/released or, if it's held down or not (up).
-    bool isPressed(GluiMouseButton) const;
-    bool isReleased(GluiMouseButton) const;
-    bool isDown(GluiMouseButton) const;
-    bool isUp(GluiMouseButton) const;
+    bool isPressed(FluidMouseButton) const;
+    bool isReleased(FluidMouseButton) const;
+    bool isDown(FluidMouseButton) const;
+    bool isUp(FluidMouseButton) const;
 
     /// Check if the given keyboard key has just been pressed/released or, if it's held down or not (up).
-    bool isPressed(GluiKeyboardKey) const;
-    bool isReleased(GluiKeyboardKey) const;
-    bool isDown(GluiKeyboardKey) const;
-    bool isUp(GluiKeyboardKey) const;
+    bool isPressed(FluidKeyboardKey) const;
+    bool isReleased(FluidKeyboardKey) const;
+    bool isDown(FluidKeyboardKey) const;
+    bool isUp(FluidKeyboardKey) const;
 
     /// If true, the given keyboard key has been virtually pressed again, through a long-press.
-    bool isRepeated(GluiKeyboardKey) const;
+    bool isRepeated(FluidKeyboardKey) const;
 
     /// Get next queued character from user's input. The queue should be cleared every frame. Return null if no
     /// character was pressed.
@@ -51,15 +51,15 @@ interface GluiBackend {
     /// connected gamepads.
     ///
     /// Returns: 0 if the event isn't taking place on any controller, or number of the controller.
-    int isPressed(GluiGamepadButton button) const;
-    int isReleased(GluiGamepadButton button) const;
-    int isDown(GluiGamepadButton button) const;
-    int isUp(GluiGamepadButton button) const;
+    int isPressed(FluidGamepadButton button) const;
+    int isReleased(FluidGamepadButton button) const;
+    int isDown(FluidGamepadButton button) const;
+    int isUp(FluidGamepadButton button) const;
 
     /// If true, the given gamepad button has been virtually pressed again, through a long-press.
     ///
     /// Returns: 0 if no controller had a button repeat this frame, or number of the controller.
-    int isRepeated(GluiGamepadButton button) const;
+    int isRepeated(FluidGamepadButton button) const;
 
     /// Get/set mouse position
     Vector2 mousePosition(Vector2);
@@ -102,8 +102,8 @@ interface GluiBackend {
     void restoreArea();
 
     /// Get or set mouse cursor icon.
-    GluiMouseCursor mouseCursor(GluiMouseCursor);
-    GluiMouseCursor mouseCursor() const;
+    FluidMouseCursor mouseCursor(FluidMouseCursor);
+    FluidMouseCursor mouseCursor() const;
 
     /// Texture reaper used by this backend. May be null.
     ///
@@ -166,7 +166,7 @@ struct TextureReaper {
     }
 
     /// Create a tombstone.
-    shared(TextureTombstone)* makeTombstone(GluiBackend backend, uint textureID) @trusted {
+    shared(TextureTombstone)* makeTombstone(FluidBackend backend, uint textureID) @trusted {
 
         return textures[textureID] = TextureTombstone.make(backend);
 
@@ -238,7 +238,7 @@ struct TextureReaper {
 /// Tombstones are used to ensure textures are freed on the same thread they have been created on.
 ///
 /// Tombstones are kept alive until the texture is explicitly destroyed and then finalized (disowned) from the main
-/// thread by a periodically-running `TextureReaper`. This is necessary to make Glui safe in multithreaded
+/// thread by a periodically-running `TextureReaper`. This is necessary to make Fluid safe in multithreaded
 /// environments.
 shared struct TextureTombstone {
 
@@ -247,11 +247,11 @@ shared struct TextureTombstone {
     import core.stdc.stdlib;
 
     /// Backend that created this texture.
-    private GluiBackend _backend;
+    private FluidBackend _backend;
 
     private bool _destroyed, _disowned;
 
-    static TextureTombstone* make(GluiBackend backend) @system {
+    static TextureTombstone* make(FluidBackend backend) @system {
 
         import core.exception;
 
@@ -275,7 +275,7 @@ shared struct TextureTombstone {
     bool isDestroyed() @system => _destroyed.atomicLoad;
 
     /// Get the backend owning this texture.
-    inout(shared GluiBackend) backend() inout => _backend;
+    inout(shared FluidBackend) backend() inout => _backend;
 
     /// Mark the texture as destroyed.
     void markDestroyed() @system {
@@ -407,7 +407,7 @@ unittest {
 
 }
 
-struct GluiMouseCursor {
+struct FluidMouseCursor {
 
     enum SystemCursors {
 
@@ -427,17 +427,17 @@ struct GluiMouseCursor {
 
     enum {
 
-        systemDefault = GluiMouseCursor(SystemCursors.systemDefault),
-        none          = GluiMouseCursor(SystemCursors.none),
-        pointer       = GluiMouseCursor(SystemCursors.pointer),
-        crosshair     = GluiMouseCursor(SystemCursors.crosshair),
-        text          = GluiMouseCursor(SystemCursors.text),
-        allScroll     = GluiMouseCursor(SystemCursors.allScroll),
-        resizeEW      = GluiMouseCursor(SystemCursors.resizeEW),
-        resizeNS      = GluiMouseCursor(SystemCursors.resizeNS),
-        resizeNESW    = GluiMouseCursor(SystemCursors.resizeNESW),
-        resizeNWSE    = GluiMouseCursor(SystemCursors.resizeNWSE),
-        notAllowed    = GluiMouseCursor(SystemCursors.notAllowed),
+        systemDefault = FluidMouseCursor(SystemCursors.systemDefault),
+        none          = FluidMouseCursor(SystemCursors.none),
+        pointer       = FluidMouseCursor(SystemCursors.pointer),
+        crosshair     = FluidMouseCursor(SystemCursors.crosshair),
+        text          = FluidMouseCursor(SystemCursors.text),
+        allScroll     = FluidMouseCursor(SystemCursors.allScroll),
+        resizeEW      = FluidMouseCursor(SystemCursors.resizeEW),
+        resizeNS      = FluidMouseCursor(SystemCursors.resizeNS),
+        resizeNESW    = FluidMouseCursor(SystemCursors.resizeNESW),
+        resizeNWSE    = FluidMouseCursor(SystemCursors.resizeNWSE),
+        notAllowed    = FluidMouseCursor(SystemCursors.notAllowed),
 
     }
 
@@ -447,7 +447,7 @@ struct GluiMouseCursor {
 
 }
 
-enum GluiMouseButton {
+enum FluidMouseButton {
     none,
     left,         // Left (primary) mouse button.
     right,        // Right (secondary) mouse button.
@@ -467,13 +467,13 @@ enum GluiMouseButton {
 }
 
 /// Check if the given mouse button is a scroll wheel step.
-bool isScroll(GluiMouseButton button) {
+bool isScroll(FluidMouseButton button) {
 
     return button.scrollUp <= button && button <= button.scrollRight;
 
 }
 
-enum GluiGamepadButton {
+enum FluidGamepadButton {
 
     none,                // No such button
     dpadUp,              // Dpad up button.
@@ -501,7 +501,7 @@ enum GluiGamepadButton {
 
 }
 
-enum GluiGamepadAxis {
+enum FluidGamepadAxis {
 
     leftX,         // Left joystick, X axis.
     leftY,         // Left joystick, Y axis.
@@ -512,7 +512,7 @@ enum GluiGamepadAxis {
 
 }
 
-enum GluiKeyboardKey {
+enum FluidKeyboardKey {
     none               = 0,        // No key pressed
     apostrophe         = 39,       // '
     comma              = 44,       // ,
@@ -704,9 +704,9 @@ struct Texture {
         && dpiY == other.dpiY;
 
     /// Get the backend for this texture. Doesn't work after freeing the tombstone.
-    inout(GluiBackend) backend() inout @trusted
+    inout(FluidBackend) backend() inout @trusted
 
-        => cast(inout GluiBackend) tombstone.backend;
+        => cast(inout FluidBackend) tombstone.backend;
 
     /// DPI value of the texture.
     Vector2 dpi() const
@@ -893,13 +893,13 @@ version (Have_raylib_d) {
 
     import raylib;
 
-    debug (Glui_BuildMessages) {
-        pragma(msg, "Glui: Using Raylib 5 as the default backend");
+    debug (Fluid_BuildMessages) {
+        pragma(msg, "Fluid: Using Raylib 5 as the default backend");
     }
 
     static this() {
 
-        defaultGluiBackend = new Raylib5Backend;
+        defaultFluidBackend = new Raylib5Backend;
 
     }
 
@@ -911,8 +911,8 @@ version (Have_raylib_d) {
 
 else {
 
-    debug (Glui_BuildMessages) {
-        pragma(msg, "Glui: No built-in backend in use");
+    debug (Fluid_BuildMessages) {
+        pragma(msg, "Fluid: No built-in backend in use");
     }
 
     struct Vector2 {

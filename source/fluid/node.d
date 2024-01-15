@@ -40,8 +40,8 @@ private interface Styleable {
 
 }
 
-/// Represents a Glui node.
-abstract class GluiNode : Styleable {
+/// Represents a Fluid node.
+abstract class FluidNode : Styleable {
 
     public import fluid.structs : NodeAlign, NodeParams, Layout;
     public import fluid.structs : Align = NodeAlign, Params = NodeParams;
@@ -152,7 +152,7 @@ abstract class GluiNode : Styleable {
         }
 
         /// Ditto
-        deprecated("Use GluiNode(NodeParams) instead.")
+        deprecated("Use FluidNode(NodeParams) instead.")
         this(Theme theme = null, Layout layout = Layout.init) {
 
             this(layout, theme);
@@ -163,19 +163,19 @@ abstract class GluiNode : Styleable {
 
     /// Construct a new node.
     ///
-    /// The typical approach to constructing new nodes is via `glui.utils.simpleConstructor`. A node component would
+    /// The typical approach to constructing new nodes is via `fluid.utils.simpleConstructor`. A node component would
     /// provide an alias pointing to the `simpleConstructor` instance, which can then be used as a factory function. For
-    /// example, `GluiNode` provides the `label` simpleConstructor. Using these has increased convenience by making it
+    /// example, `FluidNode` provides the `label` simpleConstructor. Using these has increased convenience by making it
     /// possible to omit `NodeParams` or to specify each parameter individually, for example
     ///
     /// ---
     /// auto myLabel = label(.layout!1, .theme, "Hello, World!");
     /// // Equivalent of:
-    /// auto myLabel = new GluiLabel(NodeParams(.layout!1, .theme), "Hello, World!");
+    /// auto myLabel = new FluidLabel(NodeParams(.layout!1, .theme), "Hello, World!");
     /// ---
     ///
     /// See_Also:
-    ///     `glui.utils.simpleConstructor`
+    ///     `fluid.utils.simpleConstructor`
     /// Params:
     ///     params = An optional set of parameters the node accepts, including `layout` and `theme`.
     this(NodeParams params) {
@@ -190,14 +190,14 @@ abstract class GluiNode : Styleable {
 
     }
 
-    bool opEquals(const GluiNode otherNode) const {
+    bool opEquals(const FluidNode otherNode) const {
 
         return this is otherNode;
 
     }
 
     /// Show the node.
-    This show(this This = GluiNode)() return {
+    This show(this This = FluidNode)() return {
 
         // Note: The default value for This is necessary, otherwise virtual calls don't work
         isHidden = false;
@@ -206,7 +206,7 @@ abstract class GluiNode : Styleable {
     }
 
     /// Hide the node.
-    This hide(this This = GluiNode)() return {
+    This hide(this This = FluidNode)() return {
 
         isHidden = true;
         return cast(This) this;
@@ -216,7 +216,7 @@ abstract class GluiNode : Styleable {
     unittest {
 
         auto io = new HeadlessBackend;
-        auto root = new class GluiNode {
+        auto root = new class FluidNode {
 
             mixin implHoveredRect;
 
@@ -246,7 +246,7 @@ abstract class GluiNode : Styleable {
     }
 
     /// Disable this node.
-    This disable(this This = GluiNode)() {
+    This disable(this This = FluidNode)() {
 
         // `scope return` attribute on disable() and enable() is broken, `isDisabled` just can't get return for reasons
         // unknown
@@ -257,7 +257,7 @@ abstract class GluiNode : Styleable {
     }
 
     /// Enable this node.
-    This enable(this This = GluiNode)() {
+    This enable(this This = FluidNode)() {
 
         isDisabled = false;
         return cast(This) this;
@@ -283,7 +283,7 @@ abstract class GluiNode : Styleable {
         // Press the button
         {
             io.nextFrame;
-            io.press(GluiKeyboardKey.enter);
+            io.press(FluidKeyboardKey.enter);
             button.focus();
             root.draw();
 
@@ -293,7 +293,7 @@ abstract class GluiNode : Styleable {
         // Press the button while disabled
         {
             io.nextFrame;
-            io.press(GluiKeyboardKey.enter);
+            io.press(FluidKeyboardKey.enter);
             button.disable();
             root.draw();
 
@@ -304,7 +304,7 @@ abstract class GluiNode : Styleable {
         // Enable the button and hit it again
         {
             io.nextFrame;
-            io.press(GluiKeyboardKey.enter);
+            io.press(FluidKeyboardKey.enter);
             button.enable();
             root.draw();
 
@@ -315,7 +315,7 @@ abstract class GluiNode : Styleable {
         // Try typing into the input box
         {
             io.nextFrame;
-            io.release(GluiKeyboardKey.enter);
+            io.release(FluidKeyboardKey.enter);
             io.inputCharacter("Hello, ");
             input.focus();
             root.draw();
@@ -336,7 +336,7 @@ abstract class GluiNode : Styleable {
         // Attempt disabling the nodes recursively
         {
             io.nextFrame;
-            io.press(GluiKeyboardKey.enter);
+            io.press(FluidKeyboardKey.enter);
             button.focus();
             input.enable();
             root.disable();
@@ -353,7 +353,7 @@ abstract class GluiNode : Styleable {
         // Check the input box
         {
             io.nextFrame;
-            io.press(GluiKeyboardKey.enter);
+            io.press(FluidKeyboardKey.enter);
             io.inputCharacter("World!");
             input.focus();
 
@@ -366,7 +366,7 @@ abstract class GluiNode : Styleable {
         // Enable input once again
         {
             io.nextFrame;
-            io.press(GluiKeyboardKey.enter);
+            io.press(FluidKeyboardKey.enter);
             root.enable();
             root.draw();
 
@@ -374,17 +374,17 @@ abstract class GluiNode : Styleable {
             assert(input.value == "Hello, ");
         }
 
-        io.saveSVG("/tmp/glui.svg");
+        io.saveSVG("/tmp/fluid.svg");
 
     }
 
-    inout(GluiBackend) backend() inout {
+    inout(FluidBackend) backend() inout {
 
         return tree.backend;
 
     }
 
-    GluiBackend backend(GluiBackend backend) {
+    FluidBackend backend(FluidBackend backend) {
 
         // Create the tree if not present
         if (tree is null) {
@@ -452,8 +452,8 @@ abstract class GluiNode : Styleable {
 
         import fluid.space;
 
-        GluiNode[4] allNodes;
-        GluiNode[] visitedNodes;
+        FluidNode[4] allNodes;
+        FluidNode[] visitedNodes;
 
         auto io = new HeadlessBackend;
         auto root = allNodes[0] = vspace(
@@ -464,7 +464,7 @@ abstract class GluiNode : Styleable {
         );
         auto action = new class TreeAction {
 
-            override void beforeDraw(GluiNode node, Rectangle) {
+            override void beforeDraw(FluidNode node, Rectangle) {
 
                 visitedNodes ~= node;
 
@@ -509,7 +509,7 @@ abstract class GluiNode : Styleable {
         int resizes;
 
         auto io = new HeadlessBackend;
-        auto root = new class GluiNode {
+        auto root = new class FluidNode {
 
             mixin implHoveredRect;
 
@@ -571,7 +571,7 @@ abstract class GluiNode : Styleable {
         if (!theme) {
 
             import fluid.default_theme;
-            theme = gluiDefaultTheme;
+            theme = fluidDefaultTheme;
 
         }
 
@@ -637,10 +637,10 @@ abstract class GluiNode : Styleable {
 
 
         // Note: pressed, not released; released activates input events, pressed activates focus
-        const mousePressed = tree.io.isPressed(GluiMouseButton.left);
+        const mousePressed = tree.io.isPressed(FluidMouseButton.left);
 
         // Mouse is hovering an input node
-        if (auto hoverInput = cast(GluiHoverable) tree.hover) {
+        if (auto hoverInput = cast(FluidHoverable) tree.hover) {
 
             // Ignore if the node is disabled or hover is prolonged:
             // Note that nodes will remain in tree.hover if LMB is pressed to prevent "hover stealing" — actions should
@@ -648,7 +648,7 @@ abstract class GluiNode : Styleable {
             if (!tree.hover.isDisabledInherited && tree.hover.isHovered) {
 
                 // Check if the node is focusable
-                auto focusable = cast(GluiFocusable) tree.hover;
+                auto focusable = cast(FluidFocusable) tree.hover;
 
                 // If the left mouse button is pressed down, let it have focus, if it can
                 if (mousePressed && focusable) focusable.focus();
@@ -678,17 +678,17 @@ abstract class GluiNode : Styleable {
         }
 
         // Nothing has focus
-        else with (GluiInputAction)
+        else with (FluidInputAction)
         tree.keyboardHandled = {
 
             // Check the first focusable node
             if (auto first = tree.focusDirection.first) {
 
                 // Check for focus action
-                const focusFirst = tree.isFocusActive!(GluiInputAction.focusNext)
-                    || tree.isFocusActive!(GluiInputAction.focusDown)
-                    || tree.isFocusActive!(GluiInputAction.focusRight)
-                    || tree.isFocusActive!(GluiInputAction.focusLeft);
+                const focusFirst = tree.isFocusActive!(FluidInputAction.focusNext)
+                    || tree.isFocusActive!(FluidInputAction.focusDown)
+                    || tree.isFocusActive!(FluidInputAction.focusRight)
+                    || tree.isFocusActive!(FluidInputAction.focusLeft);
 
                 // Switch focus
                 if (focusFirst) {
@@ -704,8 +704,8 @@ abstract class GluiNode : Styleable {
             if (auto last = tree.focusDirection.last) {
 
                 // Check for focus action
-                const focusLast = tree.isFocusActive!(GluiInputAction.focusPrevious)
-                    || tree.isFocusActive!(GluiInputAction.focusUp);
+                const focusLast = tree.isFocusActive!(FluidInputAction.focusPrevious)
+                    || tree.isFocusActive!(FluidInputAction.focusUp);
 
                 // Switch focus
                 if (focusLast) {
@@ -751,14 +751,14 @@ abstract class GluiNode : Styleable {
         {
 
             io.nextFrame;
-            io.press(GluiKeyboardKey.tab);
+            io.press(FluidKeyboardKey.tab);
             root.draw();
 
-            // Glui will automatically try to find the first focusable node
+            // Fluid will automatically try to find the first focusable node
             assert(root.tree.focus.asNode is root.children[0]);
 
             io.nextFrame;
-            io.release(GluiKeyboardKey.tab);
+            io.release(FluidKeyboardKey.tab);
             root.draw();
 
             assert(root.tree.focus.asNode is root.children[0]);
@@ -769,9 +769,9 @@ abstract class GluiNode : Styleable {
         {
 
             io.nextFrame;
-            io.press(GluiKeyboardKey.tab);
+            io.press(FluidKeyboardKey.tab);
             root.draw();
-            io.release(GluiKeyboardKey.tab);
+            io.release(FluidKeyboardKey.tab);
 
             assert(root.tree.focus.asNode is root.children[1]);
 
@@ -782,16 +782,16 @@ abstract class GluiNode : Styleable {
             root.tree.focus = null;
 
             io.nextFrame;
-            io.press(GluiKeyboardKey.leftShift);
-            io.press(GluiKeyboardKey.tab);
+            io.press(FluidKeyboardKey.leftShift);
+            io.press(FluidKeyboardKey.tab);
             root.draw();
 
             // If left-shift tab is pressed, the last focusable node will be used
             assert(root.tree.focus.asNode is root.children[$-1]);
 
             io.nextFrame;
-            io.release(GluiKeyboardKey.leftShift);
-            io.release(GluiKeyboardKey.tab);
+            io.release(FluidKeyboardKey.leftShift);
+            io.release(FluidKeyboardKey.tab);
             root.draw();
 
             assert(root.tree.focus.asNode is root.children[$-1]);
@@ -801,13 +801,13 @@ abstract class GluiNode : Styleable {
     }
 
     /// Switch to the previous or next focused item
-    @(GluiInputAction.focusPrevious, GluiInputAction.focusNext)
-    protected void _focusPrevNext(GluiInputAction actionType) {
+    @(FluidInputAction.focusPrevious, FluidInputAction.focusNext)
+    protected void _focusPrevNext(FluidInputAction actionType) {
 
         auto direction = tree.focusDirection;
 
         // Get the node to switch to
-        auto node = actionType == GluiInputAction.focusPrevious
+        auto node = actionType == FluidInputAction.focusPrevious
 
             // Requesting previous item
             ? either(direction.previous, direction.last)
@@ -821,11 +821,11 @@ abstract class GluiNode : Styleable {
     }
 
     /// Switch focus towards a specified direction.
-    @(GluiInputAction.focusLeft, GluiInputAction.focusRight)
-    @(GluiInputAction.focusUp, GluiInputAction.focusDown)
-    protected void _focusDirection(GluiInputAction action) {
+    @(FluidInputAction.focusLeft, FluidInputAction.focusRight)
+    @(FluidInputAction.focusUp, FluidInputAction.focusDown)
+    protected void _focusDirection(FluidInputAction action) {
 
-        with (GluiInputAction) {
+        with (FluidInputAction) {
 
             // Check which side we're going
             const side = action.predSwitch(
@@ -894,7 +894,7 @@ abstract class GluiNode : Styleable {
         _isHovered = hoveredImpl(visibleBox, tree.io.mousePosition);
 
         // Check if the mouse stroke started this node
-        const heldElsewhere = !tree.io.isPressed(GluiMouseButton.left)
+        const heldElsewhere = !tree.io.isPressed(FluidMouseButton.left)
             && isLMBHeld;
 
         // Update global hover unless mouse is being held down or mouse focus is disabled for this node
@@ -963,7 +963,7 @@ abstract class GluiNode : Styleable {
             tree.focusDirection.update(this, paddingBox, tree.depth);
 
             // If this node is focused
-            if (this is cast(GluiNode) tree.focus) {
+            if (this is cast(FluidNode) tree.focus) {
 
                 // Set the focus box
                 tree.focusBox = paddingBox;
@@ -1128,7 +1128,7 @@ abstract class GluiNode : Styleable {
         import core.exception;
         import fluid.frame;
 
-        static class Square : GluiFrame {
+        static class Square : FluidFrame {
             @safe:
             Color color;
             this(NodeParams params, Color color) {
@@ -1161,7 +1161,7 @@ abstract class GluiNode : Styleable {
         );
 
         root.theme = Theme.init.makeTheme!q{
-            GluiFrame.styleAdd.backgroundColor = color!"1c1c1c";
+            FluidFrame.styleAdd.backgroundColor = color!"1c1c1c";
         };
         root.io = io;
 
@@ -1237,10 +1237,10 @@ abstract class GluiNode : Styleable {
             // The first rectangle doesn't expand so it should be exactly 100×100 in size
             io.assertRectangle(Rectangle(350, 0, 100, 100), colors[0]);
 
-            debug io.saveSVG("/tmp/glui.svg");
+            debug io.saveSVG("/tmp/fluid.svg");
 
             // The remaining space is 500px, so divided into 1+2+3=6 pieces, it should be about 83px per piece
-            // TODO Make sure Glui fills in every pixel while filling in the gaps
+            // TODO Make sure Fluid fills in every pixel while filling in the gaps
             //      (this will make this test fail)
             //      Practically, that means making `space` track remaining space, rather than available space
             io.assertRectangle(Rectangle(350, 100, 100, 83.33), colors[1]);
@@ -1253,8 +1253,8 @@ abstract class GluiNode : Styleable {
 
     private bool isLMBHeld() @trusted {
 
-        return tree.io.isDown(GluiMouseButton.left)
-            || tree.io.isReleased(GluiMouseButton.left);
+        return tree.io.isDown(FluidMouseButton.left)
+            || tree.io.isReleased(FluidMouseButton.left);
 
     }
 

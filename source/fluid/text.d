@@ -12,7 +12,7 @@ import fluid.typeface;
 
 
 /// Draws text: handles updates, formatting and styling.
-struct Text(T : GluiNode) {
+struct Text(T : FluidNode) {
 
     /// Node owning this text struct.
     T node;
@@ -49,7 +49,7 @@ struct Text(T : GluiNode) {
 
     }
 
-    inout(GluiBackend) backend() inout
+    inout(FluidBackend) backend() inout
 
         => node.tree.backend;
 

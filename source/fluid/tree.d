@@ -26,7 +26,7 @@ struct FocusDirection {
         float distance2;
 
         /// The node.
-        GluiFocusable node;
+        FluidFocusable node;
 
         alias node this;
 
@@ -36,10 +36,10 @@ struct FocusDirection {
     Rectangle lastFocusBox;
 
     /// Nodes that may get focus with tab navigation.
-    GluiFocusable previous, next;
+    FluidFocusable previous, next;
 
     /// First and last focusable nodes in the tree.
-    GluiFocusable first, last;
+    FluidFocusable first, last;
 
     /// Focusable nodes, by direction from the focused node.
     WithPriority[4] positional;
@@ -69,13 +69,13 @@ struct FocusDirection {
     ///     current = Node to update the focus info with.
     ///     box     = Box defining node boundaries (padding box)
     ///     depth   = Current tree depth. Pass in `tree.depth`.
-    void update(GluiNode current, Rectangle box, uint depth)
+    void update(FluidNode current, Rectangle box, uint depth)
     in (current !is null, "Current node must not be null")
     do {
 
         import std.algorithm : either;
 
-        auto currentFocusable = cast(GluiFocusable) current;
+        auto currentFocusable = cast(FluidFocusable) current;
 
         // Count focus priority
         {
@@ -128,7 +128,7 @@ struct FocusDirection {
     }
 
     /// Check the given node's position and update `positional` to match.
-    private void updatePositional(GluiFocusable node, Rectangle box) {
+    private void updatePositional(FluidFocusable node, Rectangle box) {
 
         // Note: This might give false-positives if the focused node has changed during this frame
 
@@ -205,7 +205,7 @@ struct FocusDirection {
         const condition = abs(distanceInternal) > abs(distanceExternal);
 
         // ↓ box                    There is an edgecase though. If one box entirely overlaps the other on one axis, we
-        // +--------------------+   might end up with unwanted behavior, for example, in a GluiScrollFrame, focus might
+        // +--------------------+   might end up with unwanted behavior, for example, in a FluidScrollFrame, focus might
         // |   ↓ lastFocusBox   |   switch to the scrollbar instead of a child, as we would normally expect.
         // |   +============+   |
         // |   |            |   |   For this reason, we require both `distanceInternal` and `distanceExternal` to have
@@ -249,7 +249,7 @@ abstract class TreeAction {
         /// Node to descend into; `beforeDraw` and `afterDraw` will only be emitted for this node and its children.
         ///
         /// May be null to enable iteration over the entire tree.
-        GluiNode startNode;
+        FluidNode startNode;
 
         /// If true, this action is complete and no callbacks should be ran.
         ///
@@ -273,14 +273,14 @@ abstract class TreeAction {
     }
 
     /// Called before the tree is resized. Called before `beforeTree`.
-    void beforeResize(GluiNode root, Vector2 viewportSpace) { }
+    void beforeResize(FluidNode root, Vector2 viewportSpace) { }
 
     /// Called before the tree is drawn. Keep in mind this might not be called if the action is started when tree
     /// iteration has already begun.
     /// Params:
     ///     root     = Root of the tree.
     ///     viewport = Screen space for the node.
-    void beforeTree(GluiNode root, Rectangle viewport) { }
+    void beforeTree(FluidNode root, Rectangle viewport) { }
 
     /// Called before each `drawImpl` call of any node in the tree, so supplying parent nodes before their children.
     /// Params:
@@ -288,13 +288,13 @@ abstract class TreeAction {
     ///     space      = Space given for the node.
     ///     paddingBox = Padding box of the node.
     ///     contentBox = Content box of teh node.
-    void beforeDraw(GluiNode node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) { }
+    void beforeDraw(FluidNode node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) { }
 
     /// ditto
-    void beforeDraw(GluiNode node, Rectangle space) { }
+    void beforeDraw(FluidNode node, Rectangle space) { }
 
     /// internal
-    final package void beforeDrawImpl(GluiNode node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) {
+    final package void beforeDrawImpl(FluidNode node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) {
 
         // There is a start node set
         if (startNode !is null) {
@@ -319,13 +319,13 @@ abstract class TreeAction {
     ///     space      = Space given for the node.
     ///     paddingBox = Padding box of the node.
     ///     contentBox = Content box of teh node.
-    void afterDraw(GluiNode node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) { }
+    void afterDraw(FluidNode node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) { }
 
     /// ditto
-    void afterDraw(GluiNode node, Rectangle space) { }
+    void afterDraw(FluidNode node, Rectangle space) { }
 
     /// internal
-    final package void afterDrawImpl(GluiNode node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) {
+    final package void afterDrawImpl(FluidNode node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) {
 
         // There is a start node set
         if (startNode !is null) {
@@ -369,16 +369,16 @@ abstract class TreeAction {
 struct LayoutTree {
 
     /// Root node of the tree.
-    GluiNode root;
+    FluidNode root;
 
     /// Top-most hovered node in the tree.
-    GluiNode hover;
+    FluidNode hover;
 
     /// Currently focused node.
     ///
     /// Changing this value directly is discouraged. Some nodes might not want the focus! Be gentle, call
-    /// `GluiFocusable.focus()` instead and let the node set the value on its own.
-    GluiFocusable focus;
+    /// `FluidFocusable.focus()` instead and let the node set the value on its own.
+    FluidFocusable focus;
 
     /// Focus direction data.
     FocusDirection focusDirection;
@@ -405,7 +405,7 @@ struct LayoutTree {
     DList!InputBinding activeActions;
 
     /// Access to core input and output facilities.
-    GluiBackend backend;
+    FluidBackend backend;
     alias io = backend;
 
     /// Check if keyboard input was handled; updated after rendering has completed.
@@ -432,7 +432,7 @@ struct LayoutTree {
     ref inout(uint) disabledDepth() inout return { return _disabledDepth; }
 
     /// Create a new tree with the given node as its root, and using the given backend for I/O.
-    this(GluiNode root, GluiBackend backend) {
+    this(FluidNode root, FluidBackend backend) {
 
         this.root = root;
         this.backend = backend;
@@ -441,17 +441,17 @@ struct LayoutTree {
     }
 
     /// Create a new tree with the given node as its root. Use the default backend, if any is present.
-    this(GluiNode root) {
+    this(FluidNode root) {
 
-        assert(defaultGluiBackend, "Cannot create LayoutTree; no backend was chosen, and no default is set.");
+        assert(defaultFluidBackend, "Cannot create LayoutTree; no backend was chosen, and no default is set.");
 
-        this(root, defaultGluiBackend);
+        this(root, defaultFluidBackend);
 
     }
 
     /// Queue an action to perform while iterating the tree.
     ///
-    /// Avoid using this; most of the time `GluiNode.queueAction` is what you want. `LayoutTree.queueAction` might fire
+    /// Avoid using this; most of the time `FluidNode.queueAction` is what you want. `LayoutTree.queueAction` might fire
     /// too early
     void queueAction(TreeAction action)
     in (action, "Invalid action queued")
@@ -472,33 +472,33 @@ struct LayoutTree {
         }
 
         // TODO universal left/right key
-        with (GluiInputAction)
+        with (FluidInputAction)
         boundInputs = [
 
             InputLayer(
-                InputStroke(GluiKeyboardKey.leftControl),
+                InputStroke(FluidKeyboardKey.leftControl),
                 [
-                    bind!backspaceWord(GluiKeyboardKey.backspace),
-                    bind!backspaceWord(GluiKeyboardKey.w),  // emacs & vim
-                    bind!entryPrevious(GluiKeyboardKey.k),  // vim
-                    bind!entryPrevious(GluiKeyboardKey.p),  // emacs
-                    bind!entryNext(GluiKeyboardKey.j),  // vim
-                    bind!entryNext(GluiKeyboardKey.n),  // emacs
+                    bind!backspaceWord(FluidKeyboardKey.backspace),
+                    bind!backspaceWord(FluidKeyboardKey.w),  // emacs & vim
+                    bind!entryPrevious(FluidKeyboardKey.k),  // vim
+                    bind!entryPrevious(FluidKeyboardKey.p),  // emacs
+                    bind!entryNext(FluidKeyboardKey.j),  // vim
+                    bind!entryNext(FluidKeyboardKey.n),  // emacs
                 ]
             ),
 
             InputLayer(
-                InputStroke(GluiKeyboardKey.leftShift),
+                InputStroke(FluidKeyboardKey.leftShift),
                 [
-                    bind!focusPrevious(GluiKeyboardKey.tab),
-                    bind!entryPrevious(GluiKeyboardKey.tab),
+                    bind!focusPrevious(FluidKeyboardKey.tab),
+                    bind!entryPrevious(FluidKeyboardKey.tab),
                 ]
             ),
 
             InputLayer(
-                InputStroke(GluiKeyboardKey.leftAlt),
+                InputStroke(FluidKeyboardKey.leftAlt),
                 [
-                    bind!entryUp(GluiKeyboardKey.up),
+                    bind!entryUp(FluidKeyboardKey.up),
                 ]
             ),
 
@@ -506,56 +506,56 @@ struct LayoutTree {
                 InputStroke(),
                 [
                     // Press
-                    bind!press(GluiMouseButton.left),
-                    bind!press(GluiKeyboardKey.enter),
-                    bind!press(GluiGamepadButton.cross),
+                    bind!press(FluidMouseButton.left),
+                    bind!press(FluidKeyboardKey.enter),
+                    bind!press(FluidGamepadButton.cross),
 
                     // Submit
-                    bind!submit(GluiKeyboardKey.enter),
-                    bind!submit(GluiGamepadButton.cross),
+                    bind!submit(FluidKeyboardKey.enter),
+                    bind!submit(FluidGamepadButton.cross),
 
                     // Cancel
-                    bind!cancel(GluiKeyboardKey.escape),
-                    bind!cancel(GluiGamepadButton.circle),
+                    bind!cancel(FluidKeyboardKey.escape),
+                    bind!cancel(FluidGamepadButton.circle),
 
                     // Tabbing; index-focus
-                    bind!focusPrevious(GluiGamepadButton.leftButton),
-                    bind!focusNext(GluiKeyboardKey.tab),
-                    bind!focusNext(GluiGamepadButton.rightButton),
+                    bind!focusPrevious(FluidGamepadButton.leftButton),
+                    bind!focusNext(FluidKeyboardKey.tab),
+                    bind!focusNext(FluidGamepadButton.rightButton),
 
                     // Directional focus
-                    bind!focusLeft(GluiKeyboardKey.left),
-                    bind!focusLeft(GluiGamepadButton.dpadLeft),
-                    bind!focusRight(GluiKeyboardKey.right),
-                    bind!focusRight(GluiGamepadButton.dpadRight),
-                    bind!focusUp(GluiKeyboardKey.up),
-                    bind!focusUp(GluiGamepadButton.dpadUp),
-                    bind!focusDown(GluiKeyboardKey.down),
-                    bind!focusDown(GluiGamepadButton.dpadDown),
+                    bind!focusLeft(FluidKeyboardKey.left),
+                    bind!focusLeft(FluidGamepadButton.dpadLeft),
+                    bind!focusRight(FluidKeyboardKey.right),
+                    bind!focusRight(FluidGamepadButton.dpadRight),
+                    bind!focusUp(FluidKeyboardKey.up),
+                    bind!focusUp(FluidGamepadButton.dpadUp),
+                    bind!focusDown(FluidKeyboardKey.down),
+                    bind!focusDown(FluidGamepadButton.dpadDown),
 
                     // Text input
-                    bind!backspace(GluiKeyboardKey.backspace),
-                    bind!entryPrevious(GluiKeyboardKey.up),
-                    bind!entryPrevious(GluiGamepadButton.dpadUp),
-                    bind!entryNext(GluiKeyboardKey.down),
-                    bind!entryNext(GluiKeyboardKey.tab),
-                    bind!entryNext(GluiGamepadButton.dpadDown),
+                    bind!backspace(FluidKeyboardKey.backspace),
+                    bind!entryPrevious(FluidKeyboardKey.up),
+                    bind!entryPrevious(FluidGamepadButton.dpadUp),
+                    bind!entryNext(FluidKeyboardKey.down),
+                    bind!entryNext(FluidKeyboardKey.tab),
+                    bind!entryNext(FluidGamepadButton.dpadDown),
 
                     // Scrolling
-                    bind!scrollLeft(GluiKeyboardKey.left),
-                    bind!scrollLeft(GluiGamepadButton.dpadLeft),
-                    bind!scrollLeft(GluiMouseButton.scrollLeft),
-                    bind!scrollRight(GluiKeyboardKey.right),
-                    bind!scrollRight(GluiGamepadButton.dpadRight),
-                    bind!scrollRight(GluiMouseButton.scrollRight),
-                    bind!scrollUp(GluiKeyboardKey.up),
-                    bind!scrollUp(GluiGamepadButton.dpadUp),
-                    bind!scrollUp(GluiMouseButton.scrollUp),
-                    bind!scrollDown(GluiKeyboardKey.down),
-                    bind!scrollDown(GluiGamepadButton.dpadDown),
-                    bind!scrollDown(GluiMouseButton.scrollDown),
-                    bind!pageUp(GluiKeyboardKey.pageUp),
-                    bind!pageDown(GluiKeyboardKey.pageDown),
+                    bind!scrollLeft(FluidKeyboardKey.left),
+                    bind!scrollLeft(FluidGamepadButton.dpadLeft),
+                    bind!scrollLeft(FluidMouseButton.scrollLeft),
+                    bind!scrollRight(FluidKeyboardKey.right),
+                    bind!scrollRight(FluidGamepadButton.dpadRight),
+                    bind!scrollRight(FluidMouseButton.scrollRight),
+                    bind!scrollUp(FluidKeyboardKey.up),
+                    bind!scrollUp(FluidGamepadButton.dpadUp),
+                    bind!scrollUp(FluidMouseButton.scrollUp),
+                    bind!scrollDown(FluidKeyboardKey.down),
+                    bind!scrollDown(FluidGamepadButton.dpadDown),
+                    bind!scrollDown(FluidMouseButton.scrollDown),
+                    bind!pageUp(FluidKeyboardKey.pageUp),
+                    bind!pageDown(FluidKeyboardKey.pageDown),
                 ]
             )
 

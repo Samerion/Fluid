@@ -21,13 +21,13 @@ import fluid.button;
 import fluid.structs;
 import fluid.text_input;
 
-alias fileInput = simpleConstructor!GluiFileInput;
+alias fileInput = simpleConstructor!FluidFileInput;
 
 deprecated("filePicker has been renamed to fileInput. Please update references before 0.7.0.")
 alias filePicker = fileInput;
 
-deprecated("GluiFilePicker has been renamed to GluiFileInput. Please update references before 0.7.0.")
-alias GluiFilePicker = GluiFileInput;
+deprecated("FluidFilePicker has been renamed to FluidFileInput. Please update references before 0.7.0.")
+alias FluidFilePicker = FluidFileInput;
 
 @safe:
 
@@ -37,7 +37,7 @@ alias GluiFilePicker = GluiFileInput;
 /// Styles: $(UL
 ///     $(LI `selectedStyle` = Style for the currently selected suggestion.)
 /// )
-class GluiFileInput : GluiInput!GluiFrame {
+class FluidFileInput : FluidInput!FluidFrame {
 
     // TODO maybe create a generic "search all" component? Maybe something that could automatically collect all
     //      button data?
@@ -66,17 +66,17 @@ class GluiFileInput : GluiInput!GluiFrame {
         bool savedFocus;
 
         /// Label with the title of the file picker.
-        GluiLabel titleLabel;
+        FluidLabel titleLabel;
 
         /// Text input field containing the currently selected directory or file for the file picker.
-        GluiFilenameInput input;
+        FluidFilenameInput input;
 
         /// Space for all suggestions.
         ///
         /// Starts empty, and is filled in as suggestions appear. Buttons are reused, so no more buttons will be
         /// allocated once the suggestion limit is reached. Buttons are hidden if they don't contain any relevant
         /// suggestions.
-        GluiSpace suggestions;
+        FluidSpace suggestions;
 
         /// Number of available suggestions.
         int suggestionCount;
@@ -105,7 +105,7 @@ class GluiFileInput : GluiInput!GluiFrame {
             ),
 
             titleLabel  = label(name),
-            input       = new GluiFilenameInput(NodeParams.init, "Path to file...", submitted),
+            input       = new FluidFilenameInput(NodeParams.init, "Path to file...", submitted),
             suggestions = vspace(.layout!"fill"),
         );
 
@@ -178,7 +178,7 @@ class GluiFileInput : GluiInput!GluiFrame {
 
     }
 
-    protected class GluiFilenameInput : GluiTextInput {
+    protected class FluidFilenameInput : FluidTextInput {
 
         mixin defineStyles;
         mixin enableInputActions;
@@ -189,7 +189,7 @@ class GluiFileInput : GluiInput!GluiFrame {
 
         }
 
-        @(GluiInputAction.entryUp)
+        @(FluidInputAction.entryUp)
         protected void _entryUp() {
 
             typedFilename = input.value = input.value.dirName ~ "/";
@@ -197,21 +197,21 @@ class GluiFileInput : GluiInput!GluiFrame {
 
         }
 
-        @(GluiInputAction.cancel)
+        @(FluidInputAction.cancel)
         protected void _cancel() {
 
             cancel();
 
         }
 
-        @(GluiInputAction.entryPrevious)
+        @(FluidInputAction.entryPrevious)
         protected void _entryPrevious() {
 
             offsetSuggestion(-1);
 
         }
 
-        @(GluiInputAction.entryNext)
+        @(FluidInputAction.entryNext)
         protected void _entryNext() {
 
             offsetSuggestion(+1);
@@ -492,24 +492,24 @@ class GluiFileInput : GluiInput!GluiFrame {
     // Does nothing
     protected override bool keyboardImpl() {
 
-        assert(false, "GluiFileInput cannot directly have focus; call GluiFilePicker.focus to resolve automatically");
+        assert(false, "FluidFileInput cannot directly have focus; call FluidFilePicker.focus to resolve automatically");
 
     }
 
 }
 
-private class SuggestionButton : GluiButton!() {
+private class SuggestionButton : FluidButton!() {
 
     mixin enableInputActions;
 
     private {
 
         int index;
-        GluiFileInput input;
+        FluidFileInput input;
 
     }
 
-    this(T...)(GluiFileInput input, int index, T args) {
+    this(T...)(FluidFileInput input, int index, T args) {
 
         super(NodeParams(.layout!"fill"), args);
         this.index = index;

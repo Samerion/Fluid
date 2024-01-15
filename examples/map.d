@@ -10,13 +10,13 @@ void main() {
 
     scope (exit) CloseWindow();
 
-    GluiMapSpace root;
-    GluiHoverButton!() draggableButton;
+    FluidMapSpace root;
+    FluidHoverButton!() draggableButton;
 
     root = mapSpace(
         .layout!(1, "fill"),
         makeTheme!q{
-            GluiFrame.styleAdd.backgroundColor = color!"#aaa";
+            FluidFrame.styleAdd.backgroundColor = color!"#aaa";
         },
 
         // A button to toggle overlap

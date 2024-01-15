@@ -4,33 +4,33 @@ import fluid.style;
 
 /// Theme with no properties set.
 ///
-/// Unlike `Theme.init` or `null`, which will be replaced by gluiDefaultTheme or the parent's theme, this can be used as
+/// Unlike `Theme.init` or `null`, which will be replaced by fluidDefaultTheme or the parent's theme, this can be used as
 /// a valid theme for any node. This makes it useful for automatic tests, since it has guaranteed no margins, padding,
 /// or other properties that may confuse the tester.
 Theme nullTheme;
 
-/// Default theme that Glui will use if no theme is supplied. It is a very simple theme that does the minimum to make
+/// Default theme that Fluid will use if no theme is supplied. It is a very simple theme that does the minimum to make
 /// the role of each node understandable.
-Theme gluiDefaultTheme;
+Theme fluidDefaultTheme;
 
 static this() {
 
     nullTheme = Theme.init.makeTheme!q{};
 
-    gluiDefaultTheme = Theme.init.makeTheme!q{
+    fluidDefaultTheme = Theme.init.makeTheme!q{
 
         textColor = color("000");
 
-        GluiFrame.styleAdd!q{
+        FluidFrame.styleAdd!q{
 
             backgroundColor = color("fff");
 
         };
 
-        GluiButton!().styleAdd!q{
+        FluidButton!().styleAdd!q{
 
             backgroundColor = color("eee");
-            mouseCursor = GluiMouseCursor.pointer;
+            mouseCursor = FluidMouseCursor.pointer;
 
             margin.sideY = 2;
             padding.sideX = 6;
@@ -47,11 +47,11 @@ static this() {
 
         };
 
-        GluiTextInput.styleAdd!q{
+        FluidTextInput.styleAdd!q{
 
             backgroundColor = color("fffc");
             borderStyle = colorBorder(color("aaa"));
-            mouseCursor = GluiMouseCursor.text;
+            mouseCursor = FluidMouseCursor.text;
 
             margin.sideY = 2;
             padding.sideX = 6;
@@ -68,7 +68,7 @@ static this() {
 
         };
 
-        GluiScrollInput.styleAdd!q{
+        FluidScrollInput.styleAdd!q{
 
             backgroundColor = color("aaa");
 
@@ -80,8 +80,8 @@ static this() {
 
         };
 
-        GluiFileInput.unselectedStyleAdd.backgroundColor = color("fff");
-        GluiFileInput.selectedStyleAdd.backgroundColor = color("ff512f");
+        FluidFileInput.unselectedStyleAdd.backgroundColor = color("fff");
+        FluidFileInput.selectedStyleAdd.backgroundColor = color("ff512f");
 
     };
 
