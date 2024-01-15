@@ -15,13 +15,13 @@ import fluid.structs;
 /// A "node slot" node, which displays the node given to it. Allows safely swapping nodes in the layout by reference,
 /// even during drawing. Useful for creating tabs and menus.
 ///
-/// Because FluidNodeSlot does not inherit from T, it uses the single-parameter overload of simpleConstructor.
-alias nodeSlot(alias T) = simpleConstructor!(FluidNodeSlot!T);
+/// Because NodeSlot does not inherit from T, it uses the single-parameter overload of simpleConstructor.
+alias nodeSlot(alias T) = simpleConstructor!(NodeSlot!T);
 
 /// ditto
-class FluidNodeSlot(T : FluidNode) : FluidNode {
+class NodeSlot(T : Node) : Node {
 
-    /// FluidNodeSlot defines its own styles, which will only apply to the slot itself, not the contents. Most of the
+    /// NodeSlot defines its own styles, which will only apply to the slot itself, not the contents. Most of the
     /// styling options will have no effect, but padding and margin will.
     mixin DefineStyles;
 
@@ -110,7 +110,7 @@ class FluidNodeSlot(T : FluidNode) : FluidNode {
         if (value.ignoreMouse) return false;
 
         // hoveredImpl may be private... uhhh
-        return (cast(const FluidNode) value).hoveredImpl(rect, position);
+        return (cast(const Node) value).hoveredImpl(rect, position);
 
     }
 
@@ -121,9 +121,9 @@ class FluidNodeSlot(T : FluidNode) : FluidNode {
     }
 
     /// Swap contents of the two slots.
-    void swapSlots(Slot : FluidNode)(Slot other) {
+    void swapSlots(Slot : Node)(Slot other) {
 
-        static if (is(Slot : FluidNodeSlot!U, U)) {
+        static if (is(Slot : NodeSlot!U, U)) {
 
             import std.format;
             import std.algorithm;
@@ -167,14 +167,14 @@ class FluidNodeSlot(T : FluidNode) : FluidNode {
         import fluid.space;
         import fluid.button;
 
-        FluidNodeSlot!FluidLabel slot1, slot2;
+        NodeSlot!Label slot1, slot2;
 
         auto io = new HeadlessBackend;
         auto root = hspace(
             label("Hello, "),
-            slot1 = nodeSlot!FluidLabel(.layout!"fill"),
+            slot1 = nodeSlot!Label(.layout!"fill"),
             label(" and "),
-            slot2 = nodeSlot!FluidLabel(.layout!"fill"),
+            slot2 = nodeSlot!Label(.layout!"fill"),
         );
 
         slot1 = label("John");
@@ -185,7 +185,7 @@ class FluidNodeSlot(T : FluidNode) : FluidNode {
         });
 
         root.theme = nullTheme.makeTheme!q{
-            FluidLabel.styleAdd.textColor = color!"000";
+            Label.styleAdd.textColor = color!"000";
         };
         root.io = io;
 
@@ -261,14 +261,14 @@ unittest {
 
     import fluid;
 
-    FluidNodeSlot!FluidLabel slot1, slot2;
+    NodeSlot!Label slot1, slot2;
 
     // Slots can be empty, with no node inside
     auto root = vspace(
         label("Hello, "),
-        slot1 = nodeSlot!FluidLabel(.layout!"fill"),
+        slot1 = nodeSlot!Label(.layout!"fill"),
         label(" and "),
-        slot2 = nodeSlot!FluidLabel(.layout!"fill"),
+        slot2 = nodeSlot!Label(.layout!"fill"),
     );
 
     // Slots can be assigned other nodes

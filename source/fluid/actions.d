@@ -15,7 +15,7 @@ import fluid.container;
 /// the next draw. If calling `focusRecurseChildren`, the subject of the call will be excluded from taking focus.
 /// Params:
 ///     parent = Container node to search in.
-void focusRecurse(FluidNode parent) {
+void focusRecurse(Node parent) {
 
     // Perform a tree action to find the child
     parent.queueAction(new FocusRecurseAction);
@@ -54,7 +54,7 @@ unittest {
 }
 
 /// ditto
-void focusRecurseChildren(FluidNode parent) {
+void focusRecurseChildren(Node parent) {
 
     auto action = new FocusRecurseAction;
     action.excludeStartNode = true;
@@ -101,7 +101,7 @@ class FocusRecurseAction : TreeAction {
 
     }
 
-    override void beforeDraw(FluidNode node, Rectangle) {
+    override void beforeDraw(Node node, Rectangle) {
 
         // Ignore if the branch is disabled
         if (node.isDisabledInherited) return;
@@ -127,7 +127,7 @@ class FocusRecurseAction : TreeAction {
 /// Scroll so the given node becomes visible.
 /// Params:
 ///     node = Node to scroll to.
-void scrollIntoView(FluidNode node) {
+void scrollIntoView(Node node) {
 
     node.queueAction(new ScrollIntoViewAction);
 
@@ -196,14 +196,14 @@ class ScrollIntoViewAction : TreeAction {
     private {
 
         /// The node this action attempts to put into view.
-        FluidNode target;
+        Node target;
 
         Vector2 viewport;
         Rectangle childBox;
 
     }
 
-    override void afterDraw(FluidNode node, Rectangle, Rectangle paddingBox, Rectangle) {
+    override void afterDraw(Node node, Rectangle, Rectangle paddingBox, Rectangle) {
 
         // Target node was drawn
         if (node is startNode) {

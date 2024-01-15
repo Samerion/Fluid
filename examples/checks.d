@@ -24,7 +24,7 @@ void main() {
         label("Gone!"),
     );
 
-    class BrokenFrame : FluidFrame {
+    class BrokenFrame : Frame {
 
         override void drawImpl(Rectangle outer, Rectangle inner) @trusted {
 
@@ -33,7 +33,7 @@ void main() {
             debug {
 
                 assert(root.children.length == 3);
-                assert(cast(FluidLabel) root.children[1]),
+                assert(cast(Label) root.children[1]),
                 assertLocked(root.children);
 
                 assertThrown!Error(root.children = root.children[1..$]);

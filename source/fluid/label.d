@@ -14,10 +14,10 @@ import fluid.backend;
 /// Styles: $(UL
 ///     $(LI `style` = Default style for this node.)
 /// )
-alias label = simpleConstructor!FluidLabel;
+alias label = simpleConstructor!Label;
 
 /// ditto
-class FluidLabel : FluidNode {
+class Label : Node {
 
     mixin DefineStyles;
     mixin ImplHoveredRect;
@@ -25,7 +25,7 @@ class FluidLabel : FluidNode {
     public {
 
         /// Text of this label.
-        Text!FluidLabel text;
+        Text!Label text;
 
         /// If true, the content of the label should not be wrapped into new lines if it's too long to fit into one.
         bool disableWrap;
@@ -40,7 +40,7 @@ class FluidLabel : FluidNode {
             this(BasicNodeParam!index sup, string text = "") {
 
                 super(sup);
-                this.text = Text!FluidLabel(this, text);
+                this.text = Text!Label(this, text);
 
             }
 
@@ -51,7 +51,7 @@ class FluidLabel : FluidNode {
     this(NodeParams params, string text) {
 
         super(params);
-        this.text = Text!FluidLabel(this, text);
+        this.text = Text!Label(this, text);
 
     }
 
@@ -59,7 +59,7 @@ class FluidLabel : FluidNode {
     this(NodeParams params) {
 
         super(params);
-        this.text = Text!FluidLabel(this, text);
+        this.text = Text!Label(this, text);
 
     }
 
@@ -92,7 +92,7 @@ class FluidLabel : FluidNode {
         auto root = label("Hello, World!");
 
         root.theme = nullTheme.makeTheme!q{
-            FluidLabel.styleAdd.textColor = color!"000";
+            Label.styleAdd.textColor = color!"000";
         };
         root.io = io;
         root.draw();

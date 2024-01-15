@@ -11,10 +11,10 @@ import fluid.backend;
 
 
 /// Make a new vertical frame.
-alias vframe = simpleConstructor!FluidFrame;
+alias vframe = simpleConstructor!Frame;
 
 /// Make a new horizontal frame.
-alias hframe = simpleConstructor!(FluidFrame, (a) {
+alias hframe = simpleConstructor!(Frame, (a) {
 
     a.directionHorizontal = true;
 
@@ -24,7 +24,7 @@ alias hframe = simpleConstructor!(FluidFrame, (a) {
 /// Styles: $(UL
 ///     $(LI `style` = Default style for this node.)
 /// )
-class FluidFrame : FluidSpace {
+class Frame : Space {
 
     mixin DefineStyles;
     mixin ImplHoveredRect;

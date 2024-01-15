@@ -6,7 +6,7 @@ import fluid.utils;
 import fluid.style;
 import fluid.backend;
 
-alias imageView = simpleConstructor!FluidImageView;
+alias imageView = simpleConstructor!ImageView;
 
 @safe:
 
@@ -14,7 +14,7 @@ alias imageView = simpleConstructor!FluidImageView;
 ///
 /// The image will automatically scale to fit available space. It will keep aspect ratio by default and will be
 /// displayed in the middle of the available box.
-class FluidImageView : FluidNode {
+class ImageView : Node {
 
     mixin DefineStyles;
 
@@ -130,7 +130,8 @@ class FluidImageView : FluidNode {
 
         unittest {
 
-            auto io = new HeadlessBackend;
+            // TODO test for keeping aspect ratio
+            auto io = new HeadlessBackend(Vector2(1000, 1000));
             auto root = imageView(.nullTheme, "logo.png");
 
             // The texture will lazy-load
@@ -142,6 +143,7 @@ class FluidImageView : FluidNode {
             // Texture should be loaded by now
             assert(root.texture != Texture.init);
 
+            io.saveSVG("/tmp/glui.svg");
             io.assertTexture(root.texture, Vector2(0, 0), color!"fff");
 
         }

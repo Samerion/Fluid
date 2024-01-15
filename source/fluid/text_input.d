@@ -13,7 +13,7 @@ import fluid.scroll;
 import fluid.backend;
 import fluid.structs;
 
-alias textInput = simpleConstructor!FluidTextInput;
+alias textInput = simpleConstructor!TextInput;
 
 @safe:
 
@@ -25,7 +25,7 @@ alias textInput = simpleConstructor!FluidTextInput;
 ///     $(LI `emptyStyle` = Style for when the input is empty, i.e. the placeholder is visible. Text should usually be
 ///         grayed out.)
 /// )
-class FluidTextInput : FluidInput!FluidNode {
+class TextInput : InputNode!Node {
 
     mixin defineStyles!(
         "emptyStyle", q{ style },
@@ -59,7 +59,7 @@ class FluidTextInput : FluidInput!FluidNode {
     private {
 
         /// Underlying label controlling the content. Needed to properly adjust it to scroll.
-        FluidScrollable!(TextImpl, "true") contentLabel;
+        Scrollable!(TextImpl, "true") contentLabel;
 
     }
 
@@ -144,7 +144,7 @@ class FluidTextInput : FluidInput!FluidNode {
         // TODO reuse the hashmap maybe?
         auto childTheme = theme.makeTheme!q{
 
-            FluidLabel.styleAdd!q{
+            Label.styleAdd!q{
 
                 // Those are already included in our theme, we should remove them
                 margin = 0;
@@ -314,7 +314,7 @@ class FluidTextInput : FluidInput!FluidNode {
         int submitted;
 
         auto io = new HeadlessBackend;
-        FluidTextInput root;
+        TextInput root;
 
         root = textInput("placeholder", delegate {
             submitted++;
@@ -530,7 +530,7 @@ class FluidTextInput : FluidInput!FluidNode {
 
 }
 
-private class TextImpl : FluidLabel {
+private class TextImpl : Label {
 
     mixin DefineStyles!(
         "activeStyle", q{ style }

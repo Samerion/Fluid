@@ -26,16 +26,16 @@ void main() {
 
 }
 
-FluidSpace showcase(bool withSimpleDisplay = true) {
+Space showcase(bool withSimpleDisplay = true) {
 
     // Let's customize the theme first
     auto theme = makeTheme!q{
 
         // Vertical margin for spaces
-        FluidSpace.styleAdd.margin.sideY = 6;
+        Space.styleAdd.margin.sideY = 6;
 
         // Some nice padding for frames
-        FluidFrame.styleAdd!q{
+        Frame.styleAdd!q{
 
             margin.sideRight = 4;
             padding.sideX = 6;
@@ -44,7 +44,7 @@ FluidSpace showcase(bool withSimpleDisplay = true) {
         };
 
         // Get some nicer background for the main frame
-        FluidScrollFrame.styleAdd!q{
+        ScrollFrame.styleAdd!q{
 
             padding.sideX = 6;
             backgroundColor = color!"#66bfff";
@@ -73,7 +73,7 @@ FluidSpace showcase(bool withSimpleDisplay = true) {
 
 }
 
-FluidSpace boxExample() {
+Space boxExample() {
 
     auto root = vspace(
         .layout!"fill",
@@ -94,7 +94,7 @@ FluidSpace boxExample() {
                     .layout!"fill",
                     vframe(
                         makeTheme!q{
-                            FluidFrame.styleAdd.margin = 16;
+                            Frame.styleAdd.margin = 16;
                         },
                         label("Frame with margin"),
                     ),
@@ -105,7 +105,7 @@ FluidSpace boxExample() {
                     .layout!"fill",
                     vframe(
                         makeTheme!q{
-                            FluidFrame.styleAdd!q{
+                            Frame.styleAdd!q{
                                 border = 6;
                                 borderStyle = colorBorder(color!"#0079f1");
                             };
@@ -119,7 +119,7 @@ FluidSpace boxExample() {
                     .layout!"fill",
                     vframe(
                         makeTheme!q{
-                            FluidFrame.styleAdd.padding = 16;
+                            Frame.styleAdd.padding = 16;
                         },
                         label("Frame with padding"),
                     ),
@@ -133,7 +133,7 @@ FluidSpace boxExample() {
                 vframe(
                     .layout!"fill",
                     makeTheme!q{
-                        FluidFrame.styleAdd!q{
+                        Frame.styleAdd!q{
                             margin = 16;
                             border.sideX = 6;
                             border.sideY = 4;
@@ -151,12 +151,12 @@ FluidSpace boxExample() {
 
 }
 
-FluidSpace inputExample() {
+Space inputExample() {
 
     const firstText = "Press one of the buttons below to change text";
 
-    FluidLabel frontLabel;
-    FluidTextInput frontInput;
+    Label frontLabel;
+    TextInput frontInput;
 
     enum never = delegate() => assert(0);
 
@@ -208,7 +208,7 @@ FluidSpace inputExample() {
                 button(
                     makeTheme!q{
 
-                        FluidButton!().styleAdd!q{
+                        Button!().styleAdd!q{
 
                             // Default style
                             backgroundColor = color!"#ccc";
@@ -260,9 +260,9 @@ FluidSpace inputExample() {
 
 }
 
-FluidSpace popupExample() {
+Space popupExample() {
 
-    FluidSpace root;
+    Space root;
 
     root = vspace(
         .layout!"fill",
@@ -299,27 +299,27 @@ FluidSpace popupExample() {
 
 }
 
-FluidSpace slotExample() {
+Space slotExample() {
 
-    FluidNodeSlot!FluidNode slot;
-    FluidNodeSlot!FluidNode emptiedSlot;
-    FluidNodeSlot!FluidNode[5] slots;
+    NodeSlot!Node slot;
+    NodeSlot!Node emptiedSlot;
+    NodeSlot!Node[5] slots;
 
     // Example A
     auto exampleA = vspace(
         label("Press a button to place a node below"),
-        slot = nodeSlot!FluidNode(),
+        slot = nodeSlot!Node(),
 
         hspace(
             vframe(
-                slots[0] = nodeSlot!FluidNode(
+                slots[0] = nodeSlot!Node(
                     label("Hello, World!")
                 ),
                 button("SWAP", { slot.swapSlots(slots[0]); }),
             ),
 
             vframe(
-                slots[1] = nodeSlot!FluidNode(
+                slots[1] = nodeSlot!Node(
                     vframe(
                         label("Hi!")
                     ),
@@ -328,13 +328,13 @@ FluidSpace slotExample() {
             ),
 
             vframe(
-                slots[2] = nodeSlot!FluidNode(
+                slots[2] = nodeSlot!Node(
                     hspace(
                         // Nested slots!
-                        slots[3] = nodeSlot!FluidNode(
+                        slots[3] = nodeSlot!Node(
                             button("Swap", { slots[4].swapSlots(slots[3]); })
                         ),
-                        slots[4] = nodeSlot!FluidNode(
+                        slots[4] = nodeSlot!Node(
                             label("Text")
                         ),
                     ),
@@ -345,11 +345,11 @@ FluidSpace slotExample() {
     );
 
     // We can swap between two differently typed slots if they hold nodes of compatible virtual type
-    auto slot1 = nodeSlot!FluidNode(.layout!(1, "start"), label("Label 1"));
-    auto slot2 = nodeSlot!FluidLabel(.layout!(1, "end"), label("Label 2"));
+    auto slot1 = nodeSlot!Node(.layout!(1, "start"), label("Label 1"));
+    auto slot2 = nodeSlot!Label(.layout!(1, "end"), label("Label 2"));
 
     // But they will fail to compile if the types cannot intersect
-    auto slot3 = nodeSlot!FluidFrame();
+    auto slot3 = nodeSlot!Frame();
 
     static assert(!__traits(compiles,  // Therefore, this fails to compile
         slot3.swapSlots(slot2)
@@ -380,7 +380,7 @@ FluidSpace slotExample() {
 
 }
 
-FluidSpace sizeLimitExample() {
+Space sizeLimitExample() {
 
     auto root = vspace(
         .layout!"fill",
@@ -418,7 +418,7 @@ FluidSpace sizeLimitExample() {
                 // Creating size-locked nodes is easy and convenient and works with any node type through a
                 // template! It accepts any node class or node constructor like hframe.
                 //
-                //      sizeLock!FluidLabel
+                //      sizeLock!Label
                 //      sizeLock!label
                 //      sizeLock!vframe
                 //      sizeLock!hframe
@@ -431,10 +431,10 @@ FluidSpace sizeLimitExample() {
 
 }
 
-FluidSpace gridExample() {
+Space gridExample() {
 
-    FluidSpace root;
-    FluidGrid myGrid;
+    Space root;
+    Grid myGrid;
 
     // Create the grid
     root = vspace(
@@ -446,7 +446,7 @@ FluidSpace gridExample() {
             .layout!"fill",
             .segments!4,
 
-            label("You can make tables and grids with FluidGrid"),
+            label("You can make tables and grids with Grid"),
             [
                 label("This"),
                 label("Is"),
@@ -466,7 +466,7 @@ FluidSpace gridExample() {
 }
 
 /// Advanced: Create a new row with randomly sized buttons
-void addRow(FluidGrid myGrid) @safe {
+void addRow(Grid myGrid) @safe {
 
     import std.random;
 
@@ -495,7 +495,7 @@ void spawnSimpledisplay() {
     import arsd.simpledisplay;
 
     SimpleWindow window;
-    FluidSpace sdpyRoot;
+    Space sdpyRoot;
     SimpledisplayBackend backend;
 
     // Create the window
@@ -522,11 +522,11 @@ void spawnSimpledisplay() {
 
 }
 
-FluidSpace simpledisplayExample() {
+Space simpledisplayExample() {
 
     import std.concurrency;
 
-    FluidSpace root;
+    Space root;
 
     // Create information box in the showcase
     root = vspace(

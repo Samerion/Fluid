@@ -63,7 +63,7 @@ private void makeThemeImpl(string init)(Theme parent) {
     {
 
         // If the theme has a default style definition, push it
-        if (auto nodeStyle = &FluidNode.styleKey in currentTheme) {
+        if (auto nodeStyle = &Node.styleKey in currentTheme) {
 
             styleStack ~= *nodeStyle;
 
@@ -76,7 +76,7 @@ private void makeThemeImpl(string init)(Theme parent) {
         scope (exit) styleStack.popBack();
 
         // Add the node style
-        nestStyle!(init, FluidNode.styleKey);
+        nestStyle!(init, Node.styleKey);
 
     }
 

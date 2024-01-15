@@ -18,7 +18,7 @@ import fluid.container;
 @safe:
 
 
-alias mapSpace = simpleConstructor!FluidMapSpace;
+alias mapSpace = simpleConstructor!MapSpace;
 
 /// Defines the direction the node is "dropped from", that is, which corner of the object will be the anchor.
 /// Defaults to `start, start`, therefore, the supplied coordinate refers to the top-left of the object.
@@ -68,7 +68,7 @@ MapDropVector dropVector(string dropX, string dropY)() {
 
 }
 
-class FluidMapSpace : FluidSpace {
+class MapSpace : Space {
 
     mixin DefineStyles;
 
@@ -77,7 +77,7 @@ class FluidMapSpace : FluidSpace {
     alias Position = MapPosition;
 
     /// Mapping of nodes to their positions.
-    Position[FluidNode] positions;
+    Position[Node] positions;
 
     /// If true, the node will prevent its children from leaving the screen space.
     bool preventOverflow;
@@ -90,14 +90,14 @@ class FluidMapSpace : FluidSpace {
         /// Child currently dragged with the mouse.
         ///
         /// The child will move along with mouse movements performed by the user.
-        FluidNode _mouseDrag;
+        Node _mouseDrag;
 
     }
 
     /// Construct the space. Arguments are either nodes, or positions/vectors affecting the next node added through
     /// the constructor.
     this(T...)(NodeParams params, T children)
-    if (!T.length || is(T[0] == Vector2) || is(T[0] == DropVector) || is(T[0] == Position) || is(T[0] : FluidNode)) {
+    if (!T.length || is(T[0] == Vector2) || is(T[0] == DropVector) || is(T[0] == Position) || is(T[0] : Node)) {
 
         super(params);
 
@@ -143,7 +143,7 @@ class FluidMapSpace : FluidSpace {
             /// Construct the space. Arguments are either nodes, or positions/vectors affecting the next node added through
             /// the constructor.
             this(T...)(BasicNodeParam!index params, T children)
-            if (!T.length || is(T[0] == Vector2) || is(T[0] == DropVector) || is(T[0] == Position) || is(T[0] : FluidNode)) {
+            if (!T.length || is(T[0] == Vector2) || is(T[0] == DropVector) || is(T[0] == Position) || is(T[0] : Node)) {
 
                 super(params);
 
@@ -187,7 +187,7 @@ class FluidMapSpace : FluidSpace {
     }
 
     /// Add a new child to the space and assign it some position.
-    void addChild(FluidNode node, Position position)
+    void addChild(Node node, Position position)
     in ([position.coords.tupleof].any!isFinite, format!"Given %s isn't valid, values must be finite"(position))
     do {
 
@@ -197,14 +197,14 @@ class FluidMapSpace : FluidSpace {
     }
 
     /// ditto
-    void addFocusedChild(FluidNode node, Position position) {
+    void addFocusedChild(Node node, Position position) {
 
         addChild(node, position);
         node.focusRecurse();
 
     }
 
-    void moveChild(FluidNode node, Position position)
+    void moveChild(Node node, Position position)
     in ([position.coords.tupleof].any!isFinite, format!"Given %s isn't valid, values must be finite"(position))
     do {
 
@@ -212,7 +212,7 @@ class FluidMapSpace : FluidSpace {
 
     }
 
-    void moveChild(FluidNode node, Vector2 vector)
+    void moveChild(Node node, Vector2 vector)
     in ([vector.tupleof].any!isFinite, format!"Given %s isn't valid, values must be finite"(vector))
     do {
 
@@ -220,7 +220,7 @@ class FluidMapSpace : FluidSpace {
 
     }
 
-    void moveChild(FluidNode node, DropVector vector) {
+    void moveChild(Node node, DropVector vector) {
 
         positions[node].drop = vector;
 
@@ -228,7 +228,7 @@ class FluidMapSpace : FluidSpace {
 
     /// Make a node move relatively according to mouse position changes, making it behave as if it was being dragged by
     /// the mouse.
-    FluidNode mouseDrag(FluidNode node) @trusted {
+    Node mouseDrag(Node node) @trusted {
 
         assert(node in positions, "Requested node is not present in the map");
 
@@ -240,7 +240,7 @@ class FluidMapSpace : FluidSpace {
     }
 
     /// Get the node currently affected by mouseDrag.
-    inout(FluidNode) mouseDrag() inout { return _mouseDrag; }
+    inout(Node) mouseDrag() inout { return _mouseDrag; }
 
     /// Stop current mouse movements
     final void stopMouseDrag() {
@@ -250,7 +250,7 @@ class FluidMapSpace : FluidSpace {
     }
 
     /// Drag the given child, changing its position relatively.
-    void dragChildBy(FluidNode node, Vector2 delta) {
+    void dragChildBy(Node node, Vector2 delta) {
 
         auto position = node in positions;
         assert(position, "Dragged node is not present in the map");
@@ -355,7 +355,7 @@ class FluidMapSpace : FluidSpace {
     private alias getStartCorner = getCorner!false;
     private alias getEndCorner   = getCorner!true;
 
-    private Vector2 getCorner(bool end)(Vector2 space, FluidNode child, Position position) {
+    private Vector2 getCorner(bool end)(Vector2 space, Node child, Position position) {
 
         Vector2 result;
 
@@ -417,7 +417,7 @@ class FluidMapSpace : FluidSpace {
 
         import fluid.structs : layout;
 
-        class RectangleSpace : FluidSpace {
+        class RectangleSpace : Space {
 
             Color color;
 

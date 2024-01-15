@@ -15,7 +15,7 @@ import fluid.backend;
 @safe:
 
 
-/// Make a FluidInputAction handler react to every frame as long as the action is being held (mouse button held down,
+/// Make a InputAction handler react to every frame as long as the action is being held (mouse button held down,
 /// key held down, etc.).
 enum whileDown;
 
@@ -138,7 +138,8 @@ unittest {
     static assert(isInputActionType!(FluidInputAction.entryUp));
     static assert(isInputActionType!(MyAction.foo));
 
-    static assert(!isInputActionType!FluidInput);
+    static assert(!isInputActionType!InputNode);
+    static assert(!isInputActionType!InputAction);
     static assert(!isInputActionType!(InputAction!(FluidInputAction.entryUp)));
     static assert(!isInputActionType!FluidInputAction);
     static assert(!isInputActionType!MyEnum);
@@ -689,15 +690,15 @@ interface FluidHoverable {
     ref inout(bool) isDisabled() inout;
 
     /// Get the underlying node.
-    final inout(FluidNode) asNode() inout {
+    final inout(Node) asNode() inout {
 
-        return cast(inout FluidNode) this;
+        return cast(inout Node) this;
 
     }
 
     /// Run input actions for the node.
     ///
-    /// Internal. `FluidNode` calls this for the focused node every frame, falling back to `mouseImpl` if this returns
+    /// Internal. `Node` calls this for the focused node every frame, falling back to `mouseImpl` if this returns
     /// false.
     ///
     /// Implement by adding `mixin enableInputActions` in your class.
@@ -708,7 +709,7 @@ interface FluidHoverable {
         import fluid.node;
         import std.format;
 
-        static assert(is(typeof(this) : FluidNode), format!"%s : FluidHoverable must inherit from a Node"(typeid(this)));
+        static assert(is(typeof(this) : Node), format!"%s : FluidHoverable must inherit from a Node"(typeid(this)));
 
         override ref inout(bool) isDisabled() inout {
 
@@ -722,8 +723,8 @@ interface FluidHoverable {
 
         import fluid.node;
 
-        static assert(is(typeof(this) : FluidNode),
-            format!"%s : FluidHoverable must inherit from FluidNode"(typeid(this)));
+        static assert(is(typeof(this) : Node),
+            format!"%s : FluidHoverable must inherit from Node"(typeid(this)));
 
         override bool runMouseInputActions() {
 
@@ -842,7 +843,7 @@ interface FluidFocusable : FluidHoverable {
 
     /// Run input actions for the node.
     ///
-    /// Internal. `FluidNode` calls this for the focused node every frame, falling back to `keyboardImpl` if this returns
+    /// Internal. `Node` calls this for the focused node every frame, falling back to `keyboardImpl` if this returns
     /// false.
     ///
     /// Implement by adding `mixin enableInputActions` in your class.
@@ -873,7 +874,7 @@ interface FluidFocusable : FluidHoverable {
 ///     $(LI `focusStyleKey` = Style for when the input is focused.)
 ///     $(LI `disabledStyleKey` = Style for when the input is disabled.)
 /// )
-abstract class FluidInput(Parent : FluidNode) : Parent, FluidFocusable {
+abstract class InputNode(Parent : Node) : Parent, FluidFocusable {
 
     mixin defineStyles!(
         "focusStyle", q{ style },
@@ -1001,7 +1002,7 @@ unittest {
     int cancelCount;
 
     auto io = new HeadlessBackend;
-    auto root = new class FluidInput!FluidLabel {
+    auto root = new class InputNode!Label {
 
         @safe:
 
@@ -1106,7 +1107,7 @@ unittest {
     // This test checks if "hover slipping" happens; namely, if the user clicks and holds on an object, then hovers on
     // something else and releases, the click should be cancelled, and no other object should react to the same click.
 
-    class SquareButton : FluidButton!() {
+    class SquareButton : Button!() {
 
         mixin enableInputActions;
 

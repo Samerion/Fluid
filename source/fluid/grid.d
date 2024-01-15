@@ -15,8 +15,8 @@ import fluid.structs;
 @safe:
 
 
-alias grid = simpleConstructor!FluidGrid;
-alias gridRow = simpleConstructor!FluidGridRow;
+alias grid = simpleConstructor!Grid;
+alias gridRow = simpleConstructor!GridRow;
 
 /// A special version of Layout, see `segments`.
 struct Segments {
@@ -39,8 +39,8 @@ template segments(T...) {
 
 }
 
-/// The FluidGrid node will align its children in a 2D grid.
-class FluidGrid : FluidFrame {
+/// The Grid node will align its children in a 2D grid.
+class Grid : Frame {
 
     mixin DefineStyles;
 
@@ -102,14 +102,14 @@ class FluidGrid : FluidFrame {
         auto io = new HeadlessBackend;
         auto root = grid(
             .Theme.init.makeTheme!q{
-                FluidLabel.styleAdd!q{
+                Label.styleAdd!q{
                     textColor = color!"000";
                 };
             },
             .layout!"fill",
             .segments!4,
 
-            label("You can make tables and grids with FluidGrid"),
+            label("You can make tables and grids with Grid"),
             [
                 label("This"),
                 label("Is"),
@@ -131,15 +131,15 @@ class FluidGrid : FluidFrame {
         assert(root.segmentCount == 4);
         assert(root.children.length == 3);
 
-        assert(cast(FluidLabel) root.children[0]);
+        assert(cast(Label) root.children[0]);
 
-        auto row1 = cast(FluidGridRow) root.children[1];
+        auto row1 = cast(GridRow) root.children[1];
 
         assert(row1);
         assert(row1.segmentCount == 4);
         assert(row1.children.all!"a.layout.expand == 0");
 
-        auto row2 = cast(FluidGridRow) root.children[2];
+        auto row2 = cast(GridRow) root.children[2];
 
         assert(row2);
         assert(row2.segmentCount == 4);
@@ -249,7 +249,7 @@ class FluidGrid : FluidFrame {
             foreach (child; children) {
 
                 // Only count rows
-                if (auto row = cast(FluidGridRow) child) {
+                if (auto row = cast(GridRow) child) {
 
                     // Recalculate the segments needed by the row
                     row.calculateSegments();
@@ -278,13 +278,13 @@ class FluidGrid : FluidFrame {
     override void drawImpl(Rectangle outer, Rectangle inner) {
 
         // TODO WHY is this done here and not in resizeImpl?
-        void expand(FluidNode child) {
+        void expand(Node child) {
 
             // Given more grid space than we allocated
             if (lastWidth >= inner.width + 1) return;
 
             // Only proceed if the given node is a row
-            if (!cast(FluidGridRow) child) return;
+            if (!cast(GridRow) child) return;
 
             // Update the width
             lastWidth = inner.width;
@@ -350,15 +350,15 @@ class FluidGrid : FluidFrame {
 
 }
 
-/// A single row in a `FluidGrid`.
-class FluidGridRow : FluidFrame {
+/// A single row in a `Grid`.
+class GridRow : Frame {
 
     mixin DefineStyles;
 
-    FluidGrid parent;
+    Grid parent;
     ulong segmentCount;
 
-    deprecated("Please use this(NodeParams, FluidGrid, T args) instead") {
+    deprecated("Please use this(NodeParams, Grid, T args) instead") {
 
         static foreach (i; 0..BasicNodeParamLength) {
 
@@ -366,7 +366,7 @@ class FluidGridRow : FluidFrame {
             ///     params = Standard Fluid constructor parameters.
             ///     parent = Grid this row will be placed in.
             ///     args = Children to be placed in the row.
-            this(T...)(BasicNodeParam!i params, FluidGrid parent, T args) {
+            this(T...)(BasicNodeParam!i params, Grid parent, T args) {
 
                 super(params);
                 this.layout.nodeAlign = NodeAlign.fill;
@@ -389,7 +389,7 @@ class FluidGridRow : FluidFrame {
     ///     params = Standard Fluid constructor parameters.
     ///     parent = Grid this row will be placed in.
     ///     args = Children to be placed in the row.
-    this(T...)(NodeParams params, FluidGrid parent, T args) {
+    this(T...)(NodeParams params, Grid parent, T args) {
 
         super(params);
         this.layout.nodeAlign = NodeAlign.fill;

@@ -21,13 +21,13 @@ static this() {
 
         textColor = color("000");
 
-        FluidFrame.styleAdd!q{
+        Frame.styleAdd!q{
 
             backgroundColor = color("fff");
 
         };
 
-        FluidButton!().styleAdd!q{
+        Button!().styleAdd!q{
 
             backgroundColor = color("eee");
             mouseCursor = FluidMouseCursor.pointer;
@@ -47,7 +47,7 @@ static this() {
 
         };
 
-        FluidTextInput.styleAdd!q{
+        TextInput.styleAdd!q{
 
             backgroundColor = color("fffc");
             borderStyle = colorBorder(color("aaa"));
@@ -68,7 +68,7 @@ static this() {
 
         };
 
-        FluidScrollInput.styleAdd!q{
+        ScrollInput.styleAdd!q{
 
             backgroundColor = color("aaa");
 
@@ -80,8 +80,8 @@ static this() {
 
         };
 
-        FluidFileInput.unselectedStyleAdd.backgroundColor = color("fff");
-        FluidFileInput.selectedStyleAdd.backgroundColor = color("ff512f");
+        FileInput.unselectedStyleAdd.backgroundColor = color("fff");
+        FileInput.selectedStyleAdd.backgroundColor = color("ff512f");
 
     };
 

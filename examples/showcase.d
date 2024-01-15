@@ -17,32 +17,32 @@ void main() {
     // Tip: To make a new theme from scratch without inheriting Fluid defaults, use `Theme.init.makeTheme`
     auto redTheme = makeTheme!q{
 
-        FluidFrame.styleAdd.backgroundColor = color!"#c01212";
-        FluidButton!().styleAdd.backgroundColor = color!"#fff";
+        Frame.styleAdd.backgroundColor = color!"#c01212";
+        Button!().styleAdd.backgroundColor = color!"#fff";
 
     };
     auto greenTheme = redTheme.makeTheme!q{
 
-        FluidFrame.styleAdd.backgroundColor = color!"#12c012";
+        Frame.styleAdd.backgroundColor = color!"#12c012";
 
     };
     auto blueTheme = redTheme.makeTheme!q{
 
-        FluidFrame.styleAdd.backgroundColor = color!"#1212c0";
+        Frame.styleAdd.backgroundColor = color!"#1212c0";
 
     };
 
     Layout fill = .layout!(1, "fill");
 
     // Save IDs
-    FluidFrame secondColumn;
+    Frame secondColumn;
 
     /// A button which will disappear on click.
-    FluidButton!() hidingButton() {
+    Button!() hidingButton() {
 
         static size_t number;
 
-        FluidButton!() result;
+        Button!() result;
         result = button(format!"Click me! %s"(++number), { result.remove; });
         return result;
 
@@ -103,7 +103,7 @@ void main() {
                         .layout!(1, "fill", "center"),
                         makeTheme!q{
 
-                            FluidLabel.styleAdd!q{
+                            Label.styleAdd!q{
                                 margin = 6;
                                 padding = 12;
                                 backgroundColor = color!"#fffa";

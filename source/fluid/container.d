@@ -26,7 +26,7 @@ interface FluidContainer {
     ///     Estimated new padding box for the child.
     /// See_Also:
     ///     `fluid.actions.scrollIntoView` for recursive scrolling via `TreeAction`.
-    Rectangle shallowScrollTo(FluidNode child, Vector2 viewport, Rectangle parentBox, Rectangle childBox);
+    Rectangle shallowScrollTo(Node child, Vector2 viewport, Rectangle parentBox, Rectangle childBox);
 
     /// Set focus on the first available focusable node in this tree.
     final void focusChild() {
@@ -35,11 +35,11 @@ interface FluidContainer {
 
     }
 
-    final inout(FluidNode) asNode() inout {
+    final inout(Node) asNode() inout {
 
         import std.format;
 
-        auto node = cast(inout FluidNode) this;
+        auto node = cast(inout Node) this;
 
         assert(node, format!"%s : FluidContainer must inherit from a Node"(typeid(this)));
 

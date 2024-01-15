@@ -15,7 +15,7 @@ debug struct Children {
 
     private {
 
-        FluidNode[] _children;
+        Node[] _children;
         bool _isLocked;
         bool _hasChanged;
 
@@ -69,7 +69,7 @@ debug struct Children {
     }
 
     /// Get the first child.
-    ref inout(FluidNode) front() inout {
+    ref inout(Node) front() inout {
 
         assert(!empty, "Can't get the first item of an empty children list");
 
@@ -77,7 +77,7 @@ debug struct Children {
 
     }
 
-    void opAssign(FluidNode[] newList) {
+    void opAssign(Node[] newList) {
 
         assert(!_isLocked, mutateError);
         _hasChanged = true;
@@ -86,7 +86,7 @@ debug struct Children {
     }
 
     // Indexing and slicing is allowed
-    inout(FluidNode[]) opIndex() inout {
+    inout(Node[]) opIndex() inout {
 
         return _children[];
 
@@ -104,7 +104,7 @@ debug struct Children {
 
     }
 
-    ref FluidNode[] getChildren() return {
+    ref Node[] getChildren() return {
 
         debug assert(!_isLocked, "Can't get a mutable reference to children while rendering. Consider doing this in "
             ~ "input handling methods like mouseImpl/keyboardImpl which happen after rendering is complete. But if "
@@ -115,7 +115,7 @@ debug struct Children {
 
     }
 
-    int opApply(scope int delegate(FluidNode node) @safe dg) {
+    int opApply(scope int delegate(Node node) @safe dg) {
 
         foreach (child; _children) {
 
@@ -127,7 +127,7 @@ debug struct Children {
 
     }
 
-    int opApply(scope int delegate(size_t index, FluidNode node) @safe dg) {
+    int opApply(scope int delegate(size_t index, Node node) @safe dg) {
 
         foreach (i, child; _children) {
 
@@ -139,7 +139,7 @@ debug struct Children {
 
     }
 
-    int opApply(scope int delegate(FluidNode node) @system dg) @system {
+    int opApply(scope int delegate(Node node) @system dg) @system {
 
         foreach (child; _children) {
 
@@ -151,7 +151,7 @@ debug struct Children {
 
     }
 
-    int opApply(scope int delegate(size_t index, FluidNode node) @system dg) @system {
+    int opApply(scope int delegate(size_t index, Node node) @system dg) @system {
 
         foreach (i, child; _children) {
 
@@ -167,7 +167,7 @@ debug struct Children {
 
 }
 
-else alias Children = FluidNode[];
+else alias Children = Node[];
 
 static assert(isInputRange!Children);
 
@@ -223,7 +223,7 @@ void assertLocked(ref Children children) {
 
 /// Get the children list as const.
 pragma(inline)
-const(FluidNode[]) asConst(Children children) {
+const(Node[]) asConst(Children children) {
 
     debug return children._children;
     else  return children;
@@ -232,7 +232,7 @@ const(FluidNode[]) asConst(Children children) {
 
 /// Get a reference to the children list forcefully, ignoring the lock. Doesn't set the dirty flag.
 pragma(inline)
-ref FluidNode[] forceMutable(return ref Children children) @system {
+ref Node[] forceMutable(return ref Children children) @system {
 
     debug return children._children;
     else  return children;

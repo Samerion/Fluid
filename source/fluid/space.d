@@ -23,18 +23,18 @@ import fluid.container;
 /// Nodes are laid in a column (`vframe`) or in a row (`hframe`).
 ///
 /// Space only acts as a container and doesn't implement styles and doesn't take focus. It's very useful as a helper for
-/// building layout, while `FluidFrame` remains to provide styling.
-alias vspace = simpleConstructor!FluidSpace;
+/// building layout, while `Frame` remains to provide styling.
+alias vspace = simpleConstructor!Space;
 
 /// ditto
-alias hspace = simpleConstructor!(FluidSpace, (a) {
+alias hspace = simpleConstructor!(Space, (a) {
 
     a.directionHorizontal = true;
 
 });
 
 /// ditto
-class FluidSpace : FluidNode, FluidContainer {
+class Space : Node, FluidContainer {
 
     mixin DefineStyles;
 
@@ -59,11 +59,11 @@ class FluidSpace : FluidNode, FluidContainer {
     }
 
     // Generate constructors
-    deprecated("Use this(NodeParams params, FluidNode[] nodes...) instead") {
+    deprecated("Use this(NodeParams params, Node[] nodes...) instead") {
 
         static foreach (index; 0 .. BasicNodeParamLength) {
 
-            this(BasicNodeParam!index params, FluidNode[] nodes...) {
+            this(BasicNodeParam!index params, Node[] nodes...) {
 
                 super(params);
                 this.children ~= nodes;
@@ -74,7 +74,7 @@ class FluidSpace : FluidNode, FluidContainer {
 
     }
 
-    this(NodeParams params, FluidNode[] nodes...) {
+    this(NodeParams params, Node[] nodes...) {
 
         super(params);
         this.children ~= nodes;
@@ -93,7 +93,7 @@ class FluidSpace : FluidNode, FluidContainer {
 
     }
 
-    override Rectangle shallowScrollTo(const FluidNode, Vector2, Rectangle, Rectangle childBox) {
+    override Rectangle shallowScrollTo(const Node, Vector2, Rectangle, Rectangle childBox) {
 
         // no-op, reordering should not be done without explicit orders
         return childBox;
@@ -118,7 +118,7 @@ class FluidSpace : FluidNode, FluidContainer {
         Vector2 maxExpandSize;
 
         // Collect expanding children in a separate array
-        FluidNode[] expandChildren;
+        Node[] expandChildren;
         foreach (child; children) {
 
             // This node expands and isn't hidden
@@ -206,9 +206,9 @@ class FluidSpace : FluidNode, FluidContainer {
 
         struct ChildIterator {
 
-            FluidSpace node;
+            Space node;
 
-            int opApply(int delegate(FluidNode) @safe fun) @trusted {
+            int opApply(int delegate(Node) @safe fun) @trusted {
 
                 node.children.lock();
                 scope (exit) node.children.unlock();
@@ -259,9 +259,9 @@ class FluidSpace : FluidNode, FluidContainer {
     /// Iterate over every child and perform the painting function. Will automatically remove nodes queued for removal.
     /// Returns: An iterator that goes over all nodes.
     deprecated("Use filterChildren instead")
-    protected void drawChildren(void delegate(FluidNode) @safe painter) {
+    protected void drawChildren(void delegate(Node) @safe painter) {
 
-        FluidNode[] leftovers;
+        Node[] leftovers;
 
         children.lock();
         scope (exit) children.unlock();
@@ -333,7 +333,7 @@ class FluidSpace : FluidNode, FluidContainer {
     /// Params:
     ///     child     = Child to place
     ///     available = Available space
-    private Vector2 childSpace(const FluidNode child, Vector2 available, bool stateful) const
+    private Vector2 childSpace(const Node child, Vector2 available, bool stateful) const
     in(
         child.isHidden || child.layout.expand <= denominator,
         format!"Nodes %s/%s sizes are out of date, call updateSize after updating the tree or layout (%s/%s)"(
@@ -421,7 +421,7 @@ unittest {
 
 unittest {
 
-    class Square : FluidNode {
+    class Square : Node {
 
         mixin implHoveredRect;
 
@@ -484,7 +484,7 @@ unittest {
 
     root.io = io;
     root.theme = nullTheme.makeTheme!q{
-        FluidFrame.styleAdd.backgroundColor = color!"7d9";
+        Frame.styleAdd.backgroundColor = color!"7d9";
     };
 
     // Frame 1
@@ -553,7 +553,7 @@ unittest {
     );
 
     root.theme = nullTheme.makeTheme!q{
-        FluidFrame.styleAdd.backgroundColor = color!"0004";
+        Frame.styleAdd.backgroundColor = color!"0004";
     };
     root.io = io;
     root.draw();

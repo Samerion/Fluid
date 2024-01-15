@@ -19,15 +19,15 @@ import fluid.backend;
 deprecated("popup has been renamed to popupFrame")
 alias popup = popupFrame;
 
-deprecated("FluidPopup has been renamed to FluidPopupFrame")
-alias FluidPopup = FluidPopupFrame;
+deprecated("FluidPopup has been renamed to PopupFrame")
+alias FluidPopup = PopupFrame;
 
-alias popupFrame = simpleConstructor!FluidPopupFrame;
+alias popupFrame = simpleConstructor!PopupFrame;
 
 /// Spawn a new popup attached to the given tree.
 ///
 /// The popup automatically gains focus.
-void spawnPopup(LayoutTree* tree, FluidPopupFrame popup) {
+void spawnPopup(LayoutTree* tree, PopupFrame popup) {
 
     popup.tree = tree;
 
@@ -46,7 +46,7 @@ void spawnPopup(LayoutTree* tree, FluidPopupFrame popup) {
 /// Spawn a new popup, as a child of another. While the child is active, the parent will also remain so.
 ///
 /// The newly spawned popup automatically gains focus.
-void spawnChildPopup(FluidPopupFrame parent, FluidPopupFrame popup) {
+void spawnChildPopup(PopupFrame parent, PopupFrame popup) {
 
     auto tree = parent.tree;
 
@@ -58,9 +58,9 @@ void spawnChildPopup(FluidPopupFrame parent, FluidPopupFrame popup) {
 
 }
 
-/// This is an override of FluidFrame to simplify creating popups: if clicked outside of it, it will disappear from
+/// This is an override of Frame to simplify creating popups: if clicked outside of it, it will disappear from
 /// the node tree.
-class FluidPopupFrame : FluidFrame, FluidFocusable {
+class PopupFrame : Frame, FluidFocusable {
 
     mixin defineStyles;
     mixin makeHoverable;
@@ -74,7 +74,7 @@ class FluidPopupFrame : FluidFrame, FluidFocusable {
         /// A child popup will keep this focus alive while focused.
         /// Typically, child popups are spawned as a result of actions within the popup itself, for example in context
         /// menus, an action can spawn a submenu. Use `spawnChildPopup` to spawn child popups.
-        FluidPopupFrame childPopup;
+        PopupFrame childPopup;
 
         /// Node that had focus before `popupFrame` took over. When the popup is closed using a keyboard shortcut, this
         /// node will take focus again.
@@ -90,7 +90,7 @@ class FluidPopupFrame : FluidFrame, FluidFocusable {
 
     }
 
-    this(NodeParams params, FluidNode[] nodes...) {
+    this(NodeParams params, Node[] nodes...) {
 
         super(params, nodes);
 
@@ -120,7 +120,7 @@ class FluidPopupFrame : FluidFrame, FluidFocusable {
 
         const viewportSize = io.windowSize;
 
-        // This method is very similar to FluidMapSpace.getStartCorner, but simplified to handle the "automatic" case
+        // This method is very similar to MapSpace.getStartCorner, but simplified to handle the "automatic" case
         // only.
 
         // Define important points on the screen: center is our anchor, left is the other corner of the popup if we
@@ -244,7 +244,7 @@ class PopupNodeAction : TreeAction {
 
     public {
 
-        FluidPopupFrame popup;
+        PopupFrame popup;
 
     }
 
@@ -255,7 +255,7 @@ class PopupNodeAction : TreeAction {
 
     }
 
-    this(FluidPopupFrame popup) {
+    this(PopupFrame popup) {
 
         this.startNode = this.popup = popup;
         popup.show();
@@ -263,7 +263,7 @@ class PopupNodeAction : TreeAction {
 
     }
 
-    override void beforeResize(FluidNode root, Vector2 viewportSize) {
+    override void beforeResize(Node root, Vector2 viewportSize) {
 
         // Perform the resize
         popup.resizeInternal(root.tree, root.theme, viewportSize);
@@ -302,7 +302,7 @@ class PopupNodeAction : TreeAction {
 
     }
 
-    override void afterDraw(FluidNode node, Rectangle space) {
+    override void afterDraw(Node node, Rectangle space) {
 
         import fluid.popup_button;
 
@@ -310,7 +310,7 @@ class PopupNodeAction : TreeAction {
         if (!hasResized) return;
 
         // Mark popup buttons
-        if (auto button = cast(FluidPopupButton) node) {
+        if (auto button = cast(PopupButton) node) {
 
             button.parentPopup = popup;
 

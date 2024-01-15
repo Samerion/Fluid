@@ -9,8 +9,8 @@ import fluid.utils;
 import fluid.style;
 import fluid.backend;
 
-alias button = simpleConstructor!(FluidButton!FluidLabel);
-alias frameButton = simpleConstructor!(FluidButton!FluidFrame);
+alias button = simpleConstructor!(Button!Label);
+alias frameButton = simpleConstructor!(Button!Frame);
 
 @safe:
 
@@ -22,7 +22,7 @@ alias frameButton = simpleConstructor!(FluidButton!FluidFrame);
 ///   $(LI `pressStyleKey` = Style to apply when the button is pressed.)
 ///   $(LI `focusStyleKey` = Style to apply when the button is focused.)
 /// )
-class FluidButton(T : FluidNode = FluidLabel) : FluidInput!T {
+class Button(T : Node = Label) : InputNode!T {
 
     mixin DefineStyles!(
         "pressStyle", q{ hoverStyle },
