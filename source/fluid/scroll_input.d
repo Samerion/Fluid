@@ -16,22 +16,22 @@ deprecated("scrollBars have been renamed to scrollInputs, please update referenc
 
     alias vscrollBar = vscrollInput;
     alias hscrollBar = hscrollInput;
-    alias FluidScrollBar = FluidScrollInput;
+    alias FluidScrollBar = ScrollInput;
 
 }
 
 /// Create a new vertical scroll bar.
-alias vscrollInput = simpleConstructor!FluidScrollInput;
+alias vscrollInput = simpleConstructor!ScrollInput;
 
 /// Create a new horizontal scroll bar.
-alias hscrollInput = simpleConstructor!(FluidScrollInput, (a) {
+alias hscrollInput = simpleConstructor!(ScrollInput, (a) {
 
     a.horizontal = true;
 
 });
 
 ///
-class FluidScrollInput : FluidInput!FluidNode {
+class ScrollInput : InputNode!Node {
 
     // TODO Hiding a scrollbar makes it completely unusable, since it cannot scan the viewport. Perhaps override
     // `isHidden` to virtually hide the scrollbar, and keep it always "visible" as such?

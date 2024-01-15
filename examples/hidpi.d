@@ -18,8 +18,8 @@ void main(string[] flags) {
 
             font = loadFont("examples/ubuntu.ttf", 14);
 
-            FluidLabel.styleAdd;
-            FluidButton!().styleAdd!q{
+            Label.styleAdd;
+            Button!().styleAdd!q{
 
                 padding = 0;
                 textColor = color!"0079f1";

@@ -190,7 +190,7 @@ unittest {
 
     // First frame: Solid border on one side only
     root.theme = Theme.init.makeTheme!q{
-        FluidFrame.styleAdd!q{
+        Frame.styleAdd!q{
             border.sideBottom = 4;
             borderStyle = colorBorder(color!"018b8d");
         };
@@ -211,7 +211,7 @@ unittest {
     // TODO optimize monochrome borders, and test them as well
     io.nextFrame;
     root.theme = Theme.init.makeTheme!(colorCode.format!q{
-        FluidFrame.styleAdd!q{
+        Frame.styleAdd!q{
             border = 4;
             borderStyle = colorBorder(%s);
         };

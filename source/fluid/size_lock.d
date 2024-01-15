@@ -42,10 +42,10 @@ struct SizeLimit {
 /// Size-locks are extremely useful for responsible applications, making sure the content doesn't span too much space on
 /// large screens, for example on wide-screen, where the content can be applied a sizeLimitX, so it never spreads to
 /// more than the set value.
-alias sizeLock(alias T) = simpleConstructor!(FluidSizeLock, T);
+alias sizeLock(alias T) = simpleConstructor!(SizeLock, T);
 
 /// ditto
-class FluidSizeLock(T : FluidNode) : T {
+class SizeLock(T : Node) : T {
 
     mixin DefineStyles;
 
@@ -123,8 +123,8 @@ unittest {
 
     root.io = io;
     root.theme = nullTheme.makeTheme!q{
-        FluidFrame.styleAdd.backgroundColor = color!"1c1c1c";
-        FluidLabel.styleAdd.textColor = color!"eee";
+        Frame.styleAdd.backgroundColor = color!"1c1c1c";
+        Label.styleAdd.textColor = color!"eee";
     };
 
     {

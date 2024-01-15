@@ -15,24 +15,24 @@ void main() {
 
     immutable theme2 = makeTheme!q{
 
-        FluidFrame.styleAdd.backgroundColor = color!"#e62937";
+        Frame.styleAdd.backgroundColor = color!"#e62937";
 
     };
 
     immutable rightTheme = makeTheme!q{
 
-        FluidSpace.styleAdd!q{
+        Space.styleAdd!q{
             margin = 5;
             margin.sideY = 10;
         };
-        FluidButton!().styleAdd!q{
+        Button!().styleAdd!q{
             margin.sideTop = 10;
         };
 
     };
 
-    FluidScrollInput myScrollbar, disabledScrollbar;
-    FluidButton!() myButton;
+    ScrollInput myScrollbar, disabledScrollbar;
+    Button!() myButton;
 
     auto root = hframe(
         .layout!(1, "fill"),

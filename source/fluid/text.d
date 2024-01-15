@@ -12,7 +12,7 @@ import fluid.typeface;
 
 
 /// Draws text: handles updates, formatting and styling.
-struct Text(T : FluidNode) {
+struct Text(T : Node) {
 
     /// Node owning this text struct.
     T node;

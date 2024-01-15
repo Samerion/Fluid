@@ -20,14 +20,14 @@ public import fluid.scroll_input;
 @safe:
 
 
-alias FluidScrollFrame = FluidScrollable!FluidFrame;
-alias FluidScrollable(T : FluidSpace) = FluidScrollable!(T, "directionHorizontal");
+alias ScrollFrame = Scrollable!Frame;
+alias Scrollable(T : Space) = Scrollable!(T, "directionHorizontal");
 
 /// Create a new vertical scroll frame.
-alias vscrollFrame = simpleConstructor!FluidScrollFrame;
+alias vscrollFrame = simpleConstructor!ScrollFrame;
 
 /// Create a new horizontal scroll frame.
-alias hscrollFrame = simpleConstructor!(FluidScrollFrame, (a) {
+alias hscrollFrame = simpleConstructor!(ScrollFrame, (a) {
 
     a.directionHorizontal = true;
 
@@ -36,7 +36,7 @@ alias hscrollFrame = simpleConstructor!(FluidScrollFrame, (a) {
 /// Implement scrolling for the given node.
 ///
 /// This only supports scrolling in one axis.
-class FluidScrollable(T : FluidNode, string horizontalExpression) : T {
+class Scrollable(T : Node, string horizontalExpression) : T {
 
     mixin DefineStyles;
 
@@ -45,7 +45,7 @@ class FluidScrollable(T : FluidNode, string horizontalExpression) : T {
     public {
 
         /// Scrollbar for the frame. Can be replaced with a customized one.
-        FluidScrollInput scrollBar;
+        ScrollInput scrollBar;
 
     }
 
@@ -103,7 +103,7 @@ class FluidScrollable(T : FluidNode, string horizontalExpression) : T {
     }
 
     static if (is(typeof(this) : FluidContainer))
-    override Rectangle shallowScrollTo(const FluidNode, Vector2, Rectangle parentBox, Rectangle childBox) {
+    override Rectangle shallowScrollTo(const Node, Vector2, Rectangle parentBox, Rectangle childBox) {
 
         struct Position {
 
@@ -207,7 +207,7 @@ class FluidScrollable(T : FluidNode, string horizontalExpression) : T {
         // Note: Mouse input detection is primitive, awaiting #13 and #14 to help better identify when should the mouse
         // affect this frame.
 
-        // This node doesn't use FluidInput because it doesn't take focus, and we don't want to cause related
+        // This node doesn't use InputNode because it doesn't take focus, and we don't want to cause related
         // accessibility issues. It can function perfectly without it, or at least until above note gets fixed.
         // Then, a "FluidHoverable" interface could possibly become a thing.
 

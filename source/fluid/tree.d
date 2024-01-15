@@ -69,7 +69,7 @@ struct FocusDirection {
     ///     current = Node to update the focus info with.
     ///     box     = Box defining node boundaries (padding box)
     ///     depth   = Current tree depth. Pass in `tree.depth`.
-    void update(FluidNode current, Rectangle box, uint depth)
+    void update(Node current, Rectangle box, uint depth)
     in (current !is null, "Current node must not be null")
     do {
 
@@ -205,7 +205,7 @@ struct FocusDirection {
         const condition = abs(distanceInternal) > abs(distanceExternal);
 
         // ↓ box                    There is an edgecase though. If one box entirely overlaps the other on one axis, we
-        // +--------------------+   might end up with unwanted behavior, for example, in a FluidScrollFrame, focus might
+        // +--------------------+   might end up with unwanted behavior, for example, in a ScrollFrame, focus might
         // |   ↓ lastFocusBox   |   switch to the scrollbar instead of a child, as we would normally expect.
         // |   +============+   |
         // |   |            |   |   For this reason, we require both `distanceInternal` and `distanceExternal` to have
@@ -249,7 +249,7 @@ abstract class TreeAction {
         /// Node to descend into; `beforeDraw` and `afterDraw` will only be emitted for this node and its children.
         ///
         /// May be null to enable iteration over the entire tree.
-        FluidNode startNode;
+        Node startNode;
 
         /// If true, this action is complete and no callbacks should be ran.
         ///
@@ -273,14 +273,14 @@ abstract class TreeAction {
     }
 
     /// Called before the tree is resized. Called before `beforeTree`.
-    void beforeResize(FluidNode root, Vector2 viewportSpace) { }
+    void beforeResize(Node root, Vector2 viewportSpace) { }
 
     /// Called before the tree is drawn. Keep in mind this might not be called if the action is started when tree
     /// iteration has already begun.
     /// Params:
     ///     root     = Root of the tree.
     ///     viewport = Screen space for the node.
-    void beforeTree(FluidNode root, Rectangle viewport) { }
+    void beforeTree(Node root, Rectangle viewport) { }
 
     /// Called before each `drawImpl` call of any node in the tree, so supplying parent nodes before their children.
     /// Params:
@@ -288,13 +288,13 @@ abstract class TreeAction {
     ///     space      = Space given for the node.
     ///     paddingBox = Padding box of the node.
     ///     contentBox = Content box of teh node.
-    void beforeDraw(FluidNode node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) { }
+    void beforeDraw(Node node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) { }
 
     /// ditto
-    void beforeDraw(FluidNode node, Rectangle space) { }
+    void beforeDraw(Node node, Rectangle space) { }
 
     /// internal
-    final package void beforeDrawImpl(FluidNode node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) {
+    final package void beforeDrawImpl(Node node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) {
 
         // There is a start node set
         if (startNode !is null) {
@@ -319,13 +319,13 @@ abstract class TreeAction {
     ///     space      = Space given for the node.
     ///     paddingBox = Padding box of the node.
     ///     contentBox = Content box of teh node.
-    void afterDraw(FluidNode node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) { }
+    void afterDraw(Node node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) { }
 
     /// ditto
-    void afterDraw(FluidNode node, Rectangle space) { }
+    void afterDraw(Node node, Rectangle space) { }
 
     /// internal
-    final package void afterDrawImpl(FluidNode node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) {
+    final package void afterDrawImpl(Node node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) {
 
         // There is a start node set
         if (startNode !is null) {
@@ -369,10 +369,10 @@ abstract class TreeAction {
 struct LayoutTree {
 
     /// Root node of the tree.
-    FluidNode root;
+    Node root;
 
     /// Top-most hovered node in the tree.
-    FluidNode hover;
+    Node hover;
 
     /// Currently focused node.
     ///
@@ -432,7 +432,7 @@ struct LayoutTree {
     ref inout(uint) disabledDepth() inout return { return _disabledDepth; }
 
     /// Create a new tree with the given node as its root, and using the given backend for I/O.
-    this(FluidNode root, FluidBackend backend) {
+    this(Node root, FluidBackend backend) {
 
         this.root = root;
         this.backend = backend;
@@ -441,7 +441,7 @@ struct LayoutTree {
     }
 
     /// Create a new tree with the given node as its root. Use the default backend, if any is present.
-    this(FluidNode root) {
+    this(Node root) {
 
         assert(defaultFluidBackend, "Cannot create LayoutTree; no backend was chosen, and no default is set.");
 
@@ -451,7 +451,7 @@ struct LayoutTree {
 
     /// Queue an action to perform while iterating the tree.
     ///
-    /// Avoid using this; most of the time `FluidNode.queueAction` is what you want. `LayoutTree.queueAction` might fire
+    /// Avoid using this; most of the time `Node.queueAction` is what you want. `LayoutTree.queueAction` might fire
     /// too early
     void queueAction(TreeAction action)
     in (action, "Invalid action queued")

@@ -13,23 +13,23 @@ void main() {
 
     auto redTheme = fluidDefaultTheme.makeTheme!q{
 
-        FluidFrame.styleAdd.backgroundColor = color!"#c01212";
+        Frame.styleAdd.backgroundColor = color!"#c01212";
 
     };
     auto greenTheme = fluidDefaultTheme.makeTheme!q{
 
-        FluidFrame.styleAdd.backgroundColor = color!"#12c012";
+        Frame.styleAdd.backgroundColor = color!"#12c012";
 
     };
     auto whiteTheme = fluidDefaultTheme.makeTheme!q{
 
-        FluidFrame.styleAdd.backgroundColor = color!"#fff";
+        Frame.styleAdd.backgroundColor = color!"#fff";
 
     };
 
-    FluidFileInput picker;
-    FluidLabel fileStatus;
-    FluidButton!() unrelatedButton;
+    FileInput picker;
+    Label fileStatus;
+    Button!() unrelatedButton;
 
     auto root = onionFrame(
         layout(NodeAlign.fill),

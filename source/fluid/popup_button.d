@@ -11,10 +11,10 @@ import fluid.style_macros;
 @safe:
 
 /// A button made to open popups.
-alias popupButton = simpleConstructor!(FluidPopupButton);
+alias popupButton = simpleConstructor!(PopupButton);
 
 /// ditto
-class FluidPopupButton : FluidButton!FluidLabel {
+class PopupButton : Button!Label {
 
     mixin defineStyles;
     mixin enableInputActions;
@@ -22,10 +22,10 @@ class FluidPopupButton : FluidButton!FluidLabel {
     public {
 
         /// Popup enabled by this button.
-        FluidPopupFrame popup;
+        PopupFrame popup;
 
         /// Popup this button belongs to, if any. Set automatically if the popup is spawned with `spawnPopup`.
-        FluidPopupFrame parentPopup;
+        PopupFrame parentPopup;
 
     }
 
@@ -34,7 +34,7 @@ class FluidPopupButton : FluidButton!FluidLabel {
     ///     params        = Generic node parameters for the button.
     ///     text          = Text for the button.
     ///     popupChildren = Children to appear within the button.
-    this(NodeParams params, string text, FluidNode[] popupChildren...) {
+    this(NodeParams params, string text, Node[] popupChildren...) {
 
         // Craft the popup
         popup = popupFrame(popupChildren);
@@ -87,7 +87,7 @@ unittest {
         lastAction = text;
     }
 
-    FluidButton!()[6] buttons;
+    Button!()[6] buttons;
 
     auto io = new HeadlessBackend;
     auto root = popupButton("Options",
@@ -100,7 +100,7 @@ unittest {
         ),
     );
 
-    auto sharePopupButton = cast(FluidPopupButton) buttons[2];
+    auto sharePopupButton = cast(PopupButton) buttons[2];
     auto sharePopup = sharePopupButton.popup;
 
     root.io = io;

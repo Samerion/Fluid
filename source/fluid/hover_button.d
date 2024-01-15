@@ -9,8 +9,8 @@ import fluid.style;
 import fluid.utils;
 import fluid.button;
 
-alias hoverButton = simpleConstructor!(FluidHoverButton!FluidLabel);
-alias frameHoverButton = simpleConstructor!(FluidHoverButton!FluidFrame);
+alias hoverButton = simpleConstructor!(HoverButton!Label);
+alias frameHoverButton = simpleConstructor!(HoverButton!Frame);
 
 @safe:
 
@@ -19,7 +19,7 @@ alias frameHoverButton = simpleConstructor!(FluidHoverButton!FluidFrame);
 ///
 /// Note, this is a somewhat low-level node and the hover event, as stated, triggers every frame. There are no hover
 /// entry nor hover leave events. Make sure you know what you're doing when using this node!
-class FluidHoverButton(T : FluidNode = FluidLabel) : FluidButton!T {
+class HoverButton(T : Node = Label) : Button!T {
 
     mixin defineStyles;
     mixin enableInputActions;

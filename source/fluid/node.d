@@ -41,7 +41,7 @@ private interface Styleable {
 }
 
 /// Represents a Fluid node.
-abstract class FluidNode : Styleable {
+abstract class Node : Styleable {
 
     public import fluid.structs : NodeAlign, NodeParams, Layout;
     public import fluid.structs : Align = NodeAlign, Params = NodeParams;
@@ -152,7 +152,7 @@ abstract class FluidNode : Styleable {
         }
 
         /// Ditto
-        deprecated("Use FluidNode(NodeParams) instead.")
+        deprecated("Use Node(NodeParams) instead.")
         this(Theme theme = null, Layout layout = Layout.init) {
 
             this(layout, theme);
@@ -165,13 +165,13 @@ abstract class FluidNode : Styleable {
     ///
     /// The typical approach to constructing new nodes is via `fluid.utils.simpleConstructor`. A node component would
     /// provide an alias pointing to the `simpleConstructor` instance, which can then be used as a factory function. For
-    /// example, `FluidNode` provides the `label` simpleConstructor. Using these has increased convenience by making it
+    /// example, `Node` provides the `label` simpleConstructor. Using these has increased convenience by making it
     /// possible to omit `NodeParams` or to specify each parameter individually, for example
     ///
     /// ---
     /// auto myLabel = label(.layout!1, .theme, "Hello, World!");
     /// // Equivalent of:
-    /// auto myLabel = new FluidLabel(NodeParams(.layout!1, .theme), "Hello, World!");
+    /// auto myLabel = new Label(NodeParams(.layout!1, .theme), "Hello, World!");
     /// ---
     ///
     /// See_Also:
@@ -190,14 +190,14 @@ abstract class FluidNode : Styleable {
 
     }
 
-    bool opEquals(const FluidNode otherNode) const {
+    bool opEquals(const Node otherNode) const {
 
         return this is otherNode;
 
     }
 
     /// Show the node.
-    This show(this This = FluidNode)() return {
+    This show(this This = Node)() return {
 
         // Note: The default value for This is necessary, otherwise virtual calls don't work
         isHidden = false;
@@ -206,7 +206,7 @@ abstract class FluidNode : Styleable {
     }
 
     /// Hide the node.
-    This hide(this This = FluidNode)() return {
+    This hide(this This = Node)() return {
 
         isHidden = true;
         return cast(This) this;
@@ -216,7 +216,7 @@ abstract class FluidNode : Styleable {
     unittest {
 
         auto io = new HeadlessBackend;
-        auto root = new class FluidNode {
+        auto root = new class Node {
 
             mixin implHoveredRect;
 
@@ -246,7 +246,7 @@ abstract class FluidNode : Styleable {
     }
 
     /// Disable this node.
-    This disable(this This = FluidNode)() {
+    This disable(this This = Node)() {
 
         // `scope return` attribute on disable() and enable() is broken, `isDisabled` just can't get return for reasons
         // unknown
@@ -257,7 +257,7 @@ abstract class FluidNode : Styleable {
     }
 
     /// Enable this node.
-    This enable(this This = FluidNode)() {
+    This enable(this This = Node)() {
 
         isDisabled = false;
         return cast(This) this;
@@ -452,8 +452,8 @@ abstract class FluidNode : Styleable {
 
         import fluid.space;
 
-        FluidNode[4] allNodes;
-        FluidNode[] visitedNodes;
+        Node[4] allNodes;
+        Node[] visitedNodes;
 
         auto io = new HeadlessBackend;
         auto root = allNodes[0] = vspace(
@@ -464,7 +464,7 @@ abstract class FluidNode : Styleable {
         );
         auto action = new class TreeAction {
 
-            override void beforeDraw(FluidNode node, Rectangle) {
+            override void beforeDraw(Node node, Rectangle) {
 
                 visitedNodes ~= node;
 
@@ -509,7 +509,7 @@ abstract class FluidNode : Styleable {
         int resizes;
 
         auto io = new HeadlessBackend;
-        auto root = new class FluidNode {
+        auto root = new class Node {
 
             mixin implHoveredRect;
 
@@ -801,7 +801,7 @@ abstract class FluidNode : Styleable {
     }
 
     /// Switch to the previous or next focused item
-    @(FluidInputAction.focusPrevious, FluidInputAction.focusNext)
+    @(FluidInputAction.focusPrevious,FluidInputAction.focusNext)
     protected void _focusPrevNext(FluidInputAction actionType) {
 
         auto direction = tree.focusDirection;
@@ -963,7 +963,7 @@ abstract class FluidNode : Styleable {
             tree.focusDirection.update(this, paddingBox, tree.depth);
 
             // If this node is focused
-            if (this is cast(FluidNode) tree.focus) {
+            if (this is cast(Node) tree.focus) {
 
                 // Set the focus box
                 tree.focusBox = paddingBox;
@@ -1128,7 +1128,7 @@ abstract class FluidNode : Styleable {
         import core.exception;
         import fluid.frame;
 
-        static class Square : FluidFrame {
+        static class Square : Frame {
             @safe:
             Color color;
             this(NodeParams params, Color color) {
@@ -1161,7 +1161,7 @@ abstract class FluidNode : Styleable {
         );
 
         root.theme = Theme.init.makeTheme!q{
-            FluidFrame.styleAdd.backgroundColor = color!"1c1c1c";
+            Frame.styleAdd.backgroundColor = color!"1c1c1c";
         };
         root.io = io;
 

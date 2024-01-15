@@ -21,13 +21,13 @@ import fluid.button;
 import fluid.structs;
 import fluid.text_input;
 
-alias fileInput = simpleConstructor!FluidFileInput;
+alias fileInput = simpleConstructor!FileInput;
 
 deprecated("filePicker has been renamed to fileInput. Please update references before 0.7.0.")
 alias filePicker = fileInput;
 
-deprecated("FluidFilePicker has been renamed to FluidFileInput. Please update references before 0.7.0.")
-alias FluidFilePicker = FluidFileInput;
+deprecated("FluidFilePicker has been renamed to FileInput. Please update references before 0.7.0.")
+alias FluidFilePicker = FileInput;
 
 @safe:
 
@@ -37,7 +37,7 @@ alias FluidFilePicker = FluidFileInput;
 /// Styles: $(UL
 ///     $(LI `selectedStyle` = Style for the currently selected suggestion.)
 /// )
-class FluidFileInput : FluidInput!FluidFrame {
+class FileInput : InputNode!Frame {
 
     // TODO maybe create a generic "search all" component? Maybe something that could automatically collect all
     //      button data?
@@ -66,17 +66,17 @@ class FluidFileInput : FluidInput!FluidFrame {
         bool savedFocus;
 
         /// Label with the title of the file picker.
-        FluidLabel titleLabel;
+        Label titleLabel;
 
         /// Text input field containing the currently selected directory or file for the file picker.
-        FluidFilenameInput input;
+        FilenameInput input;
 
         /// Space for all suggestions.
         ///
         /// Starts empty, and is filled in as suggestions appear. Buttons are reused, so no more buttons will be
         /// allocated once the suggestion limit is reached. Buttons are hidden if they don't contain any relevant
         /// suggestions.
-        FluidSpace suggestions;
+        Space suggestions;
 
         /// Number of available suggestions.
         int suggestionCount;
@@ -105,7 +105,7 @@ class FluidFileInput : FluidInput!FluidFrame {
             ),
 
             titleLabel  = label(name),
-            input       = new FluidFilenameInput(NodeParams.init, "Path to file...", submitted),
+            input       = new FilenameInput(NodeParams.init, "Path to file...", submitted),
             suggestions = vspace(.layout!"fill"),
         );
 
@@ -178,7 +178,7 @@ class FluidFileInput : FluidInput!FluidFrame {
 
     }
 
-    protected class FluidFilenameInput : FluidTextInput {
+    protected class FilenameInput : TextInput {
 
         mixin defineStyles;
         mixin enableInputActions;
@@ -492,24 +492,24 @@ class FluidFileInput : FluidInput!FluidFrame {
     // Does nothing
     protected override bool keyboardImpl() {
 
-        assert(false, "FluidFileInput cannot directly have focus; call FluidFilePicker.focus to resolve automatically");
+        assert(false, "FileInput cannot directly have focus; call FluidFilePicker.focus to resolve automatically");
 
     }
 
 }
 
-private class SuggestionButton : FluidButton!() {
+private class SuggestionButton : Button!() {
 
     mixin enableInputActions;
 
     private {
 
         int index;
-        FluidFileInput input;
+        FileInput input;
 
     }
 
-    this(T...)(FluidFileInput input, int index, T args) {
+    this(T...)(FileInput input, int index, T args) {
 
         super(NodeParams(.layout!"fill"), args);
         this.index = index;

@@ -16,7 +16,7 @@ void main() {
 
     auto theme = makeTheme!q{
 
-        FluidFrame.styleAdd!q{
+        Frame.styleAdd!q{
 
             margin = 10;
             backgroundColor = color!"#fffa";
@@ -27,13 +27,13 @@ void main() {
 
     auto fancyScroll = makeTheme!q{
 
-        FluidFrame.styleAdd!q{
+        Frame.styleAdd!q{
             backgroundColor = color!"#fffa";
             margin = 10;
             padding = 10;
         };
 
-        FluidScrollInput.styleAdd!q{
+        ScrollInput.styleAdd!q{
             margin = 0;
             margin.sideLeft = 4;
             padding = 4;
@@ -41,8 +41,8 @@ void main() {
 
     };
 
-    FluidFrame innerExpand;
-    FluidSpace root, screen1, screen2;
+    Frame innerExpand;
+    Space root, screen1, screen2;
 
     screen1 = vspace(
         .layout!(1, "fill"),
@@ -94,20 +94,20 @@ void main() {
             vscrollFrame(
                 .layout!(1, "fill"),
 
-                cast(FluidNode[]) generate(() => label("Line of text")).take(150).array,
+                cast(Node[]) generate(() => label("Line of text")).take(150).array,
             ),
             vscrollFrame(
                 .layout!(1, "fill"),
                 fancyScroll.makeTheme!q{
 
-                    FluidScrollInput.styleAdd!q{
+                    ScrollInput.styleAdd!q{
                         margin = 4;
                         margin.sideRight = 0;
                     };
 
                 },
 
-                cast(FluidNode[]) generate(() => label("Line of text")).take(150).array,
+                cast(Node[]) generate(() => label("Line of text")).take(150).array,
             ),
         ),
     );
