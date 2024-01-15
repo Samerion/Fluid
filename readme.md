@@ -1,17 +1,16 @@
-<img src="./resources/hello-glui.png" alt="Hello, Glui!" align="right"/>
+<img src="./resources/hello-fluid.png" alt="Hello World from Fluid!" align="right"/>
 
-A declarative high-level UI library for game development in [the D programming language](https://dlang.org/) that works
-out of the box. Minimal setup. Non-intrusive.
+A flexible UI library for [the D programming language](https://dlang.org/). Minimal setup. Declarative. Non-intrusive.
 
 ```d
-auto root = hspace(
+auto root = vspace(
     .layout!"center",
-    label(.layout!"end", "Hello, "),
-    imageView("./logo.png", Vector2(96, 96)),
+    label(.layout!"center", "Hello World from"),
+    imageView("./logo.png", Vector2(499, 240)),
 );
 ```
 
-Glui comes with [Raylib 5][raylib] and [arsd.simpledisplay][sdpy] support. Integration is seamless: one or two calls do
+Fluid comes with [Raylib 5][raylib] and [arsd.simpledisplay][sdpy] support. Integration is seamless: one or two calls do
 the job.
 
 ```d
@@ -30,10 +29,10 @@ while (!WindowShouldClose) {
 [raylib]: https://www.raylib.com/
 [sdpy]: https://arsd-official.dpldocs.info/arsd.simpledisplay.html
 
-Glui has a decent feature set at the moment and new features will still be added over time. Glui is already mostly
+Fluid has a decent feature set at the moment and new features will still be added over time. Fluid is already mostly
 stable and ready for use, but is still likely to receive multiple breaking changes before leaving its pre-release stage.
 
-**Support Glui development on Patreon: https://www.patreon.com/samerion**
+**Support Fluid development on Patreon: https://www.patreon.com/samerion**
 
 * Straightforward, high-level API
 * Responsive layout

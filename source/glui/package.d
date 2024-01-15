@@ -68,10 +68,10 @@ unittest {
     import std.math;
 
     auto io = new HeadlessBackend;
-    auto root = hspace(
+    auto root = vspace(
         .layout!"center",
-        label(.layout!"end", "Hello, "),
-        imageView("./logo.png", Vector2(96, 96)),
+        label(.layout!"center", "Hello World from"),
+        imageView("./logo.png", Vector2(499, 240)),
     );
 
     root.io = io;
