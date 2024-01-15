@@ -13,13 +13,13 @@ void main() {
     SetExitKey(0);
     scope (exit) CloseWindow();
 
-    immutable theme2 = makeTheme!q{
+    auto theme2 = makeTheme!q{
 
         Frame.styleAdd.backgroundColor = color!"#e62937";
 
     };
 
-    immutable rightTheme = makeTheme!q{
+    auto rightTheme = makeTheme!q{
 
         Space.styleAdd!q{
             margin = 5;
