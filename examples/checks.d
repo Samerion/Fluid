@@ -1,7 +1,7 @@
 // This is more of a test rather than an example.
 // It will be moved to a separate directory for automated tests once Glui gets a headless mode.
 
-import glui;
+import fluid;
 import raylib;
 
 import std.stdio;
