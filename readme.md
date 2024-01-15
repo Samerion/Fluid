@@ -1,4 +1,4 @@
-<img src="./resources/hello-fluid.png" alt="Hello World from Fluid!" align="right"/>
+![Hello World from Fluid!](./resources/hello-fluid.png)
 
 A flexible UI library for [the D programming language](https://dlang.org/). Minimal setup. Declarative. Non-intrusive.
 
