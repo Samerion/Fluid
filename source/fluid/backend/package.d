@@ -339,8 +339,8 @@ unittest {
     // Tune the reaper to run every frame
     io.reaper.period = 1;
 
-    // The texture is const but we'll cheat around it
-    auto texture = cast() image.texture;
+    // Get the texture
+    auto texture = image.release();
     auto textureID = texture.id;
     auto tombstone = texture.tombstone;
 
@@ -394,7 +394,7 @@ unittest {
     // Destroy the backend
     destroy(io);
 
-    auto texture = cast() root.texture;
+    auto texture = root.release();
 
     // The texture should have been automatically freed, but not marked for destruction
     assert(!texture.tombstone.isDestroyed);

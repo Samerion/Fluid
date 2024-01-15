@@ -157,6 +157,16 @@ class ImageView : Node {
 
     }
 
+    /// Release ownership over the displayed texture.
+    ///
+    /// Keep the texture alive as long as it's used by this `imageView`, free it manually using the `destroy()` method.
+    Texture release() {
+
+        _isOwner = false;
+        return _texture;
+
+    }
+
     /// Remove any texture if attached.
     void clear() @trusted scope {
 

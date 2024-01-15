@@ -23,12 +23,8 @@ class Raylib5Backend : FluidBackend {
 
     private {
 
-<<<<<<< HEAD
         TextureReaper _reaper;
-        GluiMouseCursor lastMouseCursor;
-=======
         FluidMouseCursor lastMouseCursor;
->>>>>>> 6dc1768 (sed s/Glui/Fluid)
         Rectangle drawArea;
         float _scale = 1;
 
