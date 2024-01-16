@@ -37,7 +37,7 @@ enum Chapter {
     @"Frames" frames,
 };
 
-/// The entrypoint prepares the Raylib window. The UI is build in `createUI()`.
+/// The entrypoint prepares themes and the Raylib window. The UI is build in `createUI()`.
 void main(string[] args) {
 
     // Prepare themes
