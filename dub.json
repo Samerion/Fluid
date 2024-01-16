@@ -38,7 +38,7 @@
 	},
 	"description": "A straightforward and easy to use GUI library.",
 	"license": "BSL",
-	"name": "glui",
+	"name": "fluid",
 	"stringImportPaths": [
 		"resources"
 	],
@@ -48,8 +48,8 @@
 				"examples/sometype-mono.ttf"
 			],
 			"dependencies": {
-				"glui": ">=0.0.0",
-				"libdparse": "~>0.23.2"
+				"libdparse": "~>0.23.2",
+				"fluid": ">=0.0.0"
 			},
 			"libs": [
 				"raylib"
