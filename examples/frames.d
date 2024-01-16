@@ -18,6 +18,8 @@ static this() {
 
 }
 
+// Start article
+
 @(
     () => label("Every Glui node can provide hints on how it should be laid out by the node its inside of, its parent. "
         ~ "These are provided by passing the '.layout' setting as the first argument to the node."),
@@ -71,7 +73,7 @@ GluiLabel symmetricalLayoutExample() {
         ~ `later. For the purpose of this example, the box of each label node will be highlighted in red.`),
     () => highlightBoxTheme,
 )
-GluiSpace fillExample() {
+GluiFrame fillExample() {
 
     return vframe(
         .layout!"fill",
@@ -81,11 +83,114 @@ GluiSpace fillExample() {
 
 }
 
+
+// Heading: Shrinking and expanding
+
+
 @(
     () => label(.headingTheme, `Shrinking and expanding`),
     () => label(`You might have noticed something is off in the previous example. Despite the '.layout!"fill"' `
         ~ `option, the label did not expand to the end of the container, but only used up a single line. This has to `
         ~ `do with "expanding".`),
-    // TODO
+    () => label(`By default, nodes operate in "shrink mode," which means they will only take the space they need. `
+        ~ `The parent node may have spare space to give, which means the node has to decide what part of that space it `
+        ~ `has to take. This is what happens when you change alignment: A start aligned node will take the top-left `
+        ~ `corner of that space, while an end aligned node will take the bottom-right corner, but they cannot move `
+        ~ `within space that hasn't been explicitly assigned to them.`),
+    () => label(`Because the job of frames is to align multiple nodes in a single row or column, frames will give `
+        ~ `their children space within a column or row according to their need. The nodes are given maximum space on `
+        ~ `the other axis, however, because it's not shared with any other node.`),
+    () => label(`This is where the 'expand' layout setting is useful. The frame will evenly distribute space among `
+        ~ `expanding nodes.`),
+    () => highlightBoxTheme,
 )
-void endExample() { }
+GluiFrame expandExample() {
+
+    return vframe(
+        .layout!"fill",
+        label(.layout!1, "Start-aligned node"),
+        label(.layout!(1, "fill"), "Fill-aligned node"),
+        label(.layout!(1, "center"), "Center-aligned node"),
+    );
+
+}
+
+@(
+    () => label(`See? The nodes have been assigned equal heights. They occupy the same amount of space within the `
+        ~ `column. Each uses a different part of the space they have been assigned because of differences in alignment `
+        ~ `of each.`),
+    () => label(`Note that expanding is defined as a number. Let's see what happens if we change the number.`),
+    () => highlightBoxTheme,
+)
+GluiFrame expandSegmentExample() {
+
+    return vframe(
+        .layout!"fill",
+        label(.layout!(1, "fill"), "Expand: 1"),
+        label(.layout!(2, "fill"), "Expand: 2"),
+        label(.layout!(3, "fill"), "Expand: 3"),
+    );
+
+}
+
+@(
+    () => label(`The space of the frame has been distributed fully between the labels, but each took a different `
+        ~ `fraction. This is exactly why expanding is a number: The first label took one piece of the space, the second `
+        ~ `took two, and the last took three. It defines a fraction, where the specified number is the numerator. The `
+        ~ `denominator is the sum of all expand settings — in this case that's 6. Which means, each node takes 1/6, `
+        ~ `2/6 and 3/6 of the space respectively.`),
+    () => label(`Note: Setting expand to 0 effectively disables expand and makes the node shrink. In this case, the `
+        ~ `expand argument can be omitted.`),
+    () => label(`Shrinking and expanding nodes can be used alongside in the same frame:`),
+    () => highlightBoxTheme,
+)
+GluiFrame shrinkNExpandExample() {
+
+    return vframe(
+        .layout!"fill",
+        label(.layout!(0, "fill"), "Shrink"),
+        label(.layout!(1, "fill"), "Expand"),
+    );
+
+}
+
+
+// Heading
+
+
+@(
+    () => label(.headingTheme, "Practical examples"),
+    () => label(`Mixing shrinking and expanding nodes in the same frame is very useful. Consider implementing two `
+        ~ `buttons for switching pages, just like at the end of the page. The "back" button on the left side, the `
+        ~ `"right" button on the right.`),
+)
+GluiFrame switchPagesExample() {
+
+    return hframe(
+        .layout!("fill", "center"),
+        label("Previous page"),
+        label(.layout!(1, "end"), "Next page"),
+    );
+
+}
+
+@(
+    () => label("Of course, the labels above are not functional as buttons. Buttons will be covered in a separate "
+        ~ "chapter."),
+    () => label("To make the example more complex, let's try creating a more complete pagination panel, with two "
+        ~ "buttons like above, and a few buttons in the center to jump to a specific page."),
+)
+GluiFrame paginationExample() {
+
+    return hframe(
+        .layout!("fill", "center"),
+        label(.layout!(1, "start"), "Previous page"),
+        hframe(
+            label(" 1 "),
+            label(" 2 "),
+            label(" 3 "),
+        ),
+        label(.layout!(1, "end"), "Next page"),
+    );
+
+}
