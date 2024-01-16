@@ -1,7 +1,7 @@
-module glui.showcase.frames;
+module fluid.showcase.frames;
 
-import glui;
-import glui.showcase;
+import fluid;
+import fluid.showcase;
 
 
 @safe:
@@ -21,14 +21,14 @@ static this() {
 // Start article
 
 @(
-    () => label("Every Glui node can provide hints on how it should be laid out by the node its inside of, its parent. "
-        ~ "These are provided by passing the '.layout' setting as the first argument to the node."),
+    () => label("Every Fluid node can provide hints on how it should be laid out by the node its inside of, its "
+        ~ "parent. These are provided by passing the '.layout' setting as the first argument to the node."),
     () => label("One of the parameters controlled with this setting is a node's align. Each node is virtually wrapped "
         ~ "in a box that restricts its boundaries. If a node is given more space than it needs, it will be aligned "
         ~ "differently within its boundary box based on this parameter. By default, alignment is set to the top-left "
         ~ `corner, which is equivalent to setting '.layout!("start", "start")'. `),
 )
-GluiLabel startLayoutExample() {
+Label startLayoutExample() {
 
     return label(
         .layout!("start", "start"),
@@ -43,7 +43,7 @@ GluiLabel startLayoutExample() {
         ~ `while "end" corresponds to the right or bottom side. "center", as you might guess, aligns a node to the `
         ~ `center.`),
 )
-GluiLabel centerLayoutExample() {
+Label centerLayoutExample() {
 
     return label(
         .layout!("center", "start"),
@@ -57,7 +57,7 @@ GluiLabel centerLayoutExample() {
         ~ "separately. Because it's really common to set them both to the same value, for example to fully center a "
         ~ "node, it's possible to take a shortcut and specify just one."),
 )
-GluiLabel symmetricalLayoutExample() {
+Label symmetricalLayoutExample() {
 
     return label(
         .layout!"center",
@@ -73,7 +73,7 @@ GluiLabel symmetricalLayoutExample() {
         ~ `later. For the purpose of this example, the box of each label node will be highlighted in red.`),
     () => highlightBoxTheme,
 )
-GluiFrame fillExample() {
+Frame fillExample() {
 
     return vframe(
         .layout!"fill",
@@ -104,7 +104,7 @@ GluiFrame fillExample() {
         ~ `expanding nodes.`),
     () => highlightBoxTheme,
 )
-GluiFrame expandExample() {
+Frame expandExample() {
 
     return vframe(
         .layout!"fill",
@@ -122,7 +122,7 @@ GluiFrame expandExample() {
     () => label(`Note that expanding is defined as a number. Let's see what happens if we change the number.`),
     () => highlightBoxTheme,
 )
-GluiFrame expandSegmentExample() {
+Frame expandSegmentExample() {
 
     return vframe(
         .layout!"fill",
@@ -144,7 +144,7 @@ GluiFrame expandSegmentExample() {
     () => label(`Shrinking and expanding nodes can be used alongside in the same frame:`),
     () => highlightBoxTheme,
 )
-GluiFrame shrinkNExpandExample() {
+Frame shrinkNExpandExample() {
 
     return vframe(
         .layout!"fill",
@@ -164,7 +164,7 @@ GluiFrame shrinkNExpandExample() {
         ~ `buttons for switching pages, just like at the end of the page. The "back" button on the left side, the `
         ~ `"right" button on the right.`),
 )
-GluiFrame switchPagesExample() {
+Frame switchPagesExample() {
 
     return hframe(
         .layout!("fill", "center"),
@@ -180,7 +180,7 @@ GluiFrame switchPagesExample() {
     () => label("To make the example more complex, let's try creating a more complete pagination panel, with two "
         ~ "buttons like above, and a few buttons in the center to jump to a specific page."),
 )
-GluiFrame paginationExample() {
+Frame paginationExample() {
 
     return hframe(
         .layout!("fill", "center"),

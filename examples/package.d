@@ -1,17 +1,17 @@
-/// The Glui showcase is a set of examples designed to illustrate core features of Glui and provide a quick start guide
-/// to developing applications using Glui.
+/// This showcase is a set of examples and tutorials designed to illustrate core features of Fluid and provide a quick
+/// start guide to developing applications using Fluid.
 ///
 /// This module is the central piece of the showcase, gluing it together. It loads and parses each module to display
-/// it as a document. It's not trivial; other modules from this package are designed to offer better guidance on Glui
+/// it as a document. It's not trivial; other modules from this package are designed to offer better guidance on Fluid
 /// usage, but it might also be useful to people intending to implement similar functionality.
 ///
-/// To get started with the showcase, use `dub run glui:showcase`, which should compile and run the showcase. The
+/// To get started with the showcase, use `dub run fluid:showcase`, which should compile and run the showcase. The
 /// program explains different components of the library and provides code examples, but you're free to browse through
 /// its files if you like! introduction.d might be a good start. I hope this directory proves as a useful learning
 /// resource.
-module glui.showcase;
+module fluid.showcase;
 
-import glui;
+import fluid;
 import raylib;
 import dparse.ast;
 
@@ -42,20 +42,20 @@ void main(string[] args) {
 
     // Prepare themes
     mainTheme = makeTheme!q{
-        GluiFrame.styleAdd!q{
+        Frame.styleAdd!q{
             padding.sideX = 12;
             padding.sideY = 16;
-            GluiGrid.styleAdd.padding = 0;
-            GluiGridRow.styleAdd.padding = 0;
+            Grid.styleAdd.padding = 0;
+            GridRow.styleAdd.padding = 0;
         };
-        GluiLabel.styleAdd!q{
+        Label.styleAdd!q{
             margin.sideY = 7;
-            GluiButton!().styleAdd.margin.sideX = 2;
+            Button!().styleAdd.margin.sideX = 2;
         };
     };
 
     headingTheme = mainTheme.makeTheme!q{
-        GluiLabel.styleAdd!q{
+        Label.styleAdd!q{
             typeface = Style.loadTypeface(20);
             margin.sideTop = 20;
             margin.sideBottom = 10;
@@ -63,7 +63,7 @@ void main(string[] args) {
     };
 
     subheadingTheme = mainTheme.makeTheme!q{
-        GluiLabel.styleAdd!q{
+        Label.styleAdd!q{
             typeface = Style.loadTypeface(16);
             margin.sideTop = 16;
             margin.sideBottom = 8;
@@ -76,8 +76,8 @@ void main(string[] args) {
         typeface = Style.loadTypeface(thisExePath.dirName.buildPath("sometype-mono.ttf"), 13);
         backgroundColor = color!"dedede";
 
-        GluiFrame.styleAdd.padding = 0;
-        GluiLabel.styleAdd!q{
+        Frame.styleAdd.padding = 0;
+        Label.styleAdd!q{
             margin = 0;
             padding.sideX = 12;
             padding.sideY = 16;
@@ -85,7 +85,7 @@ void main(string[] args) {
     };
 
     previewWrapperTheme = mainTheme.makeTheme!q{
-        GluiNodeSlot!GluiNode.styleAdd!q{
+        NodeSlot!Node.styleAdd!q{
             border = 1;
             borderStyle = colorBorder(color!"dedede");
         };
@@ -94,7 +94,7 @@ void main(string[] args) {
     // Prepare the window
     SetConfigFlags(ConfigFlags.FLAG_WINDOW_RESIZABLE);
     SetTraceLogLevel(TraceLogLevel.LOG_WARNING);
-    InitWindow(1000, 750, "Glui showcase");
+    InitWindow(1000, 750, "Fluid showcase");
     SetTargetFPS(60);
     scope (exit) CloseWindow();
 
@@ -111,7 +111,7 @@ void main(string[] args) {
 
         ClearBackground(color!"fff");
 
-        // Glui is by default configured to work with Raylib, so all you need to make them work together is a single
+        // Fluid is by default configured to work with Raylib, so all you need to make them work together is a single
         // call
         ui.draw();
 
@@ -119,17 +119,17 @@ void main(string[] args) {
 
 }
 
-GluiSpace createUI(string initialChapter = null) @safe {
+Space createUI(string initialChapter = null) @safe {
 
     import std.conv;
 
     Chapter currentChapter;
-    GluiScrollable!GluiFrame root;
-    GluiSpace navigationBar;
-    GluiLabel titleLabel;
-    GluiButton!() leftButton, rightButton;
+    Scrollable!Frame root;
+    Space navigationBar;
+    Label titleLabel;
+    Button!() leftButton, rightButton;
 
-    auto content = nodeSlot!GluiNode(.layout!(1, "fill"));
+    auto content = nodeSlot!Node(.layout!(1, "fill"));
 
     void changeChapter(Chapter chapter) {
 
@@ -196,7 +196,7 @@ GluiSpace createUI(string initialChapter = null) @safe {
 
 }
 
-GluiSpace exampleList(void delegate(Chapter) @safe changeChapter) @safe {
+Space exampleList(void delegate(Chapter) @safe changeChapter) @safe {
 
     import std.array;
     import std.range;
@@ -224,7 +224,7 @@ GluiSpace exampleList(void delegate(Chapter) @safe changeChapter) @safe {
 }
 
 /// Create a code block
-GluiSpace showcaseCode(string code) {
+Space showcaseCode(string code) {
 
     return vframe(
         .layout!"fill",
@@ -239,11 +239,11 @@ GluiSpace showcaseCode(string code) {
 }
 
 /// Showcase code and its result.
-GluiSpace showcaseCode(string code, GluiNode node, Theme theme = null) {
+Space showcaseCode(string code, Node node, Theme theme = null) {
 
     // Make the node inherit the default theme rather than the one we set
     if (node.theme is null) {
-        node.theme = either(theme, gluiDefaultTheme);
+        node.theme = either(theme, fluidDefaultTheme);
     }
 
     return hspace(
@@ -254,7 +254,7 @@ GluiSpace showcaseCode(string code, GluiNode node, Theme theme = null) {
             .codeTheme,
             code,
         ),
-        nodeSlot!GluiNode(
+        nodeSlot!Node(
             .layout!(1, "fill"),
             .previewWrapperTheme,
             node,
@@ -284,7 +284,7 @@ string title(Chapter query) @safe {
 }
 
 /// Render the given chapter.
-GluiSpace render(Chapter query) @safe {
+Space render(Chapter query) @safe {
 
     switch (query) {
 
@@ -302,7 +302,7 @@ GluiSpace render(Chapter query) @safe {
 }
 
 /// ditto
-GluiSpace render(Chapter chapter)() @trusted {
+Space render(Chapter chapter)() @trusted {
 
     import std.conv;
     import std.traits;
@@ -316,8 +316,8 @@ GluiSpace render(Chapter chapter)() @trusted {
     enum name = chapter.to!string;
 
     // Import the module
-    mixin("import glui.showcase.", name, ";");
-    alias mod = mixin("glui.showcase.", name);
+    mixin("import fluid.showcase.", name, ";");
+    alias mod = mixin("fluid.showcase.", name);
 
     // Get the module filename
     const filename = name ~ ".d";
@@ -347,13 +347,13 @@ GluiSpace render(Chapter chapter)() @trusted {
 
             auto documentation = sizeLock!vspace(.layout!"center", .contentSize);
             auto code = visitor.functions[member];
-            auto theme = gluiDefaultTheme;
+            auto theme = fluidDefaultTheme;
 
             // Load documentation attributes
             static foreach (uda; __traits(getAttributes, overload)) {
 
                 // Node
-                static if (is(typeof(uda()) : GluiNode))
+                static if (is(typeof(uda()) : Node))
                     documentation ~= uda();
 
                 // Theme
@@ -366,7 +366,7 @@ GluiSpace render(Chapter chapter)() @trusted {
             document ~= documentation;
 
             // Add and run a code example if it returns a node
-            static if (is(ReturnType!overload : GluiNode))
+            static if (is(ReturnType!overload : Node))
                 document ~= showcaseCode(code, overload(), theme);
 
             // Otherwise, show just the code
