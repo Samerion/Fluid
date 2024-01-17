@@ -33,7 +33,7 @@
 		"raylib-d": {
 			"default": true,
 			"optional": true,
-			"version": "~>5"
+			"version": "~>5.0"
 		}
 	},
 	"description": "A straightforward and easy to use GUI library.",
@@ -44,21 +44,15 @@
 	],
 	"subPackages": [
 		{
-			"copyFiles": [
-				"examples/sometype-mono.ttf"
-			],
 			"dependencies": {
 				"libdparse": "~>0.23.2",
-				"fluid": ">=0.0.0"
+				"fluid": { "path": "." }
 			},
 			"libs": [
 				"raylib"
 			],
 			"name": "showcase",
 			"sourcePaths": [
-				"examples"
-			],
-			"stringImportPaths": [
 				"examples"
 			],
 			"targetPath": "build",

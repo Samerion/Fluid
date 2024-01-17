@@ -35,6 +35,7 @@ Theme previewWrapperTheme;
 enum Chapter {
     @"Introduction" introduction,
     @"Frames" frames,
+    @"Buttons & mutability" buttons,
 };
 
 /// The entrypoint prepares themes and the Raylib window. The UI is build in `createUI()`.
@@ -73,7 +74,7 @@ void main(string[] args) {
     codeTheme = mainTheme.makeTheme!q{
         import std.file, std.path;
 
-        typeface = Style.loadTypeface(thisExePath.dirName.buildPath("sometype-mono.ttf"), 13);
+        typeface = Style.loadTypeface(thisExePath.dirName.buildPath("../examples/ibm-plex-mono.ttf"), 12);
         backgroundColor = color!"dedede";
 
         Frame.styleAdd.padding = 0;
@@ -304,6 +305,8 @@ Space render(Chapter query) @safe {
 /// ditto
 Space render(Chapter chapter)() @trusted {
 
+    import std.file;
+    import std.path;
     import std.conv;
     import std.traits;
     import dparse.lexer;
@@ -320,10 +323,11 @@ Space render(Chapter chapter)() @trusted {
     alias mod = mixin("fluid.showcase.", name);
 
     // Get the module filename
-    const filename = name ~ ".d";
+    const sourceDirectory = thisExePath.dirName.buildPath("../examples");
+    const filename = buildPath(sourceDirectory, name ~ ".d");
 
     // Load the file
-    auto sourceCode = import(filename);
+    auto sourceCode = readText(filename);
     auto cache = StringCache(StringCache.defaultBucketCount);
     auto tokens = getTokensForParser(sourceCode, config, &cache);
 

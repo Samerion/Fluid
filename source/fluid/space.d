@@ -357,7 +357,7 @@ class Space : Node, FluidContainer {
             const avail = (available.x - reservedSpace);
             const minSize = stateful
                 ? child.minSize.x
-                : 0;
+                : available.x;
 
             return Vector2(
                 child.layout.expand
@@ -374,7 +374,7 @@ class Space : Node, FluidContainer {
             const avail = (available.y - reservedSpace);
             const minSize = stateful
                 ? child.minSize.y
-                : 0;
+                : available.y;
 
             return Vector2(
                 available.x,
