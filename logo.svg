@@ -34,9 +34,9 @@
      inkscape:document-units="pt"
      showgrid="false"
      showguides="false"
-     inkscape:zoom="4"
-     inkscape:cx="158.25"
-     inkscape:cy="92.5"
+     inkscape:zoom="32"
+     inkscape:cx="153.1875"
+     inkscape:cy="96.4375"
      inkscape:window-width="1920"
      inkscape:window-height="1052"
      inkscape:window-x="0"
@@ -199,7 +199,7 @@
        inkscape:label="purple" />
     <path
        style="display:inline;fill:url(#linearGradient2490);stroke:none;stroke-width:0.75px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       d="M 0,57.5415 C 59.69128,33.139008 81.349867,66.743427 122.85269,78.75803 163.51291,90.528708 236.61751,46.738702 237.06554,57.5415 L 239.452,115.083 H 0 Z"
+       d="M 0,57.5415 C 59.69128,33.139008 79.643814,68.880057 122.85269,78.75803 164.1178,88.191639 236.61751,46.738702 237.06554,57.5415 L 239.452,115.083 H 0 Z"
        id="path2477"
        sodipodi:nodetypes="cssccc"
        inkscape:label="dark blue" />
