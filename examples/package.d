@@ -31,11 +31,13 @@ Theme headingTheme;
 Theme subheadingTheme;
 Theme codeTheme;
 Theme previewWrapperTheme;
+Theme highlightBoxTheme;
 
 enum Chapter {
     @"Introduction" introduction,
     @"Frames" frames,
     @"Buttons & mutability" buttons,
+    @"Node slots" slots,
 };
 
 /// The entrypoint prepares themes and the Raylib window. The UI is build in `createUI()`.
@@ -69,6 +71,11 @@ void main(string[] args) {
             margin.sideTop = 16;
             margin.sideBottom = 8;
         };
+    };
+
+    highlightBoxTheme = makeTheme!q{
+        border = 1;
+        borderStyle = colorBorder(color!"#e62937");
     };
 
     codeTheme = mainTheme.makeTheme!q{
@@ -202,24 +209,35 @@ Space exampleList(void delegate(Chapter) @safe changeChapter) @safe {
     import std.array;
     import std.range;
 
+    auto chapterGrid = grid(
+        .layout!"fill",
+        .segments(3),
+    );
+
+    // TODO This should be easier
+    auto rows = only(EnumMembers!Chapter)
+
+        // Create a button for each chapter
+        .map!(a => button(
+            .layout!"fill",
+            title(a),
+            () => changeChapter(a)
+        ))
+
+        // Split them into chunks of three
+        .chunks(3);
+
+    foreach (row; rows) {
+        chapterGrid.addRow(row.array);
+    }
+
     return sizeLock!vspace(
         .layout!"center",
         .contentSize,
         label(.layout!"center", .headingTheme, "Hello, World!"),
         label("Pick a chapter of the tutorial to get started. Start with the first one or browse the chapters that "
             ~ "interest you! Output previews are shown next to code samples to help you understand the content."),
-        grid(
-            .layout!"fill",
-            .segments(3),
-            array(
-                only(EnumMembers!Chapter)
-                    .map!(a => button(
-                        .layout!"fill",
-                        title(a),
-                        () => changeChapter(a)
-                    ))
-            ),
-        ),
+        chapterGrid,
     );
 
 }
