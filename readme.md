@@ -32,6 +32,12 @@ while (!WindowShouldClose) {
 Fluid has a decent feature set at the moment and new features will still be added over time. Fluid is already mostly
 stable and ready for use, but is still likely to receive multiple breaking changes before leaving its pre-release stage.
 
+Get Fluid:
+
+```
+dub add fluid
+```
+
 **Support Fluid development on Patreon: https://www.patreon.com/samerion**
 
 * Straightforward, high-level API
@@ -44,3 +50,4 @@ stable and ready for use, but is still likely to receive multiple breaking chang
 * Out-of-the-box Unicode support
 * Full HiDPI support
 * Partial gamepad support
+* [redub](https://github.com/MrcSnm/redub) compatible

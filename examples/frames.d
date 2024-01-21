@@ -7,17 +7,6 @@ import fluid.showcase;
 @safe:
 
 
-Theme highlightBoxTheme;
-
-static this() {
-
-    highlightBoxTheme = makeTheme!q{
-        border = 1;
-        borderStyle = colorBorder(color!"#e62937");
-    };
-
-}
-
 // Start article
 
 @(
