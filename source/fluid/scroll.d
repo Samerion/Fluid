@@ -33,6 +33,12 @@ alias hscrollFrame = simpleConstructor!(ScrollFrame, (a) {
 
 });
 
+/// Create a new scrollable node.
+alias vscrollable(alias T) = simpleConstructor!(ApplyRight!(ScrollFrame, "false"), T);
+
+/// Create a new horizontally scrollable node.
+alias hscrollable(alias T) = simpleConstructor!(ApplyRight!(ScrollFrame, "true"), T);
+
 /// Implement scrolling for the given node.
 ///
 /// This only supports scrolling in one axis.

@@ -180,6 +180,13 @@ class Grid : Frame {
 
     }
 
+    /// Add a new row to this grid.
+    void addRow(Ts...)(Ts content) {
+
+        children ~= gridRow(this, content);
+
+    }
+
     /// Magic to extract return value of extractParams at compile time.
     private struct Number(ulong num) {
 
