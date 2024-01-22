@@ -4,6 +4,8 @@ import raylib;
 import std.stdio;
 import std.exception;
 
+version (none):
+
 void main() {
 
     SetConfigFlags(ConfigFlags.FLAG_WINDOW_RESIZABLE);

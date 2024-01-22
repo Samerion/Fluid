@@ -4,6 +4,8 @@ import std.format;
 
 // This showcase is a WIP.
 
+version (none):
+
 void main() {
 
     SetConfigFlags(ConfigFlags.FLAG_WINDOW_RESIZABLE);

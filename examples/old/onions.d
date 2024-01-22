@@ -1,6 +1,8 @@
 import fluid;
 import raylib;
 
+version (none):
+
 void main() {
 
     SetConfigFlags(ConfigFlags.FLAG_WINDOW_RESIZABLE);

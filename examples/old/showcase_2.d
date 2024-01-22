@@ -2,6 +2,8 @@ import fluid;
 import raylib;
 import std.algorithm;
 
+version (none):
+
 void main() {
 
     SetConfigFlags(ConfigFlags.FLAG_WINDOW_RESIZABLE);

@@ -269,6 +269,9 @@ class FreetypeTypeface : Typeface {
         /// Underlying face.
         FT_Face face;
 
+        /// Adjust line height. `1` uses the original line height, `2` doubles it.
+        float lineHeightFactor = 1;
+
     }
 
     private {
@@ -285,6 +288,32 @@ class FreetypeTypeface : Typeface {
     }
 
     static FreetypeTypeface defaultTypeface;
+
+    static this() @trusted {
+
+        // Set the default typeface
+        FreetypeTypeface.defaultTypeface = new FreetypeTypeface(14);
+
+    }
+
+    /// Load the default typeface
+    this(int size) @trusted {
+
+        static typefaceFile = cast(ubyte[]) import("ruda-regular.ttf");
+
+        // Load the font
+        if (auto error = FT_New_Memory_Face(freetype, typefaceFile.ptr, typefaceFile.length, 0, &face)) {
+
+            assert(false, format!"Failed to load default Fluid typeface at size %s, error no. %s"(size, error));
+
+        }
+
+        // Mark self as the owner
+        this._size = size;
+        this.isOwner = true;
+        this.lineHeightFactor = 1.16;
+
+    }
 
     /// Use an existing freetype2 font.
     this(FT_Face face, int size) {
@@ -342,7 +371,7 @@ class FreetypeTypeface : Typeface {
     int lineHeight() const {
 
         // +1 is an error margin
-        return cast(int) (face.size.metrics.height / 64) + 1;
+        return cast(int) (face.size.metrics.height * lineHeightFactor / 64) + 1;
 
     }
 
@@ -646,25 +675,6 @@ shared static this() @system {
         }
 
     }
-
-}
-
-static this() @trusted {
-
-    // Load the font
-    const typefaceFile = cast(ubyte[]) import("ruda-regular.ttf");
-
-    FT_Face typeface;
-
-    if (auto error = FT_New_Memory_Face(freetype, typefaceFile.ptr, typefaceFile.length, 0, &typeface)) {
-
-        assert(false, format!"Failed to load default Fluid typeface, error no. %s"(error));
-
-    }
-
-    // Set the default typeface
-    FreetypeTypeface.defaultTypeface = new FreetypeTypeface(typeface, 14);
-    FreetypeTypeface.defaultTypeface.isOwner = true;
 
 }
 

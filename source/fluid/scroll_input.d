@@ -279,7 +279,7 @@ class ScrollInput : InputNode!Node {
                 : 1;
 
             // Change
-            if (horizontal ^ forHorizontal) emitChange(direction * scrollPageLength);
+            if (horizontal == forHorizontal) emitChange(direction * scrollPageLength);
 
         }
 
