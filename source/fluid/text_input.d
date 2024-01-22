@@ -88,7 +88,7 @@ class TextInput : InputNode!Node {
                     scrollBar.width = 0;
                     // Note: We're not hiding the scrollbar, so it may adjust used values to the size of the input
 
-                    disableWrap = true;
+                    disableWrap();
                     ignoreMouse = true;
 
                 }
@@ -120,7 +120,7 @@ class TextInput : InputNode!Node {
             scrollBar.width = 0;
             // Note: We're not hiding the scrollbar, so it may adjust used values to the size of the input
 
-            disableWrap = true;
+            disableWrap();
             ignoreMouse = true;
 
         }

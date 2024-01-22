@@ -29,15 +29,18 @@ enum contentSize = .sizeLimitX(800);
 Theme mainTheme;
 Theme headingTheme;
 Theme subheadingTheme;
+Theme exampleListTheme;
 Theme codeTheme;
 Theme previewWrapperTheme;
 Theme highlightBoxTheme;
+Theme warningTheme;
 
 enum Chapter {
     @"Introduction" introduction,
     @"Frames" frames,
     @"Buttons & mutability" buttons,
     @"Node slots" slots,
+    @"Themes" themes,
 };
 
 /// The entrypoint prepares themes and the Raylib window. The UI is build in `createUI()`.
@@ -46,10 +49,11 @@ void main(string[] args) {
     // Prepare themes
     mainTheme = makeTheme!q{
         Frame.styleAdd!q{
-            padding.sideX = 12;
-            padding.sideY = 16;
-            Grid.styleAdd.padding = 0;
-            GridRow.styleAdd.padding = 0;
+            margin.sideX = 12;
+            margin.sideY = 16;
+            Grid.styleAdd.margin = 0;
+            GridRow.styleAdd.margin = 0;
+            ScrollFrame.styleAdd.margin = 0;
         };
         Label.styleAdd!q{
             margin.sideY = 7;
@@ -73,6 +77,14 @@ void main(string[] args) {
         };
     };
 
+    exampleListTheme = mainTheme.makeTheme!q{
+        Button!().styleAdd!q{
+            padding.sideX = 8;
+            padding.sideY = 16;
+            margin = 2;
+        };
+    };
+
     highlightBoxTheme = makeTheme!q{
         border = 1;
         borderStyle = colorBorder(color!"#e62937");
@@ -82,9 +94,11 @@ void main(string[] args) {
         import std.file, std.path;
 
         typeface = Style.loadTypeface(thisExePath.dirName.buildPath("../examples/ibm-plex-mono.ttf"), 12);
-        backgroundColor = color!"dedede";
+        backgroundColor = color!"#dedede";
 
-        Frame.styleAdd.padding = 0;
+        Frame.styleAdd!q{
+            padding = 0;
+        };
         Label.styleAdd!q{
             margin = 0;
             padding.sideX = 12;
@@ -95,7 +109,18 @@ void main(string[] args) {
     previewWrapperTheme = mainTheme.makeTheme!q{
         NodeSlot!Node.styleAdd!q{
             border = 1;
-            borderStyle = colorBorder(color!"dedede");
+            borderStyle = colorBorder(color!"#dedede");
+        };
+    };
+
+    warningTheme = mainTheme.makeTheme!q{
+        Label.styleAdd!q{
+            padding.sideX = 16;
+            padding.sideY = 6;
+            border = 1;
+            borderStyle = colorBorder(color!"#ffc30f");
+            backgroundColor = color!"#ffe186";
+            textColor = color!"#000";
         };
     };
 
@@ -132,7 +157,7 @@ Space createUI(string initialChapter = null) @safe {
     import std.conv;
 
     Chapter currentChapter;
-    Scrollable!Frame root;
+    ScrollFrame root;
     Space navigationBar;
     Label titleLabel;
     Button!() leftButton, rightButton;
@@ -180,8 +205,9 @@ Space createUI(string initialChapter = null) @safe {
             // Content
             content = exampleList(&changeChapter),
 
-            hframe(
-                .layout!"fill",
+            sizeLock!hframe(
+                .layout!"center",
+                .contentSize,
 
                 // Left button
                 leftButton = button("Previous chapter", delegate {
@@ -233,10 +259,13 @@ Space exampleList(void delegate(Chapter) @safe changeChapter) @safe {
 
     return sizeLock!vspace(
         .layout!"center",
+        .exampleListTheme,
         .contentSize,
         label(.layout!"center", .headingTheme, "Hello, World!"),
         label("Pick a chapter of the tutorial to get started. Start with the first one or browse the chapters that "
             ~ "interest you! Output previews are shown next to code samples to help you understand the content."),
+        label(.warningTheme, "While this tutorial covers the most important parts of Fluid, it's still incomplete. "
+            ~ "Content will be added in further updates of Fluid. Contributions are welcome."),
         chapterGrid,
     );
 
@@ -265,14 +294,14 @@ Space showcaseCode(string code, Node node, Theme theme = null) {
         node.theme = either(theme, fluidDefaultTheme);
     }
 
-    return hspace(
+    return hframe(
         .layout!"fill",
 
-        label(
+        hscrollable!label(
             .layout!(1, "fill"),
             .codeTheme,
             code,
-        ),
+        ).disableWrap(),
         nodeSlot!Node(
             .layout!(1, "fill"),
             .previewWrapperTheme,
