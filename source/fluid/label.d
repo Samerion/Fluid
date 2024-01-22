@@ -28,7 +28,7 @@ class Label : Node {
         Text!Label text;
 
         /// If true, the content of the label should not be wrapped into new lines if it's too long to fit into one.
-        bool disableWrap;
+        bool isWrapDisabled;
 
     }
 
@@ -63,11 +63,27 @@ class Label : Node {
 
     }
 
+    /// Set wrap on for this node.
+    This disableWrap(this This = Label)() return {
+
+        isWrapDisabled = true;
+        return cast(This) this;
+
+    }
+
+    /// Set wrap off for this node
+    This enableWrap(this This = Label)() return {
+
+        isWrapDisabled = false;
+        return cast(This) this;
+
+    }
+
     protected override void resizeImpl(Vector2 available) {
 
         import std.math;
 
-        text.resize(available, !disableWrap);
+        text.resize(available, !isWrapDisabled);
         minSize = text.size;
 
     }
@@ -125,6 +141,6 @@ unittest {
     myLabel.text ~= " It's a nice day today!";
 
     // Text will automatically wrap if it's too long to fit, but you can toggle it off
-    myLabel.disableWrap = true;
+    myLabel.isWrapDisabled = true;
 
 }
