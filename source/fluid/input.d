@@ -689,6 +689,9 @@ interface FluidHoverable {
     /// Check if the node is disabled. `mixin makeHoverable` to implement.
     ref inout(bool) isDisabled() inout;
 
+    /// Check if the node is hovered.
+    bool isHovered() const;
+
     /// Get the underlying node.
     final inout(Node) asNode() inout {
 
@@ -779,9 +782,10 @@ interface FluidHoverable {
                                 if (down) {
 
                                     // Find the correct trigger condition
+                                    // Ignore mouse release events if the node is not hovered anymore
                                     const condition
                                         = activateWhileDown ? down
-                                        : mouse ? tree.isMouseActive!actionType
+                                        : mouse ? tree.isMouseActive!actionType && isHovered
                                         : tree.isFocusActive!actionType;
 
                                     // Run the action if the stroke was performed

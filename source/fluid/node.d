@@ -374,8 +374,6 @@ abstract class Node : Styleable {
             assert(input.value == "Hello, ");
         }
 
-        io.saveSVG("/tmp/fluid.svg");
-
     }
 
     inout(FluidBackend) backend() inout {
@@ -640,17 +638,17 @@ abstract class Node : Styleable {
         const mousePressed = tree.io.isPressed(FluidMouseButton.left);
 
         // Mouse is hovering an input node
+        // Note that nodes will remain in tree.hover if LMB is pressed to prevent "hover slipping" — actions should
+        // only trigger if the button was both pressed and released on the node.
         if (auto hoverInput = cast(FluidHoverable) tree.hover) {
 
-            // Ignore if the node is disabled or hover is prolonged:
-            // Note that nodes will remain in tree.hover if LMB is pressed to prevent "hover stealing" — actions should
-            // only trigger if the button was both pressed and released on the node.
-            if (!tree.hover.isDisabledInherited && tree.hover.isHovered) {
+            // Pass input to the node, unless it's disabled
+            if (!tree.hover.isDisabledInherited) {
 
                 // Check if the node is focusable
                 auto focusable = cast(FluidFocusable) tree.hover;
 
-                // If the left mouse button is pressed down, let it have focus, if it can
+                // If the left mouse button is pressed down, give the node focus
                 if (mousePressed && focusable) focusable.focus();
 
                 // Pass the input to it
@@ -1236,8 +1234,6 @@ abstract class Node : Styleable {
 
             // The first rectangle doesn't expand so it should be exactly 100×100 in size
             io.assertRectangle(Rectangle(350, 0, 100, 100), colors[0]);
-
-            debug io.saveSVG("/tmp/fluid.svg");
 
             // The remaining space is 500px, so divided into 1+2+3=6 pieces, it should be about 83px per piece
             // TODO Make sure Fluid fills in every pixel while filling in the gaps

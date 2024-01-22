@@ -237,14 +237,14 @@ class HeadlessBackend : FluidBackend {
     }
 
     /// Press the given button, and hold it until `release`.
-    void press(FluidMouseButton button) {
+    void press(FluidMouseButton button = FluidMouseButton.left) {
 
         mouse[button] = State.pressed;
 
     }
 
     /// Release the given mouse button.
-    void release(FluidMouseButton button) {
+    void release(FluidMouseButton button = FluidMouseButton.left) {
 
         mouse[button] = State.released;
 

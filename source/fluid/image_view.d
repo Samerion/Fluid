@@ -143,7 +143,6 @@ class ImageView : Node {
             // Texture should be loaded by now
             assert(root.texture != Texture.init);
 
-            io.saveSVG("/tmp/glui.svg");
             io.assertTexture(root.texture, Vector2(0, 0), color!"fff");
 
         }
