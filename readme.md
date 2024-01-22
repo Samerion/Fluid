@@ -30,13 +30,7 @@ while (!WindowShouldClose) {
 [sdpy]: https://arsd-official.dpldocs.info/arsd.simpledisplay.html
 
 Fluid has a decent feature set at the moment and new features will still be added over time. Fluid is already mostly
-stable and ready for use, but is still likely to receive multiple breaking changes before leaving its pre-release stage.
-
-Get Fluid:
-
-```
-dub add fluid
-```
+stable and ready for use, but is still likely to receive a few breaking changes before leaving its pre-release stage.
 
 **Support Fluid development on Patreon: https://www.patreon.com/samerion**
 
@@ -51,3 +45,19 @@ dub add fluid
 * Full HiDPI support
 * Partial gamepad support
 * [redub](https://github.com/MrcSnm/redub) compatible
+
+## Get Fluid
+
+You can use [dub][dub] to include Fluid in your code:
+
+```
+dub add fluid
+```
+
+To get a quick start, check out the showcase:
+
+```
+dub run fluid:showcase
+```
+
+[dub]: https://code.dlang.org/
