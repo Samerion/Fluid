@@ -54,6 +54,12 @@ For a quick start guide on Fluid, check out the showcase:
 dub run fluid:showcase
 ```
 
+Create a new [dub][dub] project based on Fluid:
+
+```
+dub init -t fluid
+```
+
 You can use [dub][dub] to include Fluid in your code:
 
 ```
