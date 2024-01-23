@@ -527,10 +527,8 @@ unittest {
 
     import fluid.space;
 
-    auto tree = new LayoutTree(vspace());
     auto io = new HeadlessBackend;
-
-    tree.io = io;
+    auto tree = new LayoutTree(vspace(), io);
 
     // Nothing pressed, action not activated
     assert(!tree.isDown!(FluidInputAction.backspaceWord));
@@ -571,10 +569,8 @@ unittest {
 
     import fluid.space;
 
-    auto tree = new LayoutTree(vspace());
     auto io = new HeadlessBackend;
-
-    tree.io = io;
+    auto tree = new LayoutTree(vspace(), io);
 
     assert(!tree.isDown!(FluidInputAction.press));
 
@@ -627,10 +623,8 @@ unittest {
 
     import fluid.space;
 
-    auto tree = new LayoutTree(vspace());
     auto io = new HeadlessBackend;
-
-    tree.io = io;
+    auto tree = new LayoutTree(vspace(), io);
 
     assert(!tree.isDown!(FluidInputAction.press));
 

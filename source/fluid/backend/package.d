@@ -917,7 +917,8 @@ else {
 
     struct Vector2 {
 
-        float x, y;
+        float x = 0;
+        float y = 0;
 
         mixin Linear;
 
