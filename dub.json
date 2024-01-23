@@ -70,6 +70,14 @@
 			],
 			"targetPath": "build",
 			"targetType": "executable"
+		},
+		{
+			"name": "init-exec",
+			"versions": ["Fluid_InitExec"],
+			"sourceFiles": ["source/fluid/dub_template.d"],
+			"sourcePaths": [],
+			"targetType": "executable",
+			"targetPath": "build"
 		}
 	],
 	"targetPath": "build",
