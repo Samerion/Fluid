@@ -12,7 +12,6 @@
 module fluid.showcase;
 
 import fluid;
-import raylib;
 import dparse.ast;
 
 import std.string;
@@ -43,7 +42,7 @@ enum Chapter {
     @"Themes" themes,
 };
 
-/// The entrypoint prepares themes and the Raylib window. The UI is build in `createUI()`.
+/// The entrypoint prepares themes and the window. The UI is build in `createUI()`.
 void main(string[] args) {
 
     // Prepare themes
@@ -124,17 +123,28 @@ void main(string[] args) {
         };
     };
 
+    // Create the UI — pass the first argument to load a chapter under the given name
+    auto ui = args.length > 1
+        ? createUI(args[1])
+        : createUI();
+
+    /// Start the window.
+    startWindow(ui);
+
+}
+
+/// Raylib entrypoint.
+version (Have_raylib_d)
+void startWindow(Node ui) {
+
+    import raylib;
+
     // Prepare the window
     SetConfigFlags(ConfigFlags.FLAG_WINDOW_RESIZABLE);
     SetTraceLogLevel(TraceLogLevel.LOG_WARNING);
     InitWindow(1000, 750, "Fluid showcase");
     SetTargetFPS(60);
     scope (exit) CloseWindow();
-
-    // Create the UI
-    auto ui = args.length > 1
-        ? createUI(args[1])
-        : createUI();
 
     // Event loop
     while (!WindowShouldClose) {
@@ -149,6 +159,34 @@ void main(string[] args) {
         ui.draw();
 
     }
+
+}
+
+else version (Have_arsd_official_simpledisplay)
+void startWindow(Node ui) {
+
+    import arsd.simpledisplay;
+
+    SimpledisplayBackend backend;
+
+    // Create the window
+    auto window = new SimpleWindow(1000, 750, "Fluid showcase",
+        OpenGlOptions.yes,
+        Resizeability.allowResizing);
+
+    // Setup the backend
+    ui.backend = backend = new SimpledisplayBackend(window);
+
+    // Simpledisplay's design is more sophisticated and requires more config than Raylib
+    window.redrawOpenGlScene = {
+        ui.draw();
+        backend.poll();
+    };
+
+    // 1 frame every 16 ms ≈ 60 FPS
+    window.eventLoop(16, {
+        window.redrawOpenGlSceneSoon();
+    });
 
 }
 
@@ -355,6 +393,7 @@ Space render(Chapter chapter)() @trusted {
     import std.file;
     import std.path;
     import std.conv;
+    import std.meta;
     import std.traits;
     import dparse.lexer;
     import dparse.parser : parseModule;
@@ -389,19 +428,18 @@ Space render(Chapter chapter)() @trusted {
     // Check each member
     static foreach (member; __traits(allMembers, mod)) {{
 
-        // Limit to functions that end with "Example"
-        static if (member.endsWith("Example"))
+        // Limit to memberrs that end with "Example"
+        // Note we cannot properly support overloads
+        static if (member.endsWith("Example")) {
 
-        // Filter to functions only
-        // Note we cannot properly support overload since ordering gets lost at this point
-        static foreach (overload; __traits(getOverloads, mod, member)) {
+            alias memberSymbol = __traits(getMember, mod, member);
 
             auto documentation = sizeLock!vspace(.layout!"center", .contentSize);
             auto code = visitor.functions[member];
             auto theme = fluidDefaultTheme;
 
             // Load documentation attributes
-            static foreach (uda; __traits(getAttributes, overload)) {
+            static foreach (uda; __traits(getAttributes, memberSymbol)) {
 
                 // Node
                 static if (is(typeof(uda()) : Node))
@@ -417,8 +455,8 @@ Space render(Chapter chapter)() @trusted {
             document ~= documentation;
 
             // Add and run a code example if it returns a node
-            static if (is(ReturnType!overload : Node))
-                document ~= showcaseCode(code, overload(), theme);
+            static if (is(ReturnType!memberSymbol : Node))
+                document ~= showcaseCode(code, memberSymbol(), theme);
 
             // Otherwise, show just the code
             else if (code != "")

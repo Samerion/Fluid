@@ -48,16 +48,18 @@ stable and ready for use, but is still likely to receive a few breaking changes 
 
 ## Get Fluid
 
+For a quick start guide on Fluid, check out the showcase:
+
+```
+dub run fluid:showcase
+```
+
 You can use [dub][dub] to include Fluid in your code:
 
 ```
 dub add fluid
-```
-
-To get a quick start, check out the showcase:
-
-```
-dub run fluid:showcase
+dub add raylib-d
+dub run raylib-d:install
 ```
 
 [dub]: https://code.dlang.org/
