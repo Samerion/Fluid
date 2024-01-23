@@ -122,7 +122,9 @@ Frame typefaceExample() {
 
         // Load typeface from given file at 14pts
         Label.styleAdd!q{
-            typeface = Style.loadTypeface("examples/ibm-plex-mono.ttf", 14);
+            import std.file, std.path;
+            auto fontPath = thisExePath.dirName.buildPath("../examples/ibm-plex-mono.ttf");
+            typeface = Style.loadTypeface(fontPath, 14);
         };
 
     };
