@@ -48,9 +48,6 @@
 				"libdparse": "~>0.23.2",
 				"fluid": { "path": "." }
 			},
-			"libs": [
-				"raylib"
-			],
 			"name": "showcase",
 			"sourcePaths": [
 				"examples"
