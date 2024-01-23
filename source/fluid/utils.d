@@ -6,6 +6,7 @@ import std.functional;
 
 import fluid.backend;
 
+
 @safe:
 
 
@@ -235,5 +236,25 @@ template StaticFieldNames(T) {
 
     // Result
     alias StaticFieldNames = Filter!(isStaticMember, Members);
+
+}
+
+/// Open given URL in a web browser.
+///
+/// Supports all major desktop operating systems. Does nothing if not supported on the given platform.
+///
+/// At the moment this simply wraps `std.process.browse`.
+void openURL(scope const(char)[] url) nothrow {
+
+    version (Posix) {
+        import std.process;
+        browse(url);
+    }
+    else version (Windows) {
+        import std.process;
+        browse(url);
+    }
+
+    // Do nothing on remaining platforms
 
 }

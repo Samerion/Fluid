@@ -1,7 +1,5 @@
 module fluid.showcase.themes;
 
-import raylib : OpenURL;
-
 import fluid;
 import fluid.showcase;
 
@@ -51,8 +49,8 @@ Frame themeExample() {
         vspace(
             label("We define two rules, one for frames and one for labels. We change their "
                 ~ "colors, which should probably be fairly easy to understand. For reference on CSS hex colors, see "),
-            button("MDN <hex-color>", delegate () @trusted {
-                OpenURL(`https://developer.mozilla.org/en-US/docs/Web/CSS/hex-color`);
+            button("MDN <hex-color>", delegate {
+                openURL(`https://developer.mozilla.org/en-US/docs/Web/CSS/hex-color`);
             })
         )),
     () => hspace(label("— "), label("Finally, we pass the theme next to the layout argument of the frame. It's "

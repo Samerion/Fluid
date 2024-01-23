@@ -26,9 +26,7 @@ Label helloWorldExample() {
     ~ "screen by itself. Typically, you'd like to create a window the user interface can live in. Because Fluid is "
     ~ "made with game development in mind, it can integrate with Raylib to do this. A minimal example of using Fluid "
     ~ "in Raylib will thus look like this:"))
-void raylibExample() @system {
-
-    import raylib;
+void raylibExample()() @system {
 
     // Create the window
     InitWindow(800, 600, "Hello, World!");
@@ -56,9 +54,8 @@ void raylibExample() @system {
 @(
     () => label("This tutorial will focus on Fluid however, and won't describe Raylib in detail. If you would like to "
         ~ "learn more about Raylib, visit its homepage:"),
-    () => button("https://raylib.com", delegate () @trusted {
-        import raylib;
-        OpenURL("https://raylib.com");
+    () => button("https://raylib.com", delegate {
+        openURL("https://raylib.com");
     }),
     () => label(.headingTheme, "Frames"),
     () => label("Next up in our list of basic nodes is the frame node. Frames are containers, which means they connect "

@@ -54,6 +54,22 @@
 			],
 			"targetPath": "build",
 			"targetType": "executable"
+		},
+		{
+			"dependencies": {
+				"libdparse": "~>0.23.2",
+				"fluid": { "path": "." },
+				"raylib-d": "~>5.0"
+			},
+			"name": "showcase-raylib",
+			"libs": [
+				"raylib"
+			],
+			"sourcePaths": [
+				"examples"
+			],
+			"targetPath": "build",
+			"targetType": "executable"
 		}
 	],
 	"targetPath": "build",
