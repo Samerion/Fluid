@@ -8,7 +8,7 @@ import fluid.showcase;
 
 
 @(
-    () => label(.warningTheme, .layout!"fill", "Warning: Themes will be completely reworked in 0.7.0. None of the code "
+    () => label(.layout!"fill", .warningTheme, "Warning: Themes will be completely reworked in 0.7.0. None of the code "
         ~ "in this article is guaranteed to work in the future. Themes are currently also far more complex than they "
         ~ "need to be — prepare for a ride."),
     () => label("One won't get far with Fluid without changing the theme of their app. While the default theme is "

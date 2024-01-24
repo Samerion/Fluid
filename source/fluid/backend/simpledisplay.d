@@ -268,7 +268,7 @@ class SimpledisplayBackend : FluidBackend {
 
     }
 
-    /// Update event state.
+    /// Update event state. To be called *after* drawing.
     void poll() {
 
         // Calculate delta time
@@ -557,6 +557,13 @@ class SimpledisplayBackend : FluidBackend {
         glEnable(GL_BLEND);
         glLoadIdentity();
 
+        // This must be present, otherwise the AMD Linux driver will hang when the window is resized. I don't have the
+        // slightest clue why.
+        if (auto error = glGetError()) {
+            import std.stdio;
+            debug writeln(error);
+        }
+
     }
 
     void drawLine(Vector2 start, Vector2 end, Color color) @trusted {
@@ -596,7 +603,6 @@ class SimpledisplayBackend : FluidBackend {
 
         openglDraw();
         glBegin(GL_TRIANGLES);
-
         glColor4ub(color.tupleof);
 
         //  d--c
@@ -611,21 +617,16 @@ class SimpledisplayBackend : FluidBackend {
         // First triangle
         glTexCoord2f(0, 0);
         vertex(d);
-        glColor4ub(color.tupleof);
         glTexCoord2f(0, 1);
         vertex(a);
-        glColor4ub(color.tupleof);
         glTexCoord2f(1, 0);
         vertex(c);
 
         // Second triangle
-        glColor4ub(color.tupleof);
         glTexCoord2f(1, 0);
         vertex(c);
-        glColor4ub(color.tupleof);
         glTexCoord2f(0, 1);
         vertex(a);
-        glColor4ub(color.tupleof);
         glTexCoord2f(1, 1);
         vertex(b);
 
