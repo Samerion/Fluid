@@ -852,6 +852,8 @@ abstract class Node : Styleable {
     ///             If the node can't fit, it will be cropped.
     final protected void draw(Rectangle space) @trusted {
 
+        import std.range;
+
         assert(!toRemove, "A toRemove child wasn't removed from container.");
         assert(tree !is null, toString ~ " wasn't resized prior to drawing. You might be missing an `updateSize`"
             ~ " call!");
@@ -899,13 +901,13 @@ abstract class Node : Styleable {
         if (isHovered && !heldElsewhere && !ignoreMouse) tree.hover = this;
 
         assert(
-            [size.tupleof].all!isFinite,
+            only(size.tupleof).all!isFinite,
             format!"Node %s resulting size is invalid: %s; given space = %s, minSize = %s"(
                 typeid(this), size, space, minSize
             ),
         );
         assert(
-            [paddingBox.tupleof, contentBox.tupleof].all!isFinite,
+            only(paddingBox.tupleof, contentBox.tupleof).all!isFinite,
             format!"Node %s size is invalid: paddingBox = %s, contentBox = %s"(
                 typeid(this), paddingBox, contentBox
             )
