@@ -214,7 +214,7 @@ class NodeSlot(T : Node) : Node {
         // Focus the second button
         {
             io.nextFrame;
-            io.press(FluidKeyboardKey.up);
+            io.press(KeyboardKey.up);
 
             root.draw();
 
@@ -224,8 +224,8 @@ class NodeSlot(T : Node) : Node {
         // Press it
         {
             io.nextFrame;
-            io.release(FluidKeyboardKey.up);
-            io.press(FluidKeyboardKey.enter);
+            io.release(KeyboardKey.up);
+            io.press(KeyboardKey.enter);
 
             root.draw();
 
@@ -238,7 +238,7 @@ class NodeSlot(T : Node) : Node {
         // Nodes can be unassigned
         {
             io.nextFrame;
-            io.release(FluidKeyboardKey.enter);
+            io.release(KeyboardKey.enter);
 
             slot1.clear();
 

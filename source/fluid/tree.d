@@ -476,29 +476,29 @@ struct LayoutTree {
         boundInputs = [
 
             InputLayer(
-                InputStroke(FluidKeyboardKey.leftControl),
+                InputStroke(KeyboardKey.leftControl),
                 [
-                    bind!backspaceWord(FluidKeyboardKey.backspace),
-                    bind!backspaceWord(FluidKeyboardKey.w),  // emacs & vim
-                    bind!entryPrevious(FluidKeyboardKey.k),  // vim
-                    bind!entryPrevious(FluidKeyboardKey.p),  // emacs
-                    bind!entryNext(FluidKeyboardKey.j),  // vim
-                    bind!entryNext(FluidKeyboardKey.n),  // emacs
+                    bind!backspaceWord(KeyboardKey.backspace),
+                    bind!backspaceWord(KeyboardKey.w),  // emacs & vim
+                    bind!entryPrevious(KeyboardKey.k),  // vim
+                    bind!entryPrevious(KeyboardKey.p),  // emacs
+                    bind!entryNext(KeyboardKey.j),  // vim
+                    bind!entryNext(KeyboardKey.n),  // emacs
                 ]
             ),
 
             InputLayer(
-                InputStroke(FluidKeyboardKey.leftShift),
+                InputStroke(KeyboardKey.leftShift),
                 [
-                    bind!focusPrevious(FluidKeyboardKey.tab),
-                    bind!entryPrevious(FluidKeyboardKey.tab),
+                    bind!focusPrevious(KeyboardKey.tab),
+                    bind!entryPrevious(KeyboardKey.tab),
                 ]
             ),
 
             InputLayer(
-                InputStroke(FluidKeyboardKey.leftAlt),
+                InputStroke(KeyboardKey.leftAlt),
                 [
-                    bind!entryUp(FluidKeyboardKey.up),
+                    bind!entryUp(KeyboardKey.up),
                 ]
             ),
 
@@ -506,56 +506,56 @@ struct LayoutTree {
                 InputStroke(),
                 [
                     // Press
-                    bind!press(FluidMouseButton.left),
-                    bind!press(FluidKeyboardKey.enter),
-                    bind!press(FluidGamepadButton.cross),
+                    bind!press(MouseButton.left),
+                    bind!press(KeyboardKey.enter),
+                    bind!press(GamepadButton.cross),
 
                     // Submit
-                    bind!submit(FluidKeyboardKey.enter),
-                    bind!submit(FluidGamepadButton.cross),
+                    bind!submit(KeyboardKey.enter),
+                    bind!submit(GamepadButton.cross),
 
                     // Cancel
-                    bind!cancel(FluidKeyboardKey.escape),
-                    bind!cancel(FluidGamepadButton.circle),
+                    bind!cancel(KeyboardKey.escape),
+                    bind!cancel(GamepadButton.circle),
 
                     // Tabbing; index-focus
-                    bind!focusPrevious(FluidGamepadButton.leftButton),
-                    bind!focusNext(FluidKeyboardKey.tab),
-                    bind!focusNext(FluidGamepadButton.rightButton),
+                    bind!focusPrevious(GamepadButton.leftButton),
+                    bind!focusNext(KeyboardKey.tab),
+                    bind!focusNext(GamepadButton.rightButton),
 
                     // Directional focus
-                    bind!focusLeft(FluidKeyboardKey.left),
-                    bind!focusLeft(FluidGamepadButton.dpadLeft),
-                    bind!focusRight(FluidKeyboardKey.right),
-                    bind!focusRight(FluidGamepadButton.dpadRight),
-                    bind!focusUp(FluidKeyboardKey.up),
-                    bind!focusUp(FluidGamepadButton.dpadUp),
-                    bind!focusDown(FluidKeyboardKey.down),
-                    bind!focusDown(FluidGamepadButton.dpadDown),
+                    bind!focusLeft(KeyboardKey.left),
+                    bind!focusLeft(GamepadButton.dpadLeft),
+                    bind!focusRight(KeyboardKey.right),
+                    bind!focusRight(GamepadButton.dpadRight),
+                    bind!focusUp(KeyboardKey.up),
+                    bind!focusUp(GamepadButton.dpadUp),
+                    bind!focusDown(KeyboardKey.down),
+                    bind!focusDown(GamepadButton.dpadDown),
 
                     // Text input
-                    bind!backspace(FluidKeyboardKey.backspace),
-                    bind!entryPrevious(FluidKeyboardKey.up),
-                    bind!entryPrevious(FluidGamepadButton.dpadUp),
-                    bind!entryNext(FluidKeyboardKey.down),
-                    bind!entryNext(FluidKeyboardKey.tab),
-                    bind!entryNext(FluidGamepadButton.dpadDown),
+                    bind!backspace(KeyboardKey.backspace),
+                    bind!entryPrevious(KeyboardKey.up),
+                    bind!entryPrevious(GamepadButton.dpadUp),
+                    bind!entryNext(KeyboardKey.down),
+                    bind!entryNext(KeyboardKey.tab),
+                    bind!entryNext(GamepadButton.dpadDown),
 
                     // Scrolling
-                    bind!scrollLeft(FluidKeyboardKey.left),
-                    bind!scrollLeft(FluidGamepadButton.dpadLeft),
-                    bind!scrollLeft(FluidMouseButton.scrollLeft),
-                    bind!scrollRight(FluidKeyboardKey.right),
-                    bind!scrollRight(FluidGamepadButton.dpadRight),
-                    bind!scrollRight(FluidMouseButton.scrollRight),
-                    bind!scrollUp(FluidKeyboardKey.up),
-                    bind!scrollUp(FluidGamepadButton.dpadUp),
-                    bind!scrollUp(FluidMouseButton.scrollUp),
-                    bind!scrollDown(FluidKeyboardKey.down),
-                    bind!scrollDown(FluidGamepadButton.dpadDown),
-                    bind!scrollDown(FluidMouseButton.scrollDown),
-                    bind!pageUp(FluidKeyboardKey.pageUp),
-                    bind!pageDown(FluidKeyboardKey.pageDown),
+                    bind!scrollLeft(KeyboardKey.left),
+                    bind!scrollLeft(GamepadButton.dpadLeft),
+                    bind!scrollLeft(MouseButton.scrollLeft),
+                    bind!scrollRight(KeyboardKey.right),
+                    bind!scrollRight(GamepadButton.dpadRight),
+                    bind!scrollRight(MouseButton.scrollRight),
+                    bind!scrollUp(KeyboardKey.up),
+                    bind!scrollUp(GamepadButton.dpadUp),
+                    bind!scrollUp(MouseButton.scrollUp),
+                    bind!scrollDown(KeyboardKey.down),
+                    bind!scrollDown(GamepadButton.dpadDown),
+                    bind!scrollDown(MouseButton.scrollDown),
+                    bind!pageUp(KeyboardKey.pageUp),
+                    bind!pageDown(KeyboardKey.pageDown),
                 ]
             )
 

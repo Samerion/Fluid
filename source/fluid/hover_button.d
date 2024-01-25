@@ -82,25 +82,25 @@ unittest {
 
     // Press the button
     io.nextFrame;
-    io.press(FluidMouseButton.left);
+    io.press(MouseButton.left);
     root.draw();
 
-    assert(io.isDown(FluidMouseButton.left));
+    assert(io.isDown(MouseButton.left));
     assert(hoverFrameCount == 2);
 
     // Wait while the button is pressed
     io.nextFrame;
     root.draw();
 
-    assert(io.isDown(FluidMouseButton.left));
+    assert(io.isDown(MouseButton.left));
     assert(hoverFrameCount == 3);
 
     // Release the button
     io.nextFrame;
-    io.release(FluidMouseButton.left);
+    io.release(MouseButton.left);
     root.draw();
 
-    assert(io.isUp(FluidMouseButton.left));
+    assert(io.isUp(MouseButton.left));
     assert(hoverFrameCount == 4);
 
     // Move the mouse elsewhere
@@ -112,7 +112,7 @@ unittest {
 
     // Press the button outside
     io.nextFrame;
-    io.press(FluidMouseButton.left);
+    io.press(MouseButton.left);
     root.draw();
 
     assert(hoverFrameCount == 4);

@@ -282,11 +282,11 @@ class Scrollable(T : Node, string horizontalExpression) : T {
 
         // TODO do this via input actions somehow https://git.samerion.com/Samerion/Fluid/issues/89
         const isPlus = isHorizontal
-            ? io.isReleased(FluidMouseButton.scrollRight)
-            : io.isReleased(FluidMouseButton.scrollDown);
+            ? io.isReleased(MouseButton.scrollRight)
+            : io.isReleased(MouseButton.scrollDown);
         const isMinus = isHorizontal
-            ? io.isReleased(FluidMouseButton.scrollLeft)
-            : io.isReleased(FluidMouseButton.scrollUp);
+            ? io.isReleased(MouseButton.scrollLeft)
+            : io.isReleased(MouseButton.scrollUp);
 
         const speed = scrollBar.scrollSpeed;
         const move

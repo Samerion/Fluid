@@ -50,13 +50,14 @@ void main(string[] args) {
         Frame.styleAdd!q{
             margin.sideX = 12;
             margin.sideY = 16;
-            Grid.styleAdd.margin = 0;
+            Grid.styleAdd.margin.sideY = 0;
             GridRow.styleAdd.margin = 0;
             ScrollFrame.styleAdd.margin = 0;
         };
         Label.styleAdd!q{
+            margin.sideX = 12;
             margin.sideY = 7;
-            Button!().styleAdd.margin.sideX = 2;
+            Button!().styleAdd;
         };
     };
 

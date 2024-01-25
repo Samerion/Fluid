@@ -29,19 +29,19 @@ static FluidBackend defaultFluidBackend;
 interface FluidBackend {
 
     /// Check if the given mouse button has just been pressed/released or, if it's held down or not (up).
-    bool isPressed(FluidMouseButton) const;
-    bool isReleased(FluidMouseButton) const;
-    bool isDown(FluidMouseButton) const;
-    bool isUp(FluidMouseButton) const;
+    bool isPressed(MouseButton) const;
+    bool isReleased(MouseButton) const;
+    bool isDown(MouseButton) const;
+    bool isUp(MouseButton) const;
 
     /// Check if the given keyboard key has just been pressed/released or, if it's held down or not (up).
-    bool isPressed(FluidKeyboardKey) const;
-    bool isReleased(FluidKeyboardKey) const;
-    bool isDown(FluidKeyboardKey) const;
-    bool isUp(FluidKeyboardKey) const;
+    bool isPressed(KeyboardKey) const;
+    bool isReleased(KeyboardKey) const;
+    bool isDown(KeyboardKey) const;
+    bool isUp(KeyboardKey) const;
 
     /// If true, the given keyboard key has been virtually pressed again, through a long-press.
-    bool isRepeated(FluidKeyboardKey) const;
+    bool isRepeated(KeyboardKey) const;
 
     /// Get next queued character from user's input. The queue should be cleared every frame. Return null if no
     /// character was pressed.
@@ -51,15 +51,15 @@ interface FluidBackend {
     /// connected gamepads.
     ///
     /// Returns: 0 if the event isn't taking place on any controller, or number of the controller.
-    int isPressed(FluidGamepadButton button) const;
-    int isReleased(FluidGamepadButton button) const;
-    int isDown(FluidGamepadButton button) const;
-    int isUp(FluidGamepadButton button) const;
+    int isPressed(GamepadButton button) const;
+    int isReleased(GamepadButton button) const;
+    int isDown(GamepadButton button) const;
+    int isUp(GamepadButton button) const;
 
     /// If true, the given gamepad button has been virtually pressed again, through a long-press.
     ///
     /// Returns: 0 if no controller had a button repeat this frame, or number of the controller.
-    int isRepeated(FluidGamepadButton button) const;
+    int isRepeated(GamepadButton button) const;
 
     /// Get/set mouse position
     Vector2 mousePosition(Vector2);
@@ -447,7 +447,7 @@ struct FluidMouseCursor {
 
 }
 
-enum FluidMouseButton {
+enum MouseButton {
     none,
     left,         // Left (primary) mouse button.
     right,        // Right (secondary) mouse button.
@@ -467,13 +467,13 @@ enum FluidMouseButton {
 }
 
 /// Check if the given mouse button is a scroll wheel step.
-bool isScroll(FluidMouseButton button) {
+bool isScroll(MouseButton button) {
 
     return button.scrollUp <= button && button <= button.scrollRight;
 
 }
 
-enum FluidGamepadButton {
+enum GamepadButton {
 
     none,                // No such button
     dpadUp,              // Dpad up button.
@@ -501,7 +501,7 @@ enum FluidGamepadButton {
 
 }
 
-enum FluidGamepadAxis {
+enum GamepadAxis {
 
     leftX,         // Left joystick, X axis.
     leftY,         // Left joystick, Y axis.
@@ -512,7 +512,7 @@ enum FluidGamepadAxis {
 
 }
 
-enum FluidKeyboardKey {
+enum KeyboardKey {
     none               = 0,        // No key pressed
     apostrophe         = 39,       // '
     comma              = 44,       // ,

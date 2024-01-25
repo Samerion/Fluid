@@ -21,6 +21,7 @@ private {
     alias Rectangle = fluid.backend.Rectangle;
     alias Color = fluid.backend.Color;
     alias Image = fluid.backend.Image;
+    alias MouseButton = fluid.backend.MouseButton;
 }
 
 class SimpledisplayBackend : FluidBackend {
@@ -50,8 +51,8 @@ class SimpledisplayBackend : FluidBackend {
         TextureReaper _reaper;
 
         /// Recent input events for each keyboard and mouse.
-        InputState[FluidKeyboardKey.max+1] _keyboardState;
-        InputState[FluidMouseButton.max+1] _mouseState;
+        InputState[KeyboardKey.max+1] _keyboardState;
+        InputState[MouseButton.max+1] _mouseState;
         // gamepads?
 
         /// Characters typed by the user, awaiting consumption.
@@ -62,7 +63,6 @@ class SimpledisplayBackend : FluidBackend {
 
     }
 
-    // TODO HiDPI
     // TODO non-openGL backend, maybe...
 
     /// Initialize the backend using the given window.
@@ -183,55 +183,55 @@ class SimpledisplayBackend : FluidBackend {
 
     }
 
-    bool isPressed(FluidMouseButton button) const {
+    bool isPressed(MouseButton button) const {
 
         return _mouseState[button] == InputState.pressed;
 
     }
 
-    bool isReleased(FluidMouseButton button) const {
+    bool isReleased(MouseButton button) const {
 
         return _mouseState[button] == InputState.released;
 
     }
 
-    bool isDown(FluidMouseButton button) const {
+    bool isDown(MouseButton button) const {
 
         return _mouseState[button].among(InputState.pressed, InputState.down) != 0;
 
     }
 
-    bool isUp(FluidMouseButton button) const {
+    bool isUp(MouseButton button) const {
 
         return _mouseState[button].among(InputState.released, InputState.up) != 0;
 
     }
 
-    bool isPressed(FluidKeyboardKey key) const {
+    bool isPressed(KeyboardKey key) const {
 
         return _keyboardState[key] == InputState.pressed;
 
     }
 
-    bool isReleased(FluidKeyboardKey key) const {
+    bool isReleased(KeyboardKey key) const {
 
         return _keyboardState[key] == InputState.released;
 
     }
 
-    bool isDown(FluidKeyboardKey key) const {
+    bool isDown(KeyboardKey key) const {
 
         return _keyboardState[key].among(InputState.pressed, InputState.repeated, InputState.down) != 0;
 
     }
 
-    bool isUp(FluidKeyboardKey key) const {
+    bool isUp(KeyboardKey key) const {
 
         return _keyboardState[key].among(InputState.released, InputState.up) != 0;
 
     }
 
-    bool isRepeated(FluidKeyboardKey key) const {
+    bool isRepeated(KeyboardKey key) const {
 
         return _keyboardState[key] == InputState.repeated;
 
@@ -251,15 +251,15 @@ class SimpledisplayBackend : FluidBackend {
 
     }
 
-    int isPressed(FluidGamepadButton button) const
+    int isPressed(GamepadButton button) const
         => 0;
-    int isReleased(FluidGamepadButton button) const
+    int isReleased(GamepadButton button) const
         => 0;
-    int isDown(FluidGamepadButton button) const
+    int isDown(GamepadButton button) const
         => 0;
-    int isUp(FluidGamepadButton button) const
+    int isUp(GamepadButton button) const
         => 1;
-    int isRepeated(FluidGamepadButton button) const
+    int isRepeated(GamepadButton button) const
         => 0;
 
     private void updateDPI() @trusted {
@@ -672,133 +672,133 @@ class SimpledisplayBackend : FluidBackend {
 
 }
 
-FluidMouseButton toFluid(arsd.simpledisplay.MouseButton button) {
+MouseButton toFluid(arsd.simpledisplay.MouseButton button) {
 
      switch (button) {
 
         default:
-        case button.none: return FluidMouseButton.none;
-        case button.left: return FluidMouseButton.left;
-        case button.middle: return FluidMouseButton.middle;
-        case button.right: return FluidMouseButton.right;
-        case button.wheelUp: return FluidMouseButton.scrollUp;
-        case button.wheelDown: return FluidMouseButton.scrollDown;
-        case button.backButton: return FluidMouseButton.back;
-        case button.forwardButton: return FluidMouseButton.forward;
+        case button.none: return MouseButton.none;
+        case button.left: return MouseButton.left;
+        case button.middle: return MouseButton.middle;
+        case button.right: return MouseButton.right;
+        case button.wheelUp: return MouseButton.scrollUp;
+        case button.wheelDown: return MouseButton.scrollDown;
+        case button.backButton: return MouseButton.back;
+        case button.forwardButton: return MouseButton.forward;
 
     }
 
 }
 
-FluidKeyboardKey toFluid(arsd.simpledisplay.Key key) {
+KeyboardKey toFluid(arsd.simpledisplay.Key key) {
 
      switch (key) {
 
-        default: return FluidKeyboardKey.none;
-        case key.Escape: return FluidKeyboardKey.escape;
-        case key.Backspace: return FluidKeyboardKey.backspace;
-        case key.F1: return FluidKeyboardKey.f1;
-        case key.F2: return FluidKeyboardKey.f2;
-        case key.F3: return FluidKeyboardKey.f3;
-        case key.F4: return FluidKeyboardKey.f4;
-        case key.F5: return FluidKeyboardKey.f5;
-        case key.F6: return FluidKeyboardKey.f6;
-        case key.F7: return FluidKeyboardKey.f7;
-        case key.F8: return FluidKeyboardKey.f8;
-        case key.F9: return FluidKeyboardKey.f9;
-        case key.F10: return FluidKeyboardKey.f10;
-        case key.F11: return FluidKeyboardKey.f11;
-        case key.F12: return FluidKeyboardKey.f12;
-        case key.PrintScreen: return FluidKeyboardKey.printScreen;
-        case key.ScrollLock: return FluidKeyboardKey.scrollLock;
-        case key.Pause: return FluidKeyboardKey.pause;
-        case key.Grave: return FluidKeyboardKey.grave;
-        case key.N0: return FluidKeyboardKey.digit0;
-        case key.N1: return FluidKeyboardKey.digit1;
-        case key.N2: return FluidKeyboardKey.digit2;
-        case key.N3: return FluidKeyboardKey.digit3;
-        case key.N4: return FluidKeyboardKey.digit4;
-        case key.N5: return FluidKeyboardKey.digit5;
-        case key.N6: return FluidKeyboardKey.digit6;
-        case key.N7: return FluidKeyboardKey.digit7;
-        case key.N8: return FluidKeyboardKey.digit8;
-        case key.N9: return FluidKeyboardKey.digit9;
-        case key.Dash: return FluidKeyboardKey.dash;
-        case key.Equals: return FluidKeyboardKey.equal;
-        case key.Backslash: return FluidKeyboardKey.backslash;
-        case key.Insert: return FluidKeyboardKey.insert;
-        case key.Home: return FluidKeyboardKey.home;
-        case key.PageUp: return FluidKeyboardKey.pageUp;
-        case key.PageDown: return FluidKeyboardKey.pageDown;
-        case key.Delete: return FluidKeyboardKey.del;
-        case key.End: return FluidKeyboardKey.end;
-        case key.Up: return FluidKeyboardKey.up;
-        case key.Down: return FluidKeyboardKey.down;
-        case key.Left: return FluidKeyboardKey.left;
-        case key.Right: return FluidKeyboardKey.right;
-        case key.Tab: return FluidKeyboardKey.tab;
-        case key.Q: return FluidKeyboardKey.q;
-        case key.W: return FluidKeyboardKey.w;
-        case key.E: return FluidKeyboardKey.e;
-        case key.R: return FluidKeyboardKey.r;
-        case key.T: return FluidKeyboardKey.t;
-        case key.Y: return FluidKeyboardKey.y;
-        case key.U: return FluidKeyboardKey.u;
-        case key.I: return FluidKeyboardKey.i;
-        case key.O: return FluidKeyboardKey.o;
-        case key.P: return FluidKeyboardKey.p;
-        case key.LeftBracket: return FluidKeyboardKey.leftBracket;
-        case key.RightBracket: return FluidKeyboardKey.rightBracket;
-        case key.CapsLock: return FluidKeyboardKey.capsLock;
-        case key.A: return FluidKeyboardKey.a;
-        case key.S: return FluidKeyboardKey.s;
-        case key.D: return FluidKeyboardKey.d;
-        case key.F: return FluidKeyboardKey.f;
-        case key.G: return FluidKeyboardKey.g;
-        case key.H: return FluidKeyboardKey.h;
-        case key.J: return FluidKeyboardKey.j;
-        case key.K: return FluidKeyboardKey.k;
-        case key.L: return FluidKeyboardKey.l;
-        case key.Semicolon: return FluidKeyboardKey.semicolon;
-        case key.Apostrophe: return FluidKeyboardKey.apostrophe;
-        case key.Enter: return FluidKeyboardKey.enter;
-        case key.Shift: return FluidKeyboardKey.leftShift;
-        case key.Z: return FluidKeyboardKey.z;
-        case key.X: return FluidKeyboardKey.x;
-        case key.C: return FluidKeyboardKey.c;
-        case key.V: return FluidKeyboardKey.v;
-        case key.B: return FluidKeyboardKey.b;
-        case key.N: return FluidKeyboardKey.n;
-        case key.M: return FluidKeyboardKey.m;
-        case key.Comma: return FluidKeyboardKey.comma;
-        case key.Period: return FluidKeyboardKey.period;
-        case key.Slash: return FluidKeyboardKey.slash;
-        case key.Shift_r: return FluidKeyboardKey.rightShift;
-        case key.Ctrl: return FluidKeyboardKey.leftControl;
-        case key.Windows: return FluidKeyboardKey.leftSuper;
-        case key.Alt: return FluidKeyboardKey.leftAlt;
-        case key.Space: return FluidKeyboardKey.space;
-        case key.Alt_r: return FluidKeyboardKey.rightAlt;
-        case key.Windows_r: return FluidKeyboardKey.rightSuper;
-        case key.Menu: return FluidKeyboardKey.contextMenu;
-        case key.Ctrl_r: return FluidKeyboardKey.rightControl;
-        case key.NumLock: return FluidKeyboardKey.numLock;
-        case key.Divide: return FluidKeyboardKey.keypadDivide;
-        case key.Multiply: return FluidKeyboardKey.keypadMultiply;
-        case key.Minus: return FluidKeyboardKey.keypadSubtract;
-        case key.Plus: return FluidKeyboardKey.keypadSum;
-        case key.PadEnter: return FluidKeyboardKey.keypadEnter;
-        case key.Pad0: return FluidKeyboardKey.keypad0;
-        case key.Pad1: return FluidKeyboardKey.keypad1;
-        case key.Pad2: return FluidKeyboardKey.keypad2;
-        case key.Pad3: return FluidKeyboardKey.keypad3;
-        case key.Pad4: return FluidKeyboardKey.keypad4;
-        case key.Pad5: return FluidKeyboardKey.keypad5;
-        case key.Pad6: return FluidKeyboardKey.keypad6;
-        case key.Pad7: return FluidKeyboardKey.keypad7;
-        case key.Pad8: return FluidKeyboardKey.keypad8;
-        case key.Pad9: return FluidKeyboardKey.keypad9;
-        case key.PadDot: return FluidKeyboardKey.keypadDecimal;
+        default: return KeyboardKey.none;
+        case key.Escape: return KeyboardKey.escape;
+        case key.Backspace: return KeyboardKey.backspace;
+        case key.F1: return KeyboardKey.f1;
+        case key.F2: return KeyboardKey.f2;
+        case key.F3: return KeyboardKey.f3;
+        case key.F4: return KeyboardKey.f4;
+        case key.F5: return KeyboardKey.f5;
+        case key.F6: return KeyboardKey.f6;
+        case key.F7: return KeyboardKey.f7;
+        case key.F8: return KeyboardKey.f8;
+        case key.F9: return KeyboardKey.f9;
+        case key.F10: return KeyboardKey.f10;
+        case key.F11: return KeyboardKey.f11;
+        case key.F12: return KeyboardKey.f12;
+        case key.PrintScreen: return KeyboardKey.printScreen;
+        case key.ScrollLock: return KeyboardKey.scrollLock;
+        case key.Pause: return KeyboardKey.pause;
+        case key.Grave: return KeyboardKey.grave;
+        case key.N0: return KeyboardKey.digit0;
+        case key.N1: return KeyboardKey.digit1;
+        case key.N2: return KeyboardKey.digit2;
+        case key.N3: return KeyboardKey.digit3;
+        case key.N4: return KeyboardKey.digit4;
+        case key.N5: return KeyboardKey.digit5;
+        case key.N6: return KeyboardKey.digit6;
+        case key.N7: return KeyboardKey.digit7;
+        case key.N8: return KeyboardKey.digit8;
+        case key.N9: return KeyboardKey.digit9;
+        case key.Dash: return KeyboardKey.dash;
+        case key.Equals: return KeyboardKey.equal;
+        case key.Backslash: return KeyboardKey.backslash;
+        case key.Insert: return KeyboardKey.insert;
+        case key.Home: return KeyboardKey.home;
+        case key.PageUp: return KeyboardKey.pageUp;
+        case key.PageDown: return KeyboardKey.pageDown;
+        case key.Delete: return KeyboardKey.del;
+        case key.End: return KeyboardKey.end;
+        case key.Up: return KeyboardKey.up;
+        case key.Down: return KeyboardKey.down;
+        case key.Left: return KeyboardKey.left;
+        case key.Right: return KeyboardKey.right;
+        case key.Tab: return KeyboardKey.tab;
+        case key.Q: return KeyboardKey.q;
+        case key.W: return KeyboardKey.w;
+        case key.E: return KeyboardKey.e;
+        case key.R: return KeyboardKey.r;
+        case key.T: return KeyboardKey.t;
+        case key.Y: return KeyboardKey.y;
+        case key.U: return KeyboardKey.u;
+        case key.I: return KeyboardKey.i;
+        case key.O: return KeyboardKey.o;
+        case key.P: return KeyboardKey.p;
+        case key.LeftBracket: return KeyboardKey.leftBracket;
+        case key.RightBracket: return KeyboardKey.rightBracket;
+        case key.CapsLock: return KeyboardKey.capsLock;
+        case key.A: return KeyboardKey.a;
+        case key.S: return KeyboardKey.s;
+        case key.D: return KeyboardKey.d;
+        case key.F: return KeyboardKey.f;
+        case key.G: return KeyboardKey.g;
+        case key.H: return KeyboardKey.h;
+        case key.J: return KeyboardKey.j;
+        case key.K: return KeyboardKey.k;
+        case key.L: return KeyboardKey.l;
+        case key.Semicolon: return KeyboardKey.semicolon;
+        case key.Apostrophe: return KeyboardKey.apostrophe;
+        case key.Enter: return KeyboardKey.enter;
+        case key.Shift: return KeyboardKey.leftShift;
+        case key.Z: return KeyboardKey.z;
+        case key.X: return KeyboardKey.x;
+        case key.C: return KeyboardKey.c;
+        case key.V: return KeyboardKey.v;
+        case key.B: return KeyboardKey.b;
+        case key.N: return KeyboardKey.n;
+        case key.M: return KeyboardKey.m;
+        case key.Comma: return KeyboardKey.comma;
+        case key.Period: return KeyboardKey.period;
+        case key.Slash: return KeyboardKey.slash;
+        case key.Shift_r: return KeyboardKey.rightShift;
+        case key.Ctrl: return KeyboardKey.leftControl;
+        case key.Windows: return KeyboardKey.leftSuper;
+        case key.Alt: return KeyboardKey.leftAlt;
+        case key.Space: return KeyboardKey.space;
+        case key.Alt_r: return KeyboardKey.rightAlt;
+        case key.Windows_r: return KeyboardKey.rightSuper;
+        case key.Menu: return KeyboardKey.contextMenu;
+        case key.Ctrl_r: return KeyboardKey.rightControl;
+        case key.NumLock: return KeyboardKey.numLock;
+        case key.Divide: return KeyboardKey.keypadDivide;
+        case key.Multiply: return KeyboardKey.keypadMultiply;
+        case key.Minus: return KeyboardKey.keypadSubtract;
+        case key.Plus: return KeyboardKey.keypadSum;
+        case key.PadEnter: return KeyboardKey.keypadEnter;
+        case key.Pad0: return KeyboardKey.keypad0;
+        case key.Pad1: return KeyboardKey.keypad1;
+        case key.Pad2: return KeyboardKey.keypad2;
+        case key.Pad3: return KeyboardKey.keypad3;
+        case key.Pad4: return KeyboardKey.keypad4;
+        case key.Pad5: return KeyboardKey.keypad5;
+        case key.Pad6: return KeyboardKey.keypad6;
+        case key.Pad7: return KeyboardKey.keypad7;
+        case key.Pad8: return KeyboardKey.keypad8;
+        case key.Pad9: return KeyboardKey.keypad9;
+        case key.PadDot: return KeyboardKey.keypadDecimal;
 
     }
 

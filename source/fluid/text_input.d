@@ -338,7 +338,7 @@ class TextInput : InputNode!Node {
         // Submit
         {
             io.nextFrame;
-            io.press(FluidKeyboardKey.enter);
+            io.press(KeyboardKey.enter);
             root.draw();
 
             assert(submitted == 1);
@@ -428,8 +428,8 @@ class TextInput : InputNode!Node {
 
         // Typing should be disabled while erasing
         {
-            io.press(FluidKeyboardKey.leftControl);
-            io.press(FluidKeyboardKey.w);
+            io.press(KeyboardKey.leftControl);
+            io.press(KeyboardKey.w);
             io.inputCharacter('w');
 
             root.draw();
@@ -501,7 +501,7 @@ class TextInput : InputNode!Node {
 
         // Typing should be disabled while erasing
         {
-            io.press(FluidKeyboardKey.backspace);
+            io.press(KeyboardKey.backspace);
             io.inputCharacter("o, world");
 
             root.draw();

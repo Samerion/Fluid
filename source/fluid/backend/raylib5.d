@@ -12,6 +12,7 @@ import std.range;
 import std.algorithm;
 
 import fluid.backend;
+import fluid.backend : MouseButton, KeyboardKey, GamepadButton;
 
 public import raylib : Vector2, Rectangle, Color;
 
@@ -32,57 +33,57 @@ class Raylib5Backend : FluidBackend {
 
     @trusted {
 
-        bool isPressed(FluidMouseButton button) const
+        bool isPressed(MouseButton button) const
             => isScroll(button)
             ?  isScrollPressed(button)
             :  IsMouseButtonPressed(button.toRaylib);
-        bool isReleased(FluidMouseButton button) const
+        bool isReleased(MouseButton button) const
             => isScroll(button)
             ?  isScrollPressed(button)
             :  IsMouseButtonReleased(button.toRaylib);
-        bool isDown(FluidMouseButton button) const
+        bool isDown(MouseButton button) const
             => isScroll(button)
             ?  isScrollPressed(button)
             :  IsMouseButtonDown(button.toRaylib);
-        bool isUp(FluidMouseButton button) const
+        bool isUp(MouseButton button) const
             => isScroll(button)
             ?  !isScrollPressed(button)
             :  IsMouseButtonUp(button.toRaylib);
 
-        bool isPressed(FluidKeyboardKey key) const => IsKeyPressed(key.toRaylib);
-        bool isReleased(FluidKeyboardKey key) const => IsKeyReleased(key.toRaylib);
-        bool isDown(FluidKeyboardKey key) const => IsKeyDown(key.toRaylib);
-        bool isUp(FluidKeyboardKey key) const => IsKeyUp(key.toRaylib);
-        bool isRepeated(FluidKeyboardKey key) const => IsKeyPressedRepeat(key.toRaylib);
+        bool isPressed(KeyboardKey key) const => IsKeyPressed(key.toRaylib);
+        bool isReleased(KeyboardKey key) const => IsKeyReleased(key.toRaylib);
+        bool isDown(KeyboardKey key) const => IsKeyDown(key.toRaylib);
+        bool isUp(KeyboardKey key) const => IsKeyUp(key.toRaylib);
+        bool isRepeated(KeyboardKey key) const => IsKeyPressedRepeat(key.toRaylib);
 
         dchar inputCharacter() => cast(dchar) GetCharPressed();
 
-        int isPressed(FluidGamepadButton button) const {
+        int isPressed(GamepadButton button) const {
             auto btn = button.toRaylib;
             return 1 + cast(int) iota(0, 4).countUntil!(a => IsGamepadButtonPressed(a, btn));
         }
 
-        int isReleased(FluidGamepadButton button) const {
+        int isReleased(GamepadButton button) const {
             auto btn = button.toRaylib;
             return 1 + cast(int) iota(0, 4).countUntil!(a => IsGamepadButtonReleased(a, btn));
         }
 
-        int isDown(FluidGamepadButton button) const {
+        int isDown(GamepadButton button) const {
             auto btn = button.toRaylib;
             return 1 + cast(int) iota(0, 4).countUntil!(a => IsGamepadButtonDown(a, btn));
         }
 
-        int isUp(FluidGamepadButton button) const {
+        int isUp(GamepadButton button) const {
             auto btn = button.toRaylib;
             return 1 + cast(int) iota(0, 4).countUntil!(a => IsGamepadButtonUp(a, btn));
         }
 
-        int isRepeated(FluidGamepadButton button) const
+        int isRepeated(GamepadButton button) const
             => 0;
 
     }
 
-    private bool isScrollPressed(FluidMouseButton btn) const @trusted {
+    private bool isScrollPressed(MouseButton btn) const @trusted {
 
         const wheelMove = GetMouseWheelMoveV;
 
@@ -402,17 +403,17 @@ raylib.MouseCursor toRaylib(FluidMouseCursor.SystemCursors cursor) {
 }
 
 /// Get the Raylib enum for a keyboard key.
-raylib.KeyboardKey toRaylib(FluidKeyboardKey key) {
+raylib.KeyboardKey toRaylib(KeyboardKey key) {
 
     return cast(raylib.KeyboardKey) key;
 
 }
 
 /// Get the Raylib enum for a mouse button.
-raylib.MouseButton toRaylib(FluidMouseButton button) {
+raylib.MouseButton toRaylib(MouseButton button) {
 
     with (raylib.MouseButton)
-    with (FluidMouseButton)
+    with (MouseButton)
     final switch (button) {
         case scrollLeft:
         case scrollRight:
@@ -431,7 +432,7 @@ raylib.MouseButton toRaylib(FluidMouseButton button) {
 }
 
 /// Get the Raylib enum for a keyboard key.
-raylib.GamepadButton toRaylib(FluidGamepadButton button) {
+raylib.GamepadButton toRaylib(GamepadButton button) {
 
     return cast(raylib.GamepadButton) button;
 

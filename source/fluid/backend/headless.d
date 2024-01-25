@@ -139,9 +139,9 @@ class HeadlessBackend : FluidBackend {
     private {
 
         dstring characterQueue;
-        State[FluidMouseButton.max+1] mouse;
-        State[FluidKeyboardKey.max+1] keyboard;
-        State[FluidGamepadButton.max+1] gamepad;
+        State[MouseButton.max+1] mouse;
+        State[KeyboardKey.max+1] keyboard;
+        State[GamepadButton.max+1] gamepad;
         Vector2 _mousePosition;
         Vector2 _windowSize;
         Vector2 _dpi = Vector2(96, 96);
@@ -220,7 +220,7 @@ class HeadlessBackend : FluidBackend {
     }
 
     /// Press the given key, and hold it until `release`. Marks as repeated if already down.
-    void press(FluidKeyboardKey key) {
+    void press(KeyboardKey key) {
 
         if (isDown(key))
             keyboard[key] = State.repeated;
@@ -230,82 +230,82 @@ class HeadlessBackend : FluidBackend {
     }
 
     /// Release the given keyboard key.
-    void release(FluidKeyboardKey key) {
+    void release(KeyboardKey key) {
 
         keyboard[key] = State.released;
 
     }
 
     /// Press the given button, and hold it until `release`.
-    void press(FluidMouseButton button = FluidMouseButton.left) {
+    void press(MouseButton button = MouseButton.left) {
 
         mouse[button] = State.pressed;
 
     }
 
     /// Release the given mouse button.
-    void release(FluidMouseButton button = FluidMouseButton.left) {
+    void release(MouseButton button = MouseButton.left) {
 
         mouse[button] = State.released;
 
     }
 
     /// Press the given button, and hold it until `release`.
-    void press(FluidGamepadButton button) {
+    void press(GamepadButton button) {
 
         gamepad[button] = State.pressed;
 
     }
 
     /// Release the given mouse button.
-    void release(FluidGamepadButton button) {
+    void release(GamepadButton button) {
 
         gamepad[button] = State.released;
 
     }
 
     /// Check if the given mouse button has just been pressed/released or, if it's held down or not (up).
-    bool isPressed(FluidMouseButton button) const
+    bool isPressed(MouseButton button) const
 
         => mouse[button] == State.pressed;
 
-    bool isReleased(FluidMouseButton button) const
+    bool isReleased(MouseButton button) const
 
         => mouse[button] == State.released;
 
-    bool isDown(FluidMouseButton button) const
+    bool isDown(MouseButton button) const
 
         => mouse[button] == State.pressed
         || mouse[button] == State.repeated
         || mouse[button] == State.down;
 
-    bool isUp(FluidMouseButton button) const
+    bool isUp(MouseButton button) const
 
         => mouse[button] == State.released
         || mouse[button] == State.up;
 
     /// Check if the given keyboard key has just been pressed/released or, if it's held down or not (up).
-    bool isPressed(FluidKeyboardKey key) const
+    bool isPressed(KeyboardKey key) const
 
         => keyboard[key] == State.pressed;
 
-    bool isReleased(FluidKeyboardKey key) const
+    bool isReleased(KeyboardKey key) const
 
         => keyboard[key] == State.released;
 
-    bool isDown(FluidKeyboardKey key) const
+    bool isDown(KeyboardKey key) const
 
         => keyboard[key] == State.pressed
         || keyboard[key] == State.repeated
         || keyboard[key] == State.down;
 
-    bool isUp(FluidKeyboardKey key) const
+    bool isUp(KeyboardKey key) const
 
         => keyboard[key] == State.released
         || keyboard[key] == State.up;
 
     /// If true, the given keyboard key has been virtually pressed again, through a long-press.
-    bool isRepeated(FluidKeyboardKey key) const
+    bool isRepeated(KeyboardKey key) const
 
         => keyboard[key] == State.repeated;
 
@@ -336,26 +336,26 @@ class HeadlessBackend : FluidBackend {
     }
 
     /// Check if the given gamepad button has been pressed/released or, if it's held down or not (up).
-    int isPressed(FluidGamepadButton button) const
+    int isPressed(GamepadButton button) const
 
         => gamepad[button] == State.pressed;
 
-    int isReleased(FluidGamepadButton button) const
+    int isReleased(GamepadButton button) const
 
         => gamepad[button] == State.released;
 
-    int isDown(FluidGamepadButton button) const
+    int isDown(GamepadButton button) const
 
         => gamepad[button] == State.pressed
         || gamepad[button] == State.repeated
         || gamepad[button] == State.down;
 
-    int isUp(FluidGamepadButton button) const
+    int isUp(GamepadButton button) const
 
         => gamepad[button] == State.released
         || gamepad[button] == State.up;
 
-    int isRepeated(FluidGamepadButton button) const
+    int isRepeated(GamepadButton button) const
 
         => gamepad[button] == State.repeated;
 
@@ -777,73 +777,73 @@ unittest {
 
     with (backend) {
 
-        press(FluidMouseButton.left);
+        press(MouseButton.left);
 
-        assert(isPressed(FluidMouseButton.left));
-        assert(isDown(FluidMouseButton.left));
-        assert(!isUp(FluidMouseButton.left));
-        assert(!isReleased(FluidMouseButton.left));
+        assert(isPressed(MouseButton.left));
+        assert(isDown(MouseButton.left));
+        assert(!isUp(MouseButton.left));
+        assert(!isReleased(MouseButton.left));
 
-        press(FluidKeyboardKey.enter);
+        press(KeyboardKey.enter);
 
-        assert(isPressed(FluidKeyboardKey.enter));
-        assert(isDown(FluidKeyboardKey.enter));
-        assert(!isUp(FluidKeyboardKey.enter));
-        assert(!isReleased(FluidKeyboardKey.enter));
-        assert(!isRepeated(FluidKeyboardKey.enter));
-
-        nextFrame;
-
-        assert(!isPressed(FluidMouseButton.left));
-        assert(isDown(FluidMouseButton.left));
-        assert(!isUp(FluidMouseButton.left));
-        assert(!isReleased(FluidMouseButton.left));
-
-        assert(!isPressed(FluidKeyboardKey.enter));
-        assert(isDown(FluidKeyboardKey.enter));
-        assert(!isUp(FluidKeyboardKey.enter));
-        assert(!isReleased(FluidKeyboardKey.enter));
-        assert(!isRepeated(FluidKeyboardKey.enter));
+        assert(isPressed(KeyboardKey.enter));
+        assert(isDown(KeyboardKey.enter));
+        assert(!isUp(KeyboardKey.enter));
+        assert(!isReleased(KeyboardKey.enter));
+        assert(!isRepeated(KeyboardKey.enter));
 
         nextFrame;
 
-        press(FluidKeyboardKey.enter);
+        assert(!isPressed(MouseButton.left));
+        assert(isDown(MouseButton.left));
+        assert(!isUp(MouseButton.left));
+        assert(!isReleased(MouseButton.left));
 
-        assert(!isPressed(FluidKeyboardKey.enter));
-        assert(isDown(FluidKeyboardKey.enter));
-        assert(!isUp(FluidKeyboardKey.enter));
-        assert(!isReleased(FluidKeyboardKey.enter));
-        assert(isRepeated(FluidKeyboardKey.enter));
-
-        nextFrame;
-
-        release(FluidMouseButton.left);
-
-        assert(!isPressed(FluidMouseButton.left));
-        assert(!isDown(FluidMouseButton.left));
-        assert(isUp(FluidMouseButton.left));
-        assert(isReleased(FluidMouseButton.left));
-
-        release(FluidKeyboardKey.enter);
-
-        assert(!isPressed(FluidKeyboardKey.enter));
-        assert(!isDown(FluidKeyboardKey.enter));
-        assert(isUp(FluidKeyboardKey.enter));
-        assert(isReleased(FluidKeyboardKey.enter));
-        assert(!isRepeated(FluidKeyboardKey.enter));
+        assert(!isPressed(KeyboardKey.enter));
+        assert(isDown(KeyboardKey.enter));
+        assert(!isUp(KeyboardKey.enter));
+        assert(!isReleased(KeyboardKey.enter));
+        assert(!isRepeated(KeyboardKey.enter));
 
         nextFrame;
 
-        assert(!isPressed(FluidMouseButton.left));
-        assert(!isDown(FluidMouseButton.left));
-        assert(isUp(FluidMouseButton.left));
-        assert(!isReleased(FluidMouseButton.left));
+        press(KeyboardKey.enter);
 
-        assert(!isPressed(FluidKeyboardKey.enter));
-        assert(!isDown(FluidKeyboardKey.enter));
-        assert(isUp(FluidKeyboardKey.enter));
-        assert(!isReleased(FluidKeyboardKey.enter));
-        assert(!isRepeated(FluidKeyboardKey.enter));
+        assert(!isPressed(KeyboardKey.enter));
+        assert(isDown(KeyboardKey.enter));
+        assert(!isUp(KeyboardKey.enter));
+        assert(!isReleased(KeyboardKey.enter));
+        assert(isRepeated(KeyboardKey.enter));
+
+        nextFrame;
+
+        release(MouseButton.left);
+
+        assert(!isPressed(MouseButton.left));
+        assert(!isDown(MouseButton.left));
+        assert(isUp(MouseButton.left));
+        assert(isReleased(MouseButton.left));
+
+        release(KeyboardKey.enter);
+
+        assert(!isPressed(KeyboardKey.enter));
+        assert(!isDown(KeyboardKey.enter));
+        assert(isUp(KeyboardKey.enter));
+        assert(isReleased(KeyboardKey.enter));
+        assert(!isRepeated(KeyboardKey.enter));
+
+        nextFrame;
+
+        assert(!isPressed(MouseButton.left));
+        assert(!isDown(MouseButton.left));
+        assert(isUp(MouseButton.left));
+        assert(!isReleased(MouseButton.left));
+
+        assert(!isPressed(KeyboardKey.enter));
+        assert(!isDown(KeyboardKey.enter));
+        assert(isUp(KeyboardKey.enter));
+        assert(!isReleased(KeyboardKey.enter));
+        assert(!isRepeated(KeyboardKey.enter));
 
     }
 
