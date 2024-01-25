@@ -51,7 +51,7 @@ stable and ready for use, but is still likely to receive a few breaking changes 
 For a quick start guide on Fluid, check out the showcase:
 
 ```
-dub run fluid:showcase
+dub run fluid:example-showcase
 ```
 
 Create a new [dub][dub] project based on Fluid:
