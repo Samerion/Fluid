@@ -8,7 +8,7 @@ import fluid.showcase;
 
 
 @(
-    () => label("Fluid is a library for creating user user interfaces. The focus of the library is ease of use, making "
+    () => label("Fluid is a library for creating user interfaces. The focus of the library is ease of use, making "
         ~ "it possible to design menus, input forms, controls and displays while minimizing amount of effort and "
         ~ "time."),
     () => label("To start from the basics, Fluid programs are built using nodes. There's a number of "
