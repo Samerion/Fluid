@@ -154,7 +154,7 @@ struct InputStroke {
 
     import std.sumtype;
 
-    alias Item = SumType!(FluidKeyboardKey, FluidMouseButton, FluidGamepadButton);
+    alias Item = SumType!(KeyboardKey, MouseButton, GamepadButton);
 
     Item[] input;
 
@@ -199,15 +199,15 @@ struct InputStroke {
 
     unittest {
 
-        assert(!InputStroke(FluidKeyboardKey.leftControl).isMouseStroke);
-        assert(!InputStroke(FluidKeyboardKey.w).isMouseStroke);
-        assert(!InputStroke(FluidKeyboardKey.leftControl, FluidKeyboardKey.w).isMouseStroke);
+        assert(!InputStroke(KeyboardKey.leftControl).isMouseStroke);
+        assert(!InputStroke(KeyboardKey.w).isMouseStroke);
+        assert(!InputStroke(KeyboardKey.leftControl, FluidKeyboardKey.w).isMouseStroke);
 
-        assert(InputStroke(FluidMouseButton.left).isMouseStroke);
-        assert(InputStroke(FluidKeyboardKey.leftControl, FluidMouseButton.left).isMouseStroke);
+        assert(InputStroke(MouseButton.left).isMouseStroke);
+        assert(InputStroke(KeyboardKey.leftControl, MouseButton.left).isMouseStroke);
 
-        assert(!InputStroke(FluidGamepadButton.triangle).isMouseStroke);
-        assert(!InputStroke(FluidKeyboardKey.leftControl, FluidGamepadButton.triangle).isMouseStroke);
+        assert(!InputStroke(GamepadButton.triangle).isMouseStroke);
+        assert(!InputStroke(KeyboardKey.leftControl, GamepadButton.triangle).isMouseStroke);
 
     }
 
@@ -215,7 +215,7 @@ struct InputStroke {
     static bool isMouseItem(Item item) {
 
         return item.match!(
-            (FluidMouseButton _) => true,
+            (MouseButton _) => true,
             (_) => false,
         );
 
@@ -231,18 +231,18 @@ struct InputStroke {
     ///
     unittest {
 
-        auto stroke = InputStroke(FluidKeyboardKey.leftControl, FluidKeyboardKey.w);
+        auto stroke = InputStroke(KeyboardKey.leftControl, FluidKeyboardKey.w);
         auto io = new HeadlessBackend;
 
         // No keys pressed
         assert(!stroke.isDown(io));
 
         // Control pressed
-        io.press(FluidKeyboardKey.leftControl);
+        io.press(KeyboardKey.leftControl);
         assert(!stroke.isDown(io));
 
         // Both keys pressed
-        io.press(FluidKeyboardKey.w);
+        io.press(KeyboardKey.w);
         assert(stroke.isDown(io));
 
         // Still pressed, but not immediately
@@ -250,7 +250,7 @@ struct InputStroke {
         assert(stroke.isDown(io));
 
         // W pressed
-        io.release(FluidKeyboardKey.leftControl);
+        io.release(KeyboardKey.leftControl);
         assert(!stroke.isDown(io));
 
     }
@@ -272,15 +272,15 @@ struct InputStroke {
 
     unittest {
 
-        auto singleKey = InputStroke(FluidKeyboardKey.w);
-        auto stroke = InputStroke(FluidKeyboardKey.leftControl, FluidKeyboardKey.leftShift, FluidKeyboardKey.w);
+        auto singleKey = InputStroke(KeyboardKey.w);
+        auto stroke = InputStroke(KeyboardKey.leftControl, FluidKeyboardKey.leftShift, FluidKeyboardKey.w);
         auto io = new HeadlessBackend;
 
         // No key pressed
         assert(!singleKey.isActive(io));
         assert(!stroke.isActive(io));
 
-        io.press(FluidKeyboardKey.w);
+        io.press(KeyboardKey.w);
 
         // Just pressed the "W" key
         assert(singleKey.isActive(io));
@@ -292,19 +292,19 @@ struct InputStroke {
         assert(!singleKey.isActive(io));
         assert(!stroke.isActive(io));
 
-        io.press(FluidKeyboardKey.leftControl);
-        io.press(FluidKeyboardKey.leftShift);
+        io.press(KeyboardKey.leftControl);
+        io.press(KeyboardKey.leftShift);
 
         assert(!singleKey.isActive(io));
         assert(!stroke.isActive(io));
 
         // The last key needs to be pressed during the current frame
-        io.press(FluidKeyboardKey.w);
+        io.press(KeyboardKey.w);
 
         assert(singleKey.isActive(io));
         assert(stroke.isActive(io));
 
-        io.release(FluidKeyboardKey.w);
+        io.release(KeyboardKey.w);
 
         assert(!singleKey.isActive(io));
         assert(!stroke.isActive(io));
@@ -314,22 +314,22 @@ struct InputStroke {
     /// Mouse actions are activated on release
     unittest {
 
-        auto stroke = InputStroke(FluidKeyboardKey.leftControl, FluidMouseButton.left);
+        auto stroke = InputStroke(KeyboardKey.leftControl, MouseButton.left);
         auto io = new HeadlessBackend;
 
         assert(!stroke.isActive(io));
 
-        io.press(FluidKeyboardKey.leftControl);
-        io.press(FluidMouseButton.left);
+        io.press(KeyboardKey.leftControl);
+        io.press(MouseButton.left);
 
         assert(!stroke.isActive(io));
 
-        io.release(FluidMouseButton.left);
+        io.release(MouseButton.left);
 
         assert(stroke.isActive(io));
 
         // The action won't trigger if previous keys aren't held down
-        io.release(FluidKeyboardKey.leftControl);
+        io.release(KeyboardKey.leftControl);
 
         assert(!stroke.isActive(io));
 
@@ -341,13 +341,13 @@ struct InputStroke {
         return item.match!(
 
             // Keyboard
-            (FluidKeyboardKey key) => backend.isDown(key),
+            (KeyboardKey key) => backend.isDown(key),
 
             // A released mouse button also counts as down for our purposes, as it might trigger the action
-            (FluidMouseButton button) => backend.isDown(button) || backend.isReleased(button),
+            (MouseButton button) => backend.isDown(button) || backend.isReleased(button),
 
             // Gamepad
-            (FluidGamepadButton button) => backend.isDown(button) != 0
+            (GamepadButton button) => backend.isDown(button) != 0
         );
 
     }
@@ -359,9 +359,9 @@ struct InputStroke {
     static bool isItemActive(const FluidBackend backend, Item item) {
 
         return item.match!(
-            (FluidKeyboardKey key) => backend.isPressed(key) || backend.isRepeated(key),
-            (FluidMouseButton button) => backend.isReleased(button),
-            (FluidGamepadButton button) => backend.isPressed(button) || backend.isRepeated(button),
+            (KeyboardKey key) => backend.isPressed(key) || backend.isRepeated(key),
+            (MouseButton button) => backend.isReleased(button),
+            (GamepadButton button) => backend.isPressed(button) || backend.isRepeated(button),
         );
 
     }
@@ -533,21 +533,21 @@ unittest {
     // Nothing pressed, action not activated
     assert(!tree.isDown!(FluidInputAction.backspaceWord));
 
-    io.press(FluidKeyboardKey.leftControl);
-    io.press(FluidKeyboardKey.backspace);
+    io.press(KeyboardKey.leftControl);
+    io.press(KeyboardKey.backspace);
     tree.poll();
 
     // The action is now held down with the ctrl+blackspace stroke
     assert(tree.isDown!(FluidInputAction.backspaceWord));
 
-    io.release(FluidKeyboardKey.backspace);
-    io.press(FluidKeyboardKey.w);
+    io.release(KeyboardKey.backspace);
+    io.press(KeyboardKey.w);
     tree.poll();
 
     // ctrl+W also activates the stroke
     assert(tree.isDown!(FluidInputAction.backspaceWord));
 
-    io.release(FluidKeyboardKey.leftControl);
+    io.release(KeyboardKey.leftControl);
     tree.poll();
 
     // Control up, won't match any stroke now
@@ -574,14 +574,14 @@ unittest {
 
     assert(!tree.isDown!(FluidInputAction.press));
 
-    io.press(FluidMouseButton.left);
+    io.press(MouseButton.left);
     tree.poll();
 
     // Pressing with a mouse
     assert(tree.isDown!(FluidInputAction.press));
     assert(tree.isMouseDown!(FluidInputAction.press));
 
-    io.release(FluidMouseButton.left);
+    io.release(MouseButton.left);
     tree.poll();
 
     // Releasing a mouse key still counts as holding it down
@@ -595,14 +595,14 @@ unittest {
 
     assert(!tree.isDown!(FluidInputAction.press));
 
-    io.press(FluidKeyboardKey.enter);
+    io.press(KeyboardKey.enter);
     tree.poll();
 
     // Pressing with a keyboard
     assert(tree.isDown!(FluidInputAction.press));
     assert(!tree.isMouseDown!(FluidInputAction.press));
 
-    io.release(FluidKeyboardKey.enter);
+    io.release(KeyboardKey.enter);
     tree.poll();
 
     assert(!tree.isDown!(FluidInputAction.press));
@@ -628,15 +628,15 @@ unittest {
 
     assert(!tree.isDown!(FluidInputAction.press));
 
-    io.press(FluidKeyboardKey.enter);
+    io.press(KeyboardKey.enter);
     tree.poll();
 
     // Pressing with a keyboard
     assert(tree.isDown!(FluidInputAction.press));
     assert(tree.isFocusDown!(FluidInputAction.press));
 
-    io.release(FluidKeyboardKey.enter);
-    io.press(FluidMouseButton.left);
+    io.release(KeyboardKey.enter);
+    io.press(MouseButton.left);
     tree.poll();
 
     // Pressing with a mouse
@@ -1037,7 +1037,7 @@ unittest {
     root.focus();
 
     // Press the node via focus
-    io.press(FluidKeyboardKey.enter);
+    io.press(KeyboardKey.enter);
 
     root.draw();
 
@@ -1053,9 +1053,9 @@ unittest {
 
     // Hover the node and press it with the mouse
     io.nextFrame;
-    io.release(FluidKeyboardKey.enter);
+    io.release(KeyboardKey.enter);
     io.mousePosition = Vector2(5, 5);
-    io.press(FluidMouseButton.left);
+    io.press(MouseButton.left);
 
     root.draw();
     root.tree.focus = null;
@@ -1066,7 +1066,7 @@ unittest {
     // If we now drag away from the button and release...
     io.nextFrame;
     io.mousePosition = Vector2(15, 15);
-    io.release(FluidMouseButton.left);
+    io.release(MouseButton.left);
 
     root.draw();
 
@@ -1076,7 +1076,7 @@ unittest {
     // But if we release the mouse on the button
     io.nextFrame;
     io.mousePosition = Vector2(5, 5);
-    io.release(FluidMouseButton.left);
+    io.release(MouseButton.left);
 
     root.draw();
 
@@ -1088,7 +1088,7 @@ unittest {
 
     // Press escape to cancel
     io.nextFrame;
-    io.press(FluidKeyboardKey.escape);
+    io.press(KeyboardKey.escape);
 
     root.draw();
 
@@ -1133,12 +1133,12 @@ unittest {
 
     // Press the left button
     io.mousePosition = Vector2(5, 5);
-    io.press(FluidMouseButton.left);
+    io.press(MouseButton.left);
 
     root.draw();
 
     // Release it
-    io.release(FluidMouseButton.left);
+    io.release(MouseButton.left);
 
     root.draw();
 
@@ -1148,12 +1148,12 @@ unittest {
     // Press the right button
     io.nextFrame;
     io.mousePosition = Vector2(15, 5);
-    io.press(FluidMouseButton.left);
+    io.press(MouseButton.left);
 
     root.draw();
 
     // Release it
-    io.release(FluidMouseButton.left);
+    io.release(MouseButton.left);
 
     root.draw();
 
@@ -1162,7 +1162,7 @@ unittest {
     // Press the left button, but don't release
     io.nextFrame;
     io.mousePosition = Vector2(5, 5);
-    io.press(FluidMouseButton.left);
+    io.press(MouseButton.left);
 
     root.draw();
 
@@ -1190,7 +1190,7 @@ unittest {
 
     // Release the button on the next frame
     io.nextFrame;
-    io.release(FluidMouseButton.left);
+    io.release(MouseButton.left);
 
     root.draw();
 
@@ -1198,13 +1198,13 @@ unittest {
 
     // Things should go to normal next frame
     io.nextFrame;
-    io.press(FluidMouseButton.left);
+    io.press(MouseButton.left);
 
     root.draw();
 
     // So we can expect the right button to trigger now
     io.nextFrame;
-    io.release(FluidMouseButton.left);
+    io.release(MouseButton.left);
 
     root.draw();
 

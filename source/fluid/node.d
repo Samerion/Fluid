@@ -283,7 +283,7 @@ abstract class Node : Styleable {
         // Press the button
         {
             io.nextFrame;
-            io.press(FluidKeyboardKey.enter);
+            io.press(KeyboardKey.enter);
             button.focus();
             root.draw();
 
@@ -293,7 +293,7 @@ abstract class Node : Styleable {
         // Press the button while disabled
         {
             io.nextFrame;
-            io.press(FluidKeyboardKey.enter);
+            io.press(KeyboardKey.enter);
             button.disable();
             root.draw();
 
@@ -304,7 +304,7 @@ abstract class Node : Styleable {
         // Enable the button and hit it again
         {
             io.nextFrame;
-            io.press(FluidKeyboardKey.enter);
+            io.press(KeyboardKey.enter);
             button.enable();
             root.draw();
 
@@ -315,7 +315,7 @@ abstract class Node : Styleable {
         // Try typing into the input box
         {
             io.nextFrame;
-            io.release(FluidKeyboardKey.enter);
+            io.release(KeyboardKey.enter);
             io.inputCharacter("Hello, ");
             input.focus();
             root.draw();
@@ -336,7 +336,7 @@ abstract class Node : Styleable {
         // Attempt disabling the nodes recursively
         {
             io.nextFrame;
-            io.press(FluidKeyboardKey.enter);
+            io.press(KeyboardKey.enter);
             button.focus();
             input.enable();
             root.disable();
@@ -353,7 +353,7 @@ abstract class Node : Styleable {
         // Check the input box
         {
             io.nextFrame;
-            io.press(FluidKeyboardKey.enter);
+            io.press(KeyboardKey.enter);
             io.inputCharacter("World!");
             input.focus();
 
@@ -366,7 +366,7 @@ abstract class Node : Styleable {
         // Enable input once again
         {
             io.nextFrame;
-            io.press(FluidKeyboardKey.enter);
+            io.press(KeyboardKey.enter);
             root.enable();
             root.draw();
 
@@ -635,7 +635,7 @@ abstract class Node : Styleable {
 
 
         // Note: pressed, not released; released activates input events, pressed activates focus
-        const mousePressed = tree.io.isPressed(FluidMouseButton.left);
+        const mousePressed = tree.io.isPressed(MouseButton.left);
 
         // Mouse is hovering an input node
         // Note that nodes will remain in tree.hover if LMB is pressed to prevent "hover slipping" — actions should
@@ -749,14 +749,14 @@ abstract class Node : Styleable {
         {
 
             io.nextFrame;
-            io.press(FluidKeyboardKey.tab);
+            io.press(KeyboardKey.tab);
             root.draw();
 
             // Fluid will automatically try to find the first focusable node
             assert(root.tree.focus.asNode is root.children[0]);
 
             io.nextFrame;
-            io.release(FluidKeyboardKey.tab);
+            io.release(KeyboardKey.tab);
             root.draw();
 
             assert(root.tree.focus.asNode is root.children[0]);
@@ -767,9 +767,9 @@ abstract class Node : Styleable {
         {
 
             io.nextFrame;
-            io.press(FluidKeyboardKey.tab);
+            io.press(KeyboardKey.tab);
             root.draw();
-            io.release(FluidKeyboardKey.tab);
+            io.release(KeyboardKey.tab);
 
             assert(root.tree.focus.asNode is root.children[1]);
 
@@ -780,16 +780,16 @@ abstract class Node : Styleable {
             root.tree.focus = null;
 
             io.nextFrame;
-            io.press(FluidKeyboardKey.leftShift);
-            io.press(FluidKeyboardKey.tab);
+            io.press(KeyboardKey.leftShift);
+            io.press(KeyboardKey.tab);
             root.draw();
 
             // If left-shift tab is pressed, the last focusable node will be used
             assert(root.tree.focus.asNode is root.children[$-1]);
 
             io.nextFrame;
-            io.release(FluidKeyboardKey.leftShift);
-            io.release(FluidKeyboardKey.tab);
+            io.release(KeyboardKey.leftShift);
+            io.release(KeyboardKey.tab);
             root.draw();
 
             assert(root.tree.focus.asNode is root.children[$-1]);
@@ -894,7 +894,7 @@ abstract class Node : Styleable {
         _isHovered = hoveredImpl(visibleBox, tree.io.mousePosition);
 
         // Check if the mouse stroke started this node
-        const heldElsewhere = !tree.io.isPressed(FluidMouseButton.left)
+        const heldElsewhere = !tree.io.isPressed(MouseButton.left)
             && isLMBHeld;
 
         // Update global hover unless mouse is being held down or mouse focus is disabled for this node
@@ -1251,8 +1251,8 @@ abstract class Node : Styleable {
 
     private bool isLMBHeld() @trusted {
 
-        return tree.io.isDown(FluidMouseButton.left)
-            || tree.io.isReleased(FluidMouseButton.left);
+        return tree.io.isDown(MouseButton.left)
+            || tree.io.isReleased(MouseButton.left);
 
     }
 

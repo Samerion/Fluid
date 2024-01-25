@@ -111,7 +111,7 @@ unittest {
     // Focus the button
     {
         io.nextFrame;
-        io.press(FluidKeyboardKey.down);
+        io.press(KeyboardKey.down);
 
         root.draw();
 
@@ -121,8 +121,8 @@ unittest {
     // Press it
     {
         io.nextFrame;
-        io.release(FluidKeyboardKey.down);
-        io.press(FluidKeyboardKey.enter);
+        io.release(KeyboardKey.down);
+        io.press(KeyboardKey.enter);
 
         root.draw();
     }
@@ -130,7 +130,7 @@ unittest {
     // Popup opens
     {
         io.nextFrame;
-        io.release(FluidKeyboardKey.enter);
+        io.release(KeyboardKey.enter);
 
         root.draw();
 
@@ -140,8 +140,8 @@ unittest {
     // Go to the previous button, expecting wrap
     {
         io.nextFrame;
-        io.press(FluidKeyboardKey.leftShift);
-        io.press(FluidKeyboardKey.tab);
+        io.press(KeyboardKey.leftShift);
+        io.press(KeyboardKey.tab);
 
         root.draw();
 
@@ -151,9 +151,9 @@ unittest {
     // Press it
     {
         io.nextFrame;
-        io.release(FluidKeyboardKey.leftShift);
-        io.release(FluidKeyboardKey.tab);
-        io.press(FluidKeyboardKey.enter);
+        io.release(KeyboardKey.leftShift);
+        io.release(KeyboardKey.tab);
+        io.press(KeyboardKey.enter);
 
         root.draw();
     }
@@ -161,7 +161,7 @@ unittest {
     // Wait for the popup to appear
     {
         io.nextFrame;
-        io.release(FluidKeyboardKey.enter);
+        io.release(KeyboardKey.enter);
 
         root.draw();
         assert(buttons[3].isFocused, "The first button of the second menu should be focused");
@@ -170,7 +170,7 @@ unittest {
     // Press the up arrow, it should do nothing
     {
         io.nextFrame;
-        io.press(FluidKeyboardKey.up);
+        io.press(KeyboardKey.up);
 
         root.draw();
         assert(buttons[3].isFocused);
@@ -179,8 +179,8 @@ unittest {
     // Press the down arrow
     {
         io.nextFrame;
-        io.release(FluidKeyboardKey.up);
-        io.press(FluidKeyboardKey.down);
+        io.release(KeyboardKey.up);
+        io.press(KeyboardKey.down);
 
         root.draw();
         assert(buttons[4].isFocused);
@@ -189,8 +189,8 @@ unittest {
     // Press the button
     {
         io.nextFrame;
-        io.release(FluidKeyboardKey.down);
-        io.press(FluidKeyboardKey.enter);
+        io.release(KeyboardKey.down);
+        io.press(KeyboardKey.enter);
 
         root.draw();
         assert(buttons[4].isFocused);
@@ -202,8 +202,8 @@ unittest {
     // Close the popup by pressing escape
     {
         io.nextFrame;
-        io.release(FluidKeyboardKey.enter);
-        io.press(FluidKeyboardKey.escape);
+        io.release(KeyboardKey.enter);
+        io.press(KeyboardKey.escape);
 
         root.draw();
 
