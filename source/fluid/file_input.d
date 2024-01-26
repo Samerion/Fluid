@@ -385,7 +385,7 @@ class FileInput : InputNode!Frame {
     }
 
     /// Set current suggestion by number.
-    private void selectSuggestion(long n) {
+    private void selectSuggestion(size_t n) {
 
         auto previous = currentSuggestion;
         currentSuggestion = n;
@@ -417,7 +417,7 @@ class FileInput : InputNode!Frame {
     }
 
     /// Offset currently chosen selection by number.
-    private void offsetSuggestion(long n) {
+    private void offsetSuggestion(size_t n) {
 
         const indexLimit = suggestionCount + 1;
 
