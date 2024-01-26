@@ -201,7 +201,7 @@ struct InputStroke {
 
         assert(!InputStroke(KeyboardKey.leftControl).isMouseStroke);
         assert(!InputStroke(KeyboardKey.w).isMouseStroke);
-        assert(!InputStroke(KeyboardKey.leftControl, FluidKeyboardKey.w).isMouseStroke);
+        assert(!InputStroke(KeyboardKey.leftControl, KeyboardKey.w).isMouseStroke);
 
         assert(InputStroke(MouseButton.left).isMouseStroke);
         assert(InputStroke(KeyboardKey.leftControl, MouseButton.left).isMouseStroke);
@@ -231,7 +231,7 @@ struct InputStroke {
     ///
     unittest {
 
-        auto stroke = InputStroke(KeyboardKey.leftControl, FluidKeyboardKey.w);
+        auto stroke = InputStroke(KeyboardKey.leftControl, KeyboardKey.w);
         auto io = new HeadlessBackend;
 
         // No keys pressed
@@ -273,7 +273,7 @@ struct InputStroke {
     unittest {
 
         auto singleKey = InputStroke(KeyboardKey.w);
-        auto stroke = InputStroke(KeyboardKey.leftControl, FluidKeyboardKey.leftShift, FluidKeyboardKey.w);
+        auto stroke = InputStroke(KeyboardKey.leftControl, KeyboardKey.leftShift, KeyboardKey.w);
         auto io = new HeadlessBackend;
 
         // No key pressed

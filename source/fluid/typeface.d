@@ -300,9 +300,10 @@ class FreetypeTypeface : Typeface {
     this(int size) @trusted {
 
         static typefaceFile = cast(ubyte[]) import("ruda-regular.ttf");
+        const typefaceSize = cast(int) typefaceFile.length;
 
         // Load the font
-        if (auto error = FT_New_Memory_Face(freetype, typefaceFile.ptr, typefaceFile.length, 0, &face)) {
+        if (auto error = FT_New_Memory_Face(freetype, typefaceFile.ptr, typefaceSize, 0, &face)) {
 
             assert(false, format!"Failed to load default Fluid typeface at size %s, error no. %s"(size, error));
 
