@@ -296,7 +296,7 @@ class ScrollInput : InputNode!Node {
             ? &isDown!(FluidInputAction.scrollLeft)
             : &isDown!(FluidInputAction.scrollUp);
 
-        const speed = cast(ulong) (actionScrollSpeed * io.deltaTime);
+        const speed = cast(size_t) (actionScrollSpeed * io.deltaTime);
         const change
             = isPlus(tree)  ? +speed
             : isMinus(tree) ? -speed
@@ -322,9 +322,9 @@ class ScrollInput : InputNode!Node {
     }
 
     /// Scroll page length used for `pageUp` and `pageDown` navigation.
-    protected ulong scrollPageLength() const {
+    protected size_t scrollPageLength() const {
 
-        return cast(ulong) (scrollbarLength * 3/4);
+        return cast(size_t) (scrollbarLength * 3/4);
 
     }
 

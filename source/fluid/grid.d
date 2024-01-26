@@ -44,7 +44,7 @@ class Grid : Frame {
 
     mixin DefineStyles;
 
-    ulong segmentCount;
+    size_t segmentCount;
 
     private {
 
@@ -188,7 +188,7 @@ class Grid : Frame {
     }
 
     /// Magic to extract return value of extractParams at compile time.
-    private struct Number(ulong num) {
+    private struct Number(size_t num) {
 
         enum value = num;
 
@@ -363,7 +363,7 @@ class GridRow : Frame {
     mixin DefineStyles;
 
     Grid parent;
-    ulong segmentCount;
+    size_t segmentCount;
 
     deprecated("Please use this(NodeParams, Grid, T args) instead") {
 
@@ -439,7 +439,7 @@ class GridRow : Frame {
 
         }
 
-        ulong segment;
+        size_t segment;
 
         // Resize the children
         foreach (child; children) {
@@ -473,7 +473,7 @@ class GridRow : Frame {
 
     override protected void drawImpl(Rectangle outer, Rectangle inner) {
 
-        ulong segment;
+        size_t segment;
 
         pickStyle.drawBackground(tree.io, outer);
 
