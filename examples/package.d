@@ -303,8 +303,8 @@ Space exampleList(void delegate(Chapter) @safe changeChapter) @safe {
         label(.layout!"center", .headingTheme, "Hello, World!"),
         label("Pick a chapter of the tutorial to get started. Start with the first one or browse the chapters that "
             ~ "interest you! Output previews are shown next to code samples to help you understand the content."),
-        label(.warningTheme, "While this tutorial covers the most important parts of Fluid, it's still incomplete. "
-            ~ "Content will be added in further updates of Fluid. Contributions are welcome."),
+        label(.layout!"fill", .warningTheme, "While this tutorial covers the most important parts of Fluid, it's still "
+            ~ "incomplete. Content will be added in further updates of Fluid. Contributions are welcome."),
         chapterGrid,
     );
 
