@@ -10,7 +10,7 @@
 				"bindbc-freetype": "staticBC"
 			},
 			"libs": ["freetype"],
-			"lflags-windows": ["-L$PACKAGE_DIR/libraries/windows"],
+			"lflags-windows": ["/LIBPATH:$PACKAGE_DIR/libraries/windows"],
 			"lflags-osx": ["-L$PACKAGE_DIR/libraries/macos"],
 			"lflags-linux": ["-L$PACKAGE_DIR/libraries/ubuntu"]
 		},
