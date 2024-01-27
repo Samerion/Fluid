@@ -14,6 +14,19 @@ import fluid.backend;
 @safe:
 
 
+version (BindFT_Static) {
+    debug (Fluid_BuildMessages) {
+        pragma(msg, "Fluid: Using static freetype");
+    }
+}
+else {
+    version = BindFT_Dynamic;
+    debug (Fluid_BuildMessages) {
+        pragma(msg, "Fluid: Using dynamic freetype");
+    }
+}
+
+
 /// Low-level interface for drawing text. Represents a single typeface.
 ///
 /// Unlike the rest of Fluid, Typeface doesn't define pixels as 1/96th of an inch. DPI must also be specified manually.
@@ -653,6 +666,7 @@ class RaylibTypeface : Typeface {
 
 }
 
+version (BindFT_Dynamic)
 shared static this() @system {
 
     // Ignore if freetype was already loaded
