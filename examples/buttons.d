@@ -73,12 +73,47 @@ Frame nestedLabelFirstExample() {
 
 }
 
+@system
+void unsafeFunction() { }
+
 @(
     () => label("Of course, we also have the choice to assign the label on the same line it was declared "
         ~ "on. The downside of that usage is that it is usually helpful to keep each component of the tree united "
-        ~ "for easier analysis. However, it might be preferrable if the tree is becoming complex, so you might need "
+        ~ "for easier analysis. However, it might be preferrable if the tree is becoming complex, so you need "
         ~ "to find the right balance."),
 
+    () => label(.headingTheme, "A note on @safe-ty"),
+    () => label("D has a memory safety checker, which will help prevent memory errors at compile-time. Fluid is fully "
+        ~ "opted into it, which means your delegates will be rejected if the compiler deems them unsafe!"),
+    () => label("Most importantly, C functions like the ones provided by Raylib aren't tested for safety, so they're "
+        ~ "marked as unsafe and cannot be used in Fluid delegates. If you need to, you'll have to tell the compiler "
+        ~ "by making them @trusted."),
+    () => label("Tip: Memory safety is controlled with three attributes, @system, @trusted and @safe. The first two "
+        ~ "disable memory safety checks, while @safe enables them. Use @trusted to mark code which you 'trust' to be "
+        ~ "safe, so you can call it from @safe code."),
+    () => button("More information on D memory safety", delegate {
+        openURL("https://dlang.org/spec/memory-safe-d.html");
+    }),
+)
+void safetyCheckerExample() @system {
+
+    // This button calls an unsafe function, so it'll be rejected.
+    button("Oops.", delegate {
+
+        /* unsafeFunction(); Won't work! */
+
+    });
+
+    // To make it work, you have to make it @trusted.
+    button("Trusted button.", delegate () @trusted {
+
+        unsafeFunction();
+
+    });
+
+}
+
+@(
     () => label(.headingTheme, "Editing layouts"),
     () => label("Frame contents can be changed at runtime by changing their 'children' property. The operation is a "
         ~ "bit more complex than updating labels, and you have to pay attention to this one if you intend to rearrange "
