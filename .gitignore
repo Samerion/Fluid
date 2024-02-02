@@ -9,3 +9,4 @@ build/
 *.obj
 *.lst
 /tags
+.DS_Store

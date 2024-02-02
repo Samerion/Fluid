@@ -9,6 +9,23 @@
 /// ---
 module fluid;
 
+// Unsupported build flag; ignores checks. Do not file issue tickets if you run into problems when building with it.
+debug (Fluid_Force) version = Fluid_Force;
+version (Fluid_Force) { }
+else {
+
+    // OSX builds are not supported with DMD. LDC is required.
+    version (DigitalMars)
+    version (OSX) {
+
+        static assert(false,
+            "Fluid: DMD is not supported under macOS because of compiler bugs. Refusing to build.\n"
+            ~ "    Please use LDC instead. When using dub, pass flag `--compiler=ldc2`.\n"
+            ~ "    To ignore this check, you can build with UNSUPPORTED version or debug version Fluid_Force.");
+
+    }
+}
+
 public import
     fluid.backend,
     fluid.actions,
