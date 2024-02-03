@@ -20,6 +20,12 @@ public import raylib : Vector2, Rectangle, Color;
 @safe:
 
 
+// Coordinate scaling will translate Fluid coordinates, where each pixels is 1/96th of an inch, to screen coordinates,
+// making use of DPI information provided by the system. It is disabled on macOS, since the system already handles this
+// for us.
+version (OSX)
+    version = Fluid_DisableScaling;
+
 class Raylib5Backend : FluidBackend {
 
     private {
@@ -168,41 +174,56 @@ class Raylib5Backend : FluidBackend {
 
     Vector2 toRaylibCoords(Vector2 position) const @trusted {
 
-        return Vector2(position.x * hidpiScale.x, position.y * hidpiScale.y);
+        version (Fluid_DisableScaling)
+            return position;
+        else
+            return Vector2(position.x * hidpiScale.x, position.y * hidpiScale.y);
 
     }
 
     Rectangle toRaylibCoords(Rectangle rec) const @trusted {
 
-        return Rectangle(
-            rec.x * hidpiScale.x,
-            rec.y * hidpiScale.y,
-            rec.width * hidpiScale.x,
-            rec.height * hidpiScale.y,
-        );
+        version (Fluid_DisableScaling)
+            return rec;
+        else
+            return Rectangle(
+                rec.x * hidpiScale.x,
+                rec.y * hidpiScale.y,
+                rec.width * hidpiScale.x,
+                rec.height * hidpiScale.y,
+            );
 
     }
 
     Vector2 toFluidCoords(Vector2 position) const @trusted {
 
-        return Vector2(position.x / hidpiScale.x, position.y / hidpiScale.y);
+        version (Fluid_DisableScaling)
+            return position;
+        else
+            return Vector2(position.x / hidpiScale.x, position.y / hidpiScale.y);
 
     }
 
     Vector2 toFluidCoords(float x, float y) const @trusted {
 
-        return Vector2(x / hidpiScale.x, y / hidpiScale.y);
+        version (Fluid_DisableScaling)
+            return Vector2(x, y);
+        else
+            return Vector2(x / hidpiScale.x, y / hidpiScale.y);
 
     }
 
     Rectangle toFluidCoords(Rectangle rec) const @trusted {
 
-        return Rectangle(
-            rec.x / hidpiScale.x,
-            rec.y / hidpiScale.y,
-            rec.width / hidpiScale.x,
-            rec.height / hidpiScale.y,
-        );
+        version (Fluid_DisableScaling)
+            return rec;
+        else
+            return Rectangle(
+                rec.x / hidpiScale.x,
+                rec.y / hidpiScale.y,
+                rec.width / hidpiScale.x,
+                rec.height / hidpiScale.y,
+            );
 
     }
 
