@@ -44,7 +44,6 @@ stable and ready for use, but is still likely to receive a few breaking changes 
 * Out-of-the-box Unicode support
 * Full HiDPI support
 * Partial gamepad support
-* [redub](https://github.com/MrcSnm/redub) compatible
 
 ## Get Fluid
 
