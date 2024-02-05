@@ -281,19 +281,14 @@ class Scrollable(T : Node, string horizontalExpression) : T {
     private void inputImpl() @trusted {
 
         // TODO do this via input actions somehow https://git.samerion.com/Samerion/Fluid/issues/89
-        const isPlus = isHorizontal
-            ? io.isReleased(MouseButton.scrollRight)
-            : io.isReleased(MouseButton.scrollDown);
-        const isMinus = isHorizontal
-            ? io.isReleased(MouseButton.scrollLeft)
-            : io.isReleased(MouseButton.scrollUp);
-
         const speed = scrollBar.scrollSpeed;
-        const move
-            = isPlus  ? +speed
-            : isMinus ? -speed
-            : 0;
+        const value = isHorizontal
+            ? io.scroll.x
+            : io.scroll.y;
+        const move = speed * value;
+        // io.deltaTime is irrelevant here
 
+        // TODO NO ptrdiff_t
         scrollBar.setScroll(scroll.to!ptrdiff_t + move.to!ptrdiff_t);
 
     }

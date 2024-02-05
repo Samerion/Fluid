@@ -50,9 +50,10 @@ class SimpledisplayBackend : FluidBackend {
 
         TextureReaper _reaper;
 
-        /// Recent input events for each keyboard and mouse.
+        /// Recent input events for keyboard and mouse.
         InputState[KeyboardKey.max+1] _keyboardState;
         InputState[MouseButton.max+1] _mouseState;
+        int _scroll;
         // gamepads?
 
         /// Characters typed by the user, awaiting consumption.
@@ -104,7 +105,19 @@ class SimpledisplayBackend : FluidBackend {
 
             if (oldMouseHandler) oldMouseHandler(event);
 
-            final switch (event.type) {
+            // Scroll event
+            if (const scroll = event.button.scrollValue) {
+
+                if (event.type == event.type.buttonPressed) {
+
+                    _scroll = scroll;
+
+                }
+
+            }
+
+            // Other events
+            else final switch (event.type) {
 
                 // Update mouse position
                 case event.type.motion:
@@ -278,6 +291,7 @@ class SimpledisplayBackend : FluidBackend {
         // Reset frame state
         _hasJustResized = false;
         _characterQueue = null;
+        _scroll = 0;
 
         foreach (ref state; _keyboardState) {
             if (state == state.pressed) state = state.down;
@@ -300,19 +314,25 @@ class SimpledisplayBackend : FluidBackend {
 
     }
 
-    Vector2 mousePosition() const @trusted {
+    Vector2 mousePosition() const {
 
         return toFluidCoords(_mousePosition);
 
     }
 
-    float deltaTime() const @trusted {
+    Vector2 scroll() const {
+
+        return Vector2(0, _scroll);
+
+    }
+
+    float deltaTime() const {
 
         return _deltaTime;
 
     }
 
-    bool hasJustResized() const @trusted {
+    bool hasJustResized() const {
 
         return _hasJustResized;
 
@@ -326,7 +346,7 @@ class SimpledisplayBackend : FluidBackend {
 
     }
 
-    Vector2 windowSize() const @trusted {
+    Vector2 windowSize() const {
 
         return toFluidCoords(Vector2(window.width, window.height));
 
@@ -672,17 +692,29 @@ class SimpledisplayBackend : FluidBackend {
 
 }
 
+int scrollValue(arsd.simpledisplay.MouseButton button) {
+
+    switch (button) {
+
+        case button.wheelUp: return -1;
+        case button.wheelDown: return +1;
+        default: return 0;
+
+    }
+
+}
+
 MouseButton toFluid(arsd.simpledisplay.MouseButton button) {
 
      switch (button) {
 
         default:
+        case button.wheelUp:
+        case button.wheelDown:
         case button.none: return MouseButton.none;
         case button.left: return MouseButton.left;
         case button.middle: return MouseButton.middle;
         case button.right: return MouseButton.right;
-        case button.wheelUp: return MouseButton.scrollUp;
-        case button.wheelDown: return MouseButton.scrollDown;
         case button.backButton: return MouseButton.back;
         case button.forwardButton: return MouseButton.forward;
 

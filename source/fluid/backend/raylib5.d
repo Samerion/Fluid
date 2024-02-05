@@ -40,21 +40,13 @@ class Raylib5Backend : FluidBackend {
     @trusted {
 
         bool isPressed(MouseButton button) const
-            => isScroll(button)
-            ?  isScrollPressed(button)
-            :  IsMouseButtonPressed(button.toRaylib);
+            => IsMouseButtonPressed(button.toRaylib);
         bool isReleased(MouseButton button) const
-            => isScroll(button)
-            ?  isScrollPressed(button)
-            :  IsMouseButtonReleased(button.toRaylib);
+            => IsMouseButtonReleased(button.toRaylib);
         bool isDown(MouseButton button) const
-            => isScroll(button)
-            ?  isScrollPressed(button)
-            :  IsMouseButtonDown(button.toRaylib);
+            => IsMouseButtonDown(button.toRaylib);
         bool isUp(MouseButton button) const
-            => isScroll(button)
-            ?  !isScrollPressed(button)
-            :  IsMouseButtonUp(button.toRaylib);
+            => IsMouseButtonUp(button.toRaylib);
 
         bool isPressed(KeyboardKey key) const => IsKeyPressed(key.toRaylib);
         bool isReleased(KeyboardKey key) const => IsKeyReleased(key.toRaylib);
@@ -89,20 +81,6 @@ class Raylib5Backend : FluidBackend {
 
     }
 
-    private bool isScrollPressed(MouseButton btn) const @trusted {
-
-        const wheelMove = GetMouseWheelMoveV;
-
-        switch (btn) {
-            case btn.scrollUp:    return wheelMove.y > 0;
-            case btn.scrollDown:  return wheelMove.y < 0;
-            case btn.scrollLeft:  return wheelMove.x > 0;
-            case btn.scrollRight: return wheelMove.x < 0;
-            default:              assert(false);
-        }
-
-    }
-
     Vector2 mousePosition(Vector2 position) @trusted {
 
         auto positionRay = toRaylibCoords(position);
@@ -114,6 +92,12 @@ class Raylib5Backend : FluidBackend {
     Vector2 mousePosition() const @trusted {
 
         return toFluidCoords(GetMousePosition);
+
+    }
+
+    Vector2 scroll() const @trusted {
+
+        return -GetMouseWheelMoveV;
 
     }
 
@@ -436,10 +420,6 @@ raylib.MouseButton toRaylib(MouseButton button) {
     with (raylib.MouseButton)
     with (MouseButton)
     final switch (button) {
-        case scrollLeft:
-        case scrollRight:
-        case scrollUp:
-        case scrollDown:
         case none:    assert(false);
         case left:    return MOUSE_BUTTON_LEFT;
         case right:   return MOUSE_BUTTON_RIGHT;

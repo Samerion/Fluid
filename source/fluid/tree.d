@@ -544,16 +544,12 @@ struct LayoutTree {
                     // Scrolling
                     bind!scrollLeft(KeyboardKey.left),
                     bind!scrollLeft(GamepadButton.dpadLeft),
-                    bind!scrollLeft(MouseButton.scrollLeft),
                     bind!scrollRight(KeyboardKey.right),
                     bind!scrollRight(GamepadButton.dpadRight),
-                    bind!scrollRight(MouseButton.scrollRight),
                     bind!scrollUp(KeyboardKey.up),
                     bind!scrollUp(GamepadButton.dpadUp),
-                    bind!scrollUp(MouseButton.scrollUp),
                     bind!scrollDown(KeyboardKey.down),
                     bind!scrollDown(GamepadButton.dpadDown),
-                    bind!scrollDown(MouseButton.scrollDown),
                     bind!pageUp(KeyboardKey.pageUp),
                     bind!pageDown(KeyboardKey.pageDown),
                 ]
