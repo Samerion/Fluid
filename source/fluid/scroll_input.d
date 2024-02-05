@@ -51,13 +51,11 @@ class ScrollInput : InputNode!Node {
 
     public {
 
-        /// Mouse scroll speed; Pixels per mouse wheel event in FluidScrollable.
-        enum scrollSpeed = 60.0;
+        /// Mouse scroll speed; Pixels per event in FluidScrollable.
+        enum scrollSpeed = 15.0;
 
-        /// Keyboard/gamepad
-        enum actionScrollSpeed = 1000.0;
-
-        // TODO HiDPI should affect scrolling speed
+        /// Keyboard/gamepad scroll speed in pixels per event.
+        enum actionScrollSpeed = 60.0;
 
         /// If true, the scrollbar will be horizontal.
         bool horizontal;
@@ -296,7 +294,7 @@ class ScrollInput : InputNode!Node {
             ? &isDown!(FluidInputAction.scrollLeft)
             : &isDown!(FluidInputAction.scrollUp);
 
-        const speed = cast(size_t) (actionScrollSpeed * io.deltaTime);
+        const speed = cast(size_t) actionScrollSpeed;
         const change
             = isPlus(tree)  ? +speed
             : isMinus(tree) ? -speed

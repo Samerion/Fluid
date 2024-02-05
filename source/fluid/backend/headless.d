@@ -142,6 +142,7 @@ class HeadlessBackend : FluidBackend {
         State[MouseButton.max+1] mouse;
         State[KeyboardKey.max+1] keyboard;
         State[GamepadButton.max+1] gamepad;
+        Vector2 _scroll;
         Vector2 _mousePosition;
         Vector2 _windowSize;
         Vector2 _dpi = Vector2(96, 96);
@@ -186,6 +187,7 @@ class HeadlessBackend : FluidBackend {
         // Clear temporary data
         characterQueue = null;
         _justResized = false;
+        _scroll = Vector2();
         canvas.clear();
 
         // Update input
@@ -367,6 +369,15 @@ class HeadlessBackend : FluidBackend {
     Vector2 mousePosition() const
 
         => _mousePosition;
+
+    /// Get/set mouse scroll
+    Vector2 scroll(Vector2 value)
+
+        => _scroll = scroll;
+
+    Vector2 scroll() const
+
+        => _scroll;
 
     /// Get time elapsed since last frame in seconds.
     float deltaTime() const
