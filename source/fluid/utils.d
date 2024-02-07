@@ -2,6 +2,7 @@
 module fluid.utils;
 
 import std.meta;
+import std.traits;
 import std.functional;
 
 import fluid.backend;
@@ -145,6 +146,106 @@ unittest {
     const barC = xbar!yfoo(3);
     assert(barC.value == "foo");
     assert(barC.foo == 3);
+
+}
+
+/// Tags are optional "marks" left on nodes that are used to apply matching styles. Tags closely resemble
+/// [HTML classes](https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/class).
+///
+/// Tags have to be explicitly defined before usage, by creating an enum and marking it with the `@NodeTag` attribute.
+/// Such tags can then be applied by passing them to the constructor.
+enum NodeTag;
+
+///
+unittest {
+
+    import fluid.label;
+
+    @NodeTag
+    enum Tags {
+        myTag,
+    }
+
+    label(Tags.myTag, "Hello, World!");
+
+}
+
+enum isNodeTag(alias tag)
+    = hasUDA!(tag, NodeTag)
+    || hasUDA!(typeof(tag), NodeTag);
+
+unittest {
+
+    @NodeTag
+    enum singleEnum;
+
+    assert(isNodeTag!singleEnum);
+
+    @NodeTag
+    enum Tags { a, b, c }
+
+    assert(isNodeTag!(Tags.a));
+    assert(isNodeTag!(Tags.b));
+    assert(isNodeTag!(Tags.c));
+
+    enum NonTags { a, b, c }
+
+    assert(!isNodeTag!(NonTags.a));
+    assert(!isNodeTag!(NonTags.b));
+    assert(!isNodeTag!(NonTags.c));
+
+    enum SomeTags { a, b, @NodeTag tag }
+
+    assert(!isNodeTag!(SomeTags.a));
+    assert(!isNodeTag!(SomeTags.b));
+    assert(isNodeTag!(SomeTags.tag));
+
+}
+
+/// Unique ID of a node tag.
+immutable struct NodeTagID {
+
+    /// Unique ID of the tag.
+    size_t id;
+
+    /// Tag name. Only emitted when debugging.
+    debug string name;
+
+    /// Get ID of an input action.
+    this(alias tag)() immutable {
+
+        enum Tag = NodeTagImpl!tag;
+
+        this.id = cast(size_t) &Tag._id;
+        debug this.name = fullyQualifiedName!tag;
+
+    }
+
+    bool opEqual(NodeTagID other) {
+
+        return id == other.id;
+
+    }
+
+}
+
+private struct NodeTagImpl(alias nodeTag)
+if (isNodeTag!nodeTag) {
+
+    alias tag = nodeTag;
+
+    alias id this;
+
+    /// Implementation is the same as input action IDs, see fluid.input.InputAction.
+    /// For what's important, the _id field is not the ID; its pointer however, is.
+    align(1)
+    private static immutable bool _id;
+
+    static NodeTagID id() {
+
+        return NodeTagID!(typeof(this)());
+
+    }
 
 }
 
