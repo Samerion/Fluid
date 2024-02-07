@@ -65,7 +65,7 @@ interface FluidBackend {
     Vector2 mousePosition(Vector2);
     Vector2 mousePosition() const;
 
-    /// Get scroll value on both axes. Each value ranges from [-1, +1]
+    /// Get scroll value on both axes.
     Vector2 scroll() const;
 
     /// Get time elapsed since last frame in seconds.

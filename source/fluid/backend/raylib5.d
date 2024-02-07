@@ -97,7 +97,12 @@ class Raylib5Backend : FluidBackend {
 
     Vector2 scroll() const @trusted {
 
-        return -GetMouseWheelMoveV;
+        // Normalize the value: Linux and Windows provide trinary values (-1, 0, 1) but macOS gives analog that often
+        // goes far higher than that. This is a rough guess of the proportions based on feeling.
+        version (OSX)
+            return -GetMouseWheelMoveV / 4;
+        else
+            return -GetMouseWheelMoveV;
 
     }
 
