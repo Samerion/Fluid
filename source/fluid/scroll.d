@@ -46,8 +46,6 @@ class Scrollable(T : Node, string horizontalExpression) : T {
 
     mixin DefineStyles;
 
-    // TODO: move keyboard input to FluidScrollBar.
-
     public {
 
         /// Scrollbar for the frame. Can be replaced with a customized one.

@@ -52,7 +52,7 @@ class ScrollInput : InputNode!Node {
     public {
 
         /// Mouse scroll speed; Pixels per event in FluidScrollable.
-        enum scrollSpeed = 15.0;
+        enum scrollSpeed = 60.0;
 
         /// Keyboard/gamepad scroll speed in pixels per event.
         enum actionScrollSpeed = 60.0;
