@@ -96,10 +96,7 @@ class MapSpace : Space {
 
     /// Construct the space. Arguments are either nodes, or positions/vectors affecting the next node added through
     /// the constructor.
-    this(T...)(NodeParams params, T children)
-    if (!T.length || is(T[0] == Vector2) || is(T[0] == DropVector) || is(T[0] == Position) || is(T[0] : Node)) {
-
-        super(params);
+    this(T...)(T children) {
 
         Position position;
 
@@ -372,7 +369,6 @@ class MapSpace : Space {
             Color color;
 
             this(Color color) @safe {
-                super(NodeParams.init);
                 this.color = color;
             }
 
