@@ -66,6 +66,9 @@ abstract class Node : Styleable {
         /// Layout for this node.
         Layout layout;
 
+        /// Tags assigned for this node.
+        Tags tags;
+
         /// If true, this node will be removed from the tree on the next draw.
         bool toRemove;
 
