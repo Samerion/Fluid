@@ -152,7 +152,7 @@ class HeadlessBackend : FluidBackend {
         float _deltaTime = 1f / 60f;
         bool _justResized;
         bool _scissorsOn;
-        Color _tint;
+        Color _tint = color!"fff";
 
         /// Currently allocated/used textures as URLs.
         ///
@@ -535,7 +535,6 @@ class HeadlessBackend : FluidBackend {
 
     }
 
-    // TODO
     Color tint(Color color) {
 
         return _tint = color;
@@ -551,6 +550,7 @@ class HeadlessBackend : FluidBackend {
     /// Draw a line.
     void drawLine(Vector2 start, Vector2 end, Color color) {
 
+        color = multiply(color, tint);
         canvas ~= Drawing(DrawnLine(start, end, color));
 
     }
@@ -558,6 +558,7 @@ class HeadlessBackend : FluidBackend {
     /// Draw a triangle, consisting of 3 vertices with counter-clockwise winding.
     void drawTriangle(Vector2 a, Vector2 b, Vector2 c, Color color) {
 
+        color = multiply(color, tint);
         canvas ~= Drawing(DrawnTriangle(a, b, c, color));
 
     }
@@ -565,6 +566,7 @@ class HeadlessBackend : FluidBackend {
     /// Draw a rectangle.
     void drawRectangle(Rectangle rectangle, Color color) {
 
+        color = multiply(color, tint);
         canvas ~= Drawing(DrawnRectangle(rectangle, color));
 
     }
@@ -574,6 +576,7 @@ class HeadlessBackend : FluidBackend {
     in (false)
     do {
 
+        tint = multiply(tint, this.tint);
         canvas ~= Drawing(DrawnTexture(texture, rectangle, tint));
 
     }
@@ -624,7 +627,7 @@ class HeadlessBackend : FluidBackend {
 
         assert(
             rectangles.canFind!(rect => rect.isClose(r) && rect.color == color),
-            "No matching rectangle"
+            format!"No rectangle matching %s %s"(r, color)
         );
 
     }

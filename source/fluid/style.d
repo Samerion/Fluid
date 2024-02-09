@@ -639,3 +639,92 @@ unittest {
     assert(rect.end.y == rect.getSide(Style.Side.bottom));
 
 }
+
+unittest {
+
+    import fluid.frame;
+    import fluid.structs;
+
+    auto io = new HeadlessBackend;
+    auto myTheme = nullTheme.makeTheme!q{
+        Frame.styleAdd!q{
+            backgroundColor = color!"fff";
+            tint = color!"aaaa";
+        };
+    };
+    auto root = vframe(
+        layout!(1, "fill"),
+        myTheme,
+        vframe(
+            layout!(1, "fill"),
+            vframe(
+                layout!(1, "fill"),
+                vframe(
+                    layout!(1, "fill"),
+                )
+            ),
+        ),
+    );
+
+    root.io = io;
+    root.draw();
+
+    auto rect = Rectangle(0, 0, 800, 600);
+    auto bg = color!"fff";
+
+    // Background rectangles — all covering the same area, but with fading color and transparency
+    io.assertRectangle(rect, bg = multiply(bg, color!"aaaa"));
+    io.assertRectangle(rect, bg = multiply(bg, color!"aaaa"));
+    io.assertRectangle(rect, bg = multiply(bg, color!"aaaa"));
+    io.assertRectangle(rect, bg = multiply(bg, color!"aaaa"));
+
+}
+
+unittest {
+
+    import fluid.frame;
+    import fluid.structs;
+
+    auto io = new HeadlessBackend;
+    auto myTheme = nullTheme.makeTheme!q{
+        Frame.styleAdd!q{
+            backgroundColor = color!"fff";
+            tint = color!"aaaa";
+            border.sideRight = 1;
+            borderStyle = colorBorder(color!"f00");
+        };
+    };
+    auto root = vframe(
+        layout!(1, "fill"),
+        myTheme,
+        vframe(
+            layout!(1, "fill"),
+            vframe(
+                layout!(1, "fill"),
+                vframe(
+                    layout!(1, "fill"),
+                )
+            ),
+        ),
+    );
+
+    root.io = io;
+    root.draw();
+
+    auto bg = color!"fff";
+
+    // Background rectangles — reducing in size every pixel as the border gets added
+    io.assertRectangle(Rectangle(0, 0, 799, 600), bg = multiply(bg, color!"aaaa"));
+    io.assertRectangle(Rectangle(0, 0, 798, 600), bg = multiply(bg, color!"aaaa"));
+    io.assertRectangle(Rectangle(0, 0, 797, 600), bg = multiply(bg, color!"aaaa"));
+    io.assertRectangle(Rectangle(0, 0, 796, 600), bg = multiply(bg, color!"aaaa"));
+
+    auto border = color!"f00";
+
+    // Border rectangles
+    io.assertRectangle(Rectangle(799, 0, 1, 600), border = multiply(border, color!"aaaa"));
+    io.assertRectangle(Rectangle(798, 0, 1, 600), border = multiply(border, color!"aaaa"));
+    io.assertRectangle(Rectangle(797, 0, 1, 600), border = multiply(border, color!"aaaa"));
+    io.assertRectangle(Rectangle(796, 0, 1, 600), border = multiply(border, color!"aaaa"));
+
+}
