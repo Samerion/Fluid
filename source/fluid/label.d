@@ -71,12 +71,6 @@ class Label : Node {
 
     }
 
-    override inout(Style) pickStyle() inout {
-
-        return style;
-
-    }
-
     unittest {
 
         auto io = new HeadlessBackend;

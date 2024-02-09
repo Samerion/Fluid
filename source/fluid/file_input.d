@@ -505,19 +505,4 @@ private class SuggestionButton : Button!() {
 
     }
 
-    override inout(Style) pickStyle() inout {
-
-        // Selected
-        if (input.currentSuggestion == index+1)
-            return input.selectedStyle;
-
-        // Hovered
-        if (isHovered)
-            return input.suggestionHoverStyle;
-
-        // Idle
-        return input.unselectedStyle;
-
-    }
-
 }

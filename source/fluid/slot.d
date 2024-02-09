@@ -100,12 +100,6 @@ class NodeSlot(T : Node) : Node {
 
     }
 
-    override inout(Style) pickStyle() inout {
-
-        return style;
-
-    }
-
     /// Swap contents of the two slots.
     void swapSlots(Slot : Node)(Slot other) {
 

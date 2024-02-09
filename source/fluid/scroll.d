@@ -160,7 +160,6 @@ class Scrollable(T : Node, string horizontalExpression) : T {
     override void resizeImpl(Vector2 space) {
 
         assert(scrollBar !is null, "No scrollbar has been set for FluidScrollable");
-        assert(theme !is null);
         assert(tree !is null);
 
         /// Padding represented as a vector. This sums the padding on each axis.

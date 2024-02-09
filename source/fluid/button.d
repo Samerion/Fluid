@@ -70,23 +70,6 @@ class Button(T : Node = Label) : InputNode!T {
 
     }
 
-    /// Pick the style.
-    protected override inout(Style) pickStyle() inout {
-
-        // If pressed
-        if (isPressed) return pressStyle;
-
-        // If focused
-        if (isFocused) return focusStyle;
-
-        // If hovered
-        if (isHovered) return hoverStyle;
-
-        // No decision — normal state
-        return super.pickStyle();
-
-    }
-
     static if (is(typeof(text) : string))
     override string toString() const {
 
