@@ -18,30 +18,8 @@ import fluid.structs;
 @safe:
 
 
-private interface Styleable {
-
-    /// Reload styles for the node. Triggered when the theme is changed.
-    ///
-    /// Use `mixin DefineStyles` to generate the styles.
-    final void reloadStyles() {
-
-        // First load what we're given
-        reloadStylesImpl();
-
-        // Then load the defaults
-        loadDefaultStyles();
-
-    }
-
-    // Internal:
-
-    protected void reloadStylesImpl();
-    protected void loadDefaultStyles();
-
-}
-
 /// Represents a Fluid node.
-abstract class Node : Styleable {
+abstract class Node {
 
     public import fluid.structs : NodeAlign, Layout;
     public import fluid.structs : Align = NodeAlign;
@@ -100,6 +78,9 @@ abstract class Node : Styleable {
 
         /// Theme of this node.
         Theme _theme;
+
+        /// Cached style for this node.
+        Style _style;
 
         /// Actions queued for this node; only used for queueing actions before the first `resize`; afterwards, all
         /// actions are queued directly into the tree.
