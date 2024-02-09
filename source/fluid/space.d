@@ -38,15 +38,20 @@ class Space : Node, FluidContainer {
 
     mixin DefineStyles;
 
-    /// Children of this frame.
-    Children children;
+    public {
 
-    /// Defines in what directions children of this frame should be placed.
-    ///
-    /// If true, children are placed horizontally, if false, vertically.
-    bool horizontal;
+        /// Children of this frame.
+        Children children;
 
-    alias directionHorizontal = horizontal;
+        /// Defines in what directions children of this frame should be placed.
+        ///
+        /// If true, children are placed horizontally, if false, vertically.
+        bool isHorizontal;
+
+        alias horizontal = isHorizontal;
+        alias directionHorizontal = horizontal;
+
+    }
 
     private {
 
@@ -54,7 +59,7 @@ class Space : Node, FluidContainer {
         uint denominator;
 
         /// Space reserved for shrinking elements.
-        uint reservedSpace;
+        float reservedSpace;
 
     }
 
@@ -140,8 +145,8 @@ class Space : Node, FluidContainer {
 
                 // Reserve space for this node
                 reservedSpace += directionHorizontal
-                    ? cast(uint) child.minSize.x
-                    : cast(uint) child.minSize.y;
+                    ? child.minSize.x
+                    : child.minSize.y;
 
             }
 
@@ -194,8 +199,8 @@ class Space : Node, FluidContainer {
             child.draw(rect);
 
             // Offset position
-            if (directionHorizontal) position.x += cast(int) size.x;
-            else position.y += cast(int) size.y;
+            if (directionHorizontal) position.x += size.x;
+            else position.y += size.y;
 
         }
 
@@ -563,5 +568,53 @@ unittest {
     io.assertRectangle(Rectangle(180, 180,  90,  90), color!"0004");
     io.assertRectangle(Rectangle(180, 180,  30,  90), color!"0004");
     io.assertRectangle(Rectangle(180, 180,  30,  30), color!"0004");
+
+}
+
+// https://git.samerion.com/Samerion/Fluid/issues/58
+unittest {
+
+    import fluid.frame;
+    import fluid.label;
+    import fluid.structs;
+
+    auto fill = layout!(1, "fill");
+    auto io = new HeadlessBackend;
+    auto myTheme = nullTheme.makeTheme!q{
+        Frame.styleAdd.backgroundColor = color!"#303030";
+        Label.styleAdd.backgroundColor = color!"#e65bb8";
+    };
+    auto root = hframe(
+        fill,
+        myTheme,
+        label(fill, "1"),
+        label(fill, "2"),
+        label(fill, "3"),
+        label(fill, "4"),
+        label(fill, "5"),
+        label(fill, "6"),
+        label(fill, "7"),
+        label(fill, "8"),
+        label(fill, "9"),
+        label(fill, "10"),
+        label(fill, "11"),
+        label(fill, "12"),
+    );
+
+    root.io = io;
+    root.draw();
+
+    io.assertRectangle(Rectangle( 0*800/12f, 0, 66.66, 600), color!"#e65bb8");
+    io.assertRectangle(Rectangle( 1*800/12f, 0, 66.66, 600), color!"#e65bb8");
+    io.assertRectangle(Rectangle( 2*800/12f, 0, 66.66, 600), color!"#e65bb8");
+    io.assertRectangle(Rectangle( 3*800/12f, 0, 66.66, 600), color!"#e65bb8");
+    io.assertRectangle(Rectangle( 4*800/12f, 0, 66.66, 600), color!"#e65bb8");
+    io.assertRectangle(Rectangle( 5*800/12f, 0, 66.66, 600), color!"#e65bb8");
+    io.assertRectangle(Rectangle( 6*800/12f, 0, 66.66, 600), color!"#e65bb8");
+    io.assertRectangle(Rectangle( 7*800/12f, 0, 66.66, 600), color!"#e65bb8");
+    io.assertRectangle(Rectangle( 8*800/12f, 0, 66.66, 600), color!"#e65bb8");
+    io.assertRectangle(Rectangle( 9*800/12f, 0, 66.66, 600), color!"#e65bb8");
+    io.assertRectangle(Rectangle(10*800/12f, 0, 66.66, 600), color!"#e65bb8");
+    io.assertRectangle(Rectangle(11*800/12f, 0, 66.66, 600), color!"#e65bb8");
 
 }
