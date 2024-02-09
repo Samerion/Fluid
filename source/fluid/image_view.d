@@ -52,7 +52,6 @@ class ImageView : Node {
     ///     minSize = Minimum size of the node. Defaults to image size.
     this(T)(T source, Vector2 minSize) {
 
-        super(sup);
         super.minSize = minSize;
         this.texture = source;
 
@@ -61,7 +60,6 @@ class ImageView : Node {
     /// ditto
     this(T)(T source) {
 
-        super(sup);
         this.texture = source;
         this.isSizeAutomatic = true;
 
