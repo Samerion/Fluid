@@ -152,6 +152,7 @@ class HeadlessBackend : FluidBackend {
         float _deltaTime = 1f / 60f;
         bool _justResized;
         bool _scissorsOn;
+        Color _tint;
 
         /// Currently allocated/used textures as URLs.
         ///
@@ -531,6 +532,19 @@ class HeadlessBackend : FluidBackend {
     bool isTextureValid(uint id) {
 
         return cast(bool) (id in allocatedTextures);
+
+    }
+
+    // TODO
+    Color tint(Color color) {
+
+        return _tint = color;
+
+    }
+
+    Color tint() const {
+
+        return _tint;
 
     }
 

@@ -165,10 +165,29 @@ class Style {
     // Misc
     struct {
 
+        /// Apply tint to all node contents, including children.
+        Color tint = color!"fff";
+
         /// Cursor icon to use while this node is hovered.
         ///
         /// Custom image cursors are not supported yet.
         FluidMouseCursor mouseCursor;
+
+        /// Get or set node opacity. Value in range [0, 1] — 0 is fully transparent, 1 is fully opaque.
+        float opacity() const {
+
+            return tint.a / 255.0;
+
+        }
+
+        /// ditto
+        float opacity(float value) {
+
+            tint.a = cast(ubyte) clamp(value * 255, 0, 255);
+
+            return value;
+
+        }
 
     }
 
@@ -191,6 +210,7 @@ class Style {
             static foreach (j; 0..this.tupleof.length) {{
 
                 auto inheritedField = style.tupleof[j];
+                auto init = Style.init.tupleof[j];
 
                 static if (__traits(compiles, inheritedField is null)) {
 
@@ -199,7 +219,7 @@ class Style {
                 }
                 else {
 
-                    const isInit = inheritedField == inheritedField.init;
+                    const isInit = inheritedField == init;
 
                 }
 
@@ -217,6 +237,8 @@ class Style {
     }
 
     /// Get the default, empty style.
+    ///
+    /// Warning: This returns a single, mutable instance. Changes made will change init entirely.
     static Style init() {
 
         static Style val;
@@ -234,6 +256,16 @@ class Style {
     static Typeface loadTypeface(int fontSize) @trusted {
 
         return new FreetypeTypeface(fontSize);
+
+    }
+
+    /// Returns either this style or Style.init.
+    final Style orInit() return scope {
+
+        if (this is null)
+            return init;
+        else
+            return this;
 
     }
 

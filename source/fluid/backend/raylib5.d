@@ -33,6 +33,7 @@ class Raylib5Backend : FluidBackend {
         TextureReaper _reaper;
         FluidMouseCursor lastMouseCursor;
         Rectangle drawArea;
+        Color _tint = color!"fff";
         float _scale = 1;
 
     }
@@ -311,21 +312,33 @@ class Raylib5Backend : FluidBackend {
 
     }
 
+    Color tint(Color color) {
+
+        return _tint = color;
+
+    }
+
+    Color tint() const {
+
+        return _tint;
+
+    }
+
     void drawLine(Vector2 start, Vector2 end, Color color) @trusted {
 
-        DrawLineV(toRaylibCoords(start), toRaylibCoords(end), color);
+        DrawLineV(toRaylibCoords(start), toRaylibCoords(end), multiply(color, tint));
 
     }
 
     void drawTriangle(Vector2 a, Vector2 b, Vector2 c, Color color) @trusted {
 
-        DrawTriangle(toRaylibCoords(a), toRaylibCoords(b), toRaylibCoords(c), color);
+        DrawTriangle(toRaylibCoords(a), toRaylibCoords(b), toRaylibCoords(c), multiply(color, tint));
 
     }
 
     void drawRectangle(Rectangle rectangle, Color color) @trusted {
 
-        DrawRectangleRec(toRaylibCoords(rectangle), color);
+        DrawRectangleRec(toRaylibCoords(rectangle), multiply(color, tint));
 
     }
 
@@ -363,7 +376,7 @@ class Raylib5Backend : FluidBackend {
         const dpi = this.dpi;
         const source = Rectangle(0, 0, texture.width, texture.height);
 
-        DrawTexturePro(texture.toRaylib, source, destination, Vector2(0, 0), 0, tint);
+        DrawTexturePro(texture.toRaylib, source, destination, Vector2(0, 0), 0, multiply(tint, this.tint));
 
     }
 

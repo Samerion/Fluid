@@ -879,11 +879,18 @@ abstract class Node : Styleable {
         const paddingBox = style ? style.cropBox(borderBox, style.border)   : borderBox;
         const contentBox = style ? style.cropBox(paddingBox, style.padding) : paddingBox;
 
+        const currentStyle = pickStyle().orInit;
+
+        // Set tint
+        auto previousTint = io.tint;
+        io.tint = multiply(previousTint, currentStyle.tint);
+        scope (exit) io.tint = previousTint;
+
         // If there's a border active, draw it
-        const currentStyle = pickStyle;
-        if (style && currentStyle && currentStyle.borderStyle) {
+        if (style && currentStyle.borderStyle) {
 
             currentStyle.borderStyle.apply(io, borderBox, style.border);
+            // TODO wouldn't it be better to draw borders as background?
 
         }
 

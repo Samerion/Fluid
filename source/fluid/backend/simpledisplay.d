@@ -47,6 +47,7 @@ class SimpledisplayBackend : FluidBackend {
         Rectangle _scissors;
         bool _scissorsEnabled;
         FluidMouseCursor _cursor;
+        Color _tint = color!"fff";
 
         TextureReaper _reaper;
 
@@ -586,7 +587,21 @@ class SimpledisplayBackend : FluidBackend {
 
     }
 
+    Color tint(Color color) {
+
+        return _tint = color;
+
+    }
+
+    Color tint() const {
+
+        return _tint;
+
+    }
+
     void drawLine(Vector2 start, Vector2 end, Color color) @trusted {
+
+        color = multiply(color, tint);
 
         openglDraw();
         glBegin(GL_LINES);
@@ -600,6 +615,8 @@ class SimpledisplayBackend : FluidBackend {
     }
 
     void drawTriangle(Vector2 a, Vector2 b, Vector2 c, Color color) @trusted {
+
+        color = multiply(color, tint);
 
         openglDraw();
         glBegin(GL_TRIANGLES);
@@ -618,6 +635,8 @@ class SimpledisplayBackend : FluidBackend {
     }
 
     private void drawRectangleImpl(Rectangle rectangle, Color color) @trusted {
+
+        color = multiply(color, tint);
 
         import fluid.utils;
 
