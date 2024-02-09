@@ -2,6 +2,7 @@
 module fluid.structs;
 
 import std.conv;
+import std.traits;
 
 import fluid.node;
 
@@ -174,5 +175,132 @@ struct Layout {
         }
 
     }
+
+}
+
+/// Tags are optional "marks" left on nodes that are used to apply matching styles. Tags closely resemble
+/// [HTML classes](https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/class).
+///
+/// Tags have to be explicitly defined before usage, by creating an enum and marking it with the `@NodeTag` attribute.
+/// Such tags can then be applied by passing them to the constructor.
+enum NodeTag;
+
+///
+unittest {
+
+    import fluid.label;
+
+    @NodeTag
+    enum Tags {
+        myTag,
+    }
+
+    auto myLabel = label(
+        .tags!(Tags.myTag),
+        "Hello, World!"
+    );
+
+    assert(myLabel.tags == .tags!(Tags.myTag));
+
+}
+
+/// Check if the given item is a node tag.
+enum isNodeTag(alias tag)
+    = hasUDA!(tag, NodeTag)
+    || hasUDA!(typeof(tag), NodeTag);
+
+/// Specify tags for the next node to add.
+Tags tags(input...)() {
+
+    auto result = new TagID[input.length];
+
+    static foreach (i, tag; input) {
+
+        result[i] = tagID!tag;
+
+    }
+
+    return Tags(result);
+
+}
+
+/// Node parameter assigning a new set of tags to a node.
+struct Tags {
+
+    TagID[] tags;
+
+    void apply(Node node) {
+
+        node.tags = this;
+
+    }
+
+}
+
+unittest {
+
+    @NodeTag
+    enum singleEnum;
+
+    assert(isNodeTag!singleEnum);
+
+    @NodeTag
+    enum Tags { a, b, c }
+
+    assert(isNodeTag!(Tags.a));
+    assert(isNodeTag!(Tags.b));
+    assert(isNodeTag!(Tags.c));
+
+    enum NonTags { a, b, c }
+
+    assert(!isNodeTag!(NonTags.a));
+    assert(!isNodeTag!(NonTags.b));
+    assert(!isNodeTag!(NonTags.c));
+
+    enum SomeTags { a, b, @NodeTag tag }
+
+    assert(!isNodeTag!(SomeTags.a));
+    assert(!isNodeTag!(SomeTags.b));
+    assert(isNodeTag!(SomeTags.tag));
+
+}
+
+TagID tagID(alias tag)() {
+
+    enum Tag = TagIDImpl!tag();
+
+    debug
+        return TagID(cast(long) &Tag._id, fullyQualifiedName!tag);
+    else
+        return TagID(cast(long) &Tag._id);
+
+}
+
+/// Unique ID of a node tag.
+struct TagID {
+
+    /// Unique ID of the tag.
+    long id;
+
+    /// Tag name. Only emitted when debugging.
+    debug string name;
+
+    bool opEqual(TagID other) {
+
+        return id == other.id;
+
+    }
+
+}
+
+private struct TagIDImpl(alias nodeTag)
+if (isNodeTag!nodeTag) {
+
+    alias tag = nodeTag;
+
+    /// Implementation is the same as input action IDs, see fluid.input.InputAction.
+    /// For what's important, the _id field is not the ID; its pointer however, is.
+    align(1)
+    private static immutable bool _id;
 
 }
