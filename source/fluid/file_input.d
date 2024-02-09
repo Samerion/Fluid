@@ -485,7 +485,7 @@ class FileInput : InputNode!Frame {
 
 }
 
-private class SuggestionButton : Button!() {
+private class SuggestionButton : Button {
 
     mixin enableInputActions;
 

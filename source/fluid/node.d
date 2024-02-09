@@ -817,9 +817,6 @@ abstract class Node {
 
         const spaceV = Vector2(space.width, space.height);
 
-        // No style set? It likely none have been loaded
-        // TODO if (!style) reloadStyles();
-
         // Get parameters
         const size = Vector2(
             layout.nodeAlign[0] == NodeAlign.fill ? space.width  : min(space.width,  minSize.x),
@@ -960,6 +957,11 @@ abstract class Node {
         tree.actions ~= _queuedActions;
         _queuedActions = null;
 
+        // Load styles
+        if (!style) reloadStyles();
+
+        assert(style);
+
 
         // The node is hidden, reset size
         if (isHidden) minSize = Vector2(0, 0);
@@ -1060,10 +1062,13 @@ abstract class Node {
     }
 
     /// Reload style from the current theme.
-    private void reloadStyles() {
+    private void reloadStyles()
+    out (; _style)
+    do {
 
         // Reset style
         _style = Style.init;
+        assert(_style);
 
         // Apply theme to the given style
         theme.apply(this, _style);

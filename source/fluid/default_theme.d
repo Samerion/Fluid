@@ -13,6 +13,76 @@ Theme nullTheme;
 /// the role of each node understandable.
 Theme fluidDefaultTheme;
 
+version (all)
+static this() {
+
+    import fluid.node;
+    import fluid.frame;
+    import fluid.button;
+    import fluid.backend;
+    import fluid.text_input;
+    import fluid.scroll_input;
+
+    with (Rule) {
+
+        nullTheme.add(
+            rule!Node(),
+        );
+
+        fluidDefaultTheme.add(
+            rule!Node(
+                textColor = color("#000"),
+            ),
+            rule!Frame(
+                backgroundColor = color("#fff"),
+            ),
+            rule!Button(
+                backgroundColor = color("#eee"),
+                mouseCursor = FluidMouseCursor.pointer,
+                margin.sideY = 2,
+                padding.sideX = 6,
+                //focusStyleAdd.backgroundColor = color("ddd");
+                //hoverStyleAdd.backgroundColor = color("ccc");
+                //pressStyleAdd.backgroundColor = color("aaa");
+                //disabledStyleAdd!q{
+                //    textColor = color("000a");
+                //    backgroundColor = color("eee5");
+                //};
+            ),
+            rule!TextInput(
+                backgroundColor = color("#fffc"),
+                borderStyle = colorBorder(color("#aaa")),
+                mouseCursor = FluidMouseCursor.text,
+
+                margin.sideY = 2,
+                padding.sideX = 6,
+                border.sideBottom = 2,
+                //emptyStyleAdd.textColor = color("000a");
+                //focusStyleAdd.backgroundColor = color("fff");
+                //disabledStyleAdd!q{
+                //    textColor = color("000a");
+                //    backgroundColor = color("fff5");
+                //};
+            ),
+            rule!ScrollInput(
+                backgroundColor = color("aaa"),
+
+                //backgroundStyleAdd.backgroundColor = color("eee");
+                //hoverStyleAdd.backgroundColor = color("888");
+                //focusStyleAdd.backgroundColor = color("777");
+                //pressStyleAdd.backgroundColor = color("555");
+                //disabledStyleAdd.backgroundColor = color("aaa5");
+            ),
+            //rule!FileInput.unselectedStyleAdd.backgroundColor = color("fff");
+            //rule!FileInput.selectedStyleAdd.backgroundColor = color("ff512f");
+        );
+
+    }
+
+}
+
+// TODO remove
+else
 static this() {
 
     nullTheme = Theme.init.makeTheme!q{};

@@ -118,7 +118,9 @@ struct Style {
     }
 
     /// Get the default, empty style.
-    static Style init() {
+    static Style init()
+    out (r; r)
+    do {
 
         return Style(Typeface.defaultTypeface);
 
@@ -138,32 +140,9 @@ struct Style {
 
     alias loadFont = loadTypeface;
 
-    /// Update the style with given D code.
-    ///
-    /// This allows each init code to have a consistent default scope, featuring `fluid`, `raylib` and chosen `std`
-    /// modules.
-    ///
-    /// Params:
-    ///     init = Code to update the style with.
-    ///     T    = An compile-time object to update the scope with.
-    void update(string init)() {
+    bool opCast(T : bool)() const {
 
-        import fluid;
-
-        // Wrap init content in brackets to allow imports
-        // See: https://forum.dlang.org/thread/nl4vse$egk$1@digitalmars.com
-        // The thread mentions mixin templates but it's the same for string mixins too; and a mixin with multiple
-        // statements is annoyingly treated as multiple separate mixins.
-        mixin(init.format!"{ %s }");
-
-    }
-
-    /// Ditto.
-    void update(string init, T)() {
-
-        import fluid;
-
-        with (T) mixin(init.format!"{ %s }");
+        return this !is Style(null);
 
     }
 

@@ -318,7 +318,7 @@ unittest {
     import fluid.scroll;
     import fluid.structs;
 
-    Button!() btn;
+    Button btn;
 
     auto io = new HeadlessBackend(Vector2(200, 100));
     auto root = vscrollFrame(
