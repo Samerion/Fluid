@@ -63,55 +63,18 @@ class TextInput : InputNode!Node {
 
     }
 
-    deprecated("Use this(NodeParams, string, void delegate() @safe submitted) instead") {
-
-        static foreach (index; 0 .. BasicNodeParamLength) {
-
-            /// Create a text input.
-            /// Params:
-            ///     sup         = Node parameters.
-            ///     placeholder = Placeholder text for the field.
-            ///     submitted   = Callback for when the field is submitted.
-            this(BasicNodeParam!index sup, string placeholder = "", void delegate() @trusted submitted = null) {
-
-                super(NodeParams(sup));
-                this.placeholder = placeholder;
-                this.submitted = submitted;
-
-                // Create the label
-                this.contentLabel = new typeof(contentLabel)(NodeParams(.layout!(1, "fill")), "");
-
-                with (this.contentLabel) {
-
-                    // Make the scrollbar invisible
-                    scrollBar.disable();
-                    scrollBar.width = 0;
-                    // Note: We're not hiding the scrollbar, so it may adjust used values to the size of the input
-
-                    disableWrap();
-                    ignoreMouse = true;
-
-                }
-
-            }
-
-        }
-
-    }
-
     /// Create a text input.
     /// Params:
     ///     params      = Node parameters.
     ///     placeholder = Placeholder text for the field.
     ///     submitted   = Callback for when the field is submitted.
-    this(NodeParams params, string placeholder = "", void delegate() @trusted submitted = null) {
+    this(string placeholder = "", void delegate() @trusted submitted = null) {
 
-        super(params);
         this.placeholder = placeholder;
         this.submitted = submitted;
 
         // Create the label
-        this.contentLabel = new typeof(contentLabel)(NodeParams(.layout!(1, "fill")), "");
+        this.contentLabel = new typeof(contentLabel)("");
 
         with (this.contentLabel) {
 

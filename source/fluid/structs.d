@@ -3,8 +3,29 @@ module fluid.structs;
 
 import std.conv;
 
+import fluid.node;
+
 
 @safe:
+
+
+/// Check if the given type implements node parameter interface.
+///
+/// Node parameters passed at the beginning of a simpleConstructor will not be passed to the node constructor. Instead,
+/// their `apply` function will be called on the node after the node has been created. This can be used to initialize
+/// properties at the time of creation. A basic implementation of the interface looks as follows:
+///
+/// ---
+/// struct MyParameter {
+///     void apply(Node node) { }
+/// }
+/// ---
+///
+/// Params:
+///     T = Type to check
+//      NodeType = Node to implement.
+enum isNodeParam(T, NodeType : Node = Node)
+    = __traits(compiles, T.init.apply(NodeType.init));
 
 
 enum NodeAlign {
@@ -111,7 +132,7 @@ unittest {
 
 }
 
-/// Represents a node's layout
+/// Node parameter for setting the node layout.
 struct Layout {
 
     /// Fraction of available space this node should occupy in the node direction.
@@ -121,6 +142,13 @@ struct Layout {
 
     /// Align the content box to a side of the occupied space.
     NodeAlign[2] nodeAlign;
+
+    /// Apply this layout to the given node. Implements the node parameter.
+    void apply(Node node) {
+
+        node.layout = this;
+
+    }
 
     string toString() const {
 
@@ -144,30 +172,6 @@ struct Layout {
             else return format!".layout!(%s, %s)"(nodeAlign[0], nodeAlign[1]);
 
         }
-
-    }
-
-}
-
-/// Node core constructor parameters, to be passed from node to node.
-struct NodeParams {
-
-    import fluid.style;
-
-    Layout layout;
-    Theme theme;
-
-    this(Layout layout, Theme theme = null) {
-
-        this.layout = layout;
-        this.theme  = theme;
-
-    }
-
-    /// Ditto
-    this(Theme theme, Layout layout = Layout.init) {
-
-        this(layout, theme);
 
     }
 

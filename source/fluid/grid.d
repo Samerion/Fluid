@@ -18,24 +18,42 @@ import fluid.structs;
 alias grid = simpleConstructor!Grid;
 alias gridRow = simpleConstructor!GridRow;
 
-/// A special version of Layout, see `segments`.
+// TODO rename segments to columns?
+
+/// Segments is used to set the number of columns spanned by a grid item. When applied to a grid, it sets the number of
+/// columns the grid will have.
 struct Segments {
 
-    Layout layout;
-    alias layout this;
+    /// Number of columns used by a grid item.
+    uint amount = 1;
+
+    /// Set the number of columns present in a grid.
+    void apply(Grid grid) {
+
+        grid.segmentCount = amount;
+
+    }
+
+    /// Set the number of columns used by this node.
+    void apply(Node node) {
+
+        node.layout.expand = amount;
+
+    }
 
 }
 
-template segments(T...) {
+/// ditto
+Segments segments(uint columns) {
 
-    Segments segments(Args...)(Args args) {
+    return Segments(columns);
 
-        static if (T.length == 0)
-            return Segments(.layout(args));
-        else
-            return Segments(.layout!T(args));
+}
 
-    }
+/// ditto
+Segments segments(uint columns)() {
+
+    return Segments(columns);
 
 }
 
@@ -56,18 +74,7 @@ class Grid : Frame {
 
     }
 
-    this(Ts...)(NodeParams params, Segments segments, Ts children) {
-
-        this.segmentCount = segments.layout.expand;
-        this(params, children);
-
-    }
-
-    this(Ts...)(NodeParams params, Ts children)
-    if (children.length == 0 || !is(typeof(children[0]) == Segments))
-    do {
-
-        super(params);
+    this(Ts...)(Ts children) {
 
         this.children.length = children.length;
 
@@ -365,49 +372,16 @@ class GridRow : Frame {
     Grid parent;
     size_t segmentCount;
 
-    deprecated("Please use this(NodeParams, Grid, T args) instead") {
-
-        static foreach (i; 0..BasicNodeParamLength) {
-
-            /// Params:
-            ///     params = Standard Fluid constructor parameters.
-            ///     parent = Grid this row will be placed in.
-            ///     args = Children to be placed in the row.
-            this(T...)(BasicNodeParam!i params, Grid parent, T args) {
-
-                super(params);
-                this.layout.nodeAlign = NodeAlign.fill;
-                this.parent = parent;
-                this.directionHorizontal = true;
-
-                foreach (arg; args) {
-
-                    this.children ~= arg;
-
-                }
-
-            }
-
-        }
-
-    }
-
     /// Params:
     ///     params = Standard Fluid constructor parameters.
     ///     parent = Grid this row will be placed in.
-    ///     args = Children to be placed in the row.
-    this(T...)(NodeParams params, Grid parent, T args) {
+    ///     nodes = Children to be placed in the row.
+    this(T...)(Grid parent, T nodes) {
 
-        super(params);
+        super(nodes);
         this.layout.nodeAlign = NodeAlign.fill;
         this.parent = parent;
         this.directionHorizontal = true;
-
-        foreach (arg; args) {
-
-            this.children ~= arg;
-
-        }
 
     }
 
