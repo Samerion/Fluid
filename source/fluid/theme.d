@@ -1,6 +1,7 @@
 module fluid.theme;
 
 import std.meta;
+import std.range;
 import std.string;
 import std.traits;
 
@@ -52,23 +53,29 @@ struct Theme {
     }
 
     /// Apply this theme on the given style.
-    /// Returns: True if a rule was applied, false otherwise.
-    bool apply(Node node, ref Style style) {
+    void apply(Node node, ref Style style) {
 
-        // Find matching rules
-        if (auto rules = typeid(node) in rules) {
+        void applyFor(TypeInfo_Class ti) {
 
-            // Test against every rule
-            foreach (rule; *rules) {
+            // Inherit from parents
+            if (ti.base) applyFor(ti.base);
 
-                // Stop on first success
-                if (rule.apply(node, style)) return true;
+            // Find matching rules
+            if (auto rules = typeid(node) in rules) {
+
+                // Test against every rule
+                foreach (rule; *rules) {
+
+                    // Stop on first success
+                    if (rule.apply(node, style)) break;
+
+                }
 
             }
 
         }
 
-        return false;
+        applyFor(typeid(node));
 
     }
 
@@ -120,7 +127,7 @@ Rule rule(T : Node, Ts...)(Ts fields) {
     result.selector = Selector(typeid(T));
 
     // Load fields
-    static foreach (field; fields) {
+    static foreach (field; fields) {{
 
         static if (is(typeof(field) : Field!(fieldName, T), string fieldName, T)) {
 
@@ -130,7 +137,7 @@ Rule rule(T : Node, Ts...)(Ts fields) {
 
         else static assert(false, format!"Unrecognized type %s"(typeid(field)));
 
-    }
+    }}
 
     return result;
 
@@ -192,11 +199,14 @@ struct StyleTemplate {
     /// Update the given style using this template.
     void apply(ref Style style) {
 
-        static foreach (field; fields) {
+        static foreach (field; fields) {{
 
-            __traits(child, style, field) = mixin("this.", __traits(identifier, field));
+            auto newValue = mixin("this.", __traits(identifier, field));
 
-        }
+            if (newValue.isSet)
+                __traits(child, style, field) = newValue.value;
+
+        }}
 
     }
 
@@ -205,14 +215,41 @@ struct StyleTemplate {
 struct Field(string fieldName, T) {
 
     enum name = fieldName;
+    alias Type = FieldValue!T.Type;
 
-    FieldValue!T value;
+    Type value;
 
     alias value this;
 
-    static Field make(FieldValue!T.Type value) {
+    static Field make(Type value) {
 
-        return Field(FieldValue!T(value, true));
+        return Field(value);
+
+    }
+
+    static Field make() {
+
+        return Field();
+
+    }
+
+    // Implement side array helpers
+    static if (isSideArray!Type) {
+
+        private enum isHelper(string member) = member.startsWith("side");
+        private alias helpers = Filter!(isHelper, __traits(allMembers, fluid.style));
+
+        static foreach (helper; helpers) {
+
+            mixin(format!q{
+                Field %1$s(X)(X x) {
+                    auto copy = this;
+                    .%1$s(copy.value) = x;
+                    return copy;
+                }
+            }(helper));
+
+        }
 
     }
 
@@ -228,6 +265,11 @@ private struct FieldValue(T) {
     Type value;
     bool isSet;
 
-    alias value this;
+    ref Type opAssign(Type value) {
+
+        this.isSet = true;
+        return this.value = value;
+
+    }
 
 }

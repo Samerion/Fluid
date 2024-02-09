@@ -11,10 +11,10 @@ import fluid.popup_frame;
 @safe:
 
 /// A button made to open popups.
-alias popupButton = simpleConstructor!(PopupButton);
+alias popupButton = simpleConstructor!PopupButton;
 
 /// ditto
-class PopupButton : Button!Label {
+class PopupButton : Button {
 
     mixin defineStyles;
     mixin enableInputActions;
@@ -86,7 +86,7 @@ unittest {
         lastAction = text;
     }
 
-    Button!()[6] buttons;
+    Button[6] buttons;
 
     auto io = new HeadlessBackend;
     auto root = popupButton("Options",

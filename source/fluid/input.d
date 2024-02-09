@@ -1089,7 +1089,7 @@ unittest {
     // This test checks if "hover slipping" happens; namely, if the user clicks and holds on an object, then hovers on
     // something else and releases, the click should be cancelled, and no other object should react to the same click.
 
-    class SquareButton : Button!() {
+    class SquareButton : Button {
 
         mixin enableInputActions;
 
