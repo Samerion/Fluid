@@ -379,7 +379,7 @@ Space showcaseCode(string code) {
 }
 
 /// Showcase code and its result.
-Space showcaseCode(string code, Node node, Theme theme = null) {
+Space showcaseCode(string code, Node node, Theme theme = Theme.init) {
 
     // Make the node inherit the default theme rather than the one we set
     if (node.theme is null) {

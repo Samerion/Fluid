@@ -7,6 +7,7 @@ import std.format;
 import std.typecons;
 import std.algorithm;
 
+import fluid.node;
 import fluid.utils;
 import fluid.backend;
 import fluid.typeface;
@@ -23,7 +24,25 @@ public import fluid.backend : color;
 alias StyleKeyPtr = immutable(StyleKey)*;
 
 /// Node theme.
-alias Theme = Style[StyleKeyPtr];
+struct Theme {
+
+    Style[StyleKeyPtr] value;
+
+    alias value this;
+
+    void apply(Node node) {
+
+        node.theme = this;
+
+    }
+
+    Theme dup() {
+
+        return Theme(value.dup);
+
+    }
+
+}
 
 /// Side array is a static array defining a property separately for each side of a box, for example margin and border
 /// size. Order is as follows: `[left, right, top, bottom]`. You can use `Style.Side` to index this array with an enum.

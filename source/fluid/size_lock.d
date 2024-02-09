@@ -53,25 +53,10 @@ class SizeLock(T : Node) : T {
     /// If a value on either axis is `0`, limit will not be applied on the axis.
     SizeLimit limit;
 
-    this(T...)(NodeParams params, SizeLimit limit, T args) {
+    this(T...)(SizeLimit limit, T args) {
 
-        super(params, args);
+        super(args);
         this.limit = limit;
-
-    }
-
-    deprecated("BasicNodeParams have been replaced with NodeParams; please use this(NodeParams, SizeLimit, T)") {
-
-        static foreach (i; 0..BasicNodeParamLength) {
-
-            this(T...)(BasicNodeParam!i params, SizeLimit limit, T args) {
-
-                super(params, args);
-                this.limit = limit;
-
-            }
-
-        }
 
     }
 

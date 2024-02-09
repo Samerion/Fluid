@@ -45,70 +45,54 @@ enum isSimpleConstructor(T) = is(T : SimpleConstructor!(A, a), A, alias a);
 
 struct SimpleConstructor(T, alias fun = "a") {
 
+    import fluid.style;
+    import fluid.structs;
+
     alias Type = T;
     alias initializer = unaryFun!fun;
 
     Type opCall(Args...)(Args args) {
 
-        import fluid.style;
-        import fluid.structs;
-
-        // Determine if an argument is a parameter
-        enum isTheme(T) = is(T : Theme);
-        enum isLayout(T) = is(T : Layout);
-
-        // Scan for parameters
-        static if (Args.length >= 1) {
-
-            alias FirstArg = Args[0];
-
-            // Load the second argument with a fallback
-            static if (Args.length >= 2)
-                alias SecondArg = Args[1];
-            else
-                alias SecondArg = void;
-
-            // Check if the first parameter is a parameter
-            static if (isTheme!FirstArg) {
-
-                enum arity = 1 + isLayout!SecondArg;
-
-            }
-
-            else static if (isLayout!FirstArg) {
-
-                enum arity = 1 + isTheme!SecondArg;
-
-            }
-
-            else enum arity = 0;
-
-        }
-
-        else enum arity = 0;
+        // Collect parameters
+        enum paramCount = leadingParams!Args;
 
         // Construct the node
-        auto params = NodeParams(args[0..arity]);
+        auto result = new Type(args[paramCount..$]);
 
-        // Collect the parameters into NodeParams
-        static if (__traits(compiles, new Type(params, args[arity..$]))) {
-
-            auto result = new Type(params, args[arity..$]);
-
-        }
-
-        // Old-style, plain construction
-        else static if (__traits(compiles, new Type(args))) {
-
-            auto result = new Type(args);
-
-        }
-
-        // If neither compile, try the new call convention again to make sure it emits an error message
-        else auto result = new Type(params, args[arity..$]);
-
+        // Run the initializer
         initializer(result);
+
+        // Pass the parameters
+        foreach (param; args[0..paramCount]) {
+
+            param.apply(result);
+
+        }
+
         return result;
+
+    }
+
+    /// Count node parameters present at the beginning of the given type list. This function is only available at
+    /// compile-time.
+    ///
+    /// If a node parameter is passed *after* a non-parameter, it will not be included in the count, and will not be
+    /// treated as one by simpleConstructor.
+    static int leadingParams(Args...)() {
+
+        assert(__ctfe, "leadingParams is not available at runtime");
+
+        if (__ctfe)
+        foreach (i, Arg; Args) {
+
+            // Found a non-parameter, return the index
+            if (!isNodeParam!(Arg, T))
+                return i;
+
+        }
+
+        // All arguments are parameters
+        return Args.length;
 
     }
 
@@ -161,25 +145,6 @@ unittest {
     const barC = xbar!yfoo(3);
     assert(barC.value == "foo");
     assert(barC.foo == 3);
-
-}
-
-deprecated("BasicNodeParams are deprecated in favor of simpleConstructor. Define constructors using NodeParams as the "
-    ~ "first argument instead") {
-
-    alias BasicNodeParamLength = Alias!5;
-    template BasicNodeParam(int index) {
-
-        import fluid.style;
-        import fluid.structs;
-
-        static if (index == 0) alias BasicNodeParam = AliasSeq!(Layout, Theme);
-        static if (index == 1) alias BasicNodeParam = AliasSeq!(Theme, Layout);
-        static if (index == 2) alias BasicNodeParam = AliasSeq!(Layout);
-        static if (index == 3) alias BasicNodeParam = AliasSeq!(Theme);
-        static if (index == 4) alias BasicNodeParam = AliasSeq!();
-
-    }
 
 }
 

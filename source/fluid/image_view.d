@@ -42,26 +42,6 @@ class ImageView : Node {
     /// Set to true if the image view owns the texture and manages its ownership.
     private bool _isOwner;
 
-    deprecated("Use this(NodeParams, T, Vector2) instead.") {
-
-        static foreach (index; 0 .. BasicNodeParamLength) {
-
-            /// Create an image node from given texture or filename.
-            /// Params:
-            ///     source  = `Texture` raylib struct to use, or a filename to load from.
-            ///     minSize = Minimum size of the node.
-            this(T)(BasicNodeParam!index sup, T source, Vector2 minSize = Vector2(0, 0)) {
-
-                super(sup);
-                texture = source;
-                super.minSize = minSize;
-
-            }
-
-        }
-
-    }
-
     /// Create an image node from given texture or filename.
     ///
     /// Note, if a string is given, the texture will be loaded when resizing. This ensures a Fluid backend is available
@@ -70,7 +50,7 @@ class ImageView : Node {
     /// Params:
     ///     source  = `Texture` struct to use, or a filename to load from.
     ///     minSize = Minimum size of the node. Defaults to image size.
-    this(T)(NodeParams sup, T source, Vector2 minSize) {
+    this(T)(T source, Vector2 minSize) {
 
         super(sup);
         super.minSize = minSize;
@@ -79,10 +59,9 @@ class ImageView : Node {
     }
 
     /// ditto
-    this(T)(NodeParams sup, T source) {
+    this(T)(T source) {
 
         super(sup);
-        super.minSize = minSize;
         this.texture = source;
         this.isSizeAutomatic = true;
 
