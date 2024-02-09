@@ -1095,7 +1095,7 @@ abstract class Node : Styleable {
 
     }
 
-    @system  // cathing Error
+    @system  // catching Error
     unittest {
 
         import std.exception;
@@ -1105,8 +1105,7 @@ abstract class Node : Styleable {
         static class Square : Frame {
             @safe:
             Color color;
-            this(NodeParams params, Color color) {
-                super(params);
+            this(Color color) {
                 this.color = color;
             }
             override void resizeImpl(Vector2) {

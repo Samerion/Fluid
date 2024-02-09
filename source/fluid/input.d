@@ -1110,7 +1110,7 @@ unittest {
         mixin enableInputActions;
 
         this(T...)(T t) {
-            super(NodeParams(), t);
+            super(t);
         }
 
         override void resizeImpl(Vector2) {

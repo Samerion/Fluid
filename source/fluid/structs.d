@@ -24,7 +24,7 @@ import fluid.node;
 /// Params:
 ///     T = Type to check
 //      NodeType = Node to implement.
-enum isNodeParam(T, NodeType : Node = Node)
+enum isNodeParam(T, NodeType = Node)
     = __traits(compiles, T.init.apply(NodeType.init));
 
 
