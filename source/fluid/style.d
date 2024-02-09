@@ -12,8 +12,8 @@ import fluid.utils;
 import fluid.backend;
 import fluid.typeface;
 
+public import fluid.theme;
 public import fluid.border;
-public import fluid.style_macros;
 public import fluid.default_theme;
 public import fluid.backend : color;
 
@@ -21,91 +21,10 @@ public import fluid.backend : color;
 @safe:
 
 
-alias StyleKeyPtr = immutable(StyleKey)*;
-
-/// Node theme.
-struct Theme {
-
-    Style[StyleKeyPtr] value;
-
-    alias value this;
-
-    void apply(Node node) {
-
-        node.theme = this;
-
-    }
-
-    Theme dup() {
-
-        return Theme(value.dup);
-
-    }
-
-}
-
-/// Side array is a static array defining a property separately for each side of a box, for example margin and border
-/// size. Order is as follows: `[left, right, top, bottom]`. You can use `Style.Side` to index this array with an enum.
-///
-/// Because of the default behavior of static arrays, one can set the value for all sides to be equal with a simple
-/// assignment: `array = 8`. Additionally, to make it easier to manipulate the box, one may use the `sideX` and `sideY`
-/// functions to get a `uint[2]` array of the values corresponding to the given axis (which can also be assigned like
-/// `array.sideX = 8`) or the `sideLeft`, `sideRight`, `sideTop` and `sideBottom` functions corresponding to the given
-/// sides.
-enum isSideArray(T) = is(T == X[4], X);
-
-///
-unittest {
-
-    uint[4] sides;
-    static assert(isSideArray!(uint[4]));
-
-    sides.sideX = 4;
-
-    assert(sides.sideLeft == sides.sideRight);
-    assert(sides.sideLeft == 4);
-
-    sides = 8;
-    assert(sides == [8, 8, 8, 8]);
-    assert(sides.sideX == sides.sideY);
-
-}
-
-/// An empty struct used to create unique style type identifiers.
-struct StyleKey { }
-
-/// Create a new style initialized with given D code.
-///
-/// raylib and std.string are accessible inside by default.
-///
-/// Note: It is recommended to create a root style node defining font parameters and then inherit other styles from it.
-///
-/// Params:
-///     init    = D code to use.
-///     parents = Styles to inherit from. See `Style.this` documentation for more info.
-///     data    = Data to pass to the code as the context. All fields of the struct will be within the style's scope.
-Style style(string init, Data)(Data data, Style[] parents...) {
-
-    auto result = new Style;
-
-    with (data) with (result) mixin(init);
-
-    return result;
-
-}
-
-/// Ditto.
-Style style(string init)(Style[] parents...) {
-
-    auto result = new Style(parents);
-    result.update!init;
-
-    return result;
-
-}
-
 /// Contains the style for a node.
-class Style {
+struct Style {
+
+    enum Themable;
 
     enum Side {
 
@@ -113,37 +32,13 @@ class Style {
 
     }
 
-    // Internal use only, can't be private because it's used in mixins.
-    static {
-
-        Theme _currentTheme;
-        Style[] _styleStack;
-
-    }
-
     // Text options
-    struct {
+    @Themable {
 
         /// Main typeface to be used for text.
         Typeface typeface;
 
         alias font = typeface;
-
-        deprecated("Set font parameters in the typeface. These will be removed in 0.7.0") {
-
-            /// Font size (height) in pixels.
-            float fontSize;
-
-            /// Line height, as a fraction of `fontSize`.
-            float lineHeight;
-
-            /// Space between characters, relative to font size.
-            float charSpacing;
-
-            /// Space between words, relative to the font size.
-            float wordSpacing;
-
-        }
 
         /// Text color.
         Color textColor;
@@ -151,7 +46,7 @@ class Style {
     }
 
     // Background
-    struct {
+    @Themable {
 
         /// Background color of the node.
         Color backgroundColor;
@@ -159,7 +54,7 @@ class Style {
     }
 
     // Spacing
-    struct {
+    @Themable {
 
         /// Margin (outer margin) of the node. `[left, right, top, bottom]`.
         ///
@@ -182,14 +77,16 @@ class Style {
     }
 
     // Misc
-    struct {
+    public {
 
         /// Apply tint to all node contents, including children.
+        @Themable
         Color tint = color!"fff";
 
         /// Cursor icon to use while this node is hovered.
         ///
         /// Custom image cursors are not supported yet.
+        @Themable
         FluidMouseCursor mouseCursor;
 
         /// Get or set node opacity. Value in range [0, 1] — 0 is fully transparent, 1 is fully opaque.
@@ -200,6 +97,7 @@ class Style {
         }
 
         /// ditto
+        @Themable
         float opacity(float value) {
 
             tint.a = cast(ubyte) clamp(value * 255, 0, 255);
@@ -210,59 +108,14 @@ class Style {
 
     }
 
-    this() {
-
-        this.font = Typeface.defaultTypeface;
-
-    }
-
-    /// Create a style by copying params of others.
-    ///
-    /// Multiple styles can be set, so if one field is set to `typeof(field).init`, it will be taken from the previous
-    /// style from the list — that is, settings from the last style override previous ones.
-    this(Style[] styles...) {
-
-        // Check each style
-        foreach (i, style; styles) {
-
-            // Inherit each field
-            static foreach (j; 0..this.tupleof.length) {{
-
-                auto inheritedField = style.tupleof[j];
-                auto init = Style.init.tupleof[j];
-
-                static if (__traits(compiles, inheritedField is null)) {
-
-                    const isInit = inheritedField is null;
-
-                }
-                else {
-
-                    const isInit = inheritedField == init;
-
-                }
-
-                // Ignore if it's set to init (unless it's the first style)
-                if (i == 0 || !isInit) {
-
-                    this.tupleof[j] = inheritedField;
-
-                }
-
-            }}
-
-        }
-
-    }
+    @disable this();
 
     /// Get the default, empty style.
-    ///
-    /// Warning: This returns a single, mutable instance. Changes made will change init entirely.
     static Style init() {
 
-        static Style val;
-        if (val is null) val = new Style;
-        return val;
+        Style style;
+        style.typeface = Typeface.defaultTypeface;
+        return style;
 
     }
 
@@ -455,28 +308,30 @@ class Style {
 
 }
 
-/// `wrapText` result.
-struct TextLine {
+/// Side array is a static array defining a property separately for each side of a box, for example margin and border
+/// size. Order is as follows: `[left, right, top, bottom]`. You can use `Style.Side` to index this array with an enum.
+///
+/// Because of the default behavior of static arrays, one can set the value for all sides to be equal with a simple
+/// assignment: `array = 8`. Additionally, to make it easier to manipulate the box, one may use the `sideX` and `sideY`
+/// functions to get a `uint[2]` array of the values corresponding to the given axis (which can also be assigned like
+/// `array.sideX = 8`) or the `sideLeft`, `sideRight`, `sideTop` and `sideBottom` functions corresponding to the given
+/// sides.
+enum isSideArray(T) = is(T == X[4], X);
 
-    struct Word {
+///
+unittest {
 
-        string text;
-        size_t width;
-        bool lineFeed;  // Word is followed by a line feed.
+    uint[4] sides;
+    static assert(isSideArray!(uint[4]));
 
-    }
+    sides.sideX = 4;
 
-    /// Index of the line within the original text. This is the start of the text.
-    size_t index;
+    assert(sides.sideLeft == sides.sideRight);
+    assert(sides.sideLeft == 4);
 
-    /// Text on this line.
-    string text;
-
-    /// Width of the line (including spaces).
-    size_t width = 0;
-
-    /// If true, the line is explicitly terminated with a line feed.
-    bool lineFeed;
+    sides = 8;
+    assert(sides == [8, 8, 8, 8]);
+    assert(sides.sideX == sides.sideY);
 
 }
 
