@@ -16,31 +16,65 @@ import fluid.style;
     mixin template DefineStyles(args...) { }
 //}
 
+Theme makeTheme(string s, Ts...)(Ts) {
+
+    return Theme.init;
+
+}
+
 /// Node theme.
 struct Theme {
 
     Rule[][TypeInfo_Class] rules;
+
+    bool opCast(T : bool)() const {
+
+        return rules !is null;
+
+    }
 
     /// Add rules to the theme.
     void add(Rule[] rules...) {
 
         foreach (rule; rules) {
 
-            rules[rule.selector.type] ~= rule;
+            this.rules[rule.selector.type] ~= rule;
 
         }
 
     }
 
+    /// Make the node use this theme.
     void apply(Node node) {
 
         node.theme = this;
 
     }
 
+    /// Apply this theme on the given style.
+    /// Returns: True if a rule was applied, false otherwise.
+    bool apply(Node node, ref Style style) {
+
+        // Find matching rules
+        if (auto rules = typeid(node) in rules) {
+
+            // Test against every rule
+            foreach (rule; *rules) {
+
+                // Stop on first success
+                if (rule.apply(node, style)) return true;
+
+            }
+
+        }
+
+        return false;
+
+    }
+
     Theme dup() {
 
-        return Theme(value.dup);
+        return Theme(rules.dup);
 
     }
 
@@ -77,6 +111,31 @@ struct Selector {
 
 }
 
+/// Create a style rule for the given node.
+Rule rule(T : Node, Ts...)(Ts fields) {
+
+    Rule result;
+
+    // Create the selector
+    result.selector = Selector(typeid(T));
+
+    // Load fields
+    static foreach (field; fields) {
+
+        static if (is(typeof(field) : Field!(fieldName, T), string fieldName, T)) {
+
+            __traits(child, result.fields, Rule.field!fieldName) = field.value;
+
+        }
+
+        else static assert(false, format!"Unrecognized type %s"(typeid(field)));
+
+    }
+
+    return result;
+
+}
+
 /// Rules specify changes that are to be made to the node's style.
 struct Rule {
 
@@ -93,13 +152,29 @@ struct Rule {
     static foreach (field; StyleTemplate.fields) {
 
         mixin(format!q{
-            alias %1$s = Field!("%1$s", typeof(field));
+            alias %1$s = Field!("%1$s", typeof(field)).make;
         }(__traits(identifier, field)));
 
     }
 
     alias field(string name) = __traits(getMember, StyleTemplate, name);
     alias FieldType(string name) = field!name.Type;
+
+    /// Apply this rule on the given style.
+    /// Returns: True if applied, false if not.
+    bool apply(Node node, ref Style style) {
+
+        // Test against the selector
+        if (!selector.test(node)) return false;
+
+        // Apply changes
+        fields.apply(style);
+
+        // TODO dynamic rules
+
+        return true;
+
+    }
 
 }
 
@@ -134,6 +209,12 @@ struct Field(string fieldName, T) {
     FieldValue!T value;
 
     alias value this;
+
+    static Field make(FieldValue!T.Type value) {
+
+        return Field(FieldValue!T(value, true));
+
+    }
 
 }
 

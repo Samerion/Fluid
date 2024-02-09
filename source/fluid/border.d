@@ -216,7 +216,6 @@ unittest {
             borderStyle = colorBorder(%s);
         };
     });
-    root.reloadStyles();
     root.draw();
 
     // Rectangles

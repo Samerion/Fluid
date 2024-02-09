@@ -894,22 +894,6 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable {
 
     }
 
-    override inout(Style) pickStyle() inout {
-
-        // Disabled
-        if (isDisabledInherited) return disabledStyle;
-
-        // Focused
-        else if (isFocused) return focusStyle;
-
-        // Hovered
-        else if (isHovered) return hoverStyle;
-
-        // Other
-        else return style;
-
-    }
-
     /// Handle mouse input.
     ///
     /// Usually, you'd prefer to define a method marked with an `InputAction` enum. This function is preferred for more

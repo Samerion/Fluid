@@ -108,14 +108,19 @@ struct Style {
 
     }
 
+    /// Use `Style.init`.
     @disable this();
+
+    private this(Typeface typeface) {
+
+        this.typeface = typeface;
+
+    }
 
     /// Get the default, empty style.
     static Style init() {
 
-        Style style;
-        style.typeface = Typeface.defaultTypeface;
-        return style;
+        return Style(Typeface.defaultTypeface);
 
     }
 
@@ -128,16 +133,6 @@ struct Style {
     static Typeface loadTypeface(int fontSize) @trusted {
 
         return new FreetypeTypeface(fontSize);
-
-    }
-
-    /// Returns either this style or Style.init.
-    final Style orInit() return scope {
-
-        if (this is null)
-            return init;
-        else
-            return this;
 
     }
 

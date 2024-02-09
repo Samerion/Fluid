@@ -44,10 +44,4 @@ class Frame : Space {
 
     }
 
-    protected override inout(Style) pickStyle() inout {
-
-        return style;
-
-    }
-
 }

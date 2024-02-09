@@ -157,7 +157,7 @@ class ScrollInput : InputNode!Node {
         setScroll(position);
 
         // Draw the background
-        backgroundStyle.drawBackground(tree.io, paddingBox);
+        // TODO backgroundStyle.drawBackground(tree.io, paddingBox);
 
         // Calculate the size of the scrollbar
         scrollbarPosition = Vector2(contentBox.x, contentBox.y);
@@ -192,24 +192,6 @@ class ScrollInput : InputNode!Node {
         const innerStyle = pickStyle();
 
         innerStyle.drawBackground(tree.io, innerRect);
-
-    }
-
-    override protected inout(Style) pickStyle() inout {
-
-        auto up = super.pickStyle();
-
-        // The outer part is being hovered...
-        if (up is hoverStyle) {
-
-            // Check if the inner part is
-            return innerHovered
-                ? hoverStyle
-                : style;
-
-        }
-
-        return up;
 
     }
 

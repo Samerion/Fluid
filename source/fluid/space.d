@@ -292,12 +292,6 @@ class Space : Node, FluidContainer {
 
     }
 
-    protected override inout(Style) pickStyle() inout {
-
-        return null;
-
-    }
-
     /// Params:
     ///     child     = Child size to add.
     ///     previous  = Previous position.

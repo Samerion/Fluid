@@ -220,10 +220,4 @@ class ImageView : Node {
 
     }
 
-    override inout(Style) pickStyle() inout {
-
-        return null;
-
-    }
-
 }

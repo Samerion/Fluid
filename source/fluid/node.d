@@ -103,6 +103,9 @@ abstract class Node {
 
         }
 
+        /// Current style, used for sizing. Does not include any changes made by `when` clauses or callbacks.
+        inout(Style) style() inout { return _style; }
+
     }
 
     @property {
@@ -139,7 +142,11 @@ abstract class Node {
     ///
     /// See_Also:
     ///     `fluid.utils.simpleConstructor`
-    this() { }
+    this() {
+
+        _style = Style.init;
+
+    }
 
     bool opEquals(const Node otherNode) const {
 
@@ -576,11 +583,7 @@ abstract class Node {
         // Set mouse cursor to match hovered node
         if (tree.hover) {
 
-            if (auto style = tree.hover.pickStyle) {
-
-                tree.io.mouseCursor = style.mouseCursor;
-
-            }
+            tree.io.mouseCursor = style.mouseCursor;
 
         }
 
@@ -814,8 +817,8 @@ abstract class Node {
 
         const spaceV = Vector2(space.width, space.height);
 
-        // No style set? It likely hasn't been loaded
-        if (!style) reloadStyles();
+        // No style set? It likely none have been loaded
+        // TODO if (!style) reloadStyles();
 
         // Get parameters
         const size = Vector2(
@@ -826,11 +829,11 @@ abstract class Node {
 
         // Calculate the boxes
         const marginBox  = Rectangle(position.tupleof, size.tupleof);
-        const borderBox  = style ? style.cropBox(marginBox, style.margin)   : marginBox;
-        const paddingBox = style ? style.cropBox(borderBox, style.border)   : borderBox;
-        const contentBox = style ? style.cropBox(paddingBox, style.padding) : paddingBox;
+        const borderBox  = style.cropBox(marginBox, style.margin);
+        const paddingBox = style.cropBox(borderBox, style.border);
+        const contentBox = style.cropBox(paddingBox, style.padding);
 
-        const currentStyle = pickStyle().orInit;
+        const currentStyle = pickStyle();
 
         // Set tint
         auto previousTint = io.tint;
@@ -838,7 +841,7 @@ abstract class Node {
         scope (exit) io.tint = previousTint;
 
         // If there's a border active, draw it
-        if (style && currentStyle.borderStyle) {
+        if (currentStyle.borderStyle) {
 
             currentStyle.borderStyle.apply(io, borderBox, style.border);
             // TODO wouldn't it be better to draw borders as background?
@@ -951,7 +954,7 @@ abstract class Node {
 
         // Inherit tree and theme
         this.tree = tree;
-        if (this.theme is null) this.theme = theme;
+        if (!this.theme) this.theme = theme;
 
         // Queue actions into the tree
         tree.actions ~= _queuedActions;
@@ -967,8 +970,8 @@ abstract class Node {
             import std.range;
 
             const fullMargin = style.fullMargin;
-            const spacingX = style ? chain(fullMargin.sideX[], style.padding.sideX[]).sum : 0;
-            const spacingY = style ? chain(fullMargin.sideY[], style.padding.sideY[]).sum : 0;
+            const spacingX = chain(fullMargin.sideX[], style.padding.sideX[]).sum;
+            const spacingY = chain(fullMargin.sideY[], style.padding.sideY[]).sum;
 
             // Reduce space by margins
             space.x = max(0, space.x - spacingX);
@@ -1053,6 +1056,17 @@ abstract class Node {
     inout(Style) pickStyle() inout {
 
         return style;
+
+    }
+
+    /// Reload style from the current theme.
+    private void reloadStyles() {
+
+        // Reset style
+        _style = Style.init;
+
+        // Apply theme to the given style
+        theme.apply(this, _style);
 
     }
 
