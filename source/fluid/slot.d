@@ -33,35 +33,9 @@ class NodeSlot(T : Node) : Node {
     }
 
     /// Create a new node slot and optionally place a node within.
-    this(NodeParams params, T node = null) {
+    this(T node = null) {
 
-        super(params);
         this.value = node;
-
-    }
-
-    deprecated("Use (NodeParams, T node) or simpleConstructor instead") {
-
-        /// Create a new slot and place a node in it.
-        this(Layout layout, T node) {
-
-            this.value = node;
-            this.layout = layout;
-
-        }
-
-        this(T node) {
-
-            this.value = node;
-
-        }
-
-        /// Create a new empty slot.
-        this(Layout layout = Layout.init) {
-
-            this.layout = layout;
-
-        }
 
     }
 

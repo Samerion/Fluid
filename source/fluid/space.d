@@ -63,30 +63,19 @@ class Space : Node, FluidContainer {
 
     }
 
-    // Generate constructors
-    deprecated("Use this(NodeParams params, Node[] nodes...) instead") {
+    /// Create the space and fill it with given nodes.
+    this(Node[] nodes...) {
 
-        static foreach (index; 0 .. BasicNodeParamLength) {
-
-            this(BasicNodeParam!index params, Node[] nodes...) {
-
-                super(params);
-                this.children ~= nodes;
-
-            }
-
-        }
-
-    }
-
-    this(NodeParams params, Node[] nodes...) {
-
-        super(params);
         this.children ~= nodes;
 
     }
 
-    this() {
+    /// Create the space using nodes from the given range.
+    this(Range)(Range range)
+    if (isInputRange!Range)
+    do {
+
+        this.children ~= range;
 
     }
 

@@ -91,24 +91,17 @@ class FileInput : InputNode!Frame {
 
     /// Create a file picker.
     ///
-    /// Note: This is an "overlay" node, so it's expected to be placed in a global `onionFrame`. The constructor doesn't
-    /// accept a layout parameter, as there is a default, constant one, required for the node to work correctly. This
-    /// node is also hidden by default.
-    this(Theme theme, string name, void delegate() @trusted submitted,
-        void delegate() @trusted cancelled = null)
-    do {
+    /// Note: This is an "overlay" node, so it's expected to be placed in a global `onionFrame`. The node assigns its
+    /// own default layout, which typically shouldn't be overriden.
+    this(string name, void delegate() @trusted submitted, void delegate() @trusted cancelled = null) {
 
         super(
-            NodeParams(
-                .layout(1, NodeAlign.center, NodeAlign.start),
-                theme,
-            ),
-
             titleLabel  = label(name),
-            input       = new FilenameInput(NodeParams.init, "Path to file...", submitted),
+            input       = new FilenameInput("Path to file...", submitted),
             suggestions = vspace(.layout!"fill"),
         );
 
+        this.layout = .layout(1, NodeAlign.center, NodeAlign.start);
         this.cancelled = cancelled;
         this.submitted = submitted;
 
@@ -150,12 +143,6 @@ class FileInput : InputNode!Frame {
             else submit();
 
         };
-
-    }
-
-    this(string name, void delegate() @trusted submitted, void delegate() @trusted cancelled = null) {
-
-        this(null, name, submitted, cancelled);
 
     }
 
@@ -511,7 +498,8 @@ private class SuggestionButton : Button!() {
 
     this(T...)(FileInput input, int index, T args) {
 
-        super(NodeParams(.layout!"fill"), args);
+        super(args);
+        this.layout = .layout!"fill";
         this.index = index;
         this.input = input;
 

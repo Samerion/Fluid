@@ -31,15 +31,14 @@ class PopupButton : Button!Label {
 
     /// Create a new button.
     /// Params:
-    ///     params        = Generic node parameters for the button.
     ///     text          = Text for the button.
     ///     popupChildren = Children to appear within the button.
-    this(NodeParams params, string text, Node[] popupChildren...) {
+    this(string text, Node[] popupChildren...) {
 
         // Craft the popup
         popup = popupFrame(popupChildren);
 
-        super(params, text, delegate {
+        super(text, delegate {
 
             // Parent popup active
             if (parentPopup && parentPopup.isFocused)

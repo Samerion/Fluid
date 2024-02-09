@@ -1007,7 +1007,7 @@ unittest {
         mixin enableInputActions;
 
         this() {
-            super(NodeParams(), "");
+            super("");
         }
 
         override void resizeImpl(Vector2 space) {
