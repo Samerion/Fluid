@@ -90,9 +90,9 @@ class PopupFrame : Frame, FluidFocusable {
 
     }
 
-    this(NodeParams params, Node[] nodes...) {
+    this(Node[] nodes...) {
 
-        super(params, nodes);
+        super(nodes);
 
     }
 

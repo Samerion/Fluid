@@ -43,8 +43,8 @@ private interface Styleable {
 /// Represents a Fluid node.
 abstract class Node : Styleable {
 
-    public import fluid.structs : NodeAlign, NodeParams, Layout;
-    public import fluid.structs : Align = NodeAlign, Params = NodeParams;
+    public import fluid.structs : NodeAlign, Layout;
+    public import fluid.structs : Align = NodeAlign;
 
     /// This node defines a single style, `style`, which also works as a default style for all other nodes. However,
     /// rather than for that, the purpose of this style is to define the convention of `style` being the node's default,
@@ -138,57 +138,24 @@ abstract class Node : Styleable {
 
     }
 
-    deprecated("Overloading layout/theme has been delegated to simpleConstructor. From now on, use super(NodeParams).")
-    {
-
-        /// Params:
-        ///     layout = Layout for this node.
-        ///     theme = Theme of this node.
-        this(Layout layout = Layout.init, Theme theme = null) {
-
-            this.layout = layout;
-            this.theme  = theme;
-
-        }
-
-        /// Ditto
-        deprecated("Use Node(NodeParams) instead.")
-        this(Theme theme = null, Layout layout = Layout.init) {
-
-            this(layout, theme);
-
-        }
-
-    }
-
     /// Construct a new node.
     ///
     /// The typical approach to constructing new nodes is via `fluid.utils.simpleConstructor`. A node component would
     /// provide an alias pointing to the `simpleConstructor` instance, which can then be used as a factory function. For
-    /// example, `Node` provides the `label` simpleConstructor. Using these has increased convenience by making it
-    /// possible to omit `NodeParams` or to specify each parameter individually, for example
+    /// example, `Label` provides the `label` simpleConstructor. Using these has increased convenience by making it
+    /// possible to specify special properties while constructing the node, for example
     ///
     /// ---
     /// auto myLabel = label(.layout!1, .theme, "Hello, World!");
     /// // Equivalent of:
-    /// auto myLabel = new Label(NodeParams(.layout!1, .theme), "Hello, World!");
+    /// auto myLabel = new Label("Hello, World!");
+    /// myLabel.layout = .layout!1;
+    /// myLabel.theme = .theme;
     /// ---
     ///
     /// See_Also:
     ///     `fluid.utils.simpleConstructor`
-    /// Params:
-    ///     params = An optional set of parameters the node accepts, including `layout` and `theme`.
-    this(NodeParams params) {
-
-        this.layout = params.layout;
-        this.theme = params.theme;
-
-    }
-
-    /// Ditto
-    this() {
-
-    }
+    this() { }
 
     bool opEquals(const Node otherNode) const {
 

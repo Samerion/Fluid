@@ -5,6 +5,7 @@ import std.traits;
 import std.string;
 
 import fluid.style;
+import fluid.default_theme;
 
 @safe:
 
@@ -22,33 +23,10 @@ private static {
 ///     init = D code to initialize the Node style with.
 ///     parent = Inherit styles from a parent theme.
 /// Returns: The created theme.
-template makeTheme(string init) {
+Theme makeTheme(string init)(Theme theme = fluidDefaultTheme) {
 
-    import fluid.default_theme;
-
-    // This ugly template is a workaround for https://issues.dlang.org/show_bug.cgi?id=22208
-    // We can't use inout here, sorry...
-
-    Theme makeTheme(Theme theme = fluidDefaultTheme) {
-
-        makeThemeImpl!init(theme.dup);
-        return currentTheme;
-
-    }
-
-    const(Theme) makeTheme(const Theme theme) @trusted {
-
-        makeThemeImpl!init(cast(Theme) theme.dup);
-        return cast(const) currentTheme;
-
-    }
-
-    immutable(Theme) makeTheme(immutable Theme theme) @trusted {
-
-        makeThemeImpl!init(cast(Theme) theme.dup);
-        return cast(immutable) currentTheme;
-
-    }
+    makeThemeImpl!init(theme.dup);
+    return currentTheme;
 
 }
 

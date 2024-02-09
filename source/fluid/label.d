@@ -32,33 +32,8 @@ class Label : Node {
 
     }
 
-    deprecated("Use this(NodeParams, string text) instead.") {
+    this(string text) {
 
-        static foreach (index; 0 .. BasicNodeParamLength) {
-
-            /// Initialize the label with given text.
-            this(BasicNodeParam!index sup, string text = "") {
-
-                super(sup);
-                this.text = Text!Label(this, text);
-
-            }
-
-        }
-
-    }
-
-    this(NodeParams params, string text) {
-
-        super(params);
-        this.text = Text!Label(this, text);
-
-    }
-
-    deprecated("`text` is now a required parameter for label — please adjust before 0.7.0.")
-    this(NodeParams params) {
-
-        super(params);
         this.text = Text!Label(this, text);
 
     }
