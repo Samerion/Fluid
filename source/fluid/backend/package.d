@@ -128,6 +128,12 @@ interface FluidBackend {
 
     }
 
+    /// Set tint for all newly drawn shapes. The input color for every shape should be multiplied by this color.
+    Color tint(Color);
+
+    /// Get current tint color.
+    Color tint() const;
+
     /// Draw a line.
     void drawLine(Vector2 start, Vector2 end, Color color);
 
@@ -878,6 +884,26 @@ Color alphaBlend(Color bottom, Color top) {
         cast(ubyte) (bottom.b * bottomA + top.b * topA),
         cast(ubyte) (bottom.a * bottomA + top.a * topA),
     );
+
+}
+
+/// Multiple color values.
+Color multiply(Color a, Color b) {
+
+    return Color(
+        cast(ubyte) (a.r * b.r / 255.0),
+        cast(ubyte) (a.g * b.g / 255.0),
+        cast(ubyte) (a.b * b.b / 255.0),
+        cast(ubyte) (a.a * b.a / 255.0),
+    );
+
+}
+
+unittest {
+
+    assert(multiply(color!"#fff", color!"#a00") == color!"#a00");
+    assert(multiply(color!"#1eff00", color!"#009bdd") == color!"#009b00");
+    assert(multiply(color!"#aaaa", color!"#1234") == color!"#0b16222d");
 
 }
 

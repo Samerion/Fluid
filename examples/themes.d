@@ -292,3 +292,61 @@ Space spaceExample() {
     );
 
 }
+
+@(
+
+    () => label(.headingTheme, "Extras"),
+    () => label("The 'tint' property can be used to change the color of a node as a whole, including its content. "
+        ~ "Moreover, the 'opacity' property functions as a shortcut for changing only the alpha channel, making it "
+        ~ "easy to create half-transparent nodes."),
+)
+Space opacityExample() {
+
+    auto opaque = makeTheme!q{
+        Frame.styleAdd!q{
+            backgroundColor = color!"#e65bb8";
+            borderStyle = colorBorder(color!"#751fbe");
+            border = 2;
+            padding = 6;
+        };
+    };
+
+    // New theme, inherit properties from opaque
+    auto halfOpaque = opaque.makeTheme!q{
+        Frame.styleAdd.opacity = 0.5;
+    };
+
+    auto transparent = opaque.makeTheme!q{
+        Frame.styleAdd.opacity = 0;
+    };
+
+    auto dark = opaque.makeTheme!q{
+        Frame.styleAdd.tint = color!"#444";
+    };
+
+    return vspace(
+
+        vframe(
+            opaque,
+            label("Hello, world!"),
+        ),
+        vframe(
+            halfOpaque,
+            label("Fading..."),
+            vframe(
+                dark,
+                label("Fading into darkness..."),
+            ),
+        ),
+        vframe(
+            dark,
+            label("Hello, darkness."),
+        ),
+        vframe(
+            transparent,
+            label("Can't see me!"),
+        ),
+
+    );
+
+}
