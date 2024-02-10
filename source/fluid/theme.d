@@ -28,6 +28,23 @@ struct Theme {
 
     Rule[][TypeInfo_Class] rules;
 
+    /// Create a new theme using the given rules.
+    this(Rule[] rules...) {
+
+        // Inherit from default theme
+        this(fluidDefaultTheme.rules.dup);
+        add(rules);
+
+    }
+
+    /// Create a theme using the given set of rules.
+    this(Rule[][TypeInfo_Class] rules) {
+
+        this.rules = rules;
+
+    }
+
+    /// Check if the theme was initialized.
     bool opCast(T : bool)() const {
 
         return rules !is null;
@@ -139,15 +156,15 @@ Rule rule(T : Node, Ts...)(Ts fields) {
     result.selector = Selector(typeid(T));
 
     // Load fields
-    static foreach (field; fields) {{
+    static foreach (i, field; fields) {{
 
         static if (is(typeof(field) : Field!(fieldName, T), string fieldName, T)) {
 
-            __traits(child, result.fields, Rule.field!fieldName) = field.value;
+            field.value.apply(__traits(child, result.fields, Rule.field!fieldName));
 
         }
 
-        else static assert(false, format!"Unrecognized type %s"(typeid(field)));
+        else static assert(false, format!"Unrecognized type %s (argument index %s)"(typeof(field).stringof, i));
 
     }}
 
@@ -157,6 +174,8 @@ Rule rule(T : Node, Ts...)(Ts fields) {
 
 /// Rules specify changes that are to be made to the node's style.
 struct Rule {
+
+    alias loadTypeface = Style.loadTypeface;
 
     /// Selector to filter items that should match this rule.
     Selector selector;
@@ -204,7 +223,8 @@ struct StyleTemplate {
     // Create fields for every themable item
     static foreach (field; fields) {
 
-        mixin(q{ FieldValue!(typeof(field)) }, __traits(identifier, field), ";");
+        static if (!isFunction!(typeof(field)))
+            mixin(q{ FieldValue!(typeof(field)) }, __traits(identifier, field), ";");
 
     }
 
@@ -216,8 +236,7 @@ struct StyleTemplate {
 
             auto newValue = mixin("this.", __traits(identifier, field));
 
-            if (newValue.isSet)
-                __traits(child, style, field) = newValue.value;
+            newValue.apply(__traits(child, style, field));
 
         }}
 
@@ -246,22 +265,15 @@ struct StyleTemplate {
 struct Field(string fieldName, T) {
 
     enum name = fieldName;
-    alias Type = FieldValue!T.Type;
+    alias Type = T;
 
-    Type value;
-
-    alias value this;
-
-    static Field make(Type value) {
-
-        return Field(value);
-
-    }
+    FieldValue!T value;
 
     static Field make(T)(T value) {
 
-        Type fieldValue = value;
-        return Field(fieldValue);
+        Field field;
+        field.value = value;
+        return field;
 
     }
 
@@ -271,21 +283,53 @@ struct Field(string fieldName, T) {
 
     }
 
-    // Implement side array helpers
-    static if (isSideArray!Type) {
+    // Operators for arrays
+    static if (isStaticArray!T) {
 
-        private enum isHelper(string member) = member.startsWith("side");
-        private alias helpers = Filter!(isHelper, __traits(allMembers, fluid.style));
+        private size_t[2] slice;
 
-        static foreach (helper; helpers) {
+        Field opAssign(Input)(Input input) return {
 
-            mixin(format!q{
-                Field %1$s(X)(X x) {
-                    auto copy = this;
-                    .%1$s(copy.value) = x;
-                    return copy;
-                }
-            }(helper));
+            value[slice] = input;
+            return this;
+
+        }
+
+        inout(Field) opIndex(size_t i) return inout {
+
+            return inout Field(value, [i, i+1]);
+
+        }
+
+        inout(Field) opIndex(return inout Field slice) const {
+
+            return slice;
+
+        }
+
+        inout(Field) opSlice(size_t dimension : 0)(size_t i, size_t j) return inout {
+
+            return Field(value, [i, j]);
+
+        }
+
+        version (none) {
+
+            // This shouldn't be necessary, but side* accessor methods fail to correctly infer refs if `auto ref` is used.
+            private enum isHelper(string field) = field.startsWith("side");
+            private alias helpers = Filter!(isHelper, __traits(allMembers, fluid.style));
+
+            static foreach (helper; helpers) {
+
+                mixin(format!q{
+                    auto %s(Input)(Input input) {
+                        auto self = this;
+                        .%1$s(self);
+                        return self = input;
+                    }
+                }(helper));
+
+            }
 
         }
 
@@ -293,21 +337,170 @@ struct Field(string fieldName, T) {
 
 }
 
-private struct FieldValue(T) {
+template FieldValue(T) {
 
-    static if (isFunction!T)
-        alias Type = ReturnType!T;
-    else
+    // Static array
+    static if (is(T : E[n], E, size_t n))
+    struct FieldValue {
+
         alias Type = T;
+        alias ExpandedType = FieldValueImpl!E[n];
+
+        ExpandedType value;
+        bool isSet;
+
+        FieldValue opAssign(FieldValue value) {
+
+            this.value = value.value;
+            this.isSet = value.isSet;
+            return this;
+
+        }
+
+        Type opAssign(Input)(Input value) {
+
+            // Implicit cast
+            Type newValue = value;
+
+            // Mark as changed
+            isSet = true;
+
+            // Assign each field
+            foreach (i, ref field; this.value.tupleof) {
+
+                field = newValue.tupleof[i];
+
+            }
+
+            return newValue;
+
+        }
+
+        auto opIndexAssign(Input)(Input input, size_t index) {
+
+            isSet = true;
+            return value[index] = input;
+
+        }
+
+        auto opIndexAssign(Input)(Input input, size_t[2] indices) {
+
+            isSet = true;
+            return value[indices[0] .. indices[1]] = FieldValueImpl!E(input, true);
+
+        }
+
+        size_t[2] opSlice(size_t i, size_t j) const {
+
+            return [i, j];
+
+        }
+
+        /// Change the given value to match the requested change.
+        void apply(ref Type value) {
+
+            if (!isSet) return;
+
+            foreach (i, field; this.value.tupleof) {
+                field.apply(value.tupleof[i]);
+            }
+
+        }
+
+        /// Change the given value to match the requested change.
+        void apply(ref FieldValue value) {
+
+            if (!isSet) return;
+
+            value.isSet = true;
+
+            foreach (i, field; this.value.tupleof) {
+                field.apply(value.value[i]);
+            }
+
+        }
+
+        string toString() {
+
+            Type output;
+            apply(output);
+            return format!"%s"(output);
+
+        }
+
+    }
+
+    // Others
+    else alias FieldValue = FieldValueImpl!T;
+
+}
+
+private struct FieldValueImpl(T) {
+
+    alias Type = T;
 
     Type value;
     bool isSet;
 
-    ref Type opAssign(Type value) {
+    FieldValueImpl opAssign(FieldValueImpl value) {
 
-        this.isSet = true;
+        this.value = value.value;
+        this.isSet = value.isSet;
+
+        return this;
+
+    }
+
+    Type opAssign(Input)(Input value) {
+
+        // Mark as set
+        isSet = true;
+
         return this.value = value;
 
     }
+
+    /// Change the given value to match the requested change.
+    void apply(ref Type value) {
+
+        if (!isSet) return;
+
+        value = this.value;
+
+    }
+
+    /// Apply another modification to a field.
+    void apply(ref FieldValueImpl value) {
+
+        if (!isSet) return;
+
+        value.value = this.value;
+        value.isSet = true;
+
+    }
+
+    string toString() const @trusted {
+
+        return format!"%s"(value);
+
+    }
+
+}
+
+unittest {
+
+    import fluid.frame;
+
+    auto frameRule = rule!Frame(
+        Rule.margin.sideX = 8,
+        Rule.margin.sideY = 4,
+    );
+    auto theme = nullTheme.derive(frameRule);
+
+    // TODO test
+    //import std.stdio;
+    //writeln(Rule.margin.sideX = 8);
+    //writeln(frameRule);
+    //writeln(theme);
 
 }

@@ -95,10 +95,10 @@ Frame twoThemesExample() {
         ~ "state. You can define a different style for a button that is hovered, held down, or focused (relevant if "
         ~ "using a keyboard)."),
 )
-Button!() buttonExample() {
+Button buttonExample() {
 
     auto myTheme = makeTheme!q{
-        Button!().styleAdd!q{
+        Button.styleAdd!q{
             // Light grey by default
             backgroundColor = color!"#ddd";
 
@@ -232,10 +232,10 @@ void sideArrayExample() {
     () => label("Border color can also be defined separately for each side. This might be great if you like "
         ~ "retro-looking buttons.")
 )
-Button!() fancyButtonExample() {
+Button fancyButtonExample() {
 
     auto myTheme = makeTheme!q{
-        Button!().styleAdd!q{
+        Button.styleAdd!q{
             auto start = color!"#fff";
             auto end = color!"#666";
             borderStyle = colorBorder([start, end, start, end]);

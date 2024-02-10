@@ -32,7 +32,7 @@ Label mutableLabelExample() {
 
     import std.range : cycle;
 
-    Button!() myButton;
+    Button myButton;
     auto texts = cycle(["Hello!", "Bonjour!", "¡Hola!", "Здравствуйте!"]);
 
     // Create the button
