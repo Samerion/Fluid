@@ -41,6 +41,12 @@ static this() {
                 mouseCursor = FluidMouseCursor.pointer,
                 margin.sideY = 2,
                 padding.sideX = 6,
+
+                (Node node) => node.isHovered
+                    ? rule(
+                        backgroundColor = color("#aaa"),
+                    )
+                    : rule(),
                 //focusStyleAdd.backgroundColor = color("ddd");
                 //hoverStyleAdd.backgroundColor = color("ccc");
                 //pressStyleAdd.backgroundColor = color("aaa");

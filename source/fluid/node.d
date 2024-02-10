@@ -82,6 +82,9 @@ abstract class Node {
         /// Cached style for this node.
         Style _style;
 
+        /// Attached styling delegates.
+        Rule.StyleDelegate[] _styleDelegates;
+
         /// Actions queued for this node; only used for queueing actions before the first `resize`; afterwards, all
         /// actions are queued directly into the tree.
         TreeAction[] _queuedActions;
@@ -1057,9 +1060,19 @@ abstract class Node {
     }
 
     /// Get the current style.
-    inout(Style) pickStyle() inout {
+    Style pickStyle() {
 
-        return style;
+        // Pick the current style
+        auto result = _style;
+
+        // Apply it
+        foreach (dg; _styleDelegates) {
+
+            dg(this).apply(this, result);
+
+        }
+
+        return result;
 
     }
 
@@ -1073,7 +1086,7 @@ abstract class Node {
         assert(_style);
 
         // Apply theme to the given style
-        theme.apply(this, _style);
+        _styleDelegates = theme.apply(this, _style);
 
     }
 
