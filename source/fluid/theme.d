@@ -82,7 +82,10 @@ struct Theme {
     }
 
     /// Apply this theme on the given style.
-    void apply(Node node, ref Style style) {
+    /// Returns: An array of delegates used to update the style at runtime.
+    Rule.StyleDelegate[] apply(Node node, ref Style style) {
+
+        Rule.StyleDelegate[] dgs;
 
         void applyFor(TypeInfo_Class ti) {
 
@@ -95,7 +98,12 @@ struct Theme {
                 // Test against every rule
                 foreach (rule; *rules) {
 
-                    rule.apply(node, style);
+                    // Run the rule, and add the callback if any
+                    if (rule.applyStatic(node, style) && rule.styleDelegate) {
+
+                        dgs ~= rule.styleDelegate;
+
+                    }
 
                 }
 
@@ -104,6 +112,8 @@ struct Theme {
         }
 
         applyFor(typeid(node));
+
+        return dgs;
 
     }
 
@@ -141,14 +151,14 @@ struct Selector {
     /// Test if the selector matches given node.
     bool test(Node node) {
 
-        return type.isBaseOf(typeid(node));
+        return !type || type.isBaseOf(typeid(node));
 
     }
 
 }
 
 /// Create a style rule for the given node.
-Rule rule(T : Node, Ts...)(Ts fields) {
+Rule rule(T : Node = Node, Ts...)(Ts fields) {
 
     Rule result;
 
@@ -158,15 +168,42 @@ Rule rule(T : Node, Ts...)(Ts fields) {
     // Load fields
     static foreach (i, field; fields) {{
 
+        // Directly assigned field
         static if (is(typeof(field) : Field!(fieldName, T), string fieldName, T)) {
 
-            field.value.apply(__traits(child, result.fields, Rule.field!fieldName));
+            // Add to the result
+            field.apply(result.fields);
 
         }
+
+        // Delegate
+        else static if (isCallable!field) { }
 
         else static assert(false, format!"Unrecognized type %s (argument index %s)"(typeof(field).stringof, i));
 
     }}
+
+    // Load delegates
+    alias delegates = Filter!(isCallable, fields);
+
+    // Build the dynamic rule delegate
+    static if (delegates.length)
+    result.styleDelegate = (node) {
+
+        Rule dynamicResult;
+
+        static foreach (dg; delegates) {
+
+            import std.stdio;
+
+            // Use the delegate and apply the result on the template of choice
+            dg(node).apply(node, dynamicResult);
+
+        }
+
+        return dynamicResult;
+
+    };
 
     return result;
 
@@ -175,6 +212,7 @@ Rule rule(T : Node, Ts...)(Ts fields) {
 /// Rules specify changes that are to be made to the node's style.
 struct Rule {
 
+    alias StyleDelegate = Rule delegate(Node node) @safe;
     alias loadTypeface = Style.loadTypeface;
 
     /// Selector to filter items that should match this rule.
@@ -183,8 +221,8 @@ struct Rule {
     /// Fields affected by this rule and their values.
     StyleTemplate fields;
 
-    /// Callback updating the node at runtime.
-    StyleTemplate delegate(Node node) @safe dynamic;
+    /// Callback for updating the style dynamically. May be null.
+    StyleDelegate styleDelegate;
 
     /// Define field values for each
     static foreach (field; StyleTemplate.fields) {
@@ -198,9 +236,49 @@ struct Rule {
     alias field(string name) = __traits(getMember, StyleTemplate, name);
     alias FieldType(string name) = field!name.Type;
 
+    /// Combine with another rule.
+    bool apply(Node node, ref Rule rule) {
+
+        // Test against the selector
+        if (!selector.test(node)) return false;
+
+        // Apply changes
+        fields.apply(rule.fields);
+
+        // Check for delegates
+        if (styleDelegate) {
+
+            // Run and apply the delegate
+            styleDelegate(node).apply(node, rule);
+
+        }
+
+        return true;
+
+    }
+
     /// Apply this rule on the given style.
     /// Returns: True if applied, false if not.
     bool apply(Node node, ref Style style) {
+
+        // Apply the rule
+        if (!applyStatic(node, style)) return false;
+
+        // Check for delegates
+        if (styleDelegate) {
+
+            // Run and apply the delegate
+            styleDelegate(node).apply(node, style);
+
+        }
+
+        return true;
+
+    }
+
+    /// Apply this rule on the given style. Ignores dynamic styles.
+    /// Returns: True if applied, false if not.
+    bool applyStatic(Node node, ref Style style) {
 
         // Test against the selector
         if (!selector.test(node)) return false;
@@ -239,6 +317,17 @@ struct StyleTemplate {
             newValue.apply(__traits(child, style, field));
 
         }}
+
+    }
+
+    /// Combine with another style template, applying all local rules on the other template.
+    void apply(ref StyleTemplate style) {
+
+        static foreach (i, field; fields) {
+
+            this.tupleof[i].apply(style.tupleof[i]);
+
+        }
 
     }
 
@@ -283,6 +372,13 @@ struct Field(string fieldName, T) {
 
     }
 
+    /// Apply on a style template.
+    void apply(ref StyleTemplate style) {
+
+        value.apply(__traits(child, style, Rule.field!fieldName));
+
+    }
+
     // Operators for arrays
     static if (isStaticArray!T) {
 
@@ -310,26 +406,6 @@ struct Field(string fieldName, T) {
         inout(Field) opSlice(size_t dimension : 0)(size_t i, size_t j) return inout {
 
             return Field(value, [i, j]);
-
-        }
-
-        version (none) {
-
-            // This shouldn't be necessary, but side* accessor methods fail to correctly infer refs if `auto ref` is used.
-            private enum isHelper(string field) = field.startsWith("side");
-            private alias helpers = Filter!(isHelper, __traits(allMembers, fluid.style));
-
-            static foreach (helper; helpers) {
-
-                mixin(format!q{
-                    auto %s(Input)(Input input) {
-                        auto self = this;
-                        .%1$s(self);
-                        return self = input;
-                    }
-                }(helper));
-
-            }
 
         }
 

@@ -59,6 +59,10 @@ void main(string[] args) {
                 margin.sideX = 12,
                 margin.sideY = 7,
             ),
+            rule!Button(
+                margin.sideX = 12,
+                margin.sideY = 7,
+            ),
             rule!Grid(margin.sideY = 0),
             rule!GridRow(margin = 0),
             rule!ScrollFrame(margin = 0),
@@ -88,7 +92,7 @@ void main(string[] args) {
             ),
         );
 
-        highlightBoxTheme = mainTheme.derive(
+        highlightBoxTheme = Theme(
             rule!Node(
                 border = 1,
                 borderStyle = colorBorder(color!"#e62937"),
