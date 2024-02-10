@@ -494,12 +494,12 @@ unittest {
     import fluid.structs;
 
     auto io = new HeadlessBackend;
-    auto myTheme = nullTheme.makeTheme!q{
-        Frame.styleAdd!q{
-            backgroundColor = color!"fff";
-            tint = color!"aaaa";
-        };
-    };
+    auto myTheme = nullTheme.derive(
+        rule!Frame(
+            Rule.backgroundColor = color!"fff",
+            Rule.tint = color!"aaaa",
+        ),
+    );
     auto root = vframe(
         layout!(1, "fill"),
         myTheme,
@@ -534,14 +534,14 @@ unittest {
     import fluid.structs;
 
     auto io = new HeadlessBackend;
-    auto myTheme = nullTheme.makeTheme!q{
-        Frame.styleAdd!q{
-            backgroundColor = color!"fff";
-            tint = color!"aaaa";
-            border.sideRight = 1;
-            borderStyle = colorBorder(color!"f00");
-        };
-    };
+    auto myTheme = nullTheme.derive(
+        rule!Frame(
+            Rule.backgroundColor = color!"fff",
+            Rule.tint = color!"aaaa",
+            Rule.border.sideRight = 1,
+            Rule.borderStyle = colorBorder(color!"f00"),
+        )
+    );
     auto root = vframe(
         layout!(1, "fill"),
         myTheme,

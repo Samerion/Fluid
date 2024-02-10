@@ -531,6 +531,8 @@ abstract class Node {
 
         }
 
+        assert(theme);
+
         const space = tree.io.windowSize;
 
         // Clear mouse hover if LMB is up
