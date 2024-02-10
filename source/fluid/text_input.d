@@ -90,6 +90,12 @@ class TextInput : InputNode!Node {
 
     }
 
+    bool isEmpty() const {
+
+        return value == "";
+
+    }
+
     protected override void resizeImpl(Vector2 area) {
 
         import std.algorithm : max;

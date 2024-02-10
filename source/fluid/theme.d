@@ -160,6 +160,9 @@ struct Selector {
 /// Create a style rule for the given node.
 Rule rule(T : Node = Node, Ts...)(Ts fields) {
 
+    enum isWhenRule(alias field) = is(typeof(field) : WhenRule!dg, alias dg);
+    enum isDynamicRule(alias field) = isCallable!field || isWhenRule!field;
+
     Rule result;
 
     // Create the selector
@@ -176,28 +179,42 @@ Rule rule(T : Node = Node, Ts...)(Ts fields) {
 
         }
 
-        // Delegate
-        else static if (isCallable!field) { }
+        // Dynamic rule
+        else static if (isDynamicRule!field) { }
 
         else static assert(false, format!"Unrecognized type %s (argument index %s)"(typeof(field).stringof, i));
 
     }}
 
     // Load delegates
-    alias delegates = Filter!(isCallable, fields);
+    alias delegates = Filter!(isDynamicRule, fields);
 
     // Build the dynamic rule delegate
     static if (delegates.length)
-    result.styleDelegate = (node) {
+    result.styleDelegate = (Node node) {
 
         Rule dynamicResult;
 
+        // Cast the node into proper type
+        auto castNode = cast(T) node;
+        assert(castNode, "styleDelegate was passed an invalid node");
+
         static foreach (dg; delegates) {
 
-            import std.stdio;
+            // A "when" rule
+            static if (isWhenRule!dg) {
+
+                // Test the predicate before applying the result
+                if (dg.predicate(castNode)) {
+
+                    dg.rule.apply(node, dynamicResult);
+
+                }
+
+            }
 
             // Use the delegate and apply the result on the template of choice
-            dg(node).apply(node, dynamicResult);
+            else dg(node).apply(node, dynamicResult);
 
         }
 
@@ -224,7 +241,7 @@ struct Rule {
     /// Callback for updating the style dynamically. May be null.
     StyleDelegate styleDelegate;
 
-    /// Define field values for each
+    /// Define field setters for each field, to use as `Rule.property = value`
     static foreach (field; StyleTemplate.fields) {
 
         mixin(format!q{
@@ -291,6 +308,25 @@ struct Rule {
         return true;
 
     }
+
+}
+
+/// Branch out in a rule to apply styling based on a runtime condition.
+WhenRule!predicate when(alias predicate, Args...)(Args args) {
+
+    return WhenRule!predicate(rule(args));
+
+}
+
+struct WhenRule(alias dg) {
+
+    import std.functional;
+
+    /// Function to evaluate to test if the rule should be applied.
+    alias predicate = unaryFun!dg;
+
+    /// Rule to apply.
+    Rule rule;
 
 }
 
