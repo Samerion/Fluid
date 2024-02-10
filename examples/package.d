@@ -45,84 +45,91 @@ enum Chapter {
 /// The entrypoint prepares themes and the window. The UI is build in `createUI()`.
 void main(string[] args) {
 
+    import std.file, std.path;
+
     // Prepare themes
-    mainTheme = makeTheme!q{
-        Frame.styleAdd!q{
-            margin.sideX = 12;
-            margin.sideY = 16;
-            Grid.styleAdd.margin.sideY = 0;
-            GridRow.styleAdd.margin = 0;
-            ScrollFrame.styleAdd.margin = 0;
-        };
-        Label.styleAdd!q{
-            margin.sideX = 12;
-            margin.sideY = 7;
-            Button!().styleAdd;
-        };
-    };
+    with (Rule) {
 
-    headingTheme = mainTheme.makeTheme!q{
-        Label.styleAdd!q{
-            typeface = Style.loadTypeface(20);
-            margin.sideTop = 20;
-            margin.sideBottom = 10;
-        };
-    };
+        mainTheme = Theme(
+            rule!Frame(
+                margin.sideX = 12,
+                margin.sideY = 16,
+            ),
+            rule!Label(
+                margin.sideX = 12,
+                margin.sideY = 7,
+            ),
+            rule!Grid(margin.sideY = 0),
+            rule!GridRow(margin = 0),
+            rule!ScrollFrame(margin = 0),
+        );
 
-    subheadingTheme = mainTheme.makeTheme!q{
-        Label.styleAdd!q{
-            typeface = Style.loadTypeface(16);
-            margin.sideTop = 16;
-            margin.sideBottom = 8;
-        };
-    };
+        headingTheme = mainTheme.derive(
+            rule!Label(
+                typeface = Style.loadTypeface(20),
+                margin.sideTop = 20,
+                margin.sideBottom = 10,
+            ),
+        );
 
-    exampleListTheme = mainTheme.makeTheme!q{
-        Button!().styleAdd!q{
-            padding.sideX = 8;
-            padding.sideY = 16;
-            margin = 2;
-        };
-    };
+        subheadingTheme = mainTheme.derive(
+            rule!Label(
+                typeface = Style.loadTypeface(16),
+                margin.sideTop = 16,
+                margin.sideBottom = 8,
+            ),
+        );
 
-    highlightBoxTheme = makeTheme!q{
-        border = 1;
-        borderStyle = colorBorder(color!"#e62937");
-    };
+        exampleListTheme = mainTheme.derive(
+            rule!Button(
+                padding.sideX = 8,
+                padding.sideY = 16,
+                margin = 2,
+            ),
+        );
 
-    codeTheme = mainTheme.makeTheme!q{
-        import std.file, std.path;
+        highlightBoxTheme = mainTheme.derive(
+            rule!Node(
+                border = 1,
+                borderStyle = colorBorder(color!"#e62937"),
+            ),
+        );
 
-        typeface = Style.loadTypeface(thisExePath.dirName.buildPath("../examples/ibm-plex-mono.ttf"), 12);
-        backgroundColor = color!"#dedede";
+        codeTheme = mainTheme.derive(
 
-        Frame.styleAdd!q{
-            padding = 0;
-        };
-        Label.styleAdd!q{
-            margin = 0;
-            padding.sideX = 12;
-            padding.sideY = 16;
-        };
-    };
+            rule!Node(
+                typeface = loadTypeface(thisExePath.dirName.buildPath("../examples/ibm-plex-mono.ttf"), 12),
+                backgroundColor = color!"#dedede",
+            ),
+            rule!Frame(
+                padding = 0,
+            ),
+            rule!Label(
+                margin = 0,
+                padding.sideX = 12,
+                padding.sideY = 16,
+            ),
+        );
 
-    previewWrapperTheme = mainTheme.makeTheme!q{
-        NodeSlot!Node.styleAdd!q{
-            border = 1;
-            borderStyle = colorBorder(color!"#dedede");
-        };
-    };
+        previewWrapperTheme = mainTheme.derive(
+            rule!(NodeSlot!Node)(
+                border = 1,
+                borderStyle = colorBorder(color!"#dedede"),
+            ),
+        );
 
-    warningTheme = mainTheme.makeTheme!q{
-        Label.styleAdd!q{
-            padding.sideX = 16;
-            padding.sideY = 6;
-            border = 1;
-            borderStyle = colorBorder(color!"#ffc30f");
-            backgroundColor = color!"#ffe186";
-            textColor = color!"#000";
-        };
-    };
+        warningTheme = mainTheme.derive(
+            rule!Label(
+                padding.sideX = 16,
+                padding.sideY = 6,
+                border = 1,
+                borderStyle = colorBorder(color!"#ffc30f"),
+                backgroundColor = color!"#ffe186",
+                textColor = color!"#000",
+            ),
+        );
+
+    }
 
     // Create the UI — pass the first argument to load a chapter under the given name
     auto ui = args.length > 1
@@ -199,7 +206,7 @@ Space createUI(string initialChapter = null) @safe {
     ScrollFrame root;
     Space navigationBar;
     Label titleLabel;
-    Button!() leftButton, rightButton;
+    Button leftButton, rightButton;
 
     auto content = nodeSlot!Node(.layout!(1, "fill"));
 
@@ -329,7 +336,7 @@ Space showcaseCode(string code) {
 Space showcaseCode(string code, Node node, Theme theme = Theme.init) {
 
     // Make the node inherit the default theme rather than the one we set
-    if (node.theme is null) {
+    if (!node.theme) {
         node.theme = either(theme, fluidDefaultTheme);
     }
 

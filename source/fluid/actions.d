@@ -146,7 +146,7 @@ unittest {
     auto io = new HeadlessBackend(Vector2(10, viewportHeight));
     auto root = vscrollFrame(
         layout!(1, "fill"),
-        cast(Theme) null,
+        Theme.init,
 
         label("a"),
         label("b"),

@@ -97,7 +97,6 @@ struct Style {
         }
 
         /// ditto
-        @Themable
         float opacity(float value) {
 
             tint.a = cast(ubyte) clamp(value * 255, 0, 255);
@@ -292,6 +291,10 @@ struct Style {
 /// sides.
 enum isSideArray(T) = is(T == X[4], X);
 
+/// ditto
+enum isSomeSideArray(T) = isSideArray!T
+    || (is(T == Field!(name, U), string name, U) && isSideArray!U);
+
 ///
 unittest {
 
@@ -310,32 +313,32 @@ unittest {
 }
 
 /// Get a reference to the left, right, top or bottom side of the given side array.
-ref inout(ElementType!T) sideLeft(T)(return ref inout T sides)
-if (isSideArray!T) {
+auto ref sideLeft(T)(return auto ref inout T sides)
+if (isSomeSideArray!T) {
 
     return sides[Style.Side.left];
 
 }
 
 /// ditto
-ref inout(ElementType!T) sideRight(T)(return ref inout T sides)
-if (isSideArray!T) {
+auto ref sideRight(T)(return auto ref inout T sides)
+if (isSomeSideArray!T) {
 
     return sides[Style.Side.right];
 
 }
 
 /// ditto
-ref inout(ElementType!T) sideTop(T)(return ref inout T sides)
-if (isSideArray!T) {
+auto ref sideTop(T)(return auto ref inout T sides)
+if (isSomeSideArray!T) {
 
     return sides[Style.Side.top];
 
 }
 
 /// ditto
-ref inout(ElementType!T) sideBottom(T)(return ref inout T sides)
-if (isSideArray!T) {
+auto ref sideBottom(T)(return auto ref inout T sides)
+if (isSomeSideArray!T) {
 
     return sides[Style.Side.bottom];
 
@@ -356,7 +359,7 @@ unittest {
 }
 
 /// Get a reference to the X axis for the given side array.
-ref inout(uint[2]) sideX(T)(return ref inout T sides)
+ref inout(ElementType!T[2]) sideX(T)(return ref inout T sides)
 if (isSideArray!T) {
 
     const start = Style.Side.left;
@@ -364,8 +367,27 @@ if (isSideArray!T) {
 
 }
 
-ref inout(uint[2]) sideY(T)(return ref inout T sides)
+/// ditto
+auto ref sideX(T)(return auto ref inout T sides)
+if (isSomeSideArray!T && !isSideArray!T) {
+
+    const start = Style.Side.left;
+    return sides[start .. start + 2];
+
+}
+
+/// Get a reference to the Y axis for the given side array.
+ref inout(ElementType!T[2]) sideY(T)(return ref inout T sides)
 if (isSideArray!T) {
+
+    const start = Style.Side.top;
+    return sides[start .. start + 2];
+
+}
+
+/// ditto
+auto ref sideY(T)(return auto ref inout T sides)
+if (isSomeSideArray!T && !isSideArray!T) {
 
     const start = Style.Side.top;
     return sides[start .. start + 2];
