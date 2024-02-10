@@ -189,12 +189,13 @@ unittest {
     root.io = io;
 
     // First frame: Solid border on one side only
-    root.theme = Theme.init.makeTheme!q{
-        Frame.styleAdd!q{
-            border.sideBottom = 4;
-            borderStyle = colorBorder(color!"018b8d");
-        };
-    };
+    with (Rule)
+    root.theme = nullTheme.derive(
+        rule!Frame(
+            border.sideBottom = 4,
+            borderStyle = colorBorder(color!"018b8d"),
+        )
+    );
     root.draw();
 
     assert(
@@ -203,19 +204,19 @@ unittest {
         "Border must be present underneath the rectangle"
     );
 
-    enum colorCode = q{ [color!"018b8d", color!"8d7006", color!"038d23", color!"6b048d"] };
-
-    Color[4] borderColor = mixin(colorCode);
+    Color[4] borderColor = [color!"018b8d", color!"8d7006", color!"038d23", color!"6b048d"];
 
     // Second frame: Border on all sides
     // TODO optimize monochrome borders, and test them as well
     io.nextFrame;
-    root.theme = Theme.init.makeTheme!(colorCode.format!q{
-        Frame.styleAdd!q{
-            border = 4;
-            borderStyle = colorBorder(%s);
-        };
-    });
+
+    with (Rule)
+    root.theme = nullTheme.derive(
+        rule!Frame(
+            border = 4,
+            borderStyle = colorBorder(borderColor),
+        )
+    );
     root.draw();
 
     // Rectangles

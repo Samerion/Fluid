@@ -104,8 +104,8 @@ class TextInput : InputNode!Node {
         contentLabel.text = (value == "") ? placeholder : value;
 
         // Inherit main style
-        // TODO reuse the hashmap maybe?
-        auto childTheme = theme.makeTheme!q{
+        // TODO do this in pickStyle
+        /* auto childTheme = theme.makeTheme!q{
 
             Label.styleAdd!q{
 
@@ -116,10 +116,10 @@ class TextInput : InputNode!Node {
 
             };
 
-        };
+        }; */
 
         // Resize the label
-        contentLabel.resize(tree, childTheme, Vector2(0, minSize.y));
+        contentLabel.resize(tree, theme, Vector2(0, minSize.y));
 
     }
 

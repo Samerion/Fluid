@@ -34,6 +34,18 @@ struct Theme {
 
     }
 
+    /// Create a new theme that derives from another.
+    ///
+    /// Note: This doesn't duplicate rules. If rules are changed or reassigned, they will may the parent theme. In a
+    /// typical scenario you only add new rules.
+    Theme derive(Rule[] rules...) {
+
+        auto newTheme = this.dup;
+        newTheme.add(rules);
+        return newTheme;
+
+    }
+
     /// Add rules to the theme.
     void add(Rule[] rules...) {
 
@@ -61,13 +73,12 @@ struct Theme {
             if (ti.base) applyFor(ti.base);
 
             // Find matching rules
-            if (auto rules = typeid(node) in rules) {
+            if (auto rules = ti in rules) {
 
                 // Test against every rule
                 foreach (rule; *rules) {
 
-                    // Stop on first success
-                    if (rule.apply(node, style)) break;
+                    rule.apply(node, style);
 
                 }
 
@@ -79,6 +90,7 @@ struct Theme {
 
     }
 
+    /// Duplicate the theme. This is not recursive; rules are not copied.
     Theme dup() {
 
         return Theme(rules.dup);
@@ -199,6 +211,7 @@ struct StyleTemplate {
     /// Update the given style using this template.
     void apply(ref Style style) {
 
+        // TODO only iterate on fields that have changed
         static foreach (field; fields) {{
 
             auto newValue = mixin("this.", __traits(identifier, field));
@@ -207,6 +220,24 @@ struct StyleTemplate {
                 __traits(child, style, field) = newValue.value;
 
         }}
+
+    }
+
+    string toString() const @trusted {
+
+        string[] items;
+
+        static foreach (field; fields) {{
+
+            enum name = __traits(identifier, field);
+            auto value = mixin("this.", name);
+
+            if (value.isSet)
+                items ~= format!"%s: %s"(name, value.value);
+
+        }}
+
+        return format!"StyleTemplate(%-(%s, %))"(items);
 
     }
 
@@ -224,6 +255,13 @@ struct Field(string fieldName, T) {
     static Field make(Type value) {
 
         return Field(value);
+
+    }
+
+    static Field make(T)(T value) {
+
+        Type fieldValue = value;
+        return Field(fieldValue);
 
     }
 

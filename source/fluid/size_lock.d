@@ -107,10 +107,12 @@ unittest {
     );
 
     root.io = io;
-    root.theme = nullTheme.makeTheme!q{
-        Frame.styleAdd.backgroundColor = color!"1c1c1c";
-        Label.styleAdd.textColor = color!"eee";
-    };
+
+    with (Rule)
+    root.theme = nullTheme.derive(
+        rule!Frame(backgroundColor = color!"1c1c1c"),
+        rule!Label(textColor = color!"eee"),
+    );
 
     {
         root.draw();

@@ -106,9 +106,10 @@ unittest {
 
     );
 
-    root.theme = nullTheme.makeTheme!q{
-        Label.styleAdd.textColor = color!"000";
-    };
+    with (Rule)
+    root.theme = nullTheme.derive(
+        rule!Label(textColor = color!"000"),
+    );
     root.io = io;
     root.draw();
 

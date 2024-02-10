@@ -108,11 +108,11 @@ class Grid : Frame {
 
         auto io = new HeadlessBackend;
         auto root = grid(
-            .Theme.init.makeTheme!q{
-                Label.styleAdd!q{
-                    textColor = color!"000";
-                };
-            },
+            nullTheme.derive(
+                rule!Label(
+                    Rule.textColor = color!"000",
+                ),
+            ),
             .layout!"fill",
             .segments!4,
 
