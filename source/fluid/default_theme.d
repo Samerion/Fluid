@@ -42,18 +42,14 @@ static this() {
                 margin.sideY = 2,
                 padding.sideX = 6,
 
-                (Node node) => node.isHovered
-                    ? rule(
-                        backgroundColor = color("#aaa"),
-                    )
-                    : rule(),
-                //focusStyleAdd.backgroundColor = color("ddd");
-                //hoverStyleAdd.backgroundColor = color("ccc");
-                //pressStyleAdd.backgroundColor = color("aaa");
-                //disabledStyleAdd!q{
-                //    textColor = color("000a");
-                //    backgroundColor = color("eee5");
-                //};
+                when!"a.isHovered"(backgroundColor = color("#ccc")),
+                when!"a.isFocused"(backgroundColor = color("#ddd")),  // TODO use an outline for focus
+                when!"a.isPressed"(backgroundColor = color("#aaa")),
+                when!"a.isDisabled"(
+                    textColor = color("000a"),
+                    backgroundColor = color("eee5"),
+                    // TODO disabled should apply opacity, and should work for every node
+                ),
             ),
             rule!TextInput(
                 backgroundColor = color("#fffc"),
@@ -63,24 +59,25 @@ static this() {
                 margin.sideY = 2,
                 padding.sideX = 6,
                 border.sideBottom = 2,
-                //emptyStyleAdd.textColor = color("000a");
-                //focusStyleAdd.backgroundColor = color("fff");
-                //disabledStyleAdd!q{
-                //    textColor = color("000a");
-                //    backgroundColor = color("fff5");
-                //};
+
+                when!"a.isEmpty"(textColor = color("000a")),
+                when!"a.isFocused"(textColor = color("fff")),
+                when!"a.isDisabled"(
+                    textColor = color("000a"),
+                    backgroundColor = color("fff5"),
+                ),
             ),
             rule!ScrollInput(
                 backgroundColor = color("aaa"),
 
-                //backgroundStyleAdd.backgroundColor = color("eee");
-                //hoverStyleAdd.backgroundColor = color("888");
-                //focusStyleAdd.backgroundColor = color("777");
-                //pressStyleAdd.backgroundColor = color("555");
-                //disabledStyleAdd.backgroundColor = color("aaa5");
+                //backgroundStyleAdd.backgroundColor = color("eee"),
+                when!"a.isHovered"(backgroundColor = color("888")),
+                when!"a.isFocused"(backgroundColor = color("777")),
+                when!"a.isPressed"(backgroundColor = color("555")),
+                when!"a.isDisabled"(backgroundColor = color("aaa5")),
             ),
-            //rule!FileInput.unselectedStyleAdd.backgroundColor = color("fff");
-            //rule!FileInput.selectedStyleAdd.backgroundColor = color("ff512f");
+            //rule!FileInput.unselectedStyleAdd.backgroundColor = color("fff"),
+            //rule!FileInput.selectedStyleAdd.backgroundColor = color("ff512f"),
         );
 
     }
