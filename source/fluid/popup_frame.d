@@ -62,7 +62,6 @@ void spawnChildPopup(PopupFrame parent, PopupFrame popup) {
 /// the node tree.
 class PopupFrame : Frame, FluidFocusable {
 
-    mixin defineStyles;
     mixin makeHoverable;
     mixin enableInputActions;
 

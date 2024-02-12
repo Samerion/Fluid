@@ -16,7 +16,6 @@ alias popupButton = simpleConstructor!PopupButton;
 /// ditto
 class PopupButton : Button {
 
-    mixin defineStyles;
     mixin enableInputActions;
 
     public {

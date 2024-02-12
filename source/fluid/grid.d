@@ -60,8 +60,6 @@ Segments segments(uint columns)() {
 /// The Grid node will align its children in a 2D grid.
 class Grid : Frame {
 
-    mixin DefineStyles;
-
     size_t segmentCount;
 
     private {
@@ -366,8 +364,6 @@ class Grid : Frame {
 
 /// A single row in a `Grid`.
 class GridRow : Frame {
-
-    mixin DefineStyles;
 
     Grid parent;
     size_t segmentCount;

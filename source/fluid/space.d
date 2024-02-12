@@ -36,8 +36,6 @@ alias hspace = simpleConstructor!(Space, (a) {
 /// ditto
 class Space : Node, FluidContainer {
 
-    mixin DefineStyles;
-
     public {
 
         /// Children of this frame.

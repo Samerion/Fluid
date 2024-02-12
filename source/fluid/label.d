@@ -19,8 +19,7 @@ alias label = simpleConstructor!Label;
 /// ditto
 class Label : Node {
 
-    mixin DefineStyles;
-    mixin ImplHoveredRect;
+    mixin implHoveredRect;
 
     public {
 

@@ -42,11 +42,6 @@ class FileInput : InputNode!Frame {
     // TODO maybe create a generic "search all" component? Maybe something that could automatically collect all
     //      button data?
 
-    mixin defineStyles!(
-        "unselectedStyle", q{ Style.init },
-        "selectedStyle", q{ unselectedStyle },
-        "suggestionHoverStyle", q{ selectedStyle },
-    );
     mixin enableInputActions;
 
     /// Callback to run when input was cancelled.
@@ -167,7 +162,6 @@ class FileInput : InputNode!Frame {
 
     protected class FilenameInput : TextInput {
 
-        mixin defineStyles;
         mixin enableInputActions;
 
         this(T...)(T args) {

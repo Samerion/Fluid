@@ -24,18 +24,6 @@ abstract class Node {
     public import fluid.structs : NodeAlign, Layout;
     public import fluid.structs : Align = NodeAlign;
 
-    /// This node defines a single style, `style`, which also works as a default style for all other nodes. However,
-    /// rather than for that, the purpose of this style is to define the convention of `style` being the node's default,
-    /// idle style.
-    ///
-    /// It should be noted the default `style` is the only style that affects a node's sizing — as the tree would have
-    /// to be resized in case they changed and secondary styles are assumed to change frequently (for example, on
-    /// hover). In practice, resizing the tree on those changes usually ends up horrible for the user, so it's advised
-    /// to stick to constant sizing in order to not hurt the accessibility.
-    mixin DefineStyles!(
-        "style", q{ Style.init },
-    );
-
     public {
 
         /// Tree data for the node. Note: requires at least one draw before this will work.

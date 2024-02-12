@@ -26,9 +26,6 @@ alias FrameButton = ButtonImpl!Frame;
 /// )
 class ButtonImpl(T : Node = Label) : InputNode!T {
 
-    mixin DefineStyles!(
-        "pressStyle", q{ hoverStyle },
-    );
     mixin enableInputActions;
 
     /// Callback to run when the button is pressed.

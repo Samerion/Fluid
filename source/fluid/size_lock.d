@@ -47,8 +47,6 @@ alias sizeLock(alias T) = simpleConstructor!(SizeLock, T);
 /// ditto
 class SizeLock(T : Node) : T {
 
-    mixin DefineStyles;
-
     /// The maximum size of this node.
     /// If a value on either axis is `0`, limit will not be applied on the axis.
     SizeLimit limit;
