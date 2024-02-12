@@ -874,11 +874,6 @@ interface FluidFocusable : FluidHoverable {
 /// )
 abstract class InputNode(Parent : Node) : Parent, FluidFocusable {
 
-    mixin defineStyles!(
-        "focusStyle", q{ style },
-        "hoverStyle", q{ style },
-        "disabledStyle", q{ style },
-    );
     mixin makeHoverable;
     mixin enableInputActions;
 

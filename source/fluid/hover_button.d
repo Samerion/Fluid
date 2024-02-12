@@ -24,7 +24,6 @@ alias FrameHoverButton = HoverButtonImpl!Frame;
 /// entry nor hover leave events. Make sure you know what you're doing when using this node!
 class HoverButtonImpl(T : Node = Label) : ButtonImpl!T {
 
-    mixin defineStyles;
     mixin enableInputActions;
 
     /// Create a new hover button.

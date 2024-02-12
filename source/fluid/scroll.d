@@ -44,8 +44,6 @@ alias hscrollable(alias T) = simpleConstructor!(ApplyRight!(ScrollFrame, "true")
 /// This only supports scrolling in one axis.
 class Scrollable(T : Node, string horizontalExpression) : T {
 
-    mixin DefineStyles;
-
     public {
 
         /// Scrollbar for the frame. Can be replaced with a customized one.

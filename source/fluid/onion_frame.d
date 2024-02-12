@@ -18,8 +18,6 @@ alias onionFrame = simpleConstructor!OnionFrame;
 /// ditto
 class OnionFrame : Frame {
 
-    mixin DefineStyles;
-
     this(T...)(T args) {
 
         super(args);

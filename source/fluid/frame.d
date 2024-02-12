@@ -26,8 +26,7 @@ alias hframe = simpleConstructor!(Frame, (a) {
 /// )
 class Frame : Space {
 
-    mixin DefineStyles;
-    mixin ImplHoveredRect;
+    mixin implHoveredRect;
 
     this(T...)(T args) {
 

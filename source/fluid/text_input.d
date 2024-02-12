@@ -27,9 +27,6 @@ alias textInput = simpleConstructor!TextInput;
 /// )
 class TextInput : InputNode!Node {
 
-    mixin defineStyles!(
-        "emptyStyle", q{ style },
-    );
     mixin implHoveredRect;
     mixin enableInputActions;
 
@@ -484,10 +481,6 @@ class TextInput : InputNode!Node {
 }
 
 private class TextImpl : Label {
-
-    mixin DefineStyles!(
-        "activeStyle", q{ style }
-    );
 
     this(T...)(T args) {
 

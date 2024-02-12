@@ -21,10 +21,6 @@ alias nodeSlot(alias T) = simpleConstructor!(NodeSlot!T);
 /// ditto
 class NodeSlot(T : Node) : Node {
 
-    /// NodeSlot defines its own styles, which will only apply to the slot itself, not the contents. Most of the
-    /// styling options will have no effect, but padding and margin will.
-    mixin DefineStyles;
-
     public {
 
         /// Node placed in the slot.
