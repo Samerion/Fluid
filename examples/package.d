@@ -32,15 +32,22 @@ Theme exampleListTheme;
 Theme codeTheme;
 Theme previewWrapperTheme;
 Theme highlightBoxTheme;
-Theme warningTheme;
 
+enum DebugChapter;
 enum Chapter {
     @"Introduction" introduction,
     @"Frames" frames,
     @"Buttons & mutability" buttons,
     @"Node slots" slots,
     @"Themes" themes,
+    @"Text input" @DebugChapter text_input,
 };
+
+@NodeTag
+enum Tags {
+    warning,
+    debugChapter,
+}
 
 /// The entrypoint prepares themes and the window. The UI is build in `createUI()`.
 void main(string[] args) {
@@ -49,6 +56,9 @@ void main(string[] args) {
 
     // Prepare themes
     with (Rule) {
+
+        enum warningColor = color!"#ffe186";
+        enum warningAccentColor = color!"#ffc30f";
 
         mainTheme = Theme(
             rule!Frame(
@@ -66,6 +76,16 @@ void main(string[] args) {
             rule!Grid(margin.sideY = 0),
             rule!GridRow(margin = 0),
             rule!ScrollFrame(margin = 0),
+
+            // Warning
+            rule!(Label, Tags.warning)(
+                padding.sideX = 16,
+                padding.sideY = 6,
+                border = 1,
+                borderStyle = colorBorder(warningAccentColor),
+                backgroundColor = warningColor,
+                textColor = color!"#000",
+            ),
         );
 
         headingTheme = mainTheme.derive(
@@ -119,17 +139,6 @@ void main(string[] args) {
             rule!(NodeSlot!Node)(
                 border = 1,
                 borderStyle = colorBorder(color!"#dedede"),
-            ),
-        );
-
-        warningTheme = mainTheme.derive(
-            rule!Label(
-                padding.sideX = 16,
-                padding.sideY = 6,
-                border = 1,
-                borderStyle = colorBorder(color!"#ffc30f"),
-                backgroundColor = color!"#ffe186",
-                textColor = color!"#000",
             ),
         );
 
@@ -282,6 +291,7 @@ Space createUI(string initialChapter = null) @safe {
 
 Space exampleList(void delegate(Chapter) @safe changeChapter) @safe {
 
+    import std.meta;
     import std.array;
     import std.range;
 
@@ -296,8 +306,11 @@ Space exampleList(void delegate(Chapter) @safe changeChapter) @safe {
         // Create a button for each chapter
         .map!(a => button(
             .layout!"fill",
+            isDebug(a)
+                ? .tags!(Tags.debugChapter)
+                : .tags!(),
             title(a),
-            () => changeChapter(a)
+            delegate { changeChapter(a); }
         ))
 
         // Split them into chunks of three
@@ -314,8 +327,8 @@ Space exampleList(void delegate(Chapter) @safe changeChapter) @safe {
         label(.layout!"center", .headingTheme, "Hello, World!"),
         label("Pick a chapter of the tutorial to get started. Start with the first one or browse the chapters that "
             ~ "interest you! Output previews are shown next to code samples to help you understand the content."),
-        label(.layout!"fill", .warningTheme, "While this tutorial covers the most important parts of Fluid, it's still "
-            ~ "incomplete. Content will be added in further updates of Fluid. Contributions are welcome."),
+        label(.layout!"fill", .tags!(Tags.warning), "While this tutorial covers the most important parts of Fluid, "
+            ~ "it's still incomplete. Content will be added in further updates of Fluid. Contributions are welcome."),
         chapterGrid,
     );
 
@@ -361,6 +374,26 @@ Space showcaseCode(string code, Node node, Theme theme = Theme.init) {
 
 }
 
+/// Check if the chapter is a debug chapter.
+bool isDebug(Chapter query) @safe {
+
+    import std.traits;
+
+    switch (query) {
+
+        static foreach (chapter; EnumMembers!Chapter) {
+
+            case chapter:
+                return hasUDA!(chapter, DebugChapter);
+
+        }
+
+        default: return false;
+
+    }
+
+}
+
 /// Get the title of the given chapter.
 string title(Chapter query) @safe {
 
@@ -371,7 +404,7 @@ string title(Chapter query) @safe {
         static foreach (chapter; EnumMembers!Chapter) {
 
             case chapter:
-                return __traits(getAttributes, chapter)[0];
+                return getUDAs!(chapter, string)[0];
 
         }
 

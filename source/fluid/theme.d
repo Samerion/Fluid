@@ -7,6 +7,7 @@ import std.traits;
 
 import fluid.node;
 import fluid.style;
+import fluid.structs;
 
 
 @safe:
@@ -149,81 +150,124 @@ struct Selector {
     /// Type of the node to match.
     TypeInfo_Class type;
 
+    /// Tags needed by the selector.
+    TagList tags;
+
     /// Test if the selector matches given node.
     bool test(Node node) {
 
+        return testType(node)
+            && testTags(node);
+
+    }
+
+    private bool testType(Node node) {
+
         return !type || type.isBaseOf(typeid(node));
+
+    }
+
+    /// True if all tags in this selector are present on the given node.
+    private bool testTags(Node node) {
+
+        return tags.intersect(node.tags).walkLength == tags.length;
+
+    }
+
+    unittest {
+
+        import fluid.label;
+
+        @NodeTag enum good;
+        @NodeTag enum bad;
+
+        auto selector = Selector(typeid(Label)).addTags!good;
+
+        assert(selector.test(label(.tags!good, "")));
+        assert(!selector.test(label(.tags!bad, "")));
+        assert(!selector.test(label("")));
+
+    }
+
+    /// Create a new selector requiring the given set of tags.
+    Selector addTags(tags...)() {
+
+        return Selector(type, this.tags.add!tags);
 
     }
 
 }
 
 /// Create a style rule for the given node.
-Rule rule(T : Node = Node, Ts...)(Ts fields) {
+template rule(T : Node = Node, tags...) {
 
-    enum isWhenRule(alias field) = is(typeof(field) : WhenRule!dg, alias dg);
-    enum isDynamicRule(alias field) = isCallable!field || isWhenRule!field;
+    Rule rule(Ts...)(Ts fields) {
 
-    Rule result;
+        enum isWhenRule(alias field) = is(typeof(field) : WhenRule!dg, alias dg);
+        enum isDynamicRule(alias field) = isCallable!field || isWhenRule!field;
 
-    // Create the selector
-    result.selector = Selector(typeid(T));
+        Rule result;
 
-    // Load fields
-    static foreach (i, field; fields) {{
+        // Create the selector
+        result.selector = Selector(typeid(T)).addTags!tags;
 
-        // Directly assigned field
-        static if (is(typeof(field) : Field!(fieldName, T), string fieldName, T)) {
+        // Load fields
+        static foreach (i, field; fields) {{
 
-            // Add to the result
-            field.apply(result.fields);
+            // Directly assigned field
+            static if (is(typeof(field) : Field!(fieldName, T), string fieldName, T)) {
 
-        }
-
-        // Dynamic rule
-        else static if (isDynamicRule!field) { }
-
-        else static assert(false, format!"Unrecognized type %s (argument index %s)"(typeof(field).stringof, i));
-
-    }}
-
-    // Load delegates
-    alias delegates = Filter!(isDynamicRule, fields);
-
-    // Build the dynamic rule delegate
-    static if (delegates.length)
-    result.styleDelegate = (Node node) {
-
-        Rule dynamicResult;
-
-        // Cast the node into proper type
-        auto castNode = cast(T) node;
-        assert(castNode, "styleDelegate was passed an invalid node");
-
-        static foreach (dg; delegates) {
-
-            // A "when" rule
-            static if (isWhenRule!dg) {
-
-                // Test the predicate before applying the result
-                if (dg.predicate(castNode)) {
-
-                    dg.rule.apply(node, dynamicResult);
-
-                }
+                // Add to the result
+                field.apply(result.fields);
 
             }
 
-            // Use the delegate and apply the result on the template of choice
-            else dg(node).apply(node, dynamicResult);
+            // Dynamic rule
+            else static if (isDynamicRule!field) { }
 
-        }
+            else static assert(false, format!"Unrecognized type %s (argument index %s)"(typeof(field).stringof, i));
 
-        return dynamicResult;
+        }}
 
-    };
+        // Load delegates
+        alias delegates = Filter!(isDynamicRule, fields);
 
-    return result;
+        // Build the dynamic rule delegate
+        static if (delegates.length)
+        result.styleDelegate = (Node node) {
+
+            Rule dynamicResult;
+
+            // Cast the node into proper type
+            auto castNode = cast(T) node;
+            assert(castNode, "styleDelegate was passed an invalid node");
+
+            static foreach (dg; delegates) {
+
+                // A "when" rule
+                static if (isWhenRule!dg) {
+
+                    // Test the predicate before applying the result
+                    if (dg.predicate(castNode)) {
+
+                        dg.rule.apply(node, dynamicResult);
+
+                    }
+
+                }
+
+                // Use the delegate and apply the result on the template of choice
+                else dg(node).apply(node, dynamicResult);
+
+            }
+
+            return dynamicResult;
+
+        };
+
+        return result;
+
+    }
 
 }
 

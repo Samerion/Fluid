@@ -33,7 +33,7 @@ abstract class Node {
         Layout layout;
 
         /// Tags assigned for this node.
-        Tags tags;
+        TagList tags;
 
         /// If true, this node will be removed from the tree on the next draw.
         bool toRemove;
@@ -1139,9 +1139,9 @@ abstract class Node {
             square(.layout!"fill",   colors[3]),
         );
 
-        root.theme = Theme.init.makeTheme!q{
-            Frame.styleAdd.backgroundColor = color!"1c1c1c";
-        };
+        root.theme = Theme.init.derive(
+            rule!Frame(Rule.backgroundColor = color!"1c1c1c")
+        );
         root.io = io;
 
         // Test the layout

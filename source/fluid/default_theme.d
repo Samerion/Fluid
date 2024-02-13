@@ -1,6 +1,12 @@
 module fluid.default_theme;
 
+import fluid.node;
+import fluid.frame;
 import fluid.style;
+import fluid.button;
+import fluid.backend;
+import fluid.text_input;
+import fluid.scroll_input;
 
 /// Theme with no properties set.
 ///
@@ -13,15 +19,7 @@ Theme nullTheme;
 /// the role of each node understandable.
 Theme fluidDefaultTheme;
 
-version (all)
 static this() {
-
-    import fluid.node;
-    import fluid.frame;
-    import fluid.button;
-    import fluid.backend;
-    import fluid.text_input;
-    import fluid.scroll_input;
 
     with (Rule) {
 
@@ -81,82 +79,5 @@ static this() {
         );
 
     }
-
-}
-
-// TODO remove
-else
-static this() {
-
-    nullTheme = Theme.init.makeTheme!q{};
-
-    fluidDefaultTheme = Theme.init.makeTheme!q{
-
-        textColor = color("000");
-
-        Frame.styleAdd!q{
-
-            backgroundColor = color("fff");
-
-        };
-
-        Button!().styleAdd!q{
-
-            backgroundColor = color("eee");
-            mouseCursor = FluidMouseCursor.pointer;
-
-            margin.sideY = 2;
-            padding.sideX = 6;
-
-            focusStyleAdd.backgroundColor = color("ddd");
-            hoverStyleAdd.backgroundColor = color("ccc");
-            pressStyleAdd.backgroundColor = color("aaa");
-            disabledStyleAdd!q{
-
-                textColor = color("000a");
-                backgroundColor = color("eee5");
-
-            };
-
-        };
-
-        TextInput.styleAdd!q{
-
-            backgroundColor = color("fffc");
-            borderStyle = colorBorder(color("aaa"));
-            mouseCursor = FluidMouseCursor.text;
-
-            margin.sideY = 2;
-            padding.sideX = 6;
-            border.sideBottom = 2;
-
-            emptyStyleAdd.textColor = color("000a");
-            focusStyleAdd.backgroundColor = color("fff");
-            disabledStyleAdd!q{
-
-                textColor = color("000a");
-                backgroundColor = color("fff5");
-
-            };
-
-        };
-
-        ScrollInput.styleAdd!q{
-
-            backgroundColor = color("aaa");
-
-            backgroundStyleAdd.backgroundColor = color("eee");
-            hoverStyleAdd.backgroundColor = color("888");
-            focusStyleAdd.backgroundColor = color("777");
-            pressStyleAdd.backgroundColor = color("555");
-            disabledStyleAdd.backgroundColor = color("aaa5");
-
-        };
-
-        FileInput.unselectedStyleAdd.backgroundColor = color("fff");
-        FileInput.selectedStyleAdd.backgroundColor = color("ff512f");
-
-    };
-
 
 }
