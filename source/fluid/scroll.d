@@ -61,13 +61,13 @@ class Scrollable(T : Node, string horizontalExpression) : T {
     this(T...)(T args) {
 
         super(args);
-        this.scrollBar = .vscrollInput();
+        this.scrollBar = .vscrollInput(.layout!(1, "fill"));
 
     }
 
     /// Distance the node is scrolled by.
     @property
-    ref inout(size_t) scroll() inout { return scrollBar.position; }
+    ref inout(float) scroll() inout { return scrollBar.position; }
 
     /// Check if the underlying node is horizontal.
     private bool isHorizontal() const {
@@ -91,14 +91,14 @@ class Scrollable(T : Node, string horizontalExpression) : T {
     }
 
     /// Set the scroll to a value clamped between start and end.
-    void setScroll(ptrdiff_t value) {
+    void setScroll(float value) {
 
         scrollBar.setScroll(value);
 
     }
 
     /// Get the maximum value this container can be scrolled to. Requires at least one draw.
-    size_t scrollMax() const {
+    float scrollMax() const {
 
         return scrollBar.scrollMax();
 
@@ -133,20 +133,20 @@ class Scrollable(T : Node, string horizontalExpression) : T {
 
             // Need to scroll towards the end
             = *position.start > position.viewportStart && position.end > position.viewportEnd
-            ? to!ptrdiff_t(position.end - position.viewportEnd)
+            ? position.end - position.viewportEnd
 
             // Need to scroll towards the start
             : *position.start < position.viewportStart && position.end < position.viewportEnd
-            ? to!ptrdiff_t(*position.start - position.viewportStart)
+            ? *position.start - position.viewportStart
 
             // Already in viewport
             : 0;
 
         // Perform the scroll
-        setScroll(scroll.to!ptrdiff_t + offset);
+        setScroll(scroll + offset);
 
         // Adjust the offset
-        offset = scroll.to!ptrdiff_t - scrollBefore;
+        offset = scroll - scrollBefore;
 
         // Apply child position
         *position.start += offset;
@@ -167,13 +167,8 @@ class Scrollable(T : Node, string horizontalExpression) : T {
         const paddingSpace = space + paddingVector;
 
         // Resize the scrollbar
-        with (scrollBar) {
-
-            horizontal = isHorizontal;
-            layout = .layout!(1, "fill");
-            resize(this.tree, this.theme, paddingSpace);
-
-        }
+        scrollBar.isHorizontal = this.isHorizontal;
+        scrollBar.resize(this.tree, this.theme, paddingSpace);
 
         /// Space without the scrollbar
         const contentSpace = isHorizontal
@@ -189,14 +184,14 @@ class Scrollable(T : Node, string horizontalExpression) : T {
         // Set scrollbar size and add the scrollbar to the result
         if (isHorizontal) {
 
-            scrollBar.availableSpace = cast(size_t) paddingBoxSize.x;
+            scrollBar.availableSpace = paddingBoxSize.x;
             minSize.y += scrollBar.minSize.y;
 
         }
 
         else {
 
-            scrollBar.availableSpace = cast(size_t) paddingBoxSize.y;
+            scrollBar.availableSpace = paddingBoxSize.y;
             minSize.x += scrollBar.minSize.x;
 
         }
@@ -214,7 +209,7 @@ class Scrollable(T : Node, string horizontalExpression) : T {
 
         // TODO Is the above still true?
 
-        scrollBar.horizontal = isHorizontal;
+        scrollBar.isHorizontal = isHorizontal;
 
         auto scrollBarRect = outer;
 
@@ -283,8 +278,7 @@ class Scrollable(T : Node, string horizontalExpression) : T {
         const move = speed * value;
         // io.deltaTime is irrelevant here
 
-        // TODO NO ptrdiff_t
-        scrollBar.setScroll(scroll.to!ptrdiff_t + move.to!ptrdiff_t);
+        scrollBar.setScroll(scroll + move);
 
     }
 

@@ -754,10 +754,10 @@ interface FluidHoverable {
                     static if (isMethod) {
 
                         // Make sure no method is marked `@InputAction`, that's invalid usage
-                        alias inputActionUDAs = getUDAs!(overload, InputAction);
+                        alias inputActionUDAs = getUDAs!(overload, fluid.input.InputAction);
 
                         // Check for `@whileDown`
-                        enum activateWhileDown = hasUDA!(overload, whileDown);
+                        enum activateWhileDown = hasUDA!(overload, fluid.input.whileDown);
 
                         static assert(inputActionUDAs.length == 0,
                             format!"Please use @(%s) instead of @InputAction!(%1$s)"(inputActionUDAs[0].type));
@@ -889,7 +889,7 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable {
 
     }
 
-    /// Handle mouse input.
+    /// Handle mouse input if no input action did.
     ///
     /// Usually, you'd prefer to define a method marked with an `InputAction` enum. This function is preferred for more
     /// advanced usage.
@@ -904,7 +904,7 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable {
 
     }
 
-    /// Handle keyboard and gamepad input.
+    /// Handle keyboard and gamepad input if no input action did.
     ///
     /// Usually, you'd prefer to define a method marked with an `InputAction` enum. This function is preferred for more
     /// advanced usage.
@@ -921,8 +921,6 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable {
     /// Check if the node is being pressed. Performs action lookup.
     ///
     /// This is a helper for nodes that might do something when pressed, for example, buttons.
-    ///
-    /// Preferrably, the node should implement an `isPressed` property and cache the result of this!
     protected bool checkIsPressed() {
 
         return (isHovered && tree.isMouseDown!(FluidInputAction.press))
