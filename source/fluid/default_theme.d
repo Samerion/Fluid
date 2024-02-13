@@ -50,7 +50,7 @@ static this() {
                 ),
             ),
             rule!TextInput(
-                backgroundColor = color("#fffc"),
+                backgroundColor = color("#fff"),
                 borderStyle = colorBorder(color("#aaa")),
                 mouseCursor = FluidMouseCursor.text,
 
@@ -58,21 +58,21 @@ static this() {
                 padding.sideX = 6,
                 border.sideBottom = 2,
 
-                when!"a.isEmpty"(textColor = color("000a")),
-                when!"a.isFocused"(textColor = color("fff")),
+                when!"a.isEmpty"(textColor = color("#000a")),
+                when!"a.isFocused"(borderStyle = colorBorder(color("#555"))),
                 when!"a.isDisabled"(
-                    textColor = color("000a"),
-                    backgroundColor = color("fff5"),
+                    textColor = color("#000a"),
+                    backgroundColor = color("#fff5"),
                 ),
             ),
             rule!ScrollInput(
-                backgroundColor = color("aaa"),
+                backgroundColor = color("#aaa"),
 
                 //backgroundStyleAdd.backgroundColor = color("eee"),
-                when!"a.isHovered"(backgroundColor = color("888")),
-                when!"a.isFocused"(backgroundColor = color("777")),
-                when!"a.isPressed"(backgroundColor = color("555")),
-                when!"a.isDisabled"(backgroundColor = color("aaa5")),
+                when!"a.isHovered"(backgroundColor = color("#888")),
+                when!"a.isFocused"(backgroundColor = color("#777")),
+                when!"a.isPressed"(backgroundColor = color("#555")),
+                when!"a.isDisabled"(backgroundColor = color("#aaa5")),
             ),
             //rule!FileInput.unselectedStyleAdd.backgroundColor = color("fff"),
             //rule!FileInput.selectedStyleAdd.backgroundColor = color("ff512f"),
