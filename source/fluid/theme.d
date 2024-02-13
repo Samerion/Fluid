@@ -156,21 +156,23 @@ struct Selector {
     /// Test if the selector matches given node.
     bool test(Node node) {
 
-        return testType(node)
-            && testTags(node);
+        return testType(typeid(node))
+            && testTags(node.tags);
 
     }
 
-    private bool testType(Node node) {
+    /// Test if the given type matches the selector.
+    bool testType(TypeInfo_Class type) {
 
-        return !type || type.isBaseOf(typeid(node));
+        return !this.type || this.type.isBaseOf(type);
 
     }
 
     /// True if all tags in this selector are present on the given node.
-    private bool testTags(Node node) {
+    bool testTags(TagList tags) {
 
-        return tags.intersect(node.tags).walkLength == tags.length;
+        // TODO linear search if there's only one tag
+        return this.tags.intersect(tags).walkLength == this.tags.length;
 
     }
 
@@ -199,12 +201,63 @@ struct Selector {
 }
 
 /// Create a style rule for the given node.
+///
+/// Template parameters are used to select the node the rule applies to, based on its type and the tags it has. Regular
+/// parameters define the changes made by the rule. These are created by using automatically defined members of `Rule`,
+/// which match names of `Style` fields. For example, to change the property `Style.textColor`, one would assign
+/// `Rule.textColor` inside this parameter list.
+///
+/// ---
+/// rule!Label(
+///     Rule.textColor = color("#fff"),
+///     Rule.backgroundColor = color("#000"),
+/// )
+/// ---
+///
+/// It is also possible to pass a `when` subrule to apply changes based on runtime conditions:
+///
+/// ---
+/// rule!Button(
+///     Rule.backgroundColor = color("#fff"),
+///     when!"a.isHovered"(
+///         Rule.backgroundColor = color("#ccc"),
+///     )
+/// )
+/// ---
+///
+/// If some directives are repeated across different rules, they can be reused:
+///
+/// ---
+/// myRule = rule(
+///     Rule.textColor = color("#000"),
+/// ),
+/// rule!Button(
+///     myRule,
+///     Rule.backgroundColor = color("#fff"),
+/// )
+/// ---
+///
+/// Moreover, rules respect inheritance. Since `Button` derives from `Label` and `Node`, `rule!Label` will also apply
+/// to buttons, and so will `rule!Node`.
+///
+/// For more advanced use-cases, it is possible to directly pass a delegate that accepts a node and returns a
+/// subrule.
+///
+/// ---
+/// rule!Button(
+///     a => rule(
+///         Rule.backgroundColor = pickColor(),
+///     )
+/// )
+/// ---
+///
+/// It is recommended to use the `with (Rule)` statement to make rule definitions clearer.
 template rule(T : Node = Node, tags...) {
 
     Rule rule(Ts...)(Ts fields) {
 
         enum isWhenRule(alias field) = is(typeof(field) : WhenRule!dg, alias dg);
-        enum isDynamicRule(alias field) = isCallable!field || isWhenRule!field;
+        enum isDynamicRule(alias field) = isCallable!field || isWhenRule!field || is(typeof(field) : Rule);
 
         Rule result;
 
@@ -219,6 +272,19 @@ template rule(T : Node = Node, tags...) {
 
                 // Add to the result
                 field.apply(result.fields);
+
+            }
+
+            // Copy from another rule
+            else static if (is(typeof(field) : Rule)) {
+
+                assert(field.selector.testType(typeid(T)),
+                    format!"Cannot paste rule for %s into a rule for %s"(field.selector.type, typeid(T)));
+
+                // Copy fields
+                field.fields.apply(result.fields);
+                // Also add delegates below...
+
 
             }
 
@@ -254,10 +320,21 @@ template rule(T : Node = Node, tags...) {
 
                     }
 
+                    // Apply the alternative if predicate fails
+                    else dg.alternativeRule.apply(node, dynamicResult);
+
+                }
+
+                // Regular rule, forward to its delegate
+                else static if (is(typeof(dg) : Rule)) {
+
+                    if (dg.styleDelegate)
+                    dynamicResult = dg.styleDelegate(node);
+
                 }
 
                 // Use the delegate and apply the result on the template of choice
-                else dg(node).apply(node, dynamicResult);
+                else dg(castNode).apply(node, dynamicResult);
 
             }
 
@@ -268,6 +345,31 @@ template rule(T : Node = Node, tags...) {
         return result;
 
     }
+
+}
+
+@trusted
+unittest {
+
+    import fluid.label;
+    import fluid.button;
+    import std.exception;
+    import core.exception : AssertError;
+
+    auto generalRule = rule(
+        Rule.textColor = color!"#001",
+    );
+    auto buttonRule = rule!Button(
+        Rule.backgroundColor = color!"#002",
+        generalRule,
+    );
+    assertThrown!AssertError(
+        rule!Label(buttonRule),
+        "Label rule cannot inherit from a Button rule."
+    );
+
+    assertNotThrown(rule!Button(buttonRule));
+    assertNotThrown(rule!Button(rule!Label()));
 
 }
 
@@ -298,7 +400,7 @@ struct Rule {
     alias field(string name) = __traits(getMember, StyleTemplate, name);
     alias FieldType(string name) = field!name.Type;
 
-    /// Combine with another rule.
+    /// Combine with another rule. Applies dynamic rules immediately.
     bool apply(Node node, ref Rule rule) {
 
         // Test against the selector
@@ -372,6 +474,19 @@ struct WhenRule(alias dg) {
 
     /// Rule to apply.
     Rule rule;
+
+    /// Rule to apply when the predicate failed
+    Rule alternativeRule;
+
+    /// Specify rules in case the predicate fails.
+    WhenRule otherwise(Args...)(Args args) {
+
+        auto result = this;
+        result.alternativeRule = .rule(args);
+        return result;
+
+    }
+
 
 }
 
