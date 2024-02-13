@@ -33,20 +33,17 @@ Theme codeTheme;
 Theme previewWrapperTheme;
 Theme highlightBoxTheme;
 
-enum DebugChapter;
 enum Chapter {
     @"Introduction" introduction,
     @"Frames" frames,
     @"Buttons & mutability" buttons,
     @"Node slots" slots,
     @"Themes" themes,
-    @"Text input" @DebugChapter text_input,
 };
 
 @NodeTag
 enum Tags {
     warning,
-    debugChapter,
 }
 
 /// The entrypoint prepares themes and the window. The UI is build in `createUI()`.
@@ -306,9 +303,6 @@ Space exampleList(void delegate(Chapter) @safe changeChapter) @safe {
         // Create a button for each chapter
         .map!(a => button(
             .layout!"fill",
-            isDebug(a)
-                ? .tags!(Tags.debugChapter)
-                : .tags!(),
             title(a),
             delegate { changeChapter(a); }
         ))
@@ -371,26 +365,6 @@ Space showcaseCode(string code, Node node, Theme theme = Theme.init) {
             node,
         ),
     );
-
-}
-
-/// Check if the chapter is a debug chapter.
-bool isDebug(Chapter query) @safe {
-
-    import std.traits;
-
-    switch (query) {
-
-        static foreach (chapter; EnumMembers!Chapter) {
-
-            case chapter:
-                return hasUDA!(chapter, DebugChapter);
-
-        }
-
-        default: return false;
-
-    }
 
 }
 

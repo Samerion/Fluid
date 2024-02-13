@@ -107,19 +107,6 @@ class TextInput : InputNode!Node {
         contentLabel.text = (value == "") ? placeholder : value;
 
         // Inherit main style
-        // TODO do this in pickStyle
-        /* auto childTheme = theme.makeTheme!q{
-
-            Label.styleAdd!q{
-
-                // Those are already included in our theme, we should remove them
-                margin = 0;
-                padding = 0;
-                border = 0;
-
-            };
-
-        }; */
 
         // Resize the label
         contentLabel.resize(tree, theme, Vector2(0, minSize.y));
@@ -141,7 +128,7 @@ class TextInput : InputNode!Node {
         style.drawBackground(tree.io, outer);
 
         // Copy the style to the label
-        // TODO contentLabel.activeStyle = style;
+        contentLabel.activeStyle = style;
 
         // Set the scroll
         contentLabel.scroll = cast(size_t) scrollOffset;
@@ -482,17 +469,37 @@ class TextInput : InputNode!Node {
 
 private class TextImpl : Label {
 
+    Style activeStyle;
+
     this(T...)(T args) {
 
         super(args);
+        activeStyle = Style.init;
 
     }
 
-    // Same as parent, but doesn't draw background
     override void drawImpl(Rectangle outer, Rectangle inner) {
 
+        // Don't draw background
         const style = pickStyle();
         text.draw(style, inner);
+
+    }
+
+    override void reloadStyles() {
+
+        super.reloadStyles();
+
+        // Remove all spacing
+        style.margin = 0;
+        style.padding = 0;
+        style.border = 0;
+
+    }
+
+    override Style pickStyle() {
+
+        return activeStyle;
 
     }
 

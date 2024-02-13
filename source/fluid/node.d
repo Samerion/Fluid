@@ -1065,7 +1065,7 @@ abstract class Node {
     }
 
     /// Reload style from the current theme.
-    private void reloadStyles()
+    protected void reloadStyles()
     out (; _style)
     do {
 
@@ -1075,6 +1075,9 @@ abstract class Node {
 
         // Apply theme to the given style
         _styleDelegates = theme.apply(this, _style);
+
+        // Update size
+        updateSize();
 
     }
 
