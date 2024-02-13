@@ -66,9 +66,11 @@ static this() {
                 ),
             ),
             rule!ScrollInput(
-                backgroundColor = color("#aaa"),
+                backgroundColor = color("#eee"),
 
-                //backgroundStyleAdd.backgroundColor = color("eee"),
+            ),
+            rule!ScrollInputHandle(
+                backgroundColor = color("#aaa"),
                 when!"a.isHovered"(backgroundColor = color("#888")),
                 when!"a.isFocused"(backgroundColor = color("#777")),
                 when!"a.isPressed"(backgroundColor = color("#555")),

@@ -26,7 +26,7 @@ alias vscrollInput = simpleConstructor!ScrollInput;
 /// Create a new horizontal scroll bar.
 alias hscrollInput = simpleConstructor!(ScrollInput, (a) {
 
-    a.horizontal = true;
+    a.isHorizontal = true;
 
 });
 
@@ -48,19 +48,24 @@ class ScrollInput : InputNode!Node {
         enum actionScrollSpeed = 60.0;
 
         /// If true, the scrollbar will be horizontal.
-        bool horizontal;
+        bool isHorizontal;
+
+        alias horizontal = isHorizontal;
 
         /// Amount of pixels the page is scrolled down.
-        size_t position;
+        float position = 0;
 
         /// Available space to scroll.
         ///
         /// Note: visible box size, and therefore scrollbar handle length, are determined from the space occupied by the
         /// scrollbar.
-        size_t availableSpace;
+        float availableSpace = 0;
 
         /// Width of the scrollbar.
-        size_t width = 10;
+        float width = 10;
+
+        /// Handle of the scrollbar.
+        ScrollInputHandle handle;
 
     }
 
@@ -72,57 +77,44 @@ class ScrollInput : InputNode!Node {
         /// If true, the inner part of the scrollbar is hovered.
         bool innerHovered;
 
-        /// Page length as determined in drawImpl.
+        /// Page length as determined in resizeImpl.
         double pageLength;
 
         /// Length of the scrollbar as determined in drawImpl.
-        double scrollbarLength;
-
-        /// Length of the handle.
-        double handleLength;
-
-        /// Position of the scrollbar on the screen.
-        Vector2 scrollbarPosition;
-
-        /// Position where the mouse grabbed the scrollbar.
-        Vector2 grabPosition;
-
-        /// Start position of the mouse at the beginning of the grab.
-        size_t startPosition;
+        double length;
 
     }
 
-    this(Args...)(Args args) {
+    this() {
 
-        super(args);
+        handle = new ScrollInputHandle(this);
 
     }
 
-    @property
     bool isPressed() const {
 
         return _isPressed;
 
     }
 
-    /// Set the scroll to a value clamped between start and end. Doesn't trigger the `changed` event.
-    void setScroll(ptrdiff_t value) {
+    /// Scroll page length used for `pageUp` and `pageDown` navigation.
+    float scrollPageLength() const {
 
-        position = cast(size_t) value.clamp(0, scrollMax);
+        return length * 0.75;
 
     }
 
-    /// Ditto
+    /// Set the scroll to a value clamped between start and end. Doesn't trigger the `changed` event.
     void setScroll(float value) {
 
-        position = cast(size_t) value.clamp(0, scrollMax);
+        position = value.clamp(0, scrollMax);
 
     }
 
     /// Get the maximum value this container can be scrolled to. Requires at least one draw.
-    size_t scrollMax() const {
+    float scrollMax() const {
 
-        return cast(size_t) max(0, availableSpace - pageLength);
+        return max(0, availableSpace - pageLength);
 
     }
 
@@ -130,107 +122,63 @@ class ScrollInput : InputNode!Node {
     override protected void resizeImpl(Vector2 space) {
 
         // Get minSize
-        minSize = horizontal
+        minSize = isHorizontal
             ? Vector2(space.x, width)
             : Vector2(width, space.y);
 
         // Get the expected page length
-        pageLength = horizontal
+        pageLength = isHorizontal
             ? space.x + style.padding.sideX[].sum + style.margin.sideX[].sum
             : space.y + style.padding.sideY[].sum + style.margin.sideY[].sum;
+
+        // Resize the handle
+        handle.resize(tree, theme, minSize);
 
     }
 
     override protected void drawImpl(Rectangle paddingBox, Rectangle contentBox) @trusted {
 
+        import std.math;
+
+        _isPressed = checkIsPressed;
+
+        const style = pickStyle();
+
         // Clamp the values first
         setScroll(position);
 
         // Draw the background
-        // TODO backgroundStyle.drawBackground(tree.io, paddingBox);
+        style.drawBackground(tree.io, paddingBox);
+
+        // Ignore if we can't scroll
+        if (scrollMax == 0) return;
 
         // Calculate the size of the scrollbar
-        scrollbarPosition = Vector2(contentBox.x, contentBox.y);
-        scrollbarLength = horizontal ? contentBox.width : contentBox.height;
-        handleLength = availableSpace
-            ? max(50, scrollbarLength^^2 / availableSpace)
+        length = isHorizontal ? contentBox.width : contentBox.height;
+        handle.length = availableSpace
+            ? max(handle.minimumLength, length^^2 / availableSpace)
             : 0;
 
-        const handlePosition = (scrollbarLength - handleLength) * position / scrollMax;
+        const handlePosition = (length - handle.length) * position / scrollMax;
 
-        // Now get the size of the inner rect
-        auto innerRect = contentBox;
+        // Now create a rectangle for the handle
+        auto handleRect = contentBox;
 
-        if (horizontal) {
+        if (isHorizontal) {
 
-            innerRect.x += handlePosition;
-            innerRect.w  = handleLength;
+            handleRect.x += handlePosition;
+            handleRect.w  = handle.length;
 
         }
 
         else {
 
-            innerRect.y += handlePosition;
-            innerRect.h  = handleLength;
+            handleRect.y += handlePosition;
+            handleRect.h  = handle.length;
 
         }
 
-        // Check if the inner part is hovered
-        innerHovered = innerRect.contains(io.mousePosition);
-
-        // Get the inner style
-        const innerStyle = pickStyle();
-
-        innerStyle.drawBackground(tree.io, innerRect);
-
-    }
-
-    override protected void mouseImpl() @trusted {
-
-        // Ignore if we can't scroll
-        if (availableSpace == 0) return;
-
-        // Check if the button is held down
-        const isDown = tree.isDown!(FluidInputAction.press);
-
-        // Update status
-        scope (exit) _isPressed = isDown;
-
-        // Pressed the scrollbar just now
-        if (isDown && !isPressed) {
-
-            // Remember the grab position
-            grabPosition = io.mousePosition;
-            scope (exit) startPosition = position;
-
-            // Didn't press the handle
-            if (!innerHovered) {
-
-                // Get the position
-                const posdir = horizontal ? scrollbarPosition.x : scrollbarPosition.y;
-                const grabdir = horizontal ? grabPosition.x : grabPosition.y;
-                const screenPos = grabdir - posdir - handleLength/2;
-
-                // Move it to this position
-                setScroll(screenPos * availableSpace / scrollbarLength);
-
-            }
-
-        }
-
-        // Handle is held down
-        else if (isDown) {
-
-            const mouse = io.mousePosition;
-
-            const float move = horizontal
-                ? mouse.x - grabPosition.x
-                : mouse.y - grabPosition.y;
-
-            // Move the scrollbar
-            setScroll(startPosition + move * availableSpace / scrollbarLength);
-
-        }
+        handle.draw(handleRect);
 
     }
 
@@ -249,7 +197,7 @@ class ScrollInput : InputNode!Node {
                 : 1;
 
             // Change
-            if (horizontal == forHorizontal) emitChange(direction * scrollPageLength);
+            if (isHorizontal == forHorizontal) emitChange(direction * scrollPageLength);
 
         }
 
@@ -259,17 +207,16 @@ class ScrollInput : InputNode!Node {
     @(FluidInputAction.scrollUp, FluidInputAction.scrollDown)
     protected void _scroll() @trusted {
 
-        const isPlus = horizontal
+        const isPlus = isHorizontal
             ? &isDown!(FluidInputAction.scrollRight)
             : &isDown!(FluidInputAction.scrollDown);
-        const isMinus = horizontal
+        const isMinus = isHorizontal
             ? &isDown!(FluidInputAction.scrollLeft)
             : &isDown!(FluidInputAction.scrollUp);
 
-        const speed = cast(size_t) actionScrollSpeed;
         const change
-            = isPlus(tree)  ? +speed
-            : isMinus(tree) ? -speed
+            = isPlus(tree)  ? +actionScrollSpeed
+            : isMinus(tree) ? -actionScrollSpeed
             : 0;
 
         emitChange(change);
@@ -278,7 +225,7 @@ class ScrollInput : InputNode!Node {
     }
 
     /// Change the value and run the `changed` callback.
-    protected void emitChange(ptrdiff_t move) {
+    protected void emitChange(float move) {
 
         // Ignore if nothing changed.
         if (move == 0) return;
@@ -288,13 +235,6 @@ class ScrollInput : InputNode!Node {
 
         // Run the callback
         if (changed) changed();
-
-    }
-
-    /// Scroll page length used for `pageUp` and `pageDown` navigation.
-    protected size_t scrollPageLength() const {
-
-        return cast(size_t) (scrollbarLength * 3/4);
 
     }
 
@@ -332,7 +272,7 @@ unittest {
     root.draw();
 
     // Note down the difference
-    const size_t scrollDiff = root.scroll;
+    const scrollDiff = root.scroll;
 
     // Drag the scrollbar 10 pixels lower, but also move it out of the scrollbar's area
     io.nextFrame;
@@ -341,15 +281,14 @@ unittest {
 
     const target = scrollDiff*2;
 
-    assert(root.scroll in iota(target-1, target+2),
+    assert(target-1 <= root.scroll && root.scroll <= target+1,
         "Scrollbar should operate at the same rate, even if the cursor is outside");
 
     // Make sure the button is hovered
     io.nextFrame;
     io.mousePosition = Vector2(150, 20);
     root.draw();
-    import std.stdio;
-    assert(root.tree.hover is root.scrollBar, "The scrollbar should retain hover control");
+    assert(root.tree.hover is root.scrollBar.handle, "The scrollbar should retain hover control");
     assert(btn.isHovered, "The button has to be hovered");
 
     // Release the mouse while it's hovering the button
@@ -358,5 +297,127 @@ unittest {
     root.draw();
     assert(btn.isHovered);
     // No event should trigger
+
+}
+
+class ScrollInputHandle : Node, FluidHoverable {
+
+    mixin makeHoverable;
+    mixin implHoveredRect;
+    mixin enableInputActions;
+
+    public {
+
+        enum minimumLength = 50;
+
+        ScrollInput parent;
+
+    }
+
+    protected {
+
+        /// Length of the handle.
+        double length;
+
+        /// True if the handle was pressed this frame.
+        bool justPressed;
+
+        /// Position of the mouse when dragging started.
+        Vector2 startMousePosition;
+
+        /// Scroll value when dragging started.
+        float startScrollPosition;
+
+    }
+
+    private {
+
+        bool _isPressed;
+
+    }
+
+    this(ScrollInput parent) {
+
+        import fluid.structs : layout;
+
+        this.layout = layout!"fill";
+        this.parent = parent;
+
+    }
+
+    bool isPressed() const {
+
+        return _isPressed;
+
+    }
+
+    bool isFocused() const {
+
+        return parent.isFocused;
+
+    }
+
+    override bool isHovered() const {
+
+        return super.isHovered();
+
+    }
+
+    override protected void resizeImpl(Vector2 space) {
+
+        if (parent.isHorizontal)
+            minSize = Vector2(minimumLength, parent.width);
+        else
+            minSize = Vector2(parent.width, minimumLength);
+
+    }
+
+    override protected void drawImpl(Rectangle paddingBox, Rectangle contentBox) @trusted {
+
+        // Check if pressed
+        const pressed = isHovered && tree.isMouseDown!(FluidInputAction.press);
+        justPressed = pressed && !_isPressed;
+        _isPressed = pressed;
+
+        auto style = pickStyle();
+        style.drawBackground(io, paddingBox);
+
+    }
+
+    @(FluidInputAction.press, .whileDown)
+    protected void whileDown() @trusted {
+
+        const mousePosition = io.mousePosition;
+
+        // Just pressed, save data
+        if (justPressed) {
+
+            startMousePosition = mousePosition;
+            startScrollPosition = parent.position;
+            return;
+
+        }
+
+        const totalMove = parent.isHorizontal
+            ? mousePosition.x - startMousePosition.x
+            : mousePosition.y - startMousePosition.y;
+
+        // const handlePosition = (length - handle.length) * position / scrollMax
+        // handlePosition * scrollMax = (length - handle.length) * position
+        // handlePosition * scrollMax / length
+
+        const scrollDifference = totalMove * parent.scrollMax / (parent.length - length);
+
+        // Move the scrollbar
+        parent.setScroll(startScrollPosition + scrollDifference);
+
+        // Emit signal
+        if (parent.changed) parent.changed();
+
+    }
+
+    protected void mouseImpl() {
+
+    }
 
 }
