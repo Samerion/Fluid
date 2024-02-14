@@ -34,9 +34,6 @@ alias FluidFilePicker = FileInput;
 /// A file picker node.
 ///
 /// Note, this node is hidden by default, use `show` to show.
-/// Styles: $(UL
-///     $(LI `selectedStyle` = Style for the currently selected suggestion.)
-/// )
 class FileInput : InputNode!Frame {
 
     // TODO maybe create a generic "search all" component? Maybe something that could automatically collect all

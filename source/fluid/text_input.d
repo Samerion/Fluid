@@ -18,13 +18,6 @@ alias textInput = simpleConstructor!TextInput;
 @safe:
 
 /// Text input field.
-///
-/// Styles: $(UL
-///     $(LI `style` = Default style for the input.)
-///     $(LI `focusStyle` = Style for when the input is focused.)
-///     $(LI `emptyStyle` = Style for when the input is empty, i.e. the placeholder is visible. Text should usually be
-///         grayed out.)
-/// )
 class TextInput : InputNode!Node {
 
     mixin implHoveredRect;

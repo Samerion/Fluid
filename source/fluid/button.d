@@ -17,13 +17,6 @@ alias FrameButton = ButtonImpl!Frame;
 @safe:
 
 /// A button can be pressed by the user to trigger an action.
-///
-/// Styles: $(UL
-///   $(LI `styleKey` = Default style for the button.)
-///   $(LI `hoverStyleKey` = Style to apply when the button is hovered.)
-///   $(LI `pressStyleKey` = Style to apply when the button is pressed.)
-///   $(LI `focusStyleKey` = Style to apply when the button is focused.)
-/// )
 class ButtonImpl(T : Node = Label) : InputNode!T {
 
     mixin enableInputActions;
