@@ -10,10 +10,6 @@ import fluid.backend;
 @safe:
 
 /// A label can be used to display text on the screen.
-///
-/// Styles: $(UL
-///     $(LI `style` = Default style for this node.)
-/// )
 alias label = simpleConstructor!Label;
 
 /// ditto

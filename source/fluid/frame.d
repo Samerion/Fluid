@@ -21,9 +21,6 @@ alias hframe = simpleConstructor!(Frame, (a) {
 });
 
 /// This is a frame, a stylized container for other nodes.
-/// Styles: $(UL
-///     $(LI `style` = Default style for this node.)
-/// )
 class Frame : Space {
 
     mixin implHoveredRect;

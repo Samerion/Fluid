@@ -866,12 +866,6 @@ interface FluidFocusable : FluidHoverable {
 }
 
 /// Represents a general input node.
-///
-/// Styles: $(UL
-///     $(LI `styleKey` = Default style for the input.)
-///     $(LI `focusStyleKey` = Style for when the input is focused.)
-///     $(LI `disabledStyleKey` = Style for when the input is disabled.)
-/// )
 abstract class InputNode(Parent : Node) : Parent, FluidFocusable {
 
     mixin makeHoverable;
