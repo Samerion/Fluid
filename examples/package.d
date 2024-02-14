@@ -162,6 +162,7 @@ void startWindow(Node ui) {
     SetTraceLogLevel(TraceLogLevel.LOG_WARNING);
     InitWindow(1000, 750, "Fluid showcase");
     SetTargetFPS(60);
+    SetExitKey(0);
     scope (exit) CloseWindow();
 
     // Event loop

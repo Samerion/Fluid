@@ -106,16 +106,12 @@ class TextInput : InputNode!Node {
         // Set the label text
         contentLabel.text = (value == "") ? placeholder : value;
 
-        // Inherit main style
-
         // Resize the label
         contentLabel.resize(tree, theme, Vector2(0, minSize.y));
 
     }
 
     protected override void drawImpl(Rectangle outer, Rectangle inner) @trusted {
-
-        // Note: We're drawing the label in `outer` as the presence of the label is meant to be transparent.
 
         import std.datetime : Clock;
         import std.algorithm : min, max;
@@ -226,7 +222,7 @@ class TextInput : InputNode!Node {
 
             assert(root.value == "");
             assert(root.contentLabel.text == "placeholder");
-            // TODO assert(root.contentLabel.activeStyle is root.emptyStyle);
+            assert(root.isEmpty);
         }
 
         // Focus the box and input stuff
@@ -245,7 +241,7 @@ class TextInput : InputNode!Node {
             root.draw();
 
             assert(root.contentLabel.text == "¡Hola, mundo!");
-            // TODO assert(root.contentLabel.activeStyle is root.focusStyle);
+            assert(root.isFocused);
         }
 
     }
@@ -365,7 +361,7 @@ class TextInput : InputNode!Node {
 
             assert(root.value == "Hello ");
             assert(root.contentLabel.text == "Hello ");
-            // TODO assert(root.contentLabel.activeStyle is root.focusStyle);
+            assert(root.isFocused);
         }
 
         // Erase a word
@@ -376,7 +372,7 @@ class TextInput : InputNode!Node {
 
             assert(root.value == "");
             assert(root.contentLabel.text == "");
-            // TODO assert(root.contentLabel.activeStyle is root.emptyStyle);
+            assert(root.isEmpty);
         }
 
         // Typing should be disabled while erasing
@@ -389,7 +385,7 @@ class TextInput : InputNode!Node {
 
             assert(root.value == "");
             assert(root.contentLabel.text == "");
-            // TODO assert(root.contentLabel.activeStyle is root.emptyStyle);
+            assert(root.isEmpty);
         }
 
     }
@@ -438,7 +434,7 @@ class TextInput : InputNode!Node {
 
             assert(root.value == "hello");
             assert(root.contentLabel.text == "hello");
-            // assert(root.contentLabel.activeStyle is root.focusStyle);
+            assert(root.isFocused);
         }
 
         // Erase a letter
@@ -449,7 +445,7 @@ class TextInput : InputNode!Node {
 
             assert(root.value == "hell");
             assert(root.contentLabel.text == "hell");
-            // assert(root.contentLabel.activeStyle is root.focusStyle);
+            assert(root.isFocused);
         }
 
         // Typing should be disabled while erasing
@@ -460,7 +456,7 @@ class TextInput : InputNode!Node {
             root.draw();
 
             assert(root.value == "hel");
-            // assert(root.contentLabel.activeStyle is root.focusStyle);
+            assert(root.isFocused);
         }
 
     }
@@ -499,7 +495,11 @@ private class TextImpl : Label {
 
     override Style pickStyle() {
 
-        return activeStyle;
+        auto style = activeStyle;
+        style.margin = 0;
+        style.padding = 0;
+        style.border = 0;
+        return style;
 
     }
 
