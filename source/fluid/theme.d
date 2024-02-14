@@ -7,6 +7,7 @@ import std.traits;
 
 import fluid.node;
 import fluid.style;
+import fluid.backend;
 import fluid.structs;
 
 
@@ -128,19 +129,164 @@ struct Theme {
 
 }
 
-///
 unittest {
 
-    import fluid.text_input;
+    import fluid.label;
 
     Theme theme;
 
     with (Rule)
     theme.add(
-        rule!TextInput(
-            textColor = color!"#303030",
+        rule!Label(
+            textColor = color!"#abc",
         ),
     );
+
+    auto io = new HeadlessBackend;
+    auto root = label(theme, "placeholder");
+    root.io = io;
+
+    root.draw();
+    io.assertTexture(root.text.texture, Vector2(0, 0), color!"#abc");
+
+}
+
+unittest {
+
+    import fluid.frame;
+
+    auto frameRule = rule!Frame(
+        Rule.margin.sideX = 8,
+        Rule.margin.sideY = 4,
+    );
+    auto theme = nullTheme.derive(frameRule);
+
+    // Test selector
+    assert(frameRule.selector.type == typeid(Frame));
+    assert(frameRule.selector.tags.empty);
+
+    // Test fields
+    auto style = Style.init;
+    frameRule.apply(vframe(), style);
+    assert(style.margin == [8, 8, 4, 4]);
+    assert(style.padding == style.init.padding);
+    assert(style.textColor == style.textColor.init);
+
+    // No dynamic rules
+    assert(rule.styleDelegate is null);
+
+    auto io = new HeadlessBackend;
+    auto root = vframe(theme);
+    root.io = io;
+
+    root.draw();
+
+    assert(root.style == style);
+
+}
+
+unittest {
+
+    // Inheritance
+
+    import fluid.label;
+    import fluid.button;
+
+    auto myTheme = nullTheme.derive(
+        rule!Node(
+            Rule.margin.sideX = 8,
+        ),
+        rule!Label(
+            Rule.margin.sideTop = 6,
+        ),
+        rule!Button(
+            Rule.margin.sideBottom = 4,
+        ),
+    );
+
+    auto style = Style.init;
+    myTheme.apply(button("", delegate { }), style);
+
+    assert(style.margin == [8, 8, 6, 4]);
+
+}
+
+unittest {
+
+    // Copying rules & dynamic rules
+
+    import fluid.label;
+    import fluid.button;
+
+    auto myRule = rule!Label(
+        Rule.textColor = color!"011",
+        Rule.backgroundColor = color!"faf",
+        (Label node) => node.isDisabled
+            ? rule(Rule.tint = color!"000a")
+            : rule()
+    );
+
+    auto myTheme = Theme(
+        rule!Label(
+            myRule,
+        ),
+        rule!Button(
+            myRule,
+            Rule.textColor = color!"012",
+        ),
+    );
+
+    auto style = Style.init;
+    auto myLabel = label("");
+
+    // Apply the style, including dynamic rules
+    auto cbs = myTheme.apply(myLabel, style);
+    assert(cbs.length == 1);
+    cbs[0](myLabel).apply(myLabel, style);
+
+    assert(style.textColor == color!"011");
+    assert(style.backgroundColor == color!"faf");
+    assert(style.tint == Style.init.tint);
+
+    // Disable the node and apply again, it should change nothing
+    myLabel.disable();
+    myTheme.apply(myLabel, style);
+    assert(style.tint == Style.init.tint);
+
+    // Apply the callback, tint should change
+    cbs[0](myLabel).apply(myLabel, style);
+    assert(style.tint == color!"000a");
+
+}
+
+unittest {
+
+    import fluid.label;
+
+    auto myLabel = label("");
+
+    void testMargin(Rule rule, float[4] margin) {
+
+        auto style = Style.init;
+
+        rule.apply(myLabel, style);
+
+        assert(style.margin == margin);
+
+    }
+
+    with (Rule) {
+
+        testMargin(rule(margin = 2), [2, 2, 2, 2]);
+        testMargin(rule(margin.sideX = 2), [2, 2, 0, 0]);
+        testMargin(rule(margin.sideY = 2), [0, 0, 2, 2]);
+        testMargin(rule(margin.sideTop = 2), [0, 0, 2, 0]);
+        testMargin(rule(margin.sideBottom = 2), [0, 0, 0, 2]);
+        testMargin(rule(margin.sideX = 2, margin.sideY = 4), [2, 2, 4, 4]);
+        testMargin(rule(margin = [1, 2, 3, 4]), [1, 2, 3, 4]);
+        testMargin(rule(margin.sideX = [1, 2]), [1, 2, 0, 0]);
+
+    }
 
 }
 
@@ -165,6 +311,32 @@ struct Selector {
     bool testType(TypeInfo_Class type) {
 
         return !this.type || this.type.isBaseOf(type);
+
+    }
+
+    unittest {
+
+        import fluid.input;
+        import fluid.label;
+        import fluid.button;
+
+        auto myLabel = label("my label");
+        auto myButton = button("my button", delegate { });
+
+        auto selector = Selector(typeid(Node));
+
+        assert(selector.test(myLabel));
+        assert(selector.test(myButton));
+
+        auto anotherSelector = Selector(typeid(Button));
+
+        assert(!anotherSelector.test(myLabel));
+        assert(anotherSelector.test(myButton));
+
+        auto noSelector = Selector();
+
+        assert(noSelector.test(myLabel));
+        assert(noSelector.test(myButton));
 
     }
 
@@ -351,6 +523,8 @@ template rule(T : Node = Node, tags...) {
 @trusted
 unittest {
 
+    // Rule copying semantics
+
     import fluid.label;
     import fluid.button;
     import std.exception;
@@ -490,6 +664,45 @@ struct WhenRule(alias dg) {
 
 }
 
+unittest {
+
+    import fluid.label;
+
+    auto myTheme = Theme(
+        rule!Label(
+            Rule.textColor = color!"100",
+            Rule.backgroundColor = color!"aaa",
+
+            when!"a.isEmpty"(Rule.textColor = color!"200"),
+            when!"a.text == `two`"(Rule.backgroundColor = color!"010")
+                .otherwise(Rule.backgroundColor = color!"020"),
+        ),
+    );
+
+    auto io = new HeadlessBackend;
+    auto myLabel = label(myTheme, "one");
+
+    myLabel.io = io;
+    myLabel.draw();
+
+    assert(myLabel.pickStyle().textColor == color!"100");
+    assert(myLabel.pickStyle().backgroundColor == color!"020");
+    assert(myLabel.style.backgroundColor == color!"aaa");
+
+    myLabel.text = "";
+
+    assert(myLabel.pickStyle().textColor == color!"200");
+    assert(myLabel.pickStyle().backgroundColor == color!"020");
+    assert(myLabel.style.backgroundColor == color!"aaa");
+
+    myLabel.text = "two";
+
+    assert(myLabel.pickStyle().textColor == color!"100");
+    assert(myLabel.pickStyle().backgroundColor == color!"010");
+    assert(myLabel.style.backgroundColor == color!"aaa");
+
+}
+
 struct StyleTemplate {
 
     alias fields = NoDuplicates!(getSymbolsByUDA!(Style, Style.Themable));
@@ -547,6 +760,7 @@ struct StyleTemplate {
 
 }
 
+/// `Field` allows defining and performing partial changes to members of Style.
 struct Field(string fieldName, T) {
 
     enum name = fieldName;
@@ -554,7 +768,17 @@ struct Field(string fieldName, T) {
 
     FieldValue!T value;
 
-    static Field make(T)(T value) {
+    static Field make(Item, size_t n)(Item[n] value) {
+
+        Field field;
+        field.value = value;
+        return field;
+
+    }
+
+    static Field make(T)(T value)
+    if (!isStaticArray!T)
+    do {
 
         Field field;
         field.value = value;
@@ -580,7 +804,16 @@ struct Field(string fieldName, T) {
 
         private size_t[2] slice;
 
-        Field opAssign(Input)(Input input) return {
+        Field opAssign(Input, size_t n)(Input[n] input) return {
+
+            value[slice] = input;
+            return this;
+
+        }
+
+        Field opAssign(Input)(Input input) return
+        if (!isStaticArray!Input)
+        do {
 
             value[slice] = input;
             return this;
@@ -609,6 +842,51 @@ struct Field(string fieldName, T) {
 
 }
 
+unittest {
+
+    auto typeface = Style.loadTypeface(4);
+    auto sample = Rule.typeface = typeface;
+
+    const originalTypeface = typeface;
+
+    assert(sample.name == "typeface");
+
+    auto target = Style.loadTypeface(3);
+    sample.value.apply(target);
+
+    assert(target is typeface);
+    assert(typeface is originalTypeface);
+
+}
+
+unittest {
+
+    auto sampleField = Rule.margin = 4;
+
+    assert(sampleField.name == "margin");
+    assert(sampleField.slice == [0, 0]);
+
+    float[4] field = [1, 1, 1, 1];
+    sampleField.value.apply(field);
+
+    assert(field == [4, 4, 4, 4]);
+
+}
+
+unittest {
+
+    auto sampleField = Rule.margin.sideX = 8;
+
+    assert(sampleField.name == "margin");
+    assert(sampleField.slice == [0, 2]);
+
+    float[4] field = [1, 1, 1, 1];
+    sampleField.value.apply(field);
+
+    assert(field == [8, 8, 1, 1]);
+
+}
+
 template FieldValue(T) {
 
     // Static array
@@ -629,10 +907,7 @@ template FieldValue(T) {
 
         }
 
-        Type opAssign(Input)(Input value) {
-
-            // Implicit cast
-            Type newValue = value;
+        Item[n] opAssign(Item, size_t n)(Item[n] value) {
 
             // Mark as changed
             isSet = true;
@@ -640,22 +915,51 @@ template FieldValue(T) {
             // Assign each field
             foreach (i, ref field; this.value.tupleof) {
 
-                field = newValue.tupleof[i];
+                field = value.tupleof[i];
 
             }
 
-            return newValue;
+            return value;
 
         }
 
-        auto opIndexAssign(Input)(Input input, size_t index) {
+        Input opAssign(Input)(Input value)
+        if (!isStaticArray!Input)
+        do {
+
+            // Implicit cast
+            Type newValue = value;
+
+            opAssign(newValue);
+
+            return value;
+
+        }
+
+        Input opIndexAssign(Input)(Input input, size_t index) {
 
             isSet = true;
-            return value[index] = input;
+            value[index] = input;
+            return input;
 
         }
 
-        auto opIndexAssign(Input)(Input input, size_t[2] indices) {
+        Input[n] opIndexAssign(Input, size_t n)(Input[n] input, size_t[2] indices) {
+
+            assert(indices[1] - indices[0] == n, "Invalid slice");
+
+            isSet = true;
+            foreach (i, ref field; value[indices[0] .. indices[1]]) {
+                field = input[i];
+            }
+
+            return input;
+
+        }
+
+        auto opIndexAssign(Input)(Input input, size_t[2] indices)
+        if (!isStaticArray!Input)
+        do {
 
             isSet = true;
             return value[indices[0] .. indices[1]] = FieldValueImpl!E(input, true);
@@ -756,23 +1060,5 @@ private struct FieldValueImpl(T) {
         return format!"%s"(value);
 
     }
-
-}
-
-unittest {
-
-    import fluid.frame;
-
-    auto frameRule = rule!Frame(
-        Rule.margin.sideX = 8,
-        Rule.margin.sideY = 4,
-    );
-    auto theme = nullTheme.derive(frameRule);
-
-    // TODO test
-    //import std.stdio;
-    //writeln(Rule.margin.sideX = 8);
-    //writeln(frameRule);
-    //writeln(theme);
 
 }

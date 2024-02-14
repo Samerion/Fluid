@@ -11,10 +11,13 @@ import fluid.backend;
 interface FluidBorder {
 
     /// Apply the border, drawing it in the given box.
-    abstract void apply(FluidBackend backend, Rectangle borderBox, uint[4] size) const;
+    void apply(FluidBackend backend, Rectangle borderBox, float[4] size) const;
+
+    /// Borders have to be comparable in a memory-safe manner.
+    bool opEquals(const Object object) @safe const;
 
     /// Get the rectangle for the given side of the border.
-    final Rectangle sideRect(Rectangle source, uint[4] size, Style.Side side) const {
+    final Rectangle sideRect(Rectangle source, float[4] size, Style.Side side) const {
 
         final switch (side) {
 
@@ -60,7 +63,7 @@ interface FluidBorder {
 
     /// Get square for corner next counter-clockwise to the given side.
     /// Note: returned rectangles may have negative size; rect start position will always point to the corner itself.
-    final Rectangle cornerRect(Rectangle source, uint[4] size, Style.Side side) const {
+    final Rectangle cornerRect(Rectangle source, float[4] size, Style.Side side) const {
 
         final switch (side) {
 
@@ -122,7 +125,7 @@ class ColorBorder : FluidBorder {
 
     Color[4] color;
 
-    void apply(FluidBackend io, Rectangle borderBox, uint[4] size) const @trusted {
+    void apply(FluidBackend io, Rectangle borderBox, float[4] size) const @trusted {
 
         // For each side
         foreach (sideIndex; 0..4) {
@@ -168,6 +171,12 @@ class ColorBorder : FluidBorder {
             }
 
         }
+
+    }
+
+    override bool opEquals(const Object object) @safe const {
+
+        return this is object;
 
     }
 

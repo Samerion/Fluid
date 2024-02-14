@@ -59,17 +59,17 @@ struct Style {
         /// Margin (outer margin) of the node. `[left, right, top, bottom]`.
         ///
         /// See: `isSideArray`.
-        uint[4] margin;
+        float[4] margin = 0;
 
         /// Border size, placed between margin and padding. `[left, right, top, bottom]`.
         ///
         /// See: `isSideArray`
-        uint[4] border;
+        float[4] border = 0;
 
         /// Padding (inner margin) of the node. `[left, right, top, bottom]`.
         ///
         /// See: `isSideArray`
-        uint[4] padding;
+        float[4] padding = 0;
 
         /// Border style to use.
         FluidBorder borderStyle;
@@ -144,6 +144,14 @@ struct Style {
     bool opCast(T : bool)() const {
 
         return this !is Style(null);
+
+    }
+
+    bool opEquals(const Style other) const @trusted {
+
+        // @safe: FluidBorder and Typeface are required to provide @safe opEquals.
+        // D doesn't check for opEquals on interfaces, though.
+        return this.tupleof == other.tupleof;
 
     }
 
@@ -224,7 +232,7 @@ struct Style {
     }
 
     /// Get a side array holding both the regular margin and the border.
-    uint[4] fullMargin() const {
+    float[4] fullMargin() const {
 
         return [
             margin.sideLeft + border.sideLeft,
@@ -250,15 +258,15 @@ struct Style {
     }
 
     /// Get a sum of margin, border size and padding.
-    uint[4] totalMargin() const {
+    float[4] totalMargin() const {
 
-        uint[4] ret = margin[] + border[] + padding[];
+        float[4] ret = margin[] + border[] + padding[];
         return ret;
 
     }
 
     /// Crop the given box by reducing its size on all sides.
-    static Vector2 cropBox(Vector2 size, uint[4] sides) {
+    static Vector2 cropBox(Vector2 size, float[4] sides) {
 
         size.x = max(0, size.x - sides.sideLeft - sides.sideRight);
         size.y = max(0, size.y - sides.sideTop - sides.sideBottom);
@@ -268,7 +276,7 @@ struct Style {
     }
 
     /// ditto
-    static Rectangle cropBox(Rectangle rect, uint[4] sides) {
+    static Rectangle cropBox(Rectangle rect, float[4] sides) {
 
         rect.x += sides.sideLeft;
         rect.y += sides.sideTop;
@@ -288,7 +296,7 @@ struct Style {
 ///
 /// Because of the default behavior of static arrays, one can set the value for all sides to be equal with a simple
 /// assignment: `array = 8`. Additionally, to make it easier to manipulate the box, one may use the `sideX` and `sideY`
-/// functions to get a `uint[2]` array of the values corresponding to the given axis (which can also be assigned like
+/// functions to get a `float[2]` array of the values corresponding to the given axis (which can also be assigned like
 /// `array.sideX = 8`) or the `sideLeft`, `sideRight`, `sideTop` and `sideBottom` functions corresponding to the given
 /// sides.
 enum isSideArray(T) = is(T == X[4], X);
@@ -300,8 +308,8 @@ enum isSomeSideArray(T) = isSideArray!T
 ///
 unittest {
 
-    uint[4] sides;
-    static assert(isSideArray!(uint[4]));
+    float[4] sides;
+    static assert(isSideArray!(float[4]));
 
     sides.sideX = 4;
 
@@ -349,7 +357,7 @@ if (isSomeSideArray!T) {
 ///
 unittest {
 
-    uint[4] sides = [8, 0, 4, 2];
+    float[4] sides = [8, 0, 4, 2];
 
     assert(sides.sideRight == 0);
 
@@ -399,7 +407,7 @@ if (isSomeSideArray!T && !isSideArray!T) {
 ///
 unittest {
 
-    uint[4] sides = [1, 2, 3, 4];
+    float[4] sides = [1, 2, 3, 4];
 
     assert(sides.sideX == [sides.sideLeft, sides.sideRight]);
     assert(sides.sideY == [sides.sideTop, sides.sideBottom]);

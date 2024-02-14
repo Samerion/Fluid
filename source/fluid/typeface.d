@@ -61,6 +61,9 @@ interface Typeface {
     /// Note: This API is unstable and might change over time.
     void drawLine(ref Image target, ref Vector2 penPosition, string text, Color tint) const;
 
+    /// Instances of Typeface have to be comparable in a memory-safe manner.
+    bool opEquals(const Object object) @safe const;
+
     /// Get the default Fluid typeface.
     static defaultTypeface() => FreetypeTypeface.defaultTypeface;
 
@@ -365,6 +368,13 @@ class FreetypeTypeface : Typeface {
 
     }
 
+    /// Instances of Typeface have to be comparable in a memory-safe manner.
+    override bool opEquals(const Object object) @safe const {
+
+        return this is object;
+
+    }
+
     bool isOwner() const => _isOwner;
     bool isOwner(bool value) @system => _isOwner = value;
 
@@ -565,6 +575,13 @@ class RaylibTypeface : Typeface {
             UnloadFont(_font);
 
         }
+
+    }
+
+    /// Instances of Typeface have to be comparable in a memory-safe manner.
+    override bool opEquals(const Object object) @safe const {
+
+        return this is object;
 
     }
 
