@@ -89,19 +89,17 @@ struct Style {
         @Themable
         FluidMouseCursor mouseCursor;
 
-        // TODO set opacity in rules
-
         /// Get or set node opacity. Value in range [0, 1] — 0 is fully transparent, 1 is fully opaque.
         float opacity() const {
 
-            return tint.a / 255.0;
+            return tint.a / 255.0f;
 
         }
 
         /// ditto
         float opacity(float value) {
 
-            tint.a = cast(ubyte) clamp(value * 255, 0, 255);
+            tint.a = cast(ubyte) clamp(value * ubyte.max, ubyte.min, ubyte.max);
 
             return value;
 

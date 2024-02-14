@@ -290,6 +290,34 @@ unittest {
 
 }
 
+unittest {
+
+    import std.math;
+    import fluid.label;
+
+    auto myRule = rule(
+        Rule.opacity = 0.5,
+    );
+    auto style = Style.init;
+
+    myRule.apply(label(""), style);
+
+    assert(style.opacity.isClose(127/255f));
+    assert(style.tint == color!"ffffff7f");
+
+    auto secondRule = rule(
+        Rule.tint = color!"abc",
+        Rule.opacity = 0.6,
+    );
+
+    style = Style.init;
+    secondRule.apply(label(""), style);
+
+    assert(style.opacity.isClose(153/255f));
+    assert(style.tint == color!"abc9");
+
+}
+
 /// Selector is used to pick a node based on its type and specified tags.
 struct Selector {
 
@@ -571,6 +599,15 @@ struct Rule {
 
     }
 
+    // Separately define opacity for convenience
+    static opacity(float value) {
+
+        import std.algorithm : clamp;
+
+        return tint.a = cast(ubyte) clamp(value * ubyte.max, ubyte.min, ubyte.max);
+
+    }
+
     alias field(string name) = __traits(getMember, StyleTemplate, name);
     alias FieldType(string name) = field!name.Type;
 
@@ -750,7 +787,7 @@ struct StyleTemplate {
             auto value = mixin("this.", name);
 
             if (value.isSet)
-                items ~= format!"%s: %s"(name, value.value);
+                items ~= format!"%s: %s"(name, value);
 
         }}
 
@@ -796,6 +833,24 @@ struct Field(string fieldName, T) {
     void apply(ref StyleTemplate style) {
 
         value.apply(__traits(child, style, Rule.field!fieldName));
+
+    }
+
+    // Operators for structs
+    static if (is(T == struct)) {
+
+        template opDispatch(string field)
+        if (__traits(hasMember, T, field))
+        {
+
+            Field opDispatch(Input)(Input input) return {
+
+                __traits(getMember, value, field) = input;
+                return this;
+
+            }
+
+        }
 
     }
 
@@ -889,136 +944,221 @@ unittest {
 
 template FieldValue(T) {
 
+    // Struct
+    static if (is(T == struct))
+        alias FieldValue = FieldValueStruct!T;
+
     // Static array
-    static if (is(T : E[n], E, size_t n))
-    struct FieldValue {
+    else static if (is(T : E[n], E, size_t n))
+        alias FieldValue = FieldValueStaticArray!(E, n);
 
-        alias Type = T;
-        alias ExpandedType = FieldValueImpl!E[n];
+    // Others
+    else alias FieldValue = FieldValueOther!T;
 
-        ExpandedType value;
-        bool isSet;
+}
 
-        FieldValue opAssign(FieldValue value) {
+private struct FieldValueStruct(T) {
 
-            this.value = value.value;
-            this.isSet = value.isSet;
-            return this;
+    alias Type = T;
+    alias ExpandedType = staticMap!(FieldValue, typeof(Type.tupleof));
+
+    ExpandedType value;
+    bool isSet;
+
+    FieldValueStruct opAssign(FieldValueStruct value) {
+
+        this.value = value.value;
+        this.isSet = value.isSet;
+
+        return this;
+
+    }
+
+    Type opAssign(Type value) {
+
+        // Mark as set
+        isSet = true;
+
+        // Assign each field
+        foreach (i, ref field; this.value) {
+
+            field = value.tupleof[i];
 
         }
 
-        Item[n] opAssign(Item, size_t n)(Item[n] value) {
+        return value;
 
-            // Mark as changed
+    }
+
+    template opDispatch(string name)
+    if (__traits(hasMember, Type, name))
+    {
+
+        T opDispatch(T)(T value) {
+
+            enum i = staticIndexOf!(name, FieldNameTuple!Type);
+
+            // Mark as set
             isSet = true;
 
-            // Assign each field
-            foreach (i, ref field; this.value.tupleof) {
-
-                field = value.tupleof[i];
-
-            }
+            // Assign the field
+            this.value[i] = value;
 
             return value;
-
-        }
-
-        Input opAssign(Input)(Input value)
-        if (!isStaticArray!Input)
-        do {
-
-            // Implicit cast
-            Type newValue = value;
-
-            opAssign(newValue);
-
-            return value;
-
-        }
-
-        Input opIndexAssign(Input)(Input input, size_t index) {
-
-            isSet = true;
-            value[index] = input;
-            return input;
-
-        }
-
-        Input[n] opIndexAssign(Input, size_t n)(Input[n] input, size_t[2] indices) {
-
-            assert(indices[1] - indices[0] == n, "Invalid slice");
-
-            isSet = true;
-            foreach (i, ref field; value[indices[0] .. indices[1]]) {
-                field = input[i];
-            }
-
-            return input;
-
-        }
-
-        auto opIndexAssign(Input)(Input input, size_t[2] indices)
-        if (!isStaticArray!Input)
-        do {
-
-            isSet = true;
-            return value[indices[0] .. indices[1]] = FieldValueImpl!E(input, true);
-
-        }
-
-        size_t[2] opSlice(size_t i, size_t j) const {
-
-            return [i, j];
-
-        }
-
-        /// Change the given value to match the requested change.
-        void apply(ref Type value) {
-
-            if (!isSet) return;
-
-            foreach (i, field; this.value.tupleof) {
-                field.apply(value.tupleof[i]);
-            }
-
-        }
-
-        /// Change the given value to match the requested change.
-        void apply(ref FieldValue value) {
-
-            if (!isSet) return;
-
-            value.isSet = true;
-
-            foreach (i, field; this.value.tupleof) {
-                field.apply(value.value[i]);
-            }
-
-        }
-
-        string toString() {
-
-            Type output;
-            apply(output);
-            return format!"%s"(output);
 
         }
 
     }
 
-    // Others
-    else alias FieldValue = FieldValueImpl!T;
+    /// Change the given value to match the requested change.
+    void apply(ref Type value) {
+
+        if (!isSet) return;
+
+        foreach (i, field; this.value) {
+            field.apply(value.tupleof[i]);
+        }
+
+    }
+
+    /// Change the given value to match the requested change.
+    void apply(ref FieldValueStruct value) {
+
+        if (!isSet) return;
+
+        value.isSet = true;
+
+        foreach (i, field; this.value) {
+            field.apply(value.value[i]);
+        }
+
+    }
 
 }
 
-private struct FieldValueImpl(T) {
+private struct FieldValueStaticArray(E, size_t n) {
+
+    alias Type = E[n];
+    alias ExpandedType = FieldValue!E[n];
+
+    ExpandedType value;
+    bool isSet;
+
+    FieldValueStaticArray opAssign(FieldValueStaticArray value) {
+
+        this.value = value.value;
+        this.isSet = value.isSet;
+        return this;
+
+    }
+
+    Item[n] opAssign(Item, size_t n)(Item[n] value) {
+
+        // Mark as changed
+        isSet = true;
+
+        // Assign each field
+        foreach (i, ref field; this.value.tupleof) {
+
+            field = value.tupleof[i];
+
+        }
+
+        return value;
+
+    }
+
+    Input opAssign(Input)(Input value)
+    if (!isStaticArray!Input)
+    do {
+
+        // Implicit cast
+        Type newValue = value;
+
+        opAssign(newValue);
+
+        return value;
+
+    }
+
+    Input opIndexAssign(Input)(Input input, size_t index) {
+
+        isSet = true;
+        value[index] = input;
+        return input;
+
+    }
+
+    Input[n] opIndexAssign(Input, size_t n)(Input[n] input, size_t[2] indices) {
+
+        assert(indices[1] - indices[0] == n, "Invalid slice");
+
+        isSet = true;
+        foreach (i, ref field; value[indices[0] .. indices[1]]) {
+            field = input[i];
+        }
+
+        return input;
+
+    }
+
+    auto opIndexAssign(Input)(Input input, size_t[2] indices)
+    if (!isStaticArray!Input)
+    do {
+
+        isSet = true;
+        return value[indices[0] .. indices[1]] = FieldValue!E(input, true);
+
+    }
+
+    size_t[2] opSlice(size_t i, size_t j) const {
+
+        return [i, j];
+
+    }
+
+    /// Change the given value to match the requested change.
+    void apply(ref Type value) {
+
+        if (!isSet) return;
+
+        foreach (i, field; this.value.tupleof) {
+            field.apply(value.tupleof[i]);
+        }
+
+    }
+
+    /// Change the given value to match the requested change.
+    void apply(ref FieldValueStaticArray value) {
+
+        if (!isSet) return;
+
+        value.isSet = true;
+
+        foreach (i, field; this.value.tupleof) {
+            field.apply(value.value[i]);
+        }
+
+    }
+
+    string toString() {
+
+        Type output;
+        apply(output);
+        return format!"%s"(output);
+
+    }
+
+}
+
+private struct FieldValueOther(T) {
 
     alias Type = T;
 
     Type value;
     bool isSet;
 
-    FieldValueImpl opAssign(FieldValueImpl value) {
+    FieldValueOther opAssign(FieldValueOther value) {
 
         this.value = value.value;
         this.isSet = value.isSet;
@@ -1046,7 +1186,7 @@ private struct FieldValueImpl(T) {
     }
 
     /// Apply another modification to a field.
-    void apply(ref FieldValueImpl value) {
+    void apply(ref FieldValueOther value) {
 
         if (!isSet) return;
 
