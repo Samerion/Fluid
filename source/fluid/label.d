@@ -53,6 +53,12 @@ class Label : Node {
 
     }
 
+    bool isEmpty() const {
+
+        return text.length == 0;
+
+    }
+
     protected override void resizeImpl(Vector2 available) {
 
         import std.math;

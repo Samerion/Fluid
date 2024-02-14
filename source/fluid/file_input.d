@@ -109,6 +109,9 @@ class FileInput : InputNode!Frame {
 
         typedFilename = input.value;
 
+        // Load suggestions
+        addSuggestions();
+
         // Bind events
         input.changed = () {
 
@@ -239,9 +242,6 @@ class FileInput : InputNode!Frame {
 
         clearSuggestions();
 
-        // Make sure the directory exists
-        if (!dir.exists || !dir.isDir) return;
-
         // Check the entries
         addSuggestions();
 
@@ -273,7 +273,9 @@ class FileInput : InputNode!Frame {
         const file = values[1];
 
         ulong num;
-        foreach (entry; dir.dirEntries(file ~ "*", SpanMode.shallow)) {
+
+        // TODO handle errors on a per-entry basis?
+        try foreach (entry; dir.dirEntries(file ~ "*", SpanMode.shallow)) {
 
             const name = entry.name.baseName;
 
@@ -289,6 +291,10 @@ class FileInput : InputNode!Frame {
 
             // File
             else pushSuggestion(name);
+
+        }
+
+        catch (FileException exc) {
 
         }
 
@@ -308,7 +314,7 @@ class FileInput : InputNode!Frame {
         if (index >= suggestions.children.length) {
 
             // Create the button
-            suggestions.children ~= new SuggestionButton(this, index, text, {
+            suggestions.children ~= new FileInputSuggestion(this, index, text, {
 
                 selectSuggestion(index + 1);
                 reload();
@@ -320,7 +326,7 @@ class FileInput : InputNode!Frame {
         // Set text for the relevant button
         else {
 
-            auto btn = cast(SuggestionButton) suggestions.children[index];
+            auto btn = cast(FileInputSuggestion) suggestions.children[index];
 
             btn.text = text;
             btn.show();
@@ -376,7 +382,7 @@ class FileInput : InputNode!Frame {
         // Update input to match suggestion
         if (currentSuggestion != 0) {
 
-            auto btn = cast(SuggestionButton) suggestions.children[currentSuggestion - 1];
+            auto btn = cast(FileInputSuggestion) suggestions.children[currentSuggestion - 1];
             auto newValue = valueTuple(typedFilename)[0] ~ btn.text.stripLeft;
 
             // Same value, submit
@@ -418,7 +424,7 @@ class FileInput : InputNode!Frame {
     override bool isFocused() const {
 
         return input.isFocused()
-            || cast(const SuggestionButton) tree.focus;
+            || cast(const FileInputSuggestion) tree.focus;
 
     }
 
@@ -479,24 +485,34 @@ class FileInput : InputNode!Frame {
 
 }
 
-private class SuggestionButton : Button {
+/// Suggestion button for styling.
+class FileInputSuggestion : Button {
 
     mixin enableInputActions;
 
     private {
 
-        int index;
-        FileInput input;
+        int _index;
+        FileInput _input;
 
     }
 
-    this(T...)(FileInput input, int index, T args) {
+    private this(FileInput input, int index, string text, void delegate() @safe callback) {
 
-        super(args);
+        super(text, callback);
         this.layout = .layout!"fill";
-        this.index = index;
-        this.input = input;
+        this._index = index;
+        this._input = input;
 
     }
+
+    /// File input the button belongs to.
+    inout(FileInput) parent() inout => _input;
+
+    /// Index of the button.
+    int index() const => _index;
+
+    /// True if this suggestion is selected.
+    bool isSelected() const => _input.currentSuggestion == _index+1;
 
 }

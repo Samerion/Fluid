@@ -5,7 +5,9 @@ import fluid.frame;
 import fluid.style;
 import fluid.button;
 import fluid.backend;
+import fluid.file_input;
 import fluid.text_input;
+import fluid.popup_frame;
 import fluid.scroll_input;
 
 /// Theme with no properties set.
@@ -71,13 +73,22 @@ static this() {
             ),
             rule!ScrollInputHandle(
                 backgroundColor = color("#aaa"),
+
                 when!"a.isHovered"(backgroundColor = color("#888")),
                 when!"a.isFocused"(backgroundColor = color("#777")),
                 when!"a.isPressed"(backgroundColor = color("#555")),
                 when!"a.isDisabled"(backgroundColor = color("#aaa5")),
             ),
-            //rule!FileInput.unselectedStyleAdd.backgroundColor = color("fff"),
-            //rule!FileInput.selectedStyleAdd.backgroundColor = color("ff512f"),
+            rule!PopupFrame(
+                border = 1,
+                borderStyle = colorBorder(color("#555a")),
+            ),
+            rule!FileInputSuggestion(
+                margin = 0,
+                backgroundColor = color("#fff"),
+
+                when!"a.isSelected"(backgroundColor = color("#55b9ff"))
+            ),
         );
 
     }

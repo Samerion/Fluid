@@ -95,7 +95,10 @@ abstract class Node {
         }
 
         /// Current style, used for sizing. Does not include any changes made by `when` clauses or callbacks.
-        inout(Style) style() inout { return _style; }
+        const(Style) style() const { return _style; }
+
+        /// Mutable reference to current style. Usage is discouraged; use themes to change styles if possible.
+        protected ref Style style() { return _style; }
 
     }
 
