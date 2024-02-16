@@ -578,7 +578,7 @@ abstract class Node {
         // Set mouse cursor to match hovered node
         if (tree.hover) {
 
-            tree.io.mouseCursor = style.mouseCursor;
+            tree.io.mouseCursor = tree.hover.pickStyle().mouseCursor;
 
         }
 

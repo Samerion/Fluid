@@ -52,6 +52,7 @@ public import
     fluid.structs,
     fluid.style,
     fluid.text_input,
+    // Note: fluid.theme is not included
     fluid.utils;
 
 unittest {
