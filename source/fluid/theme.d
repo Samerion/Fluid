@@ -1,3 +1,6 @@
+/// This module defines templates and structs used to build themes, including a set of special setters to use within
+/// theme definitions. Because of the amount of general symbols defined by the module, it is not imported by default
+/// and has to be imported explicitly. Do not import this globally, but within functions that define themes.
 module fluid.theme;
 
 import std.meta;
@@ -318,6 +321,24 @@ unittest {
 
 }
 
+// Define field setters for each field, to use by importing or through `Rule.property = value`
+static foreach (field; StyleTemplate.fields) {
+
+    mixin(format!q{
+        alias %1$s = Field!("%1$s", typeof(field)).make;
+    }(__traits(identifier, field)));
+
+}
+
+// Separately define opacity for convenience
+auto opacity(float value) {
+
+    import std.algorithm : clamp;
+
+    return tint.a = cast(ubyte) clamp(value * ubyte.max, ubyte.min, ubyte.max);
+
+}
+
 /// Selector is used to pick a node based on its type and specified tags.
 struct Selector {
 
@@ -581,6 +602,8 @@ struct Rule {
     alias StyleDelegate = Rule delegate(Node node) @safe;
     alias loadTypeface = Style.loadTypeface;
 
+    public import fluid.theme;
+
     /// Selector to filter items that should match this rule.
     Selector selector;
 
@@ -589,24 +612,6 @@ struct Rule {
 
     /// Callback for updating the style dynamically. May be null.
     StyleDelegate styleDelegate;
-
-    /// Define field setters for each field, to use as `Rule.property = value`
-    static foreach (field; StyleTemplate.fields) {
-
-        mixin(format!q{
-            alias %1$s = Field!("%1$s", typeof(field)).make;
-        }(__traits(identifier, field)));
-
-    }
-
-    // Separately define opacity for convenience
-    static opacity(float value) {
-
-        import std.algorithm : clamp;
-
-        return tint.a = cast(ubyte) clamp(value * ubyte.max, ubyte.min, ubyte.max);
-
-    }
 
     alias field(string name) = __traits(getMember, StyleTemplate, name);
     alias FieldType(string name) = field!name.Type;
@@ -686,11 +691,13 @@ struct WhenRule(alias dg) {
     /// Rule to apply.
     Rule rule;
 
-    /// Rule to apply when the predicate failed
+    /// Rule to apply when the predicate fails.
     Rule alternativeRule;
 
-    /// Specify rules in case the predicate fails.
+    /// Specify rule to apply in case the predicate fails. An `else` branch.
     WhenRule otherwise(Args...)(Args args) {
+
+        // TODO else if?
 
         auto result = this;
         result.alternativeRule = .rule(args);
