@@ -5,6 +5,7 @@ import fluid.frame;
 import fluid.style;
 import fluid.button;
 import fluid.backend;
+import fluid.typeface;
 import fluid.file_input;
 import fluid.text_input;
 import fluid.popup_frame;
@@ -31,6 +32,7 @@ static this() {
 
         fluidDefaultTheme.add(
             rule!Node(
+                typeface = Typeface.defaultTypeface,
                 textColor = color("#000"),
             ),
             rule!Frame(

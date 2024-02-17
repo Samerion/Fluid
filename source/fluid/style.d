@@ -116,15 +116,6 @@ struct Style {
 
     }
 
-    /// Get the default, empty style.
-    static Style init()
-    out (r; r)
-    do {
-
-        return Style(Typeface.defaultTypeface);
-
-    }
-
     static Typeface loadTypeface(string file, int fontSize) @trusted {
 
         return new FreetypeTypeface(file, fontSize);
@@ -222,10 +213,17 @@ struct Style {
 
     }
 
-    /// Draw the background
+    /// Draw the background & border
     void drawBackground(FluidBackend backend, Rectangle rect) const @trusted {
 
         backend.drawRectangle(rect, backgroundColor);
+
+        // Add border if active
+        if (borderStyle) {
+
+            borderStyle.apply(backend, rect, border);
+
+        }
 
     }
 
@@ -592,10 +590,10 @@ unittest {
     auto bg = color!"fff";
 
     // Background rectangles — reducing in size every pixel as the border gets added
+    io.assertRectangle(Rectangle(0, 0, 800, 600), bg = multiply(bg, color!"aaaa"));
     io.assertRectangle(Rectangle(0, 0, 799, 600), bg = multiply(bg, color!"aaaa"));
     io.assertRectangle(Rectangle(0, 0, 798, 600), bg = multiply(bg, color!"aaaa"));
     io.assertRectangle(Rectangle(0, 0, 797, 600), bg = multiply(bg, color!"aaaa"));
-    io.assertRectangle(Rectangle(0, 0, 796, 600), bg = multiply(bg, color!"aaaa"));
 
     auto border = color!"f00";
 

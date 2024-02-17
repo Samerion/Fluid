@@ -89,7 +89,8 @@ abstract class Node {
         Theme theme(Theme value) @trusted {
 
             _theme = cast(Theme) value;
-            reloadStyles();
+            _style = Style.init;
+            assert(!_style);
             return _theme;
 
         }
@@ -824,6 +825,7 @@ abstract class Node {
         const borderBox  = style.cropBox(marginBox, style.margin);
         const paddingBox = style.cropBox(borderBox, style.border);
         const contentBox = style.cropBox(paddingBox, style.padding);
+        const mainBox    = borderBox;
 
         const currentStyle = pickStyle();
 
@@ -832,16 +834,8 @@ abstract class Node {
         io.tint = multiply(previousTint, currentStyle.tint);
         scope (exit) io.tint = previousTint;
 
-        // If there's a border active, draw it
-        if (currentStyle.borderStyle) {
-
-            currentStyle.borderStyle.apply(io, borderBox, style.border);
-            // TODO wouldn't it be better to draw borders as background?
-
-        }
-
-        // Get the visible part of the padding box — so overflowed content doesn't get mouse focus
-        const visibleBox = tree.intersectScissors(paddingBox);
+        // Get the visible part of the main box — so overflowed content doesn't get mouse focus
+        const visibleBox = tree.intersectScissors(mainBox);
 
         // Check if hovered
         _isHovered = hoveredImpl(visibleBox, tree.io.mousePosition);
@@ -860,9 +854,9 @@ abstract class Node {
             ),
         );
         assert(
-            only(paddingBox.tupleof, contentBox.tupleof).all!isFinite,
-            format!"Node %s size is invalid: paddingBox = %s, contentBox = %s"(
-                typeid(this), paddingBox, contentBox
+            only(mainBox.tupleof, contentBox.tupleof).all!isFinite,
+            format!"Node %s size is invalid: borderBox = %s, contentBox = %s"(
+                typeid(this), mainBox, contentBox
             )
         );
 
@@ -890,7 +884,7 @@ abstract class Node {
         // Run beforeDraw actions
         foreach (action; tree.filterActions) {
 
-            action.beforeDrawImpl(this, space, paddingBox, contentBox);
+            action.beforeDrawImpl(this, space, mainBox, contentBox);
 
         }
 
@@ -898,28 +892,28 @@ abstract class Node {
         // Note: minSize includes margin!
         if (minSize.x > space.width || minSize.y > space.height) {
 
-            const lastScissors = tree.pushScissors(paddingBox);
+            const lastScissors = tree.pushScissors(mainBox);
             scope (exit) tree.popScissors(lastScissors);
 
-            drawImpl(paddingBox, contentBox);
+            drawImpl(mainBox, contentBox);
 
         }
 
         // Draw the node
-        else drawImpl(paddingBox, contentBox);
+        else drawImpl(mainBox, contentBox);
 
 
         // If not disabled
         if (!branchDisabled) {
 
             // Update focus info
-            tree.focusDirection.update(this, paddingBox, tree.depth);
+            tree.focusDirection.update(this, mainBox, tree.depth);
 
             // If this node is focused
             if (this is cast(Node) tree.focus) {
 
                 // Set the focus box
-                tree.focusBox = paddingBox;
+                tree.focusBox = mainBox;
 
             }
 
@@ -928,7 +922,7 @@ abstract class Node {
         // Run afterDraw actions
         foreach (action; tree.filterActions) {
 
-            action.afterDrawImpl(this, space, paddingBox, contentBox);
+            action.afterDrawImpl(this, space, mainBox, contentBox);
 
         }
 
@@ -1073,7 +1067,6 @@ abstract class Node {
 
         // Reset style
         _style = Style.init;
-        assert(_style);
 
         // Apply theme to the given style
         _styleDelegates = theme.apply(this, _style);
