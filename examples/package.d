@@ -39,6 +39,7 @@ enum Chapter {
     @"Buttons & mutability" buttons,
     @"Node slots" slots,
     @"Themes" themes,
+    @"Margin, padding and border" margins,
 };
 
 @NodeTag
@@ -133,8 +134,10 @@ void main(string[] args) {
         );
 
         previewWrapperTheme = mainTheme.derive(
-            rule!(NodeSlot!Node)(
+            rule!Frame(
+                margin = 0,
                 border = 1,
+                padding = 0,
                 borderStyle = colorBorder(color!"#dedede"),
             ),
         );
@@ -360,11 +363,14 @@ Space showcaseCode(string code, Node node, Theme theme = Theme.init) {
             .codeTheme,
             code,
         ).disableWrap(),
-        nodeSlot!Node(
+        vframe(
             .layout!(1, "fill"),
             .previewWrapperTheme,
-            node,
-        ),
+            nodeSlot!Node(
+                .layout!(1, "fill"),
+                node,
+            ),
+        )
     );
 
 }
