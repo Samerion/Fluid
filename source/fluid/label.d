@@ -129,6 +129,11 @@ class Label : Node {
 
     }
 
+    override string toString() const {
+        import std.range;
+        return format!"Label(%(%s%))"(only(text.toString));
+    }
+
 }
 
 ///

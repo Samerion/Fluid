@@ -40,6 +40,7 @@ enum Chapter {
     @"Buttons & mutability" buttons,
     @"Node slots" slots,
     @"Themes" themes,
+    @"Writing forms" forms,
 };
 
 /// The entrypoint prepares themes and the window. The UI is build in `createUI()`.
