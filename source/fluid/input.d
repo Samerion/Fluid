@@ -68,7 +68,7 @@ immutable struct InputActionID {
     this(IA : InputAction!actionType, alias actionType)(IA) immutable {
 
         this.id = cast(size_t) &IA._id;
-        debug this.name = fullyQualifiedName!actionType;
+        debug this.name = fullyQualifiedName!(IA.type);
 
     }
 
@@ -738,6 +738,9 @@ interface FluidHoverable {
             assert(typeid(this) is typeid(This),
                 format!"%s is missing `mixin enableInputActions;`"(typeid(this)));
 
+            // Ignore mouse events if not hovered
+            if (mouse && !isHovered) return false;
+
             // Check each member
             static foreach (memberName; __traits(allMembers, This)) {
 
@@ -779,7 +782,7 @@ interface FluidHoverable {
                                     // Ignore mouse release events if the node is not hovered anymore
                                     const condition
                                         = activateWhileDown ? down
-                                        : mouse ? tree.isMouseActive!actionType && isHovered
+                                        : mouse ? tree.isMouseActive!actionType
                                         : tree.isFocusActive!actionType;
 
                                     // Run the action if the stroke was performed

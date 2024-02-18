@@ -33,6 +33,7 @@ public import
     fluid.children,
     fluid.default_theme,
     fluid.file_input,
+    fluid.field_slot,
     fluid.frame,
     fluid.grid,
     fluid.hover_button,
