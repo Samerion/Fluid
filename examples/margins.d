@@ -42,7 +42,7 @@ static this() {
             backgroundColor = color("#61ff66"),
         ),
         rule!Label(
-            typeface = Style.loadTypeface(10),
+            typeface = Style.loadTypeface(10),  // default typeface at size 10
             margin = 0,
             padding = 0,
         ),
