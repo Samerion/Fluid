@@ -336,6 +336,18 @@ class Raylib5Backend : FluidBackend {
 
     }
 
+    void drawCircle(Vector2 center, float radius, Color color) @trusted {
+
+        DrawCircleV(center, radius, color);
+
+    }
+
+    void drawCircleOutline(Vector2 center, float radius, Color color) @trusted {
+
+        DrawCircleLinesV(center, radius, color);
+
+    }
+
     void drawRectangle(Rectangle rectangle, Color color) @trusted {
 
         DrawRectangleRec(toRaylibCoords(rectangle), multiply(color, tint));
