@@ -74,13 +74,23 @@ class Checkbox : InputNode!Node {
 
     protected override void drawImpl(Rectangle outer, Rectangle inner) {
 
+        import std.algorithm : min;
+
         auto style = pickStyle();
 
         style.drawBackground(io, outer);
 
-        if (auto tex = getTexture(style)) {
+        if (auto texture = getTexture(style)) {
 
-            tex.draw(inner);
+            // Get the scale
+            const scale = min(
+                inner.width / texture.width,
+                inner.height / texture.height
+            );
+            const size     = Vector2(texture.width * scale, texture.height * scale);
+            const position = center(inner) - size/2;
+
+            texture.draw(Rectangle(position.tupleof, size.tupleof));
 
         }
 

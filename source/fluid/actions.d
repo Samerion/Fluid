@@ -15,10 +15,14 @@ import fluid.container;
 /// the next draw. If calling `focusRecurseChildren`, the subject of the call will be excluded from taking focus.
 /// Params:
 ///     parent = Container node to search in.
-void focusRecurse(Node parent) {
+FocusRecurseAction focusRecurse(Node parent) {
+
+    auto action = new FocusRecurseAction;
 
     // Perform a tree action to find the child
-    parent.queueAction(new FocusRecurseAction);
+    parent.queueAction(action);
+
+    return action;
 
 }
 
@@ -54,12 +58,13 @@ unittest {
 }
 
 /// ditto
-void focusRecurseChildren(Node parent) {
+FocusRecurseAction focusRecurseChildren(Node parent) {
 
     auto action = new FocusRecurseAction;
     action.excludeStartNode = true;
-
     parent.queueAction(action);
+
+    return action;
 
 }
 
@@ -98,6 +103,7 @@ class FocusRecurseAction : TreeAction {
     public {
 
         bool excludeStartNode;
+        void delegate(FluidFocusable) @safe finished;
 
     }
 
@@ -114,6 +120,9 @@ class FocusRecurseAction : TreeAction {
 
             // Give it focus
             focusable.focus();
+
+            // Submit the result
+            if (finished) finished(focusable);
 
             // We're done here
             stop;

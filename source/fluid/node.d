@@ -58,6 +58,8 @@ abstract class Node : Styleable {
         "style", q{ Style.init },
     );
 
+    class Extra : StyleExtension { }
+
     public {
 
         /// Tree data for the node. Note: requires at least one draw before this will work.

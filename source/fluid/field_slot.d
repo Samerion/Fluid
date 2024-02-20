@@ -39,7 +39,16 @@ class FieldSlot(T : Node) : T, FluidHoverable {
     /// Pass focus to the field contained by this slot.
     @(FluidInputAction.press)
     void focus() {
-        this.focusRecurseChildren();
+
+        auto action = this.focusRecurseChildren();
+
+        // Press the target when found
+        action.finished = (node) {
+            if (node) {
+                node.runInputAction!(FluidInputAction.press);
+            }
+        };
+
     }
 
     override void drawImpl(Rectangle outer, Rectangle inner) {
