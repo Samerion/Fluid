@@ -9,7 +9,7 @@ import fluid.backend;
 
 @safe:
 
-/// A checkbox button can be pressed by the user to trigger an action.
+/// A checkbox can be selected by the user to indicate a true or false state.
 ///
 /// Styles: $(UL
 ///   $(LI `styleKey` = Default style for the button.)
@@ -46,11 +46,14 @@ class Checkbox : InputNode!Node {
     // Button status
     public {
 
-        /// If true, the box is checked.
-        bool isChecked;
-
         /// Size of the checkbox.
         Vector2 size;
+
+    }
+
+    private {
+
+        bool _isChecked;
 
     }
 
@@ -61,8 +64,22 @@ class Checkbox : InputNode!Node {
     this(NodeParams params, bool isChecked = false) {
 
         super(params);
-        this.isChecked = isChecked;
+        this._isChecked = isChecked;
         this.size = Vector2(10, 10);
+
+    }
+
+    /// If true, the box is checked.
+    bool isChecked() const {
+
+        return _isChecked;
+
+    }
+
+    /// ditto
+    bool isChecked(bool value) {
+
+        return _isChecked = value;
 
     }
 
@@ -103,6 +120,7 @@ class Checkbox : InputNode!Node {
 
         // No valid extra data, ignore
         if (!extra) return null;
+        if (extra.checkmark.area == 0) return null;
 
         // Check entries for this backend
         auto entries = extra.cache.require(backend, new TextureGC[Color*]);
@@ -125,11 +143,19 @@ class Checkbox : InputNode!Node {
 
     }
 
-    /// Handle mouse input, toggling the checkbox.
-    @(FluidInputAction.press)
-    protected void _pressed() @trusted {
+
+    /// Toggle the checkbox.
+    void toggle() {
 
         isChecked = !isChecked;
+
+    }
+
+    @(FluidInputAction.press)
+    protected void _pressed() {
+
+        toggle();
+        if (changed) changed();
 
     }
 

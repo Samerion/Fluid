@@ -102,6 +102,20 @@ static this() {
 
         };
 
+        Radiobox.styleAdd!q{
+
+            margin.sideX = 8;
+            margin.sideY = 4;
+            border = 0;
+            borderStyle = null;
+            padding = 2;
+            extra = new Radiobox.Extra(1, color("555"), color("5550"));
+
+            focusStyleAdd;
+            checkedStyleAdd.extra = new Radiobox.Extra(1, color("555"), color("000"));
+
+        };
+
     };
 
 

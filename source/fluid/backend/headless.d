@@ -59,6 +59,20 @@ class HeadlessBackend : FluidBackend {
 
     }
 
+    struct DrawnCircle {
+
+        Vector2 position;
+        float radius;
+        Color color;
+        bool outlineOnly;
+
+        bool isClose(Vector2 position, float radius) const
+            => .isClose(position.x, this.position.x)
+            && .isClose(position.y, this.position.y)
+            && .isClose(radius, this.radius);
+
+    }
+
     struct DrawnRectangle {
 
         Rectangle rectangle;
@@ -134,7 +148,7 @@ class HeadlessBackend : FluidBackend {
 
     }
 
-    alias Drawing = SumType!(DrawnLine, DrawnTriangle, DrawnRectangle, DrawnTexture);
+    alias Drawing = SumType!(DrawnLine, DrawnTriangle, DrawnCircle, DrawnRectangle, DrawnTexture);
 
     private {
 
@@ -563,6 +577,22 @@ class HeadlessBackend : FluidBackend {
 
     }
 
+    /// Draw a circle.
+    void drawCircle(Vector2 position, float radius, Color color) {
+
+        color = multiply(color, tint);
+        canvas ~= Drawing(DrawnCircle(position, radius, color));
+
+    }
+
+    /// Draw a circle, but outline only.
+    void drawCircleOutline(Vector2 position, float radius, Color color) {
+
+        color = multiply(color, tint);
+        canvas ~= Drawing(DrawnCircle(position, radius, color, true));
+
+    }
+
     /// Draw a rectangle.
     void drawRectangle(Rectangle rectangle, Color color) {
 
@@ -754,6 +784,7 @@ class HeadlessBackend : FluidBackend {
                         ],
                         attr("fill") = trig.color.toHex,
                     ),
+                    (DrawnCircle circle) => elems(), // TODO
                     (DrawnTexture texture) {
 
                         auto url = texture.id in allocatedTextures;
