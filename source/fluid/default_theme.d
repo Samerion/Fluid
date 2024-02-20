@@ -97,6 +97,7 @@ static this() {
             mouseCursor = FluidMouseCursor.pointer;
 
             // Checkbox image
+            focusStyleAdd.backgroundColor = color("ddd");
             checkedStyleAdd.extra = new Checkbox.Extra(Image(data, 64, 50));
 
         };

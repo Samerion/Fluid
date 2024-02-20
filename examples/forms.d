@@ -16,7 +16,7 @@ Space myExample() {
         ),
         fieldSlot!hframe(
             checkbox(),
-            label("Accept"),
+            label("Accept my rules"),
         ),
     );
 
