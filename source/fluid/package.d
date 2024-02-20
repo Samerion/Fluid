@@ -30,6 +30,7 @@ public import
     fluid.backend,
     fluid.actions,
     fluid.button,
+    fluid.checkbox,
     fluid.children,
     fluid.default_theme,
     fluid.file_input,

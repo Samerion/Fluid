@@ -83,6 +83,24 @@ static this() {
         FileInput.unselectedStyleAdd.backgroundColor = color("fff");
         FileInput.selectedStyleAdd.backgroundColor = color("ff512f");
 
+        Checkbox.styleAdd!q{
+
+            // Checkmark, alpha channel only, 65×50
+            enum file = (() @trusted => cast(ubyte[]) import("checkmark-alpha"))();
+            auto data = file.map!(a => Color(0, 0, 0, a)).array;
+
+            margin.sideX = 8;
+            margin.sideY = 4;
+            border = 1;
+            padding = 1;
+            borderStyle = colorBorder(color("555"));
+            mouseCursor = FluidMouseCursor.pointer;
+
+            // Checkbox image
+            checkedStyleAdd.extra = new Checkbox.Extra(Image(data, 64, 50));
+
+        };
+
     };
 
 

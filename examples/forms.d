@@ -14,6 +14,10 @@ Space myExample() {
             label("Username"),
             textInput("Password"),
         ),
+        fieldSlot!hframe(
+            checkbox(),
+            label("Accept"),
+        ),
     );
 
 }
