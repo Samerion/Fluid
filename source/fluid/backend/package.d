@@ -655,6 +655,7 @@ struct Image {
     /// Image data.
     Color[] pixels;
     int width, height;
+    // TODO Alpha-channel only images
 
     Vector2 size() const => Vector2(width, height);
 
@@ -676,9 +677,9 @@ struct Image {
 
 }
 
-/// Represents a GPU texture.
+/// Image or texture can be rendered by Fluid, for example, a texture stored in VRAM.
 ///
-/// Textures make use of manual memory management.
+/// Textures make use of manual memory management. See `TextureGC` for a GC-managed texture.
 struct Texture {
 
     /// Tombstone for this texture
@@ -747,6 +748,45 @@ struct Texture {
         tombstone.markDestroyed();
         tombstone = null;
         id = 0;
+
+    }
+
+}
+
+/// Wrapper over `Texture` that automates destruction via GC or RAII.
+struct TextureGC {
+
+    /// Underlying texture. Lifetime is bound to this struct.
+    Texture texture;
+
+    alias texture this;
+
+    /// Load a texture from filename.
+    this(FluidBackend backend, string filename) @trusted {
+
+        this.texture = backend.loadTexture(filename);
+
+    }
+
+    /// Load a texture from image data.
+    this(FluidBackend backend, Image data) @trusted {
+
+        this.texture = backend.loadTexture(data);
+
+    }
+
+    ~this() @trusted {
+
+        texture.destroy();
+
+    }
+
+    /// Release the texture, moving it to manual management.
+    Texture release() @system {
+
+        auto result = texture;
+        texture = texture.init;
+        return result;
 
     }
 
