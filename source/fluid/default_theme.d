@@ -91,6 +91,18 @@ static this() {
 
         };
 
+        AbstractSlider.styleAdd!q{
+
+            backgroundColor = color("ddd");
+
+        };
+
+        SliderHandle.styleAdd!q{
+
+            backgroundColor = color("aaa");
+
+        };
+
         FileInput.unselectedStyleAdd.backgroundColor = color("fff");
         FileInput.selectedStyleAdd.backgroundColor = color("ff512f");
 

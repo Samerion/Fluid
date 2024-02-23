@@ -51,6 +51,7 @@ public import
     fluid.scroll,
     fluid.scroll_input,
     fluid.size_lock,
+    fluid.slider,
     fluid.slot,
     fluid.space,
     fluid.structs,
