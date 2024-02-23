@@ -222,7 +222,7 @@ class TextInput : InputNode!Node {
         import std.range : back;
         import std.string : chop;
 
-        string input;
+        bool changed;
 
         // Get pressed key
         while (true) {
@@ -231,7 +231,8 @@ class TextInput : InputNode!Node {
             if (const key = io.inputCharacter) {
 
                 // Append to char arrays
-                input ~= cast(dchar) key;
+                push(key);
+                changed = true;
 
             }
 
@@ -241,16 +242,10 @@ class TextInput : InputNode!Node {
         }
 
         // Typed something
-        if (input.length) {
-
-            // Update the value
-            value ~= input;
+        if (changed) {
 
             // Trigger the callback
-            if (changed) changed();
-
-            // Update the size of the input
-            updateSize();
+            _changed();
 
             return true;
 
@@ -297,9 +292,32 @@ class TextInput : InputNode!Node {
 
     }
 
+    /// Push a character to the input.
+    void push(dchar character) {
+
+        value ~= character;
+        updateSize();
+
+    }
+
+    /// Called whenever the text input is updated.
+    protected void _changed() {
+
+        // Run the callback
+        if (changed) changed();
+
+    }
+
+    deprecated("Use _submitted instead, _submit to be removed in 0.8.0")
+    protected void _submit() {
+
+        _submitted();
+
+    }
+
     /// Submit the input.
     @(FluidInputAction.submit)
-    protected void _submit() {
+    protected void _submitted() {
 
         // Clear focus
         isFocused = false;
@@ -379,7 +397,7 @@ class TextInput : InputNode!Node {
         }
 
         // Trigger the callback
-        if (changed) changed();
+        _changed();
 
         // Update the size of the box
         updateSize();
@@ -452,7 +470,7 @@ class TextInput : InputNode!Node {
         value = value.chop;
 
         // Trigger the callback
-        if (changed) changed();
+        _changed();
 
         // Update the size of the box
         updateSize();

@@ -43,6 +43,7 @@ public import
     fluid.label,
     fluid.map_space,
     fluid.node,
+    fluid.number_input,
     fluid.onion_frame,
     fluid.popup_button,
     fluid.popup_frame,
