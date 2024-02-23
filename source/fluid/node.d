@@ -58,7 +58,32 @@ abstract class Node : Styleable {
         "style", q{ Style.init },
     );
 
-    class Extra : StyleExtension { }
+    static class Extra : StyleExtension {
+
+        private struct CacheKey {
+
+            Color* color;
+            FluidBackend backend;
+
+        }
+
+        /// Styling texture cache, by image pointer.
+        private TextureGC[CacheKey] cache;
+
+        /// Load a texture from the image. May return null if there's no valid image.
+        TextureGC* getTexture(FluidBackend backend, Image image) @trusted {
+
+            // No image
+            if (image.area == 0) return null;
+
+            const key = CacheKey(image.pixels.ptr, backend);
+
+            // Find or create the entry
+            return &cache.require(key, TextureGC(backend, image));
+
+        }
+
+    }
 
     public {
 
@@ -1082,7 +1107,7 @@ abstract class Node : Styleable {
     /// Params:
     ///     rect          = Area the node should be drawn in, as provided by drawImpl.
     ///     mousePosition = Current mouse position within the window.
-    protected abstract bool hoveredImpl(Rectangle rect, Vector2 mousePosition) const;
+    protected abstract bool hoveredImpl(Rectangle rect, Vector2 mousePosition);
 
     alias ImplHoveredRect = implHoveredRect;
 

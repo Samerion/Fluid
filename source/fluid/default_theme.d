@@ -68,6 +68,17 @@ static this() {
 
         };
 
+        NumberInputSpinner.styleAdd!q{
+
+            // Increment/decrement buttons, alpha channel only, 40
+            enum file = (() @trusted => cast(ubyte[]) import("arrows-alpha"))();
+            auto data = file.map!(a => Color(0, 0, 0, a)).array;
+
+            mouseCursor = FluidMouseCursor.pointer;
+            extra = new NumberInputSpinner.Extra(Image(data, 40, 64));
+
+        };
+
         ScrollInput.styleAdd!q{
 
             backgroundColor = color("aaa");
@@ -85,7 +96,7 @@ static this() {
 
         Checkbox.styleAdd!q{
 
-            // Checkmark, alpha channel only, 65×50
+            // Checkmark, alpha channel only, 64×50
             enum file = (() @trusted => cast(ubyte[]) import("checkmark-alpha"))();
             auto data = file.map!(a => Color(0, 0, 0, a)).array;
 
@@ -111,7 +122,7 @@ static this() {
             padding = 2;
             extra = new Radiobox.Extra(1, color("555"), color("5550"));
 
-            focusStyleAdd;
+            focusStyleAdd.backgroundColor = color("ddd");
             checkedStyleAdd.extra = new Radiobox.Extra(1, color("555"), color("000"));
 
         };

@@ -354,25 +354,30 @@ class Raylib5Backend : FluidBackend {
 
     }
 
-    void drawTexture(fluid.backend.Texture texture, Rectangle rectangle, Color tint, string alt = "")
+    void drawTexture(fluid.backend.Texture texture, Rectangle rectangle, Color tint, string alt = "") @trusted
     in (false)
     do {
 
-        // TODO filtering?
-        drawTexture(texture, rectangle, tint, alt, true);
+        auto rayTexture = texture.toRaylib;
+
+        SetTextureFilter(rayTexture, TextureFilter.TEXTURE_FILTER_BILINEAR);
+        drawTexture(rayTexture, rectangle, tint, alt, true);
 
     }
 
-    void drawTextureAlign(fluid.backend.Texture texture, Rectangle rectangle, Color tint, string alt = "")
+    void drawTextureAlign(fluid.backend.Texture texture, Rectangle rectangle, Color tint, string alt = "") @trusted
     in (false)
     do {
 
-        drawTexture(texture, rectangle, tint, alt, true);
+        auto rayTexture = texture.toRaylib;
+
+        SetTextureFilter(rayTexture, TextureFilter.TEXTURE_FILTER_POINT);
+        drawTexture(rayTexture, rectangle, tint, alt, true);
 
     }
 
     protected @trusted
-    void drawTexture(fluid.backend.Texture texture, Rectangle destination, Color tint, string alt, bool alignPixels)
+    void drawTexture(raylib.Texture texture, Rectangle destination, Color tint, string alt, bool alignPixels)
     do {
 
         import std.math;
@@ -388,7 +393,7 @@ class Raylib5Backend : FluidBackend {
         const dpi = this.dpi;
         const source = Rectangle(0, 0, texture.width, texture.height);
 
-        DrawTexturePro(texture.toRaylib, source, destination, Vector2(0, 0), 0, multiply(tint, this.tint));
+        DrawTexturePro(texture, source, destination, Vector2(0, 0), 0, multiply(tint, this.tint));
 
     }
 

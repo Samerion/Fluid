@@ -552,6 +552,10 @@ struct LayoutTree {
                     bind!scrollDown(GamepadButton.dpadDown),
                     bind!pageUp(KeyboardKey.pageUp),
                     bind!pageDown(KeyboardKey.pageDown),
+
+                    // Number input
+                    bind!increment(KeyboardKey.up),
+                    bind!decrement(KeyboardKey.down),
                 ]
             )
 

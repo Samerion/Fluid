@@ -39,6 +39,8 @@ enum FluidInputAction {
     // Input
     backspace,      /// Erase last character in an input.
     backspaceWord,  /// Erase last a word in an input.
+    increment,      /// Increment value in a number input.
+    decrement,      /// Decrement value in a number input.
     entryPrevious,  /// Navigate to the previous list entry.
     entryNext,      /// Navigate to the next list entry.
     entryUp,        /// Navigate up in a tree, eg. in the file picker.
@@ -788,48 +790,40 @@ interface FluidHoverable {
 
                 static foreach (overload; __traits(getOverloads, This, memberName)) {{
 
-                    // Filter out deprecated functions
-                    enum isValid = !__traits(isDeprecated, overload);
-                    // TODO maybe somehow issue an error if an input action is marked deprecated?
+                    // Make sure no method is marked `@InputAction`, that's invalid usage
+                    alias inputActionUDAs = getUDAs!(overload, InputAction);
 
-                    static if (isValid) {
+                    // Check for `@whileDown`
+                    enum activateWhileDown = hasUDA!(overload, whileDown);
 
-                        // Make sure no method is marked `@InputAction`, that's invalid usage
-                        alias inputActionUDAs = getUDAs!(overload, InputAction);
+                    static assert(inputActionUDAs.length == 0,
+                        format!"Please use @(%s) instead of @InputAction!(%1$s)"(inputActionUDAs[0].type));
 
-                        // Check for `@whileDown`
-                        enum activateWhileDown = hasUDA!(overload, whileDown);
+                    // Find the matching action
+                    static foreach (actionType; __traits(getAttributes, overload))
+                    if (InputActionID.from!actionType == action) {{
 
-                        static assert(inputActionUDAs.length == 0,
-                            format!"Please use @(%s) instead of @InputAction!(%1$s)"(inputActionUDAs[0].type));
+                        // Run the action if the stroke was performed
+                        if (activateWhileDown || active) {
 
-                        // Find the matching action
-                        static foreach (actionType; __traits(getAttributes, overload))
-                        if (InputActionID.from!actionType == action) {{
+                            // Pass the action type if applicable
+                            static if (__traits(compiles, overload(actionType))) {
 
-                            // Run the action if the stroke was performed
-                            if (activateWhileDown || active) {
-
-                                // Pass the action type if applicable
-                                static if (__traits(compiles, overload(actionType))) {
-
-                                    overload(actionType);
-
-                                }
-
-                                // TODO Support action ID?
-
-                                // Run empty
-                                else overload();
+                                overload(actionType);
 
                             }
 
-                            // Mark as handled
-                            handled = true;
+                            // TODO Support action ID?
 
-                        }}
+                            // Run empty
+                            else overload();
 
-                    }
+                        }
+
+                        // Mark as handled
+                        handled = true;
+
+                    }}
 
                 }}
 

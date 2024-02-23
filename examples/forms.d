@@ -16,6 +16,14 @@ Space myExample() {
             label("Username"),
             textInput(),
         ),
+        fieldSlot!vframe(
+            label("Integer"),
+            intInput(),
+        ),
+        fieldSlot!vframe(
+            label("Real number"),
+            floatInput(),
+        ),
 
         fieldSlot!hframe(
             checkbox(),

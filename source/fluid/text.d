@@ -114,6 +114,14 @@ struct Text(T : Node) {
 
     private void resizeImpl(const Style style, Vector2 size, Vector2 dpi, bool wrap) @trusted {
 
+        // Destroy old texture if needed
+        if (texture !is texture.init) {
+
+            backend.unloadTexture(texture);
+            texture = texture.init;
+
+        }
+
         // Empty, nothing to do
         if (size.x < 1 || size.y < 1) return;
 
@@ -126,13 +134,6 @@ struct Text(T : Node) {
         style.typeface.draw(image, Rectangle(0, 0, size.tupleof), value, color!"fff", wrap);
 
         auto oldtexture = texture.id;
-
-        // Destroy old texture if needed
-        if (texture !is texture.init) {
-
-            backend.unloadTexture(texture);
-
-        }
 
         // Load texture
         texture = backend.loadTexture(image);

@@ -29,13 +29,10 @@ class Checkbox : InputNode!Node {
     mixin enableInputActions;
 
     /// Additional features available for checkbox styling.
-    static class Extra : StyleExtension {
+    static class Extra : typeof(super).Extra {
 
         /// Image to use for the checkmark.
         Image checkmark;
-
-        /// Checkmark texture cache, by image pointer.
-        static private TextureGC[Color*][FluidBackend] cache;
 
         this(Image checkmark) {
             this.checkmark = checkmark;
@@ -120,26 +117,9 @@ class Checkbox : InputNode!Node {
 
         // No valid extra data, ignore
         if (!extra) return null;
-        if (extra.checkmark.area == 0) return null;
 
-        // Check entries for this backend
-        auto entries = extra.cache.require(backend, new TextureGC[Color*]);
-        auto index = extra.checkmark.pixels.ptr;
-
-        // Check entries for this image
-        if (auto texture = index in entries) {
-
-            return texture;
-
-        }
-
-        // No entry, create one
-        else {
-
-            entries[index] = TextureGC(io, extra.checkmark);
-            return index in entries;
-
-        }
+        // Load the texture
+        return extra.getTexture(io, extra.checkmark);
 
     }
 
