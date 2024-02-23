@@ -39,8 +39,6 @@ enum FluidInputAction {
     // Input
     backspace,      /// Erase last character in an input.
     backspaceWord,  /// Erase last a word in an input.
-    increment,      /// Increment value in a number input.
-    decrement,      /// Decrement value in a number input.
     entryPrevious,  /// Navigate to the previous list entry.
     entryNext,      /// Navigate to the next list entry.
     entryUp,        /// Navigate up in a tree, eg. in the file picker.
@@ -801,6 +799,7 @@ interface FluidHoverable {
 
                     // Find the matching action
                     static foreach (actionType; __traits(getAttributes, overload))
+                    static if (isInputActionType!actionType)
                     if (InputActionID.from!actionType == action) {{
 
                         // Run the action if the stroke was performed

@@ -123,7 +123,7 @@ class NumberInput(T) : AbstractNumberInput {
     }
 
     /// Increase the value by a step.
-    @(FluidInputAction.increment)
+    @(FluidInputAction.scrollUp)
     override void increment() {
 
         evaluateImpl();
@@ -134,7 +134,7 @@ class NumberInput(T) : AbstractNumberInput {
     }
 
     /// Decrease the value by a step.
-    @(FluidInputAction.decrement)
+    @(FluidInputAction.scrollDown)
     override void decrement() {
 
         evaluateImpl();

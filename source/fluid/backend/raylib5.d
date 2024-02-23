@@ -390,7 +390,6 @@ class Raylib5Backend : FluidBackend {
             destination.y = floor(destination.y);
         }
 
-        const dpi = this.dpi;
         const source = Rectangle(0, 0, texture.width, texture.height);
 
         DrawTexturePro(texture, source, destination, Vector2(0, 0), 0, multiply(tint, this.tint));
