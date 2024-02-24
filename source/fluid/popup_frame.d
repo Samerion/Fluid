@@ -297,7 +297,10 @@ class PopupNodeAction : TreeAction {
         popup.drawAnchored();
 
         // Remove the popup if it has no focus
-        if (!popup.isFocused) stop;
+        if (!popup.isFocused) {
+            popup.remove();
+            stop;
+        }
 
 
     }

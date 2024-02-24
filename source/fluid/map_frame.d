@@ -1,5 +1,4 @@
-deprecated("map_space has been replaced with map_frame. Please switch before 0.7.0.")
-module fluid.map_space;
+module fluid.map_frame;
 
 import std.conv;
 import std.math;
@@ -7,24 +6,69 @@ import std.format;
 import std.algorithm;
 
 import fluid.node;
+import fluid.frame;
 import fluid.input;
-import fluid.space;
 import fluid.style;
 import fluid.utils;
 import fluid.actions;
 import fluid.backend;
 import fluid.container;
 
-public import fluid.map_frame : MapDropDirection, MapDropVector, MapPosition, dropVector;
-
 
 @safe:
-deprecated("MapFrame has been replaced with map_frame. Please switch before 0.7.0."):
 
 
-alias mapSpace = simpleConstructor!MapSpace;
+alias mapFrame = simpleConstructor!MapFrame;
 
-class MapSpace : Space {
+/// Defines the direction the node is "dropped from", that is, which corner of the object will be the anchor.
+/// Defaults to `start, start`, therefore, the supplied coordinate refers to the top-left of the object.
+///
+/// Automatic may be set to make it present common dropdown behavior — top-left by default, but will change if there
+/// is overflow.
+enum MapDropDirection {
+
+    start, center, end, automatic
+
+}
+
+struct MapDropVector {
+
+    MapDropDirection x, y;
+
+}
+
+struct MapPosition {
+
+    Vector2 coords;
+    MapDropVector drop;
+
+    alias coords this;
+
+}
+
+MapDropVector dropVector()() {
+
+    return MapDropVector.init;
+
+}
+
+MapDropVector dropVector(string dropXY)() {
+
+    return dropVector!(dropXY, dropXY);
+
+}
+
+MapDropVector dropVector(string dropX, string dropY)() {
+
+    enum val(string dropV) = dropV == "auto"
+        ? MapDropDirection.automatic
+        : dropV.to!MapDropDirection;
+
+    return MapDropVector(val!dropX, val!dropY);
+
+}
+
+class MapFrame : Frame {
 
     mixin DefineStyles;
 
@@ -239,7 +283,7 @@ class MapSpace : Space {
 
     protected override void drawImpl(Rectangle outer, Rectangle inner) {
 
-        /// Move the given box to mapSpace bounds
+        /// Move the given box to mapFrame bounds
         Vector2 moveToBounds(Vector2 coords, Vector2 size) {
 
             // Ignore if no overflow prevention is enabled
@@ -371,6 +415,7 @@ class MapSpace : Space {
 
     unittest {
 
+        import fluid.space;
         import fluid.structs : layout;
 
         class RectangleSpace : Space {
@@ -393,7 +438,7 @@ class MapSpace : Space {
         }
 
         auto io = new HeadlessBackend;
-        auto root = mapSpace(
+        auto root = mapFrame(
             layout!"fill",
 
             // Rectangles with same X and Y
@@ -458,7 +503,7 @@ class MapSpace : Space {
             if (preventOverflow) {
 
                 // Two rectangles overflow: one is completely outside the view, and one is only peeking in
-                // With overflow disabled, they should both be moved strictly inside the mapSpace
+                // With overflow disabled, they should both be moved strictly inside the mapFrame
                 io.assertRectangle(Rectangle(0, 0, 10, 10), color!"f0f");
                 io.assertRectangle(Rectangle(20, 0, 10, 10), color!"0ff");
                 io.assertRectangle(Rectangle(0, 20, 10, 10), color!"ff0");

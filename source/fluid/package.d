@@ -41,7 +41,7 @@ public import
     fluid.image_view,
     fluid.input,
     fluid.label,
-    fluid.map_space,
+    fluid.map_frame,
     fluid.node,
     fluid.number_input,
     fluid.onion_frame,
