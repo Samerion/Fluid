@@ -41,6 +41,7 @@ enum Chapter {
     @"Node slots" slots,
     @"Themes" themes,
     @"Writing forms" forms,
+    // @"Popups" popups,
 };
 
 /// The entrypoint prepares themes and the window. The UI is build in `createUI()`.
@@ -146,6 +147,7 @@ void startWindow(Node ui) {
     SetTraceLogLevel(TraceLogLevel.LOG_WARNING);
     InitWindow(1000, 750, "Fluid showcase");
     SetTargetFPS(60);
+    SetExitKey(0);
     scope (exit) CloseWindow();
 
     // Event loop

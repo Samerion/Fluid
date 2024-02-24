@@ -60,7 +60,7 @@ void spawnChildPopup(PopupFrame parent, PopupFrame popup) {
 
 /// This is an override of Frame to simplify creating popups: if clicked outside of it, it will disappear from
 /// the node tree.
-class PopupFrame : Frame, FluidFocusable {
+class PopupFrame : InputNode!Frame {
 
     mixin defineStyles;
     mixin makeHoverable;
@@ -149,7 +149,7 @@ class PopupFrame : Frame, FluidFocusable {
 
             // But in case we cannot fit the popup, we might need to reverse the direction
             // |=============|          |=============|
-            // |             | ↓ right  | ↓ left
+            // |             | ↓ right  | ↓ left      |
             // |        O------>        | <------O    |
             // |        |      |        | |      |    |
             // |        |      |        | |      |    |
@@ -193,17 +193,17 @@ class PopupFrame : Frame, FluidFocusable {
 
     }
 
-    protected void mouseImpl() {
+    protected override void mouseImpl() {
 
     }
 
-    protected bool focusImpl() {
+    protected override bool focusImpl() {
 
         return false;
 
     }
 
-    void focus() {
+    override void focus() {
 
         // Set focus to self
         tree.focus = this;
@@ -229,7 +229,10 @@ class PopupFrame : Frame, FluidFocusable {
 
     }
 
-    bool isFocused() const {
+    alias isFocused = typeof(super).isFocused;
+
+    @property
+    override bool isFocused() const {
 
         return childHasFocus
             || tree.focus is this
@@ -294,10 +297,7 @@ class PopupNodeAction : TreeAction {
         popup.drawAnchored();
 
         // Remove the popup if it has no focus
-        if (!popup.isFocused) {
-            popup.remove();
-            stop;
-        }
+        if (!popup.isFocused) stop;
 
 
     }
