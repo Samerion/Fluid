@@ -69,9 +69,9 @@ class NumberInput(T) : AbstractNumberInput {
 
     }
 
-    this(NodeParams params, void delegate() @safe submitted = null) {
+    this(NodeParams params, void delegate() @safe changed = null) {
 
-        super(params, submitted);
+        super(params, changed);
 
     }
 
@@ -98,6 +98,9 @@ class NumberInput(T) : AbstractNumberInput {
 
         // Update the text
         update();
+
+        // Call change callback
+        if (changed) changed();
 
     }
 
@@ -131,6 +134,9 @@ class NumberInput(T) : AbstractNumberInput {
         update();
         focus();
 
+        // Call change callback
+        if (changed) changed();
+
     }
 
     /// Decrease the value by a step.
@@ -141,6 +147,9 @@ class NumberInput(T) : AbstractNumberInput {
         value -= step;
         update();
         focus();
+
+        // Call change callback
+        if (changed) changed();
 
     }
 
@@ -164,6 +173,138 @@ class NumberInput(T) : AbstractNumberInput {
 
 }
 
+///
+unittest {
+
+    // intInput lets the user specify any integer value
+    intInput();
+
+    // Float input allows floating point values
+    floatInput();
+
+    // Specify a callback to update other components as the value of this input changes
+    IntInput myInput;
+
+    myInput = intInput(delegate {
+
+        int result = myInput.value;
+
+    });
+
+}
+
+unittest {
+
+    int calls;
+
+    auto io = new HeadlessBackend;
+    auto root = intInput(delegate {
+
+        calls++;
+
+    });
+
+    root.io = io;
+
+    // First frame: initial state
+    root.focus();
+    root.draw();
+
+    assert(root.value == 0);
+    assert(root.TextInput.value == "0");
+
+    // Second frame, type in "10"
+    io.nextFrame();
+    io.inputCharacter("10");
+    root.draw();
+
+    // Value should remain unchanged
+    assert(calls == 0);
+    assert(root.value == 0);
+    assert(root.TextInput.value.among("010", "10"));
+
+    // Hit enter to update
+    io.nextFrame;
+    io.press(KeyboardKey.enter);
+    root.draw();
+
+    assert(calls == 1);
+    assert(root.value == 10);
+    assert(root.TextInput.value == "10");
+
+    // Test math equations
+    io.nextFrame;
+    io.inputCharacter("+20*5");
+    io.release(KeyboardKey.enter);
+    root.focus();
+    root.draw();
+
+    assert(calls == 1);
+    assert(root.value == 10);
+    assert(root.TextInput.value == "10+20*5");
+
+    // Submit the expression
+    io.nextFrame;
+    io.press(KeyboardKey.enter);
+    root.draw();
+
+    assert(calls == 2);
+    assert(root.value != (10+20)*5);
+    assert(root.value == 110);
+    assert(root.TextInput.value == "110");
+
+    // Try incrementing
+    io.nextFrame;
+    io.mousePosition = start(root.spinner._lastRectangle);
+    io.press;
+    root.draw();
+
+    io.nextFrame;
+    io.release;
+    root.draw();
+
+    assert(calls == 3);
+    assert(root.value == 111);
+    assert(root.TextInput.value == "111");
+
+    // Try decrementing
+    io.nextFrame;
+    io.mousePosition = end(root.spinner._lastRectangle) - Vector2(1, 1);
+    io.press;
+    root.draw();
+
+    io.nextFrame;
+    io.release;
+    root.draw();
+
+    assert(calls == 4);
+    assert(root.value == 110);
+    assert(root.TextInput.value == "110");
+
+}
+
+unittest {
+
+    import std.math;
+
+    auto io = new HeadlessBackend;
+    auto root = floatInput();
+
+    root.io = io;
+
+    io.inputCharacter("10e8");
+    root.focus();
+    root.draw();
+
+    io.nextFrame;
+    io.press(KeyboardKey.enter);
+    root.draw();
+
+    assert(root.value.isClose(10e8));
+    assert(root.TextInput.value.among("1e+9", "1e+09"));
+
+}
+
 abstract class AbstractNumberInput : TextInput {
 
     mixin defineStyles;
@@ -176,9 +317,10 @@ abstract class AbstractNumberInput : TextInput {
 
     }
 
-    this(NodeParams params, void delegate() @safe submitted = null) {
+    this(NodeParams params, void delegate() @safe changed = null) {
 
-        super(params, "", submitted);
+        super(params, "");
+        super.changed = changed;
         super.value = "0";
         this.spinner = numberInputSpinner(.layout!"fill", &increment, &decrement);
 

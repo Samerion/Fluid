@@ -146,6 +146,27 @@ class Radiobox : Checkbox {
 
 }
 
+///
+unittest {
+
+    // Radioboxes are similar to checkboxes, except that only one in a group
+    // can be checked at a time
+    auto group = new RadioboxGroup;
+    auto box1 = radiobox(group);
+    auto box2 = radiobox(group);
+
+    box1.select();
+
+    assert(box1.isChecked);
+
+    // Checking the other box will uncheck the previous one
+    box2.select();
+
+    assert(!box1.isChecked);
+    assert(box2.isChecked);
+
+}
+
 class RadioboxGroup {
 
     /// Selected item.

@@ -70,9 +70,11 @@ static this() {
 
         NumberInputSpinner.styleAdd!q{
 
-            // Increment/decrement buttons, alpha channel only, 40
+            // Increment/decrement buttons, alpha channel only, 40×64
             enum file = (() @trusted => cast(ubyte[]) import("arrows-alpha"))();
             auto data = file.map!(a => Color(0, 0, 0, a)).array;
+
+            assert(data.length == 40*64, format!"wrong arrows-alpha size: %s"(data.length));
 
             mouseCursor = FluidMouseCursor.pointer;
             extra = new NumberInputSpinner.Extra(Image(data, 40, 64));
@@ -111,6 +113,8 @@ static this() {
             // Checkmark, alpha channel only, 64×50
             enum file = (() @trusted => cast(ubyte[]) import("checkmark-alpha"))();
             auto data = file.map!(a => Color(0, 0, 0, a)).array;
+
+            assert(data.length == 64*50, format!"wrong checkmark-alpha size: %s"(data.length));
 
             margin.sideX = 8;
             margin.sideY = 4;

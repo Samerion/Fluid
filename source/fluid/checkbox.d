@@ -56,13 +56,22 @@ class Checkbox : InputNode!Node {
 
     /// Create a new checkbox.
     /// Params:
-    ///     params = Layout/theme for the checkbox.
+    ///     params    = Layout/theme for the checkbox.
     ///     isChecked = Whether the checkbox should be checked or not.
-    this(NodeParams params, bool isChecked = false) {
+    ///     changed   = Callback to run whenever the user changes the value.
+    this(NodeParams params, bool isChecked, void delegate() @safe changed = null) {
+
+        this(params, changed);
+        this._isChecked = isChecked;
+
+    }
+
+    /// ditto
+    this(NodeParams params, void delegate() @safe changed = null) {
 
         super(params);
-        this._isChecked = isChecked;
         this.size = Vector2(10, 10);
+        this.changed = changed;
 
     }
 
@@ -165,5 +174,39 @@ class Checkbox : InputNode!Node {
             return "checkbox()";
 
     }
+
+}
+
+///
+unittest {
+
+    // Checkbox creates a toggleable button
+    auto myCheckbox = checkbox();
+
+    assert(!myCheckbox.isChecked);
+
+}
+
+unittest {
+
+    int changed;
+
+    auto io = new HeadlessBackend;
+    auto root = checkbox(delegate {
+
+        changed++;
+
+    });
+
+    root.io = io;
+    root.runInputAction!(FluidInputAction.press);
+
+    assert(changed == 1);
+    assert(root.isChecked);
+
+    root.runInputAction!(FluidInputAction.press);
+
+    assert(changed == 2);
+    assert(!root.isChecked);
 
 }
