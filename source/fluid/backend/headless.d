@@ -405,9 +405,12 @@ class HeadlessBackend : FluidBackend {
         => _justResized;
 
     /// Get or set the size of the window.
-    Vector2 windowSize(Vector2 value)
+    Vector2 windowSize(Vector2 value) {
 
-        => _windowSize = value;
+        resize(value);
+        return value;
+
+    }
 
     Vector2 windowSize() const
 

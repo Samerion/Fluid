@@ -785,8 +785,9 @@ interface FluidHoverable {
         bool runInputActionImpl(this This)(InputActionID action, bool active = true) {
 
             // Check if this class has implemented this method
-            assert(typeid(this) is typeid(This),
-                format!"%s is missing `mixin enableInputActions;`"(typeid(this)));
+            // BUG Breaks template types like nodeSlot
+            /*assert(typeid(this) is typeid(This),
+                format!"%s is missing `mixin enableInputActions;`"(typeid(this)));*/
 
             bool handled;
 

@@ -56,6 +56,7 @@ public import
     fluid.space,
     fluid.structs,
     fluid.style,
+    fluid.switch_slot,
     fluid.text_input,
     fluid.utils;
 
