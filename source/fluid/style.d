@@ -85,6 +85,8 @@ Style style(string init)(Style[] parents...) {
 
 }
 
+interface StyleExtension { }
+
 /// Contains the style for a node.
 class Style {
 
@@ -172,6 +174,11 @@ class Style {
         ///
         /// Custom image cursors are not supported yet.
         FluidMouseCursor mouseCursor;
+
+        /// Additional information for the node the style applies to.
+        ///
+        /// Ignored if mismatched.
+        StyleExtension extra;
 
         /// Get or set node opacity. Value in range [0, 1] — 0 is fully transparent, 1 is fully opaque.
         float opacity() const {
