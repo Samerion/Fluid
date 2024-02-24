@@ -220,7 +220,7 @@ abstract class AbstractSlider : InputNode!Node {
         const availableWidth = rail.width - handle.size.x;
         const handleOffset = availableWidth * index / (length - 1f);
         const handleRect = Rectangle(
-            rail.x + handleOffset, rail.y - handle.size.y/2,
+            rail.x + handleOffset, center(rail).y - handle.size.y/2,
             handle.size.x, handle.size.y,
         );
 
