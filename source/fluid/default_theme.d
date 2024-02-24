@@ -68,6 +68,19 @@ static this() {
 
         };
 
+        NumberInputSpinner.styleAdd!q{
+
+            // Increment/decrement buttons, alpha channel only, 40×64
+            enum file = (() @trusted => cast(ubyte[]) import("arrows-alpha"))();
+            auto data = file.map!(a => Color(0, 0, 0, a)).array;
+
+            assert(data.length == 40*64, format!"wrong arrows-alpha size: %s"(data.length));
+
+            mouseCursor = FluidMouseCursor.pointer;
+            extra = new NumberInputSpinner.Extra(Image(data, 40, 64));
+
+        };
+
         ScrollInput.styleAdd!q{
 
             backgroundColor = color("aaa");
@@ -80,8 +93,55 @@ static this() {
 
         };
 
+        AbstractSlider.styleAdd!q{
+
+            backgroundColor = color("ddd");
+
+        };
+
+        SliderHandle.styleAdd!q{
+
+            backgroundColor = color("aaa");
+
+        };
+
         FileInput.unselectedStyleAdd.backgroundColor = color("fff");
         FileInput.selectedStyleAdd.backgroundColor = color("ff512f");
+
+        Checkbox.styleAdd!q{
+
+            // Checkmark, alpha channel only, 64×50
+            enum file = (() @trusted => cast(ubyte[]) import("checkmark-alpha"))();
+            auto data = file.map!(a => Color(0, 0, 0, a)).array;
+
+            assert(data.length == 64*50, format!"wrong checkmark-alpha size: %s"(data.length));
+
+            margin.sideX = 8;
+            margin.sideY = 4;
+            border = 1;
+            padding = 1;
+            borderStyle = colorBorder(color("555"));
+            mouseCursor = FluidMouseCursor.pointer;
+
+            // Checkbox image
+            focusStyleAdd.backgroundColor = color("ddd");
+            checkedStyleAdd.extra = new Checkbox.Extra(Image(data, 64, 50));
+
+        };
+
+        Radiobox.styleAdd!q{
+
+            margin.sideX = 8;
+            margin.sideY = 4;
+            border = 0;
+            borderStyle = null;
+            padding = 2;
+            extra = new Radiobox.Extra(1, color("555"), color("5550"));
+
+            focusStyleAdd.backgroundColor = color("ddd");
+            checkedStyleAdd.extra = new Radiobox.Extra(1, color("555"), color("000"));
+
+        };
 
     };
 
