@@ -769,6 +769,13 @@ interface FluidHoverable {
         static assert(is(typeof(this) : Node),
             format!"%s : FluidHoverable must inherit from Node"(typeid(this)));
 
+        // For some reason, a simple alias to FluidHoverable.runInputAction doesn't work
+        final bool runInputAction(alias action)(bool active = true) {
+
+            return runInputAction(InputActionID.from!action, active);
+
+        }
+
         override bool runInputAction(InputActionID action, bool active = true) {
 
             return runInputActionImpl(action, active);
