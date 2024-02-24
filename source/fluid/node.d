@@ -108,7 +108,7 @@ abstract class Node : Styleable {
     private {
 
         /// If true, this node must update its size.
-        bool _requiresResize = true;
+        bool _resizePending = true;
 
         /// If true, this node is hidden and won't be rendered.
         bool _isHidden;
@@ -521,10 +521,17 @@ abstract class Node : Styleable {
 
     }
 
+    /// True if this node is pending a resize.
+    bool resizePending() const {
+
+        return _resizePending;
+
+    }
+
     /// Recalculate the window size before next draw.
     final void updateSize() scope {
 
-        if (tree) tree.root._requiresResize = true;
+        if (tree) tree.root._resizePending = true;
         // Tree might be null — if so, the node will be resized regardless
 
     }
@@ -612,8 +619,11 @@ abstract class Node : Styleable {
         // Update input
         tree.poll();
 
+        // Request a resize if the window was resized
+        if (tree.io.hasJustResized) updateSize();
+
         // Resize if required
-        if (tree.io.hasJustResized || _requiresResize) {
+        if (resizePending) {
 
             // Run beforeResize actions
             foreach (action; tree.filterActions) {
@@ -623,7 +633,7 @@ abstract class Node : Styleable {
             }
 
             resize(tree, theme, space);
-            _requiresResize = false;
+            _resizePending = false;
 
         }
 
