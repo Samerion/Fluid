@@ -42,7 +42,7 @@ alias hscrollable(alias T) = simpleConstructor!(ApplyRight!(ScrollFrame, "true")
 /// Implement scrolling for the given node.
 ///
 /// This only supports scrolling in one axis.
-class Scrollable(T : Node, string horizontalExpression) : T {
+class Scrollable(T : Node, string horizontalExpression) : T, AnyScrollable {
 
     mixin DefineStyles;
 
@@ -106,8 +106,8 @@ class Scrollable(T : Node, string horizontalExpression) : T {
 
     }
 
-    static if (is(typeof(this) : FluidContainer))
-    override Rectangle shallowScrollTo(const Node, Vector2, Rectangle parentBox, Rectangle childBox) {
+    /// Scroll to the given node.
+    Rectangle shallowScrollTo(const Node, Vector2, Rectangle parentBox, Rectangle childBox) {
 
         struct Position {
 
@@ -151,7 +151,7 @@ class Scrollable(T : Node, string horizontalExpression) : T {
         offset = scroll.to!ptrdiff_t - scrollBefore;
 
         // Apply child position
-        *position.start += offset;
+        *position.start -= offset;
 
         return childBox;
 
@@ -290,5 +290,13 @@ class Scrollable(T : Node, string horizontalExpression) : T {
         scrollBar.setScroll(scroll.to!ptrdiff_t + move.to!ptrdiff_t);
 
     }
+
+}
+
+interface AnyScrollable {
+
+    void setScroll(ptrdiff_t value);
+    ref inout(size_t) scroll() inout;
+    Rectangle shallowScrollTo(const Node, Vector2, Rectangle parentBox, Rectangle childBox);
 
 }

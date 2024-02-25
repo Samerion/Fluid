@@ -27,6 +27,15 @@ static this() {
 
         };
 
+        PopupFrame.styleAdd!q{
+
+            backgroundColor = color("fff");
+            border = 1;
+            padding = 8;
+            borderStyle = colorBorder(color("888a"));
+
+        };
+
         Button!().styleAdd!q{
 
             backgroundColor = color("eee");
