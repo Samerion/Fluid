@@ -611,7 +611,7 @@ class BuildOutline : TreeAction {
 
     }
 
-    override void beforeDraw(Node node, Rectangle space) @safe {
+    override void beforeResize(Node node, Vector2) @safe {
 
         const isHeading = node.theme.among(headingTheme, subheadingTheme);
 

@@ -266,16 +266,19 @@ class PopupNodeAction : TreeAction {
 
     }
 
-    override void beforeResize(Node root, Vector2 viewportSize) {
+    override void beforeResize(Node node, Vector2 viewportSize) {
+
+        // Only accept root resizes
+        if (node !is node.tree.root) return;
 
         // Perform the resize
-        popup.resizeInternal(root.tree, root.theme, viewportSize);
+        popup.resizeInternal(node.tree, node.theme, viewportSize);
 
         // First resize
         if (!hasResized) {
 
             // Give that popup focus
-            popup.previousFocus = root.tree.focus;
+            popup.previousFocus = node.tree.focus;
             popup.focus();
             hasResized = true;
 
