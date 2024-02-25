@@ -4,8 +4,8 @@ module fluid.actions;
 import fluid.node;
 import fluid.tree;
 import fluid.input;
+import fluid.scroll;
 import fluid.backend;
-import fluid.container;
 
 
 @safe:
@@ -65,6 +65,13 @@ FocusRecurseAction focusRecurseChildren(Node parent) {
     parent.queueAction(action);
 
     return action;
+
+}
+
+/// ditto
+FocusRecurseAction focusChild(Node parent) {
+
+    return focusRecurseChildren(parent);
 
 }
 
@@ -136,9 +143,21 @@ class FocusRecurseAction : TreeAction {
 /// Scroll so the given node becomes visible.
 /// Params:
 ///     node = Node to scroll to.
-void scrollIntoView(Node node) {
+///     alignToTop = If true, the top of the element will be aligned to the top of the scrollable area.
+ScrollIntoViewAction scrollIntoView(Node node, bool alignToTop = false) {
 
-    node.queueAction(new ScrollIntoViewAction);
+    auto action = new ScrollIntoViewAction;
+    node.queueAction(action);
+    action.alignToTop = alignToTop;
+
+    return action;
+
+}
+
+/// Scroll so that the given node appears at the top, if possible.
+ScrollIntoViewAction scrollToTop(Node node) {
+
+    return scrollIntoView(node, true);
 
 }
 
@@ -210,6 +229,9 @@ class ScrollIntoViewAction : TreeAction {
         Vector2 viewport;
         Rectangle childBox;
 
+        /// If true, try to display the child at the top.
+        bool alignToTop;
+
     }
 
     override void afterDraw(Node node, Rectangle, Rectangle paddingBox, Rectangle) {
@@ -234,11 +256,21 @@ class ScrollIntoViewAction : TreeAction {
         // Note: startNode is set until reached
         else if (startNode !is null) return;
 
-        // Reached a container node
-        else if (auto container = cast(FluidContainer) node) {
+        // Reached a scroll node
+        // TODO What if the container isn't an ancestor
+        else if (auto scrollable = cast(AnyScrollable) node) {
 
             // Perform the scroll
-            childBox = container.shallowScrollTo(node, viewport, paddingBox, childBox);
+            childBox = scrollable.shallowScrollTo(node, viewport, paddingBox, childBox);
+
+            // Aligning to top, make sure the child aligns with the parent
+            if (alignToTop && childBox.y > paddingBox.y) {
+
+                const offset = childBox.y - paddingBox.y;
+
+                scrollable.setScroll(scrollable.scroll + cast(size_t) offset);
+
+            }
 
         }
 
