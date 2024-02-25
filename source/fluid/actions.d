@@ -174,7 +174,7 @@ unittest {
     auto io = new HeadlessBackend(Vector2(10, viewportHeight));
     auto root = vscrollFrame(
         layout!(1, "fill"),
-        cast(Theme) null,
+        nullTheme,
 
         label("a"),
         label("b"),
@@ -196,24 +196,24 @@ unittest {
 
     // No theme so everything is as compact as it can be: the first label should be at the very top
     assert(positions[0].y.isClose(0));
-    assert(positions[1].y > positions[0].y);
-    assert(positions[2].y > positions[1].y);
 
     // It is reasonable to assume the text will be larger than 10 pixels (viewport height)
-    assert(positions[1].y > viewportHeight);
+    // Other text will not render, since it's offscreen
+    assert(positions.length == 1);
+
+    io.nextFrame;
+    root.draw();
 
     // TODO Because the label was hidden below the viewport, Fluid will align the bottom of the selected node with the
     // viewport which probably isn't appropriate in case *like this* where it should reveal the top of the node.
-    auto texture1 = io.textures.dropOne.front;
-    assert(root.scroll.isClose(texture1.position.y + texture1.height - viewportHeight));
+    auto texture1 = io.textures.front;
+    assert(isClose(texture1.position.y + texture1.height, viewportHeight));
+    assert(isClose(root.scroll, (root.scrollMax + 10) * 2/3 - 10));
 
     io.nextFrame;
     root.draw();
 
     auto scrolledPositions = getPositions();
-
-    // Make sure all the labels are scrolled
-    assert(equal!((a, b) => isClose(a.y - root.scroll, b.y))(positions, scrolledPositions));
 
     // TODO more tests. Scrolling while already in the viewport, scrolling while partially out of the view, etc.
 
