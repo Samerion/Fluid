@@ -145,8 +145,6 @@ unittest {
     assert(root.index == 1);
     assert(root.value == 2);
 
-    io.saveSVG("/tmp/fluid.svg");
-
 }
 
 abstract class AbstractSlider : InputNode!Node {
