@@ -57,7 +57,9 @@ public import
     fluid.structs,
     fluid.style,
     fluid.switch_slot,
+    fluid.text,
     fluid.text_input,
+    fluid.tree,
     fluid.utils;
 
 unittest {

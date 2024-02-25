@@ -25,6 +25,9 @@ enum maxContentSize = .sizeLimitX(1000);
 /// Reduced content width, used for document text.
 enum contentSize = .sizeLimitX(800);
 
+/// Sidebar width
+enum sidebarSize = .sizeLimitX(220);
+
 Theme mainTheme;
 Theme headingTheme;
 Theme subheadingTheme;
@@ -199,12 +202,31 @@ Space createUI(string initialChapter = null) @safe {
     import std.conv;
 
     Chapter currentChapter;
-    ScrollFrame root;
+    Frame root;
+    ScrollFrame contentWrapper;
     Space navigationBar;
     Label titleLabel;
     Button!() leftButton, rightButton;
 
-    auto content = nodeSlot!Node(.layout!(1, "fill"));
+    auto content = nodeSlot!Space(.layout!(1, "fill"));
+    auto outlineContent = vspace(.layout!"fill");
+    auto outline = vframe(
+        .layout!"fill",
+        button(
+            .layout!"fill",
+            "Top",
+            delegate {
+                contentWrapper.scrollStart();
+            }
+        ),
+        outlineContent,
+    );
+    auto sidebar = sizeLock!switchSlot(
+        .layout!(1, "end", "start"),
+        .sidebarSize,
+        outline,
+        null,
+    );
 
     void changeChapter(Chapter chapter) {
 
@@ -219,49 +241,77 @@ Space createUI(string initialChapter = null) @safe {
         rightButton.isHidden = chapter == Chapter.max;
 
         // Scroll back to top
-        root.scrollStart();
+        contentWrapper.scrollStart();
+
+        // Collect all headings and build the outline
+        content.queueAction(new BuildOutline(outlineContent));
 
     }
 
     // All content is scrollable
-    root = vscrollFrame(
+    root = onionFrame(
         .layout!"fill",
-        .mainTheme,
-        sizeLock!vspace(
-            .layout!(1, "center", "start"),
-            .maxContentSize,
 
-            // Back button
-            navigationBar = sizeLock!hspace(
-                .layout!"center",
-                .contentSize,
-                button("← Back to navigation", delegate {
-                    content = exampleList(&changeChapter);
-                    navigationBar.hide();
-                    leftButton.hide();
-                    rightButton.hide();
-                }),
-                titleLabel = label(""),
-            ).hide(),
+        // Content
+        contentWrapper = vscrollFrame(
+            .layout!"fill",
+            .mainTheme,
+            sizeLock!vspace(
+                .layout!(1, "center", "start"),
+                .maxContentSize,
 
-            // Content
-            content = exampleList(&changeChapter),
+                // Navigation
+                navigationBar = sizeLock!hspace(
+                    .layout!"center",
+                    .contentSize,
 
-            sizeLock!hframe(
-                .layout!"center",
-                .contentSize,
+                    // Back button
+                    button("← Back to navigation", delegate {
+                        content = exampleList(&changeChapter);
+                        navigationBar.hide();
+                        leftButton.hide();
+                        rightButton.hide();
+                        outlineContent.children = [];
+                    }),
+                    sidebar.retry(
+                        popupButton("Outline", outline),
+                    ),
+                    titleLabel = label(""),
+                ).hide(),
 
-                // Left button
-                leftButton = button("Previous chapter", delegate {
-                    changeChapter(to!Chapter(currentChapter-1));
-                }).hide(),
+                // Content
+                content = exampleList(&changeChapter),
 
-                // Right button
-                rightButton = button(.layout!(1, "end"), "Next chapter", delegate {
-                    changeChapter(to!Chapter(currentChapter+1));
-                }).hide(),
+                sizeLock!hframe(
+                    .layout!"center",
+                    .contentSize,
+
+                    // Left button
+                    leftButton = button("Previous chapter", delegate {
+                        changeChapter(to!Chapter(currentChapter-1));
+                    }).hide(),
+
+                    // Right button
+                    rightButton = button(.layout!(1, "end"), "Next chapter", delegate {
+                        changeChapter(to!Chapter(currentChapter+1));
+                    }).hide(),
+                ),
             ),
-        )
+        ),
+
+        // Add sidebar on the left
+        hspace(
+            .layout!"fill",
+            sidebar,
+
+            // Reserve space for content
+            sizeLock!vspace(.maxContentSize),
+
+            // Balance the sidebar to center the content
+            vspace(.layout!1),
+        ),
+
+
     );
 
     if (initialChapter) {
@@ -544,6 +594,50 @@ class FunctionVisitor : ASTVisitor {
         // Save the result
         functions[decl.name.text] = output[].outdent.strip;
         decl.accept(this);
+
+    }
+
+}
+
+class BuildOutline : TreeAction {
+
+    Space outline;
+    Children children;
+
+    this(Space outline) @safe {
+
+        this.outline = outline;
+        outline.children = [];
+
+    }
+
+    override void beforeDraw(Node node, Rectangle space) @safe {
+
+        const isHeading = node.theme.among(headingTheme, subheadingTheme);
+
+        // Headings only
+        if (!isHeading) return;
+
+        // Add a button to the outline
+        if (auto label = cast(Label) node) {
+
+            children ~= button(
+                .layout!"fill",
+                label.text,
+                delegate {
+                    label.scrollToTop();
+                }
+            );
+
+        }
+
+    }
+
+    override void afterTree() @safe {
+
+        super.afterTree();
+        outline.children = children;
+        outline.updateSize();
 
     }
 
