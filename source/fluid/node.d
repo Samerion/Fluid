@@ -625,13 +625,6 @@ abstract class Node : Styleable {
         // Resize if required
         if (resizePending) {
 
-            // Run beforeResize actions
-            foreach (action; tree.filterActions) {
-
-                action.beforeResize(this, space);
-
-            }
-
             resize(tree, theme, space);
             _resizePending = false;
 
@@ -918,6 +911,12 @@ abstract class Node : Styleable {
 
         const currentStyle = pickStyle().orInit;
 
+        // Get the visible part of the padding box — so overflowed content doesn't get mouse focus
+        const visibleBox = tree.intersectScissors(paddingBox);
+
+        // Check if hovered
+        _isHovered = hoveredImpl(visibleBox, tree.io.mousePosition);
+
         // Set tint
         auto previousTint = io.tint;
         io.tint = multiply(previousTint, currentStyle.tint);
@@ -930,12 +929,6 @@ abstract class Node : Styleable {
             // TODO wouldn't it be better to draw borders as background?
 
         }
-
-        // Get the visible part of the padding box — so overflowed content doesn't get mouse focus
-        const visibleBox = tree.intersectScissors(paddingBox);
-
-        // Check if hovered
-        _isHovered = hoveredImpl(visibleBox, tree.io.mousePosition);
 
         // Check if the mouse stroke started this node
         const heldElsewhere = !tree.io.isPressed(MouseButton.left)
@@ -1066,6 +1059,13 @@ abstract class Node : Styleable {
                     space, spacingX, spacingY)
             );
 
+            // Run beforeResize actions
+            foreach (action; tree.filterActions) {
+
+                action.beforeResize(this, space);
+
+            }
+
             // Resize the node
             resizeImpl(space);
 
@@ -1097,8 +1097,8 @@ abstract class Node : Styleable {
 
     /// Draw this node.
     ///
-    /// Note: Instead of directly accessing `style`, use `pickStyle` to enable temporarily changing styles as visual
-    /// feedback. `resize` should still use the normal style.
+    /// Tip: Instead of directly accessing `style`, use `pickStyle` to enable temporarily changing styles as visual
+    ///     feedback. `resize` should still use the normal style.
     ///
     /// Params:
     ///     paddingBox = Area which should be used by the node. It should include styling elements such as background,
