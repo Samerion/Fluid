@@ -612,6 +612,9 @@ abstract class Node : Styleable {
         // Clear mouse hover if LMB is up
         if (!isLMBHeld) tree.hover = null;
 
+        // Clear scroll
+        tree.scroll = null;
+
         // Clear focus info
         tree.focusDirection = FocusDirection(tree.focusBox);
         tree.focusBox = Rectangle(float.nan);
@@ -666,6 +669,9 @@ abstract class Node : Styleable {
 
         // Note: pressed, not released; released activates input events, pressed activates focus
         const mousePressed = tree.io.isPressed(MouseButton.left);
+
+        // Update scroll input
+        if (tree.scroll) tree.scroll.scrollImpl(io.scroll);
 
         // Mouse is hovering an input node
         // Note that nodes will remain in tree.hover if LMB is pressed to prevent "hover slipping" — actions should
@@ -934,8 +940,25 @@ abstract class Node : Styleable {
         const heldElsewhere = !tree.io.isPressed(MouseButton.left)
             && isLMBHeld;
 
-        // Update global hover unless mouse is being held down or mouse focus is disabled for this node
-        if (isHovered && !heldElsewhere && !ignoreMouse) tree.hover = this;
+        // Check for hover, unless ignored by this node
+        if (isHovered && !ignoreMouse) {
+
+            // Set global hover as long as the mouse isn't held down
+            if (!heldElsewhere) tree.hover = this;
+
+            // Update scroll
+            if (auto scrollable = cast(FluidScrollable) this) {
+
+                // Only if scrolling is possible
+                if (scrollable.canScroll(io.scroll))  {
+
+                    tree.scroll = scrollable;
+
+                }
+
+            }
+
+        }
 
         assert(
             only(size.tupleof).all!isFinite,

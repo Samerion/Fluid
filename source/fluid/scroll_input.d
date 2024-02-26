@@ -61,16 +61,16 @@ class ScrollInput : InputNode!Node {
         bool horizontal;
 
         /// Amount of pixels the page is scrolled down.
-        size_t position;
+        ptrdiff_t position;
 
         /// Available space to scroll.
         ///
         /// Note: visible box size, and therefore scrollbar handle length, are determined from the space occupied by the
         /// scrollbar.
-        size_t availableSpace;
+        ptrdiff_t availableSpace;
 
         /// Width of the scrollbar.
-        size_t width = 10;
+        ptrdiff_t width = 10;
 
     }
 
@@ -98,7 +98,7 @@ class ScrollInput : InputNode!Node {
         Vector2 grabPosition;
 
         /// Start position of the mouse at the beginning of the grab.
-        size_t startPosition;
+        ptrdiff_t startPosition;
 
     }
 
@@ -118,21 +118,21 @@ class ScrollInput : InputNode!Node {
     /// Set the scroll to a value clamped between start and end. Doesn't trigger the `changed` event.
     void setScroll(ptrdiff_t value) {
 
-        position = cast(size_t) value.clamp(0, scrollMax);
+        position = cast(ptrdiff_t) value.clamp(0, scrollMax);
 
     }
 
     /// Ditto
     void setScroll(float value) {
 
-        position = cast(size_t) value.clamp(0, scrollMax);
+        position = cast(ptrdiff_t) value.clamp(0, scrollMax);
 
     }
 
     /// Get the maximum value this container can be scrolled to. Requires at least one draw.
-    size_t scrollMax() const {
+    ptrdiff_t scrollMax() const {
 
-        return cast(size_t) max(0, availableSpace - pageLength);
+        return cast(ptrdiff_t) max(0, availableSpace - pageLength);
 
     }
 
@@ -294,7 +294,7 @@ class ScrollInput : InputNode!Node {
             ? &isDown!(FluidInputAction.scrollLeft)
             : &isDown!(FluidInputAction.scrollUp);
 
-        const speed = cast(size_t) actionScrollSpeed;
+        const speed = cast(ptrdiff_t) actionScrollSpeed;
         const change
             = isPlus(tree)  ? +speed
             : isMinus(tree) ? -speed
@@ -320,9 +320,9 @@ class ScrollInput : InputNode!Node {
     }
 
     /// Scroll page length used for `pageUp` and `pageDown` navigation.
-    protected size_t scrollPageLength() const {
+    protected ptrdiff_t scrollPageLength() const {
 
-        return cast(size_t) (scrollbarLength * 3/4);
+        return cast(ptrdiff_t) (scrollbarLength * 3/4);
 
     }
 

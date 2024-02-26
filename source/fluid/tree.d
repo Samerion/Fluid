@@ -386,6 +386,9 @@ struct LayoutTree {
     /// `FluidFocusable.focus()` instead and let the node set the value on its own.
     FluidFocusable focus;
 
+    /// Deepest hovered scrollable node.
+    FluidScrollable scroll;
+
     /// Focus direction data.
     FocusDirection focusDirection;
 
