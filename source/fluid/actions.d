@@ -258,17 +258,17 @@ class ScrollIntoViewAction : TreeAction {
 
         // Reached a scroll node
         // TODO What if the container isn't an ancestor
-        else if (auto scrollable = cast(AnyScrollable) node) {
+        else if (auto scrollable = cast(FluidScrollable) node) {
 
             // Perform the scroll
-            childBox = scrollable.shallowScrollTo(node, viewport, paddingBox, childBox);
+            childBox = scrollable.shallowScrollTo(target, paddingBox, childBox);
 
             // Aligning to top, make sure the child aligns with the parent
             if (alignToTop && childBox.y > paddingBox.y) {
 
                 const offset = childBox.y - paddingBox.y;
 
-                scrollable.setScroll(scrollable.scroll + cast(size_t) offset);
+                scrollable.scroll = scrollable.scroll + cast(size_t) offset;
 
             }
 

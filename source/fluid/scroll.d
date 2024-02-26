@@ -42,7 +42,7 @@ alias hscrollable(alias T) = simpleConstructor!(ApplyRight!(ScrollFrame, "true")
 /// Implement scrolling for the given node.
 ///
 /// This only supports scrolling in one axis.
-class Scrollable(T : Node, string horizontalExpression) : T, AnyScrollable {
+class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable {
 
     mixin DefineStyles;
 
@@ -68,8 +68,24 @@ class Scrollable(T : Node, string horizontalExpression) : T, AnyScrollable {
     }
 
     /// Distance the node is scrolled by.
-    @property
-    ref inout(size_t) scroll() inout { return scrollBar.position; }
+    ref inout(ptrdiff_t) scroll() inout {
+
+        return scrollBar.position;
+
+    }
+
+    ptrdiff_t scroll() const {
+
+        return scrollBar.position;
+
+    }
+
+    ptrdiff_t scroll(ptrdiff_t value) {
+
+        setScroll(value);
+        return value;
+
+    }
 
     /// Check if the underlying node is horizontal.
     private bool isHorizontal() const {
@@ -106,8 +122,14 @@ class Scrollable(T : Node, string horizontalExpression) : T, AnyScrollable {
 
     }
 
+    Rectangle shallowScrollTo(const Node child, Vector2, Rectangle parentBox, Rectangle childBox) {
+
+        return shallowScrollTo(child, parentBox, childBox);
+
+    }
+
     /// Scroll to the given node.
-    Rectangle shallowScrollTo(const Node, Vector2, Rectangle parentBox, Rectangle childBox) {
+    Rectangle shallowScrollTo(const Node, Rectangle parentBox, Rectangle childBox) {
 
         struct Position {
 
@@ -208,20 +230,9 @@ class Scrollable(T : Node, string horizontalExpression) : T, AnyScrollable {
 
     override void drawImpl(Rectangle outer, Rectangle inner) {
 
-        // Note: Mouse input detection is primitive, awaiting #13 and #14 to help better identify when should the mouse
-        // affect this frame.
-
-        // This node doesn't use InputNode because it doesn't take focus, and we don't want to cause related
-        // accessibility issues. It can function perfectly without it, or at least until above note gets fixed.
-        // Then, a "FluidHoverable" interface could possibly become a thing.
-
-        // TODO Is the above still true?
-
-        scrollBar.horizontal = isHorizontal;
-
         auto scrollBarRect = outer;
 
-        if (isHovered) inputImpl();
+        scrollBar.horizontal = isHorizontal;
 
         // Scroll the given rectangle horizontally
         if (isHorizontal) {
@@ -275,14 +286,24 @@ class Scrollable(T : Node, string horizontalExpression) : T, AnyScrollable {
 
     }
 
-    /// Implementation of mouse input
-    private void inputImpl() @trusted {
+    bool canScroll(Vector2 valueVec) const {
 
-        // TODO do this via input actions somehow https://git.samerion.com/Samerion/Fluid/issues/89
         const speed = scrollBar.scrollSpeed;
         const value = isHorizontal
-            ? io.scroll.x
-            : io.scroll.y;
+            ? valueVec.x
+            : valueVec.y;
+        const move = speed * value;
+
+        return move.to!ptrdiff_t != 0;
+
+    }
+
+    void scrollImpl(Vector2 valueVec) {
+
+        const speed = scrollBar.scrollSpeed;
+        const value = isHorizontal
+            ? valueVec.x
+            : valueVec.y;
         const move = speed * value;
         // io.deltaTime is irrelevant here
 
@@ -290,13 +311,5 @@ class Scrollable(T : Node, string horizontalExpression) : T, AnyScrollable {
         scrollBar.setScroll(scroll.to!ptrdiff_t + move.to!ptrdiff_t);
 
     }
-
-}
-
-interface AnyScrollable {
-
-    void setScroll(ptrdiff_t value);
-    ref inout(size_t) scroll() inout;
-    Rectangle shallowScrollTo(const Node, Vector2, Rectangle parentBox, Rectangle childBox);
 
 }
