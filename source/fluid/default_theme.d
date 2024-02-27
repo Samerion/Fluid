@@ -140,7 +140,7 @@ static this() {
 
                 when!"a.isFocused"(backgroundColor = color("ddd")),
                 when!"a.isChecked"(
-                    extra = new NumberInputSpinner.Extra(loadBWImage!"checkmark-alpha"(64, 50)),
+                    extra = new Checkbox.Extra(loadBWImage!"checkmark-alpha"(64, 50)),
                 ),
             ),
             rule!Radiobox(

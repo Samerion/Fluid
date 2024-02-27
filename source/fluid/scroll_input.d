@@ -1,5 +1,6 @@
 module fluid.scroll_input;
 
+import std.math;
 import std.algorithm;
 
 import fluid.node;
@@ -107,7 +108,11 @@ class ScrollInput : InputNode!Node {
     /// Set the scroll to a value clamped between start and end. Doesn't trigger the `changed` event.
     void setScroll(float value) {
 
+        assert(scrollMax.isFinite);
+
         position = value.clamp(0, scrollMax);
+
+        assert(position.isFinite);
 
     }
 
@@ -137,8 +142,6 @@ class ScrollInput : InputNode!Node {
     }
 
     override protected void drawImpl(Rectangle paddingBox, Rectangle contentBox) @trusted {
-
-        import std.math;
 
         _isPressed = checkIsPressed;
 
@@ -384,7 +387,7 @@ class ScrollInputHandle : Node, FluidHoverable {
 
     }
 
-    @(FluidInputAction.press, .whileDown)
+    @(FluidInputAction.press, fluid.input.whileDown)
     protected void whileDown() @trusted {
 
         const mousePosition = io.mousePosition;
@@ -407,6 +410,11 @@ class ScrollInputHandle : Node, FluidHoverable {
         // handlePosition * scrollMax / length
 
         const scrollDifference = totalMove * parent.scrollMax / (parent.length - length);
+
+        assert(totalMove.isFinite);
+        assert(parent.length.isFinite);
+        assert(length.isFinite);
+        assert(scrollDifference.isFinite);
 
         // Move the scrollbar
         parent.setScroll(startScrollPosition + scrollDifference);
