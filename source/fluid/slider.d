@@ -31,7 +31,7 @@ class Slider(T) : AbstractSlider {
     }
 
     /// Create the slider using the given range as the set of possible values/steps.
-    this(R)(NodeParams params, R range, size_t index, void delegate() @safe changed = null)
+    this(R)(R range, size_t index, void delegate() @safe changed = null)
     if (is(ElementType!R == T)) {
 
         this(params, range, changed);
@@ -40,13 +40,12 @@ class Slider(T) : AbstractSlider {
     }
 
     /// ditto
-    this(R)(NodeParams params, R range, void delegate() @safe changed = null)
+    this(R)(R range, void delegate() @safe changed = null)
     if (is(ElementType!R == T)) {
 
         // TODO special-case empty sliders instead?
         assert(!range.empty, "Slider range must not be empty.");
 
-        super(params);
         this.range = new SliderRangeImpl!R(range);
         this.changed = changed;
 
@@ -178,11 +177,10 @@ abstract class AbstractSlider : InputNode!Node {
 
     }
 
-    this(NodeParams params) {
+    this() {
 
         alias sliderHandle = simpleConstructor!SliderHandle;
 
-        super(params);
         this.handle = sliderHandle();
 
     }
@@ -348,9 +346,8 @@ class SliderHandle : Node {
 
     }
 
-    this(NodeParams params) {
+    this() {
 
-        super(params);
         ignoreMouse = true;
 
     }

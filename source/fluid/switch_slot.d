@@ -57,9 +57,8 @@ class SwitchSlot : Node {
 
     }
 
-    this(NodeParams params, Node[] nodes...) {
+    this(Node[] nodes...) {
 
-        super(params);
         this.availableNodes ~= nodes;
 
     }

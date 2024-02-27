@@ -96,10 +96,7 @@ class MapFrame : Frame {
 
     /// Construct the space. Arguments are either nodes, or positions/vectors affecting the next node added through
     /// the constructor.
-    this(T...)(NodeParams params, T children)
-    if (!T.length || is(T[0] == Vector2) || is(T[0] == DropVector) || is(T[0] == Position) || is(T[0] : Node)) {
-
-        super(params);
+    this(T...)(T children) {
 
         Position position;
 
@@ -129,56 +126,6 @@ class MapFrame : Frame {
 
                 addChild(child, position);
                 position = Position.init;
-
-            }
-
-        }
-
-    }
-
-    deprecated("Use this(NodeParams, T) instead") {
-
-        static foreach (index; 0..BasicNodeParamLength) {
-
-            /// Construct the space. Arguments are either nodes, or positions/vectors affecting the next node added through
-            /// the constructor.
-            this(T...)(BasicNodeParam!index params, T children)
-            if (!T.length || is(T[0] == Vector2) || is(T[0] == DropVector) || is(T[0] == Position) || is(T[0] : Node)) {
-
-                super(params);
-
-                Position position;
-
-                static foreach (child; children) {
-
-                    // Update position
-                    static if (is(typeof(child) == Position)) {
-
-                        position = child;
-
-                    }
-
-                    else static if (is(typeof(child) == MapDropVector)) {
-
-                        position.drop = child;
-
-                    }
-
-                    else static if (is(typeof(child) == Vector2)) {
-
-                        position.coords = child;
-
-                    }
-
-                    // Add child
-                    else {
-
-                        addChild(child, position);
-                        position = Position.init;
-
-                    }
-
-                }
 
             }
 
@@ -423,7 +370,6 @@ class MapFrame : Frame {
             Color color;
 
             this(Color color) @safe {
-                super(NodeParams.init);
                 this.color = color;
             }
 

@@ -58,13 +58,11 @@ class Radiobox : Checkbox {
 
     /// Create a new radiobox.
     /// Params:
-    ///     params = Layout/theme for the radiobox.
     ///     group = Group the radiobox belongs to.
     ///     isChecked = Whether the radiobox should be checked or not.
-    this(NodeParams params, RadioboxGroup group, bool isChecked = false) {
+    this(RadioboxGroup group, bool isChecked = false) {
 
         this.group = group;
-        super(params);
 
         // Select if ordered to do so.
         if (isChecked) group.selection = this;
