@@ -628,6 +628,76 @@ class SimpledisplayBackend : FluidBackend {
 
     }
 
+    void drawCircle(Vector2 center, float radius, Color color) @trusted {
+
+        import std.math;
+
+        if (radius == 0) return;
+
+        center = toSdpyCoords(center);
+        color = multiply(color, tint);
+
+        openglDraw();
+        glBegin(GL_QUADS);
+
+        const stepCount = 18;
+        const step = PI / stepCount;
+
+        foreach (i; 0..stepCount) {
+
+            const angle = 2 * step * i;
+
+            glColor4ub(color.tupleof);
+            vertex(center);
+            vertex(center + radius * Vector2(
+                cos(angle + step*2) * hidpiScale.x,
+                sin(angle + step*2) * hidpiScale.y));
+            vertex(center + radius * Vector2(
+                cos(angle + step) * hidpiScale.x,
+                sin(angle + step) * hidpiScale.y));
+            vertex(center + radius * Vector2(
+                cos(angle) * hidpiScale.x,
+                sin(angle) * hidpiScale.y));
+
+        }
+
+        glEnd();
+
+    }
+
+    void drawCircleOutline(Vector2 center, float radius, Color color) @trusted {
+
+        import std.math;
+
+        if (radius == 0) return;
+
+        center = toSdpyCoords(center);
+        color = multiply(color, tint);
+
+        openglDraw();
+        glBegin(GL_LINES);
+
+        const stepCount = 36;
+        const step = 2 * PI / stepCount;
+
+        foreach (i; 0..stepCount) {
+
+            const angle = i * step;
+
+            glColor4ub(color.tupleof);
+            vertex(center + radius * Vector2(
+                cos(angle) * hidpiScale.x,
+                sin(angle) * hidpiScale.y));
+            vertex(center + radius * Vector2(
+                cos(angle + step) * hidpiScale.x,
+                sin(angle + step) * hidpiScale.y));
+
+        }
+
+        glEnd();
+
+    }
+
     void drawRectangle(Rectangle rectangle, Color color) @trusted {
 
         drawRectangleImpl(toSdpyCoords(rectangle), color);

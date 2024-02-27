@@ -13,6 +13,7 @@ import fluid.backend;
 /// A interface for nodes that contain and control other nodes.
 ///
 /// See_Also: https://git.samerion.com/Samerion/Fluid/issues/14
+deprecated("FluidContainer is to be removed in 0.7.0")
 interface FluidContainer {
 
     /// Scroll towards the given children node. This should change the parent's properties (without affecting the child)

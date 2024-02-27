@@ -24,6 +24,33 @@ abstract class Node {
     public import fluid.structs : NodeAlign, Layout;
     public import fluid.structs : Align = NodeAlign;
 
+    static class Extra {
+
+        private struct CacheKey {
+
+            Color* color;
+            FluidBackend backend;
+
+        }
+
+        /// Styling texture cache, by image pointer.
+        private TextureGC[CacheKey] cache;
+
+        /// Load a texture from the image. May return null if there's no valid image.
+        TextureGC* getTexture(FluidBackend backend, Image image) @trusted {
+
+            // No image
+            if (image.area == 0) return null;
+
+            const key = CacheKey(image.pixels.ptr, backend);
+
+            // Find or create the entry
+            return &cache.require(key, TextureGC(backend, image));
+
+        }
+
+    }
+
     public {
 
         /// Tree data for the node. Note: requires at least one draw before this will work.
@@ -50,7 +77,7 @@ abstract class Node {
     private {
 
         /// If true, this node must update its size.
-        bool _requiresResize = true;
+        bool _resizePending = true;
 
         /// If true, this node is hidden and won't be rendered.
         bool _isHidden;
@@ -446,10 +473,17 @@ abstract class Node {
 
     }
 
+    /// True if this node is pending a resize.
+    bool resizePending() const {
+
+        return _resizePending;
+
+    }
+
     /// Recalculate the window size before next draw.
     final void updateSize() scope {
 
-        if (tree) tree.root._requiresResize = true;
+        if (tree) tree.root._resizePending = true;
         // Tree might be null — if so, the node will be resized regardless
 
     }
@@ -532,6 +566,9 @@ abstract class Node {
         // Clear mouse hover if LMB is up
         if (!isLMBHeld) tree.hover = null;
 
+        // Clear scroll
+        tree.scroll = null;
+
         // Clear focus info
         tree.focusDirection = FocusDirection(tree.focusBox);
         tree.focusBox = Rectangle(float.nan);
@@ -539,18 +576,14 @@ abstract class Node {
         // Update input
         tree.poll();
 
+        // Request a resize if the window was resized
+        if (tree.io.hasJustResized) updateSize();
+
         // Resize if required
-        if (tree.io.hasJustResized || _requiresResize) {
-
-            // Run beforeResize actions
-            foreach (action; tree.filterActions) {
-
-                action.beforeResize(this, space);
-
-            }
+        if (resizePending) {
 
             resize(tree, theme, space);
-            _requiresResize = false;
+            _resizePending = false;
 
         }
 
@@ -586,6 +619,9 @@ abstract class Node {
 
         // Note: pressed, not released; released activates input events, pressed activates focus
         const mousePressed = tree.io.isPressed(MouseButton.left);
+
+        // Update scroll input
+        if (tree.scroll) tree.scroll.scrollImpl(io.scroll);
 
         // Mouse is hovering an input node
         // Note that nodes will remain in tree.hover if LMB is pressed to prevent "hover slipping" — actions should
@@ -829,23 +865,48 @@ abstract class Node {
 
         const currentStyle = pickStyle();
 
+        // Get the visible part of the padding box — so overflowed content doesn't get mouse focus
+        const visibleBox = tree.intersectScissors(paddingBox);
+
+        // Check if hovered
+        _isHovered = hoveredImpl(visibleBox, tree.io.mousePosition);
+
         // Set tint
         auto previousTint = io.tint;
         io.tint = multiply(previousTint, currentStyle.tint);
         scope (exit) io.tint = previousTint;
 
-        // Get the visible part of the main box — so overflowed content doesn't get mouse focus
-        const visibleBox = tree.intersectScissors(mainBox);
+        // If there's a border active, draw it
+        if (style && currentStyle.borderStyle) {
 
-        // Check if hovered
-        _isHovered = hoveredImpl(visibleBox, tree.io.mousePosition);
+            currentStyle.borderStyle.apply(io, borderBox, style.border);
+            // TODO wouldn't it be better to draw borders as background?
+
+        }
 
         // Check if the mouse stroke started this node
         const heldElsewhere = !tree.io.isPressed(MouseButton.left)
             && isLMBHeld;
 
-        // Update global hover unless mouse is being held down or mouse focus is disabled for this node
-        if (isHovered && !heldElsewhere && !ignoreMouse) tree.hover = this;
+        // Check for hover, unless ignored by this node
+        if (isHovered && !ignoreMouse) {
+
+            // Set global hover as long as the mouse isn't held down
+            if (!heldElsewhere) tree.hover = this;
+
+            // Update scroll
+            if (auto scrollable = cast(FluidScrollable) this) {
+
+                // Only if scrolling is possible
+                if (scrollable.canScroll(io.scroll))  {
+
+                    tree.scroll = scrollable;
+
+                }
+
+            }
+
+        }
 
         assert(
             only(size.tupleof).all!isFinite,
@@ -974,6 +1035,13 @@ abstract class Node {
                     space, spacingX, spacingY)
             );
 
+            // Run beforeResize actions
+            foreach (action; tree.filterActions) {
+
+                action.beforeResize(this, space);
+
+            }
+
             // Resize the node
             resizeImpl(space);
 
@@ -1005,8 +1073,8 @@ abstract class Node {
 
     /// Draw this node.
     ///
-    /// Note: Instead of directly accessing `style`, use `pickStyle` to enable temporarily changing styles as visual
-    /// feedback. `resize` should still use the normal style.
+    /// Tip: Instead of directly accessing `style`, use `pickStyle` to enable temporarily changing styles as visual
+    ///     feedback. `resize` should still use the normal style.
     ///
     /// Params:
     ///     paddingBox = Area which should be used by the node. It should include styling elements such as background,
@@ -1025,7 +1093,7 @@ abstract class Node {
     /// Params:
     ///     rect          = Area the node should be drawn in, as provided by drawImpl.
     ///     mousePosition = Current mouse position within the window.
-    protected abstract bool hoveredImpl(Rectangle rect, Vector2 mousePosition) const;
+    protected abstract bool hoveredImpl(Rectangle rect, Vector2 mousePosition);
 
     alias ImplHoveredRect = implHoveredRect;
 

@@ -11,7 +11,6 @@ import std.typecons;
 import std.algorithm;
 
 import fluid.space;
-import fluid.frame;
 import fluid.label;
 import fluid.utils;
 import fluid.input;
@@ -20,6 +19,7 @@ import fluid.backend;
 import fluid.button;
 import fluid.structs;
 import fluid.text_input;
+import fluid.popup_frame;
 
 alias fileInput = simpleConstructor!FileInput;
 
@@ -34,7 +34,7 @@ alias FluidFilePicker = FileInput;
 /// A file picker node.
 ///
 /// Note, this node is hidden by default, use `show` to show.
-class FileInput : InputNode!Frame {
+class FileInput : PopupFrame {
 
     // TODO maybe create a generic "search all" component? Maybe something that could automatically collect all
     //      button data?

@@ -272,9 +272,6 @@ abstract class TreeAction {
 
     }
 
-    /// Called before the tree is resized. Called before `beforeTree`.
-    void beforeResize(Node root, Vector2 viewportSpace) { }
-
     /// Called before the tree is drawn. Keep in mind this might not be called if the action is started when tree
     /// iteration has already begun.
     /// Params:
@@ -282,7 +279,13 @@ abstract class TreeAction {
     ///     viewport = Screen space for the node.
     void beforeTree(Node root, Rectangle viewport) { }
 
+    /// Called before a node is resized.
+    void beforeResize(Node node, Vector2 viewportSpace) { }
+
     /// Called before each `drawImpl` call of any node in the tree, so supplying parent nodes before their children.
+    ///
+    /// This might not be called if the node is offscreen. If you need to find all nodes, try `beforeResize`.
+    ///
     /// Params:
     ///     node       = Node that's about to be drawn.
     ///     space      = Space given for the node.
@@ -314,6 +317,9 @@ abstract class TreeAction {
     }
 
     /// Called after each `drawImpl` call of any node in the tree, so supplying children nodes before their parents.
+    ///
+    /// This might not be called if the node is offscreen. If you need to find all nodes, try `beforeResize`.
+    ///
     /// Params:
     ///     node       = Node that's about to be drawn.
     ///     space      = Space given for the node.
@@ -379,6 +385,9 @@ struct LayoutTree {
     /// Changing this value directly is discouraged. Some nodes might not want the focus! Be gentle, call
     /// `FluidFocusable.focus()` instead and let the node set the value on its own.
     FluidFocusable focus;
+
+    /// Deepest hovered scrollable node.
+    FluidScrollable scroll;
 
     /// Focus direction data.
     FocusDirection focusDirection;
@@ -446,6 +455,13 @@ struct LayoutTree {
         assert(defaultFluidBackend, "Cannot create LayoutTree; no backend was chosen, and no default is set.");
 
         this(root, defaultFluidBackend);
+
+    }
+
+    /// Returns true if this branch requested a resize or is pending a resize.
+    bool resizePending() const {
+
+        return root.resizePending;
 
     }
 

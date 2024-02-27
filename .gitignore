@@ -10,3 +10,4 @@ build/
 *.lst
 /tags
 .DS_Store
+*~

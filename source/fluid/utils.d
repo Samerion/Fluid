@@ -159,6 +159,18 @@ bool contains(Rectangle rectangle, Vector2 point) {
 
 }
 
+/// Check if the two rectangles overlap.
+bool overlap(Rectangle a, Rectangle b) {
+
+    const x = start(b).x <= a.x && a.x <= end(b).x
+        ||    start(a).x <= b.x && b.x <= end(a).x;
+    const y = start(b).y <= a.y && a.y <= end(b).y
+        ||    start(a).y <= b.y && b.y <= end(a).y;
+
+    return x && y;
+
+}
+
 // Extremely useful Rectangle utilities
 
 /// Get the top-left corner of a rectangle.
