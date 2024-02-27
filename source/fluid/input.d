@@ -716,9 +716,6 @@ interface FluidHoverable {
 
     private final bool runInputActionsImpl(bool mouse) {
 
-        // Ignore mouse events if not hovered
-        if (mouse && !isHovered) return false;
-
         auto tree = asNode.tree;
         bool handled;
 
@@ -800,7 +797,7 @@ interface FluidHoverable {
                     alias inputActionUDAs = getUDAs!(overload, InputAction);
 
                     // Check for `@whileDown`
-                    enum activateWhileDown = hasUDA!(overload, whileDown);
+                    enum activateWhileDown = hasUDA!(overload, fluid.input.whileDown);
 
                     static assert(inputActionUDAs.length == 0,
                         format!"Please use @(%s) instead of @InputAction!(%1$s)"(inputActionUDAs[0].type));

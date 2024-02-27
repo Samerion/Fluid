@@ -160,6 +160,13 @@ struct Style {
 
         }
 
+        // Update the default typeface if none is assigned
+        else {
+
+            Typeface.defaultTypeface.dpi = dpi;
+
+        }
+
     }
 
     /// Get current typeface, or fallback to default.
