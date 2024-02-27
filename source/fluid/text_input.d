@@ -94,12 +94,13 @@ class TextInput : InputNode!Node {
         minSize = size;
 
         // Set height to at least the font size
-        minSize.y = max(minSize.y, style.font.lineHeight);
+        minSize.y = max(minSize.y, style.getTypeface.lineHeight);
 
         // Set the label text
         contentLabel.text = (value == "") ? placeholder : value;
 
         // Resize the label
+        contentLabel.activeStyle = style;
         contentLabel.resize(tree, theme, Vector2(0, minSize.y));
 
     }
@@ -133,8 +134,8 @@ class TextInput : InputNode!Node {
         // Add a blinking caret
         if (timeSecs % (blinkTime*2) < blinkTime) {
 
-            const lineHeight = style.typeface.lineHeight;
-            const margin = style.typeface.lineHeight / 10f;
+            const lineHeight = style.getTypeface.lineHeight;
+            const margin = lineHeight / 10f;
 
             // Put the caret at the start if the placeholder is shown
             const textWidth = value.length

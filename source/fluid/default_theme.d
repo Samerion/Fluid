@@ -4,11 +4,15 @@ import fluid.node;
 import fluid.frame;
 import fluid.style;
 import fluid.button;
+import fluid.slider;
 import fluid.backend;
+import fluid.checkbox;
+import fluid.radiobox;
 import fluid.typeface;
 import fluid.file_input;
 import fluid.text_input;
 import fluid.popup_frame;
+import fluid.number_input;
 import fluid.scroll_input;
 
 /// Theme with no properties set.
@@ -23,6 +27,23 @@ Theme nullTheme;
 Theme fluidDefaultTheme;
 
 static this() {
+
+    Image loadBWImage(string filename)(int width, int height) @trusted {
+
+        import std.array;
+        import std.format;
+        import std.algorithm;
+
+        const area = width * height;
+
+        auto file = cast(ubyte[]) import(filename);
+        auto data = file.map!(a => Color(0, 0, 0, a)).array;
+
+        assert(data.length == area, format!"Wrong %s area %s, expected %s"(filename, data.length, area));
+
+        return Image(data, width, height);
+
+    }
 
     with (Rule) {
 
@@ -69,6 +90,16 @@ static this() {
                     backgroundColor = color("#fff5"),
                 ),
             ),
+            rule!NumberInputSpinner(
+                mouseCursor = FluidMouseCursor.pointer,
+                extra = new NumberInputSpinner.Extra(loadBWImage!"arrows-alpha"(40, 64)),
+            ),
+            rule!AbstractSlider(
+                backgroundColor = color("#ddd"),
+            ),
+            rule!SliderHandle(
+                backgroundColor = color("#aaa"),
+            ),
             rule!ScrollInput(
                 backgroundColor = color("#eee"),
             ),
@@ -85,21 +116,45 @@ static this() {
                 borderStyle = colorBorder(color("#555a")),
             ),
             /*
-        PopupFrame.styleAdd!q{
+            PopupFrame.styleAdd!q{
 
-            backgroundColor = color("fff");
-            border = 1;
-            padding = 8;
-            borderStyle = colorBorder(color("888a"));
+                backgroundColor = color("fff");
+                border = 1;
+                padding = 8;
+                borderStyle = colorBorder(color("888a"));
 
-        };
-
-        Button!().styleAdd!q{
+            };
             */
             rule!FileInputSuggestion(
                 margin = 0,
                 backgroundColor = color("#fff"),
                 when!"a.isSelected"(backgroundColor = color("#55b9ff"))
+            ),
+            rule!Checkbox(
+                margin.sideX = 8,
+                margin.sideY = 4,
+                border = 1,
+                padding = 1,
+                borderStyle = colorBorder(color("555")),
+                mouseCursor = FluidMouseCursor.pointer,
+
+                when!"a.isFocused"(backgroundColor = color("ddd")),
+                when!"a.isChecked"(
+                    extra = new NumberInputSpinner.Extra(loadBWImage!"checkmark-alpha"(64, 50)),
+                ),
+            ),
+            rule!Radiobox(
+                margin.sideX = 8,
+                margin.sideY = 4,
+                border = 0,
+                borderStyle = null,
+                padding = 2,
+                extra = new Radiobox.Extra(1, color("555"), color("5550")),
+
+                when!"a.isFocused"(backgroundColor = color("ddd")),
+                when!"a.isChecked"(
+                    extra = new Radiobox.Extra(1, color("555"), color("000"))
+                ),
             ),
         );
 
@@ -138,8 +193,6 @@ static this() {
             checkedStyleAdd.extra = new Radiobox.Extra(1, color("555"), color("000"));
 
         };
-
-    };
         */
 
     }

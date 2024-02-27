@@ -116,8 +116,7 @@ abstract class Node {
         Theme theme(Theme value) @trusted {
 
             _theme = cast(Theme) value;
-            _style = Style.init;
-            assert(!_style);
+            reloadStyles();
             return _theme;
 
         }
@@ -163,11 +162,7 @@ abstract class Node {
     ///
     /// See_Also:
     ///     `fluid.utils.simpleConstructor`
-    this() {
-
-        _style = Style.init;
-
-    }
+    this() { }
 
     bool opEquals(const Node otherNode) const {
 
@@ -877,7 +872,7 @@ abstract class Node {
         scope (exit) io.tint = previousTint;
 
         // If there's a border active, draw it
-        if (style && currentStyle.borderStyle) {
+        if (currentStyle.borderStyle) {
 
             currentStyle.borderStyle.apply(io, borderBox, style.border);
             // TODO wouldn't it be better to draw borders as background?
@@ -1007,11 +1002,6 @@ abstract class Node {
         tree.actions ~= _queuedActions;
         _queuedActions = null;
 
-        // Load styles
-        if (!style) reloadStyles();
-
-        assert(style);
-
 
         // The node is hidden, reset size
         if (isHidden) minSize = Vector2(0, 0);
@@ -1129,9 +1119,9 @@ abstract class Node {
     }
 
     /// Reload style from the current theme.
-    protected void reloadStyles()
-    out (; _style)
-    do {
+    protected void reloadStyles() {
+
+        import fluid.typeface;
 
         // Reset style
         _style = Style.init;
