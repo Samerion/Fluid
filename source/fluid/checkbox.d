@@ -56,20 +56,18 @@ class Checkbox : InputNode!Node {
 
     /// Create a new checkbox.
     /// Params:
-    ///     params    = Layout/theme for the checkbox.
     ///     isChecked = Whether the checkbox should be checked or not.
     ///     changed   = Callback to run whenever the user changes the value.
-    this(NodeParams params, bool isChecked, void delegate() @safe changed = null) {
+    this(bool isChecked, void delegate() @safe changed = null) {
 
-        this(params, changed);
+        this(changed);
         this._isChecked = isChecked;
 
     }
 
     /// ditto
-    this(NodeParams params, void delegate() @safe changed = null) {
+    this(void delegate() @safe changed = null) {
 
-        super(params);
         this.size = Vector2(10, 10);
         this.changed = changed;
 

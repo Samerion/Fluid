@@ -69,9 +69,9 @@ class NumberInput(T) : AbstractNumberInput {
 
     }
 
-    this(NodeParams params, void delegate() @safe changed = null) {
+    this(void delegate() @safe changed = null) {
 
-        super(params, changed);
+        super(changed);
 
     }
 
@@ -317,9 +317,9 @@ abstract class AbstractNumberInput : TextInput {
 
     }
 
-    this(NodeParams params, void delegate() @safe changed = null) {
+    this(void delegate() @safe changed = null) {
 
-        super(params, "");
+        super("");
         super.changed = changed;
         super.value = "0";
         this.spinner = numberInputSpinner(.layout!"fill", &increment, &decrement);
@@ -371,9 +371,8 @@ class NumberInputSpinner : Node, FluidHoverable {
 
     }
 
-    this(NodeParams params, void delegate() @safe incremented, void delegate() @safe decremented) {
+    this(void delegate() @safe incremented, void delegate() @safe decremented) {
 
-        super(params);
         this.incremented = incremented;
         this.decremented = decremented;
 
