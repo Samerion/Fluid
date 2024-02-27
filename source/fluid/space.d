@@ -12,7 +12,6 @@ import fluid.style;
 import fluid.utils;
 import fluid.backend;
 import fluid.children;
-import fluid.container;
 
 
 @safe:
@@ -34,7 +33,7 @@ alias hspace = simpleConstructor!(Space, (a) {
 });
 
 /// ditto
-class Space : Node, FluidContainer {
+class Space : Node {
 
     public {
 
@@ -82,13 +81,6 @@ class Space : Node, FluidContainer {
     void opOpAssign(string operator : "~", T)(T nodes) {
 
         children ~= nodes;
-
-    }
-
-    override Rectangle shallowScrollTo(const Node, Vector2, Rectangle, Rectangle childBox) {
-
-        // no-op, reordering should not be done without explicit orders
-        return childBox;
 
     }
 

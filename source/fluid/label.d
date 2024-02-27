@@ -100,6 +100,15 @@ class Label : Node {
 
     }
 
+    override string toString() const {
+
+        import std.range;
+        import std.format;
+
+        return format!"Label(%(%s%))"(only(text.toString));
+
+    }
+
 }
 
 ///

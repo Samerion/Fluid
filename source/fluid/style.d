@@ -89,6 +89,11 @@ struct Style {
         @Themable
         FluidMouseCursor mouseCursor;
 
+        /// Additional information for the node the style applies to.
+        ///
+        /// Ignored if mismatched.
+        Node.Extra extra;
+
         /// Get or set node opacity. Value in range [0, 1] — 0 is fully transparent, 1 is fully opaque.
         float opacity() const {
 

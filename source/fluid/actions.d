@@ -4,8 +4,8 @@ module fluid.actions;
 import fluid.node;
 import fluid.tree;
 import fluid.input;
+import fluid.scroll;
 import fluid.backend;
-import fluid.container;
 
 
 @safe:
@@ -15,10 +15,14 @@ import fluid.container;
 /// the next draw. If calling `focusRecurseChildren`, the subject of the call will be excluded from taking focus.
 /// Params:
 ///     parent = Container node to search in.
-void focusRecurse(Node parent) {
+FocusRecurseAction focusRecurse(Node parent) {
+
+    auto action = new FocusRecurseAction;
 
     // Perform a tree action to find the child
-    parent.queueAction(new FocusRecurseAction);
+    parent.queueAction(action);
+
+    return action;
 
 }
 
@@ -54,12 +58,20 @@ unittest {
 }
 
 /// ditto
-void focusRecurseChildren(Node parent) {
+FocusRecurseAction focusRecurseChildren(Node parent) {
 
     auto action = new FocusRecurseAction;
     action.excludeStartNode = true;
-
     parent.queueAction(action);
+
+    return action;
+
+}
+
+/// ditto
+FocusRecurseAction focusChild(Node parent) {
+
+    return focusRecurseChildren(parent);
 
 }
 
@@ -98,6 +110,7 @@ class FocusRecurseAction : TreeAction {
     public {
 
         bool excludeStartNode;
+        void delegate(FluidFocusable) @safe finished;
 
     }
 
@@ -115,6 +128,9 @@ class FocusRecurseAction : TreeAction {
             // Give it focus
             focusable.focus();
 
+            // Submit the result
+            if (finished) finished(focusable);
+
             // We're done here
             stop;
 
@@ -127,9 +143,21 @@ class FocusRecurseAction : TreeAction {
 /// Scroll so the given node becomes visible.
 /// Params:
 ///     node = Node to scroll to.
-void scrollIntoView(Node node) {
+///     alignToTop = If true, the top of the element will be aligned to the top of the scrollable area.
+ScrollIntoViewAction scrollIntoView(Node node, bool alignToTop = false) {
 
-    node.queueAction(new ScrollIntoViewAction);
+    auto action = new ScrollIntoViewAction;
+    node.queueAction(action);
+    action.alignToTop = alignToTop;
+
+    return action;
+
+}
+
+/// Scroll so that the given node appears at the top, if possible.
+ScrollIntoViewAction scrollToTop(Node node) {
+
+    return scrollIntoView(node, true);
 
 }
 
@@ -146,7 +174,7 @@ unittest {
     auto io = new HeadlessBackend(Vector2(10, viewportHeight));
     auto root = vscrollFrame(
         layout!(1, "fill"),
-        Theme.init,
+        nullTheme,
 
         label("a"),
         label("b"),
@@ -168,24 +196,24 @@ unittest {
 
     // No theme so everything is as compact as it can be: the first label should be at the very top
     assert(positions[0].y.isClose(0));
-    assert(positions[1].y > positions[0].y);
-    assert(positions[2].y > positions[1].y);
 
     // It is reasonable to assume the text will be larger than 10 pixels (viewport height)
-    assert(positions[1].y > viewportHeight);
+    // Other text will not render, since it's offscreen
+    assert(positions.length == 1);
+
+    io.nextFrame;
+    root.draw();
 
     // TODO Because the label was hidden below the viewport, Fluid will align the bottom of the selected node with the
     // viewport which probably isn't appropriate in case *like this* where it should reveal the top of the node.
-    auto texture1 = io.textures.dropOne.front;
-    assert(root.scroll.isClose(texture1.position.y + texture1.height - viewportHeight));
+    auto texture1 = io.textures.front;
+    assert(isClose(texture1.position.y + texture1.height, viewportHeight));
+    assert(isClose(root.scroll, (root.scrollMax + 10) * 2/3 - 10));
 
     io.nextFrame;
     root.draw();
 
     auto scrolledPositions = getPositions();
-
-    // Make sure all the labels are scrolled
-    assert(equal!((a, b) => isClose(a.y - root.scroll, b.y))(positions, scrolledPositions));
 
     // TODO more tests. Scrolling while already in the viewport, scrolling while partially out of the view, etc.
 
@@ -200,6 +228,9 @@ class ScrollIntoViewAction : TreeAction {
 
         Vector2 viewport;
         Rectangle childBox;
+
+        /// If true, try to display the child at the top.
+        bool alignToTop;
 
     }
 
@@ -225,11 +256,21 @@ class ScrollIntoViewAction : TreeAction {
         // Note: startNode is set until reached
         else if (startNode !is null) return;
 
-        // Reached a container node
-        else if (auto container = cast(FluidContainer) node) {
+        // Reached a scroll node
+        // TODO What if the container isn't an ancestor
+        else if (auto scrollable = cast(FluidScrollable) node) {
 
             // Perform the scroll
-            childBox = container.shallowScrollTo(node, viewport, paddingBox, childBox);
+            childBox = scrollable.shallowScrollTo(target, paddingBox, childBox);
+
+            // Aligning to top, make sure the child aligns with the parent
+            if (alignToTop && childBox.y > paddingBox.y) {
+
+                const offset = childBox.y - paddingBox.y;
+
+                scrollable.scroll = scrollable.scroll + cast(size_t) offset;
+
+            }
 
         }
 

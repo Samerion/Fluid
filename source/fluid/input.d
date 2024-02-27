@@ -68,7 +68,7 @@ immutable struct InputActionID {
     this(IA : InputAction!actionType, alias actionType)(IA) immutable {
 
         this.id = cast(size_t) &IA._id;
-        debug this.name = fullyQualifiedName!actionType;
+        debug this.name = fullyQualifiedName!(IA.type);
 
     }
 
@@ -693,13 +693,56 @@ interface FluidHoverable {
 
     }
 
-    /// Run input actions for the node.
+    /// Run input actions.
+    ///
+    /// Use `mixin enableInputActions` to implement. Manual implementation is discouraged.
+    bool runInputAction(InputActionID action, bool active = true);
+
+    final bool runInputAction(alias action)(bool active = true) {
+
+        return runInputAction(InputActionID.from!action, active);
+
+    }
+
+    /// Run mouse input actions for the node.
     ///
     /// Internal. `Node` calls this for the focused node every frame, falling back to `mouseImpl` if this returns
     /// false.
-    ///
-    /// Implement by adding `mixin enableInputActions` in your class.
-    bool runMouseInputActions();
+    final bool runMouseInputActions() {
+
+        return runInputActionsImpl(true);
+
+    }
+
+    private final bool runInputActionsImpl(bool mouse) {
+
+        // Ignore mouse events if not hovered
+        if (mouse && !isHovered) return false;
+
+        auto tree = asNode.tree;
+        bool handled;
+
+        // Run all active actions
+        foreach (binding; tree.activeActions[]) {
+
+            if (InputStroke.isMouseItem(binding.trigger) != mouse) continue;
+
+            handled = runInputAction(binding.action, true) || handled;
+
+        }
+
+        // Run all "while down" actions
+        foreach (binding; tree.downActions[]) {
+
+            if (InputStroke.isMouseItem(binding.trigger) != mouse) continue;
+
+            handled = runInputAction(binding.action, false) || handled;
+
+        }
+
+        return handled;
+
+    }
 
     mixin template makeHoverable() {
 
@@ -718,101 +761,82 @@ interface FluidHoverable {
 
     mixin template enableInputActions() {
 
+        import std.string;
+        import std.traits;
         import fluid.node;
+        import fluid.input;
 
         static assert(is(typeof(this) : Node),
             format!"%s : FluidHoverable must inherit from Node"(typeid(this)));
 
-        override bool runMouseInputActions() {
+        // For some reason, a simple alias to FluidHoverable.runInputAction doesn't work
+        final bool runInputAction(alias action)(bool active = true) {
 
-            return runInputActionsImpl!(true, typeof(this));
+            return runInputAction(InputActionID.from!action, active);
 
         }
 
-        /// Please use enableInputActions instead of this.
-        private bool runInputActionsImpl(bool mouse, This)() {
+        override bool runInputAction(InputActionID action, bool active = true) {
 
-            import std.string, std.traits, std.algorithm;
+            return runInputActionImpl(action, active);
+
+        }
+
+        bool runInputActionImpl(this This)(InputActionID action, bool active = true) {
 
             // Check if this class has implemented this method
-            assert(typeid(this) is typeid(This),
-                format!"%s is missing `mixin enableInputActions;`"(typeid(this)));
+            // BUG Breaks template types like nodeSlot
+            /*assert(typeid(this) is typeid(This),
+                format!"%s is missing `mixin enableInputActions;`"(typeid(this)));*/
+
+            bool handled;
 
             // Check each member
             static foreach (memberName; __traits(allMembers, This)) {
 
                 static foreach (overload; __traits(getOverloads, This, memberName)) {{
 
-                    alias member = __traits(getMember, This, memberName);
+                    // Make sure no method is marked `@InputAction`, that's invalid usage
+                    alias inputActionUDAs = getUDAs!(overload, InputAction);
 
-                    // Filter out to functions only, also ignore deprecated functions
-                    enum isMethod = !__traits(isDeprecated, member)
-                        && __traits(compiles, isFunction!member)
-                        && isFunction!member;
-                    // TODO maybe somehow issue an error if an input action is marked deprecated?
+                    // Check for `@whileDown`
+                    enum activateWhileDown = hasUDA!(overload, whileDown);
 
-                    static if (isMethod) {
+                    static assert(inputActionUDAs.length == 0,
+                        format!"Please use @(%s) instead of @InputAction!(%1$s)"(inputActionUDAs[0].type));
 
-                        // Make sure no method is marked `@InputAction`, that's invalid usage
-                        alias inputActionUDAs = getUDAs!(overload, fluid.input.InputAction);
+                    // Find the matching action
+                    static foreach (actionType; __traits(getAttributes, overload))
+                    static if (isInputActionType!actionType)
+                    if (InputActionID.from!actionType == action) {{
 
-                        // Check for `@whileDown`
-                        enum activateWhileDown = hasUDA!(overload, fluid.input.whileDown);
+                        // Run the action if the stroke was performed
+                        if (activateWhileDown || active) {
 
-                        static assert(inputActionUDAs.length == 0,
-                            format!"Please use @(%s) instead of @InputAction!(%1$s)"(inputActionUDAs[0].type));
+                            // Pass the action type if applicable
+                            static if (__traits(compiles, overload(actionType))) {
 
-                        // Find all bound actions
-                        static foreach (actionType; __traits(getAttributes, overload)) {
+                                overload(actionType);
 
-                            static if (isInputActionType!actionType) {{
+                            }
 
-                                // Find out if there's any
-                                const down = mouse
-                                    ? tree.isMouseDown!actionType
-                                    : tree.isFocusDown!actionType;
+                            // TODO Support action ID?
 
-                                // Check if the stroke is being held down
-                                if (down) {
-
-                                    // Find the correct trigger condition
-                                    // Ignore mouse release events if the node is not hovered anymore
-                                    const condition
-                                        = activateWhileDown ? down
-                                        : mouse ? tree.isMouseActive!actionType && isHovered
-                                        : tree.isFocusActive!actionType;
-
-                                    // Run the action if the stroke was performed
-                                    if (condition) {
-
-                                        // Pass the action type if applicable
-                                        static if (__traits(compiles, overload(actionType))) {
-
-                                            overload(actionType);
-
-                                        }
-
-                                        // Run empty
-                                        else overload();
-
-                                    }
-
-                                    // Mark as handled
-                                    return true;
-
-                                }
-
-                            }}
+                            // Run empty
+                            else overload();
 
                         }
 
-                    }
+                        // Mark as handled
+                        handled = true;
+
+                    }}
 
                 }}
 
             }
 
-            return false;
+            return handled;
 
         }
 
@@ -843,25 +867,38 @@ interface FluidFocusable : FluidHoverable {
     ///
     /// Internal. `Node` calls this for the focused node every frame, falling back to `keyboardImpl` if this returns
     /// false.
-    ///
-    /// Implement by adding `mixin enableInputActions` in your class.
-    bool runFocusInputActions();
+    final bool runFocusInputActions() {
 
-    /// Mixin template to enable input actions in this class.
-    mixin template enableInputActions() {
-
-        private import fluid.input;
-
-        mixin FluidHoverable.enableInputActions;
-
-        // Implement the interface method
-        override bool runFocusInputActions() {
-
-            return runInputActionsImpl!(false, typeof(this));
-
-        }
+        return runInputActionsImpl(false);
 
     }
+
+}
+
+/// An interface to be implemented by nodes that accept scroll input.
+interface FluidScrollable {
+
+    /// Returns true if the node can react to given scroll.
+    ///
+    /// Should return false if the given scroll has no effect, either because it scroll on an unsupported axis, or
+    /// because the axis is currently maxed out.
+    bool canScroll(Vector2 value) const;
+
+    /// React to scroll wheel input.
+    void scrollImpl(Vector2 value);
+
+    /// Scroll to given child node.
+    /// Params:
+    ///     child     = Child to scroll to.
+    ///     parentBox = Outer box of this node (the scrollable).
+    ///     childBox  = Outer box of the child node (the target).
+    Rectangle shallowScrollTo(const Node child, Rectangle parentBox, Rectangle childBox);
+
+    /// Get current scroll value.
+    float scroll() const;
+
+    /// Set scroll value.
+    float scroll(float value);
 
 }
 

@@ -1,4 +1,4 @@
-module fluid.map_space;
+module fluid.map_frame;
 
 import std.conv;
 import std.math;
@@ -6,8 +6,8 @@ import std.format;
 import std.algorithm;
 
 import fluid.node;
+import fluid.frame;
 import fluid.input;
-import fluid.space;
 import fluid.style;
 import fluid.utils;
 import fluid.actions;
@@ -18,7 +18,7 @@ import fluid.container;
 @safe:
 
 
-alias mapSpace = simpleConstructor!MapSpace;
+alias mapFrame = simpleConstructor!MapFrame;
 
 /// Defines the direction the node is "dropped from", that is, which corner of the object will be the anchor.
 /// Defaults to `start, start`, therefore, the supplied coordinate refers to the top-left of the object.
@@ -68,7 +68,7 @@ MapDropVector dropVector(string dropX, string dropY)() {
 
 }
 
-class MapSpace : Space {
+class MapFrame : Frame {
 
     alias DropDirection = MapDropDirection;
     alias DropVector = MapDropVector;
@@ -228,7 +228,7 @@ class MapSpace : Space {
 
     protected override void drawImpl(Rectangle outer, Rectangle inner) {
 
-        /// Move the given box to mapSpace bounds
+        /// Move the given box to mapFrame bounds
         Vector2 moveToBounds(Vector2 coords, Vector2 size) {
 
             // Ignore if no overflow prevention is enabled
@@ -360,6 +360,7 @@ class MapSpace : Space {
 
     unittest {
 
+        import fluid.space;
         import fluid.structs : layout;
 
         class RectangleSpace : Space {
@@ -381,7 +382,7 @@ class MapSpace : Space {
         }
 
         auto io = new HeadlessBackend;
-        auto root = mapSpace(
+        auto root = mapFrame(
             layout!"fill",
 
             // Rectangles with same X and Y
@@ -446,7 +447,7 @@ class MapSpace : Space {
             if (preventOverflow) {
 
                 // Two rectangles overflow: one is completely outside the view, and one is only peeking in
-                // With overflow disabled, they should both be moved strictly inside the mapSpace
+                // With overflow disabled, they should both be moved strictly inside the mapFrame
                 io.assertRectangle(Rectangle(0, 0, 10, 10), color!"f0f");
                 io.assertRectangle(Rectangle(20, 0, 10, 10), color!"0ff");
                 io.assertRectangle(Rectangle(0, 20, 10, 10), color!"ff0");

@@ -84,7 +84,7 @@ class NodeSlot(T : Node) : Node {
 
     }
 
-    protected override bool hoveredImpl(Rectangle rect, Vector2 position) const {
+    protected override bool hoveredImpl(Rectangle rect, Vector2 position) {
 
         if (!value) return false;
 
@@ -92,7 +92,7 @@ class NodeSlot(T : Node) : Node {
         if (value.ignoreMouse) return false;
 
         // hoveredImpl may be private... uhhh
-        return (cast(const Node) value).hoveredImpl(rect, position);
+        return (cast(Node) value).hoveredImpl(rect, position);
 
     }
 
