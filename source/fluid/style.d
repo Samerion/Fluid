@@ -92,6 +92,7 @@ struct Style {
         /// Additional information for the node the style applies to.
         ///
         /// Ignored if mismatched.
+        @Themable
         Node.Extra extra;
 
         /// Get or set node opacity. Value in range [0, 1] — 0 is fully transparent, 1 is fully opaque.
@@ -158,6 +159,13 @@ struct Style {
             typeface.dpi = dpi;
 
         }
+
+    }
+
+    /// Get current typeface, or fallback to default.
+    const(Typeface) getTypeface() const {
+
+        return either(typeface, Typeface.defaultTypeface);
 
     }
 

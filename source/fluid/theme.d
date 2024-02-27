@@ -392,11 +392,6 @@ struct Selector {
     /// True if all tags in this selector are present on the given node.
     bool testTags(TagList tags) {
 
-        import std.stdio;
-        if (this.tags.length) {
-            debug writefln!"node %s testing against %s"(tags, this.tags);
-        }
-
         // TODO linear search if there's only one tag
         return this.tags.intersect(tags).walkLength == this.tags.length;
 
