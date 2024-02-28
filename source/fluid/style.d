@@ -74,6 +74,9 @@ struct Style {
         /// See: `isSideArray`
         float[4] padding = 0;
 
+        /// Margin/gap between two neighboring elements; for container nodes that support it.
+        float gap = 0;
+
         /// Border style to use.
         FluidBorder borderStyle;
 

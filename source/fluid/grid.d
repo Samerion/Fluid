@@ -266,8 +266,8 @@ class Grid : Frame {
                     // Recalculate the segments needed by the row
                     row.calculateSegments();
 
-                    // Set the segment count to the lowest common multiple of the current segment count and the cell count
-                    // of this row
+                    // Set the segment count to the lowest common multiple of the current segment count and the cell
+                    // count of this row
                     segmentCount = lcm(segmentCount, row.segmentCount);
 
                 }
@@ -333,7 +333,7 @@ class Grid : Frame {
             child.draw(rect);
 
             // Offset position
-            position += child.minSize.y;
+            position += child.minSize.y + style.gap;
 
         }
 
