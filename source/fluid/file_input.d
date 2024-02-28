@@ -71,7 +71,7 @@ class FileInput : PopupFrame {
         int suggestionCount;
 
         /// Filename typed by the user, before choosing suggestions.
-        string typedFilename;
+        char[] typedFilename;
 
         /// Currently chosen suggestion. 0 is no suggestion chosen.
         size_t currentSuggestion;
@@ -98,8 +98,8 @@ class FileInput : PopupFrame {
         hide();
 
         // Windows is silly
-        version (Windows) input.value = `C:\`;
-        else input.value = expandTilde("~/");
+        version (Windows) input.value = `C:\`.dup;
+        else input.value = expandTilde("~/").dup;
 
         typedFilename = input.value;
 
@@ -138,19 +138,19 @@ class FileInput : PopupFrame {
 
     }
 
-    ref inout(string) text() inout {
+    ref inout(const(char)[]) text() inout {
 
         return titleLabel.text;
 
     }
 
-    inout(string) value() inout {
+    inout(char[]) value() inout {
 
         return input.value;
 
     }
 
-    string value(string newValue) {
+    char[] value(char[] newValue) {
 
         updateSize();
         return typedFilename = input.value = newValue;
@@ -269,7 +269,7 @@ class FileInput : PopupFrame {
         ulong num;
 
         // TODO handle errors on a per-entry basis?
-        try foreach (entry; dir.dirEntries(file ~ "*", SpanMode.shallow)) {
+        try foreach (entry; dir.to!string.dirEntries(.text(file, "*"), SpanMode.shallow)) {
 
             const name = entry.name.baseName;
 
@@ -337,18 +337,18 @@ class FileInput : PopupFrame {
     }
 
     /// Ditto.
-    private auto valueTuple(string path) const {
+    private auto valueTuple(const(char)[] path) const {
 
         // Directory
         if (path.endsWith(dirSeparator)) {
 
-            return tuple(path, "");
+            return tuple(path, (const(char)[]).init);
 
         }
 
         const file = path.baseName;
         return tuple(
-            path.chomp(file).to!string,
+            path.chomp(file),
             file,
         );
 
@@ -377,7 +377,7 @@ class FileInput : PopupFrame {
         if (currentSuggestion != 0) {
 
             auto btn = cast(FileInputSuggestion) suggestions.children[currentSuggestion - 1];
-            auto newValue = valueTuple(typedFilename)[0] ~ btn.text.stripLeft;
+            auto newValue = to!(char[])(valueTuple(typedFilename)[0] ~ btn.text.stripLeft);
 
             // Same value, submit
             if (newValue == input.value) submit();

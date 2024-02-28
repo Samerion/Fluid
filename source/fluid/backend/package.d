@@ -150,11 +150,11 @@ interface FluidBackend {
     void drawRectangle(Rectangle rectangle, Color color);
 
     /// Draw a texture.
-    void drawTexture(Texture texture, Rectangle rectangle, Color tint, string altText = "")
+    void drawTexture(Texture texture, Rectangle rectangle, Color tint, const(char)[] altText = "")
     in (texture.backend is this, "Given texture comes from a different backend");
 
     /// Draw a texture, but ensure it aligns with pixel boundaries, recommended for text.
-    void drawTextureAlign(Texture texture, Rectangle rectangle, Color tint, string altText = "")
+    void drawTextureAlign(Texture texture, Rectangle rectangle, Color tint, const(char)[] altText = "")
     in (texture.backend is this, "Given texture comes from a different backend");
 
 }

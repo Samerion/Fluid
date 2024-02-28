@@ -25,7 +25,7 @@ class Label : Node {
 
     }
 
-    this(string text) {
+    this(const(char)[] text) {
 
         this.text = Text!Label(this, text);
 

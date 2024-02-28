@@ -616,7 +616,7 @@ class HeadlessBackend : FluidBackend {
     }
 
     /// Draw a texture.
-    void drawTexture(Texture texture, Rectangle rectangle, Color tint, string altText = "")
+    void drawTexture(Texture texture, Rectangle rectangle, Color tint, const(char)[] altText = "")
     in (false)
     do {
 
@@ -626,7 +626,7 @@ class HeadlessBackend : FluidBackend {
     }
 
     /// Draw a texture, but keep it aligned to pixel boundaries.
-    void drawTextureAlign(Texture texture, Rectangle rectangle, Color tint, string altText = "")
+    void drawTextureAlign(Texture texture, Rectangle rectangle, Color tint, const(char)[] altText = "")
     in (false)
     do {
 

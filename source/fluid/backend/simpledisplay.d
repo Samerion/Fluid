@@ -743,7 +743,7 @@ class SimpledisplayBackend : FluidBackend {
 
     }
 
-    void drawTexture(Texture texture, Rectangle rectangle, Color tint, string altText) @trusted
+    void drawTexture(Texture texture, Rectangle rectangle, Color tint, const(char)[] altText) @trusted
     in (false)
     do {
 
@@ -752,7 +752,7 @@ class SimpledisplayBackend : FluidBackend {
 
     }
 
-    void drawTextureAlign(Texture texture, Rectangle rectangle, Color tint, string altText) @trusted
+    void drawTextureAlign(Texture texture, Rectangle rectangle, Color tint, const(char)[] altText) @trusted
     in (false)
     do {
 
@@ -761,7 +761,9 @@ class SimpledisplayBackend : FluidBackend {
     }
 
     @trusted
-    private void drawTextureImpl(Texture texture, Rectangle rectangle, Color tint, string altText, bool alignPixels) {
+    private void drawTextureImpl(Texture texture, Rectangle rectangle, Color tint, const(char)[] altText,
+        bool alignPixels)
+    do {
 
         import std.math;
 
