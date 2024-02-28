@@ -35,9 +35,15 @@ Space textExample() {
 )
 Space fieldExample() {
 
-    return fieldSlot!vframe(
-        label("Name:"),
-        textInput("Your name..."),
+    return vspace(
+        fieldSlot!vframe(
+            label("Name:"),
+            textInput("Your name..."),
+        ),
+        fieldSlot!vframe(
+            label("Password:"),
+            passwordInput("Your password..."),
+        ),
     );
 
 }

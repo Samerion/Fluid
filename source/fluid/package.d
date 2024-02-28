@@ -45,6 +45,7 @@ public import
     fluid.node,
     fluid.number_input,
     fluid.onion_frame,
+    fluid.password_input,
     fluid.popup_button,
     fluid.popup_frame,
     fluid.radiobox,
