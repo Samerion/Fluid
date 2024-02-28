@@ -18,18 +18,8 @@ alias textInput = simpleConstructor!TextInput;
 @safe:
 
 /// Text input field.
-///
-/// Styles: $(UL
-///     $(LI `style` = Default style for the input.)
-///     $(LI `focusStyle` = Style for when the input is focused.)
-///     $(LI `emptyStyle` = Style for when the input is empty, i.e. the placeholder is visible. Text should usually be
-///         grayed out.)
-/// )
 class TextInput : InputNode!Node {
 
-    mixin defineStyles!(
-        "emptyStyle", q{ style },
-    );
     mixin implHoveredRect;
     mixin enableInputActions;
 
@@ -90,6 +80,12 @@ class TextInput : InputNode!Node {
 
     }
 
+    bool isEmpty() const {
+
+        return value == "";
+
+    }
+
     protected override void resizeImpl(Vector2 area) {
 
         import std.algorithm : max;
@@ -98,34 +94,18 @@ class TextInput : InputNode!Node {
         minSize = size;
 
         // Set height to at least the font size
-        minSize.y = max(minSize.y, style.font.lineHeight);
+        minSize.y = max(minSize.y, style.getTypeface.lineHeight);
 
         // Set the label text
         contentLabel.text = (value == "") ? placeholder : value;
 
-        // Inherit main style
-        // TODO reuse the hashmap maybe?
-        auto childTheme = theme.makeTheme!q{
-
-            Label.styleAdd!q{
-
-                // Those are already included in our theme, we should remove them
-                margin = 0;
-                padding = 0;
-                border = 0;
-
-            };
-
-        };
-
         // Resize the label
-        contentLabel.resize(tree, childTheme, Vector2(0, minSize.y));
+        contentLabel.activeStyle = style;
+        contentLabel.resize(tree, theme, Vector2(0, minSize.y));
 
     }
 
     protected override void drawImpl(Rectangle outer, Rectangle inner) @trusted {
-
-        // Note: We're drawing the label in `outer` as the presence of the label is meant to be transparent.
 
         import std.datetime : Clock;
         import std.algorithm : min, max;
@@ -154,8 +134,8 @@ class TextInput : InputNode!Node {
         // Add a blinking caret
         if (timeSecs % (blinkTime*2) < blinkTime) {
 
-            const lineHeight = style.typeface.lineHeight;
-            const margin = style.typeface.lineHeight / 10f;
+            const lineHeight = style.getTypeface.lineHeight;
+            const margin = lineHeight / 10f;
 
             // Put the caret at the start if the placeholder is shown
             const textWidth = value.length
@@ -172,7 +152,7 @@ class TextInput : InputNode!Node {
             io.drawLine(
                 end - Vector2(0, lineHeight - margin),
                 end - Vector2(0, margin),
-                focusStyle.textColor
+                style.textColor, //focusStyle.textColor
             );
 
         }
@@ -231,7 +211,7 @@ class TextInput : InputNode!Node {
 
             assert(root.value == "");
             assert(root.contentLabel.text == "placeholder");
-            assert(root.contentLabel.activeStyle is root.emptyStyle);
+            assert(root.isEmpty);
         }
 
         // Focus the box and input stuff
@@ -250,7 +230,7 @@ class TextInput : InputNode!Node {
             root.draw();
 
             assert(root.contentLabel.text == "¡Hola, mundo!");
-            assert(root.contentLabel.activeStyle is root.focusStyle);
+            assert(root.isFocused);
         }
 
     }
@@ -393,7 +373,7 @@ class TextInput : InputNode!Node {
 
             assert(root.value == "Hello ");
             assert(root.contentLabel.text == "Hello ");
-            assert(root.contentLabel.activeStyle is root.focusStyle);
+            assert(root.isFocused);
         }
 
         // Erase a word
@@ -404,7 +384,7 @@ class TextInput : InputNode!Node {
 
             assert(root.value == "");
             assert(root.contentLabel.text == "");
-            assert(root.contentLabel.activeStyle is root.emptyStyle);
+            assert(root.isEmpty);
         }
 
         // Typing should be disabled while erasing
@@ -417,7 +397,7 @@ class TextInput : InputNode!Node {
 
             assert(root.value == "");
             assert(root.contentLabel.text == "");
-            assert(root.contentLabel.activeStyle is root.emptyStyle);
+            assert(root.isEmpty);
         }
 
     }
@@ -466,7 +446,7 @@ class TextInput : InputNode!Node {
 
             assert(root.value == "hello");
             assert(root.contentLabel.text == "hello");
-            assert(root.contentLabel.activeStyle is root.focusStyle);
+            assert(root.isFocused);
         }
 
         // Erase a letter
@@ -477,7 +457,7 @@ class TextInput : InputNode!Node {
 
             assert(root.value == "hell");
             assert(root.contentLabel.text == "hell");
-            assert(root.contentLabel.activeStyle is root.focusStyle);
+            assert(root.isFocused);
         }
 
         // Typing should be disabled while erasing
@@ -488,24 +468,8 @@ class TextInput : InputNode!Node {
             root.draw();
 
             assert(root.value == "hel");
-            assert(root.contentLabel.activeStyle is root.focusStyle);
+            assert(root.isFocused);
         }
-
-    }
-
-    override inout(Style) pickStyle() inout {
-
-        // Disabled
-        if (isDisabledInherited) return disabledStyle;
-
-        // Empty text (display placeholder)
-        else if (value == "") return emptyStyle;
-
-        // Focused
-        else if (isFocused) return focusStyle;
-
-        // Other styles
-        else return super.pickStyle();
 
     }
 
@@ -513,27 +477,41 @@ class TextInput : InputNode!Node {
 
 private class TextImpl : Label {
 
-    mixin DefineStyles!(
-        "activeStyle", q{ style }
-    );
+    Style activeStyle;
 
     this(T...)(T args) {
 
         super(args);
+        activeStyle = Style.init;
 
     }
 
-    // Same as parent, but doesn't draw background
     override void drawImpl(Rectangle outer, Rectangle inner) {
 
+        // Don't draw background
         const style = pickStyle();
         text.draw(style, inner);
 
     }
 
-    override inout(Style) pickStyle() inout {
+    override void reloadStyles() {
 
-        return activeStyle;
+        super.reloadStyles();
+
+        // Remove all spacing
+        style.margin = 0;
+        style.padding = 0;
+        style.border = 0;
+
+    }
+
+    override Style pickStyle() {
+
+        auto style = activeStyle;
+        style.margin = 0;
+        style.padding = 0;
+        style.border = 0;
+        return style;
 
     }
 

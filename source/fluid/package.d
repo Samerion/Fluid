@@ -59,6 +59,7 @@ public import
     fluid.switch_slot,
     fluid.text,
     fluid.text_input,
+    // Note: fluid.theme is not included
     fluid.tree,
     fluid.utils;
 

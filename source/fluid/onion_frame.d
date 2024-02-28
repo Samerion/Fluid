@@ -18,8 +18,6 @@ alias onionFrame = simpleConstructor!OnionFrame;
 /// ditto
 class OnionFrame : Frame {
 
-    mixin DefineStyles;
-
     this(T...)(T args) {
 
         super(args);
@@ -106,9 +104,10 @@ unittest {
 
     );
 
-    root.theme = nullTheme.makeTheme!q{
-        Label.styleAdd.textColor = color!"000";
-    };
+    with (Rule)
+    root.theme = nullTheme.derive(
+        rule!Label(textColor = color!"000"),
+    );
     root.io = io;
     root.draw();
 

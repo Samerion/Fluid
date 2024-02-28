@@ -10,17 +10,12 @@ import fluid.backend;
 @safe:
 
 /// A label can be used to display text on the screen.
-///
-/// Styles: $(UL
-///     $(LI `style` = Default style for this node.)
-/// )
 alias label = simpleConstructor!Label;
 
 /// ditto
 class Label : Node {
 
-    mixin DefineStyles;
-    mixin ImplHoveredRect;
+    mixin implHoveredRect;
 
     public {
 
@@ -54,6 +49,12 @@ class Label : Node {
 
     }
 
+    bool isEmpty() const {
+
+        return text.length == 0;
+
+    }
+
     protected override void resizeImpl(Vector2 available) {
 
         import std.math;
@@ -71,20 +72,15 @@ class Label : Node {
 
     }
 
-    override inout(Style) pickStyle() inout {
-
-        return style;
-
-    }
-
     unittest {
 
         auto io = new HeadlessBackend;
         auto root = label("Hello, World!");
 
-        root.theme = nullTheme.makeTheme!q{
-            Label.styleAdd.textColor = color!"000";
-        };
+        with (Rule)
+        root.theme = nullTheme.derive(
+            rule!Label(textColor = color!"000"),
+        );
         root.io = io;
         root.draw();
 
@@ -105,8 +101,12 @@ class Label : Node {
     }
 
     override string toString() const {
+
         import std.range;
+        import std.format;
+
         return format!"Label(%(%s%))"(only(text.toString));
+
     }
 
 }

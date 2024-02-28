@@ -35,7 +35,6 @@ Theme exampleListTheme;
 Theme codeTheme;
 Theme previewWrapperTheme;
 Theme highlightBoxTheme;
-Theme warningTheme;
 
 enum Chapter {
     @"Introduction" introduction,
@@ -43,91 +42,112 @@ enum Chapter {
     @"Buttons & mutability" buttons,
     @"Node slots" slots,
     @"Themes" themes,
+    @"Margin, padding and border" margins,
     @"Writing forms" forms,
     // @"Popups" popups,
 };
 
+@NodeTag
+enum Tags {
+    warning,
+}
+
 /// The entrypoint prepares themes and the window. The UI is build in `createUI()`.
 void main(string[] args) {
 
+    import std.file, std.path;
+
     // Prepare themes
-    mainTheme = makeTheme!q{
-        Frame.styleAdd!q{
-            margin.sideX = 12;
-            margin.sideY = 16;
-            Grid.styleAdd.margin.sideY = 0;
-            GridRow.styleAdd.margin = 0;
-            ScrollFrame.styleAdd.margin = 0;
-        };
-        Label.styleAdd!q{
-            margin.sideX = 12;
-            margin.sideY = 7;
-            Button!().styleAdd;
-        };
-    };
+    with (Rule) {
 
-    headingTheme = mainTheme.makeTheme!q{
-        Label.styleAdd!q{
-            typeface = Style.loadTypeface(20);
-            margin.sideTop = 20;
-            margin.sideBottom = 10;
-        };
-    };
+        enum warningColor = color!"#ffe186";
+        enum warningAccentColor = color!"#ffc30f";
 
-    subheadingTheme = mainTheme.makeTheme!q{
-        Label.styleAdd!q{
-            typeface = Style.loadTypeface(16);
-            margin.sideTop = 16;
-            margin.sideBottom = 8;
-        };
-    };
+        mainTheme = Theme(
+            rule!Frame(
+                margin.sideX = 12,
+                margin.sideY = 16,
+            ),
+            rule!Label(
+                margin.sideX = 12,
+                margin.sideY = 7,
+            ),
+            rule!Button(
+                margin.sideX = 12,
+                margin.sideY = 7,
+            ),
+            rule!Grid(margin.sideY = 0),
+            rule!GridRow(margin = 0),
+            rule!ScrollFrame(margin = 0),
 
-    exampleListTheme = mainTheme.makeTheme!q{
-        Button!().styleAdd!q{
-            padding.sideX = 8;
-            padding.sideY = 16;
-            margin = 2;
-        };
-    };
+            // Warning
+            rule!(Label, Tags.warning)(
+                padding.sideX = 16,
+                padding.sideY = 6,
+                border = 1,
+                borderStyle = colorBorder(warningAccentColor),
+                backgroundColor = warningColor,
+                textColor = color!"#000",
+            ),
+        );
 
-    highlightBoxTheme = makeTheme!q{
-        border = 1;
-        borderStyle = colorBorder(color!"#e62937");
-    };
+        headingTheme = mainTheme.derive(
+            rule!Label(
+                typeface = Style.loadTypeface(20),
+                margin.sideTop = 20,
+                margin.sideBottom = 10,
+            ),
+        );
 
-    codeTheme = mainTheme.makeTheme!q{
-        import std.file, std.path;
+        subheadingTheme = mainTheme.derive(
+            rule!Label(
+                typeface = Style.loadTypeface(16),
+                margin.sideTop = 16,
+                margin.sideBottom = 8,
+            ),
+        );
 
-        typeface = Style.loadTypeface(thisExePath.dirName.buildPath("../examples/ibm-plex-mono.ttf"), 12);
-        backgroundColor = color!"#dedede";
+        exampleListTheme = mainTheme.derive(
+            rule!Button(
+                padding.sideX = 8,
+                padding.sideY = 16,
+                margin = 2,
+            ),
+        );
 
-        Frame.styleAdd!q{
-            padding = 0;
-        };
-        Label.styleAdd!q{
-            margin = 0;
-            padding.sideX = 12;
-            padding.sideY = 16;
-        };
-    };
+        highlightBoxTheme = Theme(
+            rule!Node(
+                border = 1,
+                borderStyle = colorBorder(color!"#e62937"),
+            ),
+        );
 
-    previewWrapperTheme = mainTheme.makeTheme!q{
-        NodeSlot!Node.styleAdd!q{
-            border = 1;
-            borderStyle = colorBorder(color!"#dedede");
-        };
-    };
+        codeTheme = mainTheme.derive(
 
-    warningTheme = mainTheme.makeTheme!q{
-        Label.styleAdd!q{
-            padding.sideX = 16;
-            padding.sideY = 6;
-            border = 1;
-            borderStyle = colorBorder(color!"#ffc30f");
-            backgroundColor = color!"#ffe186";
-            textColor = color!"#000";
-        };
-    };
+            rule!Node(
+                typeface = loadTypeface(thisExePath.dirName.buildPath("../examples/ibm-plex-mono.ttf"), 12),
+                backgroundColor = color!"#dedede",
+            ),
+            rule!Frame(
+                padding = 0,
+            ),
+            rule!Label(
+                margin = 0,
+                padding.sideX = 12,
+                padding.sideY = 16,
+            ),
+        );
+
+        previewWrapperTheme = mainTheme.derive(
+            rule!Frame(
+                margin = 0,
+                border = 1,
+                padding = 0,
+                borderStyle = colorBorder(color!"#dedede"),
+            ),
+        );
+
+    }
 
     // Create the UI — pass the first argument to load a chapter under the given name
     auto ui = args.length > 1
@@ -206,7 +226,7 @@ Space createUI(string initialChapter = null) @safe {
     ScrollFrame contentWrapper;
     Space navigationBar;
     Label titleLabel;
-    Button!() leftButton, rightButton;
+    Button leftButton, rightButton;
 
     auto content = nodeSlot!Space(.layout!(1, "fill"));
     auto outlineContent = vspace(.layout!"fill");
@@ -324,6 +344,7 @@ Space createUI(string initialChapter = null) @safe {
 
 Space exampleList(void delegate(Chapter) @safe changeChapter) @safe {
 
+    import std.meta;
     import std.array;
     import std.range;
 
@@ -339,7 +360,7 @@ Space exampleList(void delegate(Chapter) @safe changeChapter) @safe {
         .map!(a => button(
             .layout!"fill",
             title(a),
-            () => changeChapter(a)
+            delegate { changeChapter(a); }
         ))
 
         // Split them into chunks of three
@@ -356,8 +377,8 @@ Space exampleList(void delegate(Chapter) @safe changeChapter) @safe {
         label(.layout!"center", .headingTheme, "Hello, World!"),
         label("Pick a chapter of the tutorial to get started. Start with the first one or browse the chapters that "
             ~ "interest you! Output previews are shown next to code samples to help you understand the content."),
-        label(.layout!"fill", .warningTheme, "While this tutorial covers the most important parts of Fluid, it's still "
-            ~ "incomplete. Content will be added in further updates of Fluid. Contributions are welcome."),
+        label(.layout!"fill", .tags!(Tags.warning), "While this tutorial covers the most important parts of Fluid, "
+            ~ "it's still incomplete. Content will be added in further updates of Fluid. Contributions are welcome."),
         chapterGrid,
     );
 
@@ -382,7 +403,7 @@ Space showcaseCode(string code) {
 Space showcaseCode(string code, Node node, Theme theme = Theme.init) {
 
     // Make the node inherit the default theme rather than the one we set
-    if (node.theme is null) {
+    if (!node.theme) {
         node.theme = either(theme, fluidDefaultTheme);
     }
 
@@ -394,11 +415,14 @@ Space showcaseCode(string code, Node node, Theme theme = Theme.init) {
             .codeTheme,
             code,
         ).disableWrap(),
-        nodeSlot!Node(
+        vframe(
             .layout!(1, "fill"),
             .previewWrapperTheme,
-            node,
-        ),
+            nodeSlot!Node(
+                .layout!(1, "fill"),
+                node,
+            ),
+        )
     );
 
 }
@@ -413,7 +437,7 @@ string title(Chapter query) @safe {
         static foreach (chapter; EnumMembers!Chapter) {
 
             case chapter:
-                return __traits(getAttributes, chapter)[0];
+                return getUDAs!(chapter, string)[0];
 
         }
 

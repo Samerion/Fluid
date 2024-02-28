@@ -12,8 +12,8 @@ import fluid.utils;
 import fluid.backend;
 import fluid.typeface;
 
+public import fluid.theme : makeTheme, Theme, Selector, rule, Rule, when, WhenRule, Field;
 public import fluid.border;
-public import fluid.style_macros;
 public import fluid.default_theme;
 public import fluid.backend : color;
 
@@ -21,93 +21,10 @@ public import fluid.backend : color;
 @safe:
 
 
-alias StyleKeyPtr = immutable(StyleKey)*;
-
-/// Node theme.
-struct Theme {
-
-    Style[StyleKeyPtr] value;
-
-    alias value this;
-
-    void apply(Node node) {
-
-        node.theme = this;
-
-    }
-
-    Theme dup() {
-
-        return Theme(value.dup);
-
-    }
-
-}
-
-/// Side array is a static array defining a property separately for each side of a box, for example margin and border
-/// size. Order is as follows: `[left, right, top, bottom]`. You can use `Style.Side` to index this array with an enum.
-///
-/// Because of the default behavior of static arrays, one can set the value for all sides to be equal with a simple
-/// assignment: `array = 8`. Additionally, to make it easier to manipulate the box, one may use the `sideX` and `sideY`
-/// functions to get a `uint[2]` array of the values corresponding to the given axis (which can also be assigned like
-/// `array.sideX = 8`) or the `sideLeft`, `sideRight`, `sideTop` and `sideBottom` functions corresponding to the given
-/// sides.
-enum isSideArray(T) = is(T == X[4], X);
-
-///
-unittest {
-
-    uint[4] sides;
-    static assert(isSideArray!(uint[4]));
-
-    sides.sideX = 4;
-
-    assert(sides.sideLeft == sides.sideRight);
-    assert(sides.sideLeft == 4);
-
-    sides = 8;
-    assert(sides == [8, 8, 8, 8]);
-    assert(sides.sideX == sides.sideY);
-
-}
-
-/// An empty struct used to create unique style type identifiers.
-struct StyleKey { }
-
-/// Create a new style initialized with given D code.
-///
-/// raylib and std.string are accessible inside by default.
-///
-/// Note: It is recommended to create a root style node defining font parameters and then inherit other styles from it.
-///
-/// Params:
-///     init    = D code to use.
-///     parents = Styles to inherit from. See `Style.this` documentation for more info.
-///     data    = Data to pass to the code as the context. All fields of the struct will be within the style's scope.
-Style style(string init, Data)(Data data, Style[] parents...) {
-
-    auto result = new Style;
-
-    with (data) with (result) mixin(init);
-
-    return result;
-
-}
-
-/// Ditto.
-Style style(string init)(Style[] parents...) {
-
-    auto result = new Style(parents);
-    result.update!init;
-
-    return result;
-
-}
-
-interface StyleExtension { }
-
 /// Contains the style for a node.
-class Style {
+struct Style {
+
+    enum Themable;
 
     enum Side {
 
@@ -115,37 +32,13 @@ class Style {
 
     }
 
-    // Internal use only, can't be private because it's used in mixins.
-    static {
-
-        Theme _currentTheme;
-        Style[] _styleStack;
-
-    }
-
     // Text options
-    struct {
+    @Themable {
 
         /// Main typeface to be used for text.
         Typeface typeface;
 
         alias font = typeface;
-
-        deprecated("Set font parameters in the typeface. These will be removed in 0.7.0") {
-
-            /// Font size (height) in pixels.
-            float fontSize;
-
-            /// Line height, as a fraction of `fontSize`.
-            float lineHeight;
-
-            /// Space between characters, relative to font size.
-            float charSpacing;
-
-            /// Space between words, relative to the font size.
-            float wordSpacing;
-
-        }
 
         /// Text color.
         Color textColor;
@@ -153,7 +46,7 @@ class Style {
     }
 
     // Background
-    struct {
+    @Themable {
 
         /// Background color of the node.
         Color backgroundColor;
@@ -161,22 +54,22 @@ class Style {
     }
 
     // Spacing
-    struct {
+    @Themable {
 
         /// Margin (outer margin) of the node. `[left, right, top, bottom]`.
         ///
         /// See: `isSideArray`.
-        uint[4] margin;
+        float[4] margin = 0;
 
         /// Border size, placed between margin and padding. `[left, right, top, bottom]`.
         ///
         /// See: `isSideArray`
-        uint[4] border;
+        float[4] border = 0;
 
         /// Padding (inner margin) of the node. `[left, right, top, bottom]`.
         ///
         /// See: `isSideArray`
-        uint[4] padding;
+        float[4] padding = 0;
 
         /// Border style to use.
         FluidBorder borderStyle;
@@ -184,32 +77,35 @@ class Style {
     }
 
     // Misc
-    struct {
+    public {
 
         /// Apply tint to all node contents, including children.
+        @Themable
         Color tint = color!"fff";
 
         /// Cursor icon to use while this node is hovered.
         ///
         /// Custom image cursors are not supported yet.
+        @Themable
         FluidMouseCursor mouseCursor;
 
         /// Additional information for the node the style applies to.
         ///
         /// Ignored if mismatched.
-        StyleExtension extra;
+        @Themable
+        Node.Extra extra;
 
         /// Get or set node opacity. Value in range [0, 1] — 0 is fully transparent, 1 is fully opaque.
         float opacity() const {
 
-            return tint.a / 255.0;
+            return tint.a / 255.0f;
 
         }
 
         /// ditto
         float opacity(float value) {
 
-            tint.a = cast(ubyte) clamp(value * 255, 0, 255);
+            tint.a = cast(ubyte) clamp(value * ubyte.max, ubyte.min, ubyte.max);
 
             return value;
 
@@ -217,59 +113,12 @@ class Style {
 
     }
 
-    this() {
+    /// Use `Style.init`.
+    @disable this();
 
-        this.font = Typeface.defaultTypeface;
+    private this(Typeface typeface) {
 
-    }
-
-    /// Create a style by copying params of others.
-    ///
-    /// Multiple styles can be set, so if one field is set to `typeof(field).init`, it will be taken from the previous
-    /// style from the list — that is, settings from the last style override previous ones.
-    this(Style[] styles...) {
-
-        // Check each style
-        foreach (i, style; styles) {
-
-            // Inherit each field
-            static foreach (j; 0..this.tupleof.length) {{
-
-                auto inheritedField = style.tupleof[j];
-                auto init = Style.init.tupleof[j];
-
-                static if (__traits(compiles, inheritedField is null)) {
-
-                    const isInit = inheritedField is null;
-
-                }
-                else {
-
-                    const isInit = inheritedField == init;
-
-                }
-
-                // Ignore if it's set to init (unless it's the first style)
-                if (i == 0 || !isInit) {
-
-                    this.tupleof[j] = inheritedField;
-
-                }
-
-            }}
-
-        }
-
-    }
-
-    /// Get the default, empty style.
-    ///
-    /// Warning: This returns a single, mutable instance. Changes made will change init entirely.
-    static Style init() {
-
-        static Style val;
-        if (val is null) val = new Style;
-        return val;
+        this.typeface = typeface;
 
     }
 
@@ -285,44 +134,19 @@ class Style {
 
     }
 
-    /// Returns either this style or Style.init.
-    final Style orInit() return scope {
-
-        if (this is null)
-            return init;
-        else
-            return this;
-
-    }
-
     alias loadFont = loadTypeface;
 
-    /// Update the style with given D code.
-    ///
-    /// This allows each init code to have a consistent default scope, featuring `fluid`, `raylib` and chosen `std`
-    /// modules.
-    ///
-    /// Params:
-    ///     init = Code to update the style with.
-    ///     T    = An compile-time object to update the scope with.
-    void update(string init)() {
+    bool opCast(T : bool)() const {
 
-        import fluid;
-
-        // Wrap init content in brackets to allow imports
-        // See: https://forum.dlang.org/thread/nl4vse$egk$1@digitalmars.com
-        // The thread mentions mixin templates but it's the same for string mixins too; and a mixin with multiple
-        // statements is annoyingly treated as multiple separate mixins.
-        mixin(init.format!"{ %s }");
+        return this !is Style(null);
 
     }
 
-    /// Ditto.
-    void update(string init, T)() {
+    bool opEquals(const Style other) const @trusted {
 
-        import fluid;
-
-        with (T) mixin(init.format!"{ %s }");
+        // @safe: FluidBorder and Typeface are required to provide @safe opEquals.
+        // D doesn't check for opEquals on interfaces, though.
+        return this.tupleof == other.tupleof;
 
     }
 
@@ -335,6 +159,20 @@ class Style {
             typeface.dpi = dpi;
 
         }
+
+        // Update the default typeface if none is assigned
+        else {
+
+            Typeface.defaultTypeface.dpi = dpi;
+
+        }
+
+    }
+
+    /// Get current typeface, or fallback to default.
+    const(Typeface) getTypeface() const {
+
+        return either(typeface, Typeface.defaultTypeface);
 
     }
 
@@ -395,15 +233,22 @@ class Style {
 
     }
 
-    /// Draw the background
+    /// Draw the background & border
     void drawBackground(FluidBackend backend, Rectangle rect) const @trusted {
 
         backend.drawRectangle(rect, backgroundColor);
 
+        // Add border if active
+        if (borderStyle) {
+
+            borderStyle.apply(backend, rect, border);
+
+        }
+
     }
 
     /// Get a side array holding both the regular margin and the border.
-    uint[4] fullMargin() const {
+    float[4] fullMargin() const {
 
         return [
             margin.sideLeft + border.sideLeft,
@@ -429,15 +274,15 @@ class Style {
     }
 
     /// Get a sum of margin, border size and padding.
-    uint[4] totalMargin() const {
+    float[4] totalMargin() const {
 
-        uint[4] ret = margin[] + border[] + padding[];
+        float[4] ret = margin[] + border[] + padding[];
         return ret;
 
     }
 
     /// Crop the given box by reducing its size on all sides.
-    static Vector2 cropBox(Vector2 size, uint[4] sides) {
+    static Vector2 cropBox(Vector2 size, float[4] sides) {
 
         size.x = max(0, size.x - sides.sideLeft - sides.sideRight);
         size.y = max(0, size.y - sides.sideTop - sides.sideBottom);
@@ -447,7 +292,7 @@ class Style {
     }
 
     /// ditto
-    static Rectangle cropBox(Rectangle rect, uint[4] sides) {
+    static Rectangle cropBox(Rectangle rect, float[4] sides) {
 
         rect.x += sides.sideLeft;
         rect.y += sides.sideTop;
@@ -462,58 +307,64 @@ class Style {
 
 }
 
-/// `wrapText` result.
-struct TextLine {
+/// Side array is a static array defining a property separately for each side of a box, for example margin and border
+/// size. Order is as follows: `[left, right, top, bottom]`. You can use `Style.Side` to index this array with an enum.
+///
+/// Because of the default behavior of static arrays, one can set the value for all sides to be equal with a simple
+/// assignment: `array = 8`. Additionally, to make it easier to manipulate the box, one may use the `sideX` and `sideY`
+/// functions to get a `float[2]` array of the values corresponding to the given axis (which can also be assigned like
+/// `array.sideX = 8`) or the `sideLeft`, `sideRight`, `sideTop` and `sideBottom` functions corresponding to the given
+/// sides.
+enum isSideArray(T) = is(T == X[4], X);
 
-    struct Word {
+/// ditto
+enum isSomeSideArray(T) = isSideArray!T
+    || (is(T == Field!(name, U), string name, U) && isSideArray!U);
 
-        string text;
-        size_t width;
-        bool lineFeed;  // Word is followed by a line feed.
+///
+unittest {
 
-    }
+    float[4] sides;
+    static assert(isSideArray!(float[4]));
 
-    /// Index of the line within the original text. This is the start of the text.
-    size_t index;
+    sides.sideX = 4;
 
-    /// Text on this line.
-    string text;
+    assert(sides.sideLeft == sides.sideRight);
+    assert(sides.sideLeft == 4);
 
-    /// Width of the line (including spaces).
-    size_t width = 0;
-
-    /// If true, the line is explicitly terminated with a line feed.
-    bool lineFeed;
+    sides = 8;
+    assert(sides == [8, 8, 8, 8]);
+    assert(sides.sideX == sides.sideY);
 
 }
 
 /// Get a reference to the left, right, top or bottom side of the given side array.
-ref inout(ElementType!T) sideLeft(T)(return ref inout T sides)
-if (isSideArray!T) {
+auto ref sideLeft(T)(return auto ref inout T sides)
+if (isSomeSideArray!T) {
 
     return sides[Style.Side.left];
 
 }
 
 /// ditto
-ref inout(ElementType!T) sideRight(T)(return ref inout T sides)
-if (isSideArray!T) {
+auto ref sideRight(T)(return auto ref inout T sides)
+if (isSomeSideArray!T) {
 
     return sides[Style.Side.right];
 
 }
 
 /// ditto
-ref inout(ElementType!T) sideTop(T)(return ref inout T sides)
-if (isSideArray!T) {
+auto ref sideTop(T)(return auto ref inout T sides)
+if (isSomeSideArray!T) {
 
     return sides[Style.Side.top];
 
 }
 
 /// ditto
-ref inout(ElementType!T) sideBottom(T)(return ref inout T sides)
-if (isSideArray!T) {
+auto ref sideBottom(T)(return auto ref inout T sides)
+if (isSomeSideArray!T) {
 
     return sides[Style.Side.bottom];
 
@@ -522,7 +373,7 @@ if (isSideArray!T) {
 ///
 unittest {
 
-    uint[4] sides = [8, 0, 4, 2];
+    float[4] sides = [8, 0, 4, 2];
 
     assert(sides.sideRight == 0);
 
@@ -534,7 +385,7 @@ unittest {
 }
 
 /// Get a reference to the X axis for the given side array.
-ref inout(uint[2]) sideX(T)(return ref inout T sides)
+ref inout(ElementType!T[2]) sideX(T)(return ref inout T sides)
 if (isSideArray!T) {
 
     const start = Style.Side.left;
@@ -542,8 +393,27 @@ if (isSideArray!T) {
 
 }
 
-ref inout(uint[2]) sideY(T)(return ref inout T sides)
+/// ditto
+auto ref sideX(T)(return auto ref inout T sides)
+if (isSomeSideArray!T && !isSideArray!T) {
+
+    const start = Style.Side.left;
+    return sides[start .. start + 2];
+
+}
+
+/// Get a reference to the Y axis for the given side array.
+ref inout(ElementType!T[2]) sideY(T)(return ref inout T sides)
 if (isSideArray!T) {
+
+    const start = Style.Side.top;
+    return sides[start .. start + 2];
+
+}
+
+/// ditto
+auto ref sideY(T)(return auto ref inout T sides)
+if (isSomeSideArray!T && !isSideArray!T) {
 
     const start = Style.Side.top;
     return sides[start .. start + 2];
@@ -553,7 +423,7 @@ if (isSideArray!T) {
 ///
 unittest {
 
-    uint[4] sides = [1, 2, 3, 4];
+    float[4] sides = [1, 2, 3, 4];
 
     assert(sides.sideX == [sides.sideLeft, sides.sideRight]);
     assert(sides.sideY == [sides.sideTop, sides.sideBottom]);
@@ -672,12 +542,12 @@ unittest {
     import fluid.structs;
 
     auto io = new HeadlessBackend;
-    auto myTheme = nullTheme.makeTheme!q{
-        Frame.styleAdd!q{
-            backgroundColor = color!"fff";
-            tint = color!"aaaa";
-        };
-    };
+    auto myTheme = nullTheme.derive(
+        rule!Frame(
+            Rule.backgroundColor = color!"fff",
+            Rule.tint = color!"aaaa",
+        ),
+    );
     auto root = vframe(
         layout!(1, "fill"),
         myTheme,
@@ -712,14 +582,14 @@ unittest {
     import fluid.structs;
 
     auto io = new HeadlessBackend;
-    auto myTheme = nullTheme.makeTheme!q{
-        Frame.styleAdd!q{
-            backgroundColor = color!"fff";
-            tint = color!"aaaa";
-            border.sideRight = 1;
-            borderStyle = colorBorder(color!"f00");
-        };
-    };
+    auto myTheme = nullTheme.derive(
+        rule!Frame(
+            Rule.backgroundColor = color!"fff",
+            Rule.tint = color!"aaaa",
+            Rule.border.sideRight = 1,
+            Rule.borderStyle = colorBorder(color!"f00"),
+        )
+    );
     auto root = vframe(
         layout!(1, "fill"),
         myTheme,
@@ -740,10 +610,10 @@ unittest {
     auto bg = color!"fff";
 
     // Background rectangles — reducing in size every pixel as the border gets added
+    io.assertRectangle(Rectangle(0, 0, 800, 600), bg = multiply(bg, color!"aaaa"));
     io.assertRectangle(Rectangle(0, 0, 799, 600), bg = multiply(bg, color!"aaaa"));
     io.assertRectangle(Rectangle(0, 0, 798, 600), bg = multiply(bg, color!"aaaa"));
     io.assertRectangle(Rectangle(0, 0, 797, 600), bg = multiply(bg, color!"aaaa"));
-    io.assertRectangle(Rectangle(0, 0, 796, 600), bg = multiply(bg, color!"aaaa"));
 
     auto border = color!"f00";
 

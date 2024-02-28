@@ -9,24 +9,16 @@ import fluid.utils;
 import fluid.style;
 import fluid.backend;
 
-alias button = simpleConstructor!(Button!Label);
-alias frameButton = simpleConstructor!(Button!Frame);
+alias button = simpleConstructor!Button;
+alias frameButton = simpleConstructor!FrameButton;
+alias Button = ButtonImpl!Label;
+alias FrameButton = ButtonImpl!Frame;
 
 @safe:
 
 /// A button can be pressed by the user to trigger an action.
-///
-/// Styles: $(UL
-///   $(LI `styleKey` = Default style for the button.)
-///   $(LI `hoverStyleKey` = Style to apply when the button is hovered.)
-///   $(LI `pressStyleKey` = Style to apply when the button is pressed.)
-///   $(LI `focusStyleKey` = Style to apply when the button is focused.)
-/// )
-class Button(T : Node = Label) : InputNode!T {
+class ButtonImpl(T : Node = Label) : InputNode!T {
 
-    mixin DefineStyles!(
-        "pressStyle", q{ hoverStyle },
-    );
     mixin enableInputActions;
 
     /// Callback to run when the button is pressed.
@@ -67,23 +59,6 @@ class Button(T : Node = Label) : InputNode!T {
 
         // Run the callback
         pressed();
-
-    }
-
-    /// Pick the style.
-    protected override inout(Style) pickStyle() inout {
-
-        // If pressed
-        if (isPressed) return pressStyle;
-
-        // If focused
-        if (isFocused) return focusStyle;
-
-        // If hovered
-        if (isHovered) return hoverStyle;
-
-        // No decision — normal state
-        return super.pickStyle();
 
     }
 

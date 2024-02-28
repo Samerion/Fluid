@@ -47,8 +47,6 @@ alias sizeLock(alias T) = simpleConstructor!(SizeLock, T);
 /// ditto
 class SizeLock(T : Node) : T {
 
-    mixin DefineStyles;
-
     /// The maximum size of this node.
     /// If a value on either axis is `0`, limit will not be applied on the axis.
     SizeLimit limit;
@@ -107,10 +105,12 @@ unittest {
     );
 
     root.io = io;
-    root.theme = nullTheme.makeTheme!q{
-        Frame.styleAdd.backgroundColor = color!"1c1c1c";
-        Label.styleAdd.textColor = color!"eee";
-    };
+
+    with (Rule)
+    root.theme = nullTheme.derive(
+        rule!Frame(backgroundColor = color!"1c1c1c"),
+        rule!Label(textColor = color!"eee"),
+    );
 
     {
         root.draw();

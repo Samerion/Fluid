@@ -11,19 +11,11 @@ import fluid.checkbox;
 @safe:
 
 /// A radiobox is similar to checkbox, except only one in a group can be selected at a time.
-///
-/// Styles: $(UL
-///   $(LI `styleKey` = Default style for the button.)
-///   $(LI `checkedStyleKey` = Style the radiobox uses when checked.)
-///   $(LI `hoverStyleKey` = Style to apply when the button is hovered.)
-///   $(LI `focusStyleKey` = Style to apply when the button is focused.)
-/// )
 alias radiobox = simpleConstructor!Radiobox;
 
 /// ditto
 class Radiobox : Checkbox {
 
-    mixin defineStyles;
     mixin enableInputActions;
 
     static class Extra : Checkbox.Extra {

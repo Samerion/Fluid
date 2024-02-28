@@ -20,8 +20,6 @@ alias switchSlot = simpleConstructor!SwitchSlot;
 /// ditto
 class SwitchSlot : Node {
 
-    mixin defineStyles;
-
     public {
 
         Node[] availableNodes;

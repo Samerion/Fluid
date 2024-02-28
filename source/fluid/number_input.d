@@ -27,18 +27,10 @@ alias numberInputSpinner = simpleConstructor!NumberInputSpinner;
 @safe:
 
 /// Number input field.
-///
-/// Styles: $(UL
-///     $(LI `style` = Default style for the input.)
-///     $(LI `focusStyle` = Style for when the input is focused.)
-///     $(LI `emptyStyle` = Style for when the input is empty, i.e. the placeholder is visible. Text should usually be
-///         grayed out.)
-/// )
 class NumberInput(T) : AbstractNumberInput {
 
     static assert(isNumeric!T, "NumberInput is only compatible with numeric types.");
 
-    mixin defineStyles;
     mixin enableInputActions;
 
     public {
@@ -307,7 +299,6 @@ unittest {
 
 abstract class AbstractNumberInput : TextInput {
 
-    mixin defineStyles;
     mixin enableInputActions;
 
     public {
@@ -341,7 +332,6 @@ abstract class AbstractNumberInput : TextInput {
 /// Increment and decrement buttons that appear on the right of number inputs.
 class NumberInputSpinner : Node, FluidHoverable {
 
-    mixin defineStyles;
     mixin enableInputActions;
 
     /// Additional features available for number input styling

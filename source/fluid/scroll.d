@@ -44,8 +44,6 @@ alias hscrollable(alias T) = simpleConstructor!(ApplyRight!(ScrollFrame, "true")
 /// This only supports scrolling in one axis.
 class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable {
 
-    mixin DefineStyles;
-
     public {
 
         /// Scrollbar for the frame. Can be replaced with a customized one.
@@ -63,24 +61,24 @@ class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable {
     this(T...)(T args) {
 
         super(args);
-        this.scrollBar = .vscrollInput();
+        this.scrollBar = .vscrollInput(.layout!(1, "fill"));
 
     }
 
     /// Distance the node is scrolled by.
-    ref inout(ptrdiff_t) scroll() inout {
+    ref inout(float) scroll() inout {
 
         return scrollBar.position;
 
     }
 
-    ptrdiff_t scroll() const {
+    float scroll() const {
 
         return scrollBar.position;
 
     }
 
-    ptrdiff_t scroll(ptrdiff_t value) {
+    float scroll(float value) {
 
         setScroll(value);
         return value;
@@ -109,14 +107,14 @@ class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable {
     }
 
     /// Set the scroll to a value clamped between start and end.
-    void setScroll(ptrdiff_t value) {
+    void setScroll(float value) {
 
         scrollBar.setScroll(value);
 
     }
 
     /// Get the maximum value this container can be scrolled to. Requires at least one draw.
-    size_t scrollMax() const {
+    float scrollMax() const {
 
         return scrollBar.scrollMax();
 
@@ -157,20 +155,20 @@ class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable {
 
             // Need to scroll towards the end
             = *position.start > position.viewportStart && position.end > position.viewportEnd
-            ? to!ptrdiff_t(position.end - position.viewportEnd)
+            ? position.end - position.viewportEnd
 
             // Need to scroll towards the start
             : *position.start < position.viewportStart && position.end < position.viewportEnd
-            ? to!ptrdiff_t(*position.start - position.viewportStart)
+            ? *position.start - position.viewportStart
 
             // Already in viewport
             : 0;
 
         // Perform the scroll
-        setScroll(scroll.to!ptrdiff_t + offset);
+        setScroll(scroll + offset);
 
         // Adjust the offset
-        offset = scroll.to!ptrdiff_t - scrollBefore;
+        offset = scroll - scrollBefore;
 
         // Apply child position
         *position.start -= offset;
@@ -182,7 +180,6 @@ class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable {
     override void resizeImpl(Vector2 space) {
 
         assert(scrollBar !is null, "No scrollbar has been set for FluidScrollable");
-        assert(theme !is null);
         assert(tree !is null);
 
         /// Padding represented as a vector. This sums the padding on each axis.
@@ -192,13 +189,8 @@ class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable {
         const paddingSpace = space + paddingVector;
 
         // Resize the scrollbar
-        with (scrollBar) {
-
-            horizontal = isHorizontal;
-            layout = .layout!(1, "fill");
-            resize(this.tree, this.theme, paddingSpace);
-
-        }
+        scrollBar.isHorizontal = this.isHorizontal;
+        scrollBar.resize(this.tree, this.theme, paddingSpace);
 
         /// Space without the scrollbar
         const contentSpace = isHorizontal
@@ -214,14 +206,14 @@ class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable {
         // Set scrollbar size and add the scrollbar to the result
         if (isHorizontal) {
 
-            scrollBar.availableSpace = cast(size_t) paddingBoxSize.x;
+            scrollBar.availableSpace = paddingBoxSize.x;
             minSize.y += scrollBar.minSize.y;
 
         }
 
         else {
 
-            scrollBar.availableSpace = cast(size_t) paddingBoxSize.y;
+            scrollBar.availableSpace = paddingBoxSize.y;
             minSize.x += scrollBar.minSize.x;
 
         }
@@ -307,8 +299,7 @@ class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable {
         const move = speed * value;
         // io.deltaTime is irrelevant here
 
-        // TODO NO ptrdiff_t
-        scrollBar.setScroll(scroll.to!ptrdiff_t + move.to!ptrdiff_t);
+        scrollBar.setScroll(scroll + move);
 
     }
 

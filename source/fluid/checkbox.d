@@ -10,21 +10,11 @@ import fluid.backend;
 @safe:
 
 /// A checkbox can be selected by the user to indicate a true or false state.
-///
-/// Styles: $(UL
-///   $(LI `styleKey` = Default style for the button.)
-///   $(LI `checkedStyleKey` = Style the checkbox uses when checked.)
-///   $(LI `hoverStyleKey` = Style to apply when the button is hovered.)
-///   $(LI `focusStyleKey` = Style to apply when the button is focused.)
-/// )
 alias checkbox = simpleConstructor!Checkbox;
 
 /// ditto
 class Checkbox : InputNode!Node {
 
-    mixin defineStyles!(
-        "checkedStyle", q{ hoverStyle },
-    );
     mixin implHoveredRect;
     mixin enableInputActions;
 
@@ -143,23 +133,6 @@ class Checkbox : InputNode!Node {
 
         toggle();
         if (changed) changed();
-
-    }
-
-    /// Pick the style.
-    protected override inout(Style) pickStyle() inout {
-
-        // If checked
-        if (isChecked) return checkedStyle;
-
-        // If focused
-        if (isFocused) return focusStyle;
-
-        // If hovered
-        if (isHovered) return hoverStyle;
-
-        // No decision — normal state
-        return super.pickStyle();
 
     }
 

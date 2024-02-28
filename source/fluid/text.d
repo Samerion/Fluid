@@ -111,7 +111,7 @@ struct Text(T : Node) {
 
         style.setDPI(dpi);
 
-        auto newSize = style.typeface.measure(value);
+        auto newSize = style.getTypeface.measure(value);
 
         // Size changed, queue regeneration
         if (_wrap || newSize != _sizeDots) {
@@ -134,7 +134,7 @@ struct Text(T : Node) {
         space.x *= scale.x;
         space.y *= scale.y;
 
-        auto newSize = style.typeface.measure!splitter(space, value, wrap);
+        auto newSize = style.getTypeface.measure!splitter(space, value, wrap);
 
         // Size changed, queue regeneration
         if (_wrap != wrap || newSize != _sizeDots) {
@@ -171,7 +171,7 @@ struct Text(T : Node) {
         );
 
         // TODO actually use the splitter for rendering??
-        style.typeface.draw(image, Rectangle(0, 0, _sizeDots.tupleof), value, color!"fff", _wrap);
+        style.getTypeface.draw(image, Rectangle(0, 0, _sizeDots.tupleof), value, color!"fff", _wrap);
 
         // Load texture
         texture = backend.loadTexture(image);
