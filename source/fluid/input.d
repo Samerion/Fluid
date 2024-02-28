@@ -720,6 +720,7 @@ interface FluidHoverable {
         bool handled;
 
         // Run all active actions
+        if (!mouse || isHovered)
         foreach (binding; tree.activeActions[]) {
 
             if (InputStroke.isMouseItem(binding.trigger) != mouse) continue;

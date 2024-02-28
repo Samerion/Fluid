@@ -13,14 +13,6 @@ import fluid.backend;
 @safe:
 
 
-deprecated("scrollBars have been renamed to scrollInputs, please update references before 0.7.0") {
-
-    alias vscrollBar = vscrollInput;
-    alias hscrollBar = hscrollInput;
-    alias FluidScrollBar = ScrollInput;
-
-}
-
 /// Create a new vertical scroll bar.
 alias vscrollInput = simpleConstructor!ScrollInput;
 
@@ -362,7 +354,7 @@ class ScrollInputHandle : Node, FluidHoverable {
 
     override bool isHovered() const {
 
-        return super.isHovered();
+        return this is tree.hover || super.isHovered();
 
     }
 
@@ -404,10 +396,6 @@ class ScrollInputHandle : Node, FluidHoverable {
         const totalMove = parent.isHorizontal
             ? mousePosition.x - startMousePosition.x
             : mousePosition.y - startMousePosition.y;
-
-        // const handlePosition = (length - handle.length) * position / scrollMax
-        // handlePosition * scrollMax = (length - handle.length) * position
-        // handlePosition * scrollMax / length
 
         const scrollDifference = totalMove * parent.scrollMax / (parent.length - length);
 

@@ -13,11 +13,14 @@ import fluid.scroll;
 import fluid.backend;
 import fluid.structs;
 
-alias textInput = simpleConstructor!TextInput;
 
 @safe:
 
+
 /// Text input field.
+alias textInput = simpleConstructor!TextInput;
+
+/// ditto
 class TextInput : InputNode!Node {
 
     mixin implHoveredRect;
@@ -36,13 +39,6 @@ class TextInput : InputNode!Node {
 
         /// A placeholder text for the field, displayed when the field is empty. Style using `emptyStyle`.
         string placeholder;
-
-        deprecated("multiline was never supported and will be deleted in 0.7.0") {
-
-            bool multiline() const { return false; }
-            bool multiline(bool) { return false; }
-
-        }
 
     }
 

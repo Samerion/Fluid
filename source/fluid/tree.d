@@ -429,16 +429,8 @@ struct LayoutTree {
     /// True if the current tree branch is marked as disabled (doesn't take input).
     bool isBranchDisabled;
 
-    package uint _disabledDepth;
-
     /// Incremented for every `filterActions` access to prevent nested accesses from breaking previously made ranges.
     private int _actionAccessCounter;
-
-    /// Current depth of "disabled" nodes, incremented for any node descended into, while any of the ancestors is
-    /// disabled.
-    deprecated("To be removed in 0.7.0. Use boolean `isBranchDisabled` instead. For iteration depth, check out `depth`")
-    @property
-    ref inout(uint) disabledDepth() inout return { return _disabledDepth; }
 
     /// Create a new tree with the given node as its root, and using the given backend for I/O.
     this(Node root, FluidBackend backend) {
