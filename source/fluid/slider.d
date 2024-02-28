@@ -223,13 +223,14 @@ abstract class AbstractSlider : InputNode!Node {
         const stepCount = availableWidth / length >= minStepDistance
             ? length
             : 2;
+        const visualStepDistance = availableWidth / (stepCount - 1f);
 
-        stepDistance = availableWidth / (stepCount - 1f);
+        stepDistance = availableWidth / (length - 1f);
         firstStepX = rail.x + handle.size.x / 2;
 
         foreach (step; 0 .. stepCount) {
 
-            const start = Vector2(firstStepX + stepDistance * step, end(rail).y);
+            const start = Vector2(firstStepX + visualStepDistance * step, end(rail).y);
             const end = Vector2(start.x, end(outer).y);
 
             // TODO what color?

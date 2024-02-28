@@ -91,9 +91,6 @@ abstract class Node {
         /// Check if this node is disabled, or has inherited the status.
         bool _isDisabledInherited;
 
-        /// If true, theme has been loaded.
-        bool _isStyleLoaded;
-
         /// Theme of this node.
         Theme _theme;
 
@@ -119,7 +116,6 @@ abstract class Node {
         Theme theme(Theme value) @trusted {
 
             _theme = cast(Theme) value;
-            _isStyleLoaded = false;
             updateSize();
             return _theme;
 
@@ -1003,7 +999,7 @@ abstract class Node {
         if (!this.theme) this.theme = theme;
 
         // Load the theme
-        if (!_isStyleLoaded) reloadStyles();
+        reloadStyles();
 
         // Queue actions into the tree
         tree.actions ~= _queuedActions;
@@ -1135,9 +1131,6 @@ abstract class Node {
 
         // Apply theme to the given style
         _styleDelegates = theme.apply(this, _style);
-
-        // Mark the style as loaded
-        _isStyleLoaded = true;
 
         // Update size
         updateSize();
