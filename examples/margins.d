@@ -78,7 +78,7 @@ static this() {
         ~ "backgrounds and borders are drawn during the same step."),
     () => label("Let's start by making a node with nothing but border."),
 )
-Label labelColorExample() {
+Frame marginExample() {
 
     // TODO
     // This example should have the user manipulate the values themselves
@@ -91,5 +91,10 @@ Label labelColorExample() {
         ),
     );
 
-    return label(myTheme, "Hello, World!");
+    return vframe(
+        myTheme,
+        label("Hello, World!"),
+        hseparator(),
+        label("Foo"),
+    );
 }

@@ -41,6 +41,18 @@ class HeadlessBackend : FluidBackend {
         Vector2 start, end;
         Color color;
 
+        bool isClose(Vector2 a, Vector2 b) const
+            => (
+                .isClose(start.x, this.start.x)
+                && .isClose(start.y, this.start.y)
+                && .isClose(end.x, this.end.x)
+                && .isClose(end.y, this.end.y))
+            || (
+                .isClose(end.x, this.end.x)
+                && .isClose(end.y, this.end.y)
+                && .isClose(start.x, this.start.x)
+                && .isClose(start.y, this.start.y));
+
     }
 
     struct DrawnTriangle {
@@ -55,7 +67,6 @@ class HeadlessBackend : FluidBackend {
             && .isClose(b.y, this.b.y)
             && .isClose(c.x, this.c.x)
             && .isClose(c.y, this.c.y);
-
 
     }
 
@@ -644,6 +655,16 @@ class HeadlessBackend : FluidBackend {
     alias triangles = filterCanvas!DrawnTriangle;
     alias rectangles = filterCanvas!DrawnRectangle;
     alias textures = filterCanvas!DrawnTexture;
+
+    /// Throw an `AssertError` if given line was never drawn.
+    void assertLine(Vector2 a, Vector2 b, Color color) {
+
+        assert(
+            lines.canFind!(line => line.isClose(a, b) && line.color == color),
+            "No matching line"
+        );
+
+    }
 
     /// Throw an `AssertError` if given triangle was never drawn.
     void assertTriangle(Vector2 a, Vector2 b, Vector2 c, Color color) {

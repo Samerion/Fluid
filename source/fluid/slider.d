@@ -232,8 +232,7 @@ abstract class AbstractSlider : InputNode!Node {
             const start = Vector2(firstStepX + visualStepDistance * step, end(rail).y);
             const end = Vector2(start.x, end(outer).y);
 
-            // TODO what color?
-            io.drawLine(start, end, style.backgroundColor);
+            style.drawLine(io, start, end);
 
         }
 
