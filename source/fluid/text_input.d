@@ -54,7 +54,6 @@ class TextInput : InputNode!Node {
 
     /// Create a text input.
     /// Params:
-    ///     params      = Node parameters.
     ///     placeholder = Placeholder text for the field.
     ///     submitted   = Callback for when the field is submitted.
     this(string placeholder = "", void delegate() @trusted submitted = null) {
@@ -106,7 +105,6 @@ class TextInput : InputNode!Node {
 
     protected override void drawImpl(Rectangle outer, Rectangle inner) @trusted {
 
-        import std.datetime : Clock;
         import std.algorithm : min, max;
 
         auto style = pickStyle();
@@ -125,6 +123,20 @@ class TextInput : InputNode!Node {
         // Draw the text
         contentLabel.draw(inner);
 
+        // Put the caret at the start if the placeholder is shown
+        const textWidth = value.length
+            ? min(contentLabel.scrollMax, inner.w)
+            : 0;
+
+        // Draw the caret
+        drawCaret(inner, textWidth);
+
+    }
+
+    protected void drawCaret(Rectangle inner, float textWidth) {
+
+        import std.datetime : Clock;
+
         // Ignore the rest if the node isn't focused
         if (!isFocused || isDisabledInherited) return;
 
@@ -135,11 +147,6 @@ class TextInput : InputNode!Node {
 
             const lineHeight = style.getTypeface.lineHeight;
             const margin = lineHeight / 10f;
-
-            // Put the caret at the start if the placeholder is shown
-            const textWidth = value.length
-                ? min(contentLabel.scrollMax, inner.w)
-                : 0;
 
             // Get caret position
             const end = Vector2(
