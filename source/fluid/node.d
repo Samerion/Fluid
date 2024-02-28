@@ -926,10 +926,6 @@ abstract class Node {
         if (disabledRoot) tree.isBranchDisabled = true;
         scope (exit) if (disabledRoot) tree.isBranchDisabled = false;
 
-        // Count if disabled or not
-        if (branchDisabled) tree._disabledDepth++;
-        scope (exit) if (branchDisabled) tree._disabledDepth--;
-
         // Save disabled status
         _isDisabledInherited = branchDisabled;
 

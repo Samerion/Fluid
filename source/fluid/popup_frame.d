@@ -16,12 +16,6 @@ import fluid.backend;
 @safe:
 
 
-deprecated("popup has been renamed to popupFrame")
-alias popup = popupFrame;
-
-deprecated("FluidPopup has been renamed to PopupFrame")
-alias FluidPopup = PopupFrame;
-
 alias popupFrame = simpleConstructor!PopupFrame;
 
 /// Spawn a new popup attached to the given tree.

@@ -240,42 +240,6 @@ class Space : Node {
 
     }
 
-    /// Iterate over every child and perform the painting function. Will automatically remove nodes queued for removal.
-    /// Returns: An iterator that goes over all nodes.
-    deprecated("Use filterChildren instead")
-    protected void drawChildren(void delegate(Node) @safe painter) {
-
-        Node[] leftovers;
-
-        children.lock();
-        scope (exit) children.unlock();
-
-        // Draw each child and get rid of removed children
-        auto range = children[]
-
-            // Check if the node is queued for removal
-            .filter!((node) {
-                const status = node.toRemove;
-                node.toRemove = false;
-                return !status;
-            })
-
-            // Draw the node
-            .tee!((node) => painter(node));
-
-        // Do what we ought to do
-        () @trusted {
-
-            // Process the children and move them back to the original array
-            auto leftovers = range.moveAll(children.forceMutable);
-
-            // Adjust the array size
-            children.forceMutable.length -= leftovers.length;
-
-        }();
-
-    }
-
     protected override bool hoveredImpl(Rectangle, Vector2) const {
 
         return false;

@@ -176,63 +176,6 @@ struct Style {
 
     }
 
-    deprecated("Use Typeface or Text instead. To be removed in 0.7.0.") {
-
-        /// Measure space given text will use.
-        ///
-        /// Params:
-        ///     availableSpace = Space available for drawing.
-        ///     text           = Text to draw.
-        ///     wrap           = If true (default), the text will be wrapped to match available space, unless the space is
-        ///                      empty.
-        /// Returns:
-        ///     If `availableSpace` is a vector, returns the result as a vector.
-        ///
-        ///     If `availableSpace` is a rectangle, returns a rectangle of the size of the result, offset to the position
-        ///     of the given rectangle.
-        Vector2 measureText(Vector2 availableSpace, string text, bool wrap = true) const
-        in (availableSpace.x.isFinite && availableSpace.y.isFinite,
-            format!"Text space given must be finite: %s"(availableSpace))
-        out (r; r.x.isFinite && r.y.isFinite,
-            format!"Resulting text space must be finite: %s"(r))
-        do {
-
-            return typeface.measure(availableSpace, text, wrap);
-
-        }
-
-        /// Ditto
-        Rectangle measureText(Rectangle availableSpace, string text, bool wrap = true) const
-        do {
-
-            const vec = measureText(
-                Vector2(availableSpace.width, availableSpace.height),
-                text, wrap
-            );
-
-            return Rectangle(
-                availableSpace.x, availableSpace.y,
-                vec.x, vec.y
-            );
-
-        }
-
-        /// Draw text using the same params as `measureText`.
-        void drawText(ref Image image, Rectangle rect, string text, bool wrap = true) const {
-
-            typeface.draw(image, rect, text, textColor, wrap);
-
-        }
-
-        /// ditto
-        void drawText(ref Image image, Rectangle rect, string text, Color color, bool wrap = true) const {
-
-            typeface.draw(image, rect, text, color, wrap);
-
-        }
-
-    }
-
     /// Draw the background & border
     void drawBackground(FluidBackend backend, Rectangle rect) const @trusted {
 

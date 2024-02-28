@@ -21,19 +21,16 @@ import fluid.structs;
 import fluid.text_input;
 import fluid.popup_frame;
 
-alias fileInput = simpleConstructor!FileInput;
-
-deprecated("filePicker has been renamed to fileInput. Please update references before 0.7.0.")
-alias filePicker = fileInput;
-
-deprecated("FluidFilePicker has been renamed to FileInput. Please update references before 0.7.0.")
-alias FluidFilePicker = FileInput;
 
 @safe:
 
+
 /// A file picker node.
 ///
-/// Note, this node is hidden by default, use `show` to show.
+/// Note, this node is hidden by default, use `show` or `spawnPopup` to display.
+alias fileInput = simpleConstructor!FileInput;
+
+/// ditto
 class FileInput : PopupFrame {
 
     // TODO maybe create a generic "search all" component? Maybe something that could automatically collect all
