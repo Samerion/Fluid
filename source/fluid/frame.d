@@ -23,8 +23,6 @@ alias hframe = simpleConstructor!(Frame, (a) {
 /// This is a frame, a stylized container for other nodes.
 class Frame : Space {
 
-    mixin implHoveredRect;
-
     this(T...)(T args) {
 
         super(args);
@@ -37,6 +35,14 @@ class Frame : Space {
         style.drawBackground(tree.io, outer);
 
         super.drawImpl(outer, inner);
+
+    }
+
+    protected override bool hoveredImpl(Rectangle rect, Vector2 mousePosition) {
+
+        import fluid.node;
+
+        return Node.hoveredImpl(rect, mousePosition);
 
     }
 

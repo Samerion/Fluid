@@ -19,7 +19,6 @@ alias slider(T) = simpleConstructor!(Slider!T);
 /// ditto
 class Slider(T) : AbstractSlider {
 
-    mixin implHoveredRect;
     mixin enableInputActions;
 
     public {
@@ -336,8 +335,6 @@ class SliderRangeImpl(T) : SliderRange!(ElementType!T) {
 
 /// Defines the handle of a slider.
 class SliderHandle : Node {
-
-    mixin implHoveredRect;
 
     public {
 

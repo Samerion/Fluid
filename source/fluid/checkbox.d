@@ -15,7 +15,6 @@ alias checkbox = simpleConstructor!Checkbox;
 /// ditto
 class Checkbox : InputNode!Node {
 
-    mixin implHoveredRect;
     mixin enableInputActions;
 
     /// Additional features available for checkbox styling.
