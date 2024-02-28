@@ -354,7 +354,8 @@ class Raylib5Backend : FluidBackend {
 
     }
 
-    void drawTexture(fluid.backend.Texture texture, Rectangle rectangle, Color tint, string alt = "") @trusted
+    void drawTexture(fluid.backend.Texture texture, Rectangle rectangle, Color tint, const(char)[] alt = "")
+        @trusted
     in (false)
     do {
 
@@ -365,7 +366,8 @@ class Raylib5Backend : FluidBackend {
 
     }
 
-    void drawTextureAlign(fluid.backend.Texture texture, Rectangle rectangle, Color tint, string alt = "") @trusted
+    void drawTextureAlign(fluid.backend.Texture texture, Rectangle rectangle, Color tint, const(char)[] alt = "")
+        @trusted
     in (false)
     do {
 
@@ -377,7 +379,7 @@ class Raylib5Backend : FluidBackend {
     }
 
     protected @trusted
-    void drawTexture(raylib.Texture texture, Rectangle destination, Color tint, string alt, bool alignPixels)
+    void drawTexture(raylib.Texture texture, Rectangle destination, Color tint, const(char)[] alt, bool alignPixels)
     do {
 
         import std.math;

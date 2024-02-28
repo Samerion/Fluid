@@ -18,6 +18,10 @@ import fluid.structs;
 
 
 /// Text input field.
+///
+/// Text input field uses a mutable character array (`char[]`) for content rather than `string` to provide improved
+/// security for sensitive inputs. Built-in methods and operations will overwrite any removed text to prevent it from
+/// staying in memory.
 alias textInput = simpleConstructor!TextInput;
 
 /// ditto
@@ -34,7 +38,7 @@ class TextInput : InputNode!Node {
         auto size = Vector2(200, 0);
 
         /// Value of the field.
-        string value;
+        char[] value;
 
         /// A placeholder text for the field, displayed when the field is empty. Style using `emptyStyle`.
         string placeholder;
@@ -281,7 +285,7 @@ class TextInput : InputNode!Node {
 
         // Type stuff
         {
-            root.value = "Hello World";
+            root.value = "Hello World".dup;
             root.focus();
             root.updateSize();
             root.draw();
@@ -309,6 +313,8 @@ class TextInput : InputNode!Node {
         import std.uni;
         import std.range;
 
+        auto oldValue = value;
+
         // Run while there's something to process
         while (value != "") {
 
@@ -334,6 +340,9 @@ class TextInput : InputNode!Node {
 
         }
 
+        // Shred old data
+        oldValue[value.length .. $] = char.init;
+
         // Trigger the callback
         _changed();
 
@@ -351,7 +360,7 @@ class TextInput : InputNode!Node {
 
         // Type stuff
         {
-            root.value = "Hello World";
+            root.value = "Hello World".dup;
             root.focus();
             root.updateSize();
             root.draw();
@@ -401,11 +410,16 @@ class TextInput : InputNode!Node {
     @(FluidInputAction.backspace)
     void chop() {
 
+        auto oldValue = value;
+
         // Ignore if the box is empty
         if (value == "") return;
 
         // Remove the last character
         value = value.chop;
+
+        // Shred old data
+        oldValue[value.length .. $] = char.init;
 
         // Trigger the callback
         _changed();
@@ -424,7 +438,7 @@ class TextInput : InputNode!Node {
 
         // Type stuff
         {
-            root.value = "hello‽";
+            root.value = "hello‽".dup;
             root.focus();
             root.updateSize();
             root.draw();
@@ -465,6 +479,49 @@ class TextInput : InputNode!Node {
             assert(root.value == "hel");
             assert(root.isFocused);
         }
+
+    }
+
+    /// Clear the value of this input field, making it empty.
+    void clear()
+    out(; isEmpty)
+    do {
+
+        // Shred the data
+        value[] = char.init;
+
+        // Remove the value
+        value = null;
+
+    }
+
+    unittest {
+
+        // Security test
+        auto io = new HeadlessBackend;
+        auto root = textInput();
+
+        io.inputCharacter("Hello, World!");
+        root.io = io;
+        root.focus();
+        root.draw();
+
+        auto value = root.value;
+
+        root.chop();
+
+        assert(root.value == "Hello, World");
+        assert(value == "Hello, World\xff");
+
+        root.chopWord();
+
+        assert(root.value == "Hello, ");
+        assert(value == "Hello, \xff\xff\xff\xff\xff\xff");
+
+        root.clear();
+
+        assert(root.value == "");
+        assert(value == "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff");
 
     }
 
