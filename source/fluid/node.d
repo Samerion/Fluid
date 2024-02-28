@@ -18,47 +18,13 @@ import fluid.structs;
 @safe:
 
 
-private interface Styleable {
-
-    /// Reload styles for the node. Triggered when the theme is changed.
-    ///
-    /// Use `mixin DefineStyles` to generate the styles.
-    final void reloadStyles() {
-
-        // First load what we're given
-        reloadStylesImpl();
-
-        // Then load the defaults
-        loadDefaultStyles();
-
-    }
-
-    // Internal:
-
-    protected void reloadStylesImpl();
-    protected void loadDefaultStyles();
-
-}
-
 /// Represents a Fluid node.
-abstract class Node : Styleable {
+abstract class Node {
 
     public import fluid.structs : NodeAlign, Layout;
     public import fluid.structs : Align = NodeAlign;
 
-    /// This node defines a single style, `style`, which also works as a default style for all other nodes. However,
-    /// rather than for that, the purpose of this style is to define the convention of `style` being the node's default,
-    /// idle style.
-    ///
-    /// It should be noted the default `style` is the only style that affects a node's sizing — as the tree would have
-    /// to be resized in case they changed and secondary styles are assumed to change frequently (for example, on
-    /// hover). In practice, resizing the tree on those changes usually ends up horrible for the user, so it's advised
-    /// to stick to constant sizing in order to not hurt the accessibility.
-    mixin DefineStyles!(
-        "style", q{ Style.init },
-    );
-
-    static class Extra : StyleExtension {
+    static class Extra {
 
         private struct CacheKey {
 
@@ -93,6 +59,9 @@ abstract class Node : Styleable {
         /// Layout for this node.
         Layout layout;
 
+        /// Tags assigned for this node.
+        TagList tags;
+
         /// If true, this node will be removed from the tree on the next draw.
         bool toRemove;
 
@@ -125,6 +94,12 @@ abstract class Node : Styleable {
         /// Theme of this node.
         Theme _theme;
 
+        /// Cached style for this node.
+        Style _style;
+
+        /// Attached styling delegates.
+        Rule.StyleDelegate[] _styleDelegates;
+
         /// Actions queued for this node; only used for queueing actions before the first `resize`; afterwards, all
         /// actions are queued directly into the tree.
         TreeAction[] _queuedActions;
@@ -141,10 +116,15 @@ abstract class Node : Styleable {
         Theme theme(Theme value) @trusted {
 
             _theme = cast(Theme) value;
-            reloadStyles();
+            updateSize();
             return _theme;
 
         }
+
+        /// Current style, used for sizing. Does not include any changes made by `when` clauses or callbacks.
+        ///
+        /// Direct changes are discouraged, and are likely to be discarded when reloading themes. Use themes instead.
+        ref inout(Style) style() inout { return _style; }
 
     }
 
@@ -574,6 +554,8 @@ abstract class Node : Styleable {
 
         }
 
+        assert(theme);
+
         const space = tree.io.windowSize;
 
         // Clear mouse hover if LMB is up
@@ -625,11 +607,7 @@ abstract class Node : Styleable {
         // Set mouse cursor to match hovered node
         if (tree.hover) {
 
-            if (auto style = tree.hover.pickStyle) {
-
-                tree.io.mouseCursor = style.mouseCursor;
-
-            }
+            tree.io.mouseCursor = tree.hover.pickStyle().mouseCursor;
 
         }
 
@@ -866,9 +844,6 @@ abstract class Node : Styleable {
 
         const spaceV = Vector2(space.width, space.height);
 
-        // No style set? It likely hasn't been loaded
-        if (!style) reloadStyles();
-
         // Get parameters
         const size = Vector2(
             layout.nodeAlign[0] == NodeAlign.fill ? space.width  : min(space.width,  minSize.x),
@@ -878,11 +853,12 @@ abstract class Node : Styleable {
 
         // Calculate the boxes
         const marginBox  = Rectangle(position.tupleof, size.tupleof);
-        const borderBox  = style ? style.cropBox(marginBox, style.margin)   : marginBox;
-        const paddingBox = style ? style.cropBox(borderBox, style.border)   : borderBox;
-        const contentBox = style ? style.cropBox(paddingBox, style.padding) : paddingBox;
+        const borderBox  = style.cropBox(marginBox, style.margin);
+        const paddingBox = style.cropBox(borderBox, style.border);
+        const contentBox = style.cropBox(paddingBox, style.padding);
+        const mainBox    = borderBox;
 
-        const currentStyle = pickStyle().orInit;
+        const currentStyle = pickStyle();
 
         // Get the visible part of the padding box — so overflowed content doesn't get mouse focus
         const visibleBox = tree.intersectScissors(paddingBox);
@@ -896,7 +872,7 @@ abstract class Node : Styleable {
         scope (exit) io.tint = previousTint;
 
         // If there's a border active, draw it
-        if (style && currentStyle.borderStyle) {
+        if (currentStyle.borderStyle) {
 
             currentStyle.borderStyle.apply(io, borderBox, style.border);
             // TODO wouldn't it be better to draw borders as background?
@@ -934,9 +910,9 @@ abstract class Node : Styleable {
             ),
         );
         assert(
-            only(paddingBox.tupleof, contentBox.tupleof).all!isFinite,
-            format!"Node %s size is invalid: paddingBox = %s, contentBox = %s"(
-                typeid(this), paddingBox, contentBox
+            only(mainBox.tupleof, contentBox.tupleof).all!isFinite,
+            format!"Node %s size is invalid: borderBox = %s, contentBox = %s"(
+                typeid(this), mainBox, contentBox
             )
         );
 
@@ -964,7 +940,7 @@ abstract class Node : Styleable {
         // Run beforeDraw actions
         foreach (action; tree.filterActions) {
 
-            action.beforeDrawImpl(this, space, paddingBox, contentBox);
+            action.beforeDrawImpl(this, space, mainBox, contentBox);
 
         }
 
@@ -972,28 +948,28 @@ abstract class Node : Styleable {
         // Note: minSize includes margin!
         if (minSize.x > space.width || minSize.y > space.height) {
 
-            const lastScissors = tree.pushScissors(paddingBox);
+            const lastScissors = tree.pushScissors(mainBox);
             scope (exit) tree.popScissors(lastScissors);
 
-            drawImpl(paddingBox, contentBox);
+            drawImpl(mainBox, contentBox);
 
         }
 
         // Draw the node
-        else drawImpl(paddingBox, contentBox);
+        else drawImpl(mainBox, contentBox);
 
 
         // If not disabled
         if (!branchDisabled) {
 
             // Update focus info
-            tree.focusDirection.update(this, paddingBox, tree.depth);
+            tree.focusDirection.update(this, mainBox, tree.depth);
 
             // If this node is focused
             if (this is cast(Node) tree.focus) {
 
                 // Set the focus box
-                tree.focusBox = paddingBox;
+                tree.focusBox = mainBox;
 
             }
 
@@ -1002,7 +978,7 @@ abstract class Node : Styleable {
         // Run afterDraw actions
         foreach (action; tree.filterActions) {
 
-            action.afterDrawImpl(this, space, paddingBox, contentBox);
+            action.afterDrawImpl(this, space, mainBox, contentBox);
 
         }
 
@@ -1020,7 +996,10 @@ abstract class Node : Styleable {
 
         // Inherit tree and theme
         this.tree = tree;
-        if (this.theme is null) this.theme = theme;
+        if (!this.theme) this.theme = theme;
+
+        // Load the theme
+        reloadStyles();
 
         // Queue actions into the tree
         tree.actions ~= _queuedActions;
@@ -1036,8 +1015,8 @@ abstract class Node : Styleable {
             import std.range;
 
             const fullMargin = style.fullMargin;
-            const spacingX = style ? chain(fullMargin.sideX[], style.padding.sideX[]).sum : 0;
-            const spacingY = style ? chain(fullMargin.sideY[], style.padding.sideY[]).sum : 0;
+            const spacingX = chain(fullMargin.sideX[], style.padding.sideX[]).sum;
+            const spacingY = chain(fullMargin.sideY[], style.padding.sideY[]).sum;
 
             // Reduce space by margins
             space.x = max(0, space.x - spacingX);
@@ -1126,9 +1105,35 @@ abstract class Node : Styleable {
     }
 
     /// Get the current style.
-    inout(Style) pickStyle() inout {
+    Style pickStyle() {
 
-        return style;
+        // Pick the current style
+        auto result = _style;
+
+        // Apply it
+        foreach (dg; _styleDelegates) {
+
+            dg(this).apply(this, result);
+
+        }
+
+        return result;
+
+    }
+
+    /// Reload style from the current theme.
+    protected void reloadStyles() {
+
+        import fluid.typeface;
+
+        // Reset style
+        _style = Style.init;
+
+        // Apply theme to the given style
+        _styleDelegates = theme.apply(this, _style);
+
+        // Update size
+        updateSize();
 
     }
 
@@ -1193,9 +1198,9 @@ abstract class Node : Styleable {
             square(.layout!"fill",   colors[3]),
         );
 
-        root.theme = Theme.init.makeTheme!q{
-            Frame.styleAdd.backgroundColor = color!"1c1c1c";
-        };
+        root.theme = Theme.init.derive(
+            rule!Frame(Rule.backgroundColor = color!"1c1c1c")
+        );
         root.io = io;
 
         // Test the layout

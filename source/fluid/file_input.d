@@ -34,19 +34,11 @@ alias FluidFilePicker = FileInput;
 /// A file picker node.
 ///
 /// Note, this node is hidden by default, use `show` to show.
-/// Styles: $(UL
-///     $(LI `selectedStyle` = Style for the currently selected suggestion.)
-/// )
 class FileInput : PopupFrame {
 
     // TODO maybe create a generic "search all" component? Maybe something that could automatically collect all
     //      button data?
 
-    mixin defineStyles!(
-        "unselectedStyle", q{ Style.init },
-        "selectedStyle", q{ unselectedStyle },
-        "suggestionHoverStyle", q{ selectedStyle },
-    );
     mixin enableInputActions;
 
     /// Callback to run when input was cancelled.
@@ -114,6 +106,9 @@ class FileInput : PopupFrame {
 
         typedFilename = input.value;
 
+        // Load suggestions
+        addSuggestions();
+
         // Bind events
         input.changed = () {
 
@@ -167,7 +162,6 @@ class FileInput : PopupFrame {
 
     protected class FilenameInput : TextInput {
 
-        mixin defineStyles;
         mixin enableInputActions;
 
         this(T...)(T args) {
@@ -245,9 +239,6 @@ class FileInput : PopupFrame {
 
         clearSuggestions();
 
-        // Make sure the directory exists
-        if (!dir.exists || !dir.isDir) return;
-
         // Check the entries
         addSuggestions();
 
@@ -279,7 +270,9 @@ class FileInput : PopupFrame {
         const file = values[1];
 
         ulong num;
-        foreach (entry; dir.dirEntries(file ~ "*", SpanMode.shallow)) {
+
+        // TODO handle errors on a per-entry basis?
+        try foreach (entry; dir.dirEntries(file ~ "*", SpanMode.shallow)) {
 
             const name = entry.name.baseName;
 
@@ -295,6 +288,10 @@ class FileInput : PopupFrame {
 
             // File
             else pushSuggestion(name);
+
+        }
+
+        catch (FileException exc) {
 
         }
 
@@ -314,7 +311,7 @@ class FileInput : PopupFrame {
         if (index >= suggestions.children.length) {
 
             // Create the button
-            suggestions.children ~= new SuggestionButton(this, index, text, {
+            suggestions.children ~= new FileInputSuggestion(this, index, text, {
 
                 selectSuggestion(index + 1);
                 reload();
@@ -326,7 +323,7 @@ class FileInput : PopupFrame {
         // Set text for the relevant button
         else {
 
-            auto btn = cast(SuggestionButton) suggestions.children[index];
+            auto btn = cast(FileInputSuggestion) suggestions.children[index];
 
             btn.text = text;
             btn.show();
@@ -382,7 +379,7 @@ class FileInput : PopupFrame {
         // Update input to match suggestion
         if (currentSuggestion != 0) {
 
-            auto btn = cast(SuggestionButton) suggestions.children[currentSuggestion - 1];
+            auto btn = cast(FileInputSuggestion) suggestions.children[currentSuggestion - 1];
             auto newValue = valueTuple(typedFilename)[0] ~ btn.text.stripLeft;
 
             // Same value, submit
@@ -424,7 +421,7 @@ class FileInput : PopupFrame {
     override bool isFocused() const {
 
         return input.isFocused()
-            || cast(const SuggestionButton) tree.focus;
+            || cast(const FileInputSuggestion) tree.focus;
 
     }
 
@@ -485,39 +482,34 @@ class FileInput : PopupFrame {
 
 }
 
-private class SuggestionButton : Button!() {
+/// Suggestion button for styling.
+class FileInputSuggestion : Button {
 
     mixin enableInputActions;
 
     private {
 
-        int index;
-        FileInput input;
+        int _index;
+        FileInput _input;
 
     }
 
-    this(T...)(FileInput input, int index, T args) {
+    private this(FileInput input, int index, string text, void delegate() @safe callback) {
 
-        super(args);
+        super(text, callback);
         this.layout = .layout!"fill";
-        this.index = index;
-        this.input = input;
+        this._index = index;
+        this._input = input;
 
     }
 
-    override inout(Style) pickStyle() inout {
+    /// File input the button belongs to.
+    inout(FileInput) parent() inout => _input;
 
-        // Selected
-        if (input.currentSuggestion == index+1)
-            return input.selectedStyle;
+    /// Index of the button.
+    int index() const => _index;
 
-        // Hovered
-        if (isHovered)
-            return input.suggestionHoverStyle;
-
-        // Idle
-        return input.unselectedStyle;
-
-    }
+    /// True if this suggestion is selected.
+    bool isSelected() const => _input.currentSuggestion == _index+1;
 
 }

@@ -716,9 +716,6 @@ interface FluidHoverable {
 
     private final bool runInputActionsImpl(bool mouse) {
 
-        // Ignore mouse events if not hovered
-        if (mouse && !isHovered) return false;
-
         auto tree = asNode.tree;
         bool handled;
 
@@ -800,7 +797,7 @@ interface FluidHoverable {
                     alias inputActionUDAs = getUDAs!(overload, InputAction);
 
                     // Check for `@whileDown`
-                    enum activateWhileDown = hasUDA!(overload, whileDown);
+                    enum activateWhileDown = hasUDA!(overload, fluid.input.whileDown);
 
                     static assert(inputActionUDAs.length == 0,
                         format!"Please use @(%s) instead of @InputAction!(%1$s)"(inputActionUDAs[0].type));
@@ -895,27 +892,16 @@ interface FluidScrollable {
     Rectangle shallowScrollTo(const Node child, Rectangle parentBox, Rectangle childBox);
 
     /// Get current scroll value.
-    ptrdiff_t scroll() const;
+    float scroll() const;
 
     /// Set scroll value.
-    ptrdiff_t scroll(ptrdiff_t value);
+    float scroll(float value);
 
 }
 
 /// Represents a general input node.
-///
-/// Styles: $(UL
-///     $(LI `styleKey` = Default style for the input.)
-///     $(LI `focusStyleKey` = Style for when the input is focused.)
-///     $(LI `disabledStyleKey` = Style for when the input is disabled.)
-/// )
 abstract class InputNode(Parent : Node) : Parent, FluidFocusable {
 
-    mixin defineStyles!(
-        "focusStyle", q{ style },
-        "hoverStyle", q{ style },
-        "disabledStyle", q{ style },
-    );
     mixin makeHoverable;
     mixin enableInputActions;
 
@@ -931,23 +917,7 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable {
 
     }
 
-    override inout(Style) pickStyle() inout {
-
-        // Disabled
-        if (isDisabledInherited) return disabledStyle;
-
-        // Focused
-        else if (isFocused) return focusStyle;
-
-        // Hovered
-        else if (isHovered) return hoverStyle;
-
-        // Other
-        else return style;
-
-    }
-
-    /// Handle mouse input.
+    /// Handle mouse input if no input action did.
     ///
     /// Usually, you'd prefer to define a method marked with an `InputAction` enum. This function is preferred for more
     /// advanced usage.
@@ -962,7 +932,7 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable {
 
     }
 
-    /// Handle keyboard and gamepad input.
+    /// Handle keyboard and gamepad input if no input action did.
     ///
     /// Usually, you'd prefer to define a method marked with an `InputAction` enum. This function is preferred for more
     /// advanced usage.
@@ -979,8 +949,6 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable {
     /// Check if the node is being pressed. Performs action lookup.
     ///
     /// This is a helper for nodes that might do something when pressed, for example, buttons.
-    ///
-    /// Preferrably, the node should implement an `isPressed` property and cache the result of this!
     protected bool checkIsPressed() {
 
         return (isHovered && tree.isMouseDown!(FluidInputAction.press))
@@ -1142,7 +1110,7 @@ unittest {
     // This test checks if "hover slipping" happens; namely, if the user clicks and holds on an object, then hovers on
     // something else and releases, the click should be cancelled, and no other object should react to the same click.
 
-    class SquareButton : Button!() {
+    class SquareButton : Button {
 
         mixin enableInputActions;
 

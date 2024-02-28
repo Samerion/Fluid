@@ -70,8 +70,6 @@ MapDropVector dropVector(string dropX, string dropY)() {
 
 class MapFrame : Frame {
 
-    mixin DefineStyles;
-
     alias DropDirection = MapDropDirection;
     alias DropVector = MapDropVector;
     alias Position = MapPosition;

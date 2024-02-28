@@ -62,7 +62,6 @@ void spawnChildPopup(PopupFrame parent, PopupFrame popup) {
 /// the node tree.
 class PopupFrame : InputNode!Frame {
 
-    mixin defineStyles;
     mixin makeHoverable;
     mixin enableInputActions;
 

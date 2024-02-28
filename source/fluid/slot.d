@@ -21,10 +21,6 @@ alias nodeSlot(alias T) = simpleConstructor!(NodeSlot!T);
 /// ditto
 class NodeSlot(T : Node) : Node {
 
-    /// NodeSlot defines its own styles, which will only apply to the slot itself, not the contents. Most of the
-    /// styling options will have no effect, but padding and margin will.
-    mixin DefineStyles;
-
     public {
 
         /// Node placed in the slot.
@@ -100,12 +96,6 @@ class NodeSlot(T : Node) : Node {
 
     }
 
-    override inout(Style) pickStyle() inout {
-
-        return style;
-
-    }
-
     /// Swap contents of the two slots.
     void swapSlots(Slot : Node)(Slot other) {
 
@@ -170,9 +160,10 @@ class NodeSlot(T : Node) : Node {
 
         });
 
-        root.theme = nullTheme.makeTheme!q{
-            Label.styleAdd.textColor = color!"000";
-        };
+        with (Rule)
+        root.theme = nullTheme.derive(
+            rule!Label(textColor = color!"000"),
+        );
         root.io = io;
 
         // First frame

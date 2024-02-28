@@ -2,6 +2,7 @@
 module fluid.utils;
 
 import std.meta;
+import std.traits;
 import std.functional;
 
 import fluid.backend;

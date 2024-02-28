@@ -11,10 +11,13 @@ import fluid.backend;
 interface FluidBorder {
 
     /// Apply the border, drawing it in the given box.
-    abstract void apply(FluidBackend backend, Rectangle borderBox, uint[4] size) const;
+    void apply(FluidBackend backend, Rectangle borderBox, float[4] size) const;
+
+    /// Borders have to be comparable in a memory-safe manner.
+    bool opEquals(const Object object) @safe const;
 
     /// Get the rectangle for the given side of the border.
-    final Rectangle sideRect(Rectangle source, uint[4] size, Style.Side side) const {
+    final Rectangle sideRect(Rectangle source, float[4] size, Style.Side side) const {
 
         final switch (side) {
 
@@ -60,7 +63,7 @@ interface FluidBorder {
 
     /// Get square for corner next counter-clockwise to the given side.
     /// Note: returned rectangles may have negative size; rect start position will always point to the corner itself.
-    final Rectangle cornerRect(Rectangle source, uint[4] size, Style.Side side) const {
+    final Rectangle cornerRect(Rectangle source, float[4] size, Style.Side side) const {
 
         final switch (side) {
 
@@ -122,7 +125,7 @@ class ColorBorder : FluidBorder {
 
     Color[4] color;
 
-    void apply(FluidBackend io, Rectangle borderBox, uint[4] size) const @trusted {
+    void apply(FluidBackend io, Rectangle borderBox, float[4] size) const @trusted {
 
         // For each side
         foreach (sideIndex; 0..4) {
@@ -171,6 +174,12 @@ class ColorBorder : FluidBorder {
 
     }
 
+    override bool opEquals(const Object object) @safe const {
+
+        return this is object;
+
+    }
+
 }
 
 unittest {
@@ -189,12 +198,13 @@ unittest {
     root.io = io;
 
     // First frame: Solid border on one side only
-    root.theme = Theme.init.makeTheme!q{
-        Frame.styleAdd!q{
-            border.sideBottom = 4;
-            borderStyle = colorBorder(color!"018b8d");
-        };
-    };
+    with (Rule)
+    root.theme = nullTheme.derive(
+        rule!Frame(
+            border.sideBottom = 4,
+            borderStyle = colorBorder(color!"018b8d"),
+        )
+    );
     root.draw();
 
     assert(
@@ -203,20 +213,19 @@ unittest {
         "Border must be present underneath the rectangle"
     );
 
-    enum colorCode = q{ [color!"018b8d", color!"8d7006", color!"038d23", color!"6b048d"] };
-
-    Color[4] borderColor = mixin(colorCode);
+    Color[4] borderColor = [color!"018b8d", color!"8d7006", color!"038d23", color!"6b048d"];
 
     // Second frame: Border on all sides
     // TODO optimize monochrome borders, and test them as well
     io.nextFrame;
-    root.theme = Theme.init.makeTheme!(colorCode.format!q{
-        Frame.styleAdd!q{
-            border = 4;
-            borderStyle = colorBorder(%s);
-        };
-    });
-    root.reloadStyles();
+
+    with (Rule)
+    root.theme = nullTheme.derive(
+        rule!Frame(
+            border = 4,
+            borderStyle = colorBorder(borderColor),
+        )
+    );
     root.draw();
 
     // Rectangles

@@ -35,8 +35,6 @@ alias hspace = simpleConstructor!(Space, (a) {
 /// ditto
 class Space : Node {
 
-    mixin DefineStyles;
-
     public {
 
         /// Children of this frame.
@@ -284,12 +282,6 @@ class Space : Node {
 
     }
 
-    protected override inout(Style) pickStyle() inout {
-
-        return null;
-
-    }
-
     /// Params:
     ///     child     = Child size to add.
     ///     previous  = Previous position.
@@ -468,10 +460,11 @@ unittest {
         vframe(layout!1),
     );
 
+    with (Rule)
+    root.theme = nullTheme.derive(
+        rule!Frame(backgroundColor = color!"7d9"),
+    );
     root.io = io;
-    root.theme = nullTheme.makeTheme!q{
-        Frame.styleAdd.backgroundColor = color!"7d9";
-    };
 
     // Frame 1
     {
@@ -538,9 +531,10 @@ unittest {
         ),
     );
 
-    root.theme = nullTheme.makeTheme!q{
-        Frame.styleAdd.backgroundColor = color!"0004";
-    };
+    with (Rule)
+    root.theme = nullTheme.derive(
+        rule!Frame(backgroundColor = color!"0004"),
+    );
     root.io = io;
     root.draw();
 
@@ -561,10 +555,10 @@ unittest {
 
     auto fill = layout!(1, "fill");
     auto io = new HeadlessBackend;
-    auto myTheme = nullTheme.makeTheme!q{
-        Frame.styleAdd.backgroundColor = color!"#303030";
-        Label.styleAdd.backgroundColor = color!"#e65bb8";
-    };
+    auto myTheme = nullTheme.derive(
+        rule!Frame(Rule.backgroundColor = color!"#303030"),
+        rule!Label(Rule.backgroundColor = color!"#e65bb8"),
+    );
     auto root = hframe(
         fill,
         myTheme,

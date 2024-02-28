@@ -2,6 +2,9 @@
 module fluid.structs;
 
 import std.conv;
+import std.traits;
+
+import fluid.node;
 
 import fluid.node;
 
@@ -174,5 +177,229 @@ struct Layout {
         }
 
     }
+
+}
+
+/// Tags are optional "marks" left on nodes that are used to apply matching styles. Tags closely resemble
+/// [HTML classes](https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/class).
+///
+/// Tags have to be explicitly defined before usage, by creating an enum and marking it with the `@NodeTag` attribute.
+/// Such tags can then be applied by passing them to the constructor.
+enum NodeTag;
+
+///
+unittest {
+
+    import fluid.label;
+
+    @NodeTag
+    enum Tags {
+        myTag,
+    }
+
+    auto myLabel = label(
+        .tags!(Tags.myTag),
+        "Hello, World!"
+    );
+
+    assert(myLabel.tags == .tags!(Tags.myTag));
+
+}
+
+/// Check if the given item is a node tag.
+enum isNodeTag(alias tag)
+    = hasUDA!(tag, NodeTag)
+    || (!isType!tag && hasUDA!(typeof(tag), NodeTag));
+
+/// Specify tags for the next node to add.
+TagList tags(input...)() {
+
+    return TagList.init.add!input;
+
+}
+
+/// Node parameter assigning a new set of tags to a node.
+struct TagList {
+
+    import std.range;
+    import std.algorithm;
+
+    /// A *sorted* array of tags.
+    private SortedRange!(TagID[]) range;
+
+    /// Check if the range is empty.
+    bool empty() {
+
+        return range.empty;
+
+    }
+
+    /// Count all tags.
+    size_t length() {
+
+        return range.length;
+
+    }
+
+    /// Get a list of all tags in the list.
+    const(TagID)[] get() {
+
+        return range.release;
+
+    }
+
+    /// Create a new set of tags expanded by the given set of tags.
+    TagList add(input...)() {
+
+        const originalLength = this.range.length;
+
+        TagID[input.length] newTags;
+
+        // Load the tags
+        static foreach (i, tag; input) {
+
+            newTags[i] = tagID!tag;
+
+        }
+
+        // Allocate output range
+        auto result = new TagID[originalLength + input.length];
+        auto lhs = result[0..originalLength] = this.range.release;
+
+        // Sort the result
+        completeSort(assumeSorted(lhs), newTags[]);
+
+        // Add the remaining tags
+        result[originalLength..$] = newTags;
+
+        return TagList(assumeSorted(result));
+
+    }
+
+    /// Get the intesection of the two tag lists.
+    /// Returns: A range with tags that are present in both of the lists.
+    auto intersect(TagList tags) {
+
+        return setIntersection(this.range, tags.range);
+
+    }
+
+    /// Assign this list of tags to the given node.
+    void apply(Node node) {
+
+        node.tags = this;
+
+    }
+
+    string toString() {
+
+        // Prevent writeln from clearing the range
+        return text(range.release);
+
+    }
+
+}
+
+unittest {
+
+    @NodeTag
+    enum singleEnum;
+
+    assert(isNodeTag!singleEnum);
+
+    @NodeTag
+    enum Tags { a, b, c }
+
+    assert(isNodeTag!(Tags.a));
+    assert(isNodeTag!(Tags.b));
+    assert(isNodeTag!(Tags.c));
+
+    enum NonTags { a, b, c }
+
+    assert(!isNodeTag!(NonTags.a));
+    assert(!isNodeTag!(NonTags.b));
+    assert(!isNodeTag!(NonTags.c));
+
+    enum SomeTags { a, b, @NodeTag tag }
+
+    assert(!isNodeTag!(SomeTags.a));
+    assert(!isNodeTag!(SomeTags.b));
+    assert(isNodeTag!(SomeTags.tag));
+
+}
+
+unittest {
+
+    import std.range;
+    import std.algorithm;
+
+    @NodeTag
+    enum MyTags {
+        tag1, tag2
+    }
+
+    auto tags1 = tags!(MyTags.tag1, MyTags.tag2);
+    auto tags2 = tags!(MyTags.tag2, MyTags.tag1);
+
+    assert(tags1.intersect(tags2).walkLength == 2);
+    assert(tags2.intersect(tags1).walkLength == 2);
+    assert(tags1 == tags2);
+
+    auto tags3 = tags!(MyTags.tag1);
+    auto tags4 = tags!(MyTags.tag2);
+
+    assert(tags1.intersect(tags3).equal(tagID!(MyTags.tag1).only));
+    assert(tags1.intersect(tags4).equal(tagID!(MyTags.tag2).only));
+    assert(tags3.intersect(tags4).empty);
+
+}
+
+TagID tagID(alias tag)()
+out (r; r.id, "Invalid ID returned for tag " ~ tag.stringof)
+do {
+
+    enum Tag = TagIDImpl!tag();
+
+    debug
+        return TagID(cast(long) &Tag._id, fullyQualifiedName!tag);
+    else
+        return TagID(cast(long) &Tag._id);
+
+}
+
+/// Unique ID of a node tag.
+struct TagID {
+
+    /// Unique ID of the tag.
+    long id;
+
+    invariant(id, "Tag ID must not be 0.");
+
+    /// Tag name. Only emitted when debugging.
+    debug string name;
+
+    bool opEqual(TagID other) {
+
+        return id == other.id;
+
+    }
+
+    long opCmp(TagID other) const {
+
+        return id - other.id;
+
+    }
+
+}
+
+private struct TagIDImpl(alias nodeTag)
+if (isNodeTag!nodeTag) {
+
+    alias tag = nodeTag;
+
+    /// Implementation is the same as input action IDs, see fluid.input.InputAction.
+    /// For what's important, the _id field is not the ID; its pointer however, is.
+    align(1)
+    private static immutable bool _id;
 
 }

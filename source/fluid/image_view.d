@@ -16,8 +16,6 @@ alias imageView = simpleConstructor!ImageView;
 /// displayed in the middle of the available box.
 class ImageView : Node {
 
-    mixin DefineStyles;
-
     public {
 
         /// If true, size of this imageView is adjusted automatically. Changes made to `minSize` will be reversed on
@@ -217,12 +215,6 @@ class ImageView : Node {
     override protected bool hoveredImpl(Rectangle, Vector2 mouse) const {
 
         return _targetArea.contains(mouse);
-
-    }
-
-    override inout(Style) pickStyle() inout {
-
-        return null;
 
     }
 
