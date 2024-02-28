@@ -131,6 +131,9 @@ class Space : Node {
 
         }
 
+        // Reserve space for gaps
+        reservedSpace += style.gap * (children.length - 1);
+
         // Calculate the size of expanding children last
         foreach (child; expandChildren) {
 
@@ -178,8 +181,8 @@ class Space : Node {
             child.draw(rect);
 
             // Offset position
-            if (directionHorizontal) position.x += size.x;
-            else position.y += size.y;
+            if (directionHorizontal) position.x += size.x + style.gap;
+            else position.y += size.y + style.gap;
 
         }
 
@@ -554,5 +557,39 @@ unittest {
     io.assertRectangle(Rectangle( 9*800/12f, 0, 66.66, 600), color!"#e65bb8");
     io.assertRectangle(Rectangle(10*800/12f, 0, 66.66, 600), color!"#e65bb8");
     io.assertRectangle(Rectangle(11*800/12f, 0, 66.66, 600), color!"#e65bb8");
+
+}
+
+unittest {
+
+    import fluid.frame;
+    import fluid.theme;
+    import fluid.structs : layout;
+
+    auto io = new HeadlessBackend;
+    auto theme = nullTheme.derive(
+        rule!Space(
+            gap = 4,
+        ),
+        rule!Frame(
+            backgroundColor = color("#f00"),
+        ),
+    );
+    auto root = vspace(
+        layout!"fill",
+        theme,
+        vframe(layout!(1, "fill")),
+        vframe(layout!(1, "fill")),
+        vframe(layout!(1, "fill")),
+        vframe(layout!(1, "fill")),
+    );
+
+    root.io = io;
+    root.draw();
+
+    io.assertRectangle(Rectangle(0,   0, 800, 147), color("#f00"));
+    io.assertRectangle(Rectangle(0, 151, 800, 147), color("#f00"));
+    io.assertRectangle(Rectangle(0, 302, 800, 147), color("#f00"));
+    io.assertRectangle(Rectangle(0, 453, 800, 147), color("#f00"));
 
 }
