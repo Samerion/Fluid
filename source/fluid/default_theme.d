@@ -9,6 +9,7 @@ import fluid.backend;
 import fluid.checkbox;
 import fluid.radiobox;
 import fluid.typeface;
+import fluid.separator;
 import fluid.file_input;
 import fluid.text_input;
 import fluid.popup_frame;
@@ -96,6 +97,7 @@ static this() {
             ),
             rule!AbstractSlider(
                 backgroundColor = color("#ddd"),
+                lineColor = color("#ddd"),
             ),
             rule!SliderHandle(
                 backgroundColor = color("#aaa"),
@@ -135,10 +137,10 @@ static this() {
                 margin.sideY = 4,
                 border = 1,
                 padding = 1,
-                borderStyle = colorBorder(color("555")),
+                borderStyle = colorBorder(color("#555")),
                 mouseCursor = FluidMouseCursor.pointer,
 
-                when!"a.isFocused"(backgroundColor = color("ddd")),
+                when!"a.isFocused"(backgroundColor = color("#ddd")),
                 when!"a.isChecked"(
                     extra = new Checkbox.Extra(loadBWImage!"checkmark-alpha"(64, 50)),
                 ),
@@ -149,51 +151,18 @@ static this() {
                 border = 0,
                 borderStyle = null,
                 padding = 2,
-                extra = new Radiobox.Extra(1, color("555"), color("5550")),
+                extra = new Radiobox.Extra(1, color("#555"), color("#5550")),
 
-                when!"a.isFocused"(backgroundColor = color("ddd")),
+                when!"a.isFocused"(backgroundColor = color("#ddd")),
                 when!"a.isChecked"(
-                    extra = new Radiobox.Extra(1, color("555"), color("000"))
+                    extra = new Radiobox.Extra(1, color("#555"), color("#000"))
                 ),
             ),
+            rule!Separator(
+                padding = 4,
+                lineColor = color("#ccc"),
+            ),
         );
-
-        /*
-        Checkbox.styleAdd!q{
-
-            // Checkmark, alpha channel only, 64×50
-            enum file = (() @trusted => cast(ubyte[]) import("checkmark-alpha"))();
-            auto data = file.map!(a => Color(0, 0, 0, a)).array;
-
-            assert(data.length == 64*50, format!"wrong checkmark-alpha size: %s"(data.length));
-
-            margin.sideX = 8;
-            margin.sideY = 4;
-            border = 1;
-            padding = 1;
-            borderStyle = colorBorder(color("555"));
-            mouseCursor = FluidMouseCursor.pointer;
-
-            // Checkbox image
-            focusStyleAdd.backgroundColor = color("ddd");
-            checkedStyleAdd.extra = new Checkbox.Extra(Image(data, 64, 50));
-
-        };
-
-        Radiobox.styleAdd!q{
-
-            margin.sideX = 8;
-            margin.sideY = 4;
-            border = 0;
-            borderStyle = null;
-            padding = 2;
-            extra = new Radiobox.Extra(1, color("555"), color("5550"));
-
-            focusStyleAdd.backgroundColor = color("ddd");
-            checkedStyleAdd.extra = new Radiobox.Extra(1, color("555"), color("000"));
-
-        };
-        */
 
     }
 

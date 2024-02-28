@@ -50,6 +50,7 @@ public import
     fluid.radiobox,
     fluid.scroll,
     fluid.scroll_input,
+    fluid.separator,
     fluid.size_lock,
     fluid.slider,
     fluid.slot,

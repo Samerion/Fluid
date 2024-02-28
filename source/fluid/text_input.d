@@ -147,7 +147,7 @@ class TextInput : InputNode!Node {
             io.drawLine(
                 end - Vector2(0, lineHeight - margin),
                 end - Vector2(0, margin),
-                style.textColor, //focusStyle.textColor
+                style.textColor,
             );
 
         }

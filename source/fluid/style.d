@@ -45,8 +45,11 @@ struct Style {
 
     }
 
-    // Background
+    // Background & content
     @Themable {
+
+        /// Color of lines belonging to the node, especially important to separators and sliders.
+        Color lineColor;
 
         /// Background color of the node.
         Color backgroundColor;
@@ -176,8 +179,8 @@ struct Style {
 
     }
 
-    /// Draw the background & border
-    void drawBackground(FluidBackend backend, Rectangle rect) const @trusted {
+    /// Draw the background & border.
+    void drawBackground(FluidBackend backend, Rectangle rect) const {
 
         backend.drawRectangle(rect, backgroundColor);
 
@@ -187,6 +190,13 @@ struct Style {
             borderStyle.apply(backend, rect, border);
 
         }
+
+    }
+
+    /// Draw a line.
+    void drawLine(FluidBackend backend, Vector2 start, Vector2 end) const {
+
+        backend.drawLine(start, end, lineColor);
 
     }
 

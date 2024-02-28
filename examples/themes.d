@@ -176,9 +176,9 @@ Frame deriveExample() {
         .layout!(1, "fill"),
         theme,
         label("White text on black."),
-        vspace(
+        vframe(
             label("Themes apply recursively, and also apply to children nodes."),
-            vspace(
+            vframe(
                 blueTextTheme,
                 label("Unless the children have a different theme applied."),
             ),
