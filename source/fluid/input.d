@@ -782,6 +782,8 @@ interface FluidHoverable {
 
         bool runInputActionImpl(this This)(InputActionID action, bool active = true) {
 
+            import std.meta : Filter;
+
             // Check if this class has implemented this method
             // BUG Breaks template types like nodeSlot
             /*assert(typeid(this) is typeid(This),
@@ -792,6 +794,7 @@ interface FluidHoverable {
             // Check each member
             static foreach (memberName; __traits(allMembers, This)) {
 
+                static if (!__traits(isDeprecated, __traits(getMember, This, memberName)))
                 static foreach (overload; __traits(getOverloads, This, memberName)) {{
 
                     // Make sure no method is marked `@InputAction`, that's invalid usage

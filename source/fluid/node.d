@@ -192,8 +192,6 @@ abstract class Node {
         auto io = new HeadlessBackend;
         auto root = new class Node {
 
-            mixin implHoveredRect;
-
             override void resizeImpl(Vector2) {
                 minSize = Vector2(10, 10);
             }
@@ -489,8 +487,6 @@ abstract class Node {
 
         auto io = new HeadlessBackend;
         auto root = new class Node {
-
-            mixin implHoveredRect;
 
             override void resizeImpl(Vector2) {
 
@@ -1076,16 +1072,20 @@ abstract class Node {
     /// This will be called right before drawImpl for each node in order to determine the which node should handle mouse
     /// input.
     ///
-    /// If your node fills the rectangle area its given in `drawImpl`, you may use `mixin ImplHoveredRect` to implement
-    /// this automatically.
+    /// The default behavior considers the entire area of the node to be "hoverable".
     ///
     /// Params:
     ///     rect          = Area the node should be drawn in, as provided by drawImpl.
     ///     mousePosition = Current mouse position within the window.
-    protected abstract bool hoveredImpl(Rectangle rect, Vector2 mousePosition);
+    protected bool hoveredImpl(Rectangle rect, Vector2 mousePosition) {
+
+        return rect.contains(mousePosition);
+
+    }
 
     alias ImplHoveredRect = implHoveredRect;
 
+    deprecated("implHoveredRect is now the default behavior; implHoveredRect is to be removed in 0.8.0")
     protected mixin template implHoveredRect() {
 
         private import fluid.backend : Rectangle, Vector2;

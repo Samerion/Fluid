@@ -109,7 +109,7 @@ class SwitchSlot : Node {
 
     }
 
-    override bool hoveredImpl(Rectangle, Vector2) {
+    override bool hoveredImpl(Rectangle, Vector2) const {
 
         return false;
 

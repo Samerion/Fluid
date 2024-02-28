@@ -240,7 +240,8 @@ class Space : Node {
 
     }
 
-    protected override bool hoveredImpl(Rectangle, Vector2) const {
+    /// Space does not take hover; isHovered is always false.
+    protected override bool hoveredImpl(Rectangle, Vector2) {
 
         return false;
 
@@ -364,8 +365,6 @@ unittest {
 unittest {
 
     class Square : Node {
-
-        mixin implHoveredRect;
 
         Color color;
 

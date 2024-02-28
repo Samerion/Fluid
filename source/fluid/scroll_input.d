@@ -29,7 +29,6 @@ class ScrollInput : InputNode!Node {
     // TODO Hiding a scrollbar makes it completely unusable, since it cannot scan the viewport. Perhaps override
     // `isHidden` to virtually hide the scrollbar, and keep it always "visible" as such?
 
-    mixin implHoveredRect;
     mixin enableInputActions;
 
     public {
@@ -298,7 +297,6 @@ unittest {
 class ScrollInputHandle : Node, FluidHoverable {
 
     mixin makeHoverable;
-    mixin implHoveredRect;
     mixin enableInputActions;
 
     public {

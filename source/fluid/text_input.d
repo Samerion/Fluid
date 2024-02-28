@@ -23,7 +23,6 @@ alias textInput = simpleConstructor!TextInput;
 /// ditto
 class TextInput : InputNode!Node {
 
-    mixin implHoveredRect;
     mixin enableInputActions;
 
     /// Time in seconds between changes in cursor visibility.
