@@ -110,7 +110,7 @@ class NumberInput(T) : AbstractNumberInput {
 
         import std.conv;
 
-        super.value = this.value.to!string;
+        super.value = this.value.to!(char[]);
 
         // Resize
         updateSize();
@@ -312,7 +312,7 @@ abstract class AbstractNumberInput : TextInput {
 
         super("");
         super.changed = changed;
-        super.value = "0";
+        super.value = ['0'];
         this.spinner = numberInputSpinner(.layout!"fill", &increment, &decrement);
 
     }

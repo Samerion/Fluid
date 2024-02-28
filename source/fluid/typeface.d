@@ -59,7 +59,7 @@ interface Typeface {
 
     /// Draw a line of text.
     /// Note: This API is unstable and might change over time.
-    void drawLine(ref Image target, ref Vector2 penPosition, string text, Color tint) const;
+    void drawLine(ref Image target, ref Vector2 penPosition, const(char)[] text, Color tint) const;
 
     /// Instances of Typeface have to be comparable in a memory-safe manner.
     bool opEquals(const Object object) @safe const;
@@ -450,7 +450,7 @@ class FreetypeTypeface : Typeface {
     }
 
     /// Draw a line of text
-    void drawLine(ref Image target, ref Vector2 penPosition, string text, Color tint) const @trusted {
+    void drawLine(ref Image target, ref Vector2 penPosition, const(char)[] text, Color tint) const @trusted {
 
         assert(_dpiX && _dpiY, "Font DPI hasn't been set");
 
@@ -664,7 +664,7 @@ class RaylibTypeface : Typeface {
 
     /// Draw a line of text
     /// Note: This API is unstable and might change over time.
-    void drawLine(ref .Image target, ref Vector2 penPosition, string text, Color tint) const @trusted {
+    void drawLine(ref .Image target, ref Vector2 penPosition, const(char)[] text, Color tint) const @trusted {
 
         // Note: `DrawTextEx` doesn't scale `spacing`, but `ImageDrawTextEx` DOES. The image is first drawn at base size
         //       and *then* scaled.

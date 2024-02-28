@@ -25,7 +25,7 @@ struct Text(T : Node) {
         Texture texture;
 
         /// Underlying text.
-        string value;
+        const(char)[] value;
 
     }
 
@@ -45,7 +45,7 @@ struct Text(T : Node) {
     alias minSize = size;
     alias value this;
 
-    this(T node, string text) {
+    this(T node, const(char)[] text) {
 
         this.node = node;
         opAssign(text);
@@ -53,7 +53,7 @@ struct Text(T : Node) {
     }
 
     /// Copy the text, clear ownership and texture.
-    this(ref const Text text) {
+    this(const Text text) const {
 
         this.node = null;
         this.texture = texture.init;
@@ -71,7 +71,7 @@ struct Text(T : Node) {
 
         => node.tree.backend;
 
-    string opAssign(string text) {
+    const(char)[] opAssign(const(char)[] text) {
 
         // Ignore if there's no change to be made
         if (text == value) return text;
@@ -82,7 +82,7 @@ struct Text(T : Node) {
 
     }
 
-    string opOpAssign(string operator)(string text) {
+    const(char)[] opOpAssign(string operator)(const(char)[] text) {
 
         node.updateSize;
         return mixin("value ", operator, "= text");
@@ -181,7 +181,7 @@ struct Text(T : Node) {
     }
 
     /// Draw the text.
-    void draw(const Style style, Vector2 position) @trusted {
+    void draw(const Style style, Vector2 position) {
 
         import std.math;
         import fluid.utils;
@@ -216,7 +216,7 @@ struct Text(T : Node) {
 
     string toString() const {
 
-        return value;
+        return value.idup;
 
     }
 
