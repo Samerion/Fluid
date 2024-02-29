@@ -13,18 +13,18 @@ Frame dragAndDropExample() {
         .layout!"fill",
 
         hframe(
-            .layout!(1, "start", "fill"),
-            .canDrop,
-            dragSlot(label("World! ")),
-            dragSlot(label("Goodbye, ")),
+            .layout!(1, "fill"),
+            .acceptDrop,
+            dragSlot(label("Hello,")),
+            dragSlot(label("Goodbye,")),
         ),
         hseparator(),
         hframe(
-            .layout!(1, "end", "fill"),
-            .canDrop,
-            dragSlot(label("Hello, ")),
-            dragSlot(label("Cruel ")),
-            dragSlot(label("a\nb\nc")),
+            .layout!(1, "fill"),
+            .acceptDrop,
+            dragSlot(label("Fluid!")),
+            dragSlot(label("World!")),
+            dragSlot(label("Cruel")),
         ),
     );
 

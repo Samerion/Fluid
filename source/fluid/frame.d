@@ -13,8 +13,13 @@ import fluid.backend;
 
 
 /// Make a Frame node accept nodes via drag & drop.
-/// Note: Currently, not all Frames support drag & drop.
-auto canDrop(T : Node = Node, tags...)() {
+///
+/// Note: Currently, not all Frames support drag & drop. Using it for nodes that doesn't explicitly state support might
+/// cause undefined behavior.
+///
+/// Params:
+///     tags = Restrict dropped nodes to those that have the given tag.
+auto acceptDrop(tags...)() {
 
     struct AcceptDrop {
 
@@ -28,7 +33,7 @@ auto canDrop(T : Node = Node, tags...)() {
 
     }
 
-    auto selector = Selector(typeid(T)).addTags!tags;
+    auto selector = Selector(typeid(Node)).addTags!tags;
 
     return AcceptDrop(selector);
 
@@ -45,6 +50,8 @@ alias hframe = simpleConstructor!(Frame, (a) {
 });
 
 /// This is a frame, a stylized container for other nodes.
+///
+/// Frame supports drag & drop via `acceptDrop`.
 class Frame : Space, FluidDroppable {
 
     public {
@@ -117,13 +124,14 @@ class Frame : Space, FluidDroppable {
 
         }
 
+        _dropIndex = 0;
+
         // Provide offset for the drop item if it's the first node
         auto innerStart = dropOffset(start(inner));
         inner.x = innerStart.x;
         inner.y = innerStart.y;
 
         // Draw
-        _dropIndex = 0;
         super.drawImpl(outer, inner);
 
         // Clear dropHovered status
@@ -143,8 +151,6 @@ class Frame : Space, FluidDroppable {
 
         const newOffset = super.childOffset(currentOffset, childSpace);
 
-        _dropIndex++;
-
         // Take drop nodes into account
         return dropOffset(newOffset);
 
@@ -161,7 +167,12 @@ class Frame : Space, FluidDroppable {
             : dropCursor.y <= offset.y + dropSize.y;
 
         // Not dropping here
-        if (!dropsHere) return offset;
+        if (!dropsHere && children.length) {
+
+            _dropIndex++;
+            return offset;
+
+        }
 
         // Finish the drop event
         isDropHovered = false;
@@ -199,6 +210,10 @@ class Frame : Space, FluidDroppable {
     }
 
     void drop(Vector2 position, Rectangle rectangle, Node node) {
+
+        import std.array;
+
+        this.children.insertInPlace(_dropIndex, node);
 
     }
 
