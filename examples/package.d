@@ -45,7 +45,7 @@ enum Chapter {
     @"Margin, padding and border" margins,
     @"Writing forms" forms,
     // @"Popups" popups,
-    @"Drag and drop" drag_and_drop,
+    // @"Drag and drop" drag_and_drop,
 };
 
 @NodeTag
