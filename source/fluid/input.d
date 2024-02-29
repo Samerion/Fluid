@@ -854,14 +854,14 @@ interface FluidDroppable {
     /// Called every frame an eligible node is hovering the rectangle. Used to provide feedback while drawing the
     /// container node.
     /// Params:
-    ///     position  = Cursor position.
-    ///     rectangle = Rectangle used by the node.
+    ///     position  = Screen cursor position.
+    ///     rectangle = Rectangle used by the node, relative to the droppable.
     void dropHover(Vector2 position, Rectangle rectangle);
 
     /// Specifies the given node has been dropped inside the container.
     /// Params:
-    ///     position  = Cursor position.
-    ///     rectangle = Rectangle used by the node.
+    ///     position  = Screen cursor position.
+    ///     rectangle = Rectangle used by the node, relative to the droppable.
     ///     node      = Node that has been dropped.
     void drop(Vector2 position, Rectangle rectangle, Node node);
 

@@ -1,3 +1,5 @@
+// This example is excluded from the showcase for now.
+// TODO
 module fluid.showcase.drag_and_drop;
 
 import fluid;
@@ -20,6 +22,29 @@ Frame dragAndDropExample() {
         ),
         hseparator(),
         hframe(
+            .layout!(1, "fill"),
+            .acceptDrop,
+            dragSlot(label("Fluid!")),
+            dragSlot(label("World!")),
+            dragSlot(label("Cruel")),
+        ),
+    );
+
+}
+
+Frame dropMapExample() {
+
+    return vframe(
+        .layout!"fill",
+
+        mapFrame(
+            .layout!(1, "fill"),
+            .acceptDrop,
+            dragSlot(label("Hello,")),
+            dragSlot(label("Goodbye,")),
+        ),
+        hseparator(),
+        mapFrame(
             .layout!(1, "fill"),
             .acceptDrop,
             dragSlot(label("Fluid!")),

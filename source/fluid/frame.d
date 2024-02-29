@@ -213,6 +213,11 @@ class Frame : Space, FluidDroppable {
 
         import std.array;
 
+        // Prevent overflow
+        // This might happen when rearranging an item to the end within the same container
+        if (_dropIndex > children.length)
+            _dropIndex = children.length;
+
         this.children.insertInPlace(_dropIndex, node);
 
     }

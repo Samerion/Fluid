@@ -249,9 +249,9 @@ class DragAction : TreeAction {
     public {
 
         DragSlot slot;
-        FluidDroppable target;
         Vector2 mouseStart;
-        Rectangle rectangle;
+        FluidDroppable target;
+        Rectangle targetRectangle;
 
     }
 
@@ -275,6 +275,24 @@ class DragAction : TreeAction {
 
     }
 
+    Rectangle relativeDragRectangle() {
+
+        const rect = slot.dragRectangle(offset);
+
+        return Rectangle(
+            (rect.start - targetRectangle.start).tupleof,
+            rect.size.tupleof,
+        );
+
+    }
+
+    override void beforeTree(Node, Rectangle) {
+
+        // Clear the target
+        target = null;
+
+    }
+
     override void beforeResize(Node node, Vector2 space) {
 
         // Resizing the root
@@ -287,7 +305,7 @@ class DragAction : TreeAction {
 
     }
 
-    override void beforeDraw(Node node, Rectangle) {
+    override void beforeDraw(Node node, Rectangle rectangle) {
 
         auto droppable = cast(FluidDroppable) node;
 
@@ -298,10 +316,10 @@ class DragAction : TreeAction {
         // Make sure this slot can be dropped in
         if (!droppable.canDrop(slot)) return;
 
-        const rect = slot.dragRectangle(offset);
-
-        droppable.dropHover(slot.io.mousePosition, rect);
         this.target = droppable;
+        this.targetRectangle = rectangle;
+
+        droppable.dropHover(slot.io.mousePosition, relativeDragRectangle);
 
     }
 
@@ -323,12 +341,10 @@ class DragAction : TreeAction {
         // Drop the slot if a droppable node was found
         if (target) {
 
-            const rect = slot.dragRectangle(offset);
-
             // Ready to drop, perform the action
             if (_readyToDrop) {
 
-                target.drop(slot.io.mousePosition, rect, slot);
+                target.drop(slot.io.mousePosition, relativeDragRectangle, slot);
 
             }
 
