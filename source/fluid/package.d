@@ -33,6 +33,7 @@ public import
     fluid.checkbox,
     fluid.children,
     fluid.default_theme,
+    fluid.drag_slot,
     fluid.file_input,
     fluid.field_slot,
     fluid.frame,

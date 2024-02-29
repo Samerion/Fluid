@@ -76,11 +76,12 @@ class NodeSlot(T : Node) : Node {
 
     }
 
-    protected override void drawImpl(Rectangle paddingBox, Rectangle contentBox) {
+    protected override void drawImpl(Rectangle outer, Rectangle inner) {
 
         if (!value) return;
 
-        value.draw(contentBox);
+        style.drawBackground(io, outer);
+        value.draw(inner);
 
     }
 
