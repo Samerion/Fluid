@@ -9,6 +9,7 @@ import fluid.backend;
 import fluid.checkbox;
 import fluid.radiobox;
 import fluid.typeface;
+import fluid.drag_slot;
 import fluid.separator;
 import fluid.file_input;
 import fluid.text_input;
@@ -117,16 +118,6 @@ static this() {
                 border = 1,
                 borderStyle = colorBorder(color("#555a")),
             ),
-            /*
-            PopupFrame.styleAdd!q{
-
-                backgroundColor = color("fff");
-                border = 1;
-                padding = 8;
-                borderStyle = colorBorder(color("888a"));
-
-            };
-            */
             rule!FileInputSuggestion(
                 margin = 0,
                 backgroundColor = color("#fff"),
@@ -161,6 +152,20 @@ static this() {
             rule!Separator(
                 padding = 4,
                 lineColor = color("#ccc"),
+            ),
+            rule!DragSlot(
+                padding.sideX = 6,
+                padding.sideY = 0,
+                border = 1,
+                borderStyle = colorBorder(color("#555a")),
+                backgroundColor = color("#fff"),
+                margin = 4,  // for testing
+            ),
+            rule!DragHandle(
+                lineColor = color("#ccc"),
+                padding.sideX = 8,
+                padding.sideY = 6,
+                extra = new DragHandle.Extra(5),
             ),
         );
 

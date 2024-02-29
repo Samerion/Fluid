@@ -17,8 +17,6 @@ import fluid.backend;
 @safe:
 
 
-alias mapFrame = simpleConstructor!MapFrame;
-
 /// Defines the direction the node is "dropped from", that is, which corner of the object will be the anchor.
 /// Defaults to `start, start`, therefore, the supplied coordinate refers to the top-left of the object.
 ///
@@ -67,6 +65,12 @@ MapDropVector dropVector(string dropX, string dropY)() {
 
 }
 
+/// MapFrame is a frame where every child node can be placed in an arbitrary location.
+///
+/// MapFrame supports drag & drop.
+alias mapFrame = simpleConstructor!MapFrame;
+
+/// ditto
 class MapFrame : Frame {
 
     alias DropDirection = MapDropDirection;
@@ -211,7 +215,7 @@ class MapFrame : Frame {
 
         foreach (child; children) {
 
-            const position = positions[child];
+            const position = positions.require(child, MapPosition.init);
 
             child.resize(tree, theme, space);
 
@@ -463,6 +467,26 @@ class MapFrame : Frame {
             }
 
         }
+
+    }
+
+    override void dropHover(Vector2 position, Rectangle rectangle) {
+
+    }
+
+    override void drop(Vector2, Rectangle rectangle, Node node) {
+
+        const position = MapPosition(rectangle.start);
+
+        // Already a child
+        if (children.canFind(node)) {
+
+            positions[node] = position;
+
+        }
+
+        // New child
+        else this.addChild(node, position);
 
     }
 
