@@ -249,6 +249,7 @@ class DragAction : TreeAction {
     public {
 
         DragSlot slot;
+        FluidDroppable target;
         Vector2 mouseStart;
         Rectangle rectangle;
 
@@ -257,6 +258,7 @@ class DragAction : TreeAction {
     private {
 
         bool _stopDragging;
+        bool _readyToDrop;
 
     }
 
@@ -299,14 +301,12 @@ class DragAction : TreeAction {
         const rect = slot.dragRectangle(offset);
 
         droppable.dropHover(slot.io.mousePosition, rect);
+        this.target = droppable;
 
     }
 
     /// Tree drawn, draw the node now.
     override void afterTree() {
-
-        // Stop if the node requested removal
-        if (slot.toRemove) return stop;
 
         // Draw the slot
         slot.drawDragged(offset);
@@ -318,14 +318,35 @@ class DragAction : TreeAction {
     override void afterInput(ref bool focusHandled) {
 
         // We should have received a signal from the slot if it is still being dragged
-        if (_stopDragging) {
+        if (!_stopDragging) return;
 
-            // Nope, stop dragging
-            slot.dragAction = null;
-            slot.updateSize();
-            return stop;
+        // Drop the slot if a droppable node was found
+        if (target) {
+
+            const rect = slot.dragRectangle(offset);
+
+            // Ready to drop, perform the action
+            if (_readyToDrop) {
+
+                target.drop(slot.io.mousePosition, rect, slot);
+
+            }
+
+            // Remove it from the original container and wait a frame
+            else {
+
+                slot.toRemove = true;
+                _readyToDrop = true;
+                return;
+
+            }
 
         }
+
+        // Stop dragging
+        slot.dragAction = null;
+        slot.updateSize();
+        stop;
 
     }
 
