@@ -12,16 +12,19 @@ Frame dragAndDropExample() {
     return vframe(
         .layout!"fill",
 
-        vframe(
-            .layout!(1, "fill"),
+        hframe(
+            .layout!(1, "start", "fill"),
+            .canDrop,
             dragSlot(label("World! ")),
             dragSlot(label("Goodbye, ")),
-            dragSlot(label("Cruel ")),
         ),
         hseparator(),
-        vframe(
-            .layout!(1, "fill"),
+        hframe(
+            .layout!(1, "end", "fill"),
+            .canDrop,
             dragSlot(label("Hello, ")),
+            dragSlot(label("Cruel ")),
+            dragSlot(label("a\nb\nc")),
         ),
     );
 

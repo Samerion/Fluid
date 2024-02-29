@@ -75,17 +75,24 @@ class DragSlot : NodeSlot!Node, FluidHoverable {
 
         // Queue the drag action
         dragAction = new DragAction(this);
-        queueAction(dragAction);
+        tree.queueAction(dragAction);
         updateSize();
 
         return dragAction;
 
     }
 
-    private void drawDragged(Vector2 offset) {
+    private Rectangle dragRectangle(Vector2 offset) const {
 
         const position = _staticPosition + offset;
-        const rect = Rectangle(position.tupleof, _size.tupleof);
+
+        return Rectangle(position.tupleof, _size.tupleof);
+
+    }
+
+    private void drawDragged(Vector2 offset) {
+
+        const rect = dragRectangle(offset);
 
         _drawDragged = true;
         minSize = _size;
@@ -243,6 +250,7 @@ class DragAction : TreeAction {
 
         DragSlot slot;
         Vector2 mouseStart;
+        Rectangle rectangle;
 
     }
 
@@ -259,13 +267,38 @@ class DragAction : TreeAction {
 
     }
 
-    override void beforeResize(Node node, Vector2 viewportSize) {
+    Vector2 offset() const {
 
-        // Only accept root resizes
-        if (node !is node.tree.root) return;
+        return slot.io.mousePosition - mouseStart;
 
-        // Perform the resize
-        slot.resizeInternal(node.tree, node.theme, viewportSize);
+    }
+
+    override void beforeResize(Node node, Vector2 space) {
+
+        // Resizing the root
+        if (node is node.tree.root) {
+
+            // Resize the slot too
+            slot.resizeInternal(node.tree, node.theme, space);
+
+        }
+
+    }
+
+    override void beforeDraw(Node node, Rectangle) {
+
+        auto droppable = cast(FluidDroppable) node;
+
+        // Find all hovered droppable nodes
+        if (!droppable) return;
+        if (!node.isHovered) return;
+
+        // Make sure this slot can be dropped in
+        if (!droppable.canDrop(slot)) return;
+
+        const rect = slot.dragRectangle(offset);
+
+        droppable.dropHover(slot.io.mousePosition, rect);
 
     }
 
@@ -276,7 +309,7 @@ class DragAction : TreeAction {
         if (slot.toRemove) return stop;
 
         // Draw the slot
-        slot.drawDragged(slot.io.mousePosition - mouseStart);
+        slot.drawDragged(offset);
         _stopDragging = true;
 
     }

@@ -120,7 +120,7 @@ class Space : Node {
             else {
 
                 child.resize(tree, theme, childSpace(child, available, false));
-                minSize = childPosition(child.minSize, minSize);
+                minSize = addSize(child.minSize, minSize);
 
                 // Reserve space for this node
                 reservedSpace += directionHorizontal
@@ -158,7 +158,7 @@ class Space : Node {
             : Vector2(maxExpandSize.x, maxExpandSize.y * denominator);
 
         // Add the expand space
-        minSize = childPosition(expandSize, minSize);
+        minSize = addSize(expandSize, minSize);
 
     }
 
@@ -166,12 +166,12 @@ class Space : Node {
 
         assertClean(children, "Children were changed without calling updateSize().");
 
-        auto position = Vector2(area.x, area.y);
+        auto position = start(area);
 
         foreach (child; filterChildren) {
 
             // Get params
-            const size = childSpace(child, Vector2(area.width, area.height), true);
+            const size = childSpace(child, size(area), true);
             const rect = Rectangle(
                 position.x, position.y,
                 size.x, size.y
@@ -181,8 +181,7 @@ class Space : Node {
             child.draw(rect);
 
             // Offset position
-            if (directionHorizontal) position.x += size.x + style.gap;
-            else position.y += size.y + style.gap;
+            position = childOffset(position, size);
 
         }
 
@@ -253,7 +252,7 @@ class Space : Node {
     /// Params:
     ///     child     = Child size to add.
     ///     previous  = Previous position.
-    private Vector2 childPosition(Vector2 child, Vector2 previous) const {
+    private Vector2 addSize(Vector2 child, Vector2 previous) const {
 
         import std.algorithm : max;
 
@@ -275,11 +274,21 @@ class Space : Node {
 
     }
 
+    /// Calculate the offset for the next node, given the `childSpace` result for its previous sibling.
+    protected Vector2 childOffset(Vector2 currentOffset, Vector2 childSpace) {
+
+        if (isHorizontal)
+            return currentOffset + Vector2(childSpace.x + style.gap, 0);
+        else
+            return currentOffset + Vector2(0, childSpace.y + style.gap);
+
+    }
+
     /// Get space for a child.
     /// Params:
     ///     child     = Child to place
     ///     available = Available space
-    private Vector2 childSpace(const Node child, Vector2 available, bool stateful) const
+    protected Vector2 childSpace(const Node child, Vector2 available, bool stateful = true) const
     in(
         child.isHidden || child.layout.expand <= denominator,
         format!"Nodes %s/%s sizes are out of date, call updateSize after updating the tree or layout (%s/%s)"(

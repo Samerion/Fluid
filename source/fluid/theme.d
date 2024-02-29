@@ -348,10 +348,23 @@ struct Selector {
     /// Tags needed by the selector.
     TagList tags;
 
+    /// If true, this selector will reject any match.
+    bool rejectAll;
+
+    /// Returns a selector that doesn't match anything
+    static Selector none() {
+
+        Selector result;
+        result.rejectAll = true;
+        return result;
+
+    }
+
     /// Test if the selector matches given node.
     bool test(Node node) {
 
-        return testType(typeid(node))
+        return !rejectAll
+            && testType(typeid(node))
             && testTags(node.tags);
 
     }

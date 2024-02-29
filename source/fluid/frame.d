@@ -1,14 +1,38 @@
 ///
 module fluid.frame;
 
+import fluid.node;
 import fluid.space;
 import fluid.style;
 import fluid.utils;
+import fluid.input;
 import fluid.backend;
 
 
 @safe:
 
+
+/// Make a Frame node accept nodes via drag & drop.
+/// Note: Currently, not all Frames support drag & drop.
+auto canDrop(T : Node = Node, tags...)() {
+
+    struct AcceptDrop {
+
+        Selector selector;
+
+        void apply(Frame frame) {
+
+            frame.dropSelector = selector;
+
+        }
+
+    }
+
+    auto selector = Selector(typeid(T)).addTags!tags;
+
+    return AcceptDrop(selector);
+
+}
 
 /// Make a new vertical frame.
 alias vframe = simpleConstructor!Frame;
@@ -21,11 +45,62 @@ alias hframe = simpleConstructor!(Frame, (a) {
 });
 
 /// This is a frame, a stylized container for other nodes.
-class Frame : Space {
+class Frame : Space, FluidDroppable {
+
+    public {
+
+        /// If true, a drag & drop node hovers this frame.
+        bool isDropHovered;
+
+        /// Selector (same as in themes) used to decide which nodes can be dropped inside, defaults to none.
+        Selector dropSelector = Selector.none;
+
+        /// Position of the cursor, indicating the area of the drop.
+        Vector2 dropCursor;
+
+        /// Size of the droppable area.
+        Vector2 dropSize;
+
+    }
+
+    private {
+
+        /// Index of the dropped node.
+        size_t _dropIndex;
+
+        bool _queuedDrop;
+
+        /// `dropSize` to activate after a resize.
+        Vector2 _queuedDropSize;
+
+    }
 
     this(T...)(T args) {
 
         super(args);
+
+    }
+
+    protected override void resizeImpl(Vector2 availableSpace) {
+
+        super.resizeImpl(availableSpace);
+
+        // Hovered by a dragged node
+        if (_queuedDrop) {
+
+            // Apply queued changes
+            dropSize = _queuedDropSize;
+            _queuedDrop = false;
+
+            if (isHorizontal)
+                minSize.x += dropSize.x;
+            else
+                minSize.y += dropSize.y;
+
+        }
+
+        // Clear the drop size
+        else dropSize = Vector2();
 
     }
 
@@ -34,7 +109,25 @@ class Frame : Space {
         const style = pickStyle();
         style.drawBackground(tree.io, outer);
 
+        // Clear dropSize if dropping stopped
+        if (!isDropHovered && dropSize != Vector2()) {
+
+            _queuedDrop = false;
+            updateSize();
+
+        }
+
+        // Provide offset for the drop item if it's the first node
+        auto innerStart = dropOffset(start(inner));
+        inner.x = innerStart.x;
+        inner.y = innerStart.y;
+
+        // Draw
+        _dropIndex = 0;
         super.drawImpl(outer, inner);
+
+        // Clear dropHovered status
+        isDropHovered = false;
 
     }
 
@@ -43,6 +136,69 @@ class Frame : Space {
         import fluid.node;
 
         return Node.hoveredImpl(rect, mousePosition);
+
+    }
+
+    protected override Vector2 childOffset(Vector2 currentOffset, Vector2 childSpace) {
+
+        const newOffset = super.childOffset(currentOffset, childSpace);
+
+        _dropIndex++;
+
+        // Take drop nodes into account
+        return dropOffset(newOffset);
+
+    }
+
+    /// Drag and drop implementation: Offset nodes to provide space for the dropped node.
+    protected Vector2 dropOffset(Vector2 offset) {
+
+        // Ignore if nothing is dropped
+        if (!isDropHovered) return offset;
+
+        const dropsHere = isHorizontal
+            ? dropCursor.x <= offset.x + dropSize.x
+            : dropCursor.y <= offset.y + dropSize.y;
+
+        // Not dropping here
+        if (!dropsHere) return offset;
+
+        // Finish the drop event
+        isDropHovered = false;
+
+        // Increase the offset to fit the node
+        return isHorizontal
+            ? offset + Vector2(dropSize.x, 0)
+            : offset + Vector2(0, dropSize.y);
+
+    }
+
+    bool canDrop(Node node) {
+
+        return dropSelector.test(node);
+
+    }
+
+    void dropHover(Vector2 position, Rectangle rectangle) {
+
+        import std.math;
+
+        isDropHovered = true;
+        _queuedDrop = true;
+
+        // Queue up the changes
+        dropCursor = position;
+        _queuedDropSize = size(rectangle);
+
+        const same = isClose(dropSize.x, _queuedDropSize.x)
+            && isClose(dropSize.y, _queuedDropSize.y);
+
+        // Updated
+        if (!same) updateSize();
+
+    }
+
+    void drop(Vector2 position, Rectangle rectangle, Node node) {
 
     }
 
