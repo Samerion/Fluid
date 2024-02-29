@@ -845,6 +845,28 @@ interface FluidHoverable {
 
 }
 
+/// Interface for container nodes that support dropping other nodes inside.
+interface FluidDroppable {
+
+    /// Returns true if the given node can be dropped into this node.
+    bool canDrop(Node node);
+
+    /// Called every frame an eligible node is hovering the rectangle. Used to provide feedback while drawing the
+    /// container node.
+    /// Params:
+    ///     position  = Cursor position.
+    ///     rectangle = Rectangle used by the node.
+    void dropHover(Vector2 position, Rectangle rectangle);
+
+    /// Specifies the given node has been dropped inside the container.
+    /// Params:
+    ///     position  = Cursor position.
+    ///     rectangle = Rectangle used by the node.
+    ///     node      = Node that has been dropped.
+    void drop(Vector2 position, Rectangle rectangle, Node node);
+
+}
+
 /// An interface to be implemented by all nodes that can take focus.
 ///
 /// Note: Input nodes often have many things in common. If you want to create an input-taking node, you're likely better
