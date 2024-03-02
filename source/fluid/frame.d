@@ -18,8 +18,9 @@ import fluid.backend;
 /// cause undefined behavior.
 ///
 /// Params:
-///     tags = Restrict dropped nodes to those that have the given tag.
-auto acceptDrop(tags...)() {
+///     tags     = Restrict dropped nodes to those that have the given tag.
+///     selector = Selector to limit nodes that the frame accepts. Optional — Tags are often enough.
+auto acceptDrop(tags...)(Selector selector = Selector.init) {
 
     struct AcceptDrop {
 
@@ -33,9 +34,7 @@ auto acceptDrop(tags...)() {
 
     }
 
-    auto selector = Selector(typeid(Node)).addTags!tags;
-
-    return AcceptDrop(selector);
+    return AcceptDrop(selector.addTags!tags);
 
 }
 
