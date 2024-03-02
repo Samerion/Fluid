@@ -2,6 +2,8 @@
 module fluid.text_input;
 
 import std.string;
+import std.datetime;
+import std.algorithm;
 
 import fluid.node;
 import fluid.text;
@@ -17,6 +19,24 @@ import fluid.structs;
 @safe:
 
 
+/// Constructor parameter, enables multiline input in `TextInput`.
+auto multiline(bool value = true) {
+
+    struct Multiline {
+
+        bool value;
+
+        void apply(TextInput node) {
+            node.multiline = value;
+        }
+
+    }
+
+    return Multiline(value);
+
+}
+
+
 /// Text input field.
 ///
 /// Text input field uses a mutable character array (`char[]`) for content rather than `string` to provide improved
@@ -29,9 +49,6 @@ class TextInput : InputNode!Node {
 
     mixin enableInputActions;
 
-    /// Time in seconds between changes in cursor visibility.
-    static immutable float blinkTime = 1;
-
     public {
 
         /// Size of the field.
@@ -43,12 +60,21 @@ class TextInput : InputNode!Node {
         /// A placeholder text for the field, displayed when the field is empty. Style using `emptyStyle`.
         string placeholder;
 
+        /// Time of the last change made to the input.
+        SysTime lastChange;
+
     }
 
     private {
 
         /// Underlying label controlling the content. Needed to properly adjust it to scroll.
         Scrollable!(TextImpl, "true") contentLabel;
+
+        /// Visual position of the caret.
+        Vector2 _caretPosition;
+
+        /// Index of the caret.
+        size_t _caretIndex;
 
     }
 
@@ -60,6 +86,7 @@ class TextInput : InputNode!Node {
 
         this.placeholder = placeholder;
         this.submitted = submitted;
+        this.lastChange = Clock.currTime;
 
         // Create the label
         this.contentLabel = new typeof(contentLabel)("");
@@ -71,41 +98,130 @@ class TextInput : InputNode!Node {
             scrollBar.width = 0;
             // Note: We're not hiding the scrollbar, so it may adjust used values to the size of the input
 
-            disableWrap();
+            isWrapDisabled = true;
             ignoreMouse = true;
 
         }
 
     }
 
+    /// If true, this input is currently empty.
     bool isEmpty() const {
 
         return value == "";
 
     }
 
-    protected override void resizeImpl(Vector2 area) {
+    /// If true, this input accepts multiple inputs in the input; pressing "enter" will start a new line.
+    ///
+    /// Even if multiline is off, the value may still contain line feeds if inserted from code.
+    bool multiline() const {
 
-        import std.algorithm : max;
+        return !contentLabel.isWrapDisabled;
+
+    }
+
+    /// ditto
+    bool multiline(bool value) {
+
+        contentLabel.isWrapDisabled = !value;
+        return value;
+
+    }
+
+    inout(Label) label() inout {
+
+        return contentLabel;
+
+    }
+
+    /// Visual position of the caret, relative to the top-left corner of the input.
+    Vector2 caretPosition() const {
+
+        return _caretPosition;
+
+    }
+
+    size_t caretIndex() const {
+
+        return min(_caretIndex, value.length);
+
+    }
+
+    size_t caretIndex(size_t index) {
+
+        return _caretIndex = index;
+
+    }
+
+    protected override void resizeImpl(Vector2 area) {
 
         // Set the size
         minSize = size;
 
-        // Set height to at least the font size
-        minSize.y = max(minSize.y, style.getTypeface.lineHeight);
 
         // Set the label text
         contentLabel.text = (value == "") ? placeholder : value;
 
+        const textArea = multiline
+            ? area
+            : Vector2(0, minSize.y);
+
         // Resize the label
         contentLabel.activeStyle = style;
-        contentLabel.resize(tree, theme, Vector2(0, minSize.y));
+        contentLabel.resize(tree, theme, textArea);
+
+        // Set height to at least the font size, or total text size
+        minSize.y = max(minSize.y, style.getTypeface.lineHeight, contentLabel.minSize.y);
+
+        // Locate the cursor
+        _caretPosition = caretPositionImpl(area);
+
+    }
+
+    protected Vector2 caretPositionImpl(Vector2 availableSpace) {
+
+        import fluid.typeface : TextRuler;
+
+        auto typeface = style.getTypeface;
+        auto ruler = TextRuler(typeface, availableSpace.x);
+
+        // Split on lines
+        auto lines = typeface.lineSplitter(value[0 .. caretIndex]);
+
+        // TODO this code shouldn't be necessary
+
+        // If empty, make sure to start the line
+        if (lines.empty)
+            ruler.startLine();
+
+        // Not empty, measure the text like normal
+        else foreach (line; lines) {
+
+            ruler.startLine();
+
+            // Split on words
+            if (multiline)
+            foreach (word; typeface.defaultWordChunks(line)) {
+
+                ruler.addWord(word);
+
+            }
+
+            // Don't split if not allowed
+            else ruler.addWord(line);
+
+        }
+
+        return Vector2(
+            ruler.penPosition.x,
+            ruler.textSize.y,
+        );
+
 
     }
 
     protected override void drawImpl(Rectangle outer, Rectangle inner) @trusted {
-
-        import std.algorithm : min, max;
 
         auto style = pickStyle();
 
@@ -123,45 +239,44 @@ class TextInput : InputNode!Node {
         // Draw the text
         contentLabel.draw(inner);
 
-        // Put the caret at the start if the placeholder is shown
-        const textWidth = value.length
-            ? min(contentLabel.scrollMax, inner.w)
-            : 0;
-
         // Draw the caret
-        drawCaret(inner, textWidth);
+        drawCaret(inner);
 
     }
 
-    protected void drawCaret(Rectangle inner, float textWidth) {
-
-        import std.datetime : Clock;
+    protected void drawCaret(Rectangle inner) {
 
         // Ignore the rest if the node isn't focused
         if (!isFocused || isDisabledInherited) return;
 
-        auto timeSecs = Clock.currTime.second;
-
         // Add a blinking caret
-        if (timeSecs % (blinkTime*2) < blinkTime) {
+        if (showCaret) {
 
             const lineHeight = style.getTypeface.lineHeight;
             const margin = lineHeight / 10f;
-
-            // Get caret position
-            const end = Vector2(
-                inner.x + textWidth,
-                inner.y + inner.height,
+            const relativeCaretPosition = this.caretPosition();
+            const caretPosition = start(inner) + Vector2(
+                min(relativeCaretPosition.x, inner.width),
+                relativeCaretPosition.y,
             );
 
             // Draw the caret
             io.drawLine(
-                end - Vector2(0, lineHeight - margin),
-                end - Vector2(0, margin),
+                caretPosition + Vector2(0, margin - lineHeight),
+                caretPosition - Vector2(0, margin),
                 style.textColor,
             );
 
         }
+
+    }
+
+    protected bool showCaret() {
+
+        auto timeSecs = (Clock.currTime - lastChange).total!"seconds";
+
+        // Add a blinking caret
+        return timeSecs % 2 == 0;
 
     }
 
@@ -245,12 +360,15 @@ class TextInput : InputNode!Node {
     void push(dchar character) {
 
         value ~= character;
+        _caretIndex += 1;
         updateSize();
 
     }
 
     /// Called whenever the text input is updated.
     protected void _changed() {
+
+        lastChange = Clock.currTime;
 
         // Run the callback
         if (changed) changed();
@@ -264,9 +382,24 @@ class TextInput : InputNode!Node {
 
     }
 
+    /// Start a new line
+    @(FluidInputAction.breakLine)
+    protected void _breakLine() {
+
+        if (!multiline) return;
+
+        push('\n');
+
+    }
+
     /// Submit the input.
     @(FluidInputAction.submit)
     protected void _submitted() {
+
+        import std.sumtype : match;
+
+        // breakLine has higher priority, stop if it's active
+        if (multiline && tree.isActive!(FluidInputAction.breakLine)) return;
 
         // Clear focus
         isFocused = false;
@@ -347,6 +480,11 @@ class TextInput : InputNode!Node {
 
         }
 
+        const erased = oldValue.length - value.length;
+
+        // Move the caret back
+        _caretIndex -= erased;
+
         // Shred old data
         oldValue[value.length .. $] = char.init;
 
@@ -421,6 +559,9 @@ class TextInput : InputNode!Node {
 
         // Ignore if the box is empty
         if (value == "") return;
+
+        // Move the caret
+        _caretIndex -= 1;
 
         // Remove the last character
         value = value.chop;

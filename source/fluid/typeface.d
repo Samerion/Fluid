@@ -87,6 +87,22 @@ interface Typeface {
 
     }
 
+    /// Updated version of std lineSplitter that includes trailing empty lines.
+    final auto lineSplitter(C)(C[] text) const {
+
+        import std.uni : lineSep, paraSep;
+
+        const hasEmptyLine = text.endsWith('\r', '\n', '\v', '\f', "\r\n", lineSep, paraSep, '\u0085') != 0;
+        auto split = .lineSplitter(text);
+
+        // Include the empty line if present
+        return hasEmptyLine.choose(
+            split.chain(only(typeof(text).init)),
+            split,
+        );
+
+    }
+
     /// Measure space the given text would span. Uses dots as the unit.
     ///
     /// If `availableSpace` is specified, assumes text wrapping. Text wrapping is only performed on whitespace
@@ -110,10 +126,9 @@ interface Typeface {
         // TODO don't fail on decoding errors
         // TODO RTL layouts
         // TODO vertical text
-        // TODO lineSplitter removes the last line feed if present, which is unwanted behavior
 
         // Split on lines
-        foreach (line; text.lineSplitter) {
+        foreach (line; this.lineSplitter(text)) {
 
             ruler.startLine();
 
@@ -142,7 +157,7 @@ interface Typeface {
         // TODO don't fail on decoding errors
 
         // Split on lines
-        foreach (line; text.lineSplitter) {
+        foreach (line; this.lineSplitter(text)) {
 
             ruler.startLine();
             ruler.addWord(line);
@@ -166,7 +181,7 @@ interface Typeface {
         if (wrap) {
 
             // Split on lines
-            foreach (line; text.lineSplitter) {
+            foreach (line; this.lineSplitter(text)) {
 
                 ruler.startLine();
 
@@ -187,7 +202,7 @@ interface Typeface {
         else {
 
             // Split on lines
-            foreach (line; text.lineSplitter) {
+            foreach (line; this.lineSplitter(text)) {
 
                 ruler.startLine();
 
