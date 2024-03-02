@@ -44,6 +44,10 @@ Space fieldExample() {
             label("Password:"),
             passwordInput("Your password..."),
         ),
+        fieldSlot!vframe(
+            label("Multiline input"),
+            textInput(.multiline),
+        ),
     );
 
 }

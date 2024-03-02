@@ -16,6 +16,12 @@ class PasswordInput : TextInput {
 
     mixin enableInputActions;
 
+    private {
+
+        float width;
+
+    }
+
     /// Create a password input.
     /// Params:
     ///     placeholder = Placeholder text for the field.
@@ -26,19 +32,43 @@ class PasswordInput : TextInput {
 
     }
 
-    protected override void drawImpl(Rectangle outer, Rectangle inner) @trusted {
+    /// Get the radius of the circles
+    protected float radius() const {
+
+        auto typeface = style.getTypeface;
+
+        // Use the "X" character as reference
+        return typeface.advance('X').x / 2f;
+
+    }
+
+    /// Get the advance width of the circles.
+    protected float advance() const {
+
+        auto typeface = style.getTypeface;
+
+        return typeface.advance('X').x * 1.2;
+
+    }
+
+    protected override void resizeImpl(Vector2 space) {
 
         import std.utf : count;
+
+        width = advance * count(value);
+
+        super.resizeImpl(space);
+
+    }
+
+    protected override void drawImpl(Rectangle outer, Rectangle inner) {
+
         import std.algorithm : min, max;
 
         auto style = pickStyle();
         auto typeface = style.getTypeface;
 
         // Use the "X" character as a reference
-        const reference = typeface.advance('X');
-        const advance = reference.x * 1.2;
-        const radius = reference.x / 2f;
-        const width = advance * count(value);
         const scrollOffset = max(0, width - inner.w);
 
         // If empty, draw like a regular textInput
@@ -67,10 +97,18 @@ class PasswordInput : TextInput {
 
         }
 
-        const caretOffset = min(width, inner.w);
-
         // Draw the caret
-        drawCaret(inner, caretOffset);
+        drawCaret(inner);
+
+    }
+
+    protected override Vector2 caretPositionImpl(Vector2 availableSpace) {
+
+        import fluid.typeface : TextRuler;
+
+        const position = super.caretPositionImpl(availableSpace);
+
+        return Vector2(width, position.y);
 
     }
 
