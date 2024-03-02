@@ -114,11 +114,9 @@ struct Text(T : Node) {
         auto newSize = style.getTypeface.measure(value);
 
         // Size changed, queue regeneration
-        if (_wrap || newSize != _sizeDots) {
-            _sizeDots = newSize;
-            _pendingGeneration = true;
-            _wrap = false;
-        }
+        _sizeDots = newSize;
+        _pendingGeneration = true;
+        _wrap = false;
 
     }
 
@@ -137,11 +135,11 @@ struct Text(T : Node) {
         auto newSize = style.getTypeface.measure!splitter(space, value, wrap);
 
         // Size changed, queue regeneration
-        if (_wrap != wrap || newSize != _sizeDots) {
-            _sizeDots = newSize;
-            _pendingGeneration = true;
-            _wrap = wrap;
-        }
+        _sizeDots = newSize;
+        _pendingGeneration = true;
+        _wrap = wrap;
+
+        // TODO Don't resize if nothing changed. Consider _sizeDots, _wrap and value itself.
 
     }
 
