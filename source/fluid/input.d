@@ -39,6 +39,7 @@ enum FluidInputAction {
     // Input
     backspace,      /// Erase last character in an input.
     backspaceWord,  /// Erase last a word in an input.
+    breakLine,      /// Start a new text line, place a line feed.
     entryPrevious,  /// Navigate to the previous list entry.
     entryNext,      /// Navigate to the next list entry.
     entryUp,        /// Navigate up in a tree, eg. in the file picker.
@@ -646,7 +647,7 @@ unittest {
 }
 
 /// Check if any stroke bound to this action is active.
-bool isActive(alias type)(const(LayoutTree)* tree)
+bool isActive(alias type)(LayoutTree* tree)
 if (isInputActionType!type) {
 
     return tree.activeActions[].canFind!(a
