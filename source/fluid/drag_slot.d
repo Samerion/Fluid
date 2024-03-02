@@ -171,6 +171,12 @@ class DragSlot : NodeSlot!Node, FluidHoverable {
 
     }
 
+    protected override bool hoveredImpl(Rectangle rect, Vector2 position) {
+
+        return Node.hoveredImpl(rect, position);
+
+    }
+
     override bool isHovered() const {
 
         return this is tree.hover || super.isHovered();
