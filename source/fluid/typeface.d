@@ -121,7 +121,7 @@ interface Typeface {
     if (isSomeString!String)
     do {
 
-        auto ruler = TextRuler(this, availableSpace.x);
+        auto ruler = TextRuler(this, wrap ? availableSpace.x : float.nan);
 
         measure!chunkWords(ruler, text, wrap);
 
@@ -238,6 +238,9 @@ struct TextRuler {
     /// Total size of the text.
     Vector2 textSize;
 
+    /// True if this is the first word on the line.
+    bool firstWord;
+
     this(const Typeface typeface, float lineWidth = float.nan) {
 
         this.typeface = typeface;
@@ -256,6 +259,7 @@ struct TextRuler {
         penPosition.x = typeface.penPosition.x;
         penPosition.y += lineHeight;
         textSize.y += lineHeight;
+        firstWord = true;
 
     }
 
@@ -276,7 +280,7 @@ struct TextRuler {
 
         // Exceeded line width
         // Automatically false if lineWidth is NaN
-        if (maxWordWidth < wordSpan && wordSpan < lineWidth) {
+        if (maxWordWidth < wordSpan && !firstWord) {
 
             // Start a new line
             startLine();
@@ -285,11 +289,23 @@ struct TextRuler {
 
         const wordPosition = penPosition;
 
+        firstWord = false;
         // Update pen position
         penPosition.x += wordSpan;
 
         // Allocate space
-        if (penPosition.x > textSize.x) textSize.x = penPosition.x;
+        if (penPosition.x > textSize.x) {
+
+            textSize.x = penPosition.x;
+
+            // Limit space to not exceed maximum width (false if NaN)
+            if (textSize.x > lineWidth) {
+
+                textSize.x = lineWidth;
+
+            }
+
+        }
 
         return wordPosition;
 
