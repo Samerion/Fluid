@@ -159,7 +159,6 @@ class TextInput : InputNode!Node {
         // Set the size
         minSize = size;
 
-
         // Set the label text
         contentLabel.text = (value == "") ? placeholder : value;
 
@@ -171,8 +170,10 @@ class TextInput : InputNode!Node {
         contentLabel.activeStyle = style;
         contentLabel.resize(tree, theme, textArea);
 
+        const minLines = multiline ? 3 : 1;
+
         // Set height to at least the font size, or total text size
-        minSize.y = max(minSize.y, style.getTypeface.lineHeight, contentLabel.minSize.y);
+        minSize.y = max(minSize.y, style.getTypeface.lineHeight * minLines, contentLabel.minSize.y);
 
         // Locate the cursor
         _caretPosition = caretPositionImpl(area);
@@ -186,38 +187,13 @@ class TextInput : InputNode!Node {
         auto typeface = style.getTypeface;
         auto ruler = TextRuler(typeface, availableSpace.x);
 
-        // Split on lines
-        auto lines = typeface.lineSplitter(value[0 .. caretIndex]);
-
-        // TODO this code shouldn't be necessary
-
-        // If empty, make sure to start the line
-        if (lines.empty)
-            ruler.startLine();
-
-        // Not empty, measure the text like normal
-        else foreach (line; lines) {
-
-            ruler.startLine();
-
-            // Split on words
-            if (multiline)
-            foreach (word; typeface.defaultWordChunks(line)) {
-
-                ruler.addWord(word);
-
-            }
-
-            // Don't split if not allowed
-            else ruler.addWord(line);
-
-        }
+        // Measure text until the caret
+        typeface.measure(ruler, value[0 .. caretIndex], multiline);
 
         return Vector2(
             ruler.penPosition.x,
-            ruler.textSize.y,
+            max(ruler.textSize.y, typeface.lineHeight),
         );
-
 
     }
 
