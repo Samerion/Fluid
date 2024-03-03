@@ -39,6 +39,8 @@ enum FluidInputAction {
     // Input
     backspace,      /// Erase last character in an input.
     backspaceWord,  /// Erase last a word in an input.
+    deleteChar,     /// Delete the next character in an input
+    deleteWord,     /// Delete the next word in an input
     breakLine,      /// Start a new text line, place a line feed.
     previousChar,   /// Move to the previous character in text.
     nextChar,       /// Move to the next character in text.
