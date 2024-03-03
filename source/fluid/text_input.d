@@ -163,7 +163,7 @@ class TextInput : InputNode!Node {
         contentLabel.text = (value == "") ? placeholder : value;
 
         const textArea = multiline
-            ? area
+            ? Vector2(size.x, area.y)
             : Vector2(0, minSize.y);
 
         // Resize the label
@@ -176,7 +176,7 @@ class TextInput : InputNode!Node {
         minSize.y = max(minSize.y, style.getTypeface.lineHeight * minLines, contentLabel.minSize.y);
 
         // Locate the cursor
-        _caretPosition = caretPositionImpl(area);
+        _caretPosition = caretPositionImpl(textArea);
 
     }
 
@@ -184,8 +184,12 @@ class TextInput : InputNode!Node {
 
         import fluid.typeface : TextRuler;
 
+        const space = multiline
+            ? availableSpace.x
+            : float.nan;
+
         auto typeface = style.getTypeface;
-        auto ruler = TextRuler(typeface, availableSpace.x);
+        auto ruler = TextRuler(typeface, space);
 
         // Measure text until the caret
         typeface.measure(ruler, value[0 .. caretIndex], multiline);
