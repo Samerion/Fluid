@@ -486,6 +486,14 @@ struct LayoutTree {
             InputLayer(
                 InputStroke(KeyboardKey.leftControl),
                 [
+                    bind!selectPreviousWord(KeyboardKey.left),
+                    bind!selectNextWord(KeyboardKey.right),
+                ]
+            ),
+
+            InputLayer(
+                InputStroke(KeyboardKey.leftControl),
+                [
                     bind!deleteWord(KeyboardKey.delete_),
                     bind!backspaceWord(KeyboardKey.backspace),
                     bind!backspaceWord(KeyboardKey.w),  // emacs & vim
@@ -506,6 +514,13 @@ struct LayoutTree {
                 [
                     bind!focusPrevious(KeyboardKey.tab),
                     bind!entryPrevious(KeyboardKey.tab),
+                    bind!selectPreviousChar(KeyboardKey.left),
+                    bind!selectNextChar(KeyboardKey.right),
+                    bind!selectPreviousLine(KeyboardKey.up),
+                    bind!selectNextLine(KeyboardKey.down),
+                    bind!selectAll(KeyboardKey.a),
+                    bind!selectToStart(KeyboardKey.home),
+                    bind!selectToEnd(KeyboardKey.end),
                 ]
             ),
 
@@ -560,6 +575,8 @@ struct LayoutTree {
                     bind!entryNext(KeyboardKey.down),
                     bind!entryNext(KeyboardKey.tab),
                     bind!entryNext(GamepadButton.dpadDown),
+                    bind!toStart(KeyboardKey.home),
+                    bind!toEnd(KeyboardKey.end),
 
                     // Scrolling
                     bind!scrollLeft(KeyboardKey.left),
