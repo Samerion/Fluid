@@ -222,6 +222,7 @@ class TextInput : InputNode!Node {
     }
 
     // Move the caret to the beginning of the input
+    @(FluidInputAction.toStart)
     void caretToStart() {
 
         _caretIndex = 0;
@@ -230,6 +231,7 @@ class TextInput : InputNode!Node {
     }
 
     /// Move the caret to the end of the input
+    @(FluidInputAction.toEnd)
     void caretToEnd() {
 
         _caretIndex = value.length;

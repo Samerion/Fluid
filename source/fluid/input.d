@@ -36,11 +36,7 @@ enum FluidInputAction {
     focusUp,        /// Focus input above.
     focusDown,      /// Focus input below.
 
-    // Input
-    backspace,      /// Erase last character in an input.
-    backspaceWord,  /// Erase last a word in an input.
-    deleteChar,     /// Delete the next character in an input
-    deleteWord,     /// Delete the next word in an input
+    // Text navigation
     breakLine,      /// Start a new text line, place a line feed.
     previousChar,   /// Move to the previous character in text.
     nextChar,       /// Move to the next character in text.
@@ -48,6 +44,27 @@ enum FluidInputAction {
     nextWord,       /// Move to the next word in text.
     previousLine,   /// Move to the previous line in text.
     nextLine,       /// Move to the next line in text.
+    toStart,        /// Move to the beginning; Home key.
+    toEnd,          /// Move to the end; End key.
+
+    // Editing
+    backspace,      /// Erase last character in an input.
+    backspaceWord,  /// Erase last a word in an input.
+    deleteChar,     /// Delete the next character in an input
+    deleteWord,     /// Delete the next word in an input
+
+    // Selection
+    selectPreviousChar,  /// Select previous character in text.
+    selectNextChar,      /// Select next character in text.
+    selectPreviousWord,  /// Select previous word in text.
+    selectNextWord,      /// Select next word in text.
+    selectPreviousLine,  /// Select to previous line in text.
+    selectNextLine,      /// Select to next line in text.
+    selectAll,           /// Select all in text.
+    selectToStart,       /// Select from here to beginning.
+    selectToEnd,         /// Select from here to end.
+
+    // List navigation
     entryPrevious,  /// Navigate to the previous list entry.
     entryNext,      /// Navigate to the next list entry.
     entryUp,        /// Navigate up in a tree, eg. in the file picker.
