@@ -486,6 +486,7 @@ struct LayoutTree {
             InputLayer(
                 InputStroke(KeyboardKey.leftControl),
                 [
+                    bind!deleteWord(KeyboardKey.delete_),
                     bind!backspaceWord(KeyboardKey.backspace),
                     bind!backspaceWord(KeyboardKey.w),  // emacs & vim
                     bind!entryPrevious(KeyboardKey.k),  // vim
@@ -548,6 +549,7 @@ struct LayoutTree {
 
                     // Text input
                     bind!backspace(KeyboardKey.backspace),
+                    bind!deleteChar(KeyboardKey.delete_),
                     bind!breakLine(KeyboardKey.enter),
                     bind!previousChar(KeyboardKey.left),
                     bind!nextChar(KeyboardKey.right),

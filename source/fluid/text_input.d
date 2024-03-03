@@ -192,6 +192,15 @@ class TextInput : InputNode!Node {
 
     }
 
+    /// Reassign text after the caret.
+    char[] valueAfterCaret(char[] newValue) {
+
+        _value = valueBeforeCaret ~ newValue;
+
+        return _value[caretIndex .. $];
+
+    }
+
     /// Visual position of the caret, relative to the top-left corner of the input.
     Vector2 caretPosition() const {
 
@@ -526,17 +535,38 @@ class TextInput : InputNode!Node {
 
     }
 
-    /// Erase last inputted word.
-    @(FluidInputAction.backspaceWord)
-    void chopWord() {
+    /// Erase last word before the caret, or the first word after.
+    ///
+    /// Parms:
+    ///     forward = If true, delete the next word. If false, delete the previous.
+    void chopWord(bool forward = false) {
 
         import std.uni;
         import std.range;
 
-        auto erasedWord = valueBeforeCaret.wordBack;
+        char[] erasedWord;
 
-        // Remove the word
-        valueBeforeCaret = valueBeforeCaret[0 .. $ - erasedWord.length];
+        // Remove next word
+        if (forward) {
+
+            // Find the word to delete
+            erasedWord = valueAfterCaret.wordFront;
+
+            // Remove the word
+            valueAfterCaret = valueAfterCaret[erasedWord.length .. $];
+
+        }
+
+        // Remove previous word
+        else {
+
+            // Find the word to delete
+            erasedWord = valueBeforeCaret.wordBack;
+
+            // Remove the word
+            valueBeforeCaret = valueBeforeCaret[0 .. $ - erasedWord.length];
+
+        }
 
         // Shred old data
         erasedWord[] = char.init;
@@ -546,6 +576,20 @@ class TextInput : InputNode!Node {
 
         // Update the size of the box
         updateSize();
+
+    }
+
+    @(FluidInputAction.backspaceWord)
+    protected void _backspaceWord() {
+
+        return chopWord();
+
+    }
+
+    @(FluidInputAction.deleteWord)
+    protected void _deleteWord() {
+
+        return chopWord(true);
 
     }
 
@@ -604,26 +648,59 @@ class TextInput : InputNode!Node {
 
     }
 
-    /// Erase last inputted letter.
-    @(FluidInputAction.backspace)
-    void chop() {
+    /// Erase any character preceding the caret, or the next one.
+    /// Params:
+    ///     forward = If true, removes character after the caret, otherwise removes the one before.
+    void chop(bool forward = false) {
 
-        // Ignore if the box is empty
-        if (value == "") return;
+        char[] erasedData;
 
-        auto oldValue = valueBeforeCaret;
+        // Remove next character
+        if (forward) {
 
-        // Remove the last character
-        valueBeforeCaret = valueBeforeCaret.chop;
+            if (valueAfterCaret == "") return;
+
+            const length = valueAfterCaret.front.codeLength!char;
+
+            erasedData = valueAfterCaret[0..length];
+            valueAfterCaret = valueAfterCaret[length..$];
+
+        }
+
+        // Remove previous character
+        else {
+
+            if (valueBeforeCaret == "") return;
+
+            const length = valueBeforeCaret.back.codeLength!char;
+
+            erasedData = valueBeforeCaret[$-length..$];
+            valueBeforeCaret = valueBeforeCaret[0..$-length];
+
+        }
 
         // Shred old data
-        oldValue[valueBeforeCaret.length .. $] = char.init;
+        erasedData[] = char.init;
 
         // Trigger the callback
         _changed();
 
         // Update the size of the box
         updateSize();
+
+    }
+
+    @(FluidInputAction.backspace)
+    protected void _backspace() {
+
+        chop();
+
+    }
+
+    @(FluidInputAction.deleteChar)
+    protected void _deleteChar() {
+
+        chop(true);
 
     }
 
