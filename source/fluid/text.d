@@ -139,7 +139,7 @@ struct Text(T : Node) {
         _pendingGeneration = true;
         _wrap = wrap;
 
-        // TODO Don't resize if nothing changed. Consider _sizeDots, _wrap and value itself.
+        // TODO Don't resize if nothing changed. Consider all of _sizeDots, _wrap and value.
 
     }
 

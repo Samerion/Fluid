@@ -45,8 +45,8 @@ Space fieldExample() {
             passwordInput("Your password..."),
         ),
         fieldSlot!vframe(
-            label("Multiline input"),
-            textInput(.multiline),
+            label("Describe yourself:"),
+            textInput(.multiline, "Your bio..."),
         ),
     );
 
@@ -62,14 +62,14 @@ Space checkboxExample() {
 
     return fieldSlot!hframe(
         checkbox(),
-        label("I agree to the terms and conditions"),
+        label("I agree to terms and conditions"),
     );
 
 }
 
 @(
-    () => label(.tags!(Tags.warning), "Note: Make sure your fieldSlots only contain a single input node. Placing two "
-        ~ "checkboxes or text inputs inside one might cause unexpected behavior."),
+    () => label(.layout!"fill", .tags!(Tags.warning), "Note: Make sure your fieldSlots only contain a single "
+        ~ "input node. Placing two checkboxes or text inputs inside one might cause unexpected behavior."),
     () => label("Moreover, 'FieldSlot' might be used by external tools to analyze the content, and for example, "
         ~ "provide information for screen readers. Fluid doesn't come with such tools at the time of writing, "
         ~ "but such improvements that might be introduced in the future."),

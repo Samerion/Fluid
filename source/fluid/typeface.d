@@ -112,34 +112,18 @@ interface Typeface {
     ///     chunkWords = Algorithm to use to break words when wrapping text; separators must be preserved.
     ///     availableSpace = Amount of available space the text can take up (dots), used to wrap text.
     ///     text = Text to measure.
-    ///     wrap = Toggle text wrapping.
+    ///     wrap = Toggle text wrapping. Defaults to on, unless using the single argument overload.
+    ///
+    /// Returns:
+    ///     Vector2 representing the text size, if `TextRuler` is not specified as an argument.
     final Vector2 measure(alias chunkWords = defaultWordChunks, String)
         (Vector2 availableSpace, String text, bool wrap = true) const
     if (isSomeString!String)
     do {
 
-        // Wrapping off
-        if (!wrap) return measure(text);
-
         auto ruler = TextRuler(this, availableSpace.x);
 
-        // TODO don't fail on decoding errors
-        // TODO RTL layouts
-        // TODO vertical text
-
-        // Split on lines
-        foreach (line; this.lineSplitter(text)) {
-
-            ruler.startLine();
-
-            // Split on words
-            foreach (word; chunkWords(line)) {
-
-                ruler.addWord(word);
-
-            }
-
-        }
+        measure!chunkWords(ruler, text, wrap);
 
         return ruler.textSize;
 
@@ -151,20 +135,41 @@ interface Typeface {
     do {
 
         // No wrap, only explicit in-text line breaks
-
         auto ruler = TextRuler(this);
 
+        measure(ruler, text, false);
+
+        return ruler.textSize;
+
+    }
+
+    /// ditto
+    final void measure(alias chunkWords = defaultWordChunks, String)
+        (ref TextRuler ruler, String text, bool wrap = true) const
+    if (isSomeString!String)
+    do {
+
         // TODO don't fail on decoding errors
+        // TODO RTL layouts
+        // TODO vertical text
 
         // Split on lines
         foreach (line; this.lineSplitter(text)) {
 
             ruler.startLine();
-            ruler.addWord(line);
+
+            // Split on words
+            if (wrap)
+            foreach (word; chunkWords(line)) {
+
+                ruler.addWord(word);
+
+            }
+
+            // No split
+            else ruler.addWord(line);
 
         }
-
-        return ruler.textSize;
 
     }
 
@@ -238,7 +243,7 @@ struct TextRuler {
         this.typeface = typeface;
         this.lineWidth = lineWidth;
 
-        penPosition = typeface.penPosition - typeface.lineHeight;
+        penPosition = typeface.penPosition - Vector2(0, typeface.lineHeight);
 
     }
 
@@ -248,7 +253,7 @@ struct TextRuler {
         const lineHeight = typeface.lineHeight;
 
         // Move the pen to the next line
-        penPosition.x = 0;
+        penPosition.x = typeface.penPosition.x;
         penPosition.y += lineHeight;
         textSize.y += lineHeight;
 
