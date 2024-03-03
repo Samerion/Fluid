@@ -40,6 +40,10 @@ enum FluidInputAction {
     backspace,      /// Erase last character in an input.
     backspaceWord,  /// Erase last a word in an input.
     breakLine,      /// Start a new text line, place a line feed.
+    previousChar,   /// Move to the previous character in text.
+    nextChar,       /// Move to the next character in text.
+    previousLine,   /// Move to the previous line in text.
+    nextLine,       /// Move to the next line in text.
     entryPrevious,  /// Navigate to the previous list entry.
     entryNext,      /// Navigate to the next list entry.
     entryUp,        /// Navigate up in a tree, eg. in the file picker.
@@ -722,11 +726,14 @@ interface FluidHoverable {
 
         // Run all active actions
         if (!mouse || isHovered)
-        foreach (binding; tree.activeActions[]) {
+        foreach_reverse (binding; tree.activeActions[]) {
 
             if (InputStroke.isMouseItem(binding.trigger) != mouse) continue;
 
             handled = runInputAction(binding.action, true) || handled;
+
+            // Stop once handled
+            if (handled) break;
 
         }
 
@@ -818,19 +825,31 @@ interface FluidHoverable {
                             // Pass the action type if applicable
                             static if (__traits(compiles, overload(actionType))) {
 
-                                overload(actionType);
+                                // Run the action and mark as handled
+                                static if (is(typeof(overload(actionType)) == void)) {
+
+                                    overload(actionType);
+                                    handled = true;
+
+                                }
+
+                                else handled = overload(actionType);
 
                             }
 
                             // TODO Support action ID?
 
                             // Run empty
-                            else overload();
+                            else static if (is(typeof(overload()) == void)) {
+
+                                overload();
+                                handled = true;
+
+                            }
+
+                            else handled = overload();
 
                         }
-
-                        // Mark as handled
-                        handled = true;
 
                     }}
 

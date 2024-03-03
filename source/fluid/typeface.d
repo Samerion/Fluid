@@ -290,6 +290,7 @@ struct TextRuler {
         const wordPosition = penPosition;
 
         firstWord = false;
+
         // Update pen position
         penPosition.x += wordSpan;
 

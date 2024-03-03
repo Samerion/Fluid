@@ -18,7 +18,7 @@ class PasswordInput : TextInput {
 
     private {
 
-        float width;
+        float _caretX;
 
     }
 
@@ -29,6 +29,12 @@ class PasswordInput : TextInput {
     this(string placeholder = "", void delegate() @trusted submitted = null) {
 
         super(placeholder, submitted);
+
+    }
+
+    override bool multiline() const {
+
+        return false;
 
     }
 
@@ -55,7 +61,7 @@ class PasswordInput : TextInput {
 
         import std.utf : count;
 
-        width = advance * count(value);
+        _caretX = advance * count(valueBeforeCaret);
 
         super.resizeImpl(space);
 
@@ -69,7 +75,7 @@ class PasswordInput : TextInput {
         auto typeface = style.getTypeface;
 
         // Use the "X" character as a reference
-        const scrollOffset = max(0, width - inner.w);
+        const scrollOffset = max(0, _caretX - inner.w);
 
         // If empty, draw like a regular textInput
         if (isEmpty) {
@@ -102,13 +108,13 @@ class PasswordInput : TextInput {
 
     }
 
-    protected override Vector2 caretPositionImpl(Vector2 availableSpace) {
+    protected override Vector2 caretPositionImpl(float availableWidth) {
 
         import fluid.typeface : TextRuler;
 
-        const position = super.caretPositionImpl(availableSpace);
+        const position = super.caretPositionImpl(availableWidth);
 
-        return Vector2(width, position.y);
+        return Vector2(_caretX, position.y);
 
     }
 

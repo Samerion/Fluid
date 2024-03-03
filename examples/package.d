@@ -29,8 +29,6 @@ enum contentSize = .sizeLimitX(800);
 enum sidebarSize = .sizeLimitX(220);
 
 Theme mainTheme;
-Theme headingTheme;
-Theme subheadingTheme;
 Theme exampleListTheme;
 Theme codeTheme;
 Theme previewWrapperTheme;
@@ -50,6 +48,8 @@ enum Chapter {
 
 @NodeTag
 enum Tags {
+    heading,
+    subheading,
     warning,
 }
 
@@ -81,6 +81,18 @@ void main(string[] args) {
             rule!GridRow(margin = 0),
             rule!ScrollFrame(margin = 0),
 
+            // Heading
+            rule!(Label, Tags.heading)(
+                typeface = Style.loadTypeface(20),
+                margin.sideTop = 20,
+                margin.sideBottom = 10,
+            ),
+            rule!(Label, Tags.subheading)(
+                typeface = Style.loadTypeface(16),
+                margin.sideTop = 16,
+                margin.sideBottom = 8,
+            ),
+
             // Warning
             rule!(Label, Tags.warning)(
                 padding.sideX = 16,
@@ -89,22 +101,6 @@ void main(string[] args) {
                 borderStyle = colorBorder(warningAccentColor),
                 backgroundColor = warningColor,
                 textColor = color!"#000",
-            ),
-        );
-
-        headingTheme = mainTheme.derive(
-            rule!Label(
-                typeface = Style.loadTypeface(20),
-                margin.sideTop = 20,
-                margin.sideBottom = 10,
-            ),
-        );
-
-        subheadingTheme = mainTheme.derive(
-            rule!Label(
-                typeface = Style.loadTypeface(16),
-                margin.sideTop = 16,
-                margin.sideBottom = 8,
             ),
         );
 
@@ -375,7 +371,7 @@ Space exampleList(void delegate(Chapter) @safe changeChapter) @safe {
         .layout!"center",
         .exampleListTheme,
         .contentSize,
-        label(.layout!"center", .headingTheme, "Hello, World!"),
+        label(.layout!"center", .tags!(Tags.heading), "Hello, World!"),
         label("Pick a chapter of the tutorial to get started. Start with the first one or browse the chapters that "
             ~ "interest you! Output previews are shown next to code samples to help you understand the content."),
         label(.layout!"fill", .tags!(Tags.warning), "While this tutorial covers the most important parts of Fluid, "
@@ -638,7 +634,8 @@ class BuildOutline : TreeAction {
 
     override void beforeResize(Node node, Vector2) @safe {
 
-        const isHeading = node.theme.among(headingTheme, subheadingTheme);
+        auto headingTags = .tags!(Tags.heading, Tags.subheading);
+        const isHeading = !node.tags.intersect(headingTags).empty;
 
         // Headings only
         if (!isHeading) return;

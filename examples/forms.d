@@ -73,5 +73,21 @@ Space checkboxExample() {
     () => label("Moreover, 'FieldSlot' might be used by external tools to analyze the content, and for example, "
         ~ "provide information for screen readers. Fluid doesn't come with such tools at the time of writing, "
         ~ "but such improvements that might be introduced in the future."),
+
+    () => label(.tags!(Tags.heading), "Number input"),
+    () => label("If you need the user to provide a number, consider using 'IntInput' or 'FloatInput'"),
 )
-void noExample() { }
+Frame numberInputExample() {
+
+    return vframe(
+        fieldSlot!vframe(
+            label("Provide an integer:"),
+            intInput(),
+        ),
+        fieldSlot!vframe(
+            label("Provide a real number:"),
+            floatInput(),
+        ),
+    );
+
+}

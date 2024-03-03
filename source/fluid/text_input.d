@@ -54,14 +54,11 @@ class TextInput : InputNode!Node {
         /// Size of the field.
         auto size = Vector2(200, 0);
 
-        /// Value of the field.
-        char[] value;
-
         /// A placeholder text for the field, displayed when the field is empty. Style using `emptyStyle`.
         string placeholder;
 
-        /// Time of the last change made to the input.
-        SysTime lastChange;
+        /// Time of the last interaction with the input.
+        SysTime lastTouch;
 
     }
 
@@ -70,11 +67,17 @@ class TextInput : InputNode!Node {
         /// Underlying label controlling the content. Needed to properly adjust it to scroll.
         Scrollable!(TextImpl, "true") contentLabel;
 
+        /// Value of the field.
+        char[] _value;
+
+        /// Available horizontal space.
+        float _availableWidth = float.nan;
+
         /// Visual position of the caret.
         Vector2 _caretPosition;
 
         /// Index of the caret.
-        size_t _caretIndex;
+        ptrdiff_t _caretIndex;
 
     }
 
@@ -86,7 +89,7 @@ class TextInput : InputNode!Node {
 
         this.placeholder = placeholder;
         this.submitted = submitted;
-        this.lastChange = Clock.currTime;
+        this.lastTouch = Clock.currTime;
 
         // Create the label
         this.contentLabel = new typeof(contentLabel)("");
@@ -102,6 +105,32 @@ class TextInput : InputNode!Node {
             ignoreMouse = true;
 
         }
+
+    }
+
+    /// Mark the text input as modified.
+    void touch() {
+
+        lastTouch = Clock.currTime;
+
+    }
+
+    /// Value written in the input.
+    ///
+    /// Warning: The contents of this label may be overwritten by the input. Make sure to `dup` the output if you intend
+    /// to keep the result.
+    inout(char)[] value() inout {
+
+        return _value;
+
+    }
+
+    /// ditto
+    char[] value(char[] value) {
+
+        _value = value;
+        caretToEnd();
+        return value;
 
     }
 
@@ -135,6 +164,30 @@ class TextInput : InputNode!Node {
 
     }
 
+    /// Get text preceding the caret.
+    inout(char)[] valueBeforeCaret() inout {
+
+        return _value[0 .. caretIndex];
+
+    }
+
+    /// Reassign text preceding the caret.
+    char[] valueBeforeCaret(char[] newValue) {
+
+        _value = newValue ~ valueAfterCaret;
+        caretIndex = newValue.length;
+
+        return _value[0 .. caretIndex];
+
+    }
+
+    /// Get text following the caret.
+    inout(char)[] valueAfterCaret() inout {
+
+        return _value[caretIndex .. $];
+
+    }
+
     /// Visual position of the caret, relative to the top-left corner of the input.
     Vector2 caretPosition() const {
 
@@ -142,15 +195,32 @@ class TextInput : InputNode!Node {
 
     }
 
-    size_t caretIndex() const {
+    /// Index of the character, byte-wise.
+    ptrdiff_t caretIndex() const {
 
-        return min(_caretIndex, value.length);
+        return _caretIndex.clamp(0, value.length);
 
     }
 
-    size_t caretIndex(size_t index) {
+    ptrdiff_t caretIndex(ptrdiff_t index) {
 
         return _caretIndex = index;
+
+    }
+
+    // Move the caret to the beginning of the input
+    void caretToStart() {
+
+        _caretIndex = 0;
+        updateCaretPosition();
+
+    }
+
+    /// Move the caret to the end of the input
+    void caretToEnd() {
+
+        _caretIndex = value.length;
+        updateCaretPosition();
 
     }
 
@@ -166,6 +236,8 @@ class TextInput : InputNode!Node {
             ? Vector2(size.x, area.y)
             : Vector2(0, minSize.y);
 
+        _availableWidth = textArea.x;
+
         // Resize the label
         contentLabel.activeStyle = style;
         contentLabel.resize(tree, theme, textArea);
@@ -176,16 +248,27 @@ class TextInput : InputNode!Node {
         minSize.y = max(minSize.y, style.getTypeface.lineHeight * minLines, contentLabel.minSize.y);
 
         // Locate the cursor
-        _caretPosition = caretPositionImpl(textArea);
+        updateCaretPosition();
 
     }
 
-    protected Vector2 caretPositionImpl(Vector2 availableSpace) {
+    void updateCaretPosition() {
+
+        import std.math : isNaN;
+
+        // No available width, waiting for resize
+        if (_availableWidth.isNaN) return;
+
+        _caretPosition = caretPositionImpl(_availableWidth);
+
+    }
+
+    protected Vector2 caretPositionImpl(float textWidth) {
 
         import fluid.typeface : TextRuler;
 
         const space = multiline
-            ? availableSpace.x
+            ? textWidth
             : float.nan;
 
         auto typeface = style.getTypeface;
@@ -205,7 +288,14 @@ class TextInput : InputNode!Node {
 
         auto style = pickStyle();
 
-        const scrollOffset = max(0, contentLabel.scrollMax - inner.w);
+        const scroll = contentLabel.scroll;
+        const scrolledCaret = caretPosition.x - scroll;
+
+        // Scroll to make sure the caret is always in view
+        const scrollOffset
+            = scrolledCaret > inner.width ? scrolledCaret - inner.width
+            : scrolledCaret < 0           ? scrolledCaret
+            : 0;
 
         // Fill the background
         style.drawBackground(tree.io, outer);
@@ -214,7 +304,7 @@ class TextInput : InputNode!Node {
         contentLabel.activeStyle = style;
 
         // Set the scroll
-        contentLabel.scroll = cast(size_t) scrollOffset;
+        contentLabel.setScroll = scroll + cast(ptrdiff_t) scrollOffset;
 
         // Draw the text
         contentLabel.draw(inner);
@@ -236,7 +326,7 @@ class TextInput : InputNode!Node {
             const margin = lineHeight / 10f;
             const relativeCaretPosition = this.caretPosition();
             const caretPosition = start(inner) + Vector2(
-                min(relativeCaretPosition.x, inner.width),
+                relativeCaretPosition.x - contentLabel.scroll,
                 relativeCaretPosition.y,
             );
 
@@ -253,7 +343,7 @@ class TextInput : InputNode!Node {
 
     protected bool showCaret() {
 
-        auto timeSecs = (Clock.currTime - lastChange).total!"seconds";
+        auto timeSecs = (Clock.currTime - lastTouch).total!"seconds";
 
         // Add a blinking caret
         return timeSecs % 2 == 0;
@@ -339,16 +429,24 @@ class TextInput : InputNode!Node {
     /// Push a character to the input.
     void push(dchar character) {
 
-        value ~= character;
-        _caretIndex += 1;
+        import std.utf : encode;
+
+        char[4] buffer;
+
+        auto size = buffer.encode(character);
+
+        // Insert the character
+        valueBeforeCaret = valueBeforeCaret ~ buffer[0..size];
         updateSize();
+        touch();
 
     }
 
     /// Called whenever the text input is updated.
     protected void _changed() {
 
-        lastChange = Clock.currTime;
+        // Mark as modified
+        touch();
 
         // Run the callback
         if (changed) changed();
@@ -364,11 +462,13 @@ class TextInput : InputNode!Node {
 
     /// Start a new line
     @(FluidInputAction.breakLine)
-    protected void _breakLine() {
+    protected bool _breakLine() {
 
-        if (!multiline) return;
+        if (!multiline) return false;
 
         push('\n');
+
+        return true;
 
     }
 
@@ -380,9 +480,6 @@ class TextInput : InputNode!Node {
 
         // breakLine has higher priority, stop if it's active
         if (multiline && tree.isActive!(FluidInputAction.breakLine)) return;
-
-        // Clear focus
-        isFocused = false;
 
         // Run the callback
         if (submitted) submitted();
@@ -417,7 +514,6 @@ class TextInput : InputNode!Node {
 
         // Submit
         {
-            io.nextFrame;
             io.press(KeyboardKey.enter);
             root.draw();
 
@@ -433,17 +529,17 @@ class TextInput : InputNode!Node {
         import std.uni;
         import std.range;
 
-        auto oldValue = value;
+        auto oldValue = valueBeforeCaret;
 
         // Run while there's something to process
-        while (value != "") {
+        while (valueBeforeCaret != "") {
 
             // Remove the last character
-            const lastChar = value.back;
-            value = value.chop;
+            const lastChar = valueBeforeCaret.back;
+            valueBeforeCaret = valueBeforeCaret.chop;
 
             // Stop if empty
-            if (value == "") break;
+            if (valueBeforeCaret == "") break;
 
             {
 
@@ -451,7 +547,7 @@ class TextInput : InputNode!Node {
                 if (lastChar.isWhite) continue;
 
                 // Continue deleting if two last characters were alphanumeric, or neither of them was
-                if (value.back.isAlphaNum == lastChar.isAlphaNum) continue;
+                if (valueBeforeCaret.back.isAlphaNum == lastChar.isAlphaNum) continue;
 
             }
 
@@ -460,13 +556,8 @@ class TextInput : InputNode!Node {
 
         }
 
-        const erased = oldValue.length - value.length;
-
-        // Move the caret back
-        _caretIndex -= erased;
-
         // Shred old data
-        oldValue[value.length .. $] = char.init;
+        oldValue[valueBeforeCaret.length .. $] = char.init;
 
         // Trigger the callback
         _changed();
@@ -535,19 +626,16 @@ class TextInput : InputNode!Node {
     @(FluidInputAction.backspace)
     void chop() {
 
-        auto oldValue = value;
-
         // Ignore if the box is empty
         if (value == "") return;
 
-        // Move the caret
-        _caretIndex -= 1;
+        auto oldValue = valueBeforeCaret;
 
         // Remove the last character
-        value = value.chop;
+        valueBeforeCaret = valueBeforeCaret.chop;
 
         // Shred old data
-        oldValue[value.length .. $] = char.init;
+        oldValue[valueBeforeCaret.length .. $] = char.init;
 
         // Trigger the callback
         _changed();
@@ -641,15 +729,31 @@ class TextInput : InputNode!Node {
         assert(root.value == "Hello, World");
         assert(value == "Hello, World\xff");
 
+        value = root.value;
         root.chopWord();
 
         assert(root.value == "Hello, ");
-        assert(value == "Hello, \xff\xff\xff\xff\xff\xff");
+        assert(value == "Hello, \xff\xff\xff\xff\xff");
 
+        value = root.value;
         root.clear();
 
         assert(root.value == "");
-        assert(value == "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff");
+        assert(value == "\xff\xff\xff\xff\xff\xff\xff");
+
+    }
+
+    /// Move caret to the next character
+    @(FluidInputAction.previousChar, FluidInputAction.nextChar)
+    protected void _caretX(FluidInputAction action) {
+
+        const direction = action == FluidInputAction.previousChar
+            ? -1
+            : +1;
+
+        caretIndex = caretIndex + direction;
+        touch();
+        updateCaretPosition();
 
     }
 

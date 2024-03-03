@@ -547,6 +547,10 @@ struct LayoutTree {
                     // Text input
                     bind!backspace(KeyboardKey.backspace),
                     bind!breakLine(KeyboardKey.enter),
+                    bind!previousChar(KeyboardKey.left),
+                    bind!nextChar(KeyboardKey.right),
+                    bind!previousLine(KeyboardKey.up),
+                    bind!nextLine(KeyboardKey.down),
                     bind!entryPrevious(KeyboardKey.up),
                     bind!entryPrevious(GamepadButton.dpadUp),
                     bind!entryNext(KeyboardKey.down),

@@ -67,6 +67,13 @@ class NumberInput(T) : AbstractNumberInput {
 
     }
 
+    this(T value, void delegate() @safe changed = null) {
+
+        super(changed);
+        this.value = value;
+
+    }
+
     override void drawImpl(Rectangle outer, Rectangle inner) {
 
         auto style = pickStyle();
@@ -110,7 +117,11 @@ class NumberInput(T) : AbstractNumberInput {
 
         import std.conv;
 
+        // Update the textual value
         super.value = this.value.to!(char[]);
+
+        // Move the caret
+        caretToEnd();
 
         // Resize
         updateSize();
@@ -124,6 +135,7 @@ class NumberInput(T) : AbstractNumberInput {
         evaluateImpl();
         value += step;
         update();
+        touch();
         focus();
 
         // Call change callback
@@ -138,6 +150,7 @@ class NumberInput(T) : AbstractNumberInput {
         evaluateImpl();
         value -= step;
         update();
+        touch();
         focus();
 
         // Call change callback
@@ -314,6 +327,7 @@ abstract class AbstractNumberInput : TextInput {
         super.changed = changed;
         super.value = ['0'];
         this.spinner = numberInputSpinner(.layout!"fill", &increment, &decrement);
+        caretToEnd();
 
     }
 
