@@ -59,9 +59,8 @@ class DragSlot : NodeSlot!Node, FluidHoverable {
     }
 
     /// Drag the node.
-    /// Returns: `DragAction` responsible for the movement, or `null` if the node is already being dragged.
     @(FluidInputAction.press, .whileDown)
-    DragAction drag()
+    void drag()
     in (tree)
     do {
 
@@ -69,16 +68,17 @@ class DragSlot : NodeSlot!Node, FluidHoverable {
         if (dragAction) {
 
             dragAction._stopDragging = false;
-            return null;
 
         }
 
-        // Queue the drag action
-        dragAction = new DragAction(this);
-        tree.queueAction(dragAction);
-        updateSize();
+        else {
 
-        return dragAction;
+            // Queue the drag action
+            dragAction = new DragAction(this);
+            tree.queueAction(dragAction);
+            updateSize();
+
+        }
 
     }
 

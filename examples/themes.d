@@ -100,7 +100,7 @@ Frame backgroundColorExample() {
 }
 
 @(
-    () => label(.headingTheme, "Reacting to user input"),
+    () => label(.tags!(Tags.heading), "Reacting to user input"),
     () => label("Nodes, especially input nodes, will change with the user input to provide feedback and guide "
         ~ "the user. You can set how this should look like using the 'when' rule. It accepts a predicate which "
         ~ "specifies *when* the rule should apply — and change its properties at runtime. The argument, 'a', "
@@ -149,7 +149,7 @@ Button otherwiseExample() {
 }
 
 @(
-    () => label(.headingTheme, "Copying and deriving themes"),
+    () => label(.tags!(Tags.heading), "Copying and deriving themes"),
     () => label("In case you need to change some rules just for a portion of the tree, you can 'derive' themes from "
         ~ "others. To apply a theme, pass it to the constructor of the node. It will be passed down to its "
         ~ "children, unless one has its own theme specified:"),
@@ -188,7 +188,7 @@ Frame deriveExample() {
 }
 
 @(
-    () => label(.headingTheme, "Tags"),
+    () => label(.tags!(Tags.heading), "Tags"),
     () => label("If you need to make some nodes have a different look, perhaps because they serve a different "
         ~ "purpose or just need to stand out, you can use tags. If you're familiar with web development, tags are "
         ~ "very similar to CSS classes."),
