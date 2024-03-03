@@ -1,7 +1,11 @@
 ///
 module fluid.text_input;
 
+import std.uni;
+import std.utf;
+import std.range;
 import std.string;
+import std.traits;
 import std.datetime;
 import std.algorithm;
 
@@ -326,7 +330,7 @@ class TextInput : InputNode!Node {
             const margin = lineHeight / 10f;
             const relativeCaretPosition = this.caretPosition();
             const caretPosition = start(inner) + Vector2(
-                relativeCaretPosition.x - contentLabel.scroll,
+                min(relativeCaretPosition.x - contentLabel.scroll, inner.w),
                 relativeCaretPosition.y,
             );
 
@@ -529,35 +533,13 @@ class TextInput : InputNode!Node {
         import std.uni;
         import std.range;
 
-        auto oldValue = valueBeforeCaret;
+        auto erasedWord = valueBeforeCaret.wordBack;
 
-        // Run while there's something to process
-        while (valueBeforeCaret != "") {
-
-            // Remove the last character
-            const lastChar = valueBeforeCaret.back;
-            valueBeforeCaret = valueBeforeCaret.chop;
-
-            // Stop if empty
-            if (valueBeforeCaret == "") break;
-
-            {
-
-                // Continue if last removed character was whitespace
-                if (lastChar.isWhite) continue;
-
-                // Continue deleting if two last characters were alphanumeric, or neither of them was
-                if (valueBeforeCaret.back.isAlphaNum == lastChar.isAlphaNum) continue;
-
-            }
-
-            // Break in other cases
-            break;
-
-        }
+        // Remove the word
+        valueBeforeCaret = valueBeforeCaret[0 .. $ - erasedWord.length];
 
         // Shred old data
-        oldValue[valueBeforeCaret.length .. $] = char.init;
+        erasedWord[] = char.init;
 
         // Trigger the callback
         _changed();
@@ -756,6 +738,134 @@ class TextInput : InputNode!Node {
         updateCaretPosition();
 
     }
+
+    /// Move caret to the next word
+    @(FluidInputAction.previousWord, FluidInputAction.nextWord)
+    protected void _caretWord(FluidInputAction action) {
+
+        // Previous word
+        if (action == FluidInputAction.previousWord) {
+
+            caretIndex = caretIndex - valueBeforeCaret.wordBack.length;
+
+        }
+
+        // Next word
+        else {
+
+            caretIndex = caretIndex + valueAfterCaret.wordFront.length;
+
+        }
+
+        touch();
+        updateCaretPosition();
+
+    }
+
+}
+
+/// `wordFront` and `wordBack` get the word at the beginning or end of given string, respectively.
+///
+/// A word is a streak of consecutive characters — non-whitespace, either all alphanumeric or all not — followed by any
+/// number of whitespace.
+T[] wordFront(T)(T[] text)
+if (isSomeString!(T[])) {
+
+    size_t length;
+
+    T[] result() { return text[0..length]; }
+    T[] remaining() { return text[length..$]; }
+
+    while (remaining != "") {
+
+        // Get the first character
+        const lastChar = remaining.front;
+        length += lastChar.codeLength!T;
+
+        // Stop if empty
+        if (remaining == "") break;
+
+        const nextChar = remaining.front;
+
+        // Continue if the next character is whitespace
+        // Includes any case where the previous character is followed by whitespace
+        if (nextChar.isWhite) continue;
+
+        // Stop if whitespace follows a non-white character
+        else if (lastChar.isWhite) break;
+
+        // Stop if the next character has different type
+        else if (lastChar.isAlphaNum != nextChar.isAlphaNum) break;
+
+    }
+
+    return result;
+
+}
+
+/// ditto
+T[] wordBack(T)(T[] text)
+if (isSomeString!(T[])) {
+
+    size_t length = text.length;
+
+    T[] result() { return text[length..$]; }
+    T[] remaining() { return text[0..length]; }
+
+    while (remaining != "") {
+
+        // Get the first character
+        const lastChar = remaining.back;
+        length -= lastChar.codeLength!T;
+
+        // Stop if empty
+        if (remaining == "") break;
+
+        const nextChar = remaining.back;
+
+        // Continue if the current character is whitespace
+        // Inverse to `wordFront`
+        if (lastChar.isWhite) continue;
+
+        // Stop if whitespace follows a non-white character
+        else if (nextChar.isWhite) break;
+
+        // Stop if the next character has different type
+        else if (lastChar.isAlphaNum != nextChar.isAlphaNum) break;
+
+    }
+
+    return result;
+
+}
+
+unittest {
+
+    assert("hello world!".wordFront == "hello ");
+    assert("hello, world!".wordFront == "hello");
+    assert("hello world!".wordBack == "!");
+    assert("hello world".wordBack == "world");
+    assert("hello ".wordBack == "hello ");
+
+    assert("witaj świecie!".wordFront == "witaj ");
+    assert(" świecie!".wordFront == " ");
+    assert("świecie!".wordFront == "świecie");
+    assert("witaj świecie!".wordBack == "!");
+    assert("witaj świecie".wordBack == "świecie");
+    assert("witaj ".wordBack == "witaj ");
+
+    assert("Всем привет!".wordFront == "Всем ");
+    assert("привет!".wordFront == "привет");
+    assert("!".wordFront == "!");
+
+    // dstring
+    assert("Всем привет!"d.wordFront == "Всем "d);
+    assert("привет!"d.wordFront == "привет"d);
+    assert("!"d.wordFront == "!"d);
+
+    assert("Всем привет!"d.wordBack == "!"d);
+    assert("Всем привет"d.wordBack == "привет"d);
+    assert("Всем "d.wordBack == "Всем "d);
 
 }
 

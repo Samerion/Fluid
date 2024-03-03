@@ -492,6 +492,8 @@ struct LayoutTree {
                     bind!entryPrevious(KeyboardKey.p),  // emacs
                     bind!entryNext(KeyboardKey.j),  // vim
                     bind!entryNext(KeyboardKey.n),  // emacs
+                    bind!previousWord(KeyboardKey.left),
+                    bind!nextWord(KeyboardKey.right),
 
                     // Submit with ctrl+enter
                     bind!submit(KeyboardKey.enter),

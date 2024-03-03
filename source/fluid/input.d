@@ -42,6 +42,8 @@ enum FluidInputAction {
     breakLine,      /// Start a new text line, place a line feed.
     previousChar,   /// Move to the previous character in text.
     nextChar,       /// Move to the next character in text.
+    previousWord,   /// Move to the previous word in text.
+    nextWord,       /// Move to the next word in text.
     previousLine,   /// Move to the previous line in text.
     nextLine,       /// Move to the next line in text.
     entryPrevious,  /// Navigate to the previous list entry.
