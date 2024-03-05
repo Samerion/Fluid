@@ -16,12 +16,6 @@ class PasswordInput : TextInput {
 
     mixin enableInputActions;
 
-    private {
-
-        float _caretX;
-
-    }
-
     /// Create a password input.
     /// Params:
     ///     placeholder = Placeholder text for the field.
@@ -32,6 +26,7 @@ class PasswordInput : TextInput {
 
     }
 
+    /// PasswordInput does not support multiline.
     override bool multiline() const {
 
         return false;
@@ -57,42 +52,17 @@ class PasswordInput : TextInput {
 
     }
 
-    protected override void resizeImpl(Vector2 space) {
+    protected override void drawContents(Rectangle inner, Rectangle innerScrolled) {
 
-        import std.utf : count;
+        auto typeface = pickStyle.getTypeface;
 
-        _caretX = advance * count(valueBeforeCaret);
+        // Empty, draw the placeholder using regular input
+        if (isEmpty) return super.drawContents(inner, innerScrolled);
 
-        super.resizeImpl(space);
+        // Draw selection
+        drawSelection(innerScrolled);
 
-    }
-
-    protected override void drawImpl(Rectangle outer, Rectangle inner) {
-
-        import std.algorithm : min, max;
-
-        auto style = pickStyle();
-        auto typeface = style.getTypeface;
-
-        // Use the "X" character as a reference
-        const scrollOffset = max(0, _caretX - inner.w);
-
-        // If empty, draw like a regular textInput
-        if (isEmpty) {
-
-            super.drawImpl(outer, inner);
-            return;
-
-        }
-
-        // Limit visible area
-        auto last = tree.pushScissors(outer);
-        scope (exit) tree.popScissors(last);
-
-        // Fill the background
-        style.drawBackground(tree.io, outer);
-
-        auto cursor = start(inner) + Vector2(radius - scrollOffset, typeface.lineHeight / 2f);
+        auto cursor = start(innerScrolled) + Vector2(radius, typeface.lineHeight / 2f);
 
         // Draw a circle for each character
         foreach (_; value) {
@@ -104,17 +74,46 @@ class PasswordInput : TextInput {
         }
 
         // Draw the caret
-        drawCaret(inner);
+        drawCaret(innerScrolled);
 
     }
 
     protected override Vector2 caretPositionImpl(float availableWidth) {
 
+        import std.utf : count;
         import fluid.typeface : TextRuler;
 
-        const position = super.caretPositionImpl(availableWidth);
+        return Vector2(
+            advance * count(valueBeforeCaret),
+            super.caretPositionImpl(availableWidth).y,
+        );
 
-        return Vector2(_caretX, position.y);
+    }
+
+    /// Draw selection, if applicable.
+    protected override void drawSelection(Rectangle inner) {
+
+        import std.utf : count;
+        import std.range : enumerate;
+        import std.algorithm : min, max;
+
+        // Ignore if selection is empty
+        if (selectionStart == selectionEnd) return;
+
+        const typeface = style.getTypeface;
+
+        const low = min(selectionStart, selectionEnd);
+        const high = max(selectionStart, selectionEnd);
+
+        const start = advance * count(value[0 .. low]);
+        const size = advance * count(value[low .. high]);
+
+        const rect = Rectangle(
+            (inner.start + Vector2(start, 0)).tupleof,
+            size, typeface.lineHeight,
+        );
+
+        io.drawRectangle(rect, style.selectionBackgroundColor);
 
     }
 
