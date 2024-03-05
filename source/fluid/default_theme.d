@@ -57,6 +57,7 @@ static this() {
             rule!Node(
                 typeface = Typeface.defaultTypeface,
                 textColor = color("#000"),
+                selectionBackgroundColor = color("#55b9ff"),
             ),
             rule!Frame(
                 backgroundColor = color("#fff"),

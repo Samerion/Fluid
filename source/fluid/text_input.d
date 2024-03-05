@@ -18,6 +18,7 @@ import fluid.utils;
 import fluid.scroll;
 import fluid.backend;
 import fluid.structs;
+import fluid.typeface;
 
 
 @safe:
@@ -66,10 +67,19 @@ class TextInput : InputNode!Node {
 
     }
 
+    protected {
+
+        /// If true, current movement action is performed while selecting.
+        bool selectionMovement;
+
+    }
+
     private {
 
+        alias ContentLabel = Scrollable!(WrappedLabel, "true");
+
         /// Underlying label controlling the content. Needed to properly adjust it to scroll.
-        Scrollable!(TextImpl, "true") contentLabel;
+        ContentLabel _contentLabel;
 
         /// Value of the field.
         char[] _value;
@@ -82,6 +92,9 @@ class TextInput : InputNode!Node {
 
         /// Index of the caret.
         ptrdiff_t _caretIndex;
+
+        /// Reference point; beginning of selection. Set to -1 if there is no start.
+        ptrdiff_t _selectionStart = -1;
 
     }
 
@@ -96,9 +109,9 @@ class TextInput : InputNode!Node {
         this.lastTouch = Clock.currTime;
 
         // Create the label
-        this.contentLabel = new typeof(contentLabel)("");
+        this._contentLabel = new typeof(_contentLabel)("");
 
-        with (this.contentLabel) {
+        with (this._contentLabel) {
 
             // Make the scrollbar invisible
             scrollBar.disable();
@@ -162,40 +175,76 @@ class TextInput : InputNode!Node {
 
     }
 
-    inout(Label) label() inout {
+    inout(ContentLabel) contentLabel() inout {
 
-        return contentLabel;
+        return _contentLabel;
 
     }
 
-    /// Get text preceding the caret.
+    /// Get or set text preceding the caret.
     inout(char)[] valueBeforeCaret() inout {
 
         return _value[0 .. caretIndex];
 
     }
 
-    /// Reassign text preceding the caret.
+    /// ditto
     char[] valueBeforeCaret(char[] newValue) {
 
         _value = newValue ~ valueAfterCaret;
         caretIndex = newValue.length;
+        updateSize();
 
         return _value[0 .. caretIndex];
 
     }
 
-    /// Get text following the caret.
+    /// Get or set currently selected text.
+    inout(char)[] selectedValue() inout {
+
+        const low = min(selectionStart, selectionEnd);
+        const high = max(selectionStart, selectionEnd);
+
+        return _value[low .. high];
+
+    }
+
+    /// ditto
+    char[] selectedValue(char[] value) {
+
+        const isLow = caretIndex == selectionStart;
+        const low = min(selectionStart, selectionEnd);
+        const high = max(selectionStart, selectionEnd);
+
+        _value = _value[0 .. low] ~ value ~ _value[high .. $];
+        updateSize();
+
+        // Update caret index
+        if (isLow) {
+            _caretIndex = low;
+            _selectionStart = low + value.length;
+        }
+        else {
+            _caretIndex = low + value.length;
+            _selectionStart = low;
+        }
+
+        return value;
+
+    }
+
+    /// Get or set text following the caret.
     inout(char)[] valueAfterCaret() inout {
 
         return _value[caretIndex .. $];
 
     }
 
-    /// Reassign text after the caret.
+    /// ditto
     char[] valueAfterCaret(char[] newValue) {
 
         _value = valueBeforeCaret ~ newValue;
+        updateSize();
 
         return _value[caretIndex .. $];
 
@@ -215,11 +264,49 @@ class TextInput : InputNode!Node {
 
     }
 
+    /// ditto
     ptrdiff_t caretIndex(ptrdiff_t index) {
 
         return _caretIndex = index;
 
     }
+
+    /// If true, there's an active selection.
+    bool isSelecting() const {
+
+        return _selectionStart >= 0;
+
+    }
+
+    /// Point where selection begins. Caret is the other end of the selection.
+    ptrdiff_t selectionStart() const {
+
+        // Selection is present
+        if (isSelecting)
+            return _selectionStart.clamp(0, value.length);
+
+        // No selection
+        else return caretIndex;
+
+    }
+
+    /// ditto
+    ptrdiff_t selectionStart(ptrdiff_t value) {
+
+        return _selectionStart = value;
+
+    }
+
+    /// Point where selection ends. Corresponds to caret position.
+    alias selectionEnd = caretIndex;
+
+    ///
+    void clearSelection() {
+
+        _selectionStart = -1;
+
+    }
+
 
     // Move the caret to the beginning of the input
     @(FluidInputAction.toStart)
@@ -292,10 +379,7 @@ class TextInput : InputNode!Node {
         // Measure text until the caret
         typeface.measure(ruler, value[0 .. caretIndex], multiline);
 
-        return Vector2(
-            ruler.penPosition.x,
-            max(ruler.textSize.y, typeface.lineHeight),
-        );
+        return ruler.caretPositionStart;
 
     }
 
@@ -321,11 +405,20 @@ class TextInput : InputNode!Node {
         // Set the scroll
         contentLabel.setScroll = scroll + cast(ptrdiff_t) scrollOffset;
 
+        auto scrolledInner = inner;
+        scrolledInner.x -= contentLabel.scroll;
+
+        auto lastScissors = tree.pushScissors(inner);
+        scope (exit) tree.popScissors(lastScissors);
+
+        // Draw selection
+        drawSelection(scrolledInner);
+
         // Draw the text
         contentLabel.draw(inner);
 
         // Draw the caret
-        drawCaret(inner);
+        drawCaret(scrolledInner);
 
     }
 
@@ -340,17 +433,77 @@ class TextInput : InputNode!Node {
             const lineHeight = style.getTypeface.lineHeight;
             const margin = lineHeight / 10f;
             const relativeCaretPosition = this.caretPosition();
-            const caretPosition = start(inner) + Vector2(
-                min(relativeCaretPosition.x - contentLabel.scroll, inner.w),
-                relativeCaretPosition.y,
-            );
+            const caretPosition = start(inner) + relativeCaretPosition;
 
             // Draw the caret
             io.drawLine(
-                caretPosition + Vector2(0, margin - lineHeight),
-                caretPosition - Vector2(0, margin),
+                caretPosition + Vector2(0, margin),
+                caretPosition - Vector2(0, margin - lineHeight),
                 style.textColor,
             );
+
+        }
+
+    }
+
+    /// Draw selection, if applicable.
+    protected void drawSelection(Rectangle inner) {
+
+        // Ignore if selection is empty
+        if (selectionStart == selectionEnd) return;
+
+        const low = min(selectionStart, selectionEnd);
+        const high = max(selectionStart, selectionEnd);
+
+        // Run through the text
+        auto typeface = style.getTypeface;
+        auto ruler = TextRuler(typeface, multiline ? _availableWidth : float.nan);
+
+        size_t index;
+
+        foreach (line; typeface.lineSplitter(value)) {
+
+            Vector2 lineStart;
+            auto caretStart = ruler.caretPositionStart;
+            auto caretEnd = ruler.caretPositionEnd;
+
+            ruler.startLine();
+
+            // Each word is a single, unbreakable unit
+            foreach (word; typeface.eachWord(ruler, line, multiline)) {
+
+                const startIndex = index;
+                const endIndex = index = index + word.length;
+
+                // Selection starts here
+                if (startIndex <= low && low < endIndex) {
+
+                    const dent = typeface.measure(word[0 .. low - startIndex]);
+
+                    lineStart = caretStart + Vector2(dent.x, 0);
+
+                }
+
+                // Selection ends here
+                if (startIndex < high && high <= endIndex) {
+
+                    const dent = typeface.measure(word[0 .. high - startIndex]);
+                    const lineEnd = caretEnd + Vector2(dent.x, 0);
+                    const rect = Rectangle(
+                        (inner.start + lineStart).tupleof,
+                        (lineEnd - lineStart).tupleof
+                    );
+
+                    io.drawRectangle(rect, style.selectionBackgroundColor);
+                    import std.stdio;
+                    debug writeln(value[low..high]);
+
+                }
+
+                caretStart = ruler.caretPositionStart;
+                caretEnd = ruler.caretPositionEnd;
+
+            }
 
         }
 
@@ -841,6 +994,62 @@ class TextInput : InputNode!Node {
 
     }
 
+    /// Begin or continue selection using given movement action.
+    ///
+    /// Use `selectionStart` and `selectionEnd` to define selection boundaries manually.
+    @(
+        FluidInputAction.selectPreviousChar,
+        FluidInputAction.selectNextChar,
+        FluidInputAction.selectPreviousWord,
+        FluidInputAction.selectNextWord,
+        FluidInputAction.selectPreviousLine,
+        FluidInputAction.selectNextLine,
+        FluidInputAction.selectAll,
+        FluidInputAction.selectToStart,
+        FluidInputAction.selectToEnd,
+    )
+    protected void select(FluidInputAction action) {
+
+        selectionMovement = true;
+        scope (exit) selectionMovement = false;
+
+        selectionStart = caretIndex;
+
+        with (FluidInputAction) switch (action) {
+            case selectPreviousChar:
+                runInputAction!previousChar;
+                break;
+            case selectNextChar:
+                runInputAction!nextChar;
+                break;
+            case selectPreviousWord:
+                runInputAction!previousWord;
+                break;
+            case selectNextWord:
+                runInputAction!nextWord;
+                break;
+            case selectPreviousLine:
+                runInputAction!previousLine;
+                break;
+            case selectNextLine:
+                runInputAction!nextLine;
+                break;
+            case selectToStart:
+                runInputAction!toStart;
+                break;
+            case selectToEnd:
+                runInputAction!toEnd;
+                break;
+            case selectAll:
+                selectionStart = 0;
+                caretToEnd();
+                break;
+            default:
+                assert(false, "Invalid action");
+        }
+
+    }
+
 }
 
 /// `wordFront` and `wordBack` get the word at the beginning or end of given string, respectively.
@@ -948,7 +1157,7 @@ unittest {
 
 }
 
-private class TextImpl : Label {
+private class WrappedLabel : Label {
 
     Style activeStyle;
 
