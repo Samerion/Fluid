@@ -478,24 +478,43 @@ class TextInput : InputNode!Node {
         auto typeface = style.getTypeface;
         auto ruler = TextRuler(typeface, multiline ? _availableWidth : float.nan);
 
-        size_t index;
+        Vector2 lineStart;
+        Vector2 lineEnd;
 
         foreach (line; typeface.lineSplitter(value)) {
 
-            Vector2 lineStart;
-            auto caretStart = ruler.caretPositionStart;
-            auto caretEnd = ruler.caretPositionEnd;
+            size_t index = cast(size_t) line.ptr - cast(size_t) value.ptr;
 
             ruler.startLine();
 
             // Each word is a single, unbreakable unit
-            foreach (word; typeface.eachWord(ruler, line, multiline)) {
+            foreach (word, penPosition; typeface.eachWord(ruler, line, multiline)) {
+
+                const caretEnd = ruler.caretPositionEnd(penPosition);
+                const caretStart = ruler.caretPositionStart(penPosition);
 
                 const startIndex = index;
                 const endIndex = index = index + word.length;
 
+                const newLine = ruler.wordLineIndex == 1;
+
+                scope (exit) lineEnd = ruler.caretPositionEnd;
+
+                // New line started, flush the line
+                if (newLine && startIndex > low) {
+
+                    const rect = Rectangle(
+                        (inner.start + lineStart).tupleof,
+                        (lineEnd - lineStart).tupleof
+                    );
+
+                    lineStart = caretStart;
+                    io.drawRectangle(rect, style.selectionBackgroundColor);
+
+                }
+
                 // Selection starts here
-                if (startIndex <= low && low < endIndex) {
+                if (startIndex <= low && low <= endIndex) {
 
                     const dent = typeface.measure(word[0 .. low - startIndex]);
 
@@ -504,7 +523,7 @@ class TextInput : InputNode!Node {
                 }
 
                 // Selection ends here
-                if (startIndex < high && high <= endIndex) {
+                if (startIndex <= high && high <= endIndex) {
 
                     const dent = typeface.measure(word[0 .. high - startIndex]);
                     const lineEnd = caretEnd + Vector2(dent.x, 0);
@@ -514,11 +533,9 @@ class TextInput : InputNode!Node {
                     );
 
                     io.drawRectangle(rect, style.selectionBackgroundColor);
+                    return;
 
                 }
-
-                caretStart = ruler.caretPositionStart;
-                caretEnd = ruler.caretPositionEnd;
 
             }
 
@@ -1011,6 +1028,9 @@ class TextInput : InputNode!Node {
     @(FluidInputAction.previousChar, FluidInputAction.nextChar)
     protected void _caretX(FluidInputAction action) {
 
+        moveOrClearSelection();
+
+        // Remove next character
         if (action == FluidInputAction.nextChar) {
 
             if (valueAfterCaret == "") return;
@@ -1034,7 +1054,6 @@ class TextInput : InputNode!Node {
 
         touch();
         updateCaretPosition();
-        moveOrClearSelection();
 
     }
 
