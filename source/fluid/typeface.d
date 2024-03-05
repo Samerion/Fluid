@@ -161,7 +161,7 @@ interface Typeface {
             ruler.startLine();
 
             // Split on words; do nothing in particular, just run the measurements
-            foreach (word; eachWord!chunkWords(ruler, line, wrap)) { }
+            foreach (word, penPosition; eachWord!chunkWords(ruler, line, wrap)) { }
 
         }
 
@@ -177,7 +177,7 @@ interface Typeface {
             alias ElementType = CommonType!(String, typeof(chunkWords(text).front));
 
             // I'd use `choose` but it's currently broken
-            int opApply(int delegate(ElementType) @safe yield) {
+            int opApply(int delegate(ElementType, Vector2) @safe yield) {
 
                 // Text wrapping on
                 if (wrap) {
@@ -185,8 +185,8 @@ interface Typeface {
                     // Split each word
                     foreach (word; chunkWords(text)) {
 
-                        ruler.addWord(word);
-                        if (auto ret = yield(word)) return ret;
+                        const penPosition = ruler.addWord(word);
+                        if (const ret = yield(word, penPosition)) return ret;
 
                     }
 
@@ -197,8 +197,8 @@ interface Typeface {
                 // Text wrapping off
                 else {
 
-                    ruler.addWord(text);
-                    return yield(text);
+                    const penPosition = ruler.addWord(text);
+                    return yield(text, penPosition);
 
                 }
 
@@ -275,32 +275,42 @@ struct TextRuler {
     /// Total size of the text.
     Vector2 textSize;
 
-    /// True if this is the first word on the line.
-    bool firstWord;
+    /// Index of the word within the line.
+    size_t wordLineIndex;
 
     this(const Typeface typeface, float lineWidth = float.nan) {
 
         this.typeface = typeface;
         this.lineWidth = lineWidth;
-
-        penPosition = typeface.penPosition - Vector2(0, typeface.lineHeight);
+        this.penPosition = typeface.penPosition;
 
     }
 
     /// Get current caret position.
     Vector2 caretPositionStart() const {
 
-        return caretPositionEnd - Vector2(0, typeface.lineHeight);
+        return caretPositionStart(penPosition);
 
     }
 
     /// ditto
     Vector2 caretPositionEnd() const {
 
-        return Vector2(
-            penPosition.x,
-            max(textSize.y, typeface.lineHeight),
-        );
+        return caretPositionEnd(penPosition);
+
+    }
+
+    /// Get caret position for the given pen position.
+    Vector2 caretPositionStart(Vector2 penPosition) const {
+
+        return penPosition - Vector2(0, typeface.penPosition.y);
+
+    }
+
+    /// ditto
+    Vector2 caretPositionEnd(Vector2 penPosition) const {
+
+        return caretPositionStart(penPosition) + Vector2(0, typeface.lineHeight);
 
     }
 
@@ -309,11 +319,17 @@ struct TextRuler {
 
         const lineHeight = typeface.lineHeight;
 
-        // Move the pen to the next line
-        penPosition.x = typeface.penPosition.x;
-        penPosition.y += lineHeight;
+        if (textSize != Vector2.init) {
+
+            // Move the pen to the next line
+            penPosition.x = typeface.penPosition.x;
+            penPosition.y += lineHeight;
+
+        }
+
+        // Allocate space for the line
         textSize.y += lineHeight;
-        firstWord = true;
+        wordLineIndex = 0;
 
     }
 
@@ -335,7 +351,7 @@ struct TextRuler {
 
         // Exceeded line width
         // Automatically false if lineWidth is NaN
-        if (maxWordWidth < wordSpan && !firstWord) {
+        if (maxWordWidth < wordSpan && wordLineIndex != 0) {
 
             // Start a new line
             startLine();
@@ -344,7 +360,8 @@ struct TextRuler {
 
         const wordPosition = penPosition;
 
-        firstWord = false;
+        // Increment word index
+        wordLineIndex++;
 
         // Update pen position
         penPosition.x += wordSpan;
