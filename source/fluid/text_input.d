@@ -430,6 +430,13 @@ class TextInput : InputNode!Node {
         const lastScissors = tree.pushScissors(outer);
         scope (exit) tree.popScissors(lastScissors);
 
+        // Draw the contents
+        drawContents(inner, scrolledInner);
+
+    }
+
+    protected void drawContents(Rectangle inner, Rectangle scrolledInner) {
+
         // Draw selection
         drawSelection(scrolledInner);
 
@@ -670,16 +677,9 @@ class TextInput : InputNode!Node {
 
     }
 
-    deprecated("Use _submitted instead, _submit to be removed in 0.8.0")
-    protected void _submit() {
-
-        _submitted();
-
-    }
-
     /// Start a new line
     @(FluidInputAction.breakLine)
-    protected bool _breakLine() {
+    protected bool onBreakLine() {
 
         if (!multiline) return false;
 
@@ -691,7 +691,7 @@ class TextInput : InputNode!Node {
 
     /// Submit the input.
     @(FluidInputAction.submit)
-    protected void _submitted() {
+    protected void onSubmit() {
 
         import std.sumtype : match;
 
@@ -792,14 +792,14 @@ class TextInput : InputNode!Node {
     }
 
     @(FluidInputAction.backspaceWord)
-    protected void _backspaceWord() {
+    protected void onBackspaceWord() {
 
         return chopWord();
 
     }
 
     @(FluidInputAction.deleteWord)
-    protected void _deleteWord() {
+    protected void onDeleteWord() {
 
         return chopWord(true);
 
@@ -911,14 +911,14 @@ class TextInput : InputNode!Node {
     }
 
     @(FluidInputAction.backspace)
-    protected void _backspace() {
+    protected void onBackspace() {
 
         chop();
 
     }
 
     @(FluidInputAction.deleteChar)
-    protected void _deleteChar() {
+    protected void onDeleteChar() {
 
         chop(true);
 
@@ -1026,7 +1026,7 @@ class TextInput : InputNode!Node {
 
     /// Move caret to the next character
     @(FluidInputAction.previousChar, FluidInputAction.nextChar)
-    protected void _caretX(FluidInputAction action) {
+    protected void onXChar(FluidInputAction action) {
 
         moveOrClearSelection();
 
@@ -1059,7 +1059,7 @@ class TextInput : InputNode!Node {
 
     /// Move caret to the next word
     @(FluidInputAction.previousWord, FluidInputAction.nextWord)
-    protected void _caretWord(FluidInputAction action) {
+    protected void onXWord(FluidInputAction action) {
 
         // Previous word
         if (action == FluidInputAction.previousWord) {
@@ -1095,7 +1095,7 @@ class TextInput : InputNode!Node {
         FluidInputAction.selectToStart,
         FluidInputAction.selectToEnd,
     )
-    protected void selectMove(FluidInputAction action) {
+    protected void onSelectX(FluidInputAction action) {
 
         selectionMovement = true;
         scope (exit) selectionMovement = false;
