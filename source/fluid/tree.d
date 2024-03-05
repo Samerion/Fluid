@@ -480,11 +480,12 @@ struct LayoutTree {
         }
 
         // TODO universal left/right key
+        // TODO macOS shortcuts
         with (FluidInputAction)
         boundInputs = [
 
             InputLayer(
-                InputStroke(KeyboardKey.leftControl),
+                InputStroke(KeyboardKey.leftShift, KeyboardKey.leftControl),
                 [
                     bind!selectPreviousWord(KeyboardKey.left),
                     bind!selectNextWord(KeyboardKey.right),

@@ -71,6 +71,7 @@ class NumberInput(T) : AbstractNumberInput {
 
         super(changed);
         this.value = value;
+        this.update();
 
     }
 
