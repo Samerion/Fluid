@@ -217,17 +217,9 @@ class TextInput : InputNode!Node {
         const high = max(selectionStart, selectionEnd);
 
         _value = _value[0 .. low] ~ value ~ _value[high .. $];
+        _caretIndex = low + value.length;
         updateSize();
-
-        // Update caret index
-        if (isLow) {
-            _caretIndex = low;
-            _selectionStart = low + value.length;
-        }
-        else {
-            _caretIndex = low + value.length;
-            _selectionStart = low;
-        }
+        clearSelection();
 
         return value;
 
@@ -278,6 +270,21 @@ class TextInput : InputNode!Node {
 
     }
 
+    bool isSelecting(bool value) {
+
+        // Ignore if the value stays the same
+        if (value == isSelecting) return value;
+
+        // Start selection
+        if (value) _selectionStart = _caretIndex;
+
+        // End selection
+        else clearSelection();
+
+        return value;
+
+    }
+
     /// Point where selection begins. Caret is the other end of the selection.
     ptrdiff_t selectionStart() const {
 
@@ -307,6 +314,16 @@ class TextInput : InputNode!Node {
 
     }
 
+    /// Clear selection if selection movement is disabled.
+    protected void moveOrClearSelection() {
+
+        if (!selectionMovement) {
+
+            clearSelection();
+
+        }
+
+    }
 
     // Move the caret to the beginning of the input
     @(FluidInputAction.toStart)
@@ -314,6 +331,7 @@ class TextInput : InputNode!Node {
 
         _caretIndex = 0;
         updateCaretPosition();
+        moveOrClearSelection();
 
     }
 
@@ -323,6 +341,7 @@ class TextInput : InputNode!Node {
 
         _caretIndex = value.length;
         updateCaretPosition();
+        moveOrClearSelection();
 
     }
 
@@ -408,7 +427,7 @@ class TextInput : InputNode!Node {
         auto scrolledInner = inner;
         scrolledInner.x -= contentLabel.scroll;
 
-        auto lastScissors = tree.pushScissors(inner);
+        const lastScissors = tree.pushScissors(outer);
         scope (exit) tree.popScissors(lastScissors);
 
         // Draw selection
@@ -495,8 +514,6 @@ class TextInput : InputNode!Node {
                     );
 
                     io.drawRectangle(rect, style.selectionBackgroundColor);
-                    import std.stdio;
-                    debug writeln(value[low..high]);
 
                 }
 
@@ -603,10 +620,25 @@ class TextInput : InputNode!Node {
 
         auto size = buffer.encode(character);
 
-        // Insert the character
-        valueBeforeCaret = valueBeforeCaret ~ buffer[0..size];
-        updateSize();
-        touch();
+        // If selection is active, overwrite the selection
+        if (isSelecting) {
+
+            // Shred old value
+            selectedValue[] = char.init;
+
+            // Override with the character
+            selectedValue = buffer[0..size];
+            clearSelection();
+
+        }
+
+        // Insert the character before caret
+        else {
+
+            valueBeforeCaret = valueBeforeCaret ~ buffer[0..size];
+            touch();
+
+        }
 
     }
 
@@ -701,8 +733,16 @@ class TextInput : InputNode!Node {
 
         char[] erasedWord;
 
+        // Selection active, delete it
+        if (selectedValue) {
+
+            erasedWord = selectedValue;
+            selectedValue = null;
+
+        }
+
         // Remove next word
-        if (forward) {
+        else if (forward) {
 
             // Find the word to delete
             erasedWord = valueAfterCaret.wordFront;
@@ -810,8 +850,16 @@ class TextInput : InputNode!Node {
 
         char[] erasedData;
 
+        // Selection active
+        if (isSelecting) {
+
+            erasedData = selectedValue;
+            selectedValue = null;
+
+        }
+
         // Remove next character
-        if (forward) {
+        else if (forward) {
 
             if (valueAfterCaret == "") return;
 
@@ -923,6 +971,8 @@ class TextInput : InputNode!Node {
         // Remove the value
         value = null;
 
+        clearSelection();
+
     }
 
     unittest {
@@ -961,13 +1011,30 @@ class TextInput : InputNode!Node {
     @(FluidInputAction.previousChar, FluidInputAction.nextChar)
     protected void _caretX(FluidInputAction action) {
 
-        const direction = action == FluidInputAction.previousChar
-            ? -1
-            : +1;
+        if (action == FluidInputAction.nextChar) {
 
-        caretIndex = caretIndex + direction;
+            if (valueAfterCaret == "") return;
+
+            const length = valueAfterCaret.front.codeLength!char;
+
+            caretIndex = caretIndex + length;
+
+        }
+
+        // Remove previous character
+        else {
+
+            if (valueBeforeCaret == "") return;
+
+            const length = valueBeforeCaret.back.codeLength!char;
+
+            caretIndex = caretIndex - length;
+
+        }
+
         touch();
         updateCaretPosition();
+        moveOrClearSelection();
 
     }
 
@@ -991,6 +1058,7 @@ class TextInput : InputNode!Node {
 
         touch();
         updateCaretPosition();
+        moveOrClearSelection();
 
     }
 
@@ -1008,11 +1076,13 @@ class TextInput : InputNode!Node {
         FluidInputAction.selectToStart,
         FluidInputAction.selectToEnd,
     )
-    protected void select(FluidInputAction action) {
+    protected void selectMove(FluidInputAction action) {
 
         selectionMovement = true;
         scope (exit) selectionMovement = false;
 
+        // Start selection
+        if (!isSelecting)
         selectionStart = caretIndex;
 
         with (FluidInputAction) switch (action) {
@@ -1041,7 +1111,7 @@ class TextInput : InputNode!Node {
                 runInputAction!toEnd;
                 break;
             case selectAll:
-                selectionStart = 0;
+                _selectionStart = 0;
                 caretToEnd();
                 break;
             default:
