@@ -202,10 +202,7 @@ class TextInput : InputNode!Node {
     /// Get or set currently selected text.
     inout(char)[] selectedValue() inout {
 
-        const low = min(selectionStart, selectionEnd);
-        const high = max(selectionStart, selectionEnd);
-
-        return _value[low .. high];
+        return _value[selectionLowIndex .. selectionHighIndex];
 
     }
 
@@ -213,8 +210,8 @@ class TextInput : InputNode!Node {
     char[] selectedValue(scope const(char)[] value) {
 
         const isLow = caretIndex == selectionStart;
-        const low = min(selectionStart, selectionEnd);
-        const high = max(selectionStart, selectionEnd);
+        const low = selectionLowIndex;
+        const high = selectionHighIndex;
 
         _value = _value[0 .. low] ~ value ~ _value[high .. $];
         _caretIndex = low + value.length;
@@ -282,6 +279,20 @@ class TextInput : InputNode!Node {
         else clearSelection();
 
         return value;
+
+    }
+
+    /// Low index of the selection, left boundary, first index.
+    ptrdiff_t selectionLowIndex() const {
+
+        return min(selectionStart, selectionEnd);
+
+    }
+
+    /// High index of the selection, right boundary, second index.
+    ptrdiff_t selectionHighIndex() const {
+
+        return max(selectionStart, selectionEnd);
 
     }
 
@@ -478,8 +489,8 @@ class TextInput : InputNode!Node {
         // Ignore if selection is empty
         if (selectionStart == selectionEnd) return;
 
-        const low = min(selectionStart, selectionEnd);
-        const high = max(selectionStart, selectionEnd);
+        const low = selectionLowIndex;
+        const high = selectionHighIndex;
 
         // Run through the text
         auto typeface = style.getTypeface;
@@ -1034,10 +1045,21 @@ class TextInput : InputNode!Node {
     @(FluidInputAction.previousChar, FluidInputAction.nextChar)
     protected void onXChar(FluidInputAction action) {
 
-        moveOrClearSelection();
+        const forward = action == FluidInputAction.nextChar;
 
-        // Remove next character
-        if (action == FluidInputAction.nextChar) {
+        // Terminating selection
+        if (isSelecting && !selectionMovement) {
+
+            // Move to either end of the selection
+            caretIndex = forward
+                ? selectionHighIndex
+                : selectionLowIndex;
+            clearSelection();
+
+        }
+
+        // Move to next character
+        else if (forward) {
 
             if (valueAfterCaret == "") return;
 
@@ -1047,7 +1069,7 @@ class TextInput : InputNode!Node {
 
         }
 
-        // Remove previous character
+        // Move to previous character
         else {
 
             if (valueBeforeCaret == "") return;
