@@ -508,6 +508,7 @@ struct LayoutTree {
                     bind!nextWord(KeyboardKey.right),
                     bind!selectAll(KeyboardKey.a),
                     bind!copy(KeyboardKey.c),
+                    bind!cut(KeyboardKey.x),
                     bind!paste(KeyboardKey.v),
                     bind!toStart(KeyboardKey.home),
                     bind!toEnd(KeyboardKey.end),
