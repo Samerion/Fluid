@@ -286,31 +286,22 @@ struct TextRuler {
 
     }
 
-    /// Get current caret position.
-    Vector2 caretPositionStart() const {
+    /// Get the caret as a 0 width rectangle.
+    Rectangle caret() const {
 
-        return caretPositionStart(penPosition);
-
-    }
-
-    /// ditto
-    Vector2 caretPositionEnd() const {
-
-        return caretPositionEnd(penPosition);
+        return caret(penPosition);
 
     }
 
-    /// Get caret position for the given pen position.
-    Vector2 caretPositionStart(Vector2 penPosition) const {
+    /// Get the caret as a 0 width rectangle for the given pen position.
+    Rectangle caret(Vector2 penPosition) const {
 
-        return penPosition - Vector2(0, typeface.penPosition.y);
+        const start = penPosition - Vector2(0, typeface.penPosition.y);
 
-    }
-
-    /// ditto
-    Vector2 caretPositionEnd(Vector2 penPosition) const {
-
-        return caretPositionStart(penPosition) + Vector2(0, typeface.lineHeight);
+        return Rectangle(
+            start.tupleof,
+            0, typeface.lineHeight,
+        );
 
     }
 

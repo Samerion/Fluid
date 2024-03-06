@@ -149,6 +149,22 @@ unittest {
 
 }
 
+/// Get distance between two vectors.
+float distance(Vector2 a, Vector2 b) {
+
+    import std.math : sqrt;
+
+    return sqrt(distance2(a, b));
+
+}
+
+/// Get distance between two vectors, squared.
+float distance2(Vector2 a, Vector2 b) {
+
+    return (a.x - b.x)^^2 + (a.y - b.y)^^2;
+
+}
+
 /// Check if the rectangle contains a point.
 bool contains(Rectangle rectangle, Vector2 point) {
 
