@@ -242,6 +242,7 @@ class TextInput : InputNode!Node {
     /// Visual position of the caret, relative to the top-left corner of the input.
     Vector2 caretPosition() const {
 
+        // Calculated in caretPositionImpl
         return _caretPosition;
 
     }
@@ -403,13 +404,22 @@ class TextInput : InputNode!Node {
             ? textWidth
             : float.nan;
 
+        // Get the word that immediately follows the caret, if any
+        const tail = valueAfterCaret.wordFront;
+
         auto typeface = style.getTypeface;
         auto ruler = TextRuler(typeface, space);
+        auto slice = value[0 .. caretIndex + tail.length];
 
-        // Measure text until the caret
-        typeface.measure(ruler, value[0 .. caretIndex], multiline);
+        // Measure text until the caret; include the word that follows to keep proper wrapping
+        typeface.measure(ruler, slice, multiline);
 
-        return ruler.caretPositionStart;
+        auto caretPosition = ruler.caretPositionStart;
+
+        // Measure the word itself, and remove it
+        caretPosition.x -= typeface.measure(tail).x;
+
+        return caretPosition;
 
     }
 
