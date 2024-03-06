@@ -391,8 +391,8 @@ class TextInput : InputNode!Node {
     }
 
     /// Find the closest character to the given position.
-    /// Returns: A struct with `index` and `position` fields.
-    auto findCharacter(Vector2 needle) const {
+    /// Returns: Index of the character.
+    size_t nearestCharacter(Vector2 needle) const {
 
         import std.math : abs;
 
@@ -482,7 +482,7 @@ class TextInput : InputNode!Node {
 
         }
 
-        return result;
+        return result.index;
 
     }
 
@@ -873,7 +873,7 @@ class TextInput : InputNode!Node {
         char[] erasedWord;
 
         // Selection active, delete it
-        if (selectedValue) {
+        if (isSelecting) {
 
             erasedWord = selectedValue;
             selectedValue = null;
@@ -1039,12 +1039,12 @@ class TextInput : InputNode!Node {
     @(FluidInputAction.press)
     protected void onPress() {
 
-        const character = findCharacter(io.mousePosition - _inner.start);
+        const character = nearestCharacter(io.mousePosition - _inner.start);
 
-        caretIndex = character.index;
-        horizontalAnchor = character.position.x;
+        caretIndex = character;
         touch();
         updateCaretPosition();
+        horizontalAnchor = caretPosition.x;
 
     }
 
@@ -1238,7 +1238,24 @@ class TextInput : InputNode!Node {
     @(FluidInputAction.previousLine, FluidInputAction.nextLine)
     protected void onXLine(FluidInputAction action) {
 
-        // TODO
+        auto typeface = style.getTypeface;
+        auto search = Vector2(horizontalAnchor, caretPosition.y);
+
+        // Next line
+        if (action == FluidInputAction.nextLine) {
+
+            search.y += typeface.lineHeight;
+
+        }
+
+        // Previous line
+        else {
+
+            search.y -= typeface.lineHeight;
+
+        }
+
+        caretIndex = nearestCharacter(search);
 
         touch();
         updateCaretPosition();
@@ -1250,7 +1267,7 @@ class TextInput : InputNode!Node {
     @(FluidInputAction.toStart)
     void caretToStart() {
 
-        _caretIndex = 0;
+        caretIndex = 0;
         updateCaretPosition();
         moveOrClearSelection();
         horizontalAnchor = caretPosition.x;
@@ -1261,7 +1278,7 @@ class TextInput : InputNode!Node {
     @(FluidInputAction.toEnd)
     void caretToEnd() {
 
-        _caretIndex = value.length;
+        caretIndex = value.length;
         updateCaretPosition();
         moveOrClearSelection();
         horizontalAnchor = caretPosition.x;
