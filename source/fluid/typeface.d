@@ -182,8 +182,18 @@ interface Typeface {
                 // Text wrapping on
                 if (wrap) {
 
+                    auto range = chunkWords(text);
+
+                    // Empty line, yield an empty word
+                    if (range.empty) {
+
+                        const penPosition = ruler.addWord(String.init);
+                        if (const ret = yield(String.init, penPosition)) return ret;
+
+                    }
+
                     // Split each word
-                    foreach (word; chunkWords(text)) {
+                    else foreach (word; chunkWords(text)) {
 
                         const penPosition = ruler.addWord(word);
                         if (const ret = yield(word, penPosition)) return ret;
