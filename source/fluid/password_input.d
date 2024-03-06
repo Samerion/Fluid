@@ -78,6 +78,28 @@ class PasswordInput : TextInput {
 
     }
 
+    override size_t nearestCharacter(Vector2 needle) const {
+
+        import std.utf : decode;
+
+        size_t index;
+        size_t number;
+
+        while (index < value.length) {
+
+            // Stop if found the character
+            if (needle.x < number * advance + radius) break;
+
+            // Locate the next character
+            decode(value, index);
+            number++;
+
+        }
+
+        return number;
+
+    }
+
     protected override Vector2 caretPositionImpl(float availableWidth) {
 
         import std.utf : count;
