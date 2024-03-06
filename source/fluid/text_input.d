@@ -376,8 +376,8 @@ class TextInput : InputNode!Node {
 
     }
 
-    /// Find the closest character to the given position.
-    /// Returns: Index of the character.
+    /// Find the closest index to the given position.
+    /// Returns: Index of the character. The index may be equal to character length.
     size_t nearestCharacter(Vector2 needle) const {
 
         import std.math : abs;
