@@ -1016,15 +1016,28 @@ class TextInput : InputNode!Node {
 
     }
 
+    protected override void mouseImpl() {
+
+        // Pressing the mouse
+        if (tree.isMouseDown!(FluidInputAction.press)) {
+
+            // Move the caret
+            caretTo(io.mousePosition - _inner.start);
+            updateCaretPosition();
+            horizontalAnchor = caretPosition.x;
+            moveOrClearSelection();
+
+            // Enable selection mode
+            selectionMovement = true;
+
+        }
+
+    }
+
     @(FluidInputAction.press)
     protected void onPress() {
 
-        const character = nearestCharacter(io.mousePosition - _inner.start);
-
-        caretIndex = character;
-        updateCaretPosition();
-        horizontalAnchor = caretPosition.x;
-        moveOrClearSelection();
+        selectionMovement = false;
 
     }
 
