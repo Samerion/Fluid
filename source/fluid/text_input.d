@@ -108,7 +108,7 @@ class TextInput : InputNode!Node {
         ptrdiff_t _caretIndex;
 
         /// Reference point; beginning of selection. Set to -1 if there is no start.
-        ptrdiff_t _selectionStart = -1;
+        ptrdiff_t _selectionStart;
 
     }
 
@@ -228,7 +228,7 @@ class TextInput : InputNode!Node {
         const high = selectionHighIndex;
 
         _value = _value[0 .. low] ~ value ~ _value[high .. $];
-        _caretIndex = low + value.length;
+        caretIndex = low + value.length;
         updateSize();
         clearSelection();
 
@@ -271,6 +271,10 @@ class TextInput : InputNode!Node {
     /// ditto
     ptrdiff_t caretIndex(ptrdiff_t index) {
 
+        if (!isSelecting) {
+            _selectionStart = index;
+        }
+
         touch();
         return _caretIndex = index;
 
@@ -279,22 +283,7 @@ class TextInput : InputNode!Node {
     /// If true, there's an active selection.
     bool isSelecting() const {
 
-        return _selectionStart >= 0;
-
-    }
-
-    bool isSelecting(bool value) {
-
-        // Ignore if the value stays the same
-        if (value == isSelecting) return value;
-
-        // Start selection
-        if (value) _selectionStart = _caretIndex;
-
-        // End selection
-        else clearSelection();
-
-        return value;
+        return selectionStart != caretIndex || selectionMovement;
 
     }
 
@@ -316,11 +305,7 @@ class TextInput : InputNode!Node {
     ptrdiff_t selectionStart() const {
 
         // Selection is present
-        if (isSelecting)
-            return _selectionStart.clamp(0, value.length);
-
-        // No selection
-        else return caretIndex;
+        return _selectionStart.clamp(0, value.length);
 
     }
 
@@ -337,7 +322,7 @@ class TextInput : InputNode!Node {
     ///
     void clearSelection() {
 
-        _selectionStart = -1;
+        _selectionStart = _caretIndex;
 
     }
 
@@ -1039,6 +1024,7 @@ class TextInput : InputNode!Node {
         caretIndex = character;
         updateCaretPosition();
         horizontalAnchor = caretPosition.x;
+        moveOrClearSelection();
 
     }
 
