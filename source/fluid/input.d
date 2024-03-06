@@ -55,6 +55,7 @@ enum FluidInputAction {
     deleteChar,     /// Delete the next character in an input
     deleteWord,     /// Delete the next word in an input
     copy,           /// Copy selected content.
+    cut,            /// Cut (copy and delete) selected content.
     paste,          /// Paste selected content.
 
     // Selection

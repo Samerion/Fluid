@@ -1018,7 +1018,7 @@ class TextInput : InputNode!Node {
 
     protected override void mouseImpl() {
 
-        // Pressing the mouse
+        // Pressing with the mouse
         if (tree.isMouseDown!(FluidInputAction.press)) {
 
             // Move the caret
@@ -1028,16 +1028,10 @@ class TextInput : InputNode!Node {
             moveOrClearSelection();
 
             // Enable selection mode
-            selectionMovement = true;
+            // Disable it when releasing
+            selectionMovement = !tree.isMouseActive!(FluidInputAction.press);
 
         }
-
-    }
-
-    @(FluidInputAction.press)
-    protected void onPress() {
-
-        selectionMovement = false;
 
     }
 
@@ -1368,6 +1362,15 @@ class TextInput : InputNode!Node {
             default:
                 assert(false, "Invalid action");
         }
+
+    }
+
+    /// Cut selected text to clipboard, clearing the selection.
+    @(FluidInputAction.cut)
+    protected void onCut() {
+
+        onCopy();
+        selectedValue = null;
 
     }
 
