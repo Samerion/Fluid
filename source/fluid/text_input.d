@@ -271,6 +271,7 @@ class TextInput : InputNode!Node {
     /// ditto
     ptrdiff_t caretIndex(ptrdiff_t index) {
 
+        touch();
         return _caretIndex = index;
 
     }
@@ -444,16 +445,6 @@ class TextInput : InputNode!Node {
 
             ruler.startLine();
 
-            // Match empty lines
-            {
-                const caret = ruler.caret.center;
-
-                // Skip this line if the closest match is closer vertically
-                if (abs(result.position.y - needle.y) < abs(caret.y - needle.y)) continue;
-
-                result = Position(index, caret);
-            }
-
             // Each word is a single, unbreakable unit
             foreach (word, penPosition; typeface.eachWord(ruler, line, multiline)) {
 
@@ -488,8 +479,12 @@ class TextInput : InputNode!Node {
 
     protected Vector2 caretPositionImpl(float textWidth) {
 
-        // Get the word that immediately follows the caret, if any
-        const tail = valueAfterCaret.wordFront.stripRight;
+        // If the caret is in the middle of a word, include whatever is after the caret to make sure the word is
+        // wrapped correctly
+        const inWord = !valueBeforeCaret.wordBack.endsWith!isWhite;
+        const tail = inWord
+            ? valueAfterCaret.wordFront.stripRight
+            : null;
 
         auto typeface = style.getTypeface;
         auto ruler = textRuler();
@@ -1042,7 +1037,6 @@ class TextInput : InputNode!Node {
         const character = nearestCharacter(io.mousePosition - _inner.start);
 
         caretIndex = character;
-        touch();
         updateCaretPosition();
         horizontalAnchor = caretPosition.x;
 
@@ -1203,7 +1197,6 @@ class TextInput : InputNode!Node {
 
         }
 
-        touch();
         updateCaretPosition();
         horizontalAnchor = caretPosition.x;
 
@@ -1227,7 +1220,6 @@ class TextInput : InputNode!Node {
 
         }
 
-        touch();
         updateCaretPosition();
         moveOrClearSelection();
         horizontalAnchor = caretPosition.x;
@@ -1255,15 +1247,44 @@ class TextInput : InputNode!Node {
 
         }
 
-        caretIndex = nearestCharacter(search);
-
-        touch();
-        updateCaretPosition();
+        caretTo(search);
         moveOrClearSelection();
 
     }
 
-    // Move the caret to the beginning of the input
+    /// Move the caret to the given position.
+    void caretTo(Vector2 position) {
+
+        caretIndex = nearestCharacter(position);
+        updateCaretPosition();
+
+    }
+
+    /// Move the caret to the beginning of the line.
+    @(FluidInputAction.toLineStart)
+    void caretToLineStart() {
+
+        const search = Vector2(0, caretPosition.y);
+
+        caretTo(search);
+        moveOrClearSelection();
+        horizontalAnchor = caretPosition.x;
+
+    }
+
+    /// Move the caret to the end of the line.
+    @(FluidInputAction.toLineEnd)
+    void caretToLineEnd() {
+
+        const search = Vector2(float.infinity, caretPosition.y);
+
+        caretTo(search);
+        moveOrClearSelection();
+        horizontalAnchor = caretPosition.x;
+
+    }
+
+    /// Move the caret to the beginning of the input
     @(FluidInputAction.toStart)
     void caretToStart() {
 
@@ -1296,6 +1317,8 @@ class TextInput : InputNode!Node {
         FluidInputAction.selectPreviousLine,
         FluidInputAction.selectNextLine,
         FluidInputAction.selectAll,
+        FluidInputAction.selectToLineStart,
+        FluidInputAction.selectToLineEnd,
         FluidInputAction.selectToStart,
         FluidInputAction.selectToEnd,
     )
@@ -1326,6 +1349,12 @@ class TextInput : InputNode!Node {
                 break;
             case selectNextLine:
                 runInputAction!nextLine;
+                break;
+            case selectToLineStart:
+                runInputAction!toLineStart;
+                break;
+            case selectToLineEnd:
+                runInputAction!toLineEnd;
                 break;
             case selectToStart:
                 runInputAction!toStart;

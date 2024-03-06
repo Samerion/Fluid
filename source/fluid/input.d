@@ -44,8 +44,10 @@ enum FluidInputAction {
     nextWord,       /// Move to the next word in text.
     previousLine,   /// Move to the previous line in text.
     nextLine,       /// Move to the next line in text.
-    toStart,        /// Move to the beginning; Home key.
-    toEnd,          /// Move to the end; End key.
+    toLineStart,    /// Move to the beginning of this line; Home key.
+    toLineEnd,      /// Move to the end of this line; End key.
+    toStart,        /// Move to the beginning.
+    toEnd,          /// Move to the end.
 
     // Editing
     backspace,      /// Erase last character in an input.
@@ -63,6 +65,8 @@ enum FluidInputAction {
     selectPreviousLine,  /// Select to previous line in text.
     selectNextLine,      /// Select to next line in text.
     selectAll,           /// Select all in text.
+    selectToLineStart,   /// Select from here to line beginning.
+    selectToLineEnd,     /// Select from here to line end.
     selectToStart,       /// Select from here to beginning.
     selectToEnd,         /// Select from here to end.
 

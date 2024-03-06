@@ -489,6 +489,8 @@ struct LayoutTree {
                 [
                     bind!selectPreviousWord(KeyboardKey.left),
                     bind!selectNextWord(KeyboardKey.right),
+                    bind!selectToStart(KeyboardKey.home),
+                    bind!selectToEnd(KeyboardKey.end),
                 ]
             ),
 
@@ -507,6 +509,8 @@ struct LayoutTree {
                     bind!selectAll(KeyboardKey.a),
                     bind!copy(KeyboardKey.c),
                     bind!paste(KeyboardKey.v),
+                    bind!toStart(KeyboardKey.home),
+                    bind!toEnd(KeyboardKey.end),
 
                     // Submit with ctrl+enter
                     bind!submit(KeyboardKey.enter),
@@ -522,8 +526,8 @@ struct LayoutTree {
                     bind!selectNextChar(KeyboardKey.right),
                     bind!selectPreviousLine(KeyboardKey.up),
                     bind!selectNextLine(KeyboardKey.down),
-                    bind!selectToStart(KeyboardKey.home),
-                    bind!selectToEnd(KeyboardKey.end),
+                    bind!selectToLineStart(KeyboardKey.home),
+                    bind!selectToLineEnd(KeyboardKey.end),
                 ]
             ),
 
@@ -578,8 +582,8 @@ struct LayoutTree {
                     bind!entryNext(KeyboardKey.down),
                     bind!entryNext(KeyboardKey.tab),
                     bind!entryNext(GamepadButton.dpadDown),
-                    bind!toStart(KeyboardKey.home),
-                    bind!toEnd(KeyboardKey.end),
+                    bind!toLineStart(KeyboardKey.home),
+                    bind!toLineEnd(KeyboardKey.end),
 
                     // Scrolling
                     bind!scrollLeft(KeyboardKey.left),
