@@ -52,6 +52,8 @@ enum FluidInputAction {
     backspaceWord,  /// Erase last a word in an input.
     deleteChar,     /// Delete the next character in an input
     deleteWord,     /// Delete the next word in an input
+    copy,           /// Copy selected content.
+    paste,          /// Paste selected content.
 
     // Selection
     selectPreviousChar,  /// Select previous character in text.

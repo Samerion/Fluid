@@ -327,6 +327,20 @@ class SimpledisplayBackend : FluidBackend {
 
     }
 
+    string clipboard(string value) @trusted {
+
+        window.setClipboardText(value);
+        return value;
+
+    }
+
+    string clipboard() const @trusted {
+
+        // TODO
+        return null;
+
+    }
+
     float deltaTime() const {
 
         return _deltaTime;
