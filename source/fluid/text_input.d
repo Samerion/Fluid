@@ -189,7 +189,7 @@ class TextInput : InputNode!Node {
     }
 
     /// ditto
-    char[] valueBeforeCaret(char[] newValue) {
+    char[] valueBeforeCaret(scope const(char)[] newValue) {
 
         _value = newValue ~ valueAfterCaret;
         caretIndex = newValue.length;
@@ -210,7 +210,7 @@ class TextInput : InputNode!Node {
     }
 
     /// ditto
-    char[] selectedValue(char[] value) {
+    char[] selectedValue(scope const(char)[] value) {
 
         const isLow = caretIndex == selectionStart;
         const low = min(selectionStart, selectionEnd);
@@ -221,7 +221,7 @@ class TextInput : InputNode!Node {
         updateSize();
         clearSelection();
 
-        return value;
+        return _value[low .. low + value.length];
 
     }
 
@@ -233,7 +233,7 @@ class TextInput : InputNode!Node {
     }
 
     /// ditto
-    char[] valueAfterCaret(char[] newValue) {
+    char[] valueAfterCaret(scope const(char)[] newValue) {
 
         _value = valueBeforeCaret ~ newValue;
         updateSize();
@@ -635,14 +635,20 @@ class TextInput : InputNode!Node {
 
     }
 
-    /// Push a character to the input.
+    /// Push a character or string to the input.
     void push(dchar character) {
-
-        import std.utf : encode;
 
         char[4] buffer;
 
         auto size = buffer.encode(character);
+        push(buffer[0..size]);
+
+    }
+
+    /// ditto
+    void push(scope const(char)[] text) {
+
+        import std.utf : encode;
 
         // If selection is active, overwrite the selection
         if (isSelecting) {
@@ -651,7 +657,7 @@ class TextInput : InputNode!Node {
             selectedValue[] = char.init;
 
             // Override with the character
-            selectedValue = buffer[0..size];
+            selectedValue = text;
             clearSelection();
 
         }
@@ -659,7 +665,7 @@ class TextInput : InputNode!Node {
         // Insert the character before caret
         else {
 
-            valueBeforeCaret = valueBeforeCaret ~ buffer[0..size];
+            valueBeforeCaret = valueBeforeCaret ~ text;
             touch();
 
         }
@@ -1136,6 +1142,23 @@ class TextInput : InputNode!Node {
             default:
                 assert(false, "Invalid action");
         }
+
+    }
+
+    /// Copy selected text to clipboard.
+    @(FluidInputAction.copy)
+    protected void onCopy() {
+
+        if (isSelecting)
+            io.clipboard = selectedValue.idup;
+
+    }
+
+    /// Paste text from clipboard.
+    @(FluidInputAction.paste)
+    protected void onPaste() {
+
+        push(io.clipboard.dup);
 
     }
 

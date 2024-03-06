@@ -505,6 +505,8 @@ struct LayoutTree {
                     bind!previousWord(KeyboardKey.left),
                     bind!nextWord(KeyboardKey.right),
                     bind!selectAll(KeyboardKey.a),
+                    bind!copy(KeyboardKey.c),
+                    bind!paste(KeyboardKey.v),
 
                     // Submit with ctrl+enter
                     bind!submit(KeyboardKey.enter),

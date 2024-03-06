@@ -68,6 +68,10 @@ interface FluidBackend {
     /// Get scroll value on both axes.
     Vector2 scroll() const;
 
+    /// Get or set system clipboard value.
+    string clipboard(string);
+    string clipboard() const;
+
     /// Get time elapsed since last frame in seconds.
     float deltaTime() const;
 
