@@ -1268,20 +1268,75 @@ class TextInput : InputNode!Node {
 
     }
 
+    private {
+
+        bool _pressed;
+
+        /// Number of clicks performed within short enough time from each other. First click is number 0.
+        int _clickCount;
+
+        /// Time of the last `press` event, used to enable double click and triple click selection.
+        SysTime _lastClick;
+
+        /// Position of the last click.
+        Vector2 _lastClickPosition;
+
+    }
+
     protected override void mouseImpl() {
 
+        enum maxDistance = 5;
+
         // Pressing with the mouse
-        if (tree.isMouseDown!(FluidInputAction.press)) {
+        if (!tree.isMouseDown!(FluidInputAction.press)) return;
 
-            // Move the caret
-            caretToMouse();
-            moveOrClearSelection();
+        const justPressed = !_pressed;
 
-            // Enable selection mode
-            // Disable it when releasing
-            selectionMovement = !tree.isMouseActive!(FluidInputAction.press);
+        // Just pressed
+        if (justPressed) {
+
+            const clickPosition = io.mousePosition;
+
+            // To count as repeated, the click must be within the specified double click time, and close enough
+            // to the original location
+            const isRepeated = Clock.currTime - _lastClick < io.doubleClickTime
+                && distance(clickPosition, _lastClickPosition) < maxDistance;
+
+            // Count repeated clicks
+            _clickCount = isRepeated
+                ? _clickCount + 1
+                : 0;
+
+            // Register the click
+            _lastClick = Clock.currTime;
+            _lastClickPosition = clickPosition;
 
         }
+
+        // Move the caret with the mouse
+        caretToMouse();
+        moveOrClearSelection();
+
+        final switch (_clickCount % 3) {
+
+            // First click, merely move the caret while selecting
+            case 0: break;
+
+            // Second click, select the word surrounding the cursor
+            case 1:
+                selectWord();
+                break;
+
+            // Third click, select whole line
+            case 2:
+                selectLine();
+                break;
+
+        }
+
+        // Enable selection mode
+        // Disable it when releasing
+        _pressed = selectionMovement = !tree.isMouseActive!(FluidInputAction.press);
 
     }
 
@@ -1328,67 +1383,9 @@ class TextInput : InputNode!Node {
 
     }
 
-    private {
-
-        /// Number of clicks performed within short enough time from each other. First click is number 0.
-        int _clickCount;
-
-        /// Time of the last `press` event, used to enable double click and triple click selection.
-        SysTime _lastClick;
-
-        /// Position of the last click.
-        Vector2 _lastClickPosition;
-
-    }
-
-    /// Double and triple click detection. Single click is detected with `mouseImpl`.
-    @(FluidInputAction.press)
-    protected bool onPress() {
-
-        enum maxDistance = 5;
-
-        const clickPosition = io.mousePosition - _inner.start;
-
-        // To count as repeated, the click must be within the specified double click time, and close enough
-        // to the original location
-        const isRepeated = Clock.currTime - _lastClick < io.doubleClickTime
-            && distance(clickPosition, _lastClickPosition) < maxDistance;
-
-        // Count repeated clicks
-        _clickCount = isRepeated
-            ? _clickCount + 1
-            : 0;
-
-        // Register the click
-        _lastClick = Clock.currTime;
-        _lastClickPosition = clickPosition;
-
-        final switch (_clickCount % 3) {
-
-            // First click
-            case 0: return false;
-
-            // Second click, select the word surrounding the cursor
-            case 1:
-                selectWord();
-                break;
-
-            // Third click, select whole line
-            case 2:
-                selectLine();
-                break;
-
-        }
-
-        selectionMovement = false;
-        return true;
-
-    }
-
     unittest {
 
         // This test relies on properties of the default typeface
-        // TODO selecting multiple words
 
         import std.math : isClose;
 
@@ -1431,6 +1428,163 @@ class TextInput : InputNode!Node {
 
         io.nextFrame;
         root.draw();
+
+    }
+
+    unittest {
+
+        import std.math : isClose;
+
+        auto io = new HeadlessBackend;
+        auto theme = nullTheme.derive(
+            rule!TextInput(
+                Rule.selectionBackgroundColor = color("#02a"),
+            ),
+        );
+        auto root = textInput(.multiline, theme);
+        auto lineHeight = root.style.getTypeface.lineHeight;
+
+        root.io = io;
+        root.value = "Line one\nLine two\n\nLine four".dup;
+        root.focus();
+        root.draw();
+
+        // Move the caret to second line
+        root.caretIndex = "Line one\nLin".length;
+        root.updateCaretPosition();
+
+        const middle = root._inner.start + root.caretPosition;
+        const top    = middle - Vector2(0, lineHeight);
+        const blank  = middle + Vector2(0, lineHeight);
+        const bottom = middle + Vector2(0, lineHeight * 2);
+
+        {
+
+            // Press, and move the mouse around
+            io.nextFrame();
+            io.mousePosition = middle;
+            io.press();
+            root.draw();
+
+            // Move it to top row
+            io.nextFrame();
+            io.mousePosition = top;
+            root.draw();
+
+            assert(root.selectedValue == "e one\nLin");
+            assert(root.selectionStart > root.selectionEnd);
+
+            // Move it to bottom row
+            io.nextFrame();
+            io.mousePosition = bottom;
+            root.draw();
+
+            assert(root.selectedValue == "e two\n\nLin");
+            assert(root.selectionStart < root.selectionEnd);
+
+            // And to the blank line
+            io.nextFrame();
+            io.mousePosition = blank;
+            root.draw();
+
+            assert(root.selectedValue == "e two\n");
+            assert(root.selectionStart < root.selectionEnd);
+
+        }
+
+        {
+
+            // Double click
+            io.mousePosition = middle;
+            root._lastClick = SysTime.init;
+
+            foreach (i; 0..2) {
+
+                io.nextFrame();
+                io.release();
+                root.draw();
+
+                io.nextFrame();
+                io.press();
+                root.draw();
+
+            }
+
+            assert(root.selectedValue == "Line");
+            assert(root.selectionStart < root.selectionEnd);
+
+            // Move it to top row
+            io.nextFrame();
+            io.mousePosition = top;
+            root.draw();
+
+            assert(root.selectedValue == "Line one\nLine");
+            assert(root.selectionStart > root.selectionEnd);
+
+            // Move it to bottom row
+            io.nextFrame();
+            io.mousePosition = bottom;
+            root.draw();
+
+            assert(root.selectedValue == "Line two\n\nLine");
+            assert(root.selectionStart < root.selectionEnd);
+
+            // And to the blank line
+            io.nextFrame();
+            io.mousePosition = blank;
+            root.draw();
+
+            assert(root.selectedValue == "Line two\n");
+            assert(root.selectionStart < root.selectionEnd);
+
+        }
+
+        {
+
+            // Triple
+            io.mousePosition = middle;
+            root._lastClick = SysTime.init;
+
+            foreach (i; 0..3) {
+
+                io.nextFrame();
+                io.release();
+                root.draw();
+
+                io.nextFrame();
+                io.press();
+                root.draw();
+
+            }
+
+            assert(root.selectedValue == "Line two");
+            assert(root.selectionStart < root.selectionEnd);
+
+            // Move it to top row
+            io.nextFrame();
+            io.mousePosition = top;
+            root.draw();
+
+            assert(root.selectedValue == "Line one\nLine two");
+            assert(root.selectionStart > root.selectionEnd);
+
+            // Move it to bottom row
+            io.nextFrame();
+            io.mousePosition = bottom;
+            root.draw();
+
+            assert(root.selectedValue == "Line two\n\nLine four");
+            assert(root.selectionStart < root.selectionEnd);
+
+            // And to the blank line
+            io.nextFrame();
+            io.mousePosition = blank;
+            root.draw();
+
+            assert(root.selectedValue == "Line two\n");
+            assert(root.selectionStart < root.selectionEnd);
+
+        }
 
     }
 
@@ -1604,19 +1758,26 @@ class TextInput : InputNode!Node {
 
     }
 
-    /// Select the word surrounding the cursor.
+    /// Select the word surrounding the cursor. If selection is active, expands selection to cover words.
     void selectWord() {
 
         enum excludeWhite = true;
 
-        const head = valueBeforeCaret.wordBack(excludeWhite);
-        const tail = valueAfterCaret.wordFront(excludeWhite);
+        const isLow = selectionStart <= selectionEnd;
+        const low = selectionLowIndex;
+        const high = selectionHighIndex;
+
+        const head = value[0 .. low].wordBack(excludeWhite);
+        const tail = value[high .. $].wordFront(excludeWhite);
 
         // Set selection to the start of the word
-        selectionStart = caretIndex - head.length;
+        selectionStart = low - head.length;
 
         // Move the caret to the end of the word
-        caretIndex = caretIndex + tail.length;
+        caretIndex = high + tail.length;
+
+        // Swap them if order is reversed
+        if (!isLow) swap(_selectionStart, _caretIndex);
 
         touch();
         updateCaretPosition(false);
@@ -1626,6 +1787,8 @@ class TextInput : InputNode!Node {
     /// Select the whole line the cursor is on.
     void selectLine() {
 
+        const isLow = selectionStart <= selectionEnd;
+
         foreach (line; Typeface.lineSplitter(value)) {
 
             const index = cast(size_t) line.ptr - cast(size_t) value.ptr;
@@ -1633,16 +1796,28 @@ class TextInput : InputNode!Node {
             const lineStart = index;
             const lineEnd = index + line.length;
 
-            // Found the caret
-            if (lineStart <= caretIndex && caretIndex <= lineEnd) {
+            // Found selection start
+            if (lineStart <= selectionStart && selectionStart <= lineEnd) {
 
-                caretIndex = lineEnd;
-                selectionStart = lineStart;
-                updateCaretPosition(false);
+                selectionStart = isLow
+                    ? lineStart
+                    : lineEnd;
+
+            }
+
+            // Found selection end
+            if (lineStart <= selectionEnd && selectionEnd <= lineEnd) {
+
+                selectionEnd = isLow
+                    ? lineEnd
+                    : lineStart;
+
 
             }
 
         }
+
+        updateCaretPosition(false);
 
     }
 
