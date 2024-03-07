@@ -15,6 +15,9 @@ import fluid.backend;
 @safe:
 
 
+version (OSX)
+    version = Fluid_MacKeyboard;
+
 ///
 struct FocusDirection {
 
@@ -495,46 +498,10 @@ struct LayoutTree {
 
         }
 
-        // TODO universal left/right key
-        // TODO macOS shortcuts
-        with (FluidInputAction)
-        boundInputs = [
+        with (FluidInputAction) {
 
-            InputLayer(
-                InputStroke(KeyboardKey.leftShift, KeyboardKey.leftControl),
-                [
-                    bind!selectPreviousWord(KeyboardKey.left),
-                    bind!selectNextWord(KeyboardKey.right),
-                    bind!selectToStart(KeyboardKey.home),
-                    bind!selectToEnd(KeyboardKey.end),
-                ]
-            ),
-
-            InputLayer(
-                InputStroke(KeyboardKey.leftControl),
-                [
-                    bind!deleteWord(KeyboardKey.delete_),
-                    bind!backspaceWord(KeyboardKey.backspace),
-                    bind!backspaceWord(KeyboardKey.w),  // emacs & vim
-                    bind!entryPrevious(KeyboardKey.k),  // vim
-                    bind!entryPrevious(KeyboardKey.p),  // emacs
-                    bind!entryNext(KeyboardKey.j),  // vim
-                    bind!entryNext(KeyboardKey.n),  // emacs
-                    bind!previousWord(KeyboardKey.left),
-                    bind!nextWord(KeyboardKey.right),
-                    bind!selectAll(KeyboardKey.a),
-                    bind!copy(KeyboardKey.c),
-                    bind!cut(KeyboardKey.x),
-                    bind!paste(KeyboardKey.v),
-                    bind!toStart(KeyboardKey.home),
-                    bind!toEnd(KeyboardKey.end),
-
-                    // Submit with ctrl+enter
-                    bind!submit(KeyboardKey.enter),
-                ]
-            ),
-
-            InputLayer(
+            // System-independent keys
+            auto universalShift = InputLayer(
                 InputStroke(KeyboardKey.leftShift),
                 [
                     bind!focusPrevious(KeyboardKey.tab),
@@ -546,17 +513,10 @@ struct LayoutTree {
                     bind!selectToLineStart(KeyboardKey.home),
                     bind!selectToLineEnd(KeyboardKey.end),
                     bind!breakLine(KeyboardKey.enter),
+                    bind!contextMenu(KeyboardKey.f10),
                 ]
-            ),
-
-            InputLayer(
-                InputStroke(KeyboardKey.leftAlt),
-                [
-                    bind!entryUp(KeyboardKey.up),
-                ]
-            ),
-
-            InputLayer(
+            );
+            auto universal = InputLayer(
                 InputStroke(),
                 [
                     // Press
@@ -619,9 +579,126 @@ struct LayoutTree {
                     bind!pageUp(KeyboardKey.pageUp),
                     bind!pageDown(KeyboardKey.pageDown),
                 ]
-            )
+            );
 
-        ];
+            // TODO universal left/right key
+            version (Fluid_MacKeyboard)
+                boundInputs = [
+
+                    // Shift + Command
+                    InputLayer(
+                        InputStroke(KeyboardKey.leftShift, KeyboardKey.leftSuper),
+                        [
+                            // Note: Command should *expand selection* on macOS instead of current
+                            // toLineStart/toLineEnd behavior
+                            bind!selectToLineStart(KeyboardKey.left),
+                            bind!selectToLineEnd(KeyboardKey.right),
+                            bind!selectToStart(KeyboardKey.up),
+                            bind!selectToEnd(KeyboardKey.down),
+                        ]
+                    ),
+
+                    // Shift + Option
+                    InputLayer(
+                        InputStroke(KeyboardKey.leftShift, KeyboardKey.leftAlt),
+                        [
+                            bind!selectPreviousWord(KeyboardKey.left),
+                            bind!selectNextWord(KeyboardKey.right),
+                        ]
+                    ),
+
+                    // Command
+                    InputLayer(
+                        InputStroke(KeyboardKey.leftSuper),
+                        [
+                            bind!toLineStart(KeyboardKey.left),
+                            bind!toLineEnd(KeyboardKey.right),
+                            bind!toStart(KeyboardKey.up),
+                            bind!toEnd(KeyboardKey.down),
+                            bind!selectAll(KeyboardKey.a),
+                            bind!copy(KeyboardKey.c),
+                            bind!cut(KeyboardKey.x),
+                            bind!paste(KeyboardKey.v),
+                            bind!submit(KeyboardKey.enter),
+                        ]
+                    ),
+
+                    // Option
+                    InputLayer(
+                        InputStroke(KeyboardKey.leftAlt),
+                        [
+                            bind!deleteWord(KeyboardKey.delete_),
+                            bind!backspaceWord(KeyboardKey.backspace),
+                            bind!previousWord(KeyboardKey.left),
+                            bind!nextWord(KeyboardKey.right),
+                        ]
+                    ),
+
+                    // Control
+                    InputLayer(
+                        InputStroke(KeyboardKey.leftControl),
+                        [
+                            bind!backspaceWord(KeyboardKey.w),  // emacs & vim
+                            bind!entryPrevious(KeyboardKey.k),  // vim
+                            bind!entryPrevious(KeyboardKey.p),  // emacs
+                            bind!entryNext(KeyboardKey.j),  // vim
+                            bind!entryNext(KeyboardKey.n),  // emacs
+                        ]
+                    ),
+
+                    universalShift,
+                    universal,
+                ];
+            else
+                boundInputs = [
+
+                    InputLayer(
+                        InputStroke(KeyboardKey.leftShift, KeyboardKey.leftControl),
+                        [
+                            bind!selectPreviousWord(KeyboardKey.left),
+                            bind!selectNextWord(KeyboardKey.right),
+                            bind!selectToStart(KeyboardKey.home),
+                            bind!selectToEnd(KeyboardKey.end),
+                        ]
+                    ),
+
+                    InputLayer(
+                        InputStroke(KeyboardKey.leftControl),
+                        [
+                            bind!deleteWord(KeyboardKey.delete_),
+                            bind!backspaceWord(KeyboardKey.backspace),
+                            bind!backspaceWord(KeyboardKey.w),  // emacs & vim
+                            bind!entryPrevious(KeyboardKey.k),  // vim
+                            bind!entryPrevious(KeyboardKey.p),  // emacs
+                            bind!entryNext(KeyboardKey.j),  // vim
+                            bind!entryNext(KeyboardKey.n),  // emacs
+                            bind!previousWord(KeyboardKey.left),
+                            bind!nextWord(KeyboardKey.right),
+                            bind!selectAll(KeyboardKey.a),
+                            bind!copy(KeyboardKey.c),
+                            bind!cut(KeyboardKey.x),
+                            bind!paste(KeyboardKey.v),
+                            bind!toStart(KeyboardKey.home),
+                            bind!toEnd(KeyboardKey.end),
+
+                            // Submit with ctrl+enter
+                            bind!submit(KeyboardKey.enter),
+                        ]
+                    ),
+
+                    InputLayer(
+                        InputStroke(KeyboardKey.leftAlt),
+                        [
+                            bind!entryUp(KeyboardKey.up),
+                        ]
+                    ),
+
+                    universalShift,
+                    universal,
+
+                ];
+
+        }
 
     }
 
