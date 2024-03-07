@@ -460,9 +460,9 @@ struct LayoutTree {
     /// Create a new tree with the given node as its root. Use the default backend, if any is present.
     this(Node root) {
 
-        assert(defaultFluidBackend, "Cannot create LayoutTree; no backend was chosen, and no default is set.");
-
         this(root, defaultFluidBackend);
+
+        assert(backend, "Cannot create LayoutTree; no backend was chosen, and no default is set.");
 
     }
 

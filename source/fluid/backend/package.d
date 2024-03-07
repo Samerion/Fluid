@@ -20,7 +20,7 @@ public import fluid.backend.simpledisplay;
 
 alias VoidDelegate = void delegate() @safe;
 
-static FluidBackend defaultFluidBackend;
+FluidBackend defaultFluidBackend();
 
 /// `FluidBackend` is an interface making it possible to bind Fluid to a library other than Raylib. Another built-in
 /// backend is `fluid.simpledisplay.SimpledisplayBackend` for `arsd.simpledisplay`.
@@ -979,23 +979,31 @@ unittest {
 
 }
 
-version (Have_raylib_d) {
+version (unittest) {
 
-    import raylib;
+    debug (Fluid_BuildMessages) {
+        pragma(msg, "Fluid: Using headless as the default backend (unittest)");
+    }
+
+    FluidBackend defaultFluidBackend() {
+
+        return new HeadlessBackend;
+
+    }
+
+}
+
+else version (Have_raylib_d) {
 
     debug (Fluid_BuildMessages) {
         pragma(msg, "Fluid: Using Raylib 5 as the default backend");
     }
 
-    static this() {
+    FluidBackend defaultFluidBackend() {
 
-        defaultFluidBackend = new Raylib5Backend;
+        return new Raylib5Backend;
 
     }
-
-    alias Rectangle = raylib.Rectangle;
-    alias Vector2 = raylib.Vector2;
-    alias Color = raylib.Color;
 
 }
 
@@ -1004,6 +1012,25 @@ else {
     debug (Fluid_BuildMessages) {
         pragma(msg, "Fluid: No built-in backend in use");
     }
+
+}
+
+// Structures
+version (Have_raylib_d) {
+
+    debug (Fluid_BuildMessages) {
+        pragma(msg, "Fluid: Using Raylib core structures");
+    }
+
+    import raylib;
+
+    alias Rectangle = raylib.Rectangle;
+    alias Vector2 = raylib.Vector2;
+    alias Color = raylib.Color;
+
+}
+
+else {
 
     struct Vector2 {
 
