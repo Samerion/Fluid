@@ -545,6 +545,7 @@ struct LayoutTree {
                     bind!selectNextLine(KeyboardKey.down),
                     bind!selectToLineStart(KeyboardKey.home),
                     bind!selectToLineEnd(KeyboardKey.end),
+                    bind!breakLine(KeyboardKey.enter),
                 ]
             ),
 
@@ -570,6 +571,10 @@ struct LayoutTree {
                     // Cancel
                     bind!cancel(KeyboardKey.escape),
                     bind!cancel(GamepadButton.circle),
+
+                    // Menu
+                    bind!contextMenu(MouseButton.right),
+                    bind!contextMenu(KeyboardKey.contextMenu),
 
                     // Tabbing; index-focus
                     bind!focusPrevious(GamepadButton.leftButton),

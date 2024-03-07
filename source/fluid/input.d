@@ -24,9 +24,10 @@ enum whileDown;
 enum FluidInputAction {
 
     // Basic
-    press,   /// Press the input. Used for example to activate buttons.
-    submit,  /// Submit input, eg. finish writing in textInput.
-    cancel,  /// Cancel the input.
+    press,       /// Press the input. Used for example to activate buttons.
+    submit,      /// Submit input, eg. finish writing in textInput.
+    cancel,      /// Cancel the input.
+    contextMenu, /// Open context menu.
 
     // Focus
     focusPrevious,  /// Focus previous input.

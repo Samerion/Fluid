@@ -100,14 +100,14 @@ class PasswordInput : TextInput {
 
     }
 
-    protected override Vector2 caretPositionImpl(float availableWidth) {
+    protected override Vector2 caretPositionImpl(float availableWidth, bool preferNextLine) {
 
         import std.utf : count;
         import fluid.typeface : TextRuler;
 
         return Vector2(
             advance * count(valueBeforeCaret),
-            super.caretPositionImpl(availableWidth).y,
+            super.caretPositionImpl(availableWidth, preferNextLine).y,
         );
 
     }
