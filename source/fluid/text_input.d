@@ -1023,7 +1023,6 @@ class TextInput : InputNode!Node {
 
             // Move the caret
             caretTo(io.mousePosition - _inner.start);
-            updateCaretPosition();
             horizontalAnchor = caretPosition.x;
             moveOrClearSelection();
 
@@ -1032,6 +1031,63 @@ class TextInput : InputNode!Node {
             selectionMovement = !tree.isMouseActive!(FluidInputAction.press);
 
         }
+
+    }
+
+    private {
+
+        /// Number of clicks performed within short enough time from each other. First click is number 0.
+        int _clickCount;
+
+        /// Time of the last `press` event, used to enable double click and triple click selection.
+        SysTime _lastClick;
+
+        /// Position of the last click.
+        Vector2 _lastClickPosition;
+
+    }
+
+    /// Double and triple click detection. Single click is detected with `mouseImpl`.
+    @(FluidInputAction.press)
+    protected bool onPress() {
+
+        enum maxDistance = 5;
+
+        const clickPosition = io.mousePosition - _inner.start;
+
+        // To count as repeated, the click must be within the specified double click time, and close enough
+        // to the original location
+        const isRepeated = Clock.currTime - _lastClick < io.doubleClickTime
+            && distance(clickPosition, _lastClickPosition) < maxDistance;
+
+        // Count repeated clicks
+        _clickCount = isRepeated
+            ? _clickCount + 1
+            : 0;
+
+        // Register the click
+        _lastClick = Clock.currTime;
+        _lastClickPosition = clickPosition;
+
+        final switch (_clickCount % 3) {
+
+            // First click
+            case 0: return false;
+
+            // Second click, select the word surrounding the cursor
+            case 1:
+                selectWord();
+                break;
+
+            // Third click, select whole line
+            case 2:
+                selectLine();
+                break;
+
+        }
+
+        selectionMovement = false;
+        return true;
 
     }
 
@@ -1148,6 +1204,48 @@ class TextInput : InputNode!Node {
 
         assert(root.value == "");
         assert(value == "\xff\xff\xff\xff\xff\xff\xff");
+
+    }
+
+    /// Select the word surrounding the cursor.
+    void selectWord() {
+
+        enum excludeWhite = true;
+
+        const head = valueBeforeCaret.wordBack(excludeWhite);
+        const tail = valueAfterCaret.wordFront(excludeWhite);
+
+        // Set selection to the start of the word
+        selectionStart = caretIndex - head.length;
+
+        // Move the caret to the end of the word
+        caretIndex = caretIndex + tail.length;
+
+        touch();
+        updateCaretPosition();
+
+    }
+
+    /// Select the whole line the cursor is on.
+    void selectLine() {
+
+        foreach (line; Typeface.lineSplitter(value)) {
+
+            const index = cast(size_t) line.ptr - cast(size_t) value.ptr;
+
+            const lineStart = index;
+            const lineEnd = index + line.length;
+
+            // Found the caret
+            if (lineStart <= caretIndex && caretIndex <= lineEnd) {
+
+                caretIndex = lineEnd;
+                selectionStart = lineStart;
+                updateCaretPosition();
+
+            }
+
+        }
 
     }
 
@@ -1397,7 +1495,11 @@ class TextInput : InputNode!Node {
 ///
 /// A word is a streak of consecutive characters — non-whitespace, either all alphanumeric or all not — followed by any
 /// number of whitespace.
-T[] wordFront(T)(T[] text)
+///
+/// Params:
+///     text = Text to scan for the word.
+///     excludeWhite = If true, whitespace will not be included in the word.
+T[] wordFront(T)(T[] text, bool excludeWhite = false)
 if (isSomeString!(T[])) {
 
     size_t length;
@@ -1409,6 +1511,10 @@ if (isSomeString!(T[])) {
 
         // Get the first character
         const lastChar = remaining.front;
+
+        // Exclude white characters if enabled
+        if (excludeWhite && lastChar.isWhite) break;
+
         length += lastChar.codeLength!T;
 
         // Stop if empty
@@ -1433,7 +1539,7 @@ if (isSomeString!(T[])) {
 }
 
 /// ditto
-T[] wordBack(T)(T[] text)
+T[] wordBack(T)(T[] text, bool excludeWhite = false)
 if (isSomeString!(T[])) {
 
     size_t length = text.length;
@@ -1445,6 +1551,10 @@ if (isSomeString!(T[])) {
 
         // Get the first character
         const lastChar = remaining.back;
+
+        // Exclude white characters if enabled
+        if (excludeWhite && lastChar.isWhite) break;
+
         length -= lastChar.codeLength!T;
 
         // Stop if empty
@@ -1495,6 +1605,12 @@ unittest {
     assert("Всем привет!"d.wordBack == "!"d);
     assert("Всем привет"d.wordBack == "привет"d);
     assert("Всем "d.wordBack == "Всем "d);
+
+    // Whitespace exclusion
+    assert("witaj świecie!".wordFront(true) == "witaj");
+    assert(" świecie!".wordFront(true) == "");
+    assert("witaj świecie".wordBack(true) == "świecie");
+    assert("witaj ".wordBack(true) == "");
 
 }
 

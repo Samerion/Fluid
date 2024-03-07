@@ -4,6 +4,7 @@ import std.conv;
 import std.math;
 import std.container;
 import std.algorithm;
+import std.datetime;
 
 import fluid.node;
 import fluid.input;
@@ -374,60 +375,75 @@ abstract class TreeAction {
 /// Global data for the layout tree.
 struct LayoutTree {
 
-    /// Root node of the tree.
-    Node root;
+    // Nodes
+    public {
 
-    /// Top-most hovered node in the tree.
-    Node hover;
+        /// Root node of the tree.
+        Node root;
 
-    /// Currently focused node.
-    ///
-    /// Changing this value directly is discouraged. Some nodes might not want the focus! Be gentle, call
-    /// `FluidFocusable.focus()` instead and let the node set the value on its own.
-    FluidFocusable focus;
+        /// Top-most hovered node in the tree.
+        Node hover;
 
-    /// Deepest hovered scrollable node.
-    FluidScrollable scroll;
+        /// Currently focused node.
+        ///
+        /// Changing this value directly is discouraged. Some nodes might not want the focus! Be gentle, call
+        /// `FluidFocusable.focus()` instead and let the node set the value on its own.
+        FluidFocusable focus;
 
-    /// Focus direction data.
-    FocusDirection focusDirection;
+        /// Deepest hovered scrollable node.
+        FluidScrollable scroll;
 
-    /// Padding box of the currently focused node. Only available after the node has been drawn.
-    ///
-    /// See_also: `focusDirection.lastFocusBox`.
-    Rectangle focusBox;
+    }
 
-    /// Tree actions queued to execute during next draw.
-    DList!TreeAction actions;
+    // Input
+    public {
 
-    /// Input strokes bound to emit given action signals.
-    ///
-    /// Input layers have to be sorted.
-    InputLayer[] boundInputs;
+        /// Focus direction data.
+        FocusDirection focusDirection;
 
-    invariant(boundInputs.isSorted);
+        /// Padding box of the currently focused node. Only available after the node has been drawn.
+        ///
+        /// See_also: `focusDirection.lastFocusBox`.
+        Rectangle focusBox;
 
-    /// Actions that are currently held down.
-    DList!InputBinding downActions;
+        /// Tree actions queued to execute during next draw.
+        DList!TreeAction actions;
 
-    /// Actions that have just triggered.
-    DList!InputBinding activeActions;
+        /// Input strokes bound to emit given action signals.
+        ///
+        /// Input layers have to be sorted.
+        InputLayer[] boundInputs;
 
-    /// Access to core input and output facilities.
-    FluidBackend backend;
-    alias io = backend;
+        invariant(boundInputs.isSorted);
 
-    /// Check if keyboard input was handled; updated after rendering has completed.
-    bool keyboardHandled;
+        /// Actions that are currently held down.
+        DList!InputBinding downActions;
 
-    /// Current node drawing depth.
-    uint depth;
+        /// Actions that have just triggered.
+        DList!InputBinding activeActions;
 
-    /// Current rectangle drawing is limited to.
-    Rectangle scissors;
+        /// Access to core input and output facilities.
+        FluidBackend backend;
+        alias io = backend;
 
-    /// True if the current tree branch is marked as disabled (doesn't take input).
-    bool isBranchDisabled;
+        /// Check if keyboard input was handled; updated after rendering has completed.
+        bool keyboardHandled;
+
+    }
+
+    /// Miscelleanous, technical properties.
+    public {
+
+        /// Current node drawing depth.
+        uint depth;
+
+        /// Current rectangle drawing is limited to.
+        Rectangle scissors;
+
+        /// True if the current tree branch is marked as disabled (doesn't take input).
+        bool isBranchDisabled;
+
+    }
 
     /// Incremented for every `filterActions` access to prevent nested accesses from breaking previously made ranges.
     private int _actionAccessCounter;
@@ -871,7 +887,6 @@ struct LayoutTree {
                 if (InputStroke.isItemActive(backend, binding.trigger)) {
 
                     activeActions ~= binding;
-
 
                 }
 
