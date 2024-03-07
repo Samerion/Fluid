@@ -609,7 +609,9 @@ abstract class Node {
 
 
         // Note: pressed, not released; released activates input events, pressed activates focus
-        const mousePressed = tree.io.isPressed(MouseButton.left);
+        const mousePressed = tree.io.isPressed(MouseButton.left)
+            || tree.io.isPressed(MouseButton.right)
+            || tree.io.isPressed(MouseButton.middle);
 
         // Update scroll input
         if (tree.scroll) tree.scroll.scrollImpl(io.scroll);

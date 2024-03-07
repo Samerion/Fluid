@@ -68,9 +68,10 @@ interface Typeface {
     static defaultTypeface() => FreetypeTypeface.defaultTypeface;
 
     /// Default word splitter used by measure/draw.
-    final defaultWordChunks(Range)(Range range) const {
+    static defaultWordChunks(Range)(Range range) {
 
         import std.uni;
+        import std.conv;
 
         /// Pick the group the character belongs to.
         static bool pickGroup(dchar a) {
@@ -81,9 +82,25 @@ interface Typeface {
 
         return range
             .splitWhen!((a, b) => pickGroup(a) != pickGroup(b) && !b.isWhite)
-            .map!"text(a)"
+            .map!(a => a.to!(const(char)[]))
             .cache;
         // TODO string allocation could probably be avoided
+
+    }
+
+    /// Updated version of std lineSplitter that includes trailing empty lines.
+    static lineSplitter(C)(C[] text) {
+
+        import std.uni : lineSep, paraSep;
+
+        const hasEmptyLine = text.endsWith('\r', '\n', '\v', '\f', "\r\n", lineSep, paraSep, '\u0085') != 0;
+        auto split = .lineSplitter(text);
+
+        // Include the empty line if present
+        return hasEmptyLine.choose(
+            split.chain(only(typeof(text).init)),
+            split,
+        );
 
     }
 
@@ -93,38 +110,22 @@ interface Typeface {
     /// characters.
     ///
     /// Params:
-    ///     chunkWords = Algorithm to use to break words when wrapping text; separators must be preserved.
+    ///     chunkWords = Algorithm to use to break words when wrapping text; separators must be preserved as separate
+    ///         words.
     ///     availableSpace = Amount of available space the text can take up (dots), used to wrap text.
     ///     text = Text to measure.
-    ///     wrap = Toggle text wrapping.
+    ///     wrap = Toggle text wrapping. Defaults to on, unless using the single argument overload.
+    ///
+    /// Returns:
+    ///     Vector2 representing the text size, if `TextRuler` is not specified as an argument.
     final Vector2 measure(alias chunkWords = defaultWordChunks, String)
         (Vector2 availableSpace, String text, bool wrap = true) const
     if (isSomeString!String)
     do {
 
-        // Wrapping off
-        if (!wrap) return measure(text);
+        auto ruler = TextRuler(this, wrap ? availableSpace.x : float.nan);
 
-        auto ruler = TextRuler(this, availableSpace.x);
-
-        // TODO don't fail on decoding errors
-        // TODO RTL layouts
-        // TODO vertical text
-        // TODO lineSplitter removes the last line feed if present, which is unwanted behavior
-
-        // Split on lines
-        foreach (line; text.lineSplitter) {
-
-            ruler.startLine();
-
-            // Split on words
-            foreach (word; chunkWords(line)) {
-
-                ruler.addWord(word);
-
-            }
-
-        }
+        measure!chunkWords(ruler, text, wrap);
 
         return ruler.textSize;
 
@@ -136,20 +137,86 @@ interface Typeface {
     do {
 
         // No wrap, only explicit in-text line breaks
-
         auto ruler = TextRuler(this);
 
+        measure(ruler, text, false);
+
+        return ruler.textSize;
+
+    }
+
+    /// ditto
+    static void measure(alias chunkWords = defaultWordChunks, String)
+        (ref TextRuler ruler, String text, bool wrap = true)
+    if (isSomeString!String)
+    do {
+
         // TODO don't fail on decoding errors
+        // TODO RTL layouts
+        // TODO vertical text
 
         // Split on lines
-        foreach (line; text.lineSplitter) {
+        foreach (line; lineSplitter(text)) {
 
             ruler.startLine();
-            ruler.addWord(line);
+
+            // Split on words; do nothing in particular, just run the measurements
+            foreach (word, penPosition; eachWord!chunkWords(ruler, line, wrap)) { }
 
         }
 
-        return ruler.textSize;
+    }
+
+    /// Helper function
+    static auto eachWord(alias chunkWords = defaultWordChunks, String)
+        (ref TextRuler ruler, String text, bool wrap = true)
+    do {
+
+        struct Helper {
+
+            alias ElementType = CommonType!(String, typeof(chunkWords(text).front));
+
+            // I'd use `choose` but it's currently broken
+            int opApply(int delegate(ElementType, Vector2) @safe yield) {
+
+                // Text wrapping on
+                if (wrap) {
+
+                    auto range = chunkWords(text);
+
+                    // Empty line, yield an empty word
+                    if (range.empty) {
+
+                        const penPosition = ruler.addWord(String.init);
+                        if (const ret = yield(String.init, penPosition)) return ret;
+
+                    }
+
+                    // Split each word
+                    else foreach (word; chunkWords(text)) {
+
+                        const penPosition = ruler.addWord(word);
+                        if (const ret = yield(word, penPosition)) return ret;
+
+                    }
+
+                    return 0;
+
+                }
+
+                // Text wrapping off
+                else {
+
+                    const penPosition = ruler.addWord(text);
+                    return yield(text, penPosition);
+
+                }
+
+            }
+
+        }
+
+        return Helper();
 
     }
 
@@ -166,7 +233,7 @@ interface Typeface {
         if (wrap) {
 
             // Split on lines
-            foreach (line; text.lineSplitter) {
+            foreach (line; this.lineSplitter(text)) {
 
                 ruler.startLine();
 
@@ -187,7 +254,7 @@ interface Typeface {
         else {
 
             // Split on lines
-            foreach (line; text.lineSplitter) {
+            foreach (line; this.lineSplitter(text)) {
 
                 ruler.startLine();
 
@@ -218,12 +285,33 @@ struct TextRuler {
     /// Total size of the text.
     Vector2 textSize;
 
+    /// Index of the word within the line.
+    size_t wordLineIndex;
+
     this(const Typeface typeface, float lineWidth = float.nan) {
 
         this.typeface = typeface;
         this.lineWidth = lineWidth;
+        this.penPosition = typeface.penPosition;
 
-        penPosition = typeface.penPosition - typeface.lineHeight;
+    }
+
+    /// Get the caret as a 0 width rectangle.
+    Rectangle caret() const {
+
+        return caret(penPosition);
+
+    }
+
+    /// Get the caret as a 0 width rectangle for the given pen position.
+    Rectangle caret(Vector2 penPosition) const {
+
+        const start = penPosition - Vector2(0, typeface.penPosition.y);
+
+        return Rectangle(
+            start.tupleof,
+            0, typeface.lineHeight,
+        );
 
     }
 
@@ -232,15 +320,23 @@ struct TextRuler {
 
         const lineHeight = typeface.lineHeight;
 
-        // Move the pen to the next line
-        penPosition.x = 0;
-        penPosition.y += lineHeight;
+        if (textSize != Vector2.init) {
+
+            // Move the pen to the next line
+            penPosition.x = typeface.penPosition.x;
+            penPosition.y += lineHeight;
+
+        }
+
+        // Allocate space for the line
         textSize.y += lineHeight;
+        wordLineIndex = 0;
 
     }
 
-    /// Add the given word to the text. The text must be single line.;
-    /// Returns: Pen position for the word.
+    /// Add the given word to the text. The text must be a single line.
+    /// Returns: Pen position for the word. It might differ from the original penPosition, because the word may be
+    ///     moved onto the next line.
     Vector2 addWord(String)(String word) {
 
         const maxWordWidth = lineWidth - penPosition.x;
@@ -256,7 +352,7 @@ struct TextRuler {
 
         // Exceeded line width
         // Automatically false if lineWidth is NaN
-        if (maxWordWidth < wordSpan && wordSpan < lineWidth) {
+        if (maxWordWidth < wordSpan && wordLineIndex != 0) {
 
             // Start a new line
             startLine();
@@ -265,11 +361,25 @@ struct TextRuler {
 
         const wordPosition = penPosition;
 
+        // Increment word index
+        wordLineIndex++;
+
         // Update pen position
         penPosition.x += wordSpan;
 
         // Allocate space
-        if (penPosition.x > textSize.x) textSize.x = penPosition.x;
+        if (penPosition.x > textSize.x) {
+
+            textSize.x = penPosition.x;
+
+            // Limit space to not exceed maximum width (false if NaN)
+            if (textSize.x > lineWidth) {
+
+                textSize.x = lineWidth;
+
+            }
+
+        }
 
         return wordPosition;
 

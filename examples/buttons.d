@@ -82,7 +82,7 @@ void unsafeFunction() { }
         ~ "for easier analysis. However, it might be preferrable if the tree is becoming complex, so you need "
         ~ "to find the right balance."),
 
-    () => label(.headingTheme, "A note on @safe-ty"),
+    () => label(.tags!(Tags.heading), "A note on @safe-ty"),
     () => label("D has a memory safety checker, which will help prevent memory errors at compile-time. Fluid is fully "
         ~ "opted into it, which means your delegates will be rejected if the compiler deems them unsafe!"),
     () => label("Most importantly, C functions like the ones provided by Raylib aren't tested for safety, so they're "
@@ -114,7 +114,7 @@ void safetyCheckerExample() @system {
 }
 
 @(
-    () => label(.headingTheme, "Editing layouts"),
+    () => label(.tags!(Tags.heading), "Editing layouts"),
     () => label("Frame contents can be changed at runtime by changing their 'children' property. The operation is a "
         ~ "bit more complex than updating labels, and you have to pay attention to this one if you intend to rearrange "
         ~ "frames this way."),

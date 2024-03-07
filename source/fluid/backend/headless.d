@@ -178,6 +178,7 @@ class HeadlessBackend : FluidBackend {
         bool _justResized;
         bool _scissorsOn;
         Color _tint = color!"fff";
+        string _clipboard;
 
         /// Currently allocated/used textures as URLs.
         ///
@@ -404,6 +405,18 @@ class HeadlessBackend : FluidBackend {
     Vector2 scroll() const
 
         => _scroll;
+
+    string clipboard(string value) @trusted {
+
+        return _clipboard = value;
+
+    }
+
+    string clipboard() const @trusted {
+
+        return _clipboard;
+
+    }
 
     /// Get time elapsed since last frame in seconds.
     float deltaTime() const

@@ -9,6 +9,7 @@ debug (Fluid_BuildMessages) {
 import raylib;
 
 import std.range;
+import std.string;
 import std.algorithm;
 
 import fluid.backend;
@@ -104,6 +105,20 @@ class Raylib5Backend : FluidBackend {
             return -GetMouseWheelMoveV / 4;
         else
             return -GetMouseWheelMoveV;
+
+    }
+
+    string clipboard(string value) @trusted {
+
+        SetClipboardText(value.toStringz);
+
+        return value;
+
+    }
+
+    string clipboard() const @trusted {
+
+        return GetClipboardText().fromStringz.dup;
 
     }
 

@@ -54,6 +54,9 @@ struct Style {
         /// Background color of the node.
         Color backgroundColor;
 
+        /// Background color for selected text.
+        Color selectionBackgroundColor;
+
     }
 
     // Spacing
