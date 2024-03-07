@@ -307,6 +307,20 @@ class TextInput : InputNode!Node {
 
         // TODO TextInput should probably handle reallocation on its own
 
+        // Filter vertical space
+        if (!multiline) {
+
+            const joinedLength = Typeface.lineSplitter(newValue).joiner.byChar.walkLength;
+
+            // Found vertical space
+            if (joinedLength != newValue.length) {
+
+                newValue = Typeface.lineSplitter(newValue).join(' ');
+
+            }
+
+        }
+
         // No value present, no shredding is to be done
         if (_value is null) {
 
@@ -373,6 +387,42 @@ class TextInput : InputNode!Node {
         assert(paddedValue == "0\xff\xff\xff\xff\xff0");
         assert(newValue == "world");
         assert(root.value == newValue);
+
+    }
+
+    unittest {
+
+        auto root = textInput();
+
+        root.value = "hello wörld!".dup;
+        assert(root.value == "hello wörld!");
+
+        root.value = "hello wörld!\n".dup;
+        assert(root.value == "hello wörld! ");
+
+        root.value = "hello wörld!\r\n".dup;
+        assert(root.value == "hello wörld! ");
+
+        root.value = "hello wörld!\v".dup;
+        assert(root.value == "hello wörld! ");
+
+    }
+
+    unittest {
+
+        auto root = textInput(.multiline);
+
+        root.value = "hello wörld!".dup;
+        assert(root.value == "hello wörld!");
+
+        root.value = "hello wörld!\n".dup;
+        assert(root.value == "hello wörld!\n");
+
+        root.value = "hello wörld!\r\n".dup;
+        assert(root.value == "hello wörld!\r\n");
+
+        root.value = "hello wörld!\v".dup;
+        assert(root.value == "hello wörld!\v");
 
     }
 
@@ -959,6 +1009,28 @@ class TextInput : InputNode!Node {
         push('\n');
 
         return true;
+
+    }
+
+    unittest {
+
+        auto root = textInput();
+
+        root.push("hello".dup);
+        root.runInputAction!(FluidInputAction.breakLine);
+
+        assert(root.value == "hello");
+
+    }
+
+    unittest {
+
+        auto root = textInput(.multiline);
+
+        root.push("hello".dup);
+        root.runInputAction!(FluidInputAction.breakLine);
+
+        assert(root.value == "hello\n");
 
     }
 
