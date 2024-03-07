@@ -19,6 +19,7 @@ import fluid.scroll;
 import fluid.backend;
 import fluid.structs;
 import fluid.typeface;
+import fluid.popup_frame;
 
 
 @safe:
@@ -76,6 +77,9 @@ class TextInput : InputNode!Node {
         /// `horizontalAnchor` is updated any time the cursor moves horizontally, including mouse navigation.
         float horizontalAnchor;
 
+        /// Context menu for this input.
+        PopupFrame contextMenu;
+
     }
 
     protected {
@@ -118,6 +122,8 @@ class TextInput : InputNode!Node {
     ///     submitted   = Callback for when the field is submitted.
     this(string placeholder = "", void delegate() @trusted submitted = null) {
 
+        import fluid.button;
+
         this.placeholder = placeholder;
         this.submitted = submitted;
         this.lastTouch = Clock.currTime;
@@ -136,6 +142,34 @@ class TextInput : InputNode!Node {
             ignoreMouse = true;
 
         }
+
+        // Create the context menu
+        this.contextMenu = popupFrame(
+            button(
+                .layout!"fill",
+                "Cut",
+                delegate {
+                    cut();
+                    contextMenu.hide();
+                }
+            ),
+            button(
+                .layout!"fill",
+                "Copy",
+                delegate {
+                    copy();
+                    contextMenu.hide();
+                }
+            ),
+            button(
+                .layout!"fill",
+                "Paste",
+                delegate {
+                    paste();
+                    contextMenu.hide();
+                }
+            ),
+        );
 
     }
 
@@ -365,14 +399,39 @@ class TextInput : InputNode!Node {
 
     }
 
-    void updateCaretPosition() {
+    /// Update the caret position to match the caret index.
+    ///
+    /// ## preferNextLine
+    ///
+    /// Determines if, in case text wraps over the new line, and the caret is in an ambiguous position, the caret
+    /// will move to the next line, or stay on the previous one. Usually `false`, except for arrow keys and the
+    /// "home" key.
+    ///
+    /// In cases where the text wraps over to the new line due to lack of space, the implied line break creates an
+    /// ambiguous position for the caret. The caret may be placed either at the end of the original line, or be put
+    /// on the newly created line:
+    ///
+    /// ---
+    /// Lorem ipsum dolor sit amet, consectetur |
+    /// |adipiscing elit, sed do eiusmod tempor
+    /// ---
+    ///
+    /// Depending on the situation, either position may be preferable. Keep in mind that the caret position influences
+    /// further movement, particularly when navigating using the down and up arrows. In case the caret is at the
+    /// end of the line, it should stay close to the end, but when it's at the beginning, it should stay close to the
+    /// start.
+    ///
+    /// This is not an issue at all on explicitly created lines, since the caret position is easily decided upon
+    /// depending if it is preceding the line break, or if it's following one. This property is only used for implicitly
+    /// created lines.
+    void updateCaretPosition(bool preferNextLine = false) {
 
         import std.math : isNaN;
 
         // No available width, waiting for resize
         if (_availableWidth.isNaN) return;
 
-        _caretPosition = caretPositionImpl(_availableWidth);
+        _caretPosition = caretPositionImpl(_availableWidth, preferNextLine);
 
     }
 
@@ -462,13 +521,35 @@ class TextInput : InputNode!Node {
 
     }
 
-    protected Vector2 caretPositionImpl(float textWidth) {
+    protected Vector2 caretPositionImpl(float textWidth, bool preferNextLine) {
 
-        // If the caret is in the middle of a word, include whatever is after the caret to make sure the word is
-        // wrapped correctly
-        const inWord = !valueBeforeCaret.wordBack.endsWith!isWhite;
-        const tail = inWord
-            ? valueAfterCaret.wordFront.stripRight
+        const(char)[] unbreakableChars(const char[] value) {
+
+            // Split on lines
+            auto lines = Typeface.lineSplitter(value);
+            if (lines.empty) return value.init;
+
+            // Split on words
+            auto chunks = Typeface.defaultWordChunks(lines.front);
+            if (chunks.empty) return value.init;
+
+            // Return empty string if the result starts with whitespace
+            if (chunks.front.front.isWhite) return value.init;
+
+            // Return first word only
+            return chunks.front;
+
+        }
+
+        // Check if the caret follows unbreakable characters
+        const head = unbreakableChars(
+            valueBeforeCaret.wordBack(true)
+        );
+
+        // If the caret is surrounded by unbreakable characters, include them in the output to make sure the
+        // word is wrapped correctly
+        const tail = preferNextLine || !head.empty
+            ? unbreakableChars(valueAfterCaret)
             : null;
 
         auto typeface = style.getTypeface;
@@ -576,13 +657,14 @@ class TextInput : InputNode!Node {
         const low = selectionLowIndex;
         const high = selectionHighIndex;
 
-        // Run through the text
+        auto style = pickStyle();
         auto typeface = style.getTypeface;
         auto ruler = textRuler();
 
         Vector2 lineStart;
         Vector2 lineEnd;
 
+        // Run through the text
         foreach (line; typeface.lineSplitter(value)) {
 
             size_t index = cast(size_t) line.ptr - cast(size_t) value.ptr;
@@ -647,8 +729,8 @@ class TextInput : InputNode!Node {
 
         auto timeSecs = (Clock.currTime - lastTouch).total!"seconds";
 
-        // Add a blinking caret
-        return timeSecs % 2 == 0;
+        // Add a blinking caret if there is no selection
+        return selectionStart == selectionEnd && timeSecs % 2 == 0;
 
     }
 
@@ -1022,8 +1104,7 @@ class TextInput : InputNode!Node {
         if (tree.isMouseDown!(FluidInputAction.press)) {
 
             // Move the caret
-            caretTo(io.mousePosition - _inner.start);
-            horizontalAnchor = caretPosition.x;
+            caretToMouse();
             moveOrClearSelection();
 
             // Enable selection mode
@@ -1088,6 +1169,22 @@ class TextInput : InputNode!Node {
 
         selectionMovement = false;
         return true;
+
+    }
+
+    /// Open the context menu
+    @(FluidInputAction.contextMenu)
+    protected void onContextMenu() {
+
+        // Move the caret
+        if (!isSelecting)
+            caretToMouse();
+
+        // Spawn the popup
+        tree.spawnPopup(contextMenu);
+
+        // Anchor to caret position
+        contextMenu.anchor = _inner.start + caretPosition;
 
     }
 
@@ -1222,7 +1319,7 @@ class TextInput : InputNode!Node {
         caretIndex = caretIndex + tail.length;
 
         touch();
-        updateCaretPosition();
+        updateCaretPosition(false);
 
     }
 
@@ -1241,7 +1338,7 @@ class TextInput : InputNode!Node {
 
                 caretIndex = lineEnd;
                 selectionStart = lineStart;
-                updateCaretPosition();
+                updateCaretPosition(false);
 
             }
 
@@ -1288,7 +1385,7 @@ class TextInput : InputNode!Node {
 
         }
 
-        updateCaretPosition();
+        updateCaretPosition(true);
         horizontalAnchor = caretPosition.x;
 
     }
@@ -1311,7 +1408,7 @@ class TextInput : InputNode!Node {
 
         }
 
-        updateCaretPosition();
+        updateCaretPosition(true);
         moveOrClearSelection();
         horizontalAnchor = caretPosition.x;
 
@@ -1339,6 +1436,7 @@ class TextInput : InputNode!Node {
         }
 
         caretTo(search);
+        updateCaretPosition(horizontalAnchor < 1);
         moveOrClearSelection();
 
     }
@@ -1347,7 +1445,15 @@ class TextInput : InputNode!Node {
     void caretTo(Vector2 position) {
 
         caretIndex = nearestCharacter(position);
-        updateCaretPosition();
+
+    }
+
+    /// Move the caret to mouse position.
+    void caretToMouse() {
+
+        caretTo(io.mousePosition - _inner.start);
+        updateCaretPosition(false);
+        horizontalAnchor = caretPosition.x;
 
     }
 
@@ -1358,6 +1464,7 @@ class TextInput : InputNode!Node {
         const search = Vector2(0, caretPosition.y);
 
         caretTo(search);
+        updateCaretPosition(true);
         moveOrClearSelection();
         horizontalAnchor = caretPosition.x;
 
@@ -1370,6 +1477,7 @@ class TextInput : InputNode!Node {
         const search = Vector2(float.infinity, caretPosition.y);
 
         caretTo(search);
+        updateCaretPosition(false);
         moveOrClearSelection();
         horizontalAnchor = caretPosition.x;
 
@@ -1380,7 +1488,7 @@ class TextInput : InputNode!Node {
     void caretToStart() {
 
         caretIndex = 0;
-        updateCaretPosition();
+        updateCaretPosition(true);
         moveOrClearSelection();
         horizontalAnchor = caretPosition.x;
 
@@ -1391,7 +1499,7 @@ class TextInput : InputNode!Node {
     void caretToEnd() {
 
         caretIndex = value.length;
-        updateCaretPosition();
+        updateCaretPosition(false);
         moveOrClearSelection();
         horizontalAnchor = caretPosition.x;
 
@@ -1465,16 +1573,16 @@ class TextInput : InputNode!Node {
 
     /// Cut selected text to clipboard, clearing the selection.
     @(FluidInputAction.cut)
-    protected void onCut() {
+    protected void cut() {
 
-        onCopy();
+        copy();
         selectedValue = null;
 
     }
 
     /// Copy selected text to clipboard.
     @(FluidInputAction.copy)
-    protected void onCopy() {
+    protected void copy() {
 
         if (isSelecting)
             io.clipboard = selectedValue.idup;
@@ -1483,7 +1591,7 @@ class TextInput : InputNode!Node {
 
     /// Paste text from clipboard.
     @(FluidInputAction.paste)
-    protected void onPaste() {
+    protected void paste() {
 
         push(io.clipboard.dup);
 
