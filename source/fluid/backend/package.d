@@ -7,6 +7,7 @@ module fluid.backend;
 import std.meta;
 import std.range;
 import std.traits;
+import std.datetime;
 import std.algorithm;
 
 public import fluid.backend.raylib5;
@@ -26,7 +27,18 @@ static FluidBackend defaultFluidBackend;
 ///
 /// The default unit in graphical space is a **pixel** (`px`), here defined as **1/96 of an inch**. This is unless
 /// stated otherwise, as in `Texture`.
+///
+/// Warning: Backend API is unstable and functions may be added or removed with no prior warning.
 interface FluidBackend {
+
+    /// Get system's double click time.
+    final Duration doubleClickTime() const {
+
+        // TODO This should be overridable
+
+        return 500.msecs;
+
+    }
 
     /// Check if the given mouse button has just been pressed/released or, if it's held down or not (up).
     bool isPressed(MouseButton) const;
