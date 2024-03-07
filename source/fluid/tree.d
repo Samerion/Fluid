@@ -4,6 +4,7 @@ import std.conv;
 import std.math;
 import std.container;
 import std.algorithm;
+import std.datetime;
 
 import fluid.node;
 import fluid.input;
@@ -13,6 +14,9 @@ import fluid.backend;
 
 @safe:
 
+
+version (OSX)
+    version = Fluid_MacKeyboard;
 
 ///
 struct FocusDirection {
@@ -374,60 +378,75 @@ abstract class TreeAction {
 /// Global data for the layout tree.
 struct LayoutTree {
 
-    /// Root node of the tree.
-    Node root;
+    // Nodes
+    public {
 
-    /// Top-most hovered node in the tree.
-    Node hover;
+        /// Root node of the tree.
+        Node root;
 
-    /// Currently focused node.
-    ///
-    /// Changing this value directly is discouraged. Some nodes might not want the focus! Be gentle, call
-    /// `FluidFocusable.focus()` instead and let the node set the value on its own.
-    FluidFocusable focus;
+        /// Top-most hovered node in the tree.
+        Node hover;
 
-    /// Deepest hovered scrollable node.
-    FluidScrollable scroll;
+        /// Currently focused node.
+        ///
+        /// Changing this value directly is discouraged. Some nodes might not want the focus! Be gentle, call
+        /// `FluidFocusable.focus()` instead and let the node set the value on its own.
+        FluidFocusable focus;
 
-    /// Focus direction data.
-    FocusDirection focusDirection;
+        /// Deepest hovered scrollable node.
+        FluidScrollable scroll;
 
-    /// Padding box of the currently focused node. Only available after the node has been drawn.
-    ///
-    /// See_also: `focusDirection.lastFocusBox`.
-    Rectangle focusBox;
+    }
 
-    /// Tree actions queued to execute during next draw.
-    DList!TreeAction actions;
+    // Input
+    public {
 
-    /// Input strokes bound to emit given action signals.
-    ///
-    /// Input layers have to be sorted.
-    InputLayer[] boundInputs;
+        /// Focus direction data.
+        FocusDirection focusDirection;
 
-    invariant(boundInputs.isSorted);
+        /// Padding box of the currently focused node. Only available after the node has been drawn.
+        ///
+        /// See_also: `focusDirection.lastFocusBox`.
+        Rectangle focusBox;
 
-    /// Actions that are currently held down.
-    DList!InputBinding downActions;
+        /// Tree actions queued to execute during next draw.
+        DList!TreeAction actions;
 
-    /// Actions that have just triggered.
-    DList!InputBinding activeActions;
+        /// Input strokes bound to emit given action signals.
+        ///
+        /// Input layers have to be sorted.
+        InputLayer[] boundInputs;
 
-    /// Access to core input and output facilities.
-    FluidBackend backend;
-    alias io = backend;
+        invariant(boundInputs.isSorted);
 
-    /// Check if keyboard input was handled; updated after rendering has completed.
-    bool keyboardHandled;
+        /// Actions that are currently held down.
+        DList!InputBinding downActions;
 
-    /// Current node drawing depth.
-    uint depth;
+        /// Actions that have just triggered.
+        DList!InputBinding activeActions;
 
-    /// Current rectangle drawing is limited to.
-    Rectangle scissors;
+        /// Access to core input and output facilities.
+        FluidBackend backend;
+        alias io = backend;
 
-    /// True if the current tree branch is marked as disabled (doesn't take input).
-    bool isBranchDisabled;
+        /// Check if keyboard input was handled; updated after rendering has completed.
+        bool keyboardHandled;
+
+    }
+
+    /// Miscelleanous, technical properties.
+    public {
+
+        /// Current node drawing depth.
+        uint depth;
+
+        /// Current rectangle drawing is limited to.
+        Rectangle scissors;
+
+        /// True if the current tree branch is marked as disabled (doesn't take input).
+        bool isBranchDisabled;
+
+    }
 
     /// Incremented for every `filterActions` access to prevent nested accesses from breaking previously made ranges.
     private int _actionAccessCounter;
@@ -444,9 +463,9 @@ struct LayoutTree {
     /// Create a new tree with the given node as its root. Use the default backend, if any is present.
     this(Node root) {
 
-        assert(defaultFluidBackend, "Cannot create LayoutTree; no backend was chosen, and no default is set.");
-
         this(root, defaultFluidBackend);
+
+        assert(backend, "Cannot create LayoutTree; no backend was chosen, and no default is set.");
 
     }
 
@@ -479,38 +498,25 @@ struct LayoutTree {
 
         }
 
-        // TODO universal left/right key
-        with (FluidInputAction)
-        boundInputs = [
+        with (FluidInputAction) {
 
-            InputLayer(
-                InputStroke(KeyboardKey.leftControl),
-                [
-                    bind!backspaceWord(KeyboardKey.backspace),
-                    bind!backspaceWord(KeyboardKey.w),  // emacs & vim
-                    bind!entryPrevious(KeyboardKey.k),  // vim
-                    bind!entryPrevious(KeyboardKey.p),  // emacs
-                    bind!entryNext(KeyboardKey.j),  // vim
-                    bind!entryNext(KeyboardKey.n),  // emacs
-                ]
-            ),
-
-            InputLayer(
+            // System-independent keys
+            auto universalShift = InputLayer(
                 InputStroke(KeyboardKey.leftShift),
                 [
                     bind!focusPrevious(KeyboardKey.tab),
                     bind!entryPrevious(KeyboardKey.tab),
+                    bind!selectPreviousChar(KeyboardKey.left),
+                    bind!selectNextChar(KeyboardKey.right),
+                    bind!selectPreviousLine(KeyboardKey.up),
+                    bind!selectNextLine(KeyboardKey.down),
+                    bind!selectToLineStart(KeyboardKey.home),
+                    bind!selectToLineEnd(KeyboardKey.end),
+                    bind!breakLine(KeyboardKey.enter),
+                    bind!contextMenu(KeyboardKey.f10),
                 ]
-            ),
-
-            InputLayer(
-                InputStroke(KeyboardKey.leftAlt),
-                [
-                    bind!entryUp(KeyboardKey.up),
-                ]
-            ),
-
-            InputLayer(
+            );
+            auto universal = InputLayer(
                 InputStroke(),
                 [
                     // Press
@@ -525,6 +531,10 @@ struct LayoutTree {
                     // Cancel
                     bind!cancel(KeyboardKey.escape),
                     bind!cancel(GamepadButton.circle),
+
+                    // Menu
+                    bind!contextMenu(MouseButton.right),
+                    bind!contextMenu(KeyboardKey.contextMenu),
 
                     // Tabbing; index-focus
                     bind!focusPrevious(GamepadButton.leftButton),
@@ -543,11 +553,19 @@ struct LayoutTree {
 
                     // Text input
                     bind!backspace(KeyboardKey.backspace),
+                    bind!deleteChar(KeyboardKey.delete_),
+                    bind!breakLine(KeyboardKey.enter),
+                    bind!previousChar(KeyboardKey.left),
+                    bind!nextChar(KeyboardKey.right),
+                    bind!previousLine(KeyboardKey.up),
+                    bind!nextLine(KeyboardKey.down),
                     bind!entryPrevious(KeyboardKey.up),
                     bind!entryPrevious(GamepadButton.dpadUp),
                     bind!entryNext(KeyboardKey.down),
                     bind!entryNext(KeyboardKey.tab),
                     bind!entryNext(GamepadButton.dpadDown),
+                    bind!toLineStart(KeyboardKey.home),
+                    bind!toLineEnd(KeyboardKey.end),
 
                     // Scrolling
                     bind!scrollLeft(KeyboardKey.left),
@@ -561,9 +579,126 @@ struct LayoutTree {
                     bind!pageUp(KeyboardKey.pageUp),
                     bind!pageDown(KeyboardKey.pageDown),
                 ]
-            )
+            );
 
-        ];
+            // TODO universal left/right key
+            version (Fluid_MacKeyboard)
+                boundInputs = [
+
+                    // Shift + Command
+                    InputLayer(
+                        InputStroke(KeyboardKey.leftShift, KeyboardKey.leftSuper),
+                        [
+                            // Note: Command should *expand selection* on macOS instead of current
+                            // toLineStart/toLineEnd behavior
+                            bind!selectToLineStart(KeyboardKey.left),
+                            bind!selectToLineEnd(KeyboardKey.right),
+                            bind!selectToStart(KeyboardKey.up),
+                            bind!selectToEnd(KeyboardKey.down),
+                        ]
+                    ),
+
+                    // Shift + Option
+                    InputLayer(
+                        InputStroke(KeyboardKey.leftShift, KeyboardKey.leftAlt),
+                        [
+                            bind!selectPreviousWord(KeyboardKey.left),
+                            bind!selectNextWord(KeyboardKey.right),
+                        ]
+                    ),
+
+                    // Command
+                    InputLayer(
+                        InputStroke(KeyboardKey.leftSuper),
+                        [
+                            bind!toLineStart(KeyboardKey.left),
+                            bind!toLineEnd(KeyboardKey.right),
+                            bind!toStart(KeyboardKey.up),
+                            bind!toEnd(KeyboardKey.down),
+                            bind!selectAll(KeyboardKey.a),
+                            bind!copy(KeyboardKey.c),
+                            bind!cut(KeyboardKey.x),
+                            bind!paste(KeyboardKey.v),
+                            bind!submit(KeyboardKey.enter),
+                        ]
+                    ),
+
+                    // Option
+                    InputLayer(
+                        InputStroke(KeyboardKey.leftAlt),
+                        [
+                            bind!deleteWord(KeyboardKey.delete_),
+                            bind!backspaceWord(KeyboardKey.backspace),
+                            bind!previousWord(KeyboardKey.left),
+                            bind!nextWord(KeyboardKey.right),
+                        ]
+                    ),
+
+                    // Control
+                    InputLayer(
+                        InputStroke(KeyboardKey.leftControl),
+                        [
+                            bind!backspaceWord(KeyboardKey.w),  // emacs & vim
+                            bind!entryPrevious(KeyboardKey.k),  // vim
+                            bind!entryPrevious(KeyboardKey.p),  // emacs
+                            bind!entryNext(KeyboardKey.j),  // vim
+                            bind!entryNext(KeyboardKey.n),  // emacs
+                        ]
+                    ),
+
+                    universalShift,
+                    universal,
+                ];
+            else
+                boundInputs = [
+
+                    InputLayer(
+                        InputStroke(KeyboardKey.leftShift, KeyboardKey.leftControl),
+                        [
+                            bind!selectPreviousWord(KeyboardKey.left),
+                            bind!selectNextWord(KeyboardKey.right),
+                            bind!selectToStart(KeyboardKey.home),
+                            bind!selectToEnd(KeyboardKey.end),
+                        ]
+                    ),
+
+                    InputLayer(
+                        InputStroke(KeyboardKey.leftControl),
+                        [
+                            bind!deleteWord(KeyboardKey.delete_),
+                            bind!backspaceWord(KeyboardKey.backspace),
+                            bind!backspaceWord(KeyboardKey.w),  // emacs & vim
+                            bind!entryPrevious(KeyboardKey.k),  // vim
+                            bind!entryPrevious(KeyboardKey.p),  // emacs
+                            bind!entryNext(KeyboardKey.j),  // vim
+                            bind!entryNext(KeyboardKey.n),  // emacs
+                            bind!previousWord(KeyboardKey.left),
+                            bind!nextWord(KeyboardKey.right),
+                            bind!selectAll(KeyboardKey.a),
+                            bind!copy(KeyboardKey.c),
+                            bind!cut(KeyboardKey.x),
+                            bind!paste(KeyboardKey.v),
+                            bind!toStart(KeyboardKey.home),
+                            bind!toEnd(KeyboardKey.end),
+
+                            // Submit with ctrl+enter
+                            bind!submit(KeyboardKey.enter),
+                        ]
+                    ),
+
+                    InputLayer(
+                        InputStroke(KeyboardKey.leftAlt),
+                        [
+                            bind!entryUp(KeyboardKey.up),
+                        ]
+                    ),
+
+                    universalShift,
+                    universal,
+
+                ];
+
+        }
 
     }
 
@@ -834,7 +969,6 @@ struct LayoutTree {
                 if (InputStroke.isItemActive(backend, binding.trigger)) {
 
                     activeActions ~= binding;
-
 
                 }
 

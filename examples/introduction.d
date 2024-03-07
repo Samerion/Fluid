@@ -57,7 +57,7 @@ void raylibExample()() @system {
     () => button("https://raylib.com", delegate {
         openURL("https://raylib.com");
     }),
-    () => label(.headingTheme, "Frames"),
+    () => label(.tags!(Tags.heading), "Frames"),
     () => label("Next up in our list of basic nodes is the frame node. Frames are containers, which means they connect "
         ~ "a number of nodes together. To start, we can place a few labels in a column."),
 )

@@ -24,9 +24,10 @@ enum whileDown;
 enum FluidInputAction {
 
     // Basic
-    press,   /// Press the input. Used for example to activate buttons.
-    submit,  /// Submit input, eg. finish writing in textInput.
-    cancel,  /// Cancel the input.
+    press,       /// Press the input. Used for example to activate buttons.
+    submit,      /// Submit input, eg. finish writing in textInput.
+    cancel,      /// Cancel the input.
+    contextMenu, /// Open context menu.
 
     // Focus
     focusPrevious,  /// Focus previous input.
@@ -36,9 +37,42 @@ enum FluidInputAction {
     focusUp,        /// Focus input above.
     focusDown,      /// Focus input below.
 
-    // Input
+    // Text navigation
+    breakLine,      /// Start a new text line, place a line feed.
+    previousChar,   /// Move to the previous character in text.
+    nextChar,       /// Move to the next character in text.
+    previousWord,   /// Move to the previous word in text.
+    nextWord,       /// Move to the next word in text.
+    previousLine,   /// Move to the previous line in text.
+    nextLine,       /// Move to the next line in text.
+    toLineStart,    /// Move to the beginning of this line; Home key.
+    toLineEnd,      /// Move to the end of this line; End key.
+    toStart,        /// Move to the beginning.
+    toEnd,          /// Move to the end.
+
+    // Editing
     backspace,      /// Erase last character in an input.
     backspaceWord,  /// Erase last a word in an input.
+    deleteChar,     /// Delete the next character in an input
+    deleteWord,     /// Delete the next word in an input
+    copy,           /// Copy selected content.
+    cut,            /// Cut (copy and delete) selected content.
+    paste,          /// Paste selected content.
+
+    // Selection
+    selectPreviousChar,  /// Select previous character in text.
+    selectNextChar,      /// Select next character in text.
+    selectPreviousWord,  /// Select previous word in text.
+    selectNextWord,      /// Select next word in text.
+    selectPreviousLine,  /// Select to previous line in text.
+    selectNextLine,      /// Select to next line in text.
+    selectAll,           /// Select all in text.
+    selectToLineStart,   /// Select from here to line beginning.
+    selectToLineEnd,     /// Select from here to line end.
+    selectToStart,       /// Select from here to beginning.
+    selectToEnd,         /// Select from here to end.
+
+    // List navigation
     entryPrevious,  /// Navigate to the previous list entry.
     entryNext,      /// Navigate to the next list entry.
     entryUp,        /// Navigate up in a tree, eg. in the file picker.
@@ -646,7 +680,7 @@ unittest {
 }
 
 /// Check if any stroke bound to this action is active.
-bool isActive(alias type)(const(LayoutTree)* tree)
+bool isActive(alias type)(LayoutTree* tree)
 if (isInputActionType!type) {
 
     return tree.activeActions[].canFind!(a
@@ -721,11 +755,14 @@ interface FluidHoverable {
 
         // Run all active actions
         if (!mouse || isHovered)
-        foreach (binding; tree.activeActions[]) {
+        foreach_reverse (binding; tree.activeActions[]) {
 
             if (InputStroke.isMouseItem(binding.trigger) != mouse) continue;
 
             handled = runInputAction(binding.action, true) || handled;
+
+            // Stop once handled
+            if (handled) break;
 
         }
 
@@ -817,19 +854,31 @@ interface FluidHoverable {
                             // Pass the action type if applicable
                             static if (__traits(compiles, overload(actionType))) {
 
-                                overload(actionType);
+                                // Run the action and mark as handled
+                                static if (is(typeof(overload(actionType)) == void)) {
+
+                                    overload(actionType);
+                                    handled = true;
+
+                                }
+
+                                else handled = overload(actionType);
 
                             }
 
                             // TODO Support action ID?
 
                             // Run empty
-                            else overload();
+                            else static if (is(typeof(overload()) == void)) {
+
+                                overload();
+                                handled = true;
+
+                            }
+
+                            else handled = overload();
 
                         }
-
-                        // Mark as handled
-                        handled = true;
 
                     }}
 

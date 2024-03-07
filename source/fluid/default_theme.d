@@ -57,6 +57,7 @@ static this() {
             rule!Node(
                 typeface = Typeface.defaultTypeface,
                 textColor = color("#000"),
+                selectionBackgroundColor = color("#55b9ff"),
             ),
             rule!Frame(
                 backgroundColor = color("#fff"),
@@ -86,7 +87,8 @@ static this() {
                 border.sideBottom = 2,
 
                 when!"a.isEmpty"(textColor = color("#000a")),
-                when!"a.isFocused"(borderStyle = colorBorder(color("#555"))),
+                when!"a.isFocused"(borderStyle = colorBorder(color("#555")))
+                    .otherwise(selectionBackgroundColor = color("#ccc")),
                 when!"a.isDisabled"(
                     textColor = color("#000a"),
                     backgroundColor = color("#fff5"),

@@ -77,7 +77,7 @@ Frame fillExample() {
 
 
 @(
-    () => label(.headingTheme, `Shrinking and expanding`),
+    () => label(.tags!(Tags.heading), `Shrinking and expanding`),
     () => label(`You might have noticed something is off in the previous example. Despite the '.layout!"fill"' `
         ~ `option, the label did not expand to the end of the container, but only used up a single line. This has to `
         ~ `do with "expanding".`),
@@ -148,7 +148,7 @@ Frame shrinkNExpandExample() {
 
 
 @(
-    () => label(.headingTheme, "Practical examples"),
+    () => label(.tags!(Tags.heading), "Practical examples"),
     () => label(`Mixing shrinking and expanding nodes in the same frame is very useful. Consider implementing two `
         ~ `buttons for switching pages, just like at the end of the page. The "back" button on the left side, the `
         ~ `"right" button on the right.`),

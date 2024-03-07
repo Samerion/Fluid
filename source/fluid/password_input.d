@@ -26,37 +26,43 @@ class PasswordInput : TextInput {
 
     }
 
-    protected override void drawImpl(Rectangle outer, Rectangle inner) @trusted {
+    /// PasswordInput does not support multiline.
+    override bool multiline() const {
 
-        import std.utf : count;
-        import std.algorithm : min, max;
+        return false;
 
-        auto style = pickStyle();
+    }
+
+    /// Get the radius of the circles
+    protected float radius() const {
+
         auto typeface = style.getTypeface;
 
-        // Use the "X" character as a reference
-        const reference = typeface.advance('X');
-        const advance = reference.x * 1.2;
-        const radius = reference.x / 2f;
-        const width = advance * count(value);
-        const scrollOffset = max(0, width - inner.w);
+        // Use the "X" character as reference
+        return typeface.advance('X').x / 2f;
 
-        // If empty, draw like a regular textInput
-        if (isEmpty) {
+    }
 
-            super.drawImpl(outer, inner);
-            return;
+    /// Get the advance width of the circles.
+    protected float advance() const {
 
-        }
+        auto typeface = style.getTypeface;
 
-        // Limit visible area
-        auto last = tree.pushScissors(outer);
-        scope (exit) tree.popScissors(last);
+        return typeface.advance('X').x * 1.2;
 
-        // Fill the background
-        style.drawBackground(tree.io, outer);
+    }
 
-        auto cursor = start(inner) + Vector2(radius - scrollOffset, typeface.lineHeight / 2f);
+    protected override void drawContents(Rectangle inner, Rectangle innerScrolled) {
+
+        auto typeface = pickStyle.getTypeface;
+
+        // Empty, draw the placeholder using regular input
+        if (isEmpty) return super.drawContents(inner, innerScrolled);
+
+        // Draw selection
+        drawSelection(innerScrolled);
+
+        auto cursor = start(innerScrolled) + Vector2(radius, typeface.lineHeight / 2f);
 
         // Draw a circle for each character
         foreach (_; value) {
@@ -67,10 +73,69 @@ class PasswordInput : TextInput {
 
         }
 
-        const caretOffset = min(width, inner.w);
-
         // Draw the caret
-        drawCaret(inner, caretOffset);
+        drawCaret(innerScrolled);
+
+    }
+
+    override size_t nearestCharacter(Vector2 needle) const {
+
+        import std.utf : decode;
+
+        size_t index;
+        size_t number;
+
+        while (index < value.length) {
+
+            // Stop if found the character
+            if (needle.x < number * advance + radius) break;
+
+            // Locate the next character
+            decode(value, index);
+            number++;
+
+        }
+
+        return number;
+
+    }
+
+    protected override Vector2 caretPositionImpl(float availableWidth, bool preferNextLine) {
+
+        import std.utf : count;
+        import fluid.typeface : TextRuler;
+
+        return Vector2(
+            advance * count(valueBeforeCaret),
+            super.caretPositionImpl(availableWidth, preferNextLine).y,
+        );
+
+    }
+
+    /// Draw selection, if applicable.
+    protected override void drawSelection(Rectangle inner) {
+
+        import std.utf : count;
+        import std.range : enumerate;
+        import std.algorithm : min, max;
+
+        // Ignore if selection is empty
+        if (selectionStart == selectionEnd) return;
+
+        const typeface = style.getTypeface;
+
+        const low = min(selectionStart, selectionEnd);
+        const high = max(selectionStart, selectionEnd);
+
+        const start = advance * count(value[0 .. low]);
+        const size = advance * count(value[low .. high]);
+
+        const rect = Rectangle(
+            (inner.start + Vector2(start, 0)).tupleof,
+            size, typeface.lineHeight,
+        );
+
+        io.drawRectangle(rect, style.selectionBackgroundColor);
 
     }
 
