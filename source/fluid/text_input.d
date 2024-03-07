@@ -87,7 +87,7 @@ class TextInput : InputNode!Node {
         /// If true, current movement action is performed while selecting.
         bool selectionMovement;
 
-        /// Last padding box assigned to this node.
+        /// Last padding box assigned to this node, with scroll applied.
         Rectangle _inner;
 
     }
@@ -182,8 +182,8 @@ class TextInput : InputNode!Node {
 
     /// Value written in the input.
     ///
-    /// Warning: The contents of this label may be overwritten by the input. Make sure to `dup` the output if you intend
-    /// to keep the result.
+    /// Warning: For security reasons, the contents of array will be overwritted by any change made to the content.
+    /// Make sure to `dup` the output if you intend to keep the result.
     inout(char)[] value() inout {
 
         return _value;
@@ -193,7 +193,7 @@ class TextInput : InputNode!Node {
     /// ditto
     char[] value(char[] value) {
 
-        _value = value;
+        replaceValue(value);
         caretToEnd();
         return value;
 
@@ -237,9 +237,14 @@ class TextInput : InputNode!Node {
     }
 
     /// ditto
-    char[] valueBeforeCaret(scope const(char)[] newValue) {
+    char[] valueBeforeCaret(char[] newValue) {
 
-        _value = newValue ~ valueAfterCaret;
+        // Replace the data
+        if (valueAfterCaret.empty)
+            replaceValue(newValue);
+        else
+            replaceValue(newValue ~ valueAfterCaret);
+
         caretIndex = newValue.length;
         updateSize();
 
@@ -255,13 +260,13 @@ class TextInput : InputNode!Node {
     }
 
     /// ditto
-    char[] selectedValue(scope const(char)[] value) {
+    char[] selectedValue(char[] value) {
 
         const isLow = caretIndex == selectionStart;
         const low = selectionLowIndex;
         const high = selectionHighIndex;
 
-        _value = _value[0 .. low] ~ value ~ _value[high .. $];
+        replaceValue(_value[0 .. low] ~ value ~ _value[high .. $]);
         caretIndex = low + value.length;
         updateSize();
         clearSelection();
@@ -278,12 +283,96 @@ class TextInput : InputNode!Node {
     }
 
     /// ditto
-    char[] valueAfterCaret(scope const(char)[] newValue) {
+    char[] valueAfterCaret(char[] newValue) {
 
-        _value = valueBeforeCaret ~ newValue;
+        // Replace the data
+        if (valueBeforeCaret.empty)
+            replaceValue(newValue);
+        else
+            replaceValue(valueBeforeCaret ~ newValue);
+
         updateSize();
 
         return _value[caretIndex .. $];
+
+    }
+
+    /// Replace the value in a secure manner.
+    private void replaceValue(char[] newValue) {
+
+        const oldStart = cast(size_t) value.ptr;
+        const oldEnd   = oldStart + value.length;
+        const newStart = cast(size_t) newValue.ptr;
+        const newEnd   = newStart + newValue.length;
+
+        // TODO TextInput should probably handle reallocation on its own
+
+        // No value present, no shredding is to be done
+        if (_value is null) {
+
+            _value = newValue;
+            return;
+
+        }
+
+        // If there is no overlap between the two strings, shred the old data in its entirety
+        if (newStart >= oldEnd || newEnd <= oldStart || newValue is null) {
+
+            _value[] = char.init;
+            _value = newValue;
+            return;
+
+        }
+
+        // Overlap exists:
+
+        // Discarded start, shred that part
+        if (newStart > oldStart) {
+            _value[0 .. newStart - oldStart] = char.init;
+        }
+
+        // Discarded end
+        if (newEnd < oldEnd) {
+            _value[$ + newEnd - oldEnd .. $] = char.init;
+        }
+
+        _value = newValue;
+
+    }
+
+    unittest {
+
+        char[] paddedValue = "0hello0".dup;
+        char[] value = paddedValue[1 .. $-1];
+        auto root = new TextInput;
+
+        // Put the value in
+        root.replaceValue(value);
+
+        // Remove the first character
+        root.replaceValue(value[1 .. $]);
+
+        assert(value == "\xffello");
+
+        // Remove the last character
+        root.replaceValue(value[1 .. $-1]);
+
+        assert(value == "\xffell\xff");
+
+        // Remove both at once
+        root.replaceValue(value[2 .. $-2]);
+
+        assert(value == "\xff\xffl\xff\xff");
+
+        // Replace the entire string
+        char[] newValue = "world".dup;
+
+        root.replaceValue(newValue);
+
+        assert(value == "\xff\xff\xff\xff\xff");
+        assert(paddedValue == "0\xff\xff\xff\xff\xff0");
+        assert(newValue == "world");
+        assert(root.value == newValue);
 
     }
 
@@ -336,6 +425,9 @@ class TextInput : InputNode!Node {
     }
 
     /// Point where selection begins. Caret is the other end of the selection.
+    ///
+    /// Note that `selectionStart` may be greater than `selectionEnd`. If you need them in order, use
+    /// `selectionLowIndex` and `selectionHighIndex`.
     ptrdiff_t selectionStart() const {
 
         // Selection is present
@@ -581,9 +673,6 @@ class TextInput : InputNode!Node {
             : scrolledCaret < 0           ? scrolledCaret
             : 0;
 
-        // Save the inner box
-        _inner = inner;
-
         // Fill the background
         style.drawBackground(tree.io, outer);
 
@@ -598,6 +687,9 @@ class TextInput : InputNode!Node {
 
         const lastScissors = tree.pushScissors(outer);
         scope (exit) tree.popScissors(lastScissors);
+
+        // Save the inner box
+        _inner = scrolledInner;
 
         // Draw the contents
         drawContents(inner, scrolledInner);
@@ -821,15 +913,12 @@ class TextInput : InputNode!Node {
     }
 
     /// ditto
-    void push(scope const(char)[] text) {
+    void push(char[] text) {
 
         import std.utf : encode;
 
         // If selection is active, overwrite the selection
         if (isSelecting) {
-
-            // Shred old value
-            selectedValue[] = char.init;
 
             // Override with the character
             selectedValue = text;
@@ -923,6 +1012,53 @@ class TextInput : InputNode!Node {
 
     }
 
+    unittest {
+
+        int submitted;
+        auto io = new HeadlessBackend;
+        auto root = textInput(
+            .multiline,
+            "",
+            delegate {
+                submitted++;
+            }
+        );
+
+        root.io = io;
+        root.push("Hello, World!".dup);
+
+        // Press enter (not focused)
+        io.press(KeyboardKey.enter);
+        root.draw();
+
+        // No effect
+        assert(root.value == "Hello, World!");
+        assert(submitted == 0);
+
+        // Focus for the next frame
+        io.nextFrame();
+        root.focus();
+
+        // Press enter
+        io.press(KeyboardKey.enter);
+        root.draw();
+
+        // A new line should be added
+        assert(root.value == "Hello, World!\n");
+        assert(submitted == 0);
+
+        // Press ctrl+enter
+        io.nextFrame();
+        io.press(KeyboardKey.leftControl);
+        io.press(KeyboardKey.enter);
+        root.draw();
+
+        // Input should be submitted
+        assert(root.value == "Hello, World!\n");
+        assert(submitted == 1);
+
+    }
+
     /// Erase last word before the caret, or the first word after.
     ///
     /// Parms:
@@ -932,12 +1068,9 @@ class TextInput : InputNode!Node {
         import std.uni;
         import std.range;
 
-        char[] erasedWord;
-
         // Selection active, delete it
         if (isSelecting) {
 
-            erasedWord = selectedValue;
             selectedValue = null;
 
         }
@@ -946,7 +1079,7 @@ class TextInput : InputNode!Node {
         else if (forward) {
 
             // Find the word to delete
-            erasedWord = valueAfterCaret.wordFront;
+            const erasedWord = valueAfterCaret.wordFront;
 
             // Remove the word
             valueAfterCaret = valueAfterCaret[erasedWord.length .. $];
@@ -957,18 +1090,12 @@ class TextInput : InputNode!Node {
         else {
 
             // Find the word to delete
-            erasedWord = valueBeforeCaret.wordBack;
+            const erasedWord = valueBeforeCaret.wordBack;
 
             // Remove the word
             valueBeforeCaret = valueBeforeCaret[0 .. $ - erasedWord.length];
 
         }
-
-        // Shred old data
-        erasedWord[] = char.init;
-
-        // Trigger the callback
-        _changed();
 
         // Update the size of the box
         updateSize();
@@ -980,14 +1107,8 @@ class TextInput : InputNode!Node {
     @(FluidInputAction.backspaceWord)
     protected void onBackspaceWord() {
 
-        return chopWord();
-
-    }
-
-    @(FluidInputAction.deleteWord)
-    protected void onDeleteWord() {
-
-        return chopWord(true);
+        chopWord();
+        _changed();
 
     }
 
@@ -1046,17 +1167,71 @@ class TextInput : InputNode!Node {
 
     }
 
+    @(FluidInputAction.deleteWord)
+    protected void onDeleteWord() {
+
+        chopWord(true);
+        _changed();
+
+    }
+
+    unittest {
+
+        auto root = textInput();
+
+        // deleteWord should do nothing, because the caret is at the end
+        root.push("Hello, Wörld".dup);
+        root.runInputAction!(FluidInputAction.deleteWord);
+
+        assert(!root.isSelecting);
+        assert(root.value == "Hello, Wörld");
+        assert(root.caretIndex == "Hello, Wörld".length);
+
+        // Move it to the previous word
+        root.runInputAction!(FluidInputAction.previousWord);
+
+        assert(!root.isSelecting);
+        assert(root.value == "Hello, Wörld");
+        assert(root.caretIndex == "Hello, ".length);
+
+        // Delete the next word
+        root.runInputAction!(FluidInputAction.deleteWord);
+
+        assert(!root.isSelecting);
+        assert(root.value == "Hello, ");
+        assert(root.caretIndex == "Hello, ".length);
+
+        // Move to the start
+        root.runInputAction!(FluidInputAction.toStart);
+
+        assert(!root.isSelecting);
+        assert(root.value == "Hello, ");
+        assert(root.caretIndex == 0);
+
+        // Delete the next word
+        root.runInputAction!(FluidInputAction.deleteWord);
+
+        assert(!root.isSelecting);
+        assert(root.value == ", ");
+        assert(root.caretIndex == 0);
+
+        // Delete the next word
+        root.runInputAction!(FluidInputAction.deleteWord);
+
+        assert(!root.isSelecting);
+        assert(root.value == "");
+        assert(root.caretIndex == 0);
+
+    }
+
     /// Erase any character preceding the caret, or the next one.
     /// Params:
     ///     forward = If true, removes character after the caret, otherwise removes the one before.
     void chop(bool forward = false) {
 
-        char[] erasedData;
-
         // Selection active
         if (isSelecting) {
 
-            erasedData = selectedValue;
             selectedValue = null;
 
         }
@@ -1068,7 +1243,6 @@ class TextInput : InputNode!Node {
 
             const length = valueAfterCaret.front.codeLength!char;
 
-            erasedData = valueAfterCaret[0..length];
             valueAfterCaret = valueAfterCaret[length..$];
 
         }
@@ -1080,13 +1254,9 @@ class TextInput : InputNode!Node {
 
             const length = valueBeforeCaret.back.codeLength!char;
 
-            erasedData = valueBeforeCaret[$-length..$];
             valueBeforeCaret = valueBeforeCaret[0..$-length];
 
         }
-
-        // Shred old data
-        erasedData[] = char.init;
 
         // Trigger the callback
         _changed();
@@ -1112,6 +1282,49 @@ class TextInput : InputNode!Node {
             selectionMovement = !tree.isMouseActive!(FluidInputAction.press);
 
         }
+
+    }
+
+    unittest {
+
+        // This test relies on properties of the default typeface
+
+        import std.math : isClose;
+
+        auto io = new HeadlessBackend;
+        auto root = textInput(nullTheme.derive(
+            rule!TextInput(
+                Rule.selectionBackgroundColor = color("#02a"),
+            ),
+        ));
+
+        root.io = io;
+        root.value = "Hello, World! Foo, bar, scroll this input".dup;
+        root.focus();
+        root.draw();
+
+        assert(root.contentLabel.scroll.isClose(127));
+
+        // Select some stuff
+        io.nextFrame;
+        io.mousePosition = Vector2(150, 10);
+        io.press();
+        root.draw();
+
+        io.nextFrame;
+        io.mousePosition = Vector2(65, 10);
+        root.draw();
+
+        assert(root.selectedValue == "scroll this");
+
+        io.nextFrame;
+        root.draw();
+
+        // Match the selection box
+        io.assertRectangle(
+            Rectangle(64, 0, 86, 27),
+            color("#02a")
+        );
 
     }
 
@@ -1169,6 +1382,55 @@ class TextInput : InputNode!Node {
 
         selectionMovement = false;
         return true;
+
+    }
+
+    unittest {
+
+        // This test relies on properties of the default typeface
+        // TODO selecting multiple words
+
+        import std.math : isClose;
+
+        auto io = new HeadlessBackend;
+        auto root = textInput(nullTheme.derive(
+            rule!TextInput(
+                Rule.selectionBackgroundColor = color("#02a"),
+            ),
+        ));
+
+        root.io = io;
+        root.value = "Hello, World! Foo, bar, scroll this input".dup;
+        root.focus();
+        root.draw();
+
+        io.mousePosition = Vector2(150, 10);
+
+        // Double- and triple-click
+        foreach (i; 0..3) {
+
+            io.nextFrame;
+            io.press();
+            root.draw();
+
+            io.nextFrame;
+            io.release();
+            root.draw();
+
+            // Double-clicked
+            if (i == 1) {
+                assert(root.selectedValue == "this");
+            }
+
+            // Triple-clicked
+            if (i == 2) {
+                assert(root.selectedValue == root.value);
+            }
+
+        }
+
+        io.nextFrame;
+        root.draw();
 
     }
 
@@ -1260,11 +1522,8 @@ class TextInput : InputNode!Node {
     out(; isEmpty)
     do {
 
-        // Shred the data
-        value[] = char.init;
-
         // Remove the value
-        value = null;
+        replaceValue(null);
 
         clearSelection();
         updateCaretPosition();
@@ -1283,24 +1542,65 @@ class TextInput : InputNode!Node {
         root.focus();
         root.draw();
 
-        auto value = root.value;
+        auto value1 = root.value;
 
         root.chop();
 
         assert(root.value == "Hello, World");
-        assert(value == "Hello, World\xff");
+        assert(value1 == "Hello, World\xff");
 
-        value = root.value;
+        auto value2 = root.value;
         root.chopWord();
 
         assert(root.value == "Hello, ");
-        assert(value == "Hello, \xff\xff\xff\xff\xff");
+        assert(value2 == "Hello, \xff\xff\xff\xff\xff");
+        assert(value1 == "Hello, \xff\xff\xff\xff\xff\xff");
 
-        value = root.value;
+        auto value3 = root.value;
         root.clear();
 
         assert(root.value == "");
-        assert(value == "\xff\xff\xff\xff\xff\xff\xff");
+        assert(value3 == "\xff\xff\xff\xff\xff\xff\xff");
+        assert(value2 == "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff");
+        assert(value1 == "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff");
+
+    }
+
+    unittest {
+
+        // Security test
+        auto io = new HeadlessBackend;
+        auto root = textInput();
+
+        io.inputCharacter("Hello, World");
+        root.io = io;
+        root.focus();
+        root.draw();
+
+        auto value1 = root.value;
+
+        root.chopWord();
+
+        assert(root.value == "Hello, ");
+        assert(value1 == "Hello, \xff\xff\xff\xff\xff");
+
+        auto value2 = root.value;
+
+        root.push("Moon".dup);
+
+        assert(root.value == "Hello, Moon");
+        assert(value2 == "Hello, "
+            || value2 == "\xff\xff\xff\xff\xff\xff\xff");
+        assert(value1 == "Hello, Moon\xff"
+            || value1 == "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff");
+
+        auto value3 = root.value;
+
+        root.clear();
+
+        assert(value3 == "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff");
+        assert(value2 == "\xff\xff\xff\xff\xff\xff\xff");
+        assert(value1 == "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff");
 
     }
 
@@ -1448,12 +1748,122 @@ class TextInput : InputNode!Node {
 
     }
 
+    unittest {
+
+        // Note: This test depends on parameters specific to the default typeface.
+
+        import std.math : isClose;
+
+        auto io = new HeadlessBackend;
+        auto root = textInput(.nullTheme, .multiline);
+
+        root.io = io;
+        root.size = Vector2(200, 0);
+        root.value = "Hello, World!\nHello, Moon\n\nHello, Sun\nWrap this line µp, make it long enough to cross over"
+            .dup;
+        root.draw();
+
+        // Move the caret to different points on the canvas
+
+        // Left side of the second "l" in "Hello", first line
+        root.caretTo(Vector2(30, 10));
+        assert(root.caretIndex == "Hel".length);
+
+        // Right side of the same "l"
+        root.caretTo(Vector2(33, 10));
+        assert(root.caretIndex == "Hell".length);
+
+        // Comma, right side, close to the second line
+        root.caretTo(Vector2(50, 24));
+        assert(root.caretIndex == "Hello,".length);
+
+        // End of the line, far right
+        root.caretTo(Vector2(200, 10));
+        assert(root.caretIndex == "Hello, World!".length);
+
+        // Start of the next line
+        root.caretTo(Vector2(0, 30));
+        assert(root.caretIndex == "Hello, World!\n".length);
+
+        // Space, right between "Hello," and "Moon"
+        root.caretTo(Vector2(54, 40));
+        assert(root.caretIndex == "Hello, World!\nHello, ".length);
+
+        // Empty line
+        root.caretTo(Vector2(54, 60));
+        assert(root.caretIndex == "Hello, World!\nHello, Moon\n".length);
+
+        // Beginning of the next line; left side of the "H"
+        root.caretTo(Vector2(4, 85));
+        assert(root.caretIndex == "Hello, World!\nHello, Moon\n\n".length);
+
+        // Wrapped line, the bottom of letter "p" in "up"
+        root.caretTo(Vector2(142, 128));
+        assert(root.caretIndex == "Hello, World!\nHello, Moon\n\nHello, Sun\nWrap this line µp".length);
+
+        // End of line
+        root.caretTo(Vector2(160, 128));
+        assert(root.caretIndex == "Hello, World!\nHello, Moon\n\nHello, Sun\nWrap this line µp, ".length);
+
+        // Beginning of the next line; result should be the same
+        root.caretTo(Vector2(2, 148));
+        assert(root.caretIndex == "Hello, World!\nHello, Moon\n\nHello, Sun\nWrap this line µp, ".length);
+
+        // Just by the way, check if the caret position is correct
+        root.updateCaretPosition(true);
+        assert(root.caretPosition.x.isClose(0));
+        assert(root.caretPosition.y.isClose(135));
+
+        root.updateCaretPosition(false);
+        assert(root.caretPosition.x.isClose(153));
+        assert(root.caretPosition.y.isClose(108));
+
+        // Try the same with the third line
+        root.caretTo(Vector2(200, 148));
+        assert(root.caretIndex
+            == "Hello, World!\nHello, Moon\n\nHello, Sun\nWrap this line µp, make it long enough ".length);
+        root.caretTo(Vector2(2, 168));
+        assert(root.caretIndex
+            == "Hello, World!\nHello, Moon\n\nHello, Sun\nWrap this line µp, make it long enough ".length);
+
+    }
+
     /// Move the caret to mouse position.
     void caretToMouse() {
 
         caretTo(io.mousePosition - _inner.start);
         updateCaretPosition(false);
         horizontalAnchor = caretPosition.x;
+
+    }
+
+    unittest {
+
+        import std.math : isClose;
+
+        // caretToMouse is a just a wrapper over caretTo, enabling mouse input
+        // This test checks if it correctly maps mouse coordinates to internal coordinates
+
+        auto io = new HeadlessBackend;
+        auto theme = nullTheme.derive(
+            rule!TextInput(
+                Rule.margin = 40,
+                Rule.padding = 40,
+            )
+        );
+        auto root = textInput(.multiline, theme);
+
+        root.io = io;
+        root.size = Vector2(200, 0);
+        root.value = "123\n456\n789"
+            .dup;
+        root.draw();
+
+        io.nextFrame();
+        io.mousePosition = Vector2(140, 90);
+        root.caretToMouse();
+
+        assert(root.caretIndex == 3);
 
     }
 
@@ -1483,6 +1893,90 @@ class TextInput : InputNode!Node {
 
     }
 
+    unittest {
+
+        // Note: This test depends on parameters specific to the default typeface.
+
+        import std.math : isClose;
+
+        auto io = new HeadlessBackend;
+        auto root = textInput(.nullTheme, .multiline);
+
+        root.io = io;
+        root.size = Vector2(200, 0);
+        root.value = "Hello, World!\nHello, Moon\n\nHello, Sun\nWrap this line µp, make it long enough to cross over"
+            .dup;
+        root.focus();
+        root.draw();
+
+        root.caretIndex = 0;
+        root.updateCaretPosition();
+        root.runInputAction!(FluidInputAction.toLineEnd);
+
+        assert(root.caretIndex == "Hello, World!".length);
+
+        // Move to the next line, should be at the end
+        root.runInputAction!(FluidInputAction.nextLine);
+
+        assert(root.valueBeforeCaret.wordBack == "Moon");
+        assert(root.valueAfterCaret.wordFront == "\n\n");
+
+        // Move to the blank line
+        root.runInputAction!(FluidInputAction.nextLine);
+
+        const blankLine = root.caretIndex;
+        assert(root.valueBeforeCaret.wordBack == "Moon\n");
+        assert(root.valueAfterCaret.wordFront == "\n");
+
+        // toLineEnd and toLineStart should have no effect
+        root.runInputAction!(FluidInputAction.toLineStart);
+        assert(root.caretIndex == blankLine);
+        root.runInputAction!(FluidInputAction.toLineEnd);
+        assert(root.caretIndex == blankLine);
+
+        // Next line again
+        // The anchor has been reset to the beginning
+        root.runInputAction!(FluidInputAction.nextLine);
+
+        assert(root.valueBeforeCaret.wordBack == "Moon\n\n");
+        assert(root.valueAfterCaret.wordFront == "Hello");
+
+        // Move to the very end
+        root.runInputAction!(FluidInputAction.toEnd);
+
+        assert(root.valueBeforeCaret.wordBack == "over");
+        assert(root.valueAfterCaret.wordFront == "");
+
+        // Move to start of the line
+        root.runInputAction!(FluidInputAction.toLineStart);
+
+        assert(root.valueBeforeCaret.wordBack == "enough ");
+        assert(root.valueAfterCaret.wordFront == "to ");
+        assert(root.caretPosition.x.isClose(0));
+
+        // Move to the previous line
+        root.runInputAction!(FluidInputAction.previousLine);
+
+        assert(root.valueBeforeCaret.wordBack == ", ");
+        assert(root.valueAfterCaret.wordFront == "make ");
+        assert(root.caretPosition.x.isClose(0));
+
+        // Move to its end — position should be the same as earlier, but the caret should be on the same line
+        root.runInputAction!(FluidInputAction.toLineEnd);
+
+        assert(root.valueBeforeCaret.wordBack == "enough ");
+        assert(root.valueAfterCaret.wordFront == "to ");
+        assert(root.caretPosition.x.isClose(181));
+
+        // Move to the previous line — again
+        root.runInputAction!(FluidInputAction.previousLine);
+
+        assert(root.valueBeforeCaret.wordBack == ", ");
+        assert(root.valueAfterCaret.wordFront == "make ");
+        assert(root.caretPosition.x.isClose(153));
+
+    }
+
     /// Move the caret to the beginning of the input
     @(FluidInputAction.toStart)
     void caretToStart() {
@@ -1505,6 +1999,50 @@ class TextInput : InputNode!Node {
 
     }
 
+    /// Select all text
+    @(FluidInputAction.selectAll)
+    void selectAll() {
+
+        selectionMovement = true;
+        scope (exit) selectionMovement = false;
+
+        _selectionStart = 0;
+        caretToEnd();
+
+    }
+
+    unittest {
+
+        auto root = textInput();
+
+        root.draw();
+        root.selectAll();
+
+        assert(root.selectionStart == 0);
+        assert(root.selectionEnd == 0);
+
+        root.push("foo bar ".dup);
+
+        assert(!root.isSelecting);
+
+        root.push("baz".dup);
+
+        assert(root.value == "foo bar baz");
+
+        auto value1 = root.value;
+
+        root.selectAll();
+
+        assert(root.selectionStart == 0);
+        assert(root.selectionEnd == root.value.length);
+
+        root.push("replaced".dup);
+
+        assert(root.value == "replaced");
+        assert(value1 == "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff");
+
+    }
+
     /// Begin or continue selection using given movement action.
     ///
     /// Use `selectionStart` and `selectionEnd` to define selection boundaries manually.
@@ -1515,7 +2053,6 @@ class TextInput : InputNode!Node {
         FluidInputAction.selectNextWord,
         FluidInputAction.selectPreviousLine,
         FluidInputAction.selectNextLine,
-        FluidInputAction.selectAll,
         FluidInputAction.selectToLineStart,
         FluidInputAction.selectToLineEnd,
         FluidInputAction.selectToStart,
@@ -1561,10 +2098,6 @@ class TextInput : InputNode!Node {
             case selectToEnd:
                 runInputAction!toEnd;
                 break;
-            case selectAll:
-                _selectionStart = 0;
-                caretToEnd();
-                break;
             default:
                 assert(false, "Invalid action");
         }
@@ -1580,12 +2113,63 @@ class TextInput : InputNode!Node {
 
     }
 
+    unittest {
+
+        auto root = textInput();
+
+        root.draw();
+
+        root.push("Foo Bar Baz Ban".dup);
+
+        // Move cursor to "Bar"
+        root.runInputAction!(FluidInputAction.toStart);
+        root.runInputAction!(FluidInputAction.nextWord);
+
+        // Select "Bar Baz "
+        root.runInputAction!(FluidInputAction.selectNextWord);
+        root.runInputAction!(FluidInputAction.selectNextWord);
+
+        assert(root.io.clipboard == "");
+
+        // Cut the text
+        root.cut();
+
+        assert(root.io.clipboard == "Bar Baz ");
+        assert(root.value == "Foo Ban");
+
+    }
+
     /// Copy selected text to clipboard.
     @(FluidInputAction.copy)
     protected void copy() {
 
         if (isSelecting)
             io.clipboard = selectedValue.idup;
+
+    }
+
+    unittest {
+
+        auto root = textInput();
+
+        root.draw();
+        root.push("Foo Bar Baz Ban".dup);
+
+        // Select all
+        root.selectAll();
+
+        assert(root.io.clipboard == "");
+
+        root.copy();
+
+        assert(root.io.clipboard == "Foo Bar Baz Ban");
+
+        // Reduce selection by a word
+        root.runInputAction!(FluidInputAction.selectPreviousWord);
+        root.copy();
+
+        assert(root.io.clipboard == "Foo Bar Baz ");
+        assert(root.value == "Foo Bar Baz Ban");
 
     }
 
@@ -1596,6 +2180,47 @@ class TextInput : InputNode!Node {
         push(io.clipboard.dup);
 
     }
+
+    unittest {
+
+        auto root = textInput();
+
+        root.value = "Foo ".dup;
+        root.draw();
+        root.io.clipboard = "Bar";
+
+        assert(root.caretIndex == 4);
+        assert(root.value == "Foo ");
+
+        root.paste();
+
+        assert(root.caretIndex == 7);
+        assert(root.value == "Foo Bar");
+
+        root.caretToStart();
+        root.paste();
+
+        assert(root.caretIndex == 3);
+        assert(root.value == "BarFoo Bar");
+
+    }
+
+}
+
+unittest {
+
+    auto root = textInput(.nullTheme, .multiline);
+    auto lineHeight = root.style.getTypeface.lineHeight;
+
+    root.value = "First one\nSecond two".dup;
+    root.draw();
+
+    // Navigate to the start and select the whole line
+    root.caretToStart();
+    root.runInputAction!(FluidInputAction.selectToLineEnd);
+
+    assert(root.selectedValue == "First one");
+    assert(root.caretPosition.y < lineHeight);
 
 }
 
