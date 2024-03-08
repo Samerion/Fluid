@@ -59,7 +59,16 @@ struct Text(T : Node, LayerRange = TextRange[]) {
     alias minSize = size;
     alias value this;
 
-    this(T node, const(char)[] text, LayerRange layerMap = LayerRange.init, size_t layerCount = 1) {
+    static if (is(LayerRange == TextRange[]))
+    this(T node, const(char)[] text) {
+
+        this.node = node;
+        this.textures = new TextureGC[1];
+        opAssign(text);
+
+    }
+
+    this(T node, const(char)[] text, LayerRange layerMap, size_t layerCount) {
 
         this.node = node;
         this.textures = new TextureGC[layerCount];
@@ -223,8 +232,8 @@ struct Text(T : Node, LayerRange = TextRange[]) {
                     auto wordFragment = word[$ - remaining .. $];
                     auto range = layerMap.front;
 
-                    // Advance the layer map if exceeded the start
-                    if (range.start < index) {
+                    // Advance the layer map if exceeded the end
+                    if (index >= range.end) {
                         layerMap.popFront;
                         continue;
                     }
@@ -232,7 +241,7 @@ struct Text(T : Node, LayerRange = TextRange[]) {
                     size_t layer = 0;
 
                     // Match found here
-                    if (range.start <= index) {
+                    if (index >= range.start) {
 
                         // Find the end of the range
                         const end = min(wordEnd, range.end) - index;
@@ -433,6 +442,51 @@ unittest {
     // Draw the text
     io.nextFrame;
     text.resize(Vector2(50, 50));
+    text.draw(styles, Vector2(0, 0));
+
+}
+
+unittest {
+
+    import fluid.space;
+
+    auto io = new HeadlessBackend;
+    auto root = vspace();
+
+    Style[2] styles;
+    styles[0].textColor = color("#000000");
+    styles[1].textColor = color("#1eff00");
+
+    auto layers = [
+        TextRange(2, 11, 1),
+    ];
+
+    auto text = mapText(root, "Hello, World!", layers, styles.length);
+
+    // Prepare the tree
+    root.io = io;
+    root.draw();
+
+    // Draw the text
+    io.nextFrame;
+    text.resize(Vector2(60, 50));
+    text.draw(styles, Vector2(0, 0));
+
+}
+
+unittest {
+
+    import fluid.space;
+
+    Style[2] styles;
+    auto root = vspace();
+    auto layers = [
+        TextRange(0, 0, 1),
+    ];
+    auto text = mapText(root, "Hello, World!", layers, styles.length);
+
+    root.draw();
+    text.resize();
     text.draw(styles, Vector2(0, 0));
 
 }
