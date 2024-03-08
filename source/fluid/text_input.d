@@ -130,11 +130,6 @@ class TextInput : InputNode!Node, FluidScrollable {
         this.lastTouch = Clock.currTime;
         this.contentLabel = new typeof(contentLabel);
 
-        // Make the scrollbar invisible
-        //contentLabel.scrollBar.disable();
-        //contentLabel.scrollBar.width = 0;
-        // Note: We're not hiding the scrollbar, so it may adjust used values to the size of the input
-
         // Make single line the default
         contentLabel.isWrapDisabled = true;
 
@@ -652,8 +647,6 @@ class TextInput : InputNode!Node, FluidScrollable {
         root.updateSize();
         root.draw();
 
-        io.saveSVG("/tmp/fluid.svg");
-
         assert(root.caretPosition.x > 200);
         assert(textSize.x > 200);
         assert(textSize.x > root.size.x);
@@ -663,8 +656,6 @@ class TextInput : InputNode!Node, FluidScrollable {
             ~ "some more text. And more.").dup;
         root.updateSize();
         root.draw();
-
-        io.saveSVG("/tmp/fluid.svg");
 
         assert(textSize.x > root.size.x);
         assert(textSize.x <= 800);
@@ -1110,9 +1101,16 @@ class TextInput : InputNode!Node, FluidScrollable {
         }
 
         // Insert the character before caret
-        else {
+        else if (valueBeforeCaret.length) {
 
             valueBeforeCaret = valueBeforeCaret ~ text;
+            touch();
+
+        }
+
+        else {
+
+            valueBeforeCaret = text;
             touch();
 
         }
