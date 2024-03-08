@@ -66,7 +66,7 @@ class Label : Node {
 
         const style = pickStyle();
         style.drawBackground(tree.io, outer);
-        text.draw(style, inner);
+        text.draw(style, inner.start);
 
     }
 
@@ -84,13 +84,13 @@ class Label : Node {
 
         const initialTextArea = root.text.size.x * root.text.size.y;
 
-        io.assertTexture(root.text.texture, Vector2(0, 0), color!"000");
+        io.assertTexture(root.text.textures[0], Vector2(0, 0), color!"000");
         io.nextFrame;
 
         root.text ~= " It's a nice day today!";
         root.draw();
 
-        io.assertTexture(root.text.texture, Vector2(0, 0), color!"000");
+        io.assertTexture(root.text.textures[0], Vector2(0, 0), color!"000");
 
         const newTextArea = root.text.size.x * root.text.size.y;
 

@@ -115,7 +115,7 @@ unittest {
     io.assertTexture(view.texture, Vector2(0, 0), color!"fff");
 
     // First label
-    io.assertTexture(labels[0].text.texture, Vector2(0, 0), color!"000");
+    io.assertTexture(labels[0].text.textures[0], Vector2(0, 0), color!"000");
 
     // TODO onionFrame should perform shrink-expand ordering similarly to `space`. The last label should wrap.
 

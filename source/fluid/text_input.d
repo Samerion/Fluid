@@ -625,9 +625,7 @@ class TextInput : InputNode!Node {
         auto result = Position(0, Vector2(float.infinity, float.infinity));
 
         // Search for a matching character on adjacent lines
-        search: foreach (line; typeface.lineSplitter(value)) {
-
-            size_t index = cast(size_t) line.ptr - cast(size_t) value.ptr;
+        search: foreach (index, line; typeface.lineSplitterIndex(value)) {
 
             ruler.startLine();
 
@@ -807,9 +805,7 @@ class TextInput : InputNode!Node {
         Vector2 lineEnd;
 
         // Run through the text
-        foreach (line; typeface.lineSplitter(value)) {
-
-            size_t index = cast(size_t) line.ptr - cast(size_t) value.ptr;
+        foreach (index, line; typeface.lineSplitterIndex(value)) {
 
             ruler.startLine();
 
@@ -1861,9 +1857,7 @@ class TextInput : InputNode!Node {
 
         const isLow = selectionStart <= selectionEnd;
 
-        foreach (line; Typeface.lineSplitter(value)) {
-
-            const index = cast(size_t) line.ptr - cast(size_t) value.ptr;
+        foreach (index, line; Typeface.lineSplitterIndex(value)) {
 
             const lineStart = index;
             const lineEnd = index + line.length;
@@ -2609,7 +2603,7 @@ private class WrappedLabel : Label {
 
         // Don't draw background
         const style = pickStyle();
-        text.draw(style, inner);
+        text.draw(style, inner.start);
 
     }
 
