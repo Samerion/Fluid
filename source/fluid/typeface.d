@@ -89,6 +89,8 @@ interface Typeface {
     }
 
     /// Updated version of std lineSplitter that includes trailing empty lines.
+    ///
+    /// `lineSplitterIndex` will produce a tuple with the index into the original text as the first element.
     static lineSplitter(C)(C[] text) {
 
         import std.uni : lineSep, paraSep;
@@ -101,6 +103,21 @@ interface Typeface {
             split.chain(only(typeof(text).init)),
             split,
         );
+
+    }
+
+    /// ditto
+    static lineSplitterIndex(C)(C[] text) {
+
+        import std.typecons : tuple;
+
+        return Typeface.lineSplitter(text)
+
+            // Insert the index
+            .map!(a => tuple(
+                cast(size_t) a.ptr - cast(size_t) text.ptr,
+                a,
+            ));
 
     }
 
@@ -229,38 +246,17 @@ interface Typeface {
 
         // TODO decoding errors
 
-        // Text wrapping on
-        if (wrap) {
+        // Split on lines
+        foreach (line; this.lineSplitter(text)) {
 
-            // Split on lines
-            foreach (line; this.lineSplitter(text)) {
+            ruler.startLine();
 
-                ruler.startLine();
+            // Split on words
+            foreach (word, penPosition; eachWord!chunkWords(ruler, line, wrap)) {
 
-                // Split on words
-                foreach (word; chunkWords(line)) {
+                auto wordPenPosition = rectangle.start + penPosition;
 
-                    auto penPosition = rectangle.start + ruler.addWord(word);
-
-                    drawLine(image, penPosition, word, tint);
-
-                }
-
-            }
-
-        }
-
-        // Text wrapping off
-        else {
-
-            // Split on lines
-            foreach (line; this.lineSplitter(text)) {
-
-                ruler.startLine();
-
-                auto penPosition = rectangle.start + ruler.addWord(line);
-
-                drawLine(image, penPosition, line, tint);
+                drawLine(image, wordPenPosition, word, tint);
 
             }
 

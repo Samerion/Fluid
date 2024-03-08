@@ -807,6 +807,8 @@ struct TextureGC {
 
     }
 
+    @disable this(const ref TextureGC);
+
     ~this() @trusted {
 
         texture.destroy();

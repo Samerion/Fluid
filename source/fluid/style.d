@@ -122,9 +122,6 @@ struct Style {
 
     }
 
-    /// Use `Style.init`.
-    @disable this();
-
     private this(Typeface typeface) {
 
         this.typeface = typeface;
