@@ -964,6 +964,8 @@ interface FluidScrollable {
     ///     child     = Child to scroll to.
     ///     parentBox = Outer box of this node (the scrollable).
     ///     childBox  = Outer box of the child node (the target).
+    /// Returns:
+    ///     New rectangle for the childBox.
     Rectangle shallowScrollTo(const Node child, Rectangle parentBox, Rectangle childBox);
 
     /// Get current scroll value.
