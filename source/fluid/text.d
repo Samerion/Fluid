@@ -312,6 +312,9 @@ struct Text(T : Node, LayerRange = TextRange[]) {
 
             if (texture is texture.init) continue;
 
+            debug assert(texture.tombstone);
+            debug assert(!texture.tombstone.isDestroyed);
+
             auto style = i < styles.length
                 ? styles[i]
                 : styles[0];
