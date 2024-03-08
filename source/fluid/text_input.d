@@ -80,6 +80,9 @@ class TextInput : InputNode!Node {
         /// Context menu for this input.
         PopupFrame contextMenu;
 
+        /// Underlying label controlling the content.
+        ContentLabel contentLabel;
+
     }
 
     protected {
@@ -93,11 +96,6 @@ class TextInput : InputNode!Node {
     }
 
     private {
-
-        alias ContentLabel = Scrollable!(WrappedLabel, "true");
-
-        /// Underlying label controlling the content. Needed to properly adjust it to scroll.
-        ContentLabel _contentLabel;
 
         /// Value of the field.
         char[] _value;
@@ -127,21 +125,7 @@ class TextInput : InputNode!Node {
         this.placeholder = placeholder;
         this.submitted = submitted;
         this.lastTouch = Clock.currTime;
-
-        // Create the label
-        this._contentLabel = new typeof(_contentLabel)("");
-
-        with (this._contentLabel) {
-
-            // Make the scrollbar invisible
-            scrollBar.disable();
-            scrollBar.width = 0;
-            // Note: We're not hiding the scrollbar, so it may adjust used values to the size of the input
-
-            isWrapDisabled = true;
-            ignoreMouse = true;
-
-        }
+        this.contentLabel = new ContentLabel;
 
         // Create the context menu
         this.contextMenu = popupFrame(
@@ -170,6 +154,45 @@ class TextInput : InputNode!Node {
                 }
             ),
         );
+
+    }
+
+    class ContentLabel : Scrollable!(Label, "true") {
+
+        this() {
+
+            super("");
+
+            // Make the scrollbar invisible
+            scrollBar.disable();
+            scrollBar.width = 0;
+            // Note: We're not hiding the scrollbar, so it may adjust used values to the size of the input
+
+            isWrapDisabled = true;
+            ignoreMouse = true;
+
+        }
+
+        override void drawImpl(Rectangle outer, Rectangle inner) {
+
+            // Don't draw background
+            const style = pickStyle();
+            text.draw(style, inner.start);
+
+        }
+
+        override void reloadStyles() {
+
+            // Do not load styles
+
+        }
+
+        override Style pickStyle() {
+
+            // Always use default style
+            return style;
+
+        }
 
     }
 
@@ -223,9 +246,26 @@ class TextInput : InputNode!Node {
 
     }
 
-    inout(ContentLabel) contentLabel() inout {
+    /// Get the current style for the label.
+    /// Params:
+    ///     style = Current style of the TextInput.
+    Style pickLabelStyle(Style style) {
 
-        return _contentLabel;
+        // Pick style from the input
+        auto result = style;
+
+        // Remove spacing
+        result.margin = 0;
+        result.padding = 0;
+        result.border = 0;
+
+        return result;
+
+    }
+
+    final Style pickLabelStyle() {
+
+        return pickLabelStyle(pickStyle);
 
     }
 
@@ -527,8 +567,8 @@ class TextInput : InputNode!Node {
 
         _availableWidth = textArea.x;
 
-        // Resize the label
-        contentLabel.activeStyle = style;
+        // Resize the label, and remove the spacing
+        contentLabel.style = pickLabelStyle(style);
         contentLabel.resize(tree, theme, textArea);
 
         const minLines = multiline ? 3 : 1;
@@ -724,8 +764,8 @@ class TextInput : InputNode!Node {
         // Fill the background
         style.drawBackground(tree.io, outer);
 
-        // Copy the style to the label
-        contentLabel.activeStyle = style;
+        // Copy style to the label
+        contentLabel.style = pickLabelStyle(style);
 
         // Set the scroll
         contentLabel.setScroll = scroll + cast(ptrdiff_t) scrollOffset;
@@ -2585,47 +2625,5 @@ unittest {
     assert(" świecie!".wordFront(true) == "");
     assert("witaj świecie".wordBack(true) == "świecie");
     assert("witaj ".wordBack(true) == "");
-
-}
-
-private class WrappedLabel : Label {
-
-    Style activeStyle;
-
-    this(T...)(T args) {
-
-        super(args);
-        activeStyle = Style.init;
-
-    }
-
-    override void drawImpl(Rectangle outer, Rectangle inner) {
-
-        // Don't draw background
-        const style = pickStyle();
-        text.draw(style, inner.start);
-
-    }
-
-    override void reloadStyles() {
-
-        super.reloadStyles();
-
-        // Remove all spacing
-        style.margin = 0;
-        style.padding = 0;
-        style.border = 0;
-
-    }
-
-    override Style pickStyle() {
-
-        auto style = activeStyle;
-        style.margin = 0;
-        style.padding = 0;
-        style.border = 0;
-        return style;
-
-    }
 
 }
