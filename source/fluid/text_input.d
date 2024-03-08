@@ -51,7 +51,7 @@ auto multiline(bool value = true) {
 alias textInput = simpleConstructor!TextInput;
 
 /// ditto
-class TextInput : InputNode!Node {
+class TextInput : InputNode!Node, FluidScrollable {
 
     mixin enableInputActions;
 
@@ -91,7 +91,7 @@ class TextInput : InputNode!Node {
         bool selectionMovement;
 
         /// Last padding box assigned to this node, with scroll applied.
-        Rectangle _inner;
+        Rectangle _inner = Rectangle(0, 0, 0, 0);
 
     }
 
@@ -112,6 +112,9 @@ class TextInput : InputNode!Node {
         /// Reference point; beginning of selection. Set to -1 if there is no start.
         ptrdiff_t _selectionStart;
 
+        /// Current horizontal visual offset of the label.
+        float _scroll = 0;
+
     }
 
     /// Create a text input.
@@ -125,7 +128,15 @@ class TextInput : InputNode!Node {
         this.placeholder = placeholder;
         this.submitted = submitted;
         this.lastTouch = Clock.currTime;
-        this.contentLabel = new ContentLabel;
+        this.contentLabel = new typeof(contentLabel);
+
+        // Make the scrollbar invisible
+        //contentLabel.scrollBar.disable();
+        //contentLabel.scrollBar.width = 0;
+        // Note: We're not hiding the scrollbar, so it may adjust used values to the size of the input
+
+        // Make single line the default
+        contentLabel.isWrapDisabled = true;
 
         // Create the context menu
         this.contextMenu = popupFrame(
@@ -157,19 +168,17 @@ class TextInput : InputNode!Node {
 
     }
 
-    class ContentLabel : Scrollable!(Label, "true") {
+    static class ContentLabel : Label {
 
         this() {
 
             super("");
 
-            // Make the scrollbar invisible
-            scrollBar.disable();
-            scrollBar.width = 0;
-            // Note: We're not hiding the scrollbar, so it may adjust used values to the size of the input
+        }
 
-            isWrapDisabled = true;
-            ignoreMouse = true;
+        override bool hoveredImpl(Rectangle, Vector2) const {
+
+            return false;
 
         }
 
@@ -243,6 +252,29 @@ class TextInput : InputNode!Node {
 
         contentLabel.isWrapDisabled = !value;
         return value;
+
+    }
+
+    /// Current horizontal visual offset of the label.
+    float scroll() const {
+
+        return _scroll;
+
+    }
+
+    /// Set scroll value.
+    float scroll(float value) {
+
+        const limit = max(0, contentLabel.minSize.x - _inner.w);
+
+        return _scroll = value.clamp(0, limit);
+
+    }
+
+    ///
+    bool canScroll(Vector2 value) const {
+
+        return clamp(scroll + value.x, 0, _availableWidth) != scroll;
 
     }
 
@@ -561,11 +593,15 @@ class TextInput : InputNode!Node {
         // Set the label text
         contentLabel.text = (value == "") ? placeholder : value;
 
-        const textArea = multiline
-            ? Vector2(size.x, area.y)
-            : Vector2(0, minSize.y);
+        const isFill = layout.nodeAlign[0] == NodeAlign.fill;
 
-        _availableWidth = textArea.x;
+        _availableWidth = isFill
+            ? area.x
+            : size.x;
+
+        const textArea = multiline
+            ? Vector2(_availableWidth, area.y)
+            : Vector2(0, size.y);
 
         // Resize the label, and remove the spacing
         contentLabel.style = pickLabelStyle(style);
@@ -578,6 +614,62 @@ class TextInput : InputNode!Node {
 
         // Locate the cursor
         updateCaretPosition();
+
+    }
+
+    unittest {
+
+        auto io = new HeadlessBackend(Vector2(800, 600));
+        auto root = textInput(
+            .layout!"fill",
+            .multiline,
+            .nullTheme,
+            "This placeholder exceeds the default size of a text input."
+        );
+
+        root.io = io;
+        root.draw();
+
+        Vector2 textSize() {
+
+            return root.contentLabel.minSize;
+
+        }
+
+        assert(textSize.x > 200);
+        assert(textSize.x > root.size.x);
+
+        io.nextFrame;
+        root.placeholder = "";
+        root.updateSize();
+        root.draw();
+
+        assert(root.caretPosition.x < 1);
+        assert(textSize.x < 1);
+
+        io.nextFrame;
+        root.value = "This value exceeds the default size of a text input.".dup;
+        root.updateSize();
+        root.draw();
+
+        io.saveSVG("/tmp/fluid.svg");
+
+        assert(root.caretPosition.x > 200);
+        assert(textSize.x > 200);
+        assert(textSize.x > root.size.x);
+
+        io.nextFrame;
+        root.value = ("This value is long enough to start a new line in the output. To make sure of it, here's "
+            ~ "some more text. And more.").dup;
+        root.updateSize();
+        root.draw();
+
+        io.saveSVG("/tmp/fluid.svg");
+
+        assert(textSize.x > root.size.x);
+        assert(textSize.x <= 800);
+        assert(textSize.y >= root.style.getTypeface.lineHeight * 2);
+        assert(root.minSize.y >= textSize.y);
 
     }
 
@@ -614,6 +706,19 @@ class TextInput : InputNode!Node {
         if (_availableWidth.isNaN) return;
 
         _caretPosition = caretPositionImpl(_availableWidth, preferNextLine);
+
+        const scrolledCaret = caretPosition.x - scroll;
+
+        // Scroll to make sure the caret is always in view
+        const scrollOffset
+            = scrolledCaret > _inner.width ? scrolledCaret - _inner.width
+            : scrolledCaret < 0            ? scrolledCaret
+            : 0;
+
+        // Set the scroll
+        scroll = multiline
+            ? 0
+            : scroll + scrollOffset;
 
     }
 
@@ -752,32 +857,24 @@ class TextInput : InputNode!Node {
 
         auto style = pickStyle();
 
-        const scroll = contentLabel.scroll;
-        const scrolledCaret = caretPosition.x - scroll;
-
-        // Scroll to make sure the caret is always in view
-        const scrollOffset
-            = scrolledCaret > inner.width ? scrolledCaret - inner.width
-            : scrolledCaret < 0           ? scrolledCaret
-            : 0;
-
         // Fill the background
         style.drawBackground(tree.io, outer);
 
         // Copy style to the label
         contentLabel.style = pickLabelStyle(style);
 
-        // Set the scroll
-        contentLabel.setScroll = scroll + cast(ptrdiff_t) scrollOffset;
-
+        // Scroll the inner rectangle
         auto scrolledInner = inner;
-        scrolledInner.x -= contentLabel.scroll;
-
-        const lastScissors = tree.pushScissors(outer);
-        scope (exit) tree.popScissors(lastScissors);
+        scrolledInner.x -= scroll;
 
         // Save the inner box
         _inner = scrolledInner;
+
+        // Increase the size of the inner box so that tree doesn't turn on scissors mode on its own
+        scrolledInner.w += scroll;
+
+        const lastScissors = tree.pushScissors(outer);
+        scope (exit) tree.popScissors(lastScissors);
 
         // Draw the contents
         drawContents(inner, scrolledInner);
@@ -790,7 +887,7 @@ class TextInput : InputNode!Node {
         drawSelection(scrolledInner);
 
         // Draw the text
-        contentLabel.draw(inner);
+        contentLabel.draw(scrolledInner);
 
         // Draw the caret
         drawCaret(scrolledInner);
@@ -1466,7 +1563,7 @@ class TextInput : InputNode!Node {
         root.focus();
         root.draw();
 
-        assert(root.contentLabel.scroll.isClose(127));
+        assert(root.scroll.isClose(127));
 
         // Select some stuff
         io.nextFrame;
@@ -1693,6 +1790,21 @@ class TextInput : InputNode!Node {
             assert(root.selectionStart < root.selectionEnd);
 
         }
+
+    }
+
+    protected override void scrollImpl(Vector2 value) {
+
+        const speed = ScrollInput.scrollSpeed;
+        const move = speed * value.x;
+
+        scroll = scroll + move;
+
+    }
+
+    Rectangle shallowScrollTo(const(Node) child, Rectangle parentBox, Rectangle childBox) {
+
+        return childBox;
 
     }
 
