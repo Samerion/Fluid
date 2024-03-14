@@ -1087,7 +1087,7 @@ class TextInput : InputNode!Node, FluidScrollable {
     }
 
     /// ditto
-    void push(char[] text) {
+    void push(scope const(char)[] text) {
 
         import std.utf : encode;
 
@@ -1095,7 +1095,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         if (isSelecting) {
 
             // Override with the character
-            selectedValue = text;
+            selectedValue = text.dup;
             clearSelection();
 
         }
@@ -1110,7 +1110,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         else {
 
-            valueBeforeCaret = text;
+            valueBeforeCaret = text.dup;
             touch();
 
         }

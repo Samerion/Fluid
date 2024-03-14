@@ -93,16 +93,29 @@ interface Typeface {
     /// `lineSplitterIndex` will produce a tuple with the index into the original text as the first element.
     static lineSplitter(C)(C[] text) {
 
+        import std.utf : UTFException;
         import std.uni : lineSep, paraSep;
 
-        const hasEmptyLine = text.endsWith('\r', '\n', '\v', '\f', "\r\n", lineSep, paraSep, '\u0085') != 0;
-        auto split = .lineSplitter(text);
+        try {
 
-        // Include the empty line if present
-        return hasEmptyLine.choose(
-            split.chain(only(typeof(text).init)),
-            split,
-        );
+            const hasEmptyLine = text.endsWith('\r', '\n', '\v', '\f', "\r\n", lineSep, paraSep, '\u0085') != 0;
+            auto split = .lineSplitter(text);
+
+            // Include the empty line if present
+            return hasEmptyLine.choose(
+                split.chain(only(typeof(text).init)),
+                split,
+            );
+
+        }
+
+        // Provide more helpful messages if endsWith fails
+        catch (UTFException exc) {
+
+            exc.msg = format!"Invalid UTF string: `%s` %s"(text, text.representation);
+            throw exc;
+
+        }
 
     }
 
