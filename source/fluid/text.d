@@ -6,6 +6,7 @@ import std.algorithm;
 
 import fluid.node;
 import fluid.style;
+import fluid.utils;
 import fluid.backend;
 import fluid.typeface;
 
@@ -151,9 +152,7 @@ struct Text(T : Node, LayerRange = TextRange[]) {
         // Update the size
         _sizeDots = style.getTypeface.measure(value);
         _wrap = false;
-
-        // Create new textures
-        textures[] = CompositeTexture(_sizeDots);
+        clearTextures();
 
     }
 
@@ -172,22 +171,30 @@ struct Text(T : Node, LayerRange = TextRange[]) {
         // Update the size
         _sizeDots = style.getTypeface.measure!splitter(space, value, wrap);
         _wrap = wrap;
+        clearTextures();
 
-        // Create new textures
-        textures[] = CompositeTexture(_sizeDots);
+    }
+
+    /// Reset all textures, destroying them, and replacing them with blanks.
+    void clearTextures() {
+
+        foreach (ref layer; textures) {
+            layer = CompositeTexture(_sizeDots);
+        }
 
     }
 
     /// Generate the textures, if not already generated.
     ///
     /// Params:
-    ///     chunks = Indices of chunks that need to be regenerated. Optional; Defaults to on-screen chunks.
-    void generate() {
+    ///     chunks = Indices of chunks that need to be regenerated.
+    ///     position = Position of the text; If given, only on-screen chunks will be generated.
+    void generate(Vector2 position) {
 
         // No textures to generate, nothing to do
         if (textures.length == 0) return;
 
-        generate(textures[0].visibleChunks);
+        generate(textures[0].visibleChunks(position, backend.windowSize));
 
     }
 
@@ -206,7 +213,10 @@ struct Text(T : Node, LayerRange = TextRange[]) {
 
         // Ignore chunks which have already been generated
         auto newChunks = chunks
-            .filter!(index => textures[0].textures[index] == TextureGC.init);
+            .filter!(index => textures[$-1].textures[index] == TextureGC.init);
+
+        // No chunks to render, stop here
+        if (newChunks.empty) return;
 
         // Prepare images to use as target
         auto images = textures
@@ -280,15 +290,22 @@ struct Text(T : Node, LayerRange = TextRange[]) {
                     foreach (i, chunkIndex; newChunks.enumerate) {
 
                         const composite = textures[layer];
-                        const start = composite.chunkPosition(chunkIndex);
-                        auto relativePenPosition = currentPenPosition - start;
+                        const chunkRect = composite.chunkRectangle(chunkIndex);
 
-                        // TODO don't draw if the chunk isn't relevant
+                        // Ignore chunks this word is not in the bounds of
+                        const relevant = chunkRect.contains(ruler.caret(currentPenPosition).start)
+                            || chunkRect.contains(ruler.caret.end);
 
+                        if (!relevant) continue;
+
+                        // Get pen position relative to this chunk
+                        auto relativePenPosition = currentPenPosition - chunkRect.start;
+
+                        // Note: relativePenPosition is passed by ref
                         typeface.drawLine(images[layer][i], relativePenPosition, wordFragment, color("#fff"));
 
-                        // Update the pen position
-                        if (chunkIndex == 0) penPosition = relativePenPosition + start;
+                        // Update the pen position; Result of this should be the same for each chunk
+                        penPosition = relativePenPosition + chunkRect.start;
 
                     }
 
@@ -302,14 +319,14 @@ struct Text(T : Node, LayerRange = TextRange[]) {
         }
 
         // Load textures
-        foreach (i, ref composite; textures) {
+        foreach (i, ref layer; textures) {
 
             foreach (imageIndex, chunkIndex; newChunks.enumerate) {
 
                 // Load texture
-                composite.textures[chunkIndex] = TextureGC(backend, images[i][imageIndex]);
-                composite.textures[chunkIndex].dpiX = cast(int) dpi.x;
-                composite.textures[chunkIndex].dpiY = cast(int) dpi.y;
+                layer.textures[chunkIndex] = TextureGC(backend, images[i][imageIndex]);
+                layer.textures[chunkIndex].dpiX = cast(int) dpi.x;
+                layer.textures[chunkIndex].dpiY = cast(int) dpi.y;
 
                 // Destroy the image
                 images[i][imageIndex].destroy();
@@ -344,7 +361,7 @@ struct Text(T : Node, LayerRange = TextRange[]) {
         if (!overlap(rectangle, screen)) return;
 
         // Regenerate visible textures
-        generate();
+        generate(position);
 
         // Draw the texture if present
         foreach (i, ref texture; textures) {
@@ -612,13 +629,37 @@ struct CompositeTexture {
 
     }
 
-    /// Get a range of indices for all currently visible chunks.
-    const visibleChunks() {
+    /// Get the rectangle of the given chunk.
+    /// Params:
+    ///     i      = Index of the chunk.
+    ///     offset = Translate the resulting rectangle by this vector.
+    Rectangle chunkRectangle(size_t i, Vector2 offset = Vector2()) const {
 
-        const rowStart = 0;
-        const rowEnd = rows;
-        const columnStart = 0;
-        const columnEnd = columns;
+        return Rectangle(
+            (chunkPosition(i) + offset).tupleof,
+            chunkSize(i).tupleof,
+        );
+
+    }
+
+    /// Get a range of indices for all currently visible chunks.
+    const visibleChunks(Vector2 position, Vector2 windowSize) {
+
+        const offset = -position;
+        const end = offset + windowSize;
+
+        ptrdiff_t positionToIndex(alias round)(float position, ptrdiff_t limit) {
+
+            const index = cast(ptrdiff_t) round(position / maxChunkSize);
+
+            return index.clamp(0, limit);
+
+        }
+
+        const rowStart = positionToIndex!floor(offset.y, rows);
+        const rowEnd = positionToIndex!ceil(end.y, rows);
+        const columnStart = positionToIndex!floor(offset.x, columns);
+        const columnEnd = positionToIndex!ceil(end.x, columns);
 
         // For each row
         return iota(rowStart, rowEnd)
@@ -636,15 +677,9 @@ struct CompositeTexture {
     /// Draw onscreen parts of the texture.
     void drawAlign(FluidBackend backend, Rectangle rectangle, Color tint = color("#fff")) {
 
-        import fluid.utils : start;
+        foreach (index; visibleChunks(rectangle.start, backend.windowSize)) {
 
-        // TODO draw onscreen only
-
-        foreach (index; visibleChunks) {
-
-            const position = rectangle.start + chunkPosition(index);
-            const size = chunkSize(index);
-            const rect = Rectangle(position.tupleof, size.tupleof);
+            const rect = chunkRectangle(index, rectangle.start);
 
             backend.drawTextureAlign(textures[index], rect, tint);
 
