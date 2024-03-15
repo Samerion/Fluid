@@ -213,7 +213,7 @@ struct Text(T : Node, LayerRange = TextRange[]) {
 
         // Ignore chunks which have already been generated
         auto newChunks = chunks
-            .filter!(index => textures[$-1].textures[index] == TextureGC.init);
+            .filter!(index => textures[$-1].chunks[index] == TextureGC.init);
 
         // No chunks to render, stop here
         if (newChunks.empty) return;
@@ -324,9 +324,9 @@ struct Text(T : Node, LayerRange = TextRange[]) {
             foreach (imageIndex, chunkIndex; newChunks.enumerate) {
 
                 // Load texture
-                layer.textures[chunkIndex] = TextureGC(backend, images[i][imageIndex]);
-                layer.textures[chunkIndex].dpiX = cast(int) dpi.x;
-                layer.textures[chunkIndex].dpiY = cast(int) dpi.y;
+                layer.chunks[chunkIndex] = TextureGC(backend, images[i][imageIndex]);
+                layer.chunks[chunkIndex].dpiX = cast(int) dpi.x;
+                layer.chunks[chunkIndex].dpiY = cast(int) dpi.y;
 
                 // Destroy the image
                 images[i][imageIndex].destroy();
@@ -452,10 +452,10 @@ unittest {
     text.resize();
     text.draw(styles, Vector2(0, 0));
 
-    // Make sure each texture was drawn with the rigth color
+    // Make sure each texture was drawn with the right color
     foreach (i; 0..4) {
 
-        io.assertTexture(text.textures[i].textures[0], Vector2(), styles[i].textColor);
+        io.assertTexture(text.textures[i].chunks[0], Vector2(), styles[i].textColor);
 
     }
 
@@ -547,7 +547,7 @@ struct CompositeTexture {
     ///
     /// Each texture, except for the last in each column or row, has the size of maxChunkSize on each side. The last
     /// texture in each row and column may have reduced width and height respectively.
-    TextureGC[] textures;
+    TextureGC[] chunks;
 
     this(Vector2 size) {
 
@@ -555,13 +555,13 @@ struct CompositeTexture {
 
         const chunkCount = columns * rows;
 
-        this.textures = new TextureGC[chunkCount];
+        this.chunks = new TextureGC[chunkCount];
 
     }
 
     size_t chunkCount() const {
 
-        return textures.length;
+        return chunks.length;
 
     }
 
@@ -681,10 +681,91 @@ struct CompositeTexture {
 
             const rect = chunkRectangle(index, rectangle.start);
 
-            backend.drawTextureAlign(textures[index], rect, tint);
+            backend.drawTextureAlign(chunks[index], rect, tint);
 
         }
 
     }
+
+}
+
+unittest {
+
+    import std.conv;
+    import fluid.label;
+    import fluid.scroll;
+
+    enum chunkSize = CompositeTexture.maxChunkSize;
+
+    auto io = new HeadlessBackend;
+    auto root = vscrollable!label(
+        nullTheme.derive(
+            rule!Label(
+                Rule.textColor = color("#000"),
+            ),
+        ),
+        "One\nTwo\nThree\nFour\nFive\n"
+    );
+
+    root.io = io;
+    root.draw();
+
+    // One layer of textures, one chunk only
+    assert(root.text.textures.length == 1);
+    assert(root.text.textures[0].chunks.length == 1);
+
+    // This one chunk must have been drawn
+    io.assertTexture(root.text.textures[0].chunks[0], Vector2(), color("#000"));
+
+    // Add a lot more text
+    io.nextFrame;
+    root.text = root.text.repeat(30).joiner.text;
+    root.draw();
+
+    const textSize = root.text._sizeDots;
+
+    // Make sure assumptions for this test are sound:
+    assert(textSize.y > chunkSize * 2, "Generated text must span at least three chunks");
+    assert(io.windowSize.y < chunkSize, "Window size must be smaller than chunk size");
+
+    // This time, there should be more chunks
+    assert(root.text.textures.length == 1);
+    assert(root.text.textures[0].chunks.length >= 3);
+
+    // Only the first one would be drawn, however
+    io.assertTexture(root.text.textures[0].chunks[0], Vector2(), color("#000"));
+    assert(io.textures.walkLength == 1);
+
+    // And, only the first one should be generated
+    assert(root.text.textures[0].chunks[0] != TextureGC.init);
+    assert(root.text.textures[0].chunks[1 .. $].all!(a => a == TextureGC.init));
+
+    // Scroll just enough so that both chunks should be on screen
+    io.nextFrame;
+    root.scroll = chunkSize - 1;
+    root.draw();
+
+    // First two chunks must have been generated and drawn
+    assert(root.text.textures[0].chunks[0 .. 2].all!(a => a != TextureGC.init));
+    assert(root.text.textures[0].chunks[2 .. $].all!(a => a == TextureGC.init));
+
+    io.assertTexture(root.text.textures[0].chunks[0], Vector2(0, -root.scroll), color("#000"));
+    io.assertTexture(root.text.textures[0].chunks[1], Vector2(0, -root.scroll + chunkSize), color("#000"));
+    assert(io.textures.walkLength == 2);
+
+    // Skip to third chunk, force regeneration
+    io.nextFrame;
+    root.scroll = 2 * chunkSize - 1;
+    root.updateSize();
+    root.draw();
+
+    // Because of the resize, the first chunk must have been destroyed
+    assert(root.text.textures[0].chunks[0 .. 1].all!(a => a == TextureGC.init));
+    assert(root.text.textures[0].chunks[1 .. 3].all!(a => a != TextureGC.init));
+    assert(root.text.textures[0].chunks[3 .. $].all!(a => a == TextureGC.init));
+
+    io.assertTexture(root.text.textures[0].chunks[1], Vector2(0, -root.scroll + chunkSize), color("#000"));
+    io.assertTexture(root.text.textures[0].chunks[2], Vector2(0, -root.scroll + chunkSize*2), color("#000"));
+    assert(io.textures.walkLength == 2);
 
 }
