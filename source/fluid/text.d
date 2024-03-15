@@ -455,7 +455,7 @@ unittest {
     // Make sure each texture was drawn with the rigth color
     foreach (i; 0..4) {
 
-        io.assertTexture(text.textures[i].texture, Vector2(), styles[i].textColor);
+        io.assertTexture(text.textures[i].textures[0], Vector2(), styles[i].textColor);
 
     }
 
