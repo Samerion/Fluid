@@ -757,26 +757,25 @@ class SimpledisplayBackend : FluidBackend {
 
     }
 
-    void drawTexture(Texture texture, Rectangle rectangle, Color tint, const(char)[] altText) @trusted
+    void drawTexture(Texture texture, Rectangle rectangle, Color tint) @trusted
     in (false)
     do {
 
         // TODO filtering?
-        drawTextureImpl(texture, rectangle, tint, altText, true);
+        drawTextureImpl(texture, rectangle, tint, false);
 
     }
 
-    void drawTextureAlign(Texture texture, Rectangle rectangle, Color tint, const(char)[] altText) @trusted
+    void drawTextureAlign(Texture texture, Rectangle rectangle, Color tint) @trusted
     in (false)
     do {
 
-        drawTextureImpl(texture, rectangle, tint, altText, true);
+        drawTextureImpl(texture, rectangle, tint, true);
 
     }
 
     @trusted
-    private void drawTextureImpl(Texture texture, Rectangle rectangle, Color tint, const(char)[] altText,
-        bool alignPixels)
+    private void drawTextureImpl(Texture texture, Rectangle rectangle, Color tint, bool alignPixels)
     do {
 
         import std.math;

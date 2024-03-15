@@ -150,7 +150,7 @@ unittest {
     root.io = io;
 
     root.draw();
-    io.assertTexture(root.text.textures[0], Vector2(0, 0), color!"#abc");
+    io.assertTexture(root.text.textures[0].chunks[0], Vector2(0, 0), color!"#abc");
 
 }
 
