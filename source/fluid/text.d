@@ -2,6 +2,8 @@ module fluid.text;
 
 import std.math;
 import std.range;
+import std.traits;
+import std.string;
 import std.algorithm;
 
 import fluid.node;
@@ -767,5 +769,509 @@ unittest {
     io.assertTexture(root.text.textures[0].chunks[1], Vector2(0, -root.scroll + chunkSize), color("#000"));
     io.assertTexture(root.text.textures[0].chunks[2], Vector2(0, -root.scroll + chunkSize*2), color("#000"));
     assert(io.textures.walkLength == 2);
+
+}
+
+/// Rope implementation, providing more efficient modification if there's lots of text.
+///
+/// The `Rope` structure acts as a slice, a view into the rope's contents. If additional text is added to a node stored
+/// inside, the change will not be reflected by the rope.
+///
+/// See_Also: https://en.wikipedia.org/wiki/Rope_(data_structure)
+struct Rope {
+
+    /// Content of the rope.
+    RopeNode* node;
+
+    /// Start and length of the rope's contents, in UTF-8 bytes.
+    size_t start, length;
+
+    /// Create a rope holding given text.
+    this(const(char)[] text) {
+
+        this(new RopeNode(text));
+
+    }
+
+    /// Create a rope concatenating two other ropes.
+    this(inout Rope left, inout Rope right) inout {
+
+        this(new inout RopeNode(left, right));
+
+    }
+
+    /// Create a rope from given node.
+    this(inout(RopeNode)* node) inout {
+
+        this.node = node;
+        this.start = 0;
+        this.length = node.length;
+
+    }
+
+    this(inout(RopeNode)* node, size_t start, size_t length) inout {
+
+        this.node = node;
+        this.start = start;
+        this.length = length;
+
+    }
+
+    /// If true, the rope is empty.
+    bool empty() const {
+
+        return node is null
+            || length == 0;
+
+    }
+
+    /// Get the first character from the rope.
+    /// Params:
+    ///     size = Size of the codepoint extracted from the rope.
+    dchar front() const {
+
+        size_t size;
+        return front(size);
+
+    }
+
+    /// ditto
+    dchar front(out size_t size) const {
+
+        import std.utf : decode;
+
+        assert(!empty, "Cannot access `.front` in an empty rope");
+
+        size_t index = start;
+
+        // Decode the nth character of the leaf
+        if (node.isLeaf) {
+
+            scope (exit) size = index - start;
+
+            return decode(node.value, index);
+
+        }
+
+        // Accessing the left node
+        else if (index < node.left.length)
+            return node.left[index .. $].front(size);
+
+        // Accessing the right node
+        else
+            return node.right[index - node.left.length .. $].front(size);
+
+    }
+
+    /// Remove the first character from the rope.
+    void popFront() {
+
+        size_t size;
+        front(size);
+        start += size;
+        length -= size;
+
+    }
+
+    /// Get character at given index.
+    char opIndex(size_t index) const {
+
+        assert(index < length, format!"Given index [%s] exceeds rope length %s"(index, length));
+
+        // Offset by start value
+        index += start;
+
+        // Access the nth byte of the leaf
+        if (node.isLeaf)
+            return node.value[index];
+
+        // Accessing the left node
+        else if (start < node.left.length)
+            return node.left[index];
+
+        // Accessing the right node
+        else
+            return node.right[index - node.left.length];
+
+    }
+
+    /// Get the rope's length.
+    size_t opDollar() const {
+
+        return length;
+
+    }
+
+    /// Slice the rope.
+    inout(Rope) opIndex(size_t[2] slice) inout {
+
+        const newLength = slice[1] - slice[0];
+
+        assert(slice[0] <= length,
+            format!"Left boundary of slice [%s .. %s] exceeds rope length %s"(slice[0], slice[1], length));
+        assert(slice[1] <= length,
+            format!"Right boundary of slice [%s .. %s] exceeds rope length %s"(slice[0], slice[1], length));
+        assert(slice[0] <= slice[1],
+            format!"Right boundary of slice [%s .. %s] is greater than left boundary"(slice[0], slice[1]));
+
+        return inout Rope(node, start + slice[0], newLength);
+
+    }
+
+    size_t[2] opSlice(size_t dim : 0)(size_t left, size_t right) const {
+
+        return [left, right];
+
+    }
+
+    /// Get the left side of the rope
+    inout(Rope) left() inout {
+
+        const start = min(node.left.length, start);
+        const end = min(node.left.length, start + length);
+
+        return node.left[start .. end];
+
+    }
+
+    unittest {
+
+        auto a = Rope("ABC");
+        auto b = Rope("DEF");
+        auto ab = Rope(a, b);
+
+        assert(ab.left.equal("ABC"));
+        assert(ab[1..$].left.equal("BC"));
+        assert(ab[3..$].left.equal(""));
+        assert(ab[4..$].left.equal(""));
+        assert(ab[0..4].left.equal("ABC"));
+        assert(ab[0..3].left.equal("ABC"));
+        assert(ab[0..2].left.equal("AB"));
+        assert(ab[0..1].left.equal("A"));
+        assert(ab[0..0].left.equal(""));
+        assert(ab[1..1].left.equal(""));
+        assert(ab[4..4].left.equal(""));
+
+    }
+
+    unittest {
+
+        auto a = Rope("ABC")[1..$];
+        auto b = Rope("DEF")[1..$];
+        auto ab = Rope(a, b);
+
+        assert(ab.left.equal("BC"));
+        assert(ab[1..$].left.equal("C"));
+        assert(ab[3..$].left.equal(""));
+        assert(ab[4..$].left.equal(""));
+        assert(ab[0..4].left.equal("BC"));
+        assert(ab[0..3].left.equal("BC"));
+        assert(ab[0..2].left.equal("BC"));
+        assert(ab[0..1].left.equal("B"));
+        assert(ab[0..0].left.equal(""));
+        assert(ab[1..1].left.equal(""));
+        assert(ab[4..4].left.equal(""));
+
+    }
+
+    /// Get the right side of the rope
+    inout(Rope) right() inout {
+
+        const leftStart = min(node.left.length, start);
+        const leftEnd = min(node.left.length, start + length);
+
+        const start = min(node.right.length, this.start - leftStart);
+        const end = min(node.right.length, this.start + length - leftEnd);
+
+        return node.right[start .. end];
+
+    }
+
+    unittest {
+
+        auto a = Rope("ABC");
+        auto b = Rope("DEF");
+        auto ab = Rope(a, b);
+
+        assert(ab.right.equal("DEF"));
+        assert(ab[1..$].right.equal("DEF"));
+        assert(ab[3..$].right.equal("DEF"));
+        assert(ab[4..$].right.equal("EF"));
+        assert(ab[4..$-1].right.equal("E"));
+        assert(ab[3..$-1].right.equal("DE"));
+        assert(ab[2..$-1].right.equal("DE"));
+        assert(ab[1..1].right.equal(""));
+        assert(ab[4..4].right.equal(""));
+
+    }
+
+    unittest {
+
+        auto a = Rope("ABC")[1..$];  // BC
+        auto b = Rope("DEF")[1..$];  // EF
+        auto ab = Rope(a, b);
+
+        assert(ab.right.equal("EF"));
+        assert(ab[1..$].right.equal("EF"));
+        assert(ab[3..$].right.equal("F"));
+        assert(ab[4..$].right.equal(""));
+        assert(ab[1..$-1].right.equal("E"));
+        assert(ab[2..$-1].right.equal("E"));
+        assert(ab[3..$-1].right.equal(""));
+        assert(ab[1..1].right.equal(""));
+        assert(ab[4..4].right.equal(""));
+
+    }
+
+    /// Split the rope, creating a new root node that connects the left and right side of the split.
+    Rope split(size_t index)
+    out (r; !r.node.isLeaf)
+    do {
+
+        assert(index <= length, format!"Split index (%s) exceeds rope length %s"(index, length));
+
+        auto left = this.left;
+        auto right = this.right;
+
+        // Leaf node, split by slicing
+        if (node.isLeaf)
+            return Rope(this[0..index], this[index..$]);
+
+        // Already split
+        else if (index == left.length)
+            return this;
+
+        // Splitting inside left node
+        else if (index < left.length) {
+
+            auto div = left.split(index);
+
+            return Rope(
+                div.left,
+                Rope(div.right, right),
+            );
+
+        }
+
+        // Splitting inside right node
+        else {
+
+            auto div = right.split(index - left.length);
+
+            return Rope(
+                Rope(left, div.left),
+                div.right,
+            );
+
+        }
+
+    }
+
+    unittest {
+
+        auto a = Rope("Hello, World!");
+        auto b = a.split(7);
+
+        assert(b.node.left.equal("Hello, "));
+        assert(b.node.right.equal("World!"));
+
+        auto startSplit = a.split(0);
+
+        assert(startSplit.node.left.equal(""));
+        assert(startSplit.node.right == a);
+
+        auto endSplit = a.split(a.length);
+
+        assert(endSplit.node.left == a);
+        assert(endSplit.node.right.equal(""));
+
+        auto c = a[1..$-4].split(6);
+
+        assert(c.node.left.equal("ello, "));
+        assert(c.node.right.equal("Wo"));
+
+    }
+
+    unittest {
+
+        auto myRope = Rope(
+            Rope(
+                Rope("HËl"),
+                Rope("lo"),
+            ),
+            Rope(
+                Rope(", "),
+                Rope(
+                    Rope("Wor"),
+                    Rope("ld!"),
+                ),
+            )
+        );
+
+        assert(myRope.equal("HËllo, World!"));
+        assert(myRope[1..$].equal("Ëllo, World!"));
+
+        {
+            auto split = myRope[1..$].split(6);
+
+            assert(split.equal("Ëllo, World!"));
+            assert(split.left.equal("Ëllo,"));
+            assert(split.right.equal(" World!"));
+        }
+        {
+            auto split = myRope[5..$-3].split(4);
+
+            assert(split.equal("o, Wor"));
+            assert(split.left.equal("o, W"));
+            assert(split.right.equal("or"));
+        }
+        {
+            auto split = myRope.split(6);
+            assert(split == myRope);
+            assert(split.left.equal("HËllo"));
+        }
+        {
+            auto split = myRope[1..$].split(5);
+            assert(split == myRope[1..$]);
+            assert(split.left.equal("Ëllo"));
+        }
+        {
+            auto split = myRope.split(0);
+            assert(split.left.equal(""));
+            assert(split.right.equal(myRope));
+        }
+        {
+            auto split = myRope.split(myRope.length);
+            assert(split.left.equal(myRope));
+            assert(split.right.equal(""));
+        }
+        {
+            auto split = myRope[1..$].split(0);
+
+            assert(split.left.equal(""));
+            assert(split.right.equal("Ëllo, World!"));
+        }
+        {
+            auto split = myRope[1..$-1].split(myRope.length-2);
+            assert(split.left.equal("Ëllo, World"));
+            assert(split.right.equal(""));
+        }
+
+    }
+
+    /// Insert a new node into the rope.
+    Rope insert(size_t index, Rope value) {
+
+        // Perform a split
+        auto split = split(index);
+
+        // Insert the element
+        return Rope(split.left, Rope(value, split.right));
+
+    }
+
+    unittest {
+
+        auto a = Rope("Hello, !");
+        auto b = a.insert(7, Rope("World"));
+
+        assert(a.equal("Hello, !"));
+        assert(b.equal("Hello, World!"));
+
+        assert(Rope("World!")
+            .insert(0, Rope("Hello, "))
+            .equal("Hello, World!"));
+        assert(Rope("Hellø, ")
+            .insert(8, Rope("Fluid!"))
+            .equal("Hellø, Fluid!"));
+
+    }
+
+    unittest {
+
+        auto a = Rope("Hello, !");
+        auto b = a.insert(7, Rope("rl"));
+
+        assert(b.equal("Hello, rl!"));
+
+        auto c = b.insert(7, Rope("Wo"));
+
+        assert(c.equal("Hello, Worl!"));
+
+        auto d = c.insert(11, Rope("d"));
+
+        assert(d.equal("Hello, World!"));
+
+    }
+
+}
+
+struct RopeNode {
+
+    public {
+
+        /// Left child of this node.
+        Rope left;
+
+        /// Right child of this node.
+        Rope right;
+
+        /// Direct content of the node, if a leaf node.
+        ///
+        /// This must be a fully valid string. Content may not be split in the middle of a codepoint.
+        const(char)[] value;
+
+    }
+
+    /// Create a leaf node from a slice
+    this(const(char)[] text) {
+
+        this.value = text;
+
+    }
+
+    /// Create a node from two other node; Concatenate the two other nodes. Both must not be null.
+    this(inout Rope left, inout Rope right) inout {
+
+        this.left = left;
+        this.right = right;
+
+    }
+
+    /// Get length of this node.
+    size_t length() const {
+
+        return isLeaf
+            ? value.length
+            : left.length + right.length;
+
+    }
+
+    /// True if this is a leaf node and contains text rather than child nodes.
+    bool isLeaf() const {
+
+        return left.node is null
+            || right.node is null;
+
+    }
+
+}
+
+unittest {
+
+    auto a = Rope("Hello, ");
+    auto b = Rope("World! ");
+
+    auto combined = Rope(a, b);
+
+    assert(combined.equal("Hello, World! "));
+    assert(combined[1..$].equal("ello, World! "));
+    assert(combined[1..5].equal("ello"));
+
+}
+
+unittest {
+
+    assert(Rope.init.empty);
 
 }
