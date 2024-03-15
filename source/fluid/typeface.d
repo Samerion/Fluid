@@ -7,6 +7,7 @@ import std.traits;
 import std.string;
 import std.algorithm;
 
+import fluid.text;
 import fluid.utils;
 import fluid.backend;
 
@@ -59,7 +60,7 @@ interface Typeface {
 
     /// Draw a line of text.
     /// Note: This API is unstable and might change over time.
-    void drawLine(ref Image target, ref Vector2 penPosition, const(char)[] text, Color tint) const;
+    void drawLine(ref Image target, ref Vector2 penPosition, Rope text, Color tint) const;
 
     /// Instances of Typeface have to be comparable in a memory-safe manner.
     bool opEquals(const Object object) @safe const;
@@ -68,69 +69,40 @@ interface Typeface {
     static defaultTypeface() => FreetypeTypeface.defaultTypeface;
 
     /// Default word splitter used by measure/draw.
-    static defaultWordChunks(Range)(Range range) {
-
-        import std.uni;
-        import std.conv;
-
-        /// Pick the group the character belongs to.
-        static bool pickGroup(dchar a) {
-
-            return a.isAlphaNum || a.isPunctuation;
-
-        }
-
-        return range
-            .splitWhen!((a, b) => pickGroup(a) != pickGroup(b) && !b.isWhite)
-            .map!(a => a.to!(const(char)[]))
-            .cache;
-        // TODO string allocation could probably be avoided
-
-    }
+    alias defaultWordChunks = .breakWords;
 
     /// Updated version of std lineSplitter that includes trailing empty lines.
     ///
     /// `lineSplitterIndex` will produce a tuple with the index into the original text as the first element.
-    static lineSplitter(C)(C[] text) {
+    static lineSplitter(KeepTerminator keepTerm = No.keepTerminator, Range)(Range text)
+    if (isSomeChar!(ElementType!Range))
+    do {
 
         import std.utf : UTFException;
         import std.uni : lineSep, paraSep;
 
-        try {
+        const hasEmptyLine = text.endsWith('\r', '\n', '\v', '\f', "\r\n", lineSep, paraSep, '\u0085') != 0;
+        auto split = .lineSplitter!keepTerm(text);
 
-            const hasEmptyLine = text.endsWith('\r', '\n', '\v', '\f', "\r\n", lineSep, paraSep, '\u0085') != 0;
-            auto split = .lineSplitter(text);
-
-            // Include the empty line if present
-            return hasEmptyLine.choose(
-                split.chain(only(typeof(text).init)),
-                split,
-            );
-
-        }
-
-        // Provide more helpful messages if endsWith fails
-        catch (UTFException exc) {
-
-            exc.msg = format!"Invalid UTF string: `%s` %s"(text, text.representation);
-            throw exc;
-
-        }
+        // Include the empty line if present
+        return hasEmptyLine.choose(
+            split.chain(only(typeof(text).init)),
+            split,
+        );
 
     }
 
     /// ditto
-    static lineSplitterIndex(C)(C[] text) {
+    static lineSplitterIndex(Range)(Range text) {
 
         import std.typecons : tuple;
 
-        return Typeface.lineSplitter(text)
+        auto initialValue = tuple(Range.init.length.init, Range.init);
 
-            // Insert the index
-            .map!(a => tuple(
-                cast(size_t) a.ptr - cast(size_t) text.ptr,
-                a,
-            ));
+        return Typeface.lineSplitter!(Yes.keepTerminator)(text)
+
+            // Insert the index, remove the terminator
+            .cumulativeFold!((a, line) => tuple(line.length + a[0], line.chomp))(initialValue);
 
     }
 
@@ -150,7 +122,6 @@ interface Typeface {
     ///     Vector2 representing the text size, if `TextRuler` is not specified as an argument.
     final Vector2 measure(alias chunkWords = defaultWordChunks, String)
         (Vector2 availableSpace, String text, bool wrap = true) const
-    if (isSomeString!String)
     do {
 
         auto ruler = TextRuler(this, wrap ? availableSpace.x : float.nan);
@@ -162,9 +133,7 @@ interface Typeface {
     }
 
     /// ditto
-    final Vector2 measure(String)(String text) const
-    if (isSomeString!String)
-    do {
+    final Vector2 measure(String)(String text) const {
 
         // No wrap, only explicit in-text line breaks
         auto ruler = TextRuler(this);
@@ -178,7 +147,6 @@ interface Typeface {
     /// ditto
     static void measure(alias chunkWords = defaultWordChunks, String)
         (ref TextRuler ruler, String text, bool wrap = true)
-    if (isSomeString!String)
     do {
 
         // TODO don't fail on decoding errors
@@ -276,6 +244,84 @@ interface Typeface {
         }
 
     }
+
+}
+
+/// Break words on whitespace and punctuation. Splitter characters stick to the word that precedes them, e.g.
+/// `foo!! bar.` is split as `["foo!! ", "bar."]`.
+auto breakWords(Range)(Range range) {
+
+    import std.uni;
+    import std.conv;
+
+    /// Pick the group the character belongs to.
+    static int pickGroup(dchar a) {
+
+        return a.isAlphaNum ? 0
+            : a.isWhite ? 1
+            : 2;
+
+    }
+
+    /// Splitter function that splits in any case two
+    static bool isSplit(dchar a, dchar b) {
+
+        return !a.isAlphaNum && !b.isWhite && pickGroup(a) != pickGroup(b);
+
+    }
+
+    struct BreakWords {
+
+        Range range;
+        Range front = Range.init;
+
+        bool empty() const => front.empty;
+        void popFront() {
+
+            dchar lastChar = 0;
+            auto originalRange = range.save;
+
+            while (!range.empty) {
+
+                if (lastChar && isSplit(lastChar, range.front)) break;
+                lastChar = range.front;
+                range.popFront;
+
+            }
+
+            front = originalRange[0 .. $ - range.length];
+
+        }
+
+    }
+
+    auto chunks = BreakWords(range);
+    chunks.popFront;
+    return chunks;
+
+}
+
+unittest {
+
+    const test = "hellö world! 123 hellö123*hello -- hello -- - &&abcde!a!!?!@!@#3";
+    const result = [
+        "hellö ",
+        "world! ",
+        "123 ",
+        "hellö123*",
+        "hello ",
+        "-- ",
+        "hello ",
+        "-- ",
+        "- ",
+        "&&",
+        "abcde!",
+        "a!!?!@!@#",
+        "3"
+    ];
+
+    assert(breakWords(test).equal(result));
+    assert(breakWords(Rope(test)).equal(result));
 
 }
 
@@ -569,7 +615,7 @@ class FreetypeTypeface : Typeface {
     }
 
     /// Draw a line of text
-    void drawLine(ref Image target, ref Vector2 penPosition, const(char)[] text, Color tint) const @trusted {
+    void drawLine(ref Image target, ref Vector2 penPosition, const Rope text, Color tint) const @trusted {
 
         assert(_dpiX && _dpiY, "Font DPI hasn't been set");
 
@@ -783,7 +829,7 @@ class RaylibTypeface : Typeface {
 
     /// Draw a line of text
     /// Note: This API is unstable and might change over time.
-    void drawLine(ref .Image target, ref Vector2 penPosition, const(char)[] text, Color tint) const @trusted {
+    void drawLine(ref .Image target, ref Vector2 penPosition, Rope text, Color tint) const @trusted {
 
         // Note: `DrawTextEx` doesn't scale `spacing`, but `ImageDrawTextEx` DOES. The image is first drawn at base size
         //       and *then* scaled.

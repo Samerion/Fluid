@@ -10,6 +10,7 @@ import std.string;
 import std.typecons;
 import std.algorithm;
 
+import fluid.text;
 import fluid.space;
 import fluid.label;
 import fluid.utils;
@@ -138,7 +139,7 @@ class FileInput : PopupFrame {
 
     }
 
-    ref inout(const(char)[]) text() inout {
+    ref inout(Text!Label) text() inout {
 
         return titleLabel.text;
 
@@ -377,7 +378,7 @@ class FileInput : PopupFrame {
         if (currentSuggestion != 0) {
 
             auto btn = cast(FileInputSuggestion) suggestions.children[currentSuggestion - 1];
-            auto newValue = to!(char[])(valueTuple(typedFilename)[0] ~ btn.text.stripLeft);
+            auto newValue = to!(char[])(valueTuple(typedFilename)[0] ~ btn.text.value.stripLeft);
 
             // Same value, submit
             if (newValue == input.value) submit();

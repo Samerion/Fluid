@@ -37,7 +37,7 @@ struct Text(T : Node, LayerRange = TextRange[]) {
         CompositeTexture[] textures;
 
         /// Underlying text.
-        const(char)[] value;
+        Rope value;
 
         /// Range determining layers in the text.
         ///
@@ -100,14 +100,15 @@ struct Text(T : Node, LayerRange = TextRange[]) {
 
         // Request update otherwise
         node.updateSize;
-        return value = text;
+        value = text;
+        return text;
 
     }
 
-    const(char)[] opOpAssign(string operator)(const(char)[] text) {
+    void opOpAssign(string operator)(const(char)[] text) {
 
         node.updateSize;
-        return mixin("value ", operator, "= text");
+        mixin("value ", operator, "= text;");
 
     }
 
@@ -392,7 +393,9 @@ struct Text(T : Node, LayerRange = TextRange[]) {
 
     string toString() const {
 
-        return value.idup;
+        import std.conv : to;
+
+        return value.to!string;
 
     }
 
@@ -780,10 +783,15 @@ unittest {
 /// See_Also: https://en.wikipedia.org/wiki/Rope_(data_structure)
 struct Rope {
 
-    /// Content of the rope.
-    RopeNode* node;
+    static assert(isInputRange!Rope);
+    static assert(isBidirectionalRange!Rope);
+    static assert(isForwardRange!Rope);
+    static assert(hasSlicing!Rope);
 
-    /// Start and length of the rope's contents, in UTF-8 bytes.
+    /// Content of the rope.
+    const(RopeNode)* node;
+
+    /// Start and length of the rope, in UTF-8 bytes.
     size_t start, length;
 
     /// Create a rope holding given text.
@@ -817,6 +825,43 @@ struct Rope {
 
     }
 
+    /// Compare the text to a string.
+    bool opEquals(const char[] str) const {
+
+        return equal(this[], str[]);
+
+    }
+
+    /// Compare two ropes.
+    bool opEquals(const Rope str) const {
+
+        return equal(this[], str[]);
+
+    }
+
+    /// Assign a new value to the rope.
+    ref opAssign(const char[] str) return {
+
+        return opAssign(new RopeNode(str));
+
+    }
+
+    /// ditto
+    ref opAssign(RopeNode* node) return {
+
+        this.node = node;
+        this.start = 0;
+        this.length = node.length;
+        return this;
+
+    }
+
+    inout(Rope) save() inout {
+
+        return this;
+
+    }
+
     /// If true, the rope is empty.
     bool empty() const {
 
@@ -825,51 +870,65 @@ struct Rope {
 
     }
 
-    /// Get the first character from the rope.
-    /// Params:
-    ///     size = Size of the codepoint extracted from the rope.
-    dchar front() const {
-
-        size_t size;
-        return front(size);
-
-    }
-
-    /// ditto
-    dchar front(out size_t size) const {
-
-        import std.utf : decode;
+    /// Get the first *byte* from the rope.
+    char front() const {
 
         assert(!empty, "Cannot access `.front` in an empty rope");
 
-        size_t index = start;
-
-        // Decode the nth character of the leaf
-        if (node.isLeaf) {
-
-            scope (exit) size = index - start;
-
-            return decode(node.value, index);
-
-        }
+        // Load nth character of the leaf
+        if (node.isLeaf)
+            return node.value[start];
 
         // Accessing the left node
-        else if (index < node.left.length)
-            return node.left[index .. $].front(size);
+        else if (!left.empty)
+            return left.front;
 
         // Accessing the right node
         else
-            return node.right[index - node.left.length .. $].front(size);
+            return right.front;
 
     }
 
-    /// Remove the first character from the rope.
+    /// Remove the first byte from the rope.
     void popFront() {
 
-        size_t size;
-        front(size);
-        start += size;
-        length -= size;
+        assert(!empty, "Cannot `.popFront` in an empty rope");
+
+        start++;
+        length--;
+
+    }
+
+    /// Get the last *byte* from the rope.
+    char back() const {
+
+        assert(!empty, "Cannot access `.back` in an empty rope");
+
+        // Decode the nth character of the leaf
+        if (node.isLeaf)
+            return node.value[start + length - 1];
+
+        // Accessing the right node
+        else if (!right.empty)
+            return right.back;
+
+        // Accessing the left node
+        else
+            return left.back;
+
+    }
+
+    /// Remove the last byte from the rope.
+    void popBack() {
+
+        length--;
+
+    }
+
+    /// Return a mutable slice.
+    Rope opIndex() const {
+
+        return this;
 
     }
 
@@ -1024,7 +1083,7 @@ struct Rope {
     }
 
     /// Split the rope, creating a new root node that connects the left and right side of the split.
-    Rope split(size_t index)
+    Rope split(size_t index) const
     out (r; !r.node.isLeaf)
     do {
 
@@ -1072,23 +1131,23 @@ struct Rope {
         auto a = Rope("Hello, World!");
         auto b = a.split(7);
 
-        assert(b.node.left.equal("Hello, "));
-        assert(b.node.right.equal("World!"));
+        assert(b.node.left == "Hello, ");
+        assert(b.node.right == "World!");
 
         auto startSplit = a.split(0);
 
-        assert(startSplit.node.left.equal(""));
+        assert(startSplit.node.left == "");
         assert(startSplit.node.right == a);
 
         auto endSplit = a.split(a.length);
 
         assert(endSplit.node.left == a);
-        assert(endSplit.node.right.equal(""));
+        assert(endSplit.node.right == "");
 
         auto c = a[1..$-4].split(6);
 
-        assert(c.node.left.equal("ello, "));
-        assert(c.node.right.equal("Wo"));
+        assert(c.node.left == "ello, ");
+        assert(c.node.right == "Wo");
 
     }
 
@@ -1160,7 +1219,7 @@ struct Rope {
     }
 
     /// Insert a new node into the rope.
-    Rope insert(size_t index, Rope value) {
+    Rope insert(size_t index, Rope value) const {
 
         // Perform a split
         auto split = split(index);
@@ -1201,6 +1260,15 @@ struct Rope {
         auto d = c.insert(11, Rope("d"));
 
         assert(d.equal("Hello, World!"));
+
+    }
+
+    /// Append text to the rope.
+    ref Rope opOpAssign(string op : "~")(ref const(char)[] value) return {
+
+        auto left = this;
+
+        return this = Rope(left, Rope(value));
 
     }
 
@@ -1273,5 +1341,8 @@ unittest {
 unittest {
 
     assert(Rope.init.empty);
+    assert(Rope("  Hello, World! ").strip == "Hello, World!");
+    assert(Rope("  Hello, World! ").stripLeft == "Hello, World! ");
+    assert(Rope("  Hello, World! ").stripRight == "  Hello, World!");
 
 }
