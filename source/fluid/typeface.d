@@ -7,7 +7,7 @@ import std.traits;
 import std.string;
 import std.algorithm;
 
-import fluid.text;
+import fluid.rope;
 import fluid.utils;
 import fluid.backend;
 
@@ -97,12 +97,35 @@ interface Typeface {
 
         import std.typecons : tuple;
 
-        auto initialValue = tuple(Range.init.length.init, Range.init);
+        auto initialValue = tuple(size_t.init, Range.init, size_t.init);
 
         return Typeface.lineSplitter!(Yes.keepTerminator)(text)
 
             // Insert the index, remove the terminator
-            .cumulativeFold!((a, line) => tuple(line.length + a[0], line.chomp))(initialValue);
+            // Position [2] is line end index
+            .cumulativeFold!((a, line) => tuple(a[2], line.chomp, a[2] + line.length))(initialValue)
+
+            // Remove item [2]
+            .map!(a => tuple(a[0], a[1]));
+
+    }
+
+    unittest {
+
+        import std.typecons : tuple;
+
+        auto myLine = "One\nTwo\r\nThree\vStuff\nï\nö";
+        auto result = [
+            tuple(0, "One"),
+            tuple(4, "Two"),
+            tuple(9, "Three"),
+            tuple(15, "Stuff"),
+            tuple(21, "ï"),
+            tuple(24, "ö"),
+        ];
+
+        assert(lineSplitterIndex(myLine).equal(result));
+        assert(lineSplitterIndex(Rope(myLine)).equal(result));
 
     }
 
@@ -251,8 +274,8 @@ interface Typeface {
 /// `foo!! bar.` is split as `["foo!! ", "bar."]`.
 auto breakWords(Range)(Range range) {
 
-    import std.uni;
-    import std.conv;
+    import std.uni : isAlphaNum, isWhite;
+    import std.utf : decodeFront;
 
     /// Pick the group the character belongs to.
     static int pickGroup(dchar a) {
@@ -284,8 +307,7 @@ auto breakWords(Range)(Range range) {
             while (!range.empty) {
 
                 if (lastChar && isSplit(lastChar, range.front)) break;
-                lastChar = range.front;
-                range.popFront;
+                lastChar = range.decodeFront;
 
             }
 
@@ -322,6 +344,13 @@ unittest {
 
     assert(breakWords(test).equal(result));
     assert(breakWords(Rope(test)).equal(result));
+
+    const test2 = "Аа Бб Вв Гг Дд Ее Ëë Жж Зз Ии "
+        ~ "Йй Кк Лл Мм Нн Оо Пп Рр Сс Тт "
+        ~ "Уу Фф Хх Цц Чч Шш Щщ Ъъ Ыы Ьь "
+        ~ "Ээ Юю Яя ";
+
+    assert(breakWords(test2).equal(breakWords(Rope(test2))));
 
 }
 
@@ -399,7 +428,7 @@ struct TextRuler {
         float wordSpan = 0;
 
         // Measure each glyph
-        foreach (dchar glyph; word) {
+        foreach (glyph; word.byDchar) {
 
             wordSpan += typeface.advance(glyph).x;
 
@@ -619,7 +648,7 @@ class FreetypeTypeface : Typeface {
 
         assert(_dpiX && _dpiY, "Font DPI hasn't been set");
 
-        foreach (dchar glyph; text) {
+        foreach (glyph; text.byDchar) {
 
             // Load the glyph
             if (auto error = FT_Load_Char(cast(FT_FaceRec*) face, glyph, FT_LOAD_RENDER)) {
@@ -831,18 +860,24 @@ class RaylibTypeface : Typeface {
     /// Note: This API is unstable and might change over time.
     void drawLine(ref .Image target, ref Vector2 penPosition, Rope text, Color tint) const @trusted {
 
+        import std.utf : toUTFz;
+
         // Note: `DrawTextEx` doesn't scale `spacing`, but `ImageDrawTextEx` DOES. The image is first drawn at base size
         //       and *then* scaled.
         const spacing = font.baseSize * this.spacing;
 
         // We trust Raylib will not mutate the font
-        // Raylib is single-threaded, so it shouldn't cause much harm anyway...
         auto font = cast() this.font;
 
         // Make a Raylib-compatible wrapper for image data
         auto result = target.toRaylib;
 
-        ImageDrawTextEx(&result, font, text.toStringz, penPosition, fontHeight, spacing, tint);
+        // Draw the rope, node by node
+        foreach (node; text.byNode) {
+
+            ImageDrawTextEx(&result, font, node.value.toStringz, penPosition, fontHeight, spacing, tint);
+
+        }
 
     }
 

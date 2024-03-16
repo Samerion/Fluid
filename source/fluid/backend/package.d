@@ -1013,6 +1013,12 @@ else {
         pragma(msg, "Fluid: No built-in backend in use");
     }
 
+    FluidBackend defaultFluidBackend() {
+
+        return null;
+
+    }
+
 }
 
 // Structures

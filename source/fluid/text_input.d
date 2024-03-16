@@ -44,10 +44,6 @@ auto multiline(bool value = true) {
 
 
 /// Text input field.
-///
-/// Text input field uses a mutable character array (`char[]`) for content rather than `string` to provide improved
-/// security for sensitive inputs. Built-in methods and operations will overwrite any removed text to prevent it from
-/// staying in memory.
 alias textInput = simpleConstructor!TextInput;
 
 /// ditto
@@ -61,7 +57,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         auto size = Vector2(200, 0);
 
         /// A placeholder text for the field, displayed when the field is empty. Style using `emptyStyle`.
-        string placeholder;
+        Rope placeholder;
 
         /// Time of the last interaction with the input.
         SysTime lastTouch;
@@ -97,8 +93,8 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     private {
 
-        /// Value of the field.
-        char[] _value;
+        /// Value of the text input.
+        Rope _value;
 
         /// Available horizontal space.
         float _availableWidth = float.nan;
@@ -208,21 +204,34 @@ class TextInput : InputNode!Node, FluidScrollable {
     }
 
     /// Value written in the input.
-    ///
-    /// Warning: For security reasons, the contents of array will be overwritted by any change made to the content.
-    /// Make sure to `dup` the output if you intend to keep the result.
-    inout(char)[] value() inout {
+    inout(Rope) value() inout {
 
         return _value;
 
     }
 
     /// ditto
-    char[] value(char[] value) {
+    Rope value(Rope newValue) {
 
-        replaceValue(value);
-        caretToEnd();
+        auto withoutLineFeeds = Typeface.lineSplitter(newValue).joiner;
+
+        // Single line mode — filter vertical space out
+        if (!multiline && !newValue.equal(withoutLineFeeds)) {
+
+            newValue = Typeface.lineSplitter(newValue).join(' ');
+
+        }
+
+        _value = newValue;
+        updateSize();
         return value;
+
+    }
+
+    /// ditto
+    Rope value(const(char)[] value) {
+
+        return this.value(Rope(value));
 
     }
 
@@ -297,163 +306,91 @@ class TextInput : InputNode!Node, FluidScrollable {
     }
 
     /// Get or set text preceding the caret.
-    inout(char)[] valueBeforeCaret() inout {
+    Rope valueBeforeCaret() const {
 
-        return _value[0 .. caretIndex];
+        return value[0 .. caretIndex];
 
     }
 
     /// ditto
-    char[] valueBeforeCaret(char[] newValue) {
+    Rope valueBeforeCaret(Rope newValue) {
 
         // Replace the data
         if (valueAfterCaret.empty)
-            replaceValue(newValue);
+            value = newValue;
         else
-            replaceValue(newValue ~ valueAfterCaret);
+            value = newValue ~ valueAfterCaret;
 
         caretIndex = newValue.length;
         updateSize();
 
-        return _value[0 .. caretIndex];
-
-    }
-
-    /// Get or set currently selected text.
-    inout(char)[] selectedValue() inout {
-
-        return _value[selectionLowIndex .. selectionHighIndex];
+        return value[0 .. caretIndex];
 
     }
 
     /// ditto
-    char[] selectedValue(char[] value) {
+    Rope valueBeforeCaret(const(char)[] newValue) {
+
+        return valueBeforeCaret(Rope(newValue));
+
+    }
+
+    /// Get or set currently selected text.
+    Rope selectedValue() inout {
+
+        return value[selectionLowIndex .. selectionHighIndex];
+
+    }
+
+    /// ditto
+    Rope selectedValue(Rope newValue) {
 
         const isLow = caretIndex == selectionStart;
         const low = selectionLowIndex;
         const high = selectionHighIndex;
 
-        replaceValue(_value[0 .. low] ~ value ~ _value[high .. $]);
-        caretIndex = low + value.length;
+        value = value.replace(low, high, newValue);
+        caretIndex = low + newValue.length;
         updateSize();
         clearSelection();
 
-        return _value[low .. low + value.length];
-
-    }
-
-    /// Get or set text following the caret.
-    inout(char)[] valueAfterCaret() inout {
-
-        return _value[caretIndex .. $];
+        return value[low .. low + newValue.length];
 
     }
 
     /// ditto
-    char[] valueAfterCaret(char[] newValue) {
+    Rope selectedValue(const(char)[] newValue) {
+
+        return selectedValue(Rope(newValue));
+
+    }
+
+    /// Get or set text following the caret.
+    Rope valueAfterCaret() inout {
+
+        return value[caretIndex .. $];
+
+    }
+
+    /// ditto
+    Rope valueAfterCaret(Rope newValue) {
 
         // Replace the data
         if (valueBeforeCaret.empty)
-            replaceValue(newValue);
+            value = newValue;
         else
-            replaceValue(valueBeforeCaret ~ newValue);
+            value = valueBeforeCaret ~ newValue;
 
         updateSize();
 
-        return _value[caretIndex .. $];
+        return value[caretIndex .. $];
 
     }
 
-    /// Replace the value in a secure manner.
-    private void replaceValue(char[] newValue) {
+    /// ditto
+    Rope valueAfterCaret(const(char)[] value) {
 
-        const oldStart = cast(size_t) value.ptr;
-        const oldEnd   = oldStart + value.length;
-        const newStart = cast(size_t) newValue.ptr;
-        const newEnd   = newStart + newValue.length;
-
-        // TODO TextInput should probably handle reallocation on its own
-
-        // Filter vertical space
-        if (!multiline) {
-
-            const joinedLength = Typeface.lineSplitter(newValue).joiner.byChar.walkLength;
-
-            // Found vertical space
-            if (joinedLength != newValue.length) {
-
-                newValue = Typeface.lineSplitter(newValue).join(' ');
-
-            }
-
-        }
-
-        // No value present, no shredding is to be done
-        if (_value is null) {
-
-            _value = newValue;
-            return;
-
-        }
-
-        // If there is no overlap between the two strings, shred the old data in its entirety
-        if (newStart >= oldEnd || newEnd <= oldStart || newValue is null) {
-
-            _value[] = char.init;
-            _value = newValue;
-            return;
-
-        }
-
-        // Overlap exists:
-
-        // Discarded start, shred that part
-        if (newStart > oldStart) {
-            _value[0 .. newStart - oldStart] = char.init;
-        }
-
-        // Discarded end
-        if (newEnd < oldEnd) {
-            _value[$ + newEnd - oldEnd .. $] = char.init;
-        }
-
-        _value = newValue;
-
-    }
-
-    unittest {
-
-        char[] paddedValue = "0hello0".dup;
-        char[] value = paddedValue[1 .. $-1];
-        auto root = new TextInput;
-
-        // Put the value in
-        root.replaceValue(value);
-
-        // Remove the first character
-        root.replaceValue(value[1 .. $]);
-
-        assert(value == "\xffello");
-
-        // Remove the last character
-        root.replaceValue(value[1 .. $-1]);
-
-        assert(value == "\xffell\xff");
-
-        // Remove both at once
-        root.replaceValue(value[2 .. $-2]);
-
-        assert(value == "\xff\xffl\xff\xff");
-
-        // Replace the entire string
-        char[] newValue = "world".dup;
-
-        root.replaceValue(newValue);
-
-        assert(value == "\xff\xff\xff\xff\xff");
-        assert(paddedValue == "0\xff\xff\xff\xff\xff0");
-        assert(newValue == "world");
-        assert(root.value == newValue);
+        return valueAfterCaret(Rope(value));
 
     }
 
@@ -586,7 +523,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         minSize = size;
 
         // Set the label text
-        contentLabel.text = (value == "") ? placeholder : value;
+        contentLabel.text = value == "" ? placeholder : value;
 
         const isFill = layout.nodeAlign[0] == NodeAlign.fill;
 
@@ -645,6 +582,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         io.nextFrame;
         root.value = "This value exceeds the default size of a text input.".dup;
         root.updateSize();
+        root.caretToEnd();
         root.draw();
 
         assert(root.caretPosition.x > 200);
@@ -728,7 +666,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         }
 
         /// Returns the position (inside the word) of the character that is the closest to the needle.
-        Position closest(Vector2 startPosition, Vector2 endPosition, const char[] word) {
+        Position closest(Vector2 startPosition, Vector2 endPosition, const Rope word) {
 
             // Needle is before or after the word
             if (needle.x <= startPosition.x) return Position(0, startPosition);
@@ -740,7 +678,7 @@ class TextInput : InputNode!Node, FluidScrollable {
             // Search inside the word
             while (index < word.length) {
 
-                decode(word, index);  // index by reference
+                decode(word[], index);  // index by reference
 
                 auto size = typeface.measure(word[0..index]);
                 auto end = startPosition.x + size.x;
@@ -761,7 +699,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         auto result = Position(0, Vector2(float.infinity, float.infinity));
 
         // Search for a matching character on adjacent lines
-        search: foreach (index, line; typeface.lineSplitterIndex(value)) {
+        search: foreach (index, line; typeface.lineSplitterIndex(value[])) {
 
             ruler.startLine();
 
@@ -799,7 +737,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     protected Vector2 caretPositionImpl(float textWidth, bool preferNextLine) {
 
-        const(char)[] unbreakableChars(const char[] value) {
+        Rope unbreakableChars(Rope value) {
 
             // Split on lines
             auto lines = Typeface.lineSplitter(value);
@@ -810,7 +748,7 @@ class TextInput : InputNode!Node, FluidScrollable {
             if (chunks.empty) return value.init;
 
             // Return empty string if the result starts with whitespace
-            if (chunks.front.front.isWhite) return value.init;
+            if (chunks.front.byDchar.front.isWhite) return value.init;
 
             // Return first word only
             return chunks.front;
@@ -826,7 +764,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         // word is wrapped correctly
         const tail = preferNextLine || !head.empty
             ? unbreakableChars(valueAfterCaret)
-            : null;
+            : Rope.init;
 
         auto typeface = style.getTypeface;
         auto ruler = textRuler();
@@ -838,7 +776,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         auto caretPosition = ruler.caret.start;
 
         // Measure the word itself, and remove it
-        caretPosition.x -= typeface.measure(tail).x;
+        caretPosition.x -= typeface.measure(tail[]).x;
 
         return caretPosition;
 
@@ -1004,7 +942,6 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         import std.uni : isAlpha, isWhite;
         import std.range : back;
-        import std.string : chop;
 
         bool changed;
 
@@ -1087,15 +1024,21 @@ class TextInput : InputNode!Node, FluidScrollable {
     }
 
     /// ditto
-    void push(scope const(char)[] text) {
+    void push(scope const(char)[] ch) {
 
-        import std.utf : encode;
+        // TODO IMPORTANT buffering
+        push(Rope(ch.dup));
+
+    }
+
+    /// ditto
+    void push(Rope text) {
 
         // If selection is active, overwrite the selection
         if (isSelecting) {
 
             // Override with the character
-            selectedValue = text.dup;
+            selectedValue = text;
             clearSelection();
 
         }
@@ -1110,7 +1053,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         else {
 
-            valueBeforeCaret = text.dup;
+            valueBeforeCaret = text;
             touch();
 
         }
@@ -1326,7 +1269,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         {
             root.value = "Hello World".dup;
             root.focus();
-            root.updateSize();
+            root.caretToEnd();
             root.draw();
 
             assert(root.value == "Hello World");
@@ -1444,7 +1387,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
             if (valueAfterCaret == "") return;
 
-            const length = valueAfterCaret.front.codeLength!char;
+            const length = valueAfterCaret.decodeFrontStatic.codeLength!char;
 
             valueAfterCaret = valueAfterCaret[length..$];
 
@@ -1455,7 +1398,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
             if (valueBeforeCaret == "") return;
 
-            const length = valueBeforeCaret.back.codeLength!char;
+            const length = valueBeforeCaret.decodeBackStatic.codeLength!char;
 
             valueBeforeCaret = valueBeforeCaret[0..$-length];
 
@@ -1559,6 +1502,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         root.io = io;
         root.value = "Hello, World! Foo, bar, scroll this input".dup;
         root.focus();
+        root.caretToEnd();
         root.draw();
 
         assert(root.scroll.isClose(127));
@@ -1602,6 +1546,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         root.io = io;
         root.value = "Hello, World! Foo, bar, scroll this input".dup;
         root.focus();
+        root.caretToEnd();
         root.draw();
 
         io.mousePosition = Vector2(150, 10);
@@ -1847,7 +1792,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         {
             root.value = "hello‽".dup;
             root.focus();
-            root.updateSize();
+            root.caretToEnd();
             root.draw();
 
             assert(root.value == "hello‽");
@@ -1895,7 +1840,7 @@ class TextInput : InputNode!Node, FluidScrollable {
     do {
 
         // Remove the value
-        replaceValue(null);
+        value = null;
 
         clearSelection();
         updateCaretPosition();
@@ -1905,7 +1850,6 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     unittest {
 
-        // Security test
         auto io = new HeadlessBackend;
         auto root = textInput();
 
@@ -1919,22 +1863,16 @@ class TextInput : InputNode!Node, FluidScrollable {
         root.chop();
 
         assert(root.value == "Hello, World");
-        assert(value1 == "Hello, World\xff");
 
         auto value2 = root.value;
         root.chopWord();
 
         assert(root.value == "Hello, ");
-        assert(value2 == "Hello, \xff\xff\xff\xff\xff");
-        assert(value1 == "Hello, \xff\xff\xff\xff\xff\xff");
 
         auto value3 = root.value;
         root.clear();
 
         assert(root.value == "");
-        assert(value3 == "\xff\xff\xff\xff\xff\xff\xff");
-        assert(value2 == "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff");
-        assert(value1 == "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff");
 
     }
 
@@ -1954,25 +1892,18 @@ class TextInput : InputNode!Node, FluidScrollable {
         root.chopWord();
 
         assert(root.value == "Hello, ");
-        assert(value1 == "Hello, \xff\xff\xff\xff\xff");
 
         auto value2 = root.value;
 
         root.push("Moon".dup);
 
         assert(root.value == "Hello, Moon");
-        assert(value2 == "Hello, "
-            || value2 == "\xff\xff\xff\xff\xff\xff\xff");
-        assert(value1 == "Hello, Moon\xff"
-            || value1 == "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff");
 
         auto value3 = root.value;
 
         root.clear();
 
-        assert(value3 == "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff");
-        assert(value2 == "\xff\xff\xff\xff\xff\xff\xff");
-        assert(value1 == "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff");
+        assert(root.value == "");
 
     }
 
@@ -2430,7 +2361,6 @@ class TextInput : InputNode!Node, FluidScrollable {
         root.push("replaced".dup);
 
         assert(root.value == "replaced");
-        assert(value1 == "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff");
 
     }
 
@@ -2521,6 +2451,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         root.runInputAction!(FluidInputAction.selectNextWord);
 
         assert(root.io.clipboard == "");
+        assert(root.selectedValue == "Bar Baz ");
 
         // Cut the text
         root.cut();
@@ -2534,8 +2465,10 @@ class TextInput : InputNode!Node, FluidScrollable {
     @(FluidInputAction.copy)
     protected void copy() {
 
+        import std.conv : text;
+
         if (isSelecting)
-            io.clipboard = selectedValue.idup;
+            io.clipboard = text(selectedValue);
 
     }
 
@@ -2578,6 +2511,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         root.value = "Foo ".dup;
         root.draw();
+        root.caretToEnd();
         root.io.clipboard = "Bar";
 
         assert(root.caretIndex == 4);
@@ -2623,28 +2557,27 @@ unittest {
 /// Params:
 ///     text = Text to scan for the word.
 ///     excludeWhite = If true, whitespace will not be included in the word.
-T[] wordFront(T)(T[] text, bool excludeWhite = false)
-if (isSomeString!(T[])) {
+T wordFront(T)(T text, bool excludeWhite = false) {
 
     size_t length;
 
-    T[] result() { return text[0..length]; }
-    T[] remaining() { return text[length..$]; }
+    T result() { return text[0..length]; }
+    T remaining() { return text[length..$]; }
 
     while (remaining != "") {
 
         // Get the first character
-        const lastChar = remaining.front;
+        const lastChar = remaining.decodeFrontStatic;
 
         // Exclude white characters if enabled
         if (excludeWhite && lastChar.isWhite) break;
 
-        length += lastChar.codeLength!T;
+        length += lastChar.codeLength!(typeof(text[0]));
 
         // Stop if empty
         if (remaining == "") break;
 
-        const nextChar = remaining.front;
+        const nextChar = remaining.decodeFrontStatic;
 
         // Continue if the next character is whitespace
         // Includes any case where the previous character is followed by whitespace
@@ -2663,28 +2596,27 @@ if (isSomeString!(T[])) {
 }
 
 /// ditto
-T[] wordBack(T)(T[] text, bool excludeWhite = false)
-if (isSomeString!(T[])) {
+T wordBack(T)(T text, bool excludeWhite = false) {
 
     size_t length = text.length;
 
-    T[] result() { return text[length..$]; }
-    T[] remaining() { return text[0..length]; }
+    T result() { return text[length..$]; }
+    T remaining() { return text[0..length]; }
 
     while (remaining != "") {
 
         // Get the first character
-        const lastChar = remaining.back;
+        const lastChar = remaining.decodeBackStatic;
 
         // Exclude white characters if enabled
         if (excludeWhite && lastChar.isWhite) break;
 
-        length -= lastChar.codeLength!T;
+        length -= lastChar.codeLength!(typeof(text[0]));
 
         // Stop if empty
         if (remaining == "") break;
 
-        const nextChar = remaining.back;
+        const nextChar = remaining.decodeBackStatic;
 
         // Continue if the current character is whitespace
         // Inverse to `wordFront`
@@ -2699,6 +2631,20 @@ if (isSomeString!(T[])) {
     }
 
     return result;
+
+}
+
+/// `decodeFront` and `decodeBack` variants that do not mutate the range
+private dchar decodeFrontStatic(T)(T range) @trusted {
+
+    return range.decodeFront;
+
+}
+
+/// ditto
+private dchar decodeBackStatic(T)(T range) @trusted {
+
+    return range.decodeBack;
 
 }
 

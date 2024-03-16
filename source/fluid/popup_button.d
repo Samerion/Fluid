@@ -13,8 +13,11 @@ import fluid.popup_frame;
 /// A button made to open popups.
 alias popupButton = simpleConstructor!PopupButton;
 
+// For no known reason, this will not compile (producing the most misleading error of the century) if extending directly
+// from Button.
+
 /// ditto
-class PopupButton : Button {
+class PopupButton : ButtonImpl!Label {
 
     mixin enableInputActions;
 

@@ -80,18 +80,15 @@ class PasswordInput : TextInput {
 
     override size_t nearestCharacter(Vector2 needle) const {
 
-        import std.utf : decode;
+        import std.utf : byDchar;
 
-        size_t index;
         size_t number;
 
-        while (index < value.length) {
+        foreach (ch; value[].byDchar) {
 
             // Stop if found the character
             if (needle.x < number * advance + radius) break;
 
-            // Locate the next character
-            decode(value, index);
             number++;
 
         }
@@ -102,11 +99,8 @@ class PasswordInput : TextInput {
 
     protected override Vector2 caretPositionImpl(float availableWidth, bool preferNextLine) {
 
-        import std.utf : count;
-        import fluid.typeface : TextRuler;
-
         return Vector2(
-            advance * count(valueBeforeCaret),
+            advance * valueBeforeCaret.countCharacters,
             super.caretPositionImpl(availableWidth, preferNextLine).y,
         );
 
@@ -115,7 +109,6 @@ class PasswordInput : TextInput {
     /// Draw selection, if applicable.
     protected override void drawSelection(Rectangle inner) {
 
-        import std.utf : count;
         import std.range : enumerate;
         import std.algorithm : min, max;
 
@@ -127,8 +120,8 @@ class PasswordInput : TextInput {
         const low = min(selectionStart, selectionEnd);
         const high = max(selectionStart, selectionEnd);
 
-        const start = advance * count(value[0 .. low]);
-        const size = advance * count(value[low .. high]);
+        const start = advance * value[0 .. low].countCharacters;
+        const size = advance * value[low .. high].countCharacters;
 
         const rect = Rectangle(
             (inner.start + Vector2(start, 0)).tupleof,
