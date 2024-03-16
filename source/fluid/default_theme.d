@@ -120,11 +120,11 @@ static this() {
                 border = 1,
                 borderStyle = colorBorder(color("#555a")),
             ),
-            rule!FileInputSuggestion(
+            /*rule!FileInputSuggestion(
                 margin = 0,
                 backgroundColor = color("#fff"),
                 when!"a.isSelected"(backgroundColor = color("#55b9ff"))
-            ),
+            ),*/
             rule!Checkbox(
                 margin.sideX = 8,
                 margin.sideY = 4,
