@@ -238,9 +238,7 @@ struct Rope {
     }
 
     /// Slice the rope.
-    Rope opIndex(size_t[2] slice) const {
-
-        const newLength = slice[1] - slice[0];
+    Rope opIndex(size_t[2] slice, string caller = __PRETTY_FUNCTION__) const {
 
         assert(slice[0] <= length,
             format!"Left boundary of slice [%s .. %s] exceeds rope length %s"(slice[0], slice[1], length));
@@ -249,7 +247,55 @@ struct Rope {
         assert(slice[0] <= slice[1],
             format!"Right boundary of slice [%s .. %s] is greater than left boundary"(slice[0], slice[1]));
 
-        return Rope(node, start + slice[0], newLength);
+        // .init stays the same
+        if (node is null) return Rope.init;
+
+        slice[] += start;
+
+        // Flatten if slicing into a specific side of the slice
+        // e.g. Rope(Rope("foo"), Rope("bar"))[0..3] returns Rope("foo")
+        if (!isLeaf) {
+
+            const divide = node.left.length;
+
+            // Slicing into the left node
+            if (slice[1] <= divide)
+                return node.left[slice];
+
+            // Slicing into the right node
+            else if (slice[0] >= divide)
+                return node.right[slice[0] - divide .. slice[1] - divide];
+
+        }
+
+        // Overlap or a leaf: return both as they are
+        return Rope(node, slice[0], slice[1] - slice[0]);
+
+    }
+
+    unittest {
+
+        auto myRope = Rope(
+            Rope("foo"),
+            Rope("bar"),
+        );
+
+        assert(myRope[0..3].isLeaf);
+        assert(myRope[0..3] == "foo");
+        assert(myRope[3..6].isLeaf);
+        assert(myRope[3..6] == "bar");
+        assert(myRope[1..2].isLeaf);
+        assert(myRope[1..2] == "o");
+        assert(myRope[4..5].isLeaf);
+        assert(myRope[4..5] == "a");
+
+        auto secondRope = Rope(
+            myRope,
+            myRope,
+        );
+
+        assert(secondRope[1..$][0..2].isLeaf);
+        assert(secondRope[1..$][0..2] == "oo");
 
     }
 
@@ -282,12 +328,16 @@ struct Rope {
         assert(ab[3..$].left.equal(""));
         assert(ab[4..$].left.equal(""));
         assert(ab[0..4].left.equal("ABC"));
-        assert(ab[0..3].left.equal("ABC"));
-        assert(ab[0..2].left.equal("AB"));
-        assert(ab[0..1].left.equal("A"));
+        assert(Rope(ab.node, 0, 3).left.equal("ABC"));
+        assert(Rope(ab.node, 0, 2).left.equal("AB"));
+        assert(Rope(ab.node, 0, 1).left.equal("A"));
         assert(ab[0..0].left.equal(""));
         assert(ab[1..1].left.equal(""));
         assert(ab[4..4].left.equal(""));
+
+        assert(ab[0..3].equal("ABC"));
+        assert(ab[0..2].equal("AB"));
+        assert(ab[0..1].equal("A"));
 
     }
 
@@ -303,11 +353,14 @@ struct Rope {
         assert(ab[4..$].left.equal(""));
         assert(ab[0..4].left.equal("BC"));
         assert(ab[0..3].left.equal("BC"));
-        assert(ab[0..2].left.equal("BC"));
-        assert(ab[0..1].left.equal("B"));
+        assert(Rope(ab.node, 0, 2).left.equal("BC"));
+        assert(Rope(ab.node, 0, 1).left.equal("B"));
         assert(ab[0..0].left.equal(""));
         assert(ab[1..1].left.equal(""));
         assert(ab[4..4].left.equal(""));
+
+        assert(ab[0..2].equal("BC"));
+        assert(ab[0..1].equal("B"));
 
     }
 
@@ -334,13 +387,18 @@ struct Rope {
 
         assert(ab.right.equal("DEF"));
         assert(ab[1..$].right.equal("DEF"));
-        assert(ab[3..$].right.equal("DEF"));
-        assert(ab[4..$].right.equal("EF"));
-        assert(ab[4..$-1].right.equal("E"));
-        assert(ab[3..$-1].right.equal("DE"));
+        assert(Rope(ab.node, 3, 3).right.equal("DEF"));
+        assert(Rope(ab.node, 4, 2).right.equal("EF"));
+        assert(Rope(ab.node, 4, 1).right.equal("E"));
+        assert(Rope(ab.node, 3, 2).right.equal("DE"));
         assert(ab[2..$-1].right.equal("DE"));
         assert(ab[1..1].right.equal(""));
         assert(ab[4..4].right.equal(""));
+
+        assert(ab[3..$].equal("DEF"));
+        assert(ab[4..$].equal("EF"));
+        assert(ab[4..$-1].equal("E"));
+        assert(ab[3..$-1].equal("DE"));
 
     }
 
@@ -352,13 +410,19 @@ struct Rope {
 
         assert(ab.right.equal("EF"));
         assert(ab[1..$].right.equal("EF"));
-        assert(ab[3..$].right.equal("F"));
-        assert(ab[4..$].right.equal(""));
-        assert(ab[1..$-1].right.equal("E"));
-        assert(ab[2..$-1].right.equal("E"));
-        assert(ab[3..$-1].right.equal(""));
+        assert(Rope(ab.node, 3, 1).right.equal("F"));
+        assert(Rope(ab.node, 4, 0).right.equal(""));
+        assert(Rope(ab.node, 1, 2).right.equal("E"));
+        assert(Rope(ab.node, 2, 1).right.equal("E"));
+        assert(Rope(ab.node, 3, 0).right.equal(""));
         assert(ab[1..1].right.equal(""));
         assert(ab[4..4].right.equal(""));
+
+        assert(ab[3..$].equal("F"));
+        assert(ab[4..$].equal(""));
+        assert(ab[1..$-1].right.equal("E"));
+        assert(ab[2..$-1].equal("E"));
+        assert(ab[3..$-1].equal(""));
 
     }
 
