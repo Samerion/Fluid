@@ -27,7 +27,6 @@ else {
     }
 }
 
-
 /// Low-level interface for drawing text. Represents a single typeface.
 ///
 /// Unlike the rest of Fluid, Typeface doesn't define pixels as 1/96th of an inch. DPI must also be specified manually.
@@ -78,10 +77,10 @@ interface Typeface {
     if (isSomeChar!(ElementType!Range))
     do {
 
-        import std.utf : UTFException;
+        import std.utf : UTFException, byDchar;
         import std.uni : lineSep, paraSep;
 
-        const hasEmptyLine = text.endsWith('\r', '\n', '\v', '\f', "\r\n", lineSep, paraSep, '\u0085') != 0;
+        const hasEmptyLine = byDchar(text).endsWith('\r', '\n', '\v', '\f', "\r\n", lineSep, paraSep, '\u0085') != 0;
         auto split = .lineSplitter!keepTerm(text);
 
         // Include the empty line if present
@@ -126,6 +125,12 @@ interface Typeface {
 
         assert(lineSplitterIndex(myLine).equal(result));
         assert(lineSplitterIndex(Rope(myLine)).equal(result));
+
+    }
+
+    unittest {
+
+        assert(lineSplitter(Rope("ą")).equal(lineSplitter("ą")));
 
     }
 
@@ -423,12 +428,14 @@ struct TextRuler {
     ///     moved onto the next line.
     Vector2 addWord(String)(String word) {
 
+        import std.utf : byDchar;
+
         const maxWordWidth = lineWidth - penPosition.x;
 
         float wordSpan = 0;
 
         // Measure each glyph
-        foreach (glyph; word.byDchar) {
+        foreach (glyph; byDchar(word)) {
 
             wordSpan += typeface.advance(glyph).x;
 

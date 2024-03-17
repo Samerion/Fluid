@@ -398,16 +398,16 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         auto root = textInput();
 
-        root.value = "hello wörld!".dup;
+        root.value = "hello wörld!";
         assert(root.value == "hello wörld!");
 
-        root.value = "hello wörld!\n".dup;
+        root.value = "hello wörld!\n";
         assert(root.value == "hello wörld! ");
 
-        root.value = "hello wörld!\r\n".dup;
+        root.value = "hello wörld!\r\n";
         assert(root.value == "hello wörld! ");
 
-        root.value = "hello wörld!\v".dup;
+        root.value = "hello wörld!\v";
         assert(root.value == "hello wörld! ");
 
     }
@@ -416,16 +416,16 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         auto root = textInput(.multiline);
 
-        root.value = "hello wörld!".dup;
+        root.value = "hello wörld!";
         assert(root.value == "hello wörld!");
 
-        root.value = "hello wörld!\n".dup;
+        root.value = "hello wörld!\n";
         assert(root.value == "hello wörld!\n");
 
-        root.value = "hello wörld!\r\n".dup;
+        root.value = "hello wörld!\r\n";
         assert(root.value == "hello wörld!\r\n");
 
-        root.value = "hello wörld!\v".dup;
+        root.value = "hello wörld!\v";
         assert(root.value == "hello wörld!\v");
 
     }
@@ -519,6 +519,8 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     protected override void resizeImpl(Vector2 area) {
 
+        import std.math : isNaN;
+
         // Set the size
         minSize = size;
 
@@ -546,6 +548,10 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         // Locate the cursor
         updateCaretPosition();
+
+        // Horizontal anchor is not set, update it
+        if (horizontalAnchor.isNaN)
+            horizontalAnchor = caretPosition.x;
 
     }
 
@@ -580,7 +586,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         assert(textSize.x < 1);
 
         io.nextFrame;
-        root.value = "This value exceeds the default size of a text input.".dup;
+        root.value = "This value exceeds the default size of a text input.";
         root.updateSize();
         root.caretToEnd();
         root.draw();
@@ -591,7 +597,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         io.nextFrame;
         root.value = ("This value is long enough to start a new line in the output. To make sure of it, here's "
-            ~ "some more text. And more.").dup;
+            ~ "some more text. And more.");
         root.updateSize();
         root.draw();
 
@@ -632,7 +638,10 @@ class TextInput : InputNode!Node, FluidScrollable {
         import std.math : isNaN;
 
         // No available width, waiting for resize
-        if (_availableWidth.isNaN) return;
+        if (_availableWidth.isNaN) {
+            _caretPosition.x = float.nan;
+            return;
+        }
 
         _caretPosition = caretPositionImpl(_availableWidth, preferNextLine);
 
@@ -1090,7 +1099,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         auto root = textInput();
 
-        root.push("hello".dup);
+        root.push("hello");
         root.runInputAction!(FluidInputAction.breakLine);
 
         assert(root.value == "hello");
@@ -1101,10 +1110,28 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         auto root = textInput(.multiline);
 
-        root.push("hello".dup);
+        root.push("hello");
         root.runInputAction!(FluidInputAction.breakLine);
 
         assert(root.value == "hello\n");
+
+    }
+
+    unittest {
+
+        auto root = textInput(.nullTheme, .multiline);
+
+        root.push("Привет, мир!");
+        root.runInputAction!(FluidInputAction.breakLine);
+
+        assert(root.value == "Привет, мир!\n");
+        assert(root.caretIndex == root.value.length);
+
+        root.push("Это пример текста для тестирования поддержки Unicode во Fluid.");
+        root.runInputAction!(FluidInputAction.breakLine);
+
+        assert(root.value == "Привет, мир!\nЭто пример текста для тестирования поддержки Unicode во Fluid.\n");
+        assert(root.caretIndex == root.value.length);
 
     }
 
@@ -1138,7 +1165,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         // Type stuff
         {
-            root.value = "Hello World".dup;
+            root.value = "Hello World";
             root.focus();
             root.updateSize();
             root.draw();
@@ -1171,7 +1198,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         );
 
         root.io = io;
-        root.push("Hello, World!".dup);
+        root.push("Hello, World!");
 
         // Press enter (not focused)
         io.press(KeyboardKey.enter);
@@ -1250,6 +1277,35 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
+    unittest {
+
+        auto root = textInput();
+
+        root.push("Это пример текста для тестирования поддержки Unicode во Fluid.");
+        root.chopWord;
+        assert(root.value == "Это пример текста для тестирования поддержки Unicode во Fluid");
+
+        root.chopWord;
+        assert(root.value == "Это пример текста для тестирования поддержки Unicode во ");
+
+        root.chopWord;
+        assert(root.value == "Это пример текста для тестирования поддержки Unicode ");
+
+        root.chopWord;
+        assert(root.value == "Это пример текста для тестирования поддержки ");
+
+        root.chopWord;
+        assert(root.value == "Это пример текста для тестирования ");
+
+        root.caretToStart();
+        root.chopWord(true);
+        assert(root.value == "пример текста для тестирования ");
+
+        root.chopWord(true);
+        assert(root.value == "текста для тестирования ");
+
+    }
+
     @(FluidInputAction.backspaceWord)
     protected void onBackspaceWord() {
 
@@ -1267,7 +1323,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         // Type stuff
         {
-            root.value = "Hello World".dup;
+            root.value = "Hello World";
             root.focus();
             root.caretToEnd();
             root.draw();
@@ -1326,7 +1382,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         auto root = textInput();
 
         // deleteWord should do nothing, because the caret is at the end
-        root.push("Hello, Wörld".dup);
+        root.push("Hello, Wörld");
         root.runInputAction!(FluidInputAction.deleteWord);
 
         assert(!root.isSelecting);
@@ -1411,6 +1467,44 @@ class TextInput : InputNode!Node, FluidScrollable {
         updateSize();
         updateCaretPosition();
         horizontalAnchor = caretPosition.x;
+
+    }
+
+    unittest {
+
+        auto root = textInput();
+
+        root.push("поддержки во Fluid.");
+        root.chop;
+        assert(root.value == "поддержки во Fluid");
+
+        root.chop;
+        assert(root.value == "поддержки во Flui");
+
+        root.chop;
+        assert(root.value == "поддержки во Flu");
+
+        root.chopWord;
+        assert(root.value == "поддержки во ");
+
+        root.chop;
+        assert(root.value == "поддержки во");
+
+        root.chop;
+        assert(root.value == "поддержки в");
+
+        root.chop;
+        assert(root.value == "поддержки ");
+
+        root.caretToStart();
+        root.chop(true);
+        assert(root.value == "оддержки ");
+
+        root.chop(true);
+        assert(root.value == "ддержки ");
+
+        root.chop(true);
+        assert(root.value == "держки ");
 
     }
 
@@ -1500,7 +1594,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         ));
 
         root.io = io;
-        root.value = "Hello, World! Foo, bar, scroll this input".dup;
+        root.value = "Hello, World! Foo, bar, scroll this input";
         root.focus();
         root.caretToEnd();
         root.draw();
@@ -1544,7 +1638,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         ));
 
         root.io = io;
-        root.value = "Hello, World! Foo, bar, scroll this input".dup;
+        root.value = "Hello, World! Foo, bar, scroll this input";
         root.focus();
         root.caretToEnd();
         root.draw();
@@ -1593,7 +1687,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         auto lineHeight = root.style.getTypeface.lineHeight;
 
         root.io = io;
-        root.value = "Line one\nLine two\n\nLine four".dup;
+        root.value = "Line one\nLine two\n\nLine four";
         root.focus();
         root.draw();
 
@@ -1790,7 +1884,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         // Type stuff
         {
-            root.value = "hello‽".dup;
+            root.value = "hello‽";
             root.focus();
             root.caretToEnd();
             root.draw();
@@ -1895,7 +1989,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         auto value2 = root.value;
 
-        root.push("Moon".dup);
+        root.push("Moon");
 
         assert(root.value == "Hello, Moon");
 
@@ -1919,11 +2013,11 @@ class TextInput : InputNode!Node, FluidScrollable {
         const head = value[0 .. low].wordBack(excludeWhite);
         const tail = value[high .. $].wordFront(excludeWhite);
 
-        // Set selection to the start of the word
-        selectionStart = low - head.length;
-
         // Move the caret to the end of the word
         caretIndex = high + tail.length;
+
+        // Set selection to the start of the word
+        selectionStart = low - head.length;
 
         // Swap them if order is reversed
         if (!isLow) swap(_selectionStart, _caretIndex);
@@ -1933,7 +2027,51 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
-    /// Select the whole line the cursor is on.
+    unittest {
+
+        auto root = textInput();
+        root.push("Привет, мир! Это пример текста для тестирования поддержки Unicode во Fluid.");
+
+        // Select word the caret is touching
+        root.selectWord();
+        assert(root.selectedValue == ".");
+
+        // Expand
+        root.selectWord();
+        assert(root.selectedValue == "Fluid.");
+
+        // Go to start
+        root.caretToStart();
+        assert(!root.isSelecting);
+        assert(root.caretIndex == 0);
+        assert(root.selectedValue == "");
+
+        root.selectWord();
+        assert(root.selectedValue == "Привет");
+
+        root.selectWord();
+        assert(root.selectedValue == "Привет,");
+
+        root.selectWord();
+        assert(root.selectedValue == "Привет,");
+
+        root.runInputAction!(FluidInputAction.nextChar);
+        assert(root.caretIndex == 13);  // Before space
+
+        root.runInputAction!(FluidInputAction.nextChar);  // After space
+        root.runInputAction!(FluidInputAction.nextChar);  // Inside "мир"
+        assert(!root.isSelecting);
+        assert(root.caretIndex == 16);
+
+        root.selectWord();
+        assert(root.selectedValue == "мир");
+
+        root.selectWord();
+        assert(root.selectedValue == "мир!");
+
+    }
+
+    /// Select the whole line the cursor is.
     void selectLine() {
 
         const isLow = selectionStart <= selectionEnd;
@@ -1965,6 +2103,44 @@ class TextInput : InputNode!Node, FluidScrollable {
         }
 
         updateCaretPosition(false);
+        horizontalAnchor = caretPosition.x;
+
+    }
+
+    unittest {
+
+        auto root = textInput();
+
+        root.push("ąąąą ąąą ąąąąąąą ąą\nąąą ąąą");
+        assert(root.caretIndex == 49);
+
+        root.selectLine();
+        assert(root.selectedValue == root.value);
+        assert(root.selectedValue.length == 49);
+        assert(root.value.length == 49);
+
+    }
+
+    unittest {
+
+        auto root = textInput(.multiline);
+
+        root.push("ąąą ąąą ąąąąąąą ąą\nąąą ąąą");
+        root.draw();
+        assert(root.caretIndex == 47);
+
+        root.selectLine();
+        assert(root.selectedValue == "ąąą ąąą");
+        assert(root.selectionStart == 34);
+        assert(root.selectionEnd == 47);
+
+        root.runInputAction!(FluidInputAction.selectPreviousLine);
+        assert(root.selectionStart == 34);
+        assert(root.selectionEnd == 13);
+        assert(root.selectedValue == " ąąąąąąą ąą\n");
+
+        root.selectLine();
+        assert(root.selectedValue == root.value);
 
     }
 
@@ -1990,7 +2166,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
             if (valueAfterCaret == "") return;
 
-            const length = valueAfterCaret.front.codeLength!char;
+            const length = valueAfterCaret.decodeFrontStatic.codeLength!char;
 
             caretIndex = caretIndex + length;
 
@@ -2001,7 +2177,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
             if (valueBeforeCaret == "") return;
 
-            const length = valueBeforeCaret.back.codeLength!char;
+            const length = valueBeforeCaret.decodeBackStatic.codeLength!char;
 
             caretIndex = caretIndex - length;
 
@@ -2009,6 +2185,42 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         updateCaretPosition(true);
         horizontalAnchor = caretPosition.x;
+
+    }
+
+    unittest {
+
+        auto root = textInput();
+        root.push("Привет, мир! Это пример текста для тестирования поддержки Unicode во Fluid.");
+
+        assert(root.caretIndex == root.value.length);
+
+        root.runInputAction!(FluidInputAction.previousWord);
+        assert(root.caretIndex == root.value.length - ".".length);
+
+        root.runInputAction!(FluidInputAction.previousWord);
+        assert(root.caretIndex == root.value.length - "Fluid.".length);
+
+        root.runInputAction!(FluidInputAction.previousChar);
+        assert(root.caretIndex == root.value.length - " Fluid.".length);
+
+        root.runInputAction!(FluidInputAction.previousChar);
+        assert(root.caretIndex == root.value.length - "о Fluid.".length);
+
+        root.runInputAction!(FluidInputAction.previousChar);
+        assert(root.caretIndex == root.value.length - "во Fluid.".length);
+
+        root.runInputAction!(FluidInputAction.previousWord);
+        assert(root.caretIndex == root.value.length - "Unicode во Fluid.".length);
+
+        root.runInputAction!(FluidInputAction.previousWord);
+        assert(root.caretIndex == root.value.length - "поддержки Unicode во Fluid.".length);
+
+        root.runInputAction!(FluidInputAction.nextChar);
+        assert(root.caretIndex == root.value.length - "оддержки Unicode во Fluid.".length);
+
+        root.runInputAction!(FluidInputAction.nextWord);
+        assert(root.caretIndex == root.value.length - "Unicode во Fluid.".length);
 
     }
 
@@ -2063,6 +2275,43 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
+    unittest {
+
+        auto root = textInput(.multiline);
+
+        // 5 en dashes, 3 then 4; starting at last line
+        root.push("–––––\n–––\n––––");
+        root.draw();
+
+        assert(root.caretIndex == root.value.length);
+
+        // From last line to second line — caret should be at its end
+        root.runInputAction!(FluidInputAction.previousLine);
+        assert(root.valueBeforeCaret == "–––––\n–––");
+
+        // First line, move to 4th dash (same as third line)
+        root.runInputAction!(FluidInputAction.previousLine);
+        assert(root.valueBeforeCaret == "––––");
+
+        // Next line — end
+        root.runInputAction!(FluidInputAction.nextLine);
+        assert(root.valueBeforeCaret == "–––––\n–––");
+
+        // Update anchor to match second line
+        root.runInputAction!(FluidInputAction.toLineEnd);
+        assert(root.valueBeforeCaret == "–––––\n–––");
+
+        // First line again, should be 3rd dash now (same as second line)
+        root.runInputAction!(FluidInputAction.previousLine);
+        assert(root.valueBeforeCaret == "–––");
+
+        // Last line, 3rd dash too
+        root.runInputAction!(FluidInputAction.nextLine);
+        root.runInputAction!(FluidInputAction.nextLine);
+        assert(root.valueBeforeCaret == "–––––\n–––\n–––");
+
+    }
+
     /// Move the caret to the given position.
     void caretTo(Vector2 position) {
 
@@ -2081,8 +2330,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         root.io = io;
         root.size = Vector2(200, 0);
-        root.value = "Hello, World!\nHello, Moon\n\nHello, Sun\nWrap this line µp, make it long enough to cross over"
-            .dup;
+        root.value = "Hello, World!\nHello, Moon\n\nHello, Sun\nWrap this line µp, make it long enough to cross over";
         root.draw();
 
         // Move the caret to different points on the canvas
@@ -2177,8 +2425,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         root.io = io;
         root.size = Vector2(200, 0);
-        root.value = "123\n456\n789"
-            .dup;
+        root.value = "123\n456\n789";
         root.draw();
 
         io.nextFrame();
@@ -2226,8 +2473,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         root.io = io;
         root.size = Vector2(200, 0);
-        root.value = "Hello, World!\nHello, Moon\n\nHello, Sun\nWrap this line µp, make it long enough to cross over"
-            .dup;
+        root.value = "Hello, World!\nHello, Moon\n\nHello, Sun\nWrap this line µp, make it long enough to cross over";
         root.focus();
         root.draw();
 
@@ -2343,11 +2589,11 @@ class TextInput : InputNode!Node, FluidScrollable {
         assert(root.selectionStart == 0);
         assert(root.selectionEnd == 0);
 
-        root.push("foo bar ".dup);
+        root.push("foo bar ");
 
         assert(!root.isSelecting);
 
-        root.push("baz".dup);
+        root.push("baz");
 
         assert(root.value == "foo bar baz");
 
@@ -2358,7 +2604,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         assert(root.selectionStart == 0);
         assert(root.selectionEnd == root.value.length);
 
-        root.push("replaced".dup);
+        root.push("replaced");
 
         assert(root.value == "replaced");
 
@@ -2439,8 +2685,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         auto root = textInput();
 
         root.draw();
-
-        root.push("Foo Bar Baz Ban".dup);
+        root.push("Foo Bar Baz Ban");
 
         // Move cursor to "Bar"
         root.runInputAction!(FluidInputAction.toStart);
@@ -2461,6 +2706,29 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
+    unittest {
+
+        auto root = textInput();
+
+        root.push("Привет, мир! Это пример текста для тестирования поддержки Unicode во Fluid.");
+        root.draw();
+        root.io.clipboard = "ą";
+
+        root.runInputAction!(FluidInputAction.previousChar);
+        root.selectionStart = 106;  // Before "Unicode"
+        root.cut();
+
+        assert(root.value == "Привет, мир! Это пример текста для тестирования поддержки .");
+        assert(root.io.clipboard == "Unicode во Fluid");
+
+        root.caretIndex = 14;
+        root.runInputAction!(FluidInputAction.selectNextWord);  // мир
+        root.paste();
+
+        assert(root.value == "Привет, Unicode во Fluid! Это пример текста для тестирования поддержки .");
+
+    }
+
     /// Copy selected text to clipboard.
     @(FluidInputAction.copy)
     protected void copy() {
@@ -2477,7 +2745,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         auto root = textInput();
 
         root.draw();
-        root.push("Foo Bar Baz Ban".dup);
+        root.push("Foo Bar Baz Ban");
 
         // Select all
         root.selectAll();
@@ -2501,7 +2769,7 @@ class TextInput : InputNode!Node, FluidScrollable {
     @(FluidInputAction.paste)
     protected void paste() {
 
-        push(io.clipboard.dup);
+        push(io.clipboard);
 
     }
 
@@ -2509,7 +2777,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         auto root = textInput();
 
-        root.value = "Foo ".dup;
+        root.value = "Foo ";
         root.draw();
         root.caretToEnd();
         root.io.clipboard = "Bar";
@@ -2537,7 +2805,7 @@ unittest {
     auto root = textInput(.nullTheme, .multiline);
     auto lineHeight = root.style.getTypeface.lineHeight;
 
-    root.value = "First one\nSecond two".dup;
+    root.value = "First one\nSecond two";
     root.draw();
 
     // Navigate to the start and select the whole line
