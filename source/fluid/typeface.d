@@ -34,7 +34,7 @@ else {
 /// See: [fluid.text.Text] for an interface on a higher level.
 interface Typeface {
 
-    /// List glyphs  in the typeface.
+    /// List glyphs in the typeface.
     long glyphCount() const;
 
     /// Get initial pen position.
@@ -44,7 +44,7 @@ interface Typeface {
     int lineHeight() const;
 
     /// Get advance vector for the given glyph. Uses dots, not pixels, as the unit.
-    Vector2 advance(dchar glyph) const;
+    Vector2 advance(dchar glyph);
 
     /// Set font scale. This should be called at least once before drawing.
     ///
@@ -149,7 +149,7 @@ interface Typeface {
     /// Returns:
     ///     Vector2 representing the text size, if `TextRuler` is not specified as an argument.
     final Vector2 measure(alias chunkWords = defaultWordChunks, String)
-        (Vector2 availableSpace, String text, bool wrap = true) const
+        (Vector2 availableSpace, String text, bool wrap = true)
     do {
 
         auto ruler = TextRuler(this, wrap ? availableSpace.x : float.nan);
@@ -161,7 +161,7 @@ interface Typeface {
     }
 
     /// ditto
-    final Vector2 measure(String)(String text) const {
+    final Vector2 measure(String)(String text) {
 
         // No wrap, only explicit in-text line breaks
         auto ruler = TextRuler(this);
@@ -363,7 +363,7 @@ unittest {
 struct TextRuler {
 
     /// Typeface to use for the text.
-    const Typeface typeface;
+    Typeface typeface;
 
     /// Maximum width for a single line. If `NaN`, no word breaking is performed.
     float lineWidth;
@@ -377,7 +377,7 @@ struct TextRuler {
     /// Index of the word within the line.
     size_t wordLineIndex;
 
-    this(const Typeface typeface, float lineWidth = float.nan) {
+    this(Typeface typeface, float lineWidth = float.nan) {
 
         this.typeface = typeface;
         this.lineWidth = lineWidth;
@@ -488,6 +488,13 @@ class FreetypeTypeface : Typeface {
 
         /// Adjust line height. `1` uses the original line height, `2` doubles it.
         float lineHeightFactor = 1;
+
+    }
+
+    protected {
+
+        /// Cache for character sizes.
+        Vector2[dchar] advanceCache;
 
     }
 
@@ -626,27 +633,35 @@ class FreetypeTypeface : Typeface {
 
         }
 
+        // Clear the cache
+        advanceCache.clear();
+
         return dpi;
 
     }
 
     /// Get advance vector for the given glyph
-    Vector2 advance(dchar glyph) const @trusted {
+    Vector2 advance(dchar glyph) @trusted {
 
         assert(_dpiX && _dpiY, "Font DPI hasn't been set");
 
-        // Sadly, there is no way to make FreeType operate correctly in `const` environment.
+        // Return the stored value if the result is cached
+        if (auto result = glyph in advanceCache) {
+
+            return *result;
+
+        }
 
         // Load the glyph
         if (auto error = FT_Load_Char(cast(FT_FaceRec*) face, glyph, FT_LOAD_DEFAULT)) {
 
-            return Vector2(0, 0);
+            return advanceCache[glyph] = Vector2(0, 0);
 
         }
 
         // Advance the cursor position
         // TODO RTL layouts
-        return Vector2(face.glyph.advance.tupleof) / 64;
+        return advanceCache[glyph] = Vector2(face.glyph.advance.tupleof) / 64;
 
     }
 
@@ -850,7 +865,7 @@ class RaylibTypeface : Typeface {
     }
 
     /// Get advance vector for the given glyph.
-    Vector2 advance(dchar codepoint) const @trusted {
+    Vector2 advance(dchar codepoint) @trusted {
 
         const glyph = GetGlyphInfo(cast() font, codepoint);
         const spacing = fontHeight * this.spacing;

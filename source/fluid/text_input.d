@@ -93,6 +93,19 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     private {
 
+        /// Buffer used to store recently inserted text.
+        /// See_Also: `buffer`
+        char[] _buffer;
+
+        /// Number of bytes stored in the bufer.
+        size_t _usedBufferSize;
+
+        /// Node the buffer is stored in.
+        RopeNode* _bufferNode;
+
+        invariant(_bufferNode is null || _bufferNode.value.ptr is _buffer.ptr,
+            "_bufferNode must be in sync with _buffer");
+
         /// Value of the text input.
         Rope _value;
 
@@ -216,6 +229,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         auto withoutLineFeeds = Typeface.lineSplitter(newValue).joiner;
 
         // Single line mode — filter vertical space out
+        // TODO Is this actually necessary? Line feeds could be filtered out visually, perhaps
         if (!multiline && !newValue.equal(withoutLineFeeds)) {
 
             newValue = Typeface.lineSplitter(newValue).join(' ');
@@ -223,6 +237,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         }
 
         _value = newValue;
+        _bufferNode = null;
         updateSize();
         return value;
 
@@ -662,7 +677,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     /// Find the closest index to the given position.
     /// Returns: Index of the character. The index may be equal to character length.
-    size_t nearestCharacter(Vector2 needle) const {
+    size_t nearestCharacter(Vector2 needle) {
 
         import std.math : abs;
 
@@ -741,6 +756,48 @@ class TextInput : InputNode!Node, FluidScrollable {
         }
 
         return result.index;
+
+    }
+
+    /// Get the current buffer.
+    ///
+    /// The buffer is used to store all content inserted through `push`.
+    protected inout(char)[] buffer() inout {
+
+        return _buffer;
+
+    }
+
+    /// Get the used size of the buffer.
+    protected ref inout(size_t) usedBufferSize() inout {
+
+        return _usedBufferSize;
+
+    }
+
+    /// Get the filled part of the buffer.
+    protected inout(char)[] usedBuffer() inout {
+
+        return _buffer[0 .. _usedBufferSize];
+
+    }
+
+    /// Get the empty part of the buffer.
+    protected inout(char)[] freeBuffer() inout {
+
+        return _buffer[_usedBufferSize .. $];
+
+    }
+
+    /// Request a new or a larger buffer.
+    /// Params:
+    ///     minimumSize = Minimum size to allocate for the buffer.
+    protected void newBuffer(size_t minimumSize = 64) {
+
+        const newSize = max(minimumSize, 64);
+
+        _buffer = new char[newSize];
+        usedBufferSize = 0;
 
     }
 
@@ -857,7 +914,7 @@ class TextInput : InputNode!Node, FluidScrollable {
     }
 
     /// Get an appropriate text ruler for this input.
-    protected TextRuler textRuler() const {
+    protected TextRuler textRuler() {
 
         return TextRuler(style.getTypeface, multiline ? _availableWidth : float.nan);
 
@@ -1035,8 +1092,23 @@ class TextInput : InputNode!Node, FluidScrollable {
     /// ditto
     void push(scope const(char)[] ch) {
 
-        // TODO IMPORTANT buffering
-        push(Rope(ch.dup));
+        // Not enough space in the buffer, allocate more
+        if (freeBuffer.length <= ch.length) {
+
+            newBuffer(ch.length);
+            _bufferNode = null;
+
+        }
+
+        auto slice = freeBuffer[0 .. ch.length];
+
+        // Save the data in the buffer
+        slice[] = ch;
+        _usedBufferSize += ch.length;
+
+        // TODO reuse _bufferNode
+
+        push(Rope(slice));
 
     }
 

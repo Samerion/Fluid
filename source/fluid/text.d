@@ -241,8 +241,8 @@ struct Text(T : Node, LayerRange = TextRange[]) {
         // No textures to generate, nothing to do
         if (textures.length == 0) return;
 
-        const style = node.pickStyle;
-        const typeface = style.getTypeface;
+        auto style = node.pickStyle;
+        auto typeface = style.getTypeface;
         const dpi = node.backend.dpi;
 
         // Ignore chunks which have already been generated

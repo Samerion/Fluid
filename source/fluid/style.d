@@ -176,7 +176,7 @@ struct Style {
     }
 
     /// Get current typeface, or fallback to default.
-    const(Typeface) getTypeface() const {
+    Typeface getTypeface() {
 
         return either(typeface, Typeface.defaultTypeface);
 
