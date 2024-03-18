@@ -16,6 +16,16 @@ class PasswordInput : TextInput {
 
     mixin enableInputActions;
 
+    protected {
+
+        /// Character circle radius.
+        float radius;
+
+        /// Distance between the start positions of each character.
+        float advance;
+
+    }
+
     /// Create a password input.
     /// Params:
     ///     placeholder = Placeholder text for the field.
@@ -30,25 +40,6 @@ class PasswordInput : TextInput {
     override bool multiline() const {
 
         return false;
-
-    }
-
-    /// Get the radius of the circles
-    protected float radius() const {
-
-        auto typeface = style.getTypeface;
-
-        // Use the "X" character as reference
-        return typeface.advance('X').x / 2f;
-
-    }
-
-    /// Get the advance width of the circles.
-    protected float advance() const {
-
-        auto typeface = style.getTypeface;
-
-        return typeface.advance('X').x * 1.2;
 
     }
 
@@ -129,6 +120,19 @@ class PasswordInput : TextInput {
         );
 
         io.drawRectangle(rect, style.selectionBackgroundColor);
+
+    }
+
+    protected override void reloadStyles() {
+
+        super.reloadStyles();
+
+        // Use the "X" character as reference
+        auto typeface = style.getTypeface;
+        auto x = typeface.advance('X').x;
+
+        radius = x / 2f;
+        advance = x * 1.2;
 
     }
 
