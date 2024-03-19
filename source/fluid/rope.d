@@ -33,7 +33,7 @@ struct Rope {
     this(const(char)[] text) {
 
         // No text, stay with Rope.init
-        if (text is null)
+        if (text == "")
             this(null, 0, 0);
         else
             this(new RopeNode(text));
@@ -41,14 +41,64 @@ struct Rope {
     }
 
     /// Create a rope concatenating two other ropes.
+    ///
+    /// Avoids gaps: If either node is empty, copies and becomes the other node.
     this(inout Rope left, inout Rope right) inout {
 
-        this(new inout RopeNode(left, right));
+        // No need to create a new node there's empty space
+        if (left.length == 0) {
+
+            // Both empty, return .init
+            if (right.length == 0)
+                this(null, 0, 0);
+
+            // Right node only, clone it
+            else
+                this(right);
+
+        }
+
+        // Only the left side is present
+        else if (right.length == 0)
+            this(left);
+
+        // Neither is empty, create a new node
+        else
+            this(new inout RopeNode(left, right));
+
+    }
+
+    unittest {
+
+        import std.stdio;
+
+        auto bumpy = Rope(
+            new RopeNode(
+                Rope(""),
+                Rope("foo"),
+            ),
+        );
+        auto flattened = Rope(
+            Rope(""),
+            Rope("foo"),
+        );
+
+        assert(bumpy.byNode.equal(["", "foo"]));
+        assert(flattened.byNode.equal(["foo"]));
+
+        auto c = Rope(
+            Rope("AAA"),
+            Rope(
+                Rope(""),
+                Rope("BBB"),
+            ),
+        );
+        assert(c.byNode.equal(["AAA", "BBB"]));
 
     }
 
     /// Create a rope from given node.
-    this(inout(RopeNode)* node) inout {
+    this(inout const(RopeNode)* node) inout {
 
         // No node given, set all to init
         if (node is null) return;
@@ -59,7 +109,14 @@ struct Rope {
 
     }
 
-    this(inout(RopeNode)* node, size_t start, size_t length) inout {
+    /// Copy a `Rope`.
+    this(inout const Rope rope) inout {
+
+        this(rope.node, rope.start, rope.length);
+
+    }
+
+    private this(inout(RopeNode)* node, size_t start, size_t length) inout {
 
         this.node = node;
         this.start = start;
@@ -437,6 +494,8 @@ struct Rope {
     }
 
     /// Split the rope, creating a new root node that connects the left and right side of the split.
+    ///
+    /// This functions never returns leaf nodes, but either side of the node may be empty.
     Rope split(size_t index) const
     out (r; !r.node.isLeaf)
     do {
@@ -446,9 +505,11 @@ struct Rope {
         auto left = this.left;
         auto right = this.right;
 
+        const(RopeNode)* result;
+
         // Leaf node, split by slicing
         if (node.isLeaf)
-            return Rope(this[0..index], this[index..$]);
+            result = new RopeNode(this[0..index], this[index..$]);
 
         // Already split
         else if (index == left.length)
@@ -459,7 +520,7 @@ struct Rope {
 
             auto div = left.split(index);
 
-            return Rope(
+            result = new RopeNode(
                 div.left,
                 Rope(div.right, right),
             );
@@ -471,12 +532,14 @@ struct Rope {
 
             auto div = right.split(index - left.length);
 
-            return Rope(
+            result = new RopeNode(
                 Rope(left, div.left),
                 div.right,
             );
 
         }
+
+        return Rope(result);
 
     }
 
@@ -653,6 +716,81 @@ struct Rope {
         auto d = c.replace(4, 12, Rope.init);
 
         assert(d == "Foo Ban");
+
+    }
+
+    unittest {
+
+        auto a = Rope(
+            Rope("Hello"),
+            Rope("Fluid"),
+        );
+        auto b = a.replace(3, 6, Rope("LOf"));
+
+        assert(b == "HelLOfluid");
+        assert(b.byNode.equal(["Hel", "LOf", "luid"]));
+
+        auto c = b.replace(3, 6, Rope("~~~"));
+
+        assert(c.byNode.equal(["Hel", "~~~", "luid"]));
+
+        auto d = c.replace(0, 3, Rope("***"));
+
+        assert(d.byNode.equal(["***", "~~~", "luid"]));
+
+        auto e = d.replace(3, 10, Rope("###"));
+
+        assert(e.byNode.equal(["***", "###"]));
+
+    }
+
+    unittest {
+
+        auto a = Rope("Hello, World!");
+
+        // Replacing with an empty node should effectively split
+        a = a.replace(7, 12, Rope(""));
+        assert(a.byNode.equal(["Hello, ", "!"]));
+
+        // Insert characters into the text by replacing a whole node
+        a = a.replace(7, 7, Rope("a"));
+        assert(a.byNode.equal(["Hello, ", "a", "!"]));
+
+        a = a.replace(7, 8, Rope("ab"));
+        assert(a.byNode.equal(["Hello, ", "ab", "!"]));
+
+        a = a.replace(7, 9, Rope("abc"));
+        assert(a.byNode.equal(["Hello, ", "abc", "!"]));
+
+        // Now, reuse the same node
+        auto node = new RopeNode("abcd");
+
+        a = a.replace(7, 10, Rope(node));
+        assert(a.byNode.equal(["Hello, ", "abcd", "!"]));
+        assert(a == "Hello, abcd!");
+
+        // Adding the node should have no effect since slices weren't updated
+        node.value = "abcde";
+        assert(a == "Hello, abcd!");
+
+        // Update the slices
+        a = a.replace(7, 11, Rope(node));
+        assert(a.byNode.equal(["Hello, ", "abcde", "!"]));
+        assert(a == "Hello, abcde!");
+
+    }
+
+    unittest {
+
+        auto a = Rope("Rope");
+
+        a = a.replace(0, 2, Rope("Car"));
+
+        assert(a.byNode.equal(["Car", "pe"]));
+
+        a = a.replace(5, 5, Rope(" diem"));
+
+        assert(a.byNode.equal(["Car", "pe", " diem"]));
 
     }
 
