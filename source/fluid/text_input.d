@@ -102,8 +102,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         /// Node the buffer is stored in.
         RopeNode* _bufferNode;
-
-        invariant(_bufferNode is null || _bufferNode.value.ptr is _buffer.ptr,
+        invariant(_bufferNode is null || _bufferNode.value.sameTail(_buffer[0 .. _usedBufferSize]),
             "_bufferNode must be in sync with _buffer");
 
         /// Value of the text input.
@@ -229,7 +228,6 @@ class TextInput : InputNode!Node, FluidScrollable {
         auto withoutLineFeeds = Typeface.lineSplitter(newValue).joiner;
 
         // Single line mode — filter vertical space out
-        // TODO Is this actually necessary? Line feeds could be filtered out visually, perhaps
         if (!multiline && !newValue.equal(withoutLineFeeds)) {
 
             newValue = Typeface.lineSplitter(newValue).join(' ');
@@ -468,6 +466,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         }
 
         touch();
+        _bufferNode = null;
         return _caretIndex = index;
 
     }
@@ -1044,6 +1043,31 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     unittest {
 
+        auto root = textInput();
+        root.value = "Ho";
+
+        root.caretIndex = 1;
+        root.push("e");
+        assert(root.value.byNode.equal(["H", "e", "o"]));
+
+        root.push("n");
+
+        assert(root.value.byNode.equal(["H", "en", "o"]));
+
+        root.push("l");
+        assert(root.value.byNode.equal(["H", "enl", "o"]));
+
+        // Create enough text to fill the buffer
+        // A new node should be created as a result
+        auto bufferFiller = 'A'.repeat(root.freeBuffer.length).array;
+
+        root.push(bufferFiller);
+        assert(root.value.byNode.equal(["H", "enl", bufferFiller, "o"]));
+
+    }
+
+    unittest {
+
         auto io = new HeadlessBackend;
         auto root = textInput("placeholder");
 
@@ -1090,13 +1114,20 @@ class TextInput : InputNode!Node, FluidScrollable {
     }
 
     /// ditto
-    void push(scope const(char)[] ch) {
+    void push(scope const(char)[] ch)
+    out (; _bufferNode, "_bufferNode must exist after pushing to buffer")
+    do {
+
+        // Move the buffer node into here; move it back when done
+        auto bufferNode = _bufferNode;
+        _bufferNode = null;
+        scope (exit) _bufferNode = bufferNode;
 
         // Not enough space in the buffer, allocate more
         if (freeBuffer.length <= ch.length) {
 
             newBuffer(ch.length);
-            _bufferNode = null;
+            bufferNode = null;
 
         }
 
@@ -1106,9 +1137,43 @@ class TextInput : InputNode!Node, FluidScrollable {
         slice[] = ch;
         _usedBufferSize += ch.length;
 
-        // TODO reuse _bufferNode
+        // Selection is active, overwrite it
+        if (isSelecting) {
 
-        push(Rope(slice));
+            bufferNode = new RopeNode(slice);
+            push(Rope(bufferNode));
+            return;
+
+        }
+
+        // The above `if` handles the one case where `push` doesn't directly add new characters to the text.
+        // From here, appending can be optimized by memorizing the node we create to add the text, and reusing it
+        // afterwards. This way, we avoid creating many one element nodes.
+
+        size_t originalLength;
+
+        // Make sure there is a node to write to
+        if (!bufferNode)
+            bufferNode = new RopeNode(slice);
+
+        // If writing in a single sequence, reuse the last inserted node
+        else {
+
+            originalLength = bufferNode.length;
+
+            // Append the character to its value
+            // The bufferNode will always share tail with the buffer
+            bufferNode.value = usedBuffer[$ - originalLength - ch.length .. $];
+
+        }
+
+        // Insert the text by replacing the old node, if present
+        value = value.replace(caretIndex - originalLength, caretIndex, Rope(bufferNode));
+
+        // Move the caret
+        caretIndex = caretIndex + ch.length;
+        updateCaretPosition();
+        horizontalAnchor = caretPosition.x;
 
     }
 

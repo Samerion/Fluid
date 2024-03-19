@@ -362,6 +362,38 @@ struct Rope {
 
     }
 
+    /// Get the depth of the rope.
+    size_t depth() const {
+
+        // Leafs have depth of 1
+        if (isLeaf) return 1;
+
+        return max(node.left.depth, node.right.depth) + 1;
+
+    }
+
+    unittest {
+
+        auto a = Rope();
+        assert(a.depth == 1);
+
+        auto b = Rope("foo");
+        assert(b.depth == 1);
+
+        auto c = Rope(
+            Rope("foo"),
+            Rope("bar"),
+        );
+        assert(c.depth == 2);
+
+        auto d = Rope(b, c);
+        assert(d.depth == 3);
+
+        auto e = Rope(d, d);
+        assert(e.depth == 4);
+
+    }
+
     /// Get the left side of the rope
     Rope left() const {
 
@@ -690,6 +722,12 @@ struct Rope {
 
         assert(low <= high,
             format!"Low boundary of replace slice [%s .. %s] is greater than the high boundary"(low, high));
+        assert(high <= length,
+            format!"Replace slice [%s .. %s] exceeds Rope length %s"(low, high, length));
+
+        // Return the value as-is if the node is empty
+        if (length == 0)
+            return value;
 
         // Split the rope in both points
         const leftSplit = split(low);
@@ -791,6 +829,17 @@ struct Rope {
         a = a.replace(5, 5, Rope(" diem"));
 
         assert(a.byNode.equal(["Car", "pe", " diem"]));
+
+    }
+
+    unittest {
+
+        auto a = Rope();
+
+        a = a.replace(0, 0, Rope("foo"));
+
+        assert(a.byNode.equal(["foo"]));
+        assert(a.isLeaf);
 
     }
 
