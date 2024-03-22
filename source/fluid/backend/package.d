@@ -230,19 +230,16 @@ struct TextureReaper {
         // Find all destroyed textures
         foreach (id, tombstone; textures) {
 
-            // Texture marked for deletion
-            if (tombstone.isDestroyed) {
+            if (!tombstone.isDestroyed) continue;
 
-                auto backend = cast() tombstone.backend;
+            auto backend = cast() tombstone.backend;
 
-                // Unload it
-                backend.unloadTexture(id);
-                tombstone.markDisowned();
+            // Unload the texture
+            backend.unloadTexture(id);
 
-                // Remove the texture from registry
-                textures.remove(id);
-
-            }
+            // Disown the tombstone and remove it from the registry
+            tombstone.markDisowned();
+            textures.remove(id);
 
         }
 
@@ -261,6 +258,8 @@ struct TextureReaper {
 
             // Unload the texture, even if it wasn't marked for deletion
             backend.unloadTexture(id);
+            // TODO Should this be done? The destructor may be called from the GC. Maybe check if it was?
+            //      Test this!
 
             // Disown all textures
             tombstone.markDisowned();
@@ -285,7 +284,10 @@ shared struct TextureTombstone {
     /// Backend that created this texture.
     private FluidBackend _backend;
 
-    private bool _destroyed, _disowned;
+    private int _references = 1;
+    private bool _disowned;
+
+    @disable this(this);
 
     static TextureTombstone* make(FluidBackend backend) @system {
 
@@ -300,6 +302,8 @@ shared struct TextureTombstone {
         *tombstone = TextureTombstone.init;
         tombstone._backend = cast(shared) backend;
 
+        assert(tombstone.references == 1);
+
         // Make sure the backend isn't freed while the tombstone is alive
         GC.addRoot(cast(void*) backend);
 
@@ -307,8 +311,15 @@ shared struct TextureTombstone {
 
     }
 
-    /// Check if the texture has been destroyed.
-    bool isDestroyed() @system => _destroyed.atomicLoad;
+    /// Check if a request for destruction has been made for the texture.
+    bool isDestroyed() @system => _references.atomicLoad == 0;
+
+    /// Check if the texture has been disowned by the backend. A disowned tombstone refers to a texture that has been
+    /// freed.
+    private bool isDisowned() @system => _disowned.atomicLoad;
+
+    /// Get number of references to this tombstone.
+    private int references() @system => _references.atomicLoad;
 
     /// Get the backend owning this texture.
     inout(shared FluidBackend) backend() inout => _backend;
@@ -316,16 +327,27 @@ shared struct TextureTombstone {
     /// Mark the texture as destroyed.
     void markDestroyed() @system {
 
-        _destroyed.atomicStore(true);
+        assert(!isDisowned || !isDestroyed, "Texture: Double destroy()");
+
+        _references.atomicFetchSub(1);
         tryDestroy();
 
     }
 
     /// Mark the texture as disowned.
-    void markDisowned() @system {
+    private void markDisowned() @system {
+
+        assert(!isDisowned || !isDestroyed);
 
         _disowned.atomicStore(true);
         tryDestroy();
+
+    }
+
+    /// Mark the texture as copied.
+    private void markCopied() @system {
+
+        _references.atomicFetchAdd(1);
 
     }
 
@@ -343,7 +365,7 @@ shared struct TextureTombstone {
     private void tryDestroy() @system {
 
         // Destroyed and disowned
-        if (_destroyed.atomicLoad && _disowned.atomicLoad) {
+        if (isDestroyed && isDisowned) {
 
             GC.removeRoot(cast(void*) _backend);
             free(cast(void*) &this);
@@ -816,6 +838,123 @@ struct TextureGC {
     this(FluidBackend backend, Image data) @trusted {
 
         this.texture = backend.loadTexture(data);
+
+    }
+
+    /// Move constructor for TextureGC; increment the reference counter for the texture.
+    ///
+    /// While I originally did not intend to implement reference counting, it is necessary to make TextureGC work in
+    /// dynamic arrays. Changing the size of the array will copy the contents without performing a proper move of the
+    /// old items. The postblit is the only kind of move constructor that will be called in this case, and a copy
+    /// constructor does not do its job.
+    this(this) @system {
+
+        if (tombstone)
+        tombstone.markCopied();
+
+    }
+
+    @system
+    unittest {
+
+        import std.string;
+
+        // This tests using TextureGC inside of a dynamic array, especially after resizing. See documentation for
+        // the postblit above.
+
+        // Test two variants:
+        // * One, where we rely on the language to finalize the copied value
+        // * And one, where we manually destroy the value
+        foreach (explicitDestruction; [false, true]) {
+
+            void makeCopy(TextureGC[] arr) {
+
+                // Create the copy
+                auto copy = arr;
+
+                assert(sameHead(arr, copy));
+
+                // Expand the array, creating another
+                copy.length = 1024;
+
+                assert(!sameHead(arr, copy));
+
+                // References to tombstones exist in both arrays now
+                assert(!copy[0].tombstone.isDestroyed);
+                assert(!arr[0].tombstone.isDestroyed);
+
+                // The copy should be marked as moved
+                assert(copy[0].tombstone.references == 2);
+                assert(arr[0].tombstone.references == 2);
+
+                // Destroy the tombstone
+                if (explicitDestruction) {
+
+                    auto tombstone = copy[0].tombstone;
+
+                    copy[0].destroy();
+                    assert(tombstone.references == 1);
+                    assert(!tombstone.isDestroyed);
+
+                }
+
+                // Forget about the copy
+                copy = null;
+
+            }
+
+            static void trashStack() {
+
+                import core.memory;
+
+                // Destroy the stack to get rid of any references to `copy`
+                ubyte[2048] garbage;
+
+                // Collect it, make sure the tombstone gets eaten
+                GC.collect();
+
+            }
+
+            auto io = new HeadlessBackend;
+            auto image = generateColorImage(10, 10, color("#fff"));
+            auto arr = [
+                TextureGC(io, image),
+                TextureGC.init,
+            ];
+
+            makeCopy(arr);
+            trashStack();
+
+            assert(!arr[0].tombstone.isDestroyed, "Tombstone of a live texture was destroyed after copying an array"
+                ~ format!" (explicitDestruction %s)"(explicitDestruction));
+
+            io.reaper.collect();
+
+            assert(io.isTextureValid(arr[0]));
+            assert(!arr[0].tombstone.isDestroyed);
+            assert(!arr[0].tombstone.isDisowned);
+            assert(arr[0].tombstone.references == 1);
+
+        }
+
+    }
+
+    @system
+    unittest {
+
+        auto io = new HeadlessBackend;
+        auto image = generateColorImage(10, 10, color("#fff"));
+        auto arr = [
+            TextureGC(io, image),
+            TextureGC.init,
+        ];
+        auto copy = arr.dup;
+
+        assert(arr[0].tombstone.references == 2);
+
+        io.reaper.collect();
+
+        assert(io.isTextureValid(arr[0]));
 
     }
 

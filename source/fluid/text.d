@@ -578,8 +578,6 @@ struct CompositeTexture {
 
         alias texture this;
 
-        @disable this(this);
-
     }
 
     /// Total size of the texture.
@@ -772,6 +770,10 @@ struct CompositeTexture {
         // Size is the same as before, update the texture
         if (sizeMatches) {
 
+            assert(chunks[i].texture.backend !is null);
+            debug assert(backend is chunks[i].texture.backend,
+                format!"Backend mismatch %s != %s"(backend, chunks[i].texture.backend));
+
             chunks[i].texture.update(chunks[i].image);
 
         }
@@ -796,6 +798,10 @@ struct CompositeTexture {
     void drawAlign(FluidBackend backend, Rectangle rectangle, Color tint = color("#fff")) {
 
         foreach (index; visibleChunks(rectangle.start, backend.windowSize)) {
+
+            assert(chunks[index].texture.backend !is null);
+            debug assert(backend is chunks[index].texture.backend,
+                format!"Backend mismatch %s != %s"(backend, chunks[index].texture.backend));
 
             const rect = chunkRectangle(index, rectangle.start);
 
