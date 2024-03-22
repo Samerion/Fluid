@@ -489,29 +489,12 @@ class HeadlessBackend : FluidBackend {
 
     Texture loadTexture(Image image) @system {
 
-        // It's probably desirable to have this toggleable at class level
-        static if (svgTextures) {
+        auto texture = loadTexture(null, image.width, image.height);
 
-            import std.base64;
-            import arsd.png;
-            import arsd.image;
+        // Fill the texture with data
+        updateTexture(texture, image);
 
-            // Load the image
-            auto data = cast(ubyte[]) image.pixels;
-            auto arsdImage = new TrueColorImage(image.width, image.height, data);
-
-            // Encode as a PNG in a data URL
-            auto png = arsdImage.writePngToArray();
-            auto base64 = Base64.encode(png);
-            auto url = format!"data:image/png;base64,%s"(base64);
-
-            // Convert to a Fluid image
-            return loadTexture(url, arsdImage.width, arsdImage.height);
-
-        }
-
-        // Can't load the texture, pretend to load a 16px texture
-        else return loadTexture(null, image.width, image.height);
+        return texture;
 
     }
 
@@ -548,6 +531,32 @@ class HeadlessBackend : FluidBackend {
         allocatedTextures[texture.id] = url;
 
         return texture;
+
+    }
+
+    void updateTexture(Texture texture, Image image) @system
+    in (false)
+    do {
+
+        static if (svgTextures) {
+
+            import std.base64;
+            import arsd.png;
+            import arsd.image;
+
+            // Load the image
+            auto data = cast(ubyte[]) image.pixels;
+            auto arsdImage = new TrueColorImage(image.width, image.height, data);
+
+            // Encode as a PNG in a data URL
+            auto png = arsdImage.writePngToArray();
+            auto base64 = Base64.encode(png);
+            auto url = format!"data:image/png;base64,%s"(base64);
+
+            // Set the URL
+            allocatedTextures[texture.id] = url;
+
+        }
 
     }
 

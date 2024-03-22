@@ -305,6 +305,14 @@ class Raylib5Backend : FluidBackend {
 
     }
 
+    void updateTexture(fluid.backend.Texture texture, fluid.backend.Image image) @system
+    in (false)
+    do {
+
+        UpdateTexture(texture.toRaylib, image.pixels.ptr);
+
+    }
+
     fluid.backend.Texture fromRaylib(raylib.Texture texture) {
 
         fluid.backend.Texture result;

@@ -133,6 +133,11 @@ interface FluidBackend {
     Texture loadTexture(Image image) @system;
     Texture loadTexture(string filename) @system;
 
+    /// Update a texture from an image. The texture must be valid and must be of the same size and format as the image.
+    void updateTexture(Texture texture, Image image) @system
+    in (texture.width == image.width)
+    in (texture.height == image.height);
+
     /// Destroy a texture created by this backend. Always use `texture.destroy()` to ensure thread safety and invoking
     /// the correct backend.
     protected void unloadTexture(uint id) @system;
@@ -756,6 +761,13 @@ struct Texture {
             width * 96 / dpiX,
             height * 96 / dpiY
         );
+
+    /// Update the texture to match the given image.
+    void update(Image image) @system {
+
+        backend.updateTexture(this, image);
+
+    }
 
     /// Draw this texture.
     void draw(Vector2 position, Color tint = color!"fff") {

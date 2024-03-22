@@ -213,7 +213,7 @@ struct Text(T : Node, LayerRange = TextRange[]) {
     void clearTextures() {
 
         foreach (ref layer; textures) {
-            layer = CompositeTexture(_sizeDots);
+            layer.resize(_sizeDots);
         }
 
     }
@@ -247,25 +247,21 @@ struct Text(T : Node, LayerRange = TextRange[]) {
 
         // Ignore chunks which have already been generated
         auto newChunks = chunks
-            .filter!(index => textures[$-1].chunks[index] == TextureGC.init);
+            .filter!(index => !textures[$-1].chunks[index].isValid);
 
         // No chunks to render, stop here
         if (newChunks.empty) return;
 
-        // Prepare images to use as target
-        auto images = textures
+        // Clear the chunks
+        foreach (ref layer; textures) {
 
-            // For each layer, generate chunks
-            .map!(a => newChunks
+            foreach (chunkIndex; newChunks) {
 
-                // Generate blank image for each texture
-                .map!(index => generateColorImage(
-                    cast(int) a.chunkSize(index).x,
-                    cast(int) a.chunkSize(index).y,
-                    color("#0000")))
-                .array)
+                layer.clearImage(chunkIndex);
 
-            .array;
+            }
+
+        }
 
         auto ruler = TextRuler(typeface, _sizeDots.x);
 
@@ -321,7 +317,7 @@ struct Text(T : Node, LayerRange = TextRange[]) {
                     const currentPenPosition = penPosition;
 
                     // Draw the fragment to selected chunks
-                    foreach (i, chunkIndex; newChunks.enumerate) {
+                    foreach (chunkIndex; newChunks) {
 
                         const composite = textures[layer];
                         const chunkRect = composite.chunkRectangle(chunkIndex);
@@ -336,7 +332,8 @@ struct Text(T : Node, LayerRange = TextRange[]) {
                         auto relativePenPosition = currentPenPosition - chunkRect.start;
 
                         // Note: relativePenPosition is passed by ref
-                        typeface.drawLine(images[layer][i], relativePenPosition, wordFragment, color("#fff"));
+                        auto image = textures[layer].chunks[chunkIndex].image;
+                        typeface.drawLine(image, relativePenPosition, wordFragment, color("#fff"));
 
                         // Update the pen position; Result of this should be the same for each chunk
                         penPosition = relativePenPosition + chunkRect.start;
@@ -355,15 +352,9 @@ struct Text(T : Node, LayerRange = TextRange[]) {
         // Load textures
         foreach (i, ref layer; textures) {
 
-            foreach (imageIndex, chunkIndex; newChunks.enumerate) {
+            foreach (chunkIndex; newChunks) {
 
-                // Load texture
-                layer.chunks[chunkIndex] = TextureGC(backend, images[i][imageIndex]);
-                layer.chunks[chunkIndex].dpiX = cast(int) dpi.x;
-                layer.chunks[chunkIndex].dpiY = cast(int) dpi.y;
-
-                // Destroy the image
-                images[i][imageIndex].destroy();
+                layer.upload(backend, chunkIndex, dpi);
 
             }
 
@@ -576,6 +567,18 @@ struct CompositeTexture {
 
     enum maxChunkSize = 1024;
 
+    struct Chunk {
+
+        TextureGC texture;
+        Image image;
+        bool isValid;
+
+        alias texture this;
+
+        @disable this(this);
+
+    }
+
     /// Total size of the texture.
     Vector2 size;
 
@@ -583,15 +586,29 @@ struct CompositeTexture {
     ///
     /// Each texture, except for the last in each column or row, has the size of maxChunkSize on each side. The last
     /// texture in each row and column may have reduced width and height respectively.
-    TextureGC[] chunks;
+    Chunk[] chunks;
 
     this(Vector2 size) {
+
+        resize(size);
+
+    }
+
+    /// Set a new size for the texture; recalculate the chunk number
+    void resize(Vector2 size) {
 
         this.size = size;
 
         const chunkCount = columns * rows;
 
-        this.chunks = new TextureGC[chunkCount];
+        this.chunks.length = chunkCount;
+
+        // Invalidate the chunks
+        foreach (ref chunk; chunks) {
+
+            chunk.isValid = false;
+
+        }
 
     }
 
@@ -710,6 +727,57 @@ struct CompositeTexture {
 
     }
 
+    /// Clear the image of the given chunk, filling it with the given color
+    void clearImage(size_t i, Color color = color("#0000")) {
+
+        const size = chunkSize(i);
+        const width = cast(int) size.x;
+        const height = cast(int) size.y;
+
+        // Check if the size of the chunk has changed
+        const sizeMatches = chunks[i].image.width == width
+            && chunks[i].image.height == height;
+
+        // Size matches, reuse the image
+        if (sizeMatches)
+            chunks[i].image.pixels[] = color;
+
+
+        // No match, generate a new image
+        else
+            chunks[i].image = generateColorImage(width, height, color);
+
+    }
+
+    /// Update the texture of a given chunk using its corresponding image.
+    void upload(FluidBackend backend, size_t i, Vector2 dpi) @trusted {
+
+        const sizeMatches = chunks[i].image.width == chunks[i].texture.width
+            && chunks[i].image.height == chunks[i].texture.height;
+
+        // Size is the same as before, update the texture
+        if (sizeMatches) {
+
+            chunks[i].texture.update(chunks[i].image);
+
+        }
+
+        // No match, create a new texture
+        else {
+
+            chunks[i].texture = TextureGC(backend, chunks[i].image);
+
+        }
+
+        // Update DPI
+        chunks[i].texture.dpiX = cast(int) dpi.x;
+        chunks[i].texture.dpiY = cast(int) dpi.y;
+
+        // Mark as valid
+        chunks[i].isValid = true;
+
+    }
+
     /// Draw onscreen parts of the texture.
     void drawAlign(FluidBackend backend, Rectangle rectangle, Color tint = color("#fff")) {
 
@@ -773,8 +841,8 @@ unittest {
     assert(io.textures.walkLength == 1);
 
     // And, only the first one should be generated
-    assert(root.text.textures[0].chunks[0] != TextureGC.init);
-    assert(root.text.textures[0].chunks[1 .. $].all!(a => a == TextureGC.init));
+    assert(root.text.textures[0].chunks[0].isValid);
+    assert(root.text.textures[0].chunks[1 .. $].all!((ref a) => !a.isValid));
 
     // Scroll just enough so that both chunks should be on screen
     io.nextFrame;
@@ -782,8 +850,8 @@ unittest {
     root.draw();
 
     // First two chunks must have been generated and drawn
-    assert(root.text.textures[0].chunks[0 .. 2].all!(a => a != TextureGC.init));
-    assert(root.text.textures[0].chunks[2 .. $].all!(a => a == TextureGC.init));
+    assert(root.text.textures[0].chunks[0 .. 2].all!((ref a) => a.isValid));
+    assert(root.text.textures[0].chunks[2 .. $].all!((ref a) => !a.isValid));
 
     io.assertTexture(root.text.textures[0].chunks[0], Vector2(0, -root.scroll), color("#000"));
     io.assertTexture(root.text.textures[0].chunks[1], Vector2(0, -root.scroll + chunkSize), color("#000"));
@@ -796,9 +864,9 @@ unittest {
     root.draw();
 
     // Because of the resize, the first chunk must have been destroyed
-    assert(root.text.textures[0].chunks[0 .. 1].all!(a => a == TextureGC.init));
-    assert(root.text.textures[0].chunks[1 .. 3].all!(a => a != TextureGC.init));
-    assert(root.text.textures[0].chunks[3 .. $].all!(a => a == TextureGC.init));
+    assert(root.text.textures[0].chunks[0 .. 1].all!((ref a) => !a.isValid));
+    assert(root.text.textures[0].chunks[1 .. 3].all!((ref a) => a.isValid));
+    assert(root.text.textures[0].chunks[3 .. $].all!((ref a) => !a.isValid));
 
     io.assertTexture(root.text.textures[0].chunks[1], Vector2(0, -root.scroll + chunkSize), color("#000"));
     io.assertTexture(root.text.textures[0].chunks[2], Vector2(0, -root.scroll + chunkSize*2), color("#000"));
