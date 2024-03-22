@@ -141,6 +141,9 @@ class TextInput : InputNode!Node, FluidScrollable {
         // Make single line the default
         contentLabel.isWrapDisabled = true;
 
+        // Enable edit mode
+        contentLabel.text.hasFastEdits = true;
+
         // Create the context menu
         this.contextMenu = popupFrame(
             button(
