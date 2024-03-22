@@ -2109,7 +2109,6 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     unittest {
 
-        // Security test
         auto io = new HeadlessBackend;
         auto root = textInput();
 
