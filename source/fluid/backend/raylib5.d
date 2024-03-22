@@ -313,7 +313,7 @@ class Raylib5Backend : FluidBackend {
 
     }
 
-    fluid.backend.Texture fromRaylib(raylib.Texture texture) {
+    private fluid.backend.Texture fromRaylib(raylib.Texture texture) {
 
         fluid.backend.Texture result;
         result.id = texture.id;

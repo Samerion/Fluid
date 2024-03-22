@@ -558,6 +558,9 @@ class HeadlessBackend : FluidBackend {
 
         }
 
+        else
+            allocatedTextures[texture.id] = null;
+
     }
 
     /// Destroy a texture created by this backend. `texture.destroy()` is the preferred way of calling this, since it
