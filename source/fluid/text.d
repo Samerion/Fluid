@@ -47,6 +47,9 @@ struct Text(T : Node, LayerRange = TextRange[]) {
         /// to belong to layer 1.
         LayerRange layerMap;
 
+        /// If true, enables optimizations for frequently edited text.
+        bool hasFastEdits;
+
     }
 
     private {
@@ -213,7 +216,7 @@ struct Text(T : Node, LayerRange = TextRange[]) {
     void clearTextures() {
 
         foreach (ref layer; textures) {
-            layer.resize(_sizeDots);
+            layer.resize(_sizeDots, hasFastEdits);
         }
 
     }
@@ -588,16 +591,23 @@ struct CompositeTexture {
     /// texture in each row and column may have reduced width and height respectively.
     Chunk[] chunks;
 
-    this(Vector2 size) {
+    private bool _alwaysMax;
 
-        resize(size);
+    this(Vector2 size, bool alwaysMax = false) {
+
+        resize(size, alwaysMax);
 
     }
 
     /// Set a new size for the texture; recalculate the chunk number
-    void resize(Vector2 size) {
+    /// Params:
+    ///     size      = New size of the texture.
+    ///     alwaysMax = Always give chunks maximum size. Improves performance in nodes that frequently change their
+    ///         content.
+    void resize(Vector2 size, bool alwaysMax = false) {
 
         this.size = size;
+        this._alwaysMax = alwaysMax;
 
         const chunkCount = columns * rows;
 
@@ -644,6 +654,10 @@ struct CompositeTexture {
 
     /// Get the expected size of the chunk at given index
     Vector2 chunkSize(size_t i) const {
+
+        // Return max chunk size if requested
+        if (_alwaysMax)
+            return Vector2(maxChunkSize, maxChunkSize);
 
         const x = column(i);
         const y = row(i);
