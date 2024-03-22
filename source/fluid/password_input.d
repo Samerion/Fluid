@@ -16,6 +16,22 @@ class PasswordInput : TextInput {
 
     mixin enableInputActions;
 
+    protected {
+
+        /// Character circle radius.
+        float radius;
+
+        /// Distance between the start positions of each character.
+        float advance;
+
+    }
+
+    private {
+
+        char[][] _bufferHistory;
+
+    }
+
     /// Create a password input.
     /// Params:
     ///     placeholder = Placeholder text for the field.
@@ -33,22 +49,71 @@ class PasswordInput : TextInput {
 
     }
 
-    /// Get the radius of the circles
-    protected float radius() const {
+    /// Delete all textual data created by the password box. All text typed inside the box will be overwritten, except
+    /// for any copies, if they were made. Clears the box.
+    ///
+    /// The password box keeps a buffer of all text that has ever been written to it, in order to store and display its
+    /// content. The security implication is that, even if the password is no longer needed, it will remain in program
+    /// memory, exposing it as a possible target for attackers, in case [memory corruption vulnerabilities][1] are
+    /// found. Even if collected by the garbage collector, the value will remain untouched until the same spot in memory
+    /// is reused, so in order to increase the security of a program, passwords should thus be *shredded* after usage,
+    /// explicitly overwriting their contents.
+    ///
+    /// Do note that shredding is never performed automatically — this function has to be called explicitly.
+    /// Furthermore, text provided through different means than explicit input or `push(char[])` will not be cleared.
+    ///
+    /// [1]: https://en.wikipedia.org/wiki/Memory_safety
+    void shred() {
 
-        auto typeface = style.getTypeface;
+        // Go through each buffer
+        foreach (buffer; _bufferHistory) {
 
-        // Use the "X" character as reference
-        return typeface.advance('X').x / 2f;
+            // Clear it
+            buffer[] = char.init;
+
+        }
+
+        // Clear the input and buffer history
+        clear();
+        _bufferHistory = [buffer];
 
     }
 
-    /// Get the advance width of the circles.
-    protected float advance() const {
+    unittest {
 
-        auto typeface = style.getTypeface;
+        import fluid.input;
 
-        return typeface.advance('X').x * 1.2;
+        auto root = passwordInput();
+        root.value = "Hello, ";
+        root.caretToEnd();
+        root.push("World!");
+
+        assert(root.value == "Hello, World!");
+
+        auto value1 = root.value;
+        root.shred();
+
+        assert(root.value == "");
+        assert(value1 == "Hello, \xFF\xFF\xFF\xFF\xFF\xFF");
+
+        root.push("Hello, World!");
+        root.runInputAction!(FluidInputAction.previousChar);
+
+        auto value2 = root.value;
+        root.chopWord();
+        root.push("Fluid");
+
+        auto value3 = root.value;
+
+        assert(root.value == "Hello, Fluid!");
+        assert(value2 == "Hello, World!");
+        assert(value3 == "Hello, Fluid!");
+
+        root.shred();
+
+        assert(root.value == "");
+        assert(value2 == "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF");
+        assert(value3 == value2);
 
     }
 
@@ -80,18 +145,15 @@ class PasswordInput : TextInput {
 
     override size_t nearestCharacter(Vector2 needle) const {
 
-        import std.utf : decode;
+        import std.utf : byDchar;
 
-        size_t index;
         size_t number;
 
-        while (index < value.length) {
+        foreach (ch; value[].byDchar) {
 
             // Stop if found the character
             if (needle.x < number * advance + radius) break;
 
-            // Locate the next character
-            decode(value, index);
             number++;
 
         }
@@ -102,11 +164,8 @@ class PasswordInput : TextInput {
 
     protected override Vector2 caretPositionImpl(float availableWidth, bool preferNextLine) {
 
-        import std.utf : count;
-        import fluid.typeface : TextRuler;
-
         return Vector2(
-            advance * count(valueBeforeCaret),
+            advance * valueBeforeCaret.countCharacters,
             super.caretPositionImpl(availableWidth, preferNextLine).y,
         );
 
@@ -115,7 +174,6 @@ class PasswordInput : TextInput {
     /// Draw selection, if applicable.
     protected override void drawSelection(Rectangle inner) {
 
-        import std.utf : count;
         import std.range : enumerate;
         import std.algorithm : min, max;
 
@@ -127,8 +185,8 @@ class PasswordInput : TextInput {
         const low = min(selectionStart, selectionEnd);
         const high = max(selectionStart, selectionEnd);
 
-        const start = advance * count(value[0 .. low]);
-        const size = advance * count(value[low .. high]);
+        const start = advance * value[0 .. low].countCharacters;
+        const size = advance * value[low .. high].countCharacters;
 
         const rect = Rectangle(
             (inner.start + Vector2(start, 0)).tupleof,
@@ -138,5 +196,50 @@ class PasswordInput : TextInput {
         io.drawRectangle(rect, style.selectionBackgroundColor);
 
     }
+
+    protected override void reloadStyles() {
+
+        super.reloadStyles();
+
+        // Use the "X" character as reference
+        auto typeface = style.getTypeface;
+        auto x = typeface.advance('X').x;
+
+        radius = x / 2f;
+        advance = x * 1.2;
+
+    }
+
+    /// Request a new or larger buffer.
+    ///
+    /// `PasswordInput` keeps track of all the buffers that have been used since its creation in order to make it
+    /// possible to `shred` the contents once they're unnecessary.
+    ///
+    /// Params:
+    ///     minimumSize = Minimum size to allocate for the buffer.
+    protected override void newBuffer(size_t minimumSize = 64) {
+
+        // Create the buffer
+        super.newBuffer(minimumSize);
+
+        // Remember the buffer
+        _bufferHistory ~= buffer;
+
+    }
+
+}
+
+///
+unittest {
+
+    // PasswordInput lets you ask the user for passwords
+    auto node = passwordInput();
+
+    // Retrieve the password with `value`
+    auto userPassword = node.value;
+
+    // Destroy the passwords once you're done to secure them against attacks
+    // (Careful: This will invalidate `userPassword` we got earlier)
+    node.shred();
 
 }

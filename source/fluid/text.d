@@ -2,6 +2,8 @@ module fluid.text;
 
 import std.math;
 import std.range;
+import std.traits;
+import std.string;
 import std.algorithm;
 
 import fluid.node;
@@ -9,6 +11,8 @@ import fluid.style;
 import fluid.utils;
 import fluid.backend;
 import fluid.typeface;
+
+public import fluid.rope;
 
 
 @safe:
@@ -35,7 +39,7 @@ struct Text(T : Node, LayerRange = TextRange[]) {
         CompositeTexture[] textures;
 
         /// Underlying text.
-        const(char)[] value;
+        Rope value;
 
         /// Range determining layers in the text.
         ///
@@ -57,6 +61,24 @@ struct Text(T : Node, LayerRange = TextRange[]) {
 
     alias minSize = size;
     alias value this;
+
+    static if (is(LayerRange == TextRange[]))
+    this(T node, Rope text) {
+
+        this.node = node;
+        this.textures = new CompositeTexture[1];
+        opAssign(text);
+
+    }
+
+    this(T node, Rope text, LayerRange layerMap, size_t layerCount) {
+
+        this.node = node;
+        this.textures = new CompositeTexture[layerCount];
+        this.layerMap = layerMap;
+        opAssign(text);
+
+    }
 
     static if (is(LayerRange == TextRange[]))
     this(T node, const(char)[] text) {
@@ -90,6 +112,17 @@ struct Text(T : Node, LayerRange = TextRange[]) {
 
         => node.tree.backend;
 
+    Rope opAssign(Rope text) {
+
+        // Identical; no change is to be made
+        if (text is value) return text;
+
+        // Request an update
+        node.updateSize();
+        return value = text;
+
+
+    }
 
     const(char)[] opAssign(const(char)[] text) {
 
@@ -98,14 +131,15 @@ struct Text(T : Node, LayerRange = TextRange[]) {
 
         // Request update otherwise
         node.updateSize;
-        return value = text;
+        value = text;
+        return text;
 
     }
 
-    const(char)[] opOpAssign(string operator)(const(char)[] text) {
+    void opOpAssign(string operator)(const(char)[] text) {
 
         node.updateSize;
-        return mixin("value ", operator, "= text");
+        mixin("value ", operator, "= text;");
 
     }
 
@@ -207,8 +241,8 @@ struct Text(T : Node, LayerRange = TextRange[]) {
         // No textures to generate, nothing to do
         if (textures.length == 0) return;
 
-        const style = node.pickStyle;
-        const typeface = style.getTypeface;
+        auto style = node.pickStyle;
+        auto typeface = style.getTypeface;
         const dpi = node.backend.dpi;
 
         // Ignore chunks which have already been generated
@@ -390,7 +424,9 @@ struct Text(T : Node, LayerRange = TextRange[]) {
 
     string toString() const {
 
-        return value.idup;
+        import std.conv : to;
+
+        return value.to!string;
 
     }
 
