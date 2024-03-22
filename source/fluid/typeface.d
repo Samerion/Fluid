@@ -7,6 +7,7 @@ import std.traits;
 import std.string;
 import std.algorithm;
 
+import fluid.rope;
 import fluid.utils;
 import fluid.backend;
 
@@ -26,7 +27,6 @@ else {
     }
 }
 
-
 /// Low-level interface for drawing text. Represents a single typeface.
 ///
 /// Unlike the rest of Fluid, Typeface doesn't define pixels as 1/96th of an inch. DPI must also be specified manually.
@@ -34,7 +34,7 @@ else {
 /// See: [fluid.text.Text] for an interface on a higher level.
 interface Typeface {
 
-    /// List glyphs  in the typeface.
+    /// List glyphs in the typeface.
     long glyphCount() const;
 
     /// Get initial pen position.
@@ -44,7 +44,7 @@ interface Typeface {
     int lineHeight() const;
 
     /// Get advance vector for the given glyph. Uses dots, not pixels, as the unit.
-    Vector2 advance(dchar glyph) const;
+    Vector2 advance(dchar glyph);
 
     /// Set font scale. This should be called at least once before drawing.
     ///
@@ -59,7 +59,7 @@ interface Typeface {
 
     /// Draw a line of text.
     /// Note: This API is unstable and might change over time.
-    void drawLine(ref Image target, ref Vector2 penPosition, const(char)[] text, Color tint) const;
+    void drawLine(ref Image target, ref Vector2 penPosition, Rope text, Color tint) const;
 
     /// Instances of Typeface have to be comparable in a memory-safe manner.
     bool opEquals(const Object object) @safe const;
@@ -68,69 +68,69 @@ interface Typeface {
     static defaultTypeface() => FreetypeTypeface.defaultTypeface;
 
     /// Default word splitter used by measure/draw.
-    static defaultWordChunks(Range)(Range range) {
-
-        import std.uni;
-        import std.conv;
-
-        /// Pick the group the character belongs to.
-        static bool pickGroup(dchar a) {
-
-            return a.isAlphaNum || a.isPunctuation;
-
-        }
-
-        return range
-            .splitWhen!((a, b) => pickGroup(a) != pickGroup(b) && !b.isWhite)
-            .map!(a => a.to!(const(char)[]))
-            .cache;
-        // TODO string allocation could probably be avoided
-
-    }
+    alias defaultWordChunks = .breakWords;
 
     /// Updated version of std lineSplitter that includes trailing empty lines.
     ///
     /// `lineSplitterIndex` will produce a tuple with the index into the original text as the first element.
-    static lineSplitter(C)(C[] text) {
+    static lineSplitter(KeepTerminator keepTerm = No.keepTerminator, Range)(Range text)
+    if (isSomeChar!(ElementType!Range))
+    do {
 
-        import std.utf : UTFException;
+        import std.utf : UTFException, byDchar;
         import std.uni : lineSep, paraSep;
 
-        try {
+        const hasEmptyLine = byDchar(text).endsWith('\r', '\n', '\v', '\f', "\r\n", lineSep, paraSep, '\u0085') != 0;
+        auto split = .lineSplitter!keepTerm(text);
 
-            const hasEmptyLine = text.endsWith('\r', '\n', '\v', '\f', "\r\n", lineSep, paraSep, '\u0085') != 0;
-            auto split = .lineSplitter(text);
-
-            // Include the empty line if present
-            return hasEmptyLine.choose(
-                split.chain(only(typeof(text).init)),
-                split,
-            );
-
-        }
-
-        // Provide more helpful messages if endsWith fails
-        catch (UTFException exc) {
-
-            exc.msg = format!"Invalid UTF string: `%s` %s"(text, text.representation);
-            throw exc;
-
-        }
+        // Include the empty line if present
+        return hasEmptyLine.choose(
+            split.chain(only(typeof(text).init)),
+            split,
+        );
 
     }
 
     /// ditto
-    static lineSplitterIndex(C)(C[] text) {
+    static lineSplitterIndex(Range)(Range text) {
 
         import std.typecons : tuple;
 
-        return Typeface.lineSplitter(text)
+        auto initialValue = tuple(size_t.init, Range.init, size_t.init);
 
-            // Insert the index
-            .map!(a => tuple(
-                cast(size_t) a.ptr - cast(size_t) text.ptr,
-                a,
-            ));
+        return Typeface.lineSplitter!(Yes.keepTerminator)(text)
+
+            // Insert the index, remove the terminator
+            // Position [2] is line end index
+            .cumulativeFold!((a, line) => tuple(a[2], line.chomp, a[2] + line.length))(initialValue)
+
+            // Remove item [2]
+            .map!(a => tuple(a[0], a[1]));
+
+    }
+
+    unittest {
+
+        import std.typecons : tuple;
+
+        auto myLine = "One\nTwo\r\nThree\vStuff\nï\nö";
+        auto result = [
+            tuple(0, "One"),
+            tuple(4, "Two"),
+            tuple(9, "Three"),
+            tuple(15, "Stuff"),
+            tuple(21, "ï"),
+            tuple(24, "ö"),
+        ];
+
+        assert(lineSplitterIndex(myLine).equal(result));
+        assert(lineSplitterIndex(Rope(myLine)).equal(result));
+
+    }
+
+    unittest {
+
+        assert(lineSplitter(Rope("ą")).equal(lineSplitter("ą")));
 
     }
 
@@ -149,8 +149,7 @@ interface Typeface {
     /// Returns:
     ///     Vector2 representing the text size, if `TextRuler` is not specified as an argument.
     final Vector2 measure(alias chunkWords = defaultWordChunks, String)
-        (Vector2 availableSpace, String text, bool wrap = true) const
-    if (isSomeString!String)
+        (Vector2 availableSpace, String text, bool wrap = true)
     do {
 
         auto ruler = TextRuler(this, wrap ? availableSpace.x : float.nan);
@@ -162,9 +161,7 @@ interface Typeface {
     }
 
     /// ditto
-    final Vector2 measure(String)(String text) const
-    if (isSomeString!String)
-    do {
+    final Vector2 measure(String)(String text) {
 
         // No wrap, only explicit in-text line breaks
         auto ruler = TextRuler(this);
@@ -178,7 +175,6 @@ interface Typeface {
     /// ditto
     static void measure(alias chunkWords = defaultWordChunks, String)
         (ref TextRuler ruler, String text, bool wrap = true)
-    if (isSomeString!String)
     do {
 
         // TODO don't fail on decoding errors
@@ -279,11 +275,95 @@ interface Typeface {
 
 }
 
+/// Break words on whitespace and punctuation. Splitter characters stick to the word that precedes them, e.g.
+/// `foo!! bar.` is split as `["foo!! ", "bar."]`.
+auto breakWords(Range)(Range range) {
+
+    import std.uni : isAlphaNum, isWhite;
+    import std.utf : decodeFront;
+
+    /// Pick the group the character belongs to.
+    static int pickGroup(dchar a) {
+
+        return a.isAlphaNum ? 0
+            : a.isWhite ? 1
+            : 2;
+
+    }
+
+    /// Splitter function that splits in any case two
+    static bool isSplit(dchar a, dchar b) {
+
+        return !a.isAlphaNum && !b.isWhite && pickGroup(a) != pickGroup(b);
+
+    }
+
+    struct BreakWords {
+
+        Range range;
+        Range front = Range.init;
+
+        bool empty() const => front.empty;
+        void popFront() {
+
+            dchar lastChar = 0;
+            auto originalRange = range.save;
+
+            while (!range.empty) {
+
+                if (lastChar && isSplit(lastChar, range.front)) break;
+                lastChar = range.decodeFront;
+
+            }
+
+            front = originalRange[0 .. $ - range.length];
+
+        }
+
+    }
+
+    auto chunks = BreakWords(range);
+    chunks.popFront;
+    return chunks;
+
+}
+
+unittest {
+
+    const test = "hellö world! 123 hellö123*hello -- hello -- - &&abcde!a!!?!@!@#3";
+    const result = [
+        "hellö ",
+        "world! ",
+        "123 ",
+        "hellö123*",
+        "hello ",
+        "-- ",
+        "hello ",
+        "-- ",
+        "- ",
+        "&&",
+        "abcde!",
+        "a!!?!@!@#",
+        "3"
+    ];
+
+    assert(breakWords(test).equal(result));
+    assert(breakWords(Rope(test)).equal(result));
+
+    const test2 = "Аа Бб Вв Гг Дд Ее Ëë Жж Зз Ии "
+        ~ "Йй Кк Лл Мм Нн Оо Пп Рр Сс Тт "
+        ~ "Уу Фф Хх Цц Чч Шш Щщ Ъъ Ыы Ьь "
+        ~ "Ээ Юю Яя ";
+
+    assert(breakWords(test2).equal(breakWords(Rope(test2))));
+
+}
+
 /// Low level interface for measuring text.
 struct TextRuler {
 
     /// Typeface to use for the text.
-    const Typeface typeface;
+    Typeface typeface;
 
     /// Maximum width for a single line. If `NaN`, no word breaking is performed.
     float lineWidth;
@@ -297,7 +377,7 @@ struct TextRuler {
     /// Index of the word within the line.
     size_t wordLineIndex;
 
-    this(const Typeface typeface, float lineWidth = float.nan) {
+    this(Typeface typeface, float lineWidth = float.nan) {
 
         this.typeface = typeface;
         this.lineWidth = lineWidth;
@@ -348,12 +428,14 @@ struct TextRuler {
     ///     moved onto the next line.
     Vector2 addWord(String)(String word) {
 
+        import std.utf : byDchar;
+
         const maxWordWidth = lineWidth - penPosition.x;
 
         float wordSpan = 0;
 
         // Measure each glyph
-        foreach (dchar glyph; word) {
+        foreach (glyph; byDchar(word)) {
 
             wordSpan += typeface.advance(glyph).x;
 
@@ -406,6 +488,13 @@ class FreetypeTypeface : Typeface {
 
         /// Adjust line height. `1` uses the original line height, `2` doubles it.
         float lineHeightFactor = 1;
+
+    }
+
+    protected {
+
+        /// Cache for character sizes.
+        Vector2[dchar] advanceCache;
 
     }
 
@@ -544,36 +633,44 @@ class FreetypeTypeface : Typeface {
 
         }
 
+        // Clear the cache
+        advanceCache.clear();
+
         return dpi;
 
     }
 
     /// Get advance vector for the given glyph
-    Vector2 advance(dchar glyph) const @trusted {
+    Vector2 advance(dchar glyph) @trusted {
 
         assert(_dpiX && _dpiY, "Font DPI hasn't been set");
 
-        // Sadly, there is no way to make FreeType operate correctly in `const` environment.
+        // Return the stored value if the result is cached
+        if (auto result = glyph in advanceCache) {
+
+            return *result;
+
+        }
 
         // Load the glyph
         if (auto error = FT_Load_Char(cast(FT_FaceRec*) face, glyph, FT_LOAD_DEFAULT)) {
 
-            return Vector2(0, 0);
+            return advanceCache[glyph] = Vector2(0, 0);
 
         }
 
         // Advance the cursor position
         // TODO RTL layouts
-        return Vector2(face.glyph.advance.tupleof) / 64;
+        return advanceCache[glyph] = Vector2(face.glyph.advance.tupleof) / 64;
 
     }
 
     /// Draw a line of text
-    void drawLine(ref Image target, ref Vector2 penPosition, const(char)[] text, Color tint) const @trusted {
+    void drawLine(ref Image target, ref Vector2 penPosition, const Rope text, Color tint) const @trusted {
 
         assert(_dpiX && _dpiY, "Font DPI hasn't been set");
 
-        foreach (dchar glyph; text) {
+        foreach (glyph; text.byDchar) {
 
             // Load the glyph
             if (auto error = FT_Load_Char(cast(FT_FaceRec*) face, glyph, FT_LOAD_RENDER)) {
@@ -768,7 +865,7 @@ class RaylibTypeface : Typeface {
     }
 
     /// Get advance vector for the given glyph.
-    Vector2 advance(dchar codepoint) const @trusted {
+    Vector2 advance(dchar codepoint) @trusted {
 
         const glyph = GetGlyphInfo(cast() font, codepoint);
         const spacing = fontHeight * this.spacing;
@@ -783,20 +880,26 @@ class RaylibTypeface : Typeface {
 
     /// Draw a line of text
     /// Note: This API is unstable and might change over time.
-    void drawLine(ref .Image target, ref Vector2 penPosition, const(char)[] text, Color tint) const @trusted {
+    void drawLine(ref .Image target, ref Vector2 penPosition, Rope text, Color tint) const @trusted {
+
+        import std.utf : toUTFz;
 
         // Note: `DrawTextEx` doesn't scale `spacing`, but `ImageDrawTextEx` DOES. The image is first drawn at base size
         //       and *then* scaled.
         const spacing = font.baseSize * this.spacing;
 
         // We trust Raylib will not mutate the font
-        // Raylib is single-threaded, so it shouldn't cause much harm anyway...
         auto font = cast() this.font;
 
         // Make a Raylib-compatible wrapper for image data
         auto result = target.toRaylib;
 
-        ImageDrawTextEx(&result, font, text.toStringz, penPosition, fontHeight, spacing, tint);
+        // Draw the rope, node by node
+        foreach (node; text.byNode) {
+
+            ImageDrawTextEx(&result, font, node.value.toStringz, penPosition, fontHeight, spacing, tint);
+
+        }
 
     }
 

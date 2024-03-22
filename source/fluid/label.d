@@ -25,6 +25,12 @@ class Label : Node {
 
     }
 
+    this(Rope text) {
+
+        this.text = Text!Label(this, text);
+
+    }
+
     this(const(char)[] text) {
 
         this.text = Text!Label(this, text);

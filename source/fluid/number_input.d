@@ -531,12 +531,12 @@ struct ExpressionResult(T) {
 
 ExpressionResult!T evaluateExpression(T, Range)(Range input) {
 
-    static assert(is(typeof(input.front) == dchar), "Given expression is not a valid string");
+    import std.utf : byDchar;
 
     alias Result = ExpressionResult!T;
 
     // Skip whitespace
-    auto expression = input.filter!(a => !a.isWhite);
+    auto expression = input.byDchar.filter!(a => !a.isWhite);
 
     return evaluateExpressionImpl!T(expression);
 
