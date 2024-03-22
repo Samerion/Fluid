@@ -549,6 +549,25 @@ class SimpledisplayBackend : FluidBackend {
 
     }
 
+    void updateTexture(Texture texture, Image image) @system
+    in (false)
+    do {
+
+        // Use the texture
+        glBindTexture(GL_TEXTURE_2D, texture.id);
+        scope (exit) glBindTexture(GL_TEXTURE_2D, 0);
+
+        const offsetX = 0;
+        const offsetY = 0;
+        const format = GL_RGBA;
+        const type = GL_UNSIGNED_BYTE;
+
+        // Update the content
+        glTexSubImage2D(GL_TEXTURE_2D, 0, offsetX, offsetY, texture.width, texture.height, format, type,
+            image.pixels.ptr);
+
+    }
+
     Image loadImage(string filename) @system {
 
         version (Have_arsd_official_image_files) {
