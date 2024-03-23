@@ -28,7 +28,7 @@ abstract class Node {
 
         private struct CacheKey {
 
-            Color* color;
+            size_t dataPtr;
             FluidBackend backend;
 
         }
@@ -42,7 +42,7 @@ abstract class Node {
             // No image
             if (image.area == 0) return null;
 
-            const key = CacheKey(image.pixels.ptr, backend);
+            const key = CacheKey(cast(size_t) image.data.ptr, backend);
 
             // Find or create the entry
             return &cache.require(key, TextureGC(backend, image));

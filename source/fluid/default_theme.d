@@ -43,6 +43,7 @@ static this() {
 
         assert(data.length == area, format!"Wrong %s area %s, expected %s"(filename, data.length, area));
 
+        // TODO use Format.alpha
         return Image(data, width, height);
 
     }

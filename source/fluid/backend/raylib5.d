@@ -36,8 +36,23 @@ class Raylib5Backend : FluidBackend {
         Rectangle drawArea;
         Color _tint = color!"fff";
         float _scale = 1;
+        Shader _alphaImageShader;
 
     }
+
+    enum alphaImageShaderCode = q{
+        #version 330
+        in vec2 fragTexCoord;
+        in vec4 fragColor;
+        out vec4 finalColor;
+        uniform sampler2D texture0;
+        uniform vec4 colDiffuse;
+        void main() {
+            // Alpha masks are white to make them practical for modulation
+            vec4 texelColor = texture(texture0, fragTexCoord);
+            finalColor = vec4(1, 1, 1, texelColor.r) * colDiffuse * fragColor;
+        }
+    } ~ "\0";
 
     @trusted {
 
@@ -80,6 +95,17 @@ class Raylib5Backend : FluidBackend {
 
         int isRepeated(GamepadButton button) const
             => 0;
+
+    }
+
+    raylib.Shader alphaImageShader() @trusted {
+
+        // Shader created and available for use
+        if (IsShaderReady(_alphaImageShader))
+            return _alphaImageShader;
+
+        // Create the shader
+        return _alphaImageShader = LoadShaderFromMemory(null, alphaImageShaderCode.ptr);
 
     }
 
@@ -309,14 +335,17 @@ class Raylib5Backend : FluidBackend {
     in (false)
     do {
 
-        UpdateTexture(texture.toRaylib, image.pixels.ptr);
+        UpdateTexture(texture.toRaylib, image.data.ptr);
 
     }
 
     private fluid.backend.Texture fromRaylib(raylib.Texture texture) {
 
+        const format = cast(raylib.PixelFormat) texture.format;
+
         fluid.backend.Texture result;
         result.id = texture.id;
+        result.format = format.fromRaylib;
         result.tombstone = reaper.makeTombstone(this, result.id);
         result.width = texture.width;
         result.height = texture.height;
@@ -416,8 +445,21 @@ class Raylib5Backend : FluidBackend {
         }
 
         const source = Rectangle(0, 0, texture.width, texture.height);
+        Shader shader;
+
+        // Alpha image, enable alpha mask shader
+        if (texture.format == PixelFormat.PIXELFORMAT_UNCOMPRESSED_GRAYSCALE)
+            shader = alphaImageShader;
+
+        // Start shaders, if applicable
+        if (IsShaderReady(shader))
+            BeginShaderMode(shader);
 
         DrawTexturePro(texture, source, destination, Vector2(0, 0), 0, multiply(tint, this.tint));
+
+        // End shaders
+        if (IsShaderReady(shader))
+            EndShaderMode();
 
     }
 
@@ -502,13 +544,43 @@ raylib.GamepadButton toRaylib(GamepadButton button) {
 raylib.Image toRaylib(fluid.backend.Image image) @trusted {
 
     raylib.Image result;
-    result.data = cast(void*) image.pixels.ptr;
+    result.data = image.data.ptr;
     result.width = image.width;
     result.height = image.height;
-    result.format = PixelFormat.PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
+    result.format = image.format.toRaylib;
     result.mipmaps = 1;
-
     return result;
+
+}
+
+/// Convert Fluid image format to Raylib's closest alternative.
+raylib.PixelFormat toRaylib(fluid.backend.Image.Format imageFormat) {
+
+    final switch (imageFormat) {
+
+        case imageFormat.rgba:
+            return PixelFormat.PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
+
+        case imageFormat.alpha:
+            return PixelFormat.PIXELFORMAT_UNCOMPRESSED_GRAYSCALE;
+
+    }
+
+}
+
+fluid.backend.Image.Format fromRaylib(raylib.PixelFormat pixelFormat) {
+
+    switch (pixelFormat) {
+
+        case pixelFormat.PIXELFORMAT_UNCOMPRESSED_R8G8B8A8:
+            return fluid.backend.Image.Format.rgba;
+
+        case pixelFormat.PIXELFORMAT_UNCOMPRESSED_GRAYSCALE:
+            return fluid.backend.Image.Format.alpha;
+
+        default: assert(false, "Unrecognized format");
+
+    }
 
 }
 
@@ -519,7 +591,7 @@ raylib.Texture toRaylib(fluid.backend.Texture texture) @trusted {
     result.id = texture.id;
     result.width = texture.width;
     result.height = texture.height;
-    result.format = PixelFormat.PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
+    result.format = texture.format.toRaylib;
     result.mipmaps = 1;
 
     return result;
