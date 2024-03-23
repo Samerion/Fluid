@@ -69,7 +69,7 @@ struct Text(T : Node, LayerRange = TextRange[]) {
     this(T node, Rope text) {
 
         this.node = node;
-        this.textures = new CompositeTexture[1];
+        this.layerCount = 1;
         opAssign(text);
 
     }
@@ -77,7 +77,7 @@ struct Text(T : Node, LayerRange = TextRange[]) {
     this(T node, Rope text, LayerRange layerMap, size_t layerCount) {
 
         this.node = node;
-        this.textures = new CompositeTexture[layerCount];
+        this.layerCount = layerCount;
         this.layerMap = layerMap;
         opAssign(text);
 
@@ -87,7 +87,7 @@ struct Text(T : Node, LayerRange = TextRange[]) {
     this(T node, const(char)[] text) {
 
         this.node = node;
-        this.textures = new CompositeTexture[1];
+        this.layerCount = 1;
         opAssign(text);
 
     }
@@ -95,7 +95,7 @@ struct Text(T : Node, LayerRange = TextRange[]) {
     this(T node, const(char)[] text, LayerRange layerMap, size_t layerCount) {
 
         this.node = node;
-        this.textures = new CompositeTexture[layerCount];
+        this.layerCount = layerCount;
         this.layerMap = layerMap;
         opAssign(text);
 
@@ -216,6 +216,7 @@ struct Text(T : Node, LayerRange = TextRange[]) {
     void clearTextures() {
 
         foreach (ref layer; textures) {
+            layer.format = Image.Format.alpha;
             layer.resize(_sizeDots, hasFastEdits);
         }
 
@@ -580,6 +581,9 @@ struct CompositeTexture {
 
     }
 
+    /// Format of the texture.
+    Image.Format format;
+
     /// Total size of the texture.
     Vector2 size;
 
@@ -752,12 +756,21 @@ struct CompositeTexture {
 
         // Size matches, reuse the image
         if (sizeMatches)
-            chunks[i].image.pixels[] = color;
+            chunks[i].image.clear(color);
 
 
         // No match, generate a new image
-        else
-            chunks[i].image = generateColorImage(width, height, color);
+        else final switch (format) {
+
+            case format.rgba:
+                chunks[i].image = generateColorImage(width, height, color);
+                return;
+
+            case format.alpha:
+                chunks[i].image = generateAlphaMask(width, height, color.a);
+                return;
+
+        }
 
     }
 
@@ -772,7 +785,7 @@ struct CompositeTexture {
 
             assert(chunks[i].texture.backend !is null);
             debug assert(backend is chunks[i].texture.backend,
-                format!"Backend mismatch %s != %s"(backend, chunks[i].texture.backend));
+                .format!"Backend mismatch %s != %s"(backend, chunks[i].texture.backend));
 
             chunks[i].texture.update(chunks[i].image);
 
@@ -801,7 +814,7 @@ struct CompositeTexture {
 
             assert(chunks[index].texture.backend !is null);
             debug assert(backend is chunks[index].texture.backend,
-                format!"Backend mismatch %s != %s"(backend, chunks[index].texture.backend));
+                .format!"Backend mismatch %s != %s"(backend, chunks[index].texture.backend));
 
             const rect = chunkRectangle(index, rectangle.start);
 
@@ -891,5 +904,18 @@ unittest {
     io.assertTexture(root.text.textures[0].chunks[1], Vector2(0, -root.scroll + chunkSize), color("#000"));
     io.assertTexture(root.text.textures[0].chunks[2], Vector2(0, -root.scroll + chunkSize*2), color("#000"));
     assert(io.textures.walkLength == 2);
+
+}
+
+unittest {
+
+    import std.file;
+    import fluid.text_input;
+
+    auto root = textInput();
+    root.draw();
+    root.io.clipboard = readText(__FILE_FULL_PATH__);
+    root.paste();
+    root.draw();
 
 }

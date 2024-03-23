@@ -525,6 +525,9 @@ class SimpledisplayBackend : FluidBackend {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
+        // TODO
+        assert(image.format == Image.Format.rgba);
+
         // Upload the data
         glTexImage2D(
 
@@ -538,7 +541,7 @@ class SimpledisplayBackend : FluidBackend {
             0,
 
             // Formatted as R8B8G8A8
-            GL_RGBA, GL_UNSIGNED_BYTE, image.pixels.ptr,
+            GL_RGBA, GL_UNSIGNED_BYTE, image.rgbaPixels.ptr,
 
         );
 
@@ -562,9 +565,12 @@ class SimpledisplayBackend : FluidBackend {
         const format = GL_RGBA;
         const type = GL_UNSIGNED_BYTE;
 
+        // TODO
+        assert(image.format == image.format.rgba);
+
         // Update the content
         glTexSubImage2D(GL_TEXTURE_2D, 0, offsetX, offsetY, texture.width, texture.height, format, type,
-            image.pixels.ptr);
+            image.rgbaPixels.ptr);
 
     }
 
@@ -579,7 +585,8 @@ class SimpledisplayBackend : FluidBackend {
 
             // Convert to a Fluid image
             Image result;
-            result.pixels = cast(Color[]) image.imageData.bytes;
+            result.format = Image.Format.rgba;
+            result.rgbaPixels = cast(Color[]) image.imageData.bytes;
             result.width = image.width;
             result.height = image.height;
             return result;

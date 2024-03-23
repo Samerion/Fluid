@@ -490,6 +490,7 @@ class HeadlessBackend : FluidBackend {
     Texture loadTexture(Image image) @system {
 
         auto texture = loadTexture(null, image.width, image.height);
+        texture.format = image.format;
 
         // Fill the texture with data
         updateTexture(texture, image);
@@ -544,8 +545,23 @@ class HeadlessBackend : FluidBackend {
             import arsd.png;
             import arsd.image;
 
+            ubyte[] data;
+
             // Load the image
-            auto data = cast(ubyte[]) image.pixels;
+            final switch (image.format) {
+
+                case Image.Format.rgba:
+                    data = cast(ubyte[]) image.rgbaPixels;
+                    break;
+                case Image.Format.alpha:
+                    data = cast(ubyte[]) image.alphaPixels
+                        .map!(a => Color(0xff, 0xff, 0xff, a))
+                        .array;
+                    break;
+
+            }
+
+            // Load the image
             auto arsdImage = new TrueColorImage(image.width, image.height, data);
 
             // Encode as a PNG in a data URL

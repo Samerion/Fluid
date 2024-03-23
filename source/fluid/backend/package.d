@@ -135,6 +135,7 @@ interface FluidBackend {
 
     /// Update a texture from an image. The texture must be valid and must be of the same size and format as the image.
     void updateTexture(Texture texture, Image image) @system
+    in (texture.format == image.format)
     in (texture.width == image.width)
     in (texture.height == image.height);
 
@@ -690,7 +691,26 @@ static Image generateColorImage(int width, int height, Color color) {
 
     // Prepare the result
     Image image;
-    image.pixels = data;
+    image.format = Image.Format.rgba;
+    image.rgbaPixels = data;
+    image.width = width;
+    image.height = height;
+
+    return image;
+
+}
+
+/// Generate an alpha mask filled with given value.
+static Image generateAlphaMask(int width, int height, ubyte value) {
+
+    // Generate each pixel
+    auto data = new ubyte[width * height];
+    data[] = value;
+
+    // Prepare the result
+    Image image;
+    image.format = Image.Format.alpha;
+    image.alphaPixels = data;
     image.width = width;
     image.height = height;
 
@@ -701,10 +721,44 @@ static Image generateColorImage(int width, int height, Color color) {
 /// Image available to the CPU.
 struct Image {
 
-    /// Image data.
-    Color[] pixels;
+    enum Format {
+
+        /// RGBA, 8 bit per channel.
+        rgba,
+
+        /// Alpha-only image/mask.
+        alpha,
+
+    }
+
+    Format format;
+
+    /// Image data. Make sure to access data relevant to the current format.
+    Color[] rgbaPixels;
+    ubyte[] alphaPixels;
+
     int width, height;
     // TODO Alpha-channel only images
+
+    /// Create an RGBA image.
+    this(Color[] rgbaPixels, int width, int height) {
+
+        this.format = Format.rgba;
+        this.rgbaPixels = rgbaPixels;
+        this.width = width;
+        this.height = height;
+
+    }
+
+    /// Create an alpha mask.
+    this(ubyte[] alphaPixels, int width, int height) {
+
+        this.format = Format.alpha;
+        this.alphaPixels = alphaPixels;
+        this.width = width;
+        this.height = height;
+
+    }
 
     Vector2 size() const {
 
@@ -718,19 +772,70 @@ struct Image {
 
     }
 
-    ref inout(Color) get(int x, int y) inout {
+    /// Get data of the image in raw form.
+    inout(void)[] data() inout {
 
-        return pixels[y * width + x];
+        final switch (format) {
+
+            case Format.rgba:
+                return rgbaPixels;
+            case Format.alpha:
+                return alphaPixels;
+
+        }
 
     }
 
-    /// Safer alternative to `get`, doesn't draw out of bounds.
+    /// Get color at given position. Position must be in image bounds.
+    Color get(int x, int y) const {
+
+        const index = y * width + x;
+
+        final switch (format) {
+
+            case Format.rgba:
+                return rgbaPixels[index];
+            case Format.alpha:
+                return Color(0xff, 0xff, 0xff, alphaPixels[index]);
+
+        }
+
+    }
+
+    /// Set color at given position. Does nothing if position is out of bounds.
     void set(int x, int y, Color color) {
 
         if (x < 0 || y < 0) return;
         if (x >= width || y >= height) return;
 
-        get(x, y) = color;
+        const index = y * width + x;
+
+        final switch (format) {
+
+            case Format.rgba:
+                rgbaPixels[index] = color;
+                return;
+            case Format.alpha:
+                alphaPixels[index] = color.a;
+                return;
+
+        }
+
+    }
+
+    /// Clear the image, replacing every pixel with given color.
+    void clear(Color color) {
+
+        final switch (format) {
+
+            case Format.rgba:
+                rgbaPixels[] = color;
+                return;
+            case Format.alpha:
+                alphaPixels[] = color.a;
+                return;
+
+        }
 
     }
 
@@ -743,6 +848,9 @@ struct Texture {
 
     /// Tombstone for this texture
     shared(TextureTombstone)* tombstone;
+
+    /// Format of the texture.
+    Image.Format format;
 
     /// GPU/backend ID of the texture.
     uint id;

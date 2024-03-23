@@ -702,7 +702,7 @@ class FreetypeTypeface : Typeface {
                     const newColor = tint.setAlpha(cast(float) pixel / pixel.max);
                     const color = alphaBlend(oldColor, newColor);
 
-                    target.get(targetX, targetY) = color;
+                    target.set(targetX, targetY, color);
 
                 }
 
