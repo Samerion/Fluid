@@ -13,7 +13,10 @@
 			"lflags-windows": ["/LIBPATH:$PACKAGE_DIR/libraries/windows"],
 			"lflags-osx": ["-L$PACKAGE_DIR/libraries/macos"],
 			"lflags-linux": ["-L$PACKAGE_DIR/libraries/ubuntu"],
-			"copyFiles-windows": ["$PACKAGE_DIR/libraries/windows/freetype.dll"]
+			"copyFiles-windows": [
+				"$PACKAGE_DIR/libraries/windows/freetype.dll",
+				"$PACKAGE_DIR/libraries/windows/raylib.dll"
+			]
 		},
 		{
 			"libs": [
@@ -26,10 +29,6 @@
 	"copyright": "Copyright © 2021–2024, Artha",
 	"dependencies": {
 		"arsd-official:image_files": {
-			"optional": true,
-			"version": "~>11.3"
-		},
-		"arsd-official:simpledisplay": {
 			"optional": true,
 			"version": "~>11.3"
 		},
@@ -54,23 +53,9 @@
 		{
 			"dependencies": {
 				"libdparse": "~>0.23.2",
-				"fluid": { "path": "." },
-				"arsd-official:simpledisplay": "~>11.3"
+				"fluid": { "path": "." }
 			},
 			"name": "showcase",
-			"sourcePaths": [
-				"examples"
-			],
-			"targetPath": "build",
-			"targetType": "executable"
-		},
-		{
-			"dependencies": {
-				"libdparse": "~>0.23.2",
-				"fluid": { "path": "." },
-				"raylib-d": "~>5.0"
-			},
-			"name": "showcase-raylib",
 			"libs": [
 				"raylib"
 			],
