@@ -29,10 +29,6 @@
 			"optional": true,
 			"version": "~>11.3"
 		},
-		"arsd-official:simpledisplay": {
-			"optional": true,
-			"version": "~>11.3"
-		},
 		"bindbc-freetype": "~>1.1.1",
 		"elemi": {
 			"optional": true,
