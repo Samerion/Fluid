@@ -141,6 +141,9 @@ class TextInput : InputNode!Node, FluidScrollable {
         // Make single line the default
         contentLabel.isWrapDisabled = true;
 
+        // Enable edit mode
+        contentLabel.text.hasFastEdits = true;
+
         // Create the context menu
         this.contextMenu = popupFrame(
             button(
@@ -2809,7 +2812,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     /// Cut selected text to clipboard, clearing the selection.
     @(FluidInputAction.cut)
-    protected void cut() {
+    void cut() {
 
         copy();
         selectedValue = null;
@@ -2867,7 +2870,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     /// Copy selected text to clipboard.
     @(FluidInputAction.copy)
-    protected void copy() {
+    void copy() {
 
         import std.conv : text;
 
@@ -2903,7 +2906,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     /// Paste text from clipboard.
     @(FluidInputAction.paste)
-    protected void paste() {
+    void paste() {
 
         push(io.clipboard);
 
