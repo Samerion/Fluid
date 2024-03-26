@@ -19,9 +19,9 @@ public import fluid.rope;
 
 
 /// Create a Text struct with given range as a text layer map.
-Text!(T, StyleRange) mapText(T : Node, StyleRange)(T node, const char[] text, StyleRange range, size_t layerCount) {
+Text!(T, StyleRange) mapText(T : Node, StyleRange)(T node, const char[] text, StyleRange range) {
 
-    return typeof(return)(node, text, range, layerCount);
+    return typeof(return)(node, text, range);
 
 }
 
@@ -419,7 +419,6 @@ unittest {
     styles[3].textColor = color("#0058f1");
 
     // Define regions
-    text.layerCount = styles.length;
     text.styleMap = [
         TextStyleSlice(7, 12, 1),   // green
         TextStyleSlice(13, 14, 2),  // w
@@ -438,10 +437,13 @@ unittest {
     text.resize();
     text.draw(styles, Vector2(0, 0));
 
-    // Make sure each texture was drawn with the right color
+    // Make sure the texture was drawn with the correct color
+    io.assertTexture(text.texture.chunks[0], Vector2(), color("#fff"));
+
     foreach (i; 0..4) {
 
-        io.assertTexture(text.textures[i].chunks[0], Vector2(), styles[i].textColor);
+        assert(text.texture.chunks[0].palette[i] == styles[i].textColor);
+        assert(text.texture.palette[i] == styles[i].textColor);
 
     }
 
@@ -460,10 +462,10 @@ unittest {
     styles[0].textColor = color("#000000");
     styles[1].textColor = color("#1eff00");
 
-    auto layers = recurrence!"a[n-1] + 1"(0)
-        .map!(a => TextStyleSlice(a, a+1, a % 2));
+    auto styleMap = recurrence!"a[n-1] + 1"(0)
+        .map!(a => TextStyleSlice(a, a+1, cast(ubyte) (a % 2)));
 
-    auto text = mapText(root, "Hello, World!", layers, styles.length);
+    auto text = mapText(root, "Hello, World!", styleMap);
 
     // Prepare the tree
     root.io = io;
@@ -487,11 +489,11 @@ unittest {
     styles[0].textColor = color("#000000");
     styles[1].textColor = color("#1eff00");
 
-    auto layers = [
+    auto styleMap = [
         TextStyleSlice(2, 11, 1),
     ];
 
-    auto text = mapText(root, "Hello, World!", layers, styles.length);
+    auto text = mapText(root, "Hello, World!", styleMap);
 
     // Prepare the tree
     root.io = io;
@@ -510,10 +512,10 @@ unittest {
 
     Style[2] styles;
     auto root = vspace();
-    auto layers = [
+    auto styleMap = [
         TextStyleSlice(0, 0, 1),
     ];
-    auto text = mapText(root, "Hello, World!", layers, styles.length);
+    auto text = mapText(root, "Hello, World!", styleMap);
 
     root.draw();
     text.resize();
@@ -812,12 +814,11 @@ unittest {
     root.io = io;
     root.draw();
 
-    // One layer of textures, one chunk only
-    assert(root.text.textures.length == 1);
-    assert(root.text.textures[0].chunks.length == 1);
+    // One chunk only
+    assert(root.text.texture.chunks.length == 1);
 
     // This one chunk must have been drawn
-    io.assertTexture(root.text.textures[0].chunks[0], Vector2(), color("#000"));
+    io.assertTexture(root.text.texture.chunks[0], Vector2(), color("#fff"));
 
     // Add a lot more text
     io.nextFrame;
@@ -831,16 +832,15 @@ unittest {
     assert(io.windowSize.y < chunkSize, "Window size must be smaller than chunk size");
 
     // This time, there should be more chunks
-    assert(root.text.textures.length == 1);
-    assert(root.text.textures[0].chunks.length >= 3);
+    assert(root.text.texture.chunks.length >= 3);
 
     // Only the first one would be drawn, however
-    io.assertTexture(root.text.textures[0].chunks[0], Vector2(), color("#000"));
+    io.assertTexture(root.text.texture.chunks[0], Vector2(), color("#fff"));
     assert(io.textures.walkLength == 1);
 
     // And, only the first one should be generated
-    assert(root.text.textures[0].chunks[0].isValid);
-    assert(root.text.textures[0].chunks[1 .. $].all!((ref a) => !a.isValid));
+    assert(root.text.texture.chunks[0].isValid);
+    assert(root.text.texture.chunks[1 .. $].all!((ref a) => !a.isValid));
 
     // Scroll just enough so that both chunks should be on screen
     io.nextFrame;
@@ -848,11 +848,11 @@ unittest {
     root.draw();
 
     // First two chunks must have been generated and drawn
-    assert(root.text.textures[0].chunks[0 .. 2].all!((ref a) => a.isValid));
-    assert(root.text.textures[0].chunks[2 .. $].all!((ref a) => !a.isValid));
+    assert(root.text.texture.chunks[0 .. 2].all!((ref a) => a.isValid));
+    assert(root.text.texture.chunks[2 .. $].all!((ref a) => !a.isValid));
 
-    io.assertTexture(root.text.textures[0].chunks[0], Vector2(0, -root.scroll), color("#000"));
-    io.assertTexture(root.text.textures[0].chunks[1], Vector2(0, -root.scroll + chunkSize), color("#000"));
+    io.assertTexture(root.text.texture.chunks[0], Vector2(0, -root.scroll), color("#fff"));
+    io.assertTexture(root.text.texture.chunks[1], Vector2(0, -root.scroll + chunkSize), color("#fff"));
     assert(io.textures.walkLength == 2);
 
     // Skip to third chunk, force regeneration
@@ -862,12 +862,12 @@ unittest {
     root.draw();
 
     // Because of the resize, the first chunk must have been destroyed
-    assert(root.text.textures[0].chunks[0 .. 1].all!((ref a) => !a.isValid));
-    assert(root.text.textures[0].chunks[1 .. 3].all!((ref a) => a.isValid));
-    assert(root.text.textures[0].chunks[3 .. $].all!((ref a) => !a.isValid));
+    assert(root.text.texture.chunks[0 .. 1].all!((ref a) => !a.isValid));
+    assert(root.text.texture.chunks[1 .. 3].all!((ref a) => a.isValid));
+    assert(root.text.texture.chunks[3 .. $].all!((ref a) => !a.isValid));
 
-    io.assertTexture(root.text.textures[0].chunks[1], Vector2(0, -root.scroll + chunkSize), color("#000"));
-    io.assertTexture(root.text.textures[0].chunks[2], Vector2(0, -root.scroll + chunkSize*2), color("#000"));
+    io.assertTexture(root.text.texture.chunks[1], Vector2(0, -root.scroll + chunkSize), color("#fff"));
+    io.assertTexture(root.text.texture.chunks[2], Vector2(0, -root.scroll + chunkSize*2), color("#fff"));
     assert(io.textures.walkLength == 2);
 
 }

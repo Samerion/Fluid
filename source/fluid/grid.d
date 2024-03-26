@@ -163,7 +163,7 @@ class Grid : Frame {
 
         // Check if the drawing is correct
         // Row 0
-        io.assertTexture(Rectangle(0, 0, root.children[0].minSize.tupleof), color!"000");
+        io.assertTexture(Rectangle(0, 0, root.children[0].minSize.tupleof), color!"fff");
 
         // Row 1
         foreach (i; 0..4) {
