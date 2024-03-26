@@ -553,6 +553,15 @@ class HeadlessBackend : FluidBackend {
                 case Image.Format.rgba:
                     data = cast(ubyte[]) image.rgbaPixels;
                     break;
+
+                // At the moment, this loads the palette available at the time of generation.
+                // Could it be possible to update the palette later?
+                case Image.Format.palettedAlpha:
+                    data = cast(ubyte[]) image.palettedAlphaPixels
+                        .map!(a => image.paletteColor(a))
+                        .array;
+                    break;
+
                 case Image.Format.alpha:
                     data = cast(ubyte[]) image.alphaPixels
                         .map!(a => Color(0xff, 0xff, 0xff, a))
