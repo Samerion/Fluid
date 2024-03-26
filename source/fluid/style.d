@@ -36,6 +36,8 @@ struct Style {
     @Themable {
 
         /// Main typeface to be used for text.
+        ///
+        /// Changing the typeface requires a resize.
         Typeface typeface;
 
         alias font = typeface;
@@ -64,23 +66,33 @@ struct Style {
 
         /// Margin (outer margin) of the node. `[left, right, top, bottom]`.
         ///
+        /// Updating margins requires a resize.
+        ///
         /// See: `isSideArray`.
         float[4] margin = 0;
 
         /// Border size, placed between margin and padding. `[left, right, top, bottom]`.
+        ///
+        /// Updating border requires a resize.
         ///
         /// See: `isSideArray`
         float[4] border = 0;
 
         /// Padding (inner margin) of the node. `[left, right, top, bottom]`.
         ///
+        /// Updating padding requires a resize.
+        ///
         /// See: `isSideArray`
         float[4] padding = 0;
 
         /// Margin/gap between two neighboring elements; for container nodes that support it.
+        ///
+        /// Updating the gap requires a resize.
         float gap = 0;
 
         /// Border style to use.
+        ///
+        /// Updating border requires a resize.
         FluidBorder borderStyle;
 
     }

@@ -409,12 +409,13 @@ unittest {
     assert(io.isTextureValid(texture));
 
     // Destroy the texture on another thread
-    spawn((Texture texture) {
+    spawn((shared Texture sharedTexture) {
 
+        auto texture = cast() sharedTexture;
         texture.destroy();
         ownerTid.send(true);
 
-    }, texture);
+    }, cast(shared) texture);
 
     // Wait for confirmation
     receiveOnly!bool;
@@ -689,32 +690,36 @@ static Image generateColorImage(int width, int height, Color color) {
     auto data = new Color[width * height];
     data[] = color;
 
-    // Prepare the result
-    Image image;
-    image.format = Image.Format.rgba;
-    image.rgbaPixels = data;
-    image.width = width;
-    image.height = height;
+    return Image(data, width, height);
 
-    return image;
+}
+
+/// Generate a paletted image filled with 0-index pixels of given alpha value.
+static Image generatePalettedImage(int width, int height, ubyte alpha) {
+
+    auto data = new PalettedColor[width * height];
+    data[] = PalettedColor(alpha, 0);
+
+    return Image(data, width, height);
 
 }
 
 /// Generate an alpha mask filled with given value.
 static Image generateAlphaMask(int width, int height, ubyte value) {
 
-    // Generate each pixel
     auto data = new ubyte[width * height];
     data[] = value;
 
-    // Prepare the result
-    Image image;
-    image.format = Image.Format.alpha;
-    image.alphaPixels = data;
-    image.width = width;
-    image.height = height;
+    return Image(data, width, height);
 
-    return image;
+}
+
+/// A paletted pixel, for use in `palettedAlpha` images; Stores images using an index into a palette, along with an
+/// alpha value.
+struct PalettedColor {
+
+    ubyte alpha;
+    ubyte index;
 
 }
 
@@ -723,10 +728,13 @@ struct Image {
 
     enum Format {
 
-        /// RGBA, 8 bit per channel.
+        /// RGBA, 8 bit per channel (32 bits per pixel).
         rgba,
 
-        /// Alpha-only image/mask.
+        /// Paletted image with alpha channel (16 bits per pixel)
+        palettedAlpha,
+
+        /// Alpha-only image/mask (8 bits per pixel).
         alpha,
 
     }
@@ -734,17 +742,40 @@ struct Image {
     Format format;
 
     /// Image data. Make sure to access data relevant to the current format.
+    ///
+    /// Each format has associated data storage. `rgba` has `rgbaPixels`, `palettedAlpha` has `palettedAlphaPixels` and
+    /// `alpha` has `alphaPixels`.
     Color[] rgbaPixels;
+
+    /// ditto
+    PalettedColor[] palettedAlphaPixels;
+
+    /// ditto
     ubyte[] alphaPixels;
 
+    /// Palette data, if relevant. Access into an invalid palette index is equivalent to full white.
+    ///
+    /// For `palettedAlpha` images (and `PalettedColor` in general), the alpha value of each color in the palette is
+    /// ignored.
+    Color[] palette;
+
     int width, height;
-    // TODO Alpha-channel only images
 
     /// Create an RGBA image.
     this(Color[] rgbaPixels, int width, int height) {
 
         this.format = Format.rgba;
         this.rgbaPixels = rgbaPixels;
+        this.width = width;
+        this.height = height;
+
+    }
+
+    /// Create a paletted image.
+    this(PalettedColor[] palettedAlphaPixels, int width, int height) {
+
+        this.format = Format.palettedAlpha;
+        this.palettedAlphaPixels = palettedAlphaPixels;
         this.width = width;
         this.height = height;
 
@@ -772,6 +803,19 @@ struct Image {
 
     }
 
+    /// Get a palette entry at given index.
+    Color paletteColor(PalettedColor pixel) const {
+
+        // Valid index, return the color; Set alpha to match the pixel
+        if (pixel.index < palette.length)
+            return palette[pixel.index].setAlpha(pixel.alpha);
+
+        // Invalid index, return white
+        else
+            return Color(0xff, 0xff, 0xff, pixel.alpha);
+
+    }
+
     /// Get data of the image in raw form.
     inout(void)[] data() inout {
 
@@ -779,6 +823,8 @@ struct Image {
 
             case Format.rgba:
                 return rgbaPixels;
+            case Format.palettedAlpha:
+                return palettedAlphaPixels;
             case Format.alpha:
                 return alphaPixels;
 
@@ -795,6 +841,8 @@ struct Image {
 
             case Format.rgba:
                 return rgbaPixels[index];
+            case Format.palettedAlpha:
+                return paletteColor(palettedAlphaPixels[index]);
             case Format.alpha:
                 return Color(0xff, 0xff, 0xff, alphaPixels[index]);
 
@@ -803,6 +851,10 @@ struct Image {
     }
 
     /// Set color at given position. Does nothing if position is out of bounds.
+    ///
+    /// The `set(int, int, Color)` overload only supports true color images. For paletted images, use
+    /// `set(int, int, PalettedColor)`. The latter can also be used for building true color images using a palette, if
+    /// one is supplied in the image at the time.
     void set(int x, int y, Color color) {
 
         if (x < 0 || y < 0) return;
@@ -815,6 +867,33 @@ struct Image {
             case Format.rgba:
                 rgbaPixels[index] = color;
                 return;
+            case Format.palettedAlpha:
+                assert(false, "Unsupported image format: Cannot `set` pixels by color in a paletted image.");
+            case Format.alpha:
+                alphaPixels[index] = color.a;
+                return;
+
+        }
+
+    }
+
+    /// ditto
+    void set(int x, int y, PalettedColor entry) {
+
+        if (x < 0 || y < 0) return;
+        if (x >= width || y >= height) return;
+
+        const index = y * width + x;
+        const color = paletteColor(entry);
+
+        final switch (format) {
+
+            case Format.rgba:
+                rgbaPixels[index] = color;
+                return;
+            case Format.palettedAlpha:
+                palettedAlphaPixels[index] = entry;
+                return;
             case Format.alpha:
                 alphaPixels[index] = color.a;
                 return;
@@ -824,12 +903,39 @@ struct Image {
     }
 
     /// Clear the image, replacing every pixel with given color.
+    ///
+    /// The `clear(Color)` overload only supports true color images. For paletted images, use `clear(PalettedColor)`.
+    /// The latter can also be used for building true color images using a palette, if one is supplied in the image at
+    /// the time.
     void clear(Color color) {
 
         final switch (format) {
 
             case Format.rgba:
                 rgbaPixels[] = color;
+                return;
+            case Format.palettedAlpha:
+                assert(false, "Unsupported image format: Cannot `clear` by color in a paletted image.");
+            case Format.alpha:
+                alphaPixels[] = color.a;
+                return;
+
+        }
+
+    }
+
+    /// ditto
+    void clear(PalettedColor entry) {
+
+        const color = paletteColor(entry);
+
+        final switch (format) {
+
+            case Format.rgba:
+                rgbaPixels[] = color;
+                return;
+            case Format.palettedAlpha:
+                palettedAlphaPixels[] = entry;
                 return;
             case Format.alpha:
                 alphaPixels[] = color.a;
@@ -860,6 +966,9 @@ struct Texture {
 
     /// Dots per inch for the X and Y axis. Defaults to 96, thus making a dot in the texture equivalent to a pixel.
     int dpiX = 96, dpiY = 96;
+
+    /// If relevant, the texture is to use this palette.
+    Color[] palette;
 
     bool opEquals(const Texture other) const
 
@@ -1204,6 +1313,8 @@ Color setAlpha(Color color, float alpha) {
 
 /// Blend two colors together; apply `top` on top of the `bottom` color. If `top` has maximum alpha, returns `top`. If
 /// alpha is zero, returns `bottom`.
+///
+/// BUG: This function is currently broken and returns incorrect results.
 Color alphaBlend(Color bottom, Color top) {
 
     auto topA = cast(float) top.a / ubyte.max;

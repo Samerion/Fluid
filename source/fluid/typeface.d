@@ -59,7 +59,12 @@ interface Typeface {
 
     /// Draw a line of text.
     /// Note: This API is unstable and might change over time.
-    void drawLine(ref Image target, ref Vector2 penPosition, Rope text, Color tint) const;
+    /// Params:
+    ///     target       = Image to draw to.
+    ///     penPosition  = Pen position for the beginning of the line. Updated to the pen position at the end of th line.
+    ///     text         = Text to draw.
+    ///     paletteIndex = If the image has a palette, this is the index to get colors from.
+    void drawLine(ref Image target, ref Vector2 penPosition, Rope text, ubyte paletteIndex = 0) const;
 
     /// Instances of Typeface have to be comparable in a memory-safe manner.
     bool opEquals(const Object object) @safe const;
@@ -248,7 +253,7 @@ interface Typeface {
 
     /// Draw text within the given rectangle in the image.
     final void draw(alias chunkWords = defaultWordChunks, String)
-        (ref Image image, Rectangle rectangle, String text, Color tint, bool wrap = true)
+        (ref Image image, Rectangle rectangle, String text, ubyte paletteIndex, bool wrap = true)
     const {
 
         auto ruler = TextRuler(this, rectangle.w);
@@ -265,7 +270,7 @@ interface Typeface {
 
                 auto wordPenPosition = rectangle.start + penPosition;
 
-                drawLine(image, wordPenPosition, word, tint);
+                drawLine(image, wordPenPosition, word, paletteIndex);
 
             }
 
@@ -666,7 +671,7 @@ class FreetypeTypeface : Typeface {
     }
 
     /// Draw a line of text
-    void drawLine(ref Image target, ref Vector2 penPosition, const Rope text, Color tint) const @trusted {
+    void drawLine(ref Image target, ref Vector2 penPosition, const Rope text, ubyte paletteIndex) const @trusted {
 
         assert(_dpiX && _dpiY, "Font DPI hasn't been set");
 
@@ -697,12 +702,12 @@ class FreetypeTypeface : Typeface {
                     // Don't draw pixels out of bounds
                     if (targetX >= target.width || targetY >= target.height) continue;
 
-                    // Note: ImageDrawPixel overrides the pixel — alpha blending has to be done by us
-                    const oldColor = target.get(targetX, targetY);
-                    const newColor = tint.setAlpha(cast(float) pixel / pixel.max);
-                    const color = alphaBlend(oldColor, newColor);
+                    // Choose the stronger color
+                    const ubyte oldAlpha = target.get(targetX, targetY).a;
+                    const ubyte newAlpha = ubyte.max * pixel / pixel.max;
 
-                    target.set(targetX, targetY, color);
+                    if (newAlpha >= oldAlpha)
+                        target.set(targetX, targetY, PalettedColor(newAlpha, paletteIndex));
 
                 }
 
@@ -710,194 +715,6 @@ class FreetypeTypeface : Typeface {
 
             // Advance pen positon
             penPosition += Vector2(face.glyph.advance.tupleof) / 64;
-
-        }
-
-    }
-
-}
-
-/// Font rendering via Raylib. Discouraged, potentially slow, and not HiDPI-compatible. Use `FreetypeTypeface` instead.
-version (Have_raylib_d)
-class RaylibTypeface : Typeface {
-
-    import raylib;
-
-    public {
-
-        /// Character spacing, as a fraction of the font size.
-        float spacing = 0.1;
-
-        /// Line height relative to font height.
-        float relativeLineHeight = 1.4;
-
-        /// Scale to apply for the typeface.
-        float scale = 1.0;
-
-    }
-
-    private {
-
-        /// Underlying Raylib font.
-        Font _font;
-
-        /// If true, this is the default font, and has to be available ahead of time.
-        ///
-        /// If the typeface is requested before Raylib is loaded (...and it is...), the default font won't be available,
-        /// so we must use late loading.
-        bool _isDefault;
-
-        /// If true, this typeface has been loaded using this class, making the class responsible for freeing the font.
-        bool _isOwner;
-
-    }
-
-    /// Object holding the default typeface.
-    static RaylibTypeface defaultTypeface() @trusted {
-
-        static RaylibTypeface typeface;
-
-        // Load the typeface
-        if (!typeface) {
-            typeface = new RaylibTypeface(GetFontDefault);
-            typeface._isDefault = true;
-            typeface.scale = 2.0;
-        }
-
-        return typeface;
-
-    }
-
-    /// Load a Raylib font.
-    this(Font font) {
-
-        this._font = font;
-
-    }
-
-    /// Load a Raylib font from file.
-    deprecated("Raylib font rendering is inefficient and lacks scaling. Use FreetypeTypeface instead")
-    this(string filename, int size) @trusted {
-
-        this._font = LoadFontEx(filename.toStringz, size, null, 0);
-        this.isOwner = true;
-
-    }
-
-    ~this() @trusted {
-
-        if (isOwner) {
-
-            UnloadFont(_font);
-
-        }
-
-    }
-
-    /// Instances of Typeface have to be comparable in a memory-safe manner.
-    override bool opEquals(const Object object) @safe const {
-
-        return this is object;
-
-    }
-
-    Font font() @trusted {
-
-        if (_isDefault)
-            return _font = GetFontDefault;
-        else
-            return _font;
-
-    }
-
-    const(Font) font() const @trusted {
-
-        if (_isDefault)
-            return GetFontDefault;
-        else
-            return _font;
-
-    }
-
-    bool isOwner() const => _isOwner;
-    bool isOwner(bool value) @system => _isOwner = value;
-
-    /// List glyphs  in the typeface.
-    long glyphCount() const {
-
-        return font.glyphCount;
-
-    }
-
-    /// Get initial pen position.
-    Vector2 penPosition() const {
-
-        return Vector2(0, 0);
-
-    }
-
-    /// Get font height in pixels.
-    int fontHeight() const {
-
-        return cast(int) (font.baseSize * scale);
-
-    }
-
-    /// Get line height in pixels.
-    int lineHeight() const {
-
-        return cast(int) (fontHeight * relativeLineHeight);
-
-    }
-
-    /// Changing DPI at runtime is not supported for Raylib typefaces.
-    Vector2 dpi(Vector2 dpi) {
-
-        // Not supported for Raylib typefaces.
-        return Vector2(96, 96);
-
-    }
-
-    Vector2 dpi() const {
-
-        return Vector2(96, 96);
-
-    }
-
-    /// Get advance vector for the given glyph.
-    Vector2 advance(dchar codepoint) @trusted {
-
-        const glyph = GetGlyphInfo(cast() font, codepoint);
-        const spacing = fontHeight * this.spacing;
-        const baseAdvanceX = glyph.advanceX
-            ? glyph.advanceX
-            : glyph.offsetX + glyph.image.width;
-        const advanceX = baseAdvanceX * scale;
-
-        return Vector2(advanceX + spacing, 0);
-
-    }
-
-    /// Draw a line of text
-    /// Note: This API is unstable and might change over time.
-    void drawLine(ref .Image target, ref Vector2 penPosition, Rope text, Color tint) const @trusted {
-
-        import std.utf : toUTFz;
-
-        // Note: `DrawTextEx` doesn't scale `spacing`, but `ImageDrawTextEx` DOES. The image is first drawn at base size
-        //       and *then* scaled.
-        const spacing = font.baseSize * this.spacing;
-
-        // We trust Raylib will not mutate the font
-        auto font = cast() this.font;
-
-        // Make a Raylib-compatible wrapper for image data
-        auto result = target.toRaylib;
-
-        // Draw the rope, node by node
-        foreach (node; text.byNode) {
-
-            ImageDrawTextEx(&result, font, node.value.toStringz, penPosition, fontHeight, spacing, tint);
 
         }
 

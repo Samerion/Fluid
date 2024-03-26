@@ -37,9 +37,13 @@ class Raylib5Backend : FluidBackend {
         Color _tint = color!"fff";
         float _scale = 1;
         Shader _alphaImageShader;
+        Shader _palettedAlphaImageShader;
+        int _palettedAlphaImageShader_palette;
+        fluid.backend.Texture _paletteTexture;
 
     }
 
+    /// Shader code for alpha images.
     enum alphaImageShaderCode = q{
         #version 330
         in vec2 fragTexCoord;
@@ -52,7 +56,25 @@ class Raylib5Backend : FluidBackend {
             vec4 texelColor = texture(texture0, fragTexCoord);
             finalColor = vec4(1, 1, 1, texelColor.r) * colDiffuse * fragColor;
         }
-    } ~ "\0";
+    };
+
+    /// Shader code for palette iamges.
+    enum palettedAlphaImageShaderCode = q{
+        #version 330
+        in vec2 fragTexCoord;
+        in vec4 fragColor;
+        out vec4 finalColor;
+        uniform sampler2D texture0;
+        uniform sampler2D palette;
+        uniform vec4 colDiffuse;
+        void main() {
+            // index.r is alpha/opacity
+            // index.g is palette index
+            vec4 index = texture(texture0, fragTexCoord);
+            vec4 texel = texture(palette, vec2(index.a, 0));
+            finalColor = vec4(texel.x, texel.y, texel.z, index.r) * colDiffuse * fragColor;
+        }
+    };
 
     @trusted {
 
@@ -93,11 +115,25 @@ class Raylib5Backend : FluidBackend {
             return 1 + cast(int) iota(0, 4).countUntil!(a => IsGamepadButtonUp(a, btn));
         }
 
-        int isRepeated(GamepadButton button) const
-            => 0;
+        int isRepeated(GamepadButton button) const {
+            return 0;
+        }
 
     }
 
+    ~this() @trusted {
+
+        if (IsWindowReady()) {
+
+            UnloadShader(_alphaImageShader);
+            UnloadShader(_palettedAlphaImageShader);
+            _paletteTexture.destroy();
+
+        }
+
+    }
+
+    /// Get shader for images with the `alpha` format.
     raylib.Shader alphaImageShader() @trusted {
 
         // Shader created and available for use
@@ -106,6 +142,28 @@ class Raylib5Backend : FluidBackend {
 
         // Create the shader
         return _alphaImageShader = LoadShaderFromMemory(null, alphaImageShaderCode.ptr);
+
+    }
+
+    /// Get shader for images with the `palettedAlpha` format.
+    /// Params:
+    ///     palette = Palette to use with the shader.
+    raylib.Shader palettedAlphaImageShader(Color[] palette) @trusted {
+
+        // Load the shader
+        if (!IsShaderReady(_palettedAlphaImageShader)) {
+
+            _palettedAlphaImageShader = LoadShaderFromMemory(null, palettedAlphaImageShaderCode.ptr);
+            _palettedAlphaImageShader_palette = GetShaderLocation(_palettedAlphaImageShader, "palette");
+
+        }
+
+        auto paletteTexture = this.paletteTexture(palette);
+
+        // Load the palette
+        SetShaderValueTexture(_palettedAlphaImageShader, _palettedAlphaImageShader_palette, paletteTexture.toRaylib);
+
+        return _palettedAlphaImageShader;
 
     }
 
@@ -414,7 +472,7 @@ class Raylib5Backend : FluidBackend {
         auto rayTexture = texture.toRaylib;
 
         SetTextureFilter(rayTexture, TextureFilter.TEXTURE_FILTER_BILINEAR);
-        drawTexture(rayTexture, rectangle, tint, false);
+        drawTexture(texture, rectangle, tint, false);
 
     }
 
@@ -426,12 +484,12 @@ class Raylib5Backend : FluidBackend {
         auto rayTexture = texture.toRaylib;
 
         SetTextureFilter(rayTexture, TextureFilter.TEXTURE_FILTER_POINT);
-        drawTexture(rayTexture, rectangle, tint, true);
+        drawTexture(texture, rectangle, tint, true);
 
     }
 
     protected @trusted
-    void drawTexture(raylib.Texture texture, Rectangle destination, Color tint, bool alignPixels)
+    void drawTexture(fluid.backend.Texture texture, Rectangle destination, Color tint, bool alignPixels)
     do {
 
         import std.math;
@@ -447,19 +505,54 @@ class Raylib5Backend : FluidBackend {
         const source = Rectangle(0, 0, texture.width, texture.height);
         Shader shader;
 
-        // Alpha image, enable alpha mask shader
-        if (texture.format == PixelFormat.PIXELFORMAT_UNCOMPRESSED_GRAYSCALE)
-            shader = alphaImageShader;
+        // Enable shaders relevant to given format
+        switch (texture.format) {
+
+            case fluid.backend.Image.Format.alpha:
+                shader = alphaImageShader;
+                break;
+
+            case fluid.backend.Image.Format.palettedAlpha:
+                shader = palettedAlphaImageShader(texture.palette);
+                break;
+
+            default: break;
+
+        }
 
         // Start shaders, if applicable
         if (IsShaderReady(shader))
             BeginShaderMode(shader);
 
-        DrawTexturePro(texture, source, destination, Vector2(0, 0), 0, multiply(tint, this.tint));
+        DrawTexturePro(texture.toRaylib, source, destination, Vector2(0, 0), 0, multiply(tint, this.tint));
 
         // End shaders
         if (IsShaderReady(shader))
             EndShaderMode();
+
+    }
+
+    /// Create a palette texture.
+    private fluid.backend.Texture paletteTexture(scope Color[] colors) @trusted
+    in (colors.length <= 256, "There can only be at most 256 colors in a palette.")
+    do {
+
+        // Fill empty slots in the palette with white
+        Color[256] allColors = color("#fff");
+        allColors[0 .. colors.length] = colors;
+
+        // Prepare an image for the texture
+        scope image = fluid.backend.Image(allColors[], 256, 1);
+
+        // Create the texture if it doesn't exist
+        if (_paletteTexture is _paletteTexture.init)
+            _paletteTexture = loadTexture(image);
+
+        // Or, update existing palette image
+        else
+            updateTexture(_paletteTexture, image);
+
+        return _paletteTexture;
 
     }
 
@@ -561,6 +654,9 @@ raylib.PixelFormat toRaylib(fluid.backend.Image.Format imageFormat) {
         case imageFormat.rgba:
             return PixelFormat.PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
 
+        case imageFormat.palettedAlpha:
+            return PixelFormat.PIXELFORMAT_UNCOMPRESSED_GRAY_ALPHA;
+
         case imageFormat.alpha:
             return PixelFormat.PIXELFORMAT_UNCOMPRESSED_GRAYSCALE;
 
@@ -574,6 +670,9 @@ fluid.backend.Image.Format fromRaylib(raylib.PixelFormat pixelFormat) {
 
         case pixelFormat.PIXELFORMAT_UNCOMPRESSED_R8G8B8A8:
             return fluid.backend.Image.Format.rgba;
+
+        case pixelFormat.PIXELFORMAT_UNCOMPRESSED_GRAY_ALPHA:
+            return fluid.backend.Image.Format.palettedAlpha;
 
         case pixelFormat.PIXELFORMAT_UNCOMPRESSED_GRAYSCALE:
             return fluid.backend.Image.Format.alpha;
