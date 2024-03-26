@@ -133,6 +133,12 @@ interface FluidBackend {
     Texture loadTexture(Image image) @system;
     Texture loadTexture(string filename) @system;
 
+    /// Update a texture from an image. The texture must be valid and must be of the same size and format as the image.
+    void updateTexture(Texture texture, Image image) @system
+    in (texture.format == image.format)
+    in (texture.width == image.width)
+    in (texture.height == image.height);
+
     /// Destroy a texture created by this backend. Always use `texture.destroy()` to ensure thread safety and invoking
     /// the correct backend.
     protected void unloadTexture(uint id) @system;
@@ -225,19 +231,16 @@ struct TextureReaper {
         // Find all destroyed textures
         foreach (id, tombstone; textures) {
 
-            // Texture marked for deletion
-            if (tombstone.isDestroyed) {
+            if (!tombstone.isDestroyed) continue;
 
-                auto backend = cast() tombstone.backend;
+            auto backend = cast() tombstone.backend;
 
-                // Unload it
-                backend.unloadTexture(id);
-                tombstone.markDisowned();
+            // Unload the texture
+            backend.unloadTexture(id);
 
-                // Remove the texture from registry
-                textures.remove(id);
-
-            }
+            // Disown the tombstone and remove it from the registry
+            tombstone.markDisowned();
+            textures.remove(id);
 
         }
 
@@ -256,6 +259,8 @@ struct TextureReaper {
 
             // Unload the texture, even if it wasn't marked for deletion
             backend.unloadTexture(id);
+            // TODO Should this be done? The destructor may be called from the GC. Maybe check if it was?
+            //      Test this!
 
             // Disown all textures
             tombstone.markDisowned();
@@ -280,7 +285,10 @@ shared struct TextureTombstone {
     /// Backend that created this texture.
     private FluidBackend _backend;
 
-    private bool _destroyed, _disowned;
+    private int _references = 1;
+    private bool _disowned;
+
+    @disable this(this);
 
     static TextureTombstone* make(FluidBackend backend) @system {
 
@@ -295,6 +303,8 @@ shared struct TextureTombstone {
         *tombstone = TextureTombstone.init;
         tombstone._backend = cast(shared) backend;
 
+        assert(tombstone.references == 1);
+
         // Make sure the backend isn't freed while the tombstone is alive
         GC.addRoot(cast(void*) backend);
 
@@ -302,8 +312,15 @@ shared struct TextureTombstone {
 
     }
 
-    /// Check if the texture has been destroyed.
-    bool isDestroyed() @system => _destroyed.atomicLoad;
+    /// Check if a request for destruction has been made for the texture.
+    bool isDestroyed() @system => _references.atomicLoad == 0;
+
+    /// Check if the texture has been disowned by the backend. A disowned tombstone refers to a texture that has been
+    /// freed.
+    private bool isDisowned() @system => _disowned.atomicLoad;
+
+    /// Get number of references to this tombstone.
+    private int references() @system => _references.atomicLoad;
 
     /// Get the backend owning this texture.
     inout(shared FluidBackend) backend() inout => _backend;
@@ -311,16 +328,27 @@ shared struct TextureTombstone {
     /// Mark the texture as destroyed.
     void markDestroyed() @system {
 
-        _destroyed.atomicStore(true);
+        assert(!isDisowned || !isDestroyed, "Texture: Double destroy()");
+
+        _references.atomicFetchSub(1);
         tryDestroy();
 
     }
 
     /// Mark the texture as disowned.
-    void markDisowned() @system {
+    private void markDisowned() @system {
+
+        assert(!isDisowned || !isDestroyed);
 
         _disowned.atomicStore(true);
         tryDestroy();
+
+    }
+
+    /// Mark the texture as copied.
+    private void markCopied() @system {
+
+        _references.atomicFetchAdd(1);
 
     }
 
@@ -338,7 +366,7 @@ shared struct TextureTombstone {
     private void tryDestroy() @system {
 
         // Destroyed and disowned
-        if (_destroyed.atomicLoad && _disowned.atomicLoad) {
+        if (isDestroyed && isDisowned) {
 
             GC.removeRoot(cast(void*) _backend);
             free(cast(void*) &this);
@@ -381,12 +409,13 @@ unittest {
     assert(io.isTextureValid(texture));
 
     // Destroy the texture on another thread
-    spawn((Texture texture) {
+    spawn((shared Texture sharedTexture) {
 
+        auto texture = cast() sharedTexture;
         texture.destroy();
         ownerTid.send(true);
 
-    }, texture);
+    }, cast(shared) texture);
 
     // Wait for confirmation
     receiveOnly!bool;
@@ -661,23 +690,106 @@ static Image generateColorImage(int width, int height, Color color) {
     auto data = new Color[width * height];
     data[] = color;
 
-    // Prepare the result
-    Image image;
-    image.pixels = data;
-    image.width = width;
-    image.height = height;
+    return Image(data, width, height);
 
-    return image;
+}
+
+/// Generate a paletted image filled with 0-index pixels of given alpha value.
+static Image generatePalettedImage(int width, int height, ubyte alpha) {
+
+    auto data = new PalettedColor[width * height];
+    data[] = PalettedColor(alpha, 0);
+
+    return Image(data, width, height);
+
+}
+
+/// Generate an alpha mask filled with given value.
+static Image generateAlphaMask(int width, int height, ubyte value) {
+
+    auto data = new ubyte[width * height];
+    data[] = value;
+
+    return Image(data, width, height);
+
+}
+
+/// A paletted pixel, for use in `palettedAlpha` images; Stores images using an index into a palette, along with an
+/// alpha value.
+struct PalettedColor {
+
+    ubyte alpha;
+    ubyte index;
 
 }
 
 /// Image available to the CPU.
 struct Image {
 
-    /// Image data.
-    Color[] pixels;
+    enum Format {
+
+        /// RGBA, 8 bit per channel (32 bits per pixel).
+        rgba,
+
+        /// Paletted image with alpha channel (16 bits per pixel)
+        palettedAlpha,
+
+        /// Alpha-only image/mask (8 bits per pixel).
+        alpha,
+
+    }
+
+    Format format;
+
+    /// Image data. Make sure to access data relevant to the current format.
+    ///
+    /// Each format has associated data storage. `rgba` has `rgbaPixels`, `palettedAlpha` has `palettedAlphaPixels` and
+    /// `alpha` has `alphaPixels`.
+    Color[] rgbaPixels;
+
+    /// ditto
+    PalettedColor[] palettedAlphaPixels;
+
+    /// ditto
+    ubyte[] alphaPixels;
+
+    /// Palette data, if relevant. Access into an invalid palette index is equivalent to full white.
+    ///
+    /// For `palettedAlpha` images (and `PalettedColor` in general), the alpha value of each color in the palette is
+    /// ignored.
+    Color[] palette;
+
     int width, height;
-    // TODO Alpha-channel only images
+
+    /// Create an RGBA image.
+    this(Color[] rgbaPixels, int width, int height) {
+
+        this.format = Format.rgba;
+        this.rgbaPixels = rgbaPixels;
+        this.width = width;
+        this.height = height;
+
+    }
+
+    /// Create a paletted image.
+    this(PalettedColor[] palettedAlphaPixels, int width, int height) {
+
+        this.format = Format.palettedAlpha;
+        this.palettedAlphaPixels = palettedAlphaPixels;
+        this.width = width;
+        this.height = height;
+
+    }
+
+    /// Create an alpha mask.
+    this(ubyte[] alphaPixels, int width, int height) {
+
+        this.format = Format.alpha;
+        this.alphaPixels = alphaPixels;
+        this.width = width;
+        this.height = height;
+
+    }
 
     Vector2 size() const {
 
@@ -691,19 +803,145 @@ struct Image {
 
     }
 
-    ref inout(Color) get(int x, int y) inout {
+    /// Get a palette entry at given index.
+    Color paletteColor(PalettedColor pixel) const {
 
-        return pixels[y * width + x];
+        // Valid index, return the color; Set alpha to match the pixel
+        if (pixel.index < palette.length)
+            return palette[pixel.index].setAlpha(pixel.alpha);
+
+        // Invalid index, return white
+        else
+            return Color(0xff, 0xff, 0xff, pixel.alpha);
 
     }
 
-    /// Safer alternative to `get`, doesn't draw out of bounds.
+    /// Get data of the image in raw form.
+    inout(void)[] data() inout {
+
+        final switch (format) {
+
+            case Format.rgba:
+                return rgbaPixels;
+            case Format.palettedAlpha:
+                return palettedAlphaPixels;
+            case Format.alpha:
+                return alphaPixels;
+
+        }
+
+    }
+
+    /// Get color at given position. Position must be in image bounds.
+    Color get(int x, int y) const {
+
+        const index = y * width + x;
+
+        final switch (format) {
+
+            case Format.rgba:
+                return rgbaPixels[index];
+            case Format.palettedAlpha:
+                return paletteColor(palettedAlphaPixels[index]);
+            case Format.alpha:
+                return Color(0xff, 0xff, 0xff, alphaPixels[index]);
+
+        }
+
+    }
+
+    /// Set color at given position. Does nothing if position is out of bounds.
+    ///
+    /// The `set(int, int, Color)` overload only supports true color images. For paletted images, use
+    /// `set(int, int, PalettedColor)`. The latter can also be used for building true color images using a palette, if
+    /// one is supplied in the image at the time.
     void set(int x, int y, Color color) {
 
         if (x < 0 || y < 0) return;
         if (x >= width || y >= height) return;
 
-        get(x, y) = color;
+        const index = y * width + x;
+
+        final switch (format) {
+
+            case Format.rgba:
+                rgbaPixels[index] = color;
+                return;
+            case Format.palettedAlpha:
+                assert(false, "Unsupported image format: Cannot `set` pixels by color in a paletted image.");
+            case Format.alpha:
+                alphaPixels[index] = color.a;
+                return;
+
+        }
+
+    }
+
+    /// ditto
+    void set(int x, int y, PalettedColor entry) {
+
+        if (x < 0 || y < 0) return;
+        if (x >= width || y >= height) return;
+
+        const index = y * width + x;
+        const color = paletteColor(entry);
+
+        final switch (format) {
+
+            case Format.rgba:
+                rgbaPixels[index] = color;
+                return;
+            case Format.palettedAlpha:
+                palettedAlphaPixels[index] = entry;
+                return;
+            case Format.alpha:
+                alphaPixels[index] = color.a;
+                return;
+
+        }
+
+    }
+
+    /// Clear the image, replacing every pixel with given color.
+    ///
+    /// The `clear(Color)` overload only supports true color images. For paletted images, use `clear(PalettedColor)`.
+    /// The latter can also be used for building true color images using a palette, if one is supplied in the image at
+    /// the time.
+    void clear(Color color) {
+
+        final switch (format) {
+
+            case Format.rgba:
+                rgbaPixels[] = color;
+                return;
+            case Format.palettedAlpha:
+                assert(false, "Unsupported image format: Cannot `clear` by color in a paletted image.");
+            case Format.alpha:
+                alphaPixels[] = color.a;
+                return;
+
+        }
+
+    }
+
+    /// ditto
+    void clear(PalettedColor entry) {
+
+        const color = paletteColor(entry);
+
+        final switch (format) {
+
+            case Format.rgba:
+                rgbaPixels[] = color;
+                return;
+            case Format.palettedAlpha:
+                palettedAlphaPixels[] = entry;
+                return;
+            case Format.alpha:
+                alphaPixels[] = color.a;
+                return;
+
+        }
 
     }
 
@@ -717,6 +955,9 @@ struct Texture {
     /// Tombstone for this texture
     shared(TextureTombstone)* tombstone;
 
+    /// Format of the texture.
+    Image.Format format;
+
     /// GPU/backend ID of the texture.
     uint id;
 
@@ -725,6 +966,9 @@ struct Texture {
 
     /// Dots per inch for the X and Y axis. Defaults to 96, thus making a dot in the texture equivalent to a pixel.
     int dpiX = 96, dpiY = 96;
+
+    /// If relevant, the texture is to use this palette.
+    Color[] palette;
 
     bool opEquals(const Texture other) const
 
@@ -756,6 +1000,13 @@ struct Texture {
             width * 96 / dpiX,
             height * 96 / dpiY
         );
+
+    /// Update the texture to match the given image.
+    void update(Image image) @system {
+
+        backend.updateTexture(this, image);
+
+    }
 
     /// Draw this texture.
     void draw(Vector2 position, Color tint = color!"fff") {
@@ -804,6 +1055,123 @@ struct TextureGC {
     this(FluidBackend backend, Image data) @trusted {
 
         this.texture = backend.loadTexture(data);
+
+    }
+
+    /// Move constructor for TextureGC; increment the reference counter for the texture.
+    ///
+    /// While I originally did not intend to implement reference counting, it is necessary to make TextureGC work in
+    /// dynamic arrays. Changing the size of the array will copy the contents without performing a proper move of the
+    /// old items. The postblit is the only kind of move constructor that will be called in this case, and a copy
+    /// constructor does not do its job.
+    this(this) @system {
+
+        if (tombstone)
+        tombstone.markCopied();
+
+    }
+
+    @system
+    unittest {
+
+        import std.string;
+
+        // This tests using TextureGC inside of a dynamic array, especially after resizing. See documentation for
+        // the postblit above.
+
+        // Test two variants:
+        // * One, where we rely on the language to finalize the copied value
+        // * And one, where we manually destroy the value
+        foreach (explicitDestruction; [false, true]) {
+
+            void makeCopy(TextureGC[] arr) {
+
+                // Create the copy
+                auto copy = arr;
+
+                assert(sameHead(arr, copy));
+
+                // Expand the array, creating another
+                copy.length = 1024;
+
+                assert(!sameHead(arr, copy));
+
+                // References to tombstones exist in both arrays now
+                assert(!copy[0].tombstone.isDestroyed);
+                assert(!arr[0].tombstone.isDestroyed);
+
+                // The copy should be marked as moved
+                assert(copy[0].tombstone.references == 2);
+                assert(arr[0].tombstone.references == 2);
+
+                // Destroy the tombstone
+                if (explicitDestruction) {
+
+                    auto tombstone = copy[0].tombstone;
+
+                    copy[0].destroy();
+                    assert(tombstone.references == 1);
+                    assert(!tombstone.isDestroyed);
+
+                }
+
+                // Forget about the copy
+                copy = null;
+
+            }
+
+            static void trashStack() {
+
+                import core.memory;
+
+                // Destroy the stack to get rid of any references to `copy`
+                ubyte[2048] garbage;
+
+                // Collect it, make sure the tombstone gets eaten
+                GC.collect();
+
+            }
+
+            auto io = new HeadlessBackend;
+            auto image = generateColorImage(10, 10, color("#fff"));
+            auto arr = [
+                TextureGC(io, image),
+                TextureGC.init,
+            ];
+
+            makeCopy(arr);
+            trashStack();
+
+            assert(!arr[0].tombstone.isDestroyed, "Tombstone of a live texture was destroyed after copying an array"
+                ~ format!" (explicitDestruction %s)"(explicitDestruction));
+
+            io.reaper.collect();
+
+            assert(io.isTextureValid(arr[0]));
+            assert(!arr[0].tombstone.isDestroyed);
+            assert(!arr[0].tombstone.isDisowned);
+            assert(arr[0].tombstone.references == 1);
+
+        }
+
+    }
+
+    @system
+    unittest {
+
+        auto io = new HeadlessBackend;
+        auto image = generateColorImage(10, 10, color("#fff"));
+        auto arr = [
+            TextureGC(io, image),
+            TextureGC.init,
+        ];
+        auto copy = arr.dup;
+
+        assert(arr[0].tombstone.references == 2);
+
+        io.reaper.collect();
+
+        assert(io.isTextureValid(arr[0]));
 
     }
 
@@ -945,6 +1313,8 @@ Color setAlpha(Color color, float alpha) {
 
 /// Blend two colors together; apply `top` on top of the `bottom` color. If `top` has maximum alpha, returns `top`. If
 /// alpha is zero, returns `bottom`.
+///
+/// BUG: This function is currently broken and returns incorrect results.
 Color alphaBlend(Color bottom, Color top) {
 
     auto topA = cast(float) top.a / ubyte.max;
