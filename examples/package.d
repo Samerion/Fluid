@@ -34,6 +34,96 @@ Theme codeTheme;
 Theme previewWrapperTheme;
 Theme highlightBoxTheme;
 
+static this() {
+
+    import fluid.theme;
+    import std.file, std.path;
+
+    enum warningColor = color!"#ffe186";
+    enum warningAccentColor = color!"#ffc30f";
+
+    mainTheme = Theme(
+        rule!Frame(
+            margin.sideX = 12,
+            margin.sideY = 16,
+        ),
+        rule!Label(
+            margin.sideX = 12,
+            margin.sideY = 7,
+        ),
+        rule!Button(
+            margin.sideX = 12,
+            margin.sideY = 7,
+        ),
+        rule!Grid(margin.sideY = 0),
+        rule!GridRow(margin = 0),
+        rule!ScrollFrame(margin = 0),
+
+        // Heading
+        rule!(Label, Tags.heading)(
+            typeface = Style.loadTypeface(20),
+            margin.sideTop = 20,
+            margin.sideBottom = 10,
+        ),
+        rule!(Label, Tags.subheading)(
+            typeface = Style.loadTypeface(16),
+            margin.sideTop = 16,
+            margin.sideBottom = 8,
+        ),
+
+        // Warning
+        rule!(Label, Tags.warning)(
+            padding.sideX = 16,
+            padding.sideY = 6,
+            border = 1,
+            borderStyle = colorBorder(warningAccentColor),
+            backgroundColor = warningColor,
+            textColor = color!"#000",
+        ),
+    );
+
+    exampleListTheme = mainTheme.derive(
+        rule!Button(
+            padding.sideX = 8,
+            padding.sideY = 16,
+            margin = 2,
+        ),
+    );
+
+    highlightBoxTheme = Theme(
+        rule!Node(
+            border = 1,
+            borderStyle = colorBorder(color!"#e62937"),
+        ),
+    );
+
+    codeTheme = mainTheme.derive(
+
+        rule!Node(
+            typeface = Style.loadTypeface(thisExePath.dirName.buildPath("../examples/ibm-plex-mono.ttf"), 11),
+            backgroundColor = color!"#dedede",
+        ),
+        rule!Frame(
+            padding = 0,
+        ),
+        rule!Label(
+            margin = 0,
+            padding.sideX = 12,
+            padding.sideY = 16,
+        ),
+    );
+
+    previewWrapperTheme = mainTheme.derive(
+        rule!Frame(
+            margin = 0,
+            border = 1,
+            padding = 0,
+            borderStyle = colorBorder(color!"#dedede"),
+        ),
+    );
+
+}
+
 enum Chapter {
     @"Introduction" introduction,
     @"Frames" frames,
@@ -53,112 +143,8 @@ enum Tags {
     warning,
 }
 
-/// The entrypoint prepares themes and the window. The UI is build in `createUI()`.
+/// The entrypoint prepares themes and the window.
 void main(string[] args) {
-
-    import std.file, std.path;
-
-    // Prepare themes
-    with (Rule) {
-
-        enum warningColor = color!"#ffe186";
-        enum warningAccentColor = color!"#ffc30f";
-
-        mainTheme = Theme(
-            rule!Frame(
-                margin.sideX = 12,
-                margin.sideY = 16,
-            ),
-            rule!Label(
-                margin.sideX = 12,
-                margin.sideY = 7,
-            ),
-            rule!Button(
-                margin.sideX = 12,
-                margin.sideY = 7,
-            ),
-            rule!Grid(margin.sideY = 0),
-            rule!GridRow(margin = 0),
-            rule!ScrollFrame(margin = 0),
-
-            // Heading
-            rule!(Label, Tags.heading)(
-                typeface = Style.loadTypeface(20),
-                margin.sideTop = 20,
-                margin.sideBottom = 10,
-            ),
-            rule!(Label, Tags.subheading)(
-                typeface = Style.loadTypeface(16),
-                margin.sideTop = 16,
-                margin.sideBottom = 8,
-            ),
-
-            // Warning
-            rule!(Label, Tags.warning)(
-                padding.sideX = 16,
-                padding.sideY = 6,
-                border = 1,
-                borderStyle = colorBorder(warningAccentColor),
-                backgroundColor = warningColor,
-                textColor = color!"#000",
-            ),
-        );
-
-        exampleListTheme = mainTheme.derive(
-            rule!Button(
-                padding.sideX = 8,
-                padding.sideY = 16,
-                margin = 2,
-            ),
-        );
-
-        highlightBoxTheme = Theme(
-            rule!Node(
-                border = 1,
-                borderStyle = colorBorder(color!"#e62937"),
-            ),
-        );
-
-        codeTheme = mainTheme.derive(
-
-            rule!Node(
-                typeface = loadTypeface(thisExePath.dirName.buildPath("../examples/ibm-plex-mono.ttf"), 12),
-                backgroundColor = color!"#dedede",
-            ),
-            rule!Frame(
-                padding = 0,
-            ),
-            rule!Label(
-                margin = 0,
-                padding.sideX = 12,
-                padding.sideY = 16,
-            ),
-        );
-
-        previewWrapperTheme = mainTheme.derive(
-            rule!Frame(
-                margin = 0,
-                border = 1,
-                padding = 0,
-                borderStyle = colorBorder(color!"#dedede"),
-            ),
-        );
-
-    }
-
-    // Create the UI — pass the first argument to load a chapter under the given name
-    auto ui = args.length > 1
-        ? createUI(args[1])
-        : createUI();
-
-    /// Start the window.
-    startWindow(ui);
-
-}
-
-/// Raylib entrypoint.
-version (Have_raylib_d)
-void startWindow(Node ui) {
 
     import raylib;
 
@@ -169,6 +155,11 @@ void startWindow(Node ui) {
     SetTargetFPS(60);
     SetExitKey(0);
     scope (exit) CloseWindow();
+
+    // Create the UI — pass the first argument to load a chapter under the given name
+    auto ui = args.length > 1
+        ? createUI(args[1])
+        : createUI();
 
     // Event loop
     while (!WindowShouldClose) {
@@ -183,34 +174,6 @@ void startWindow(Node ui) {
         ui.draw();
 
     }
-
-}
-
-else version (Have_arsd_official_simpledisplay)
-void startWindow(Node ui) {
-
-    import arsd.simpledisplay;
-
-    SimpledisplayBackend backend;
-
-    // Create the window
-    auto window = new SimpleWindow(1000, 750, "Fluid showcase",
-        OpenGlOptions.yes,
-        Resizeability.allowResizing);
-
-    // Setup the backend
-    ui.backend = backend = new SimpledisplayBackend(window);
-
-    // Simpledisplay's design is more sophisticated and requires more config than Raylib
-    window.redrawOpenGlScene = {
-        ui.draw();
-        backend.poll();
-    };
-
-    // 1 frame every 16 ms ≈ 60 FPS
-    window.eventLoop(16, {
-        window.redrawOpenGlSceneSoon();
-    });
 
 }
 
