@@ -22,10 +22,11 @@ public import raylib : Vector2, Rectangle, Color;
 
 
 // Coordinate scaling will translate Fluid coordinates, where each pixels is 1/96th of an inch, to screen coordinates,
-// making use of DPI information provided by the system. It is disabled on macOS, since the system already handles this
-// for us.
-version (OSX)
-    version = Fluid_DisableScaling;
+// making use of DPI information provided by the system. This flag, always set, disables this.
+// Oddly, this version used to be set only on macOS, and I used to claim scaling was necessary on other platforms. I
+// have no evidence to support this currently, and it appears scaling works out of the box on each of the three major
+// platforms.
+version = Fluid_DisableScaling;
 
 class Raylib5Backend : FluidBackend {
 
