@@ -12,7 +12,6 @@ import std.algorithm;
 
 public import fluid.backend.raylib5;
 public import fluid.backend.headless;
-public import fluid.backend.simpledisplay;
 
 
 @safe:
@@ -22,8 +21,7 @@ alias VoidDelegate = void delegate() @safe;
 
 FluidBackend defaultFluidBackend();
 
-/// `FluidBackend` is an interface making it possible to bind Fluid to a library other than Raylib. Another built-in
-/// backend is `fluid.simpledisplay.SimpledisplayBackend` for `arsd.simpledisplay`.
+/// `FluidBackend` is an interface making it possible to bind Fluid to a library other than Raylib.
 ///
 /// The default unit in graphical space is a **pixel** (`px`), here defined as **1/96 of an inch**. This is unless
 /// stated otherwise, as in `Texture`.
