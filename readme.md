@@ -6,12 +6,11 @@ A flexible UI library for [the D programming language](https://dlang.org/). Mini
 auto root = vspace(
     .layout!"center",
     label(.layout!"center", "Hello World from"),
-    imageView("./logo.png", Vector2(499, 240)),
+    imageView("./logo.png"),
 );
 ```
 
-Fluid comes with [Raylib 5][raylib] and [arsd.simpledisplay][sdpy] support. Integration is seamless: one or two calls do
-the job.
+Fluid comes with [Raylib 5][raylib] support. Integration is seamless: one or two calls do the job.
 
 ```d
 while (!WindowShouldClose) {
@@ -27,7 +26,6 @@ while (!WindowShouldClose) {
 ```
 
 [raylib]: https://www.raylib.com/
-[sdpy]: https://arsd-official.dpldocs.info/arsd.simpledisplay.html
 
 Fluid has a decent feature set at the moment and new features will still be added over time. Fluid is already mostly
 stable and ready for use, but is still likely to receive a few breaking changes before leaving its pre-release stage.
