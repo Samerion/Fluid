@@ -101,13 +101,13 @@ static this() {
 
         rule!Node(
             typeface = Style.loadTypeface(thisExePath.dirName.buildPath("../examples/ibm-plex-mono.ttf"), 11),
-            backgroundColor = color!"#dedede",
         ),
         rule!Frame(
             padding = 0,
         ),
-        rule!Label(
+        rule!CodeInput(
             margin = 0,
+            backgroundColor = color!"#dedede",
             padding.sideX = 12,
             padding.sideY = 16,
         ),
@@ -362,19 +362,29 @@ Space showcaseCode(string code) {
 /// Showcase code and its result.
 Space showcaseCode(string code, Node node, Theme theme = Theme.init) {
 
+    CodeInput editor;
+
     // Make the node inherit the default theme rather than the one we set
     if (!node.theme) {
         node.theme = either(theme, fluidDefaultTheme);
     }
 
+    // Reset code editor text.
+    void reset() {
+
+        editor.value = code;
+
+    }
+
+    scope (success) reset();
+
     return hframe(
         .layout!"fill",
 
-        hscrollable!label(
+        editor = codeInput(
             .layout!(1, "fill"),
             .codeTheme,
-            code,
-        ).disableWrap(),
+        ),
         vframe(
             .layout!(1, "fill"),
             .previewWrapperTheme,

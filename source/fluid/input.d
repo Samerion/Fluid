@@ -58,6 +58,9 @@ enum FluidInputAction {
     copy,           /// Copy selected content.
     cut,            /// Cut (copy and delete) selected content.
     paste,          /// Paste selected content.
+    insertTab,      /// Insert a tab into a code editor (tab key)
+    indent,         /// Indent current line or selection in a code editor.
+    outdent,        /// Outdent current line or selection in a code editor (shift+tab).
 
     // Selection
     selectPreviousChar,  /// Select previous character in text.
