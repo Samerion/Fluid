@@ -32,6 +32,7 @@ public import
     fluid.button,
     fluid.checkbox,
     fluid.children,
+    fluid.code_input,
     fluid.default_theme,
     fluid.drag_slot,
     fluid.file_input,
