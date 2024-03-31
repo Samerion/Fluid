@@ -958,6 +958,89 @@ struct Rope {
 
     }
 
+    /// Get line in the rope by a byte index.
+    /// Returns: A rope slice with the line containing the given index.
+    Rope lineByIndex(KeepTerminator keepTerminator = No.keepTerminator)(size_t index) const
+    in (index >= 0 && index <= length, format!"Index %s is out of bounds of Rope of length %s"(index, length))
+    do {
+
+        import fluid.typeface : Typeface;
+
+        auto back  = Typeface.lineSplitter(this[0..index].retro).front;
+        auto front = Typeface.lineSplitter!keepTerminator(this[index..$]).front;
+
+        static assert(is(ElementType!(typeof(back)) == char));
+        static assert(is(ElementType!(typeof(front)) == char));
+
+        const backLength  = back.walkLength;
+        const frontLength = front.walkLength;
+
+        // Combine everything on the same line, before and after the cursor
+        return this[index - backLength .. index + frontLength];
+
+    }
+
+    unittest {
+
+        Rope root;
+        assert(root.lineByIndex(0) == "");
+
+        root = root ~ "aaą\nbbČb\n c \r\n\n **Ą\n";
+        assert(root.lineByIndex(0) == "aaą");
+        assert(root.lineByIndex(1) == "aaą");
+        assert(root.lineByIndex(4) == "aaą");
+        assert(root.lineByIndex(5) == "bbČb");
+        assert(root.lineByIndex(7) == "bbČb");
+        assert(root.lineByIndex(10) == "bbČb");
+        assert(root.lineByIndex(11) == " c ");
+        assert(root.lineByIndex!(Yes.keepTerminator)(11) == " c \r\n");
+        assert(root.lineByIndex(16) == "");
+        assert(root.lineByIndex!(Yes.keepTerminator)(16) == "\n");
+        assert(root.lineByIndex(17) == " **Ą");
+        assert(root.lineByIndex(root.value.length) == "");
+        assert(root.lineByIndex!(Yes.keepTerminator)(root.value.length) == "");
+
+    }
+
+    /// Get the column the given index is on.
+    /// Returns:
+    ///     Return value depends on the type fed into the function. `column!dchar` will use characters and `column!char`
+    ///     will use bytes. The type does not have effect on the input index.
+    ptrdiff_t column(Chartype)(size_t index) const {
+
+        import std.utf : byUTF;
+        import fluid.typeface : Typeface;
+
+        // Get last line
+        return Typeface.lineSplitter(this[0..index].retro).front
+
+            // Count characters
+            .byUTF!Chartype.walkLength;
+
+    }
+
+    unittest {
+
+        Rope root;
+        assert(root.column!dchar(0) == 0);
+
+        root = Rope(" aąąą");
+        assert(root.column!dchar(8) == 5);
+        assert(root.column!char(8) == 8);
+
+        root = Rope(" aąąąO\n");
+        assert(root.column!dchar(10) == 0);
+        assert(root.column!char(10) == 0);
+
+        root = Rope(" aąąąO\n ");
+        assert(root.column!dchar(11) == 1);
+
+        root = Rope(" aąąąO\n Ω = 1+2");
+        assert(root.column!dchar(14) == 3);
+        assert(root.column!char(14) == 4);
+
+    }
+
 }
 
 struct RopeNode {

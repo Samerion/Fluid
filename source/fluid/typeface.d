@@ -75,7 +75,7 @@ interface Typeface {
     /// Default word splitter used by measure/draw.
     alias defaultWordChunks = .breakWords;
 
-    /// Updated version of std lineSplitter that includes trailing empty lines.
+    /// Updated version of `std.string.lineSplitter` that includes trailing empty lines.
     ///
     /// `lineSplitterIndex` will produce a tuple with the index into the original text as the first element.
     static lineSplitter(KeepTerminator keepTerm = No.keepTerminator, Range)(Range text)

@@ -111,6 +111,12 @@ static this() {
             padding.sideX = 12,
             padding.sideY = 16,
         ),
+        rule!Label(
+            margin = 0,
+            backgroundColor = color!"#dedede",
+            padding.sideX = 12,
+            padding.sideY = 16,
+        ),
     );
 
     previewWrapperTheme = mainTheme.derive(
