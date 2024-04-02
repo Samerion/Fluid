@@ -219,34 +219,6 @@ class CodeInput : TextInput {
 
     }
 
-    ptrdiff_t targetIndentLevelByIndex(size_t i) {
-
-        const line = lineByIndex(i);
-        const col = column!char;
-        const lineStart = i - col;
-
-        // Use the indentor if available
-        if (indentor) {
-
-            const lineEnd = lineStart + line.length;
-            const indentEnd = lineStart + line[].until!(a => a != ' ').walkLength;
-
-            return max(0, indentor.indentLevel(indentEnd));
-
-        }
-
-        // Perform basic autoindenting if indentor is not available
-        else {
-
-            const untilPreviousLine = value[0..lineStart].chomp;
-
-            // Select tabs on the given line
-            return indentLevelByIndex(untilPreviousLine.length);
-
-        }
-
-    }
-
     unittest {
 
         auto root = codeInput();
@@ -263,6 +235,29 @@ class CodeInput : TextInput {
         assert(root.indentLevelByIndex(29) == 1);
         assert(root.indentLevelByIndex(37) == 1);
         assert(root.indentLevelByIndex(48) == 2);
+
+    }
+
+    ptrdiff_t targetIndentLevelByIndex(size_t i) {
+
+        const line = lineByIndex(i);
+        const col = column!char;
+        const lineStart = i - col;
+        const untilPreviousLine = value[0..lineStart].chomp;
+        const previousLineIndent = indentLevelByIndex(untilPreviousLine.length);
+
+        // Use the indentor if available
+        if (indentor) {
+
+            const lineEnd = lineStart + line.length;
+            const indentEnd = lineStart + line[].until!(a => a != ' ').walkLength;
+
+            return max(0, previousLineIndent + indentor.indentDifference(indentEnd));
+
+        }
+
+        // Perform basic autoindenting if indentor is not available
+        else return previousLineIndent;
 
     }
 
@@ -592,7 +587,7 @@ interface CodeHighlighter {
     /// sequential. Starts at 1.
     const(char)[] nextTokenName(CodeToken index);
 
-    /// Parse the given text.
+    /// Parse the given text to use with other functions in the highlighter.
     void parse(Rope text);
 
     /// Find the next important range starting with the byte at given index.
@@ -642,15 +637,178 @@ interface CodeHighlighter {
 
 }
 
+unittest {
+
+    import std.typecons : BlackHole;
+
+    enum tokenFunction = 1;
+    enum tokenString = 2;
+
+    auto text = `print("Hello, World!")`;
+    auto highlighter = new class BlackHole!CodeHighlighter {
+
+        override CodeRange query(size_t byteIndex) {
+
+            if (byteIndex == 0) return CodeRange(0, 5, tokenFunction);
+            if (byteIndex <= 6) return CodeRange(6, 21, tokenString);
+            return CodeRange.init;
+
+        }
+
+    };
+
+    auto root = codeInput(highlighter);
+    root.draw();
+
+    assert(root.contentLabel.text.styleMap.equal([
+        TextStyleSlice(0, 5, tokenFunction),
+        TextStyleSlice(6, 21, tokenString),
+    ]));
+
+}
+
 interface CodeIndentor {
 
     /// Parse the given text.
     void parse(Rope text);
 
-    /// Get absolute indent level at given offset.
-    int indentLevel(ptrdiff_t offset);
-
     /// Get indent level for the given offset, relative to the previous line.
+    ///
+    /// `CodeInput` will use the first non-white character on a line as a reference for reformatting.
     int indentDifference(ptrdiff_t offset);
+
+}
+
+unittest {
+
+    import std.typecons : BlackHole;
+
+    auto originalText
+       = "void foo() {\n"
+       ~ "fun();\n"
+       ~ "functionCall(\n"
+       ~ "stuff()\n"
+       ~ ");\n"
+       ~ "    }\n";
+    auto formattedText
+       = "void foo() {\n"
+       ~ "    fun();\n"
+       ~ "    functionCall(\n"
+       ~ "        stuff()\n"
+       ~ "    );\n"
+       ~ "}\n";
+
+    class Indentor : BlackHole!CodeIndentor {
+
+        struct Indent {
+            ptrdiff_t offset;
+            int indent;
+        }
+
+        Indent[] indents;
+
+        override void parse(Rope rope) {
+
+            bool lineStart;
+
+            indents = [Indent(0, 0)];
+
+            foreach (i, ch; rope.enumerate) {
+
+                if (ch.among('{', '(')) {
+                    indents ~= Indent(i + 1, 1);
+                }
+
+                else if (ch.among('}', ')')) {
+                    indents ~= Indent(i, lineStart ? -1 : 0);
+                }
+
+                else if (ch == '\n') lineStart = true;
+                else if (ch != ' ') lineStart = false;
+
+            }
+
+        }
+
+        override int indentDifference(ptrdiff_t offset) {
+
+            return indents
+                .filter!(a => a.offset <= offset)
+                .tail(1)
+                .front
+                .indent;
+
+        };
+
+    };
+
+    auto indentor = new Indentor;
+    auto highlighter = new class Indentor, CodeHighlighter {
+
+        const(char)[] nextTokenName(ubyte) {
+            return null;
+        }
+
+        CodeRange query(size_t) {
+            return CodeRange.init;
+        }
+
+        override void parse(Rope value) {
+            super.parse(value);
+        }
+
+    };
+
+    auto indentorOnlyInput = codeInput();
+    indentorOnlyInput.indentor = indentor;
+    auto highlighterInput = codeInput(highlighter);
+
+    foreach (root; [indentorOnlyInput, highlighterInput]) {
+
+        root.value = originalText;
+        root.draw();
+
+        // Reformat first line
+        root.caretIndex = 0;
+        assert(root.targetIndentLevelByIndex(0) == 0);
+        root.reformatLine();
+        assert(root.value == originalText);
+
+        // Reformat second line
+        root.caretIndex = 13;
+        assert(root.indentor.indentDifference(13) == 1);
+        assert(root.targetIndentLevelByIndex(13) == 1);
+        root.reformatLine();
+        assert(root.value == formattedText[0..23] ~ originalText[19..$]);
+
+        // Reformat third line
+        root.caretIndex = 24;
+        assert(root.indentor.indentDifference(24) == 0);
+        assert(root.targetIndentLevelByIndex(24) == 1);
+        root.reformatLine();
+        assert(root.value == formattedText[0..42] ~ originalText[34..$]);
+
+        // Reformat fourth line
+        root.caretIndex = 42;
+        assert(root.indentor.indentDifference(42) == 1);
+        assert(root.targetIndentLevelByIndex(42) == 2);
+        root.reformatLine();
+        assert(root.value == formattedText[0..58] ~ originalText[42..$]);
+
+        // Reformat fifth line
+        root.caretIndex = 58;
+        assert(root.indentor.indentDifference(58) == -1);
+        assert(root.targetIndentLevelByIndex(58) == 1);
+        root.reformatLine();
+        assert(root.value == formattedText[0..65] ~ originalText[45..$]);
+
+        // And the last line, finally
+        root.caretIndex = 65;
+        assert(root.indentor.indentDifference(65) == -1);
+        assert(root.targetIndentLevelByIndex(65) == 0);
+        root.reformatLine();
+        assert(root.value == formattedText);
+
+    }
 
 }
