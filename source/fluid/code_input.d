@@ -47,6 +47,27 @@ class CodeInput : TextInput {
 
     }
 
+    private {
+
+        struct AutomaticFormat {
+
+            bool pending;
+            int oldTargetIndent;
+
+            this(int oldTargetIndent) {
+                this.pending = true;
+                this.oldTargetIndent = oldTargetIndent;
+            }
+
+        }
+
+        /// If automatic reformatting is to take place, `pending` is set to true, with `oldTargetIndent` set to the
+        /// previous value of the indent. This value is compared against the current target, and the reformatter will
+        /// only activate if there was a change.
+        AutomaticFormat _automaticFormat;
+
+    }
+
     this(CodeHighlighter highlighter = null, void delegate() @safe submitted = null) {
 
         this.submitted = submitted;
@@ -186,6 +207,20 @@ class CodeInput : TextInput {
         // Parse changes
         reparse();
 
+        // Reformat the line if requested
+        if (_automaticFormat.pending) {
+
+            const oldTarget = _automaticFormat.oldTargetIndent;
+            const newTarget = targetIndentLevelByIndex(caretIndex);
+
+            // Reformat only if the target indent changed; don't force "correct" indents on the programmer
+            if (oldTarget != newTarget)
+                reformatLine();
+
+            _automaticFormat.pending = false;
+
+        }
+
         // Resize the field
         super.resizeImpl(vector);
 
@@ -207,11 +242,36 @@ class CodeInput : TextInput {
 
     }
 
+    protected override bool keyboardImpl() {
+
+        auto oldValue = this.value;
+        auto format = AutomaticFormat(targetIndentLevelByIndex(caretIndex));
+
+        auto keyboardHandled = super.keyboardImpl();
+
+        // If the value has changed, trigger automatic reformatting
+        if (oldValue !is this.value)
+            _automaticFormat = format;
+
+        return keyboardHandled;
+
+    }
+
+    protected override bool inputActionImpl(InputActionID id, bool active) {
+
+        // Request format
+        if (active)
+            _automaticFormat = AutomaticFormat(targetIndentLevelByIndex(caretIndex));
+
+        return false;
+
+    }
+
     /// Get indent count for offset at given index.
-    ptrdiff_t indentLevelByIndex(size_t i) {
+    int indentLevelByIndex(size_t i) {
 
         // Select tabs on the given line
-        return lineByIndex(i)
+        return cast(int) lineByIndex(i)
             .until!(a => a != ' ')
 
             // Count their width
@@ -238,13 +298,18 @@ class CodeInput : TextInput {
 
     }
 
-    ptrdiff_t targetIndentLevelByIndex(size_t i) {
+    int targetIndentLevelByIndex(size_t i) {
 
         const line = lineByIndex(i);
         const col = column!char;
         const lineStart = i - col;
+
+        // Find the previous line so it can be used as reference.
+        // For the first line, `0` is used.
         const untilPreviousLine = value[0..lineStart].chomp;
-        const previousLineIndent = indentLevelByIndex(untilPreviousLine.length);
+        const previousLineIndent = lineStart == 0
+            ? 0
+            : indentLevelByIndex(untilPreviousLine.length);
 
         // Use the indentor if available
         if (indentor) {
@@ -810,5 +875,73 @@ unittest {
         assert(root.value == formattedText);
 
     }
+
+}
+
+unittest {
+
+    import std.typecons : BlackHole;
+
+    class Indentor : BlackHole!CodeIndentor {
+
+        bool outdent;
+
+        override void parse(Rope rope) {
+
+            outdent = rope.canFind("end");
+
+        }
+
+        override int indentDifference(ptrdiff_t offset) {
+
+            if (outdent)
+                return -1;
+            else
+                return 1;
+
+        };
+
+    };
+
+    auto io = new HeadlessBackend;
+    auto root = codeInput();
+    root.io = io;
+    root.indentor = new Indentor;
+    root.value = "begin";
+    root.focus();
+    root.draw();
+    assert(root.value == "begin");
+
+    // The difference defaults to 1 in this case, so the line should be indented
+    root.reformatLine();
+    assert(root.value == "    begin");
+
+    // But, if the "end" keyword is added, it should outdent automatically
+    io.nextFrame;
+    io.inputCharacter = " end";
+    root.caretToEnd();
+    root.draw();
+    io.nextFrame;
+    root.draw();
+    assert(root.value == "begin end");
+
+    // Backspace also triggers updates
+    io.nextFrame;
+    io.press(KeyboardKey.backspace);
+    root.draw();
+    io.nextFrame;
+    io.release(KeyboardKey.backspace);
+    root.draw();
+    assert(root.value == "    begin en");
+
+    // However, no change should be made if the keyword was in place before
+    io.nextFrame;
+    io.inputCharacter = " ";
+    root.value = "    begin end";
+    root.caretToEnd();
+    root.draw();
+    io.nextFrame;
+    root.draw();
+    assert(root.value == "    begin end ");
 
 }

@@ -40,6 +40,7 @@ stable and ready for use, but is still likely to receive a few breaking changes 
 * Separate layout and styling
 * Scrolling support
 * Out-of-the-box Unicode support
+* Code editor node included
 * Full HiDPI support
 * Partial gamepad support
 
