@@ -2094,27 +2094,14 @@ class TextInput : InputNode!Node, FluidScrollable {
     /// Get the index of the start or end of the line — from index of any character on the same line.
     size_t lineStartByIndex(size_t index) {
 
-        return index - column!char(index);
+        return value.lineStartByIndex(index);
 
     }
 
     /// ditto
     size_t lineEndByIndex(size_t index) {
 
-        return lineStartByIndex(index) + lineByIndex(index).length;
-
-    }
-
-    ///
-    unittest {
-
-        auto root = textInput(.multiline);
-        root.value = "Hello, World!\nHello, Fluid!";
-
-        assert(root.lineStartByIndex(5) == 0);
-        assert(root.lineEndByIndex(5) == 13);
-        assert(root.lineStartByIndex(18) == 14);
-        assert(root.lineEndByIndex(18) == root.value.length);
+        return value.lineEndByIndex(index);
 
     }
 
