@@ -92,12 +92,12 @@ class CodeInput : TextInput {
     class ContentLabel : TextInput.ContentLabel {
 
         /// Use our own `Text`.
-        Text!(ContentLabel, CodeHighlighter.Range) text;
+        Text!(ContentLabel, CodeHighlighterRange) text;
         Style[256] styles;
 
         this() {
 
-            text = typeof(text)(this, "", CodeHighlighter.Range.init);
+            text = typeof(text)(this, "", CodeHighlighterRange.init);
             text.hasFastEdits = true;
 
         }
@@ -627,26 +627,13 @@ class CodeInput : TextInput {
 }
 
 alias CodeToken = ubyte;
+alias CodeSlice = TextStyleSlice;
 
-struct CodeRange {
-
-    auto start = size_t.max;
-    auto end = size_t.max;
-    CodeToken token;
-
-    alias toTextStyleSlice this;
-
-    TextStyleSlice toTextStyleSlice() const {
-
-        return TextStyleSlice(start, end, token);
-
-    }
-
-}
+// Note: This was originally a member of CodeHighlighter, but it broke the vtable sometimes...? I wasn't able to
+// produce a minimal example to open a bug ticket, sorry.
+alias CodeHighlighterRange = typeof(CodeHighlighter.save());
 
 interface CodeHighlighter {
-
-    alias Range = typeof(CodeHighlighter.save());
 
     /// Get a name for the token at given index. Returns null if there isn't a token at given index. Indices must be
     /// sequential. Starts at 1.
@@ -662,12 +649,15 @@ interface CodeHighlighter {
     /// Returns:
     ///     The next relevant code range. Parts with no highlighting should be ignored. If there is nothing left to
     ///     highlight, should return `init`.
-    CodeRange query(size_t byteIndex);
+    CodeSlice query(size_t byteIndex)
+    in (byteIndex != size_t.max, "Invalid byte index (-1)")
+    out (r; r.end != byteIndex, "query() must return empty ranges");
 
     /// Produce a TextStyleSlice range using the result.
+    /// Returns: `CodeHighlighterRange` suitable for use as a `Text` style map.
     final save() {
 
-        struct HighlighterRange {
+        static struct HighlighterRange {
 
             CodeHighlighter highlighter;
             TextStyleSlice front;
@@ -681,7 +671,7 @@ interface CodeHighlighter {
             // Continue where the last token ended
             void popFront() {
 
-                do front = highlighter.query(front.end).toTextStyleSlice;
+                do front = highlighter.query(front.end);
 
                 // Pop again if got a null token
                 while (front.styleIndex == 0 && front !is front.init);
@@ -696,7 +686,7 @@ interface CodeHighlighter {
 
         }
 
-        return HighlighterRange(this, query(0).toTextStyleSlice);
+        return HighlighterRange(this, query(0));
 
     }
 
@@ -712,11 +702,11 @@ unittest {
     auto text = `print("Hello, World!")`;
     auto highlighter = new class BlackHole!CodeHighlighter {
 
-        override CodeRange query(size_t byteIndex) {
+        override CodeSlice query(size_t byteIndex) {
 
-            if (byteIndex == 0) return CodeRange(0, 5, tokenFunction);
-            if (byteIndex <= 6) return CodeRange(6, 21, tokenString);
-            return CodeRange.init;
+            if (byteIndex == 0) return CodeSlice(0, 5, tokenFunction);
+            if (byteIndex <= 6) return CodeSlice(6, 21, tokenString);
+            return CodeSlice.init;
 
         }
 
@@ -814,8 +804,8 @@ unittest {
             return null;
         }
 
-        CodeRange query(size_t) {
-            return CodeRange.init;
+        CodeSlice query(size_t) {
+            return CodeSlice.init;
         }
 
         override void parse(Rope value) {

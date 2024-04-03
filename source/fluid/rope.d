@@ -394,6 +394,50 @@ struct Rope {
 
     }
 
+    /// Get a leaf node that is a subrope starting with the given index. The length of the node may vary, and does not
+    /// have to reach the end of the rope.
+    Rope leafFrom(size_t start) const
+    out (r; r.isLeaf)
+    do {
+
+        auto slice = this[start..$];
+
+        // The slice is a leaf node, return it
+        if (slice.isLeaf)
+            return slice;
+
+        // Not a leaf, get the chunk containing the node
+        if (slice.left.empty)
+            return slice.right.leafFrom(0);
+        else
+            return slice.left.leafFrom(0);
+
+    }
+
+    ///
+    unittest {
+
+        auto myRope = Rope(
+            Rope("Hello, "),
+            Rope(
+                Rope("Flu"),
+                Rope("id"),
+            ),
+        );
+
+        assert(myRope.leafFrom(0) == Rope("Hello, "));
+        assert(myRope.leafFrom(7) == Rope("Flu"));
+        assert(myRope.leafFrom(10) == Rope("id"));
+
+        assert(myRope.leafFrom(2) == Rope("llo, "));
+        assert(myRope.leafFrom(7) == Rope("Flu"));
+        assert(myRope.leafFrom(8) == Rope("lu"));
+        assert(myRope.leafFrom(9) == Rope("u"));
+
+        assert(myRope.leafFrom(myRope.length) == Rope.init);
+
+    }
+
     /// Get the left side of the rope
     Rope left() const {
 
@@ -1038,6 +1082,32 @@ struct Rope {
         root = Rope(" aąąąO\n Ω = 1+2");
         assert(root.column!dchar(14) == 3);
         assert(root.column!char(14) == 4);
+
+    }
+
+    /// Get the index of the start or end of the line — from index of any character on the same line.
+    size_t lineStartByIndex(size_t index) {
+
+        return index - column!char(index);
+
+    }
+
+    /// ditto
+    size_t lineEndByIndex(size_t index) {
+
+        return lineStartByIndex(index) + lineByIndex(index).length;
+
+    }
+
+    ///
+    unittest {
+
+        auto rope = Rope("Hello, World!\nHello, Fluid!");
+
+        assert(rope.lineStartByIndex(5) == 0);
+        assert(rope.lineEndByIndex(5) == 13);
+        assert(rope.lineStartByIndex(18) == 14);
+        assert(rope.lineEndByIndex(18) == rope.length);
 
     }
 
