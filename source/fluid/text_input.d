@@ -1006,7 +1006,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
-    protected override bool keyboardImpl() @trusted {
+    protected override bool keyboardImpl() {
 
         import std.uni : isAlpha, isWhite;
         import std.range : back;
@@ -1994,7 +1994,7 @@ class TextInput : InputNode!Node, FluidScrollable {
     }
 
     /// Update a line with given byte index.
-    const(char)[] lineByIndex(ptrdiff_t index, const(char)[] value) {
+    const(char)[] lineByIndex(size_t index, const(char)[] value) {
 
         lineByIndex(index, Rope(value));
         return value;
@@ -2002,18 +2002,16 @@ class TextInput : InputNode!Node, FluidScrollable {
     }
 
     /// ditto
-    Rope lineByIndex(ptrdiff_t index, Rope newValue) {
+    Rope lineByIndex(size_t index, Rope newValue) {
 
         import std.utf;
         import fluid.typeface;
-
-        index = index.clamp(0, value.length);
 
         const backLength = Typeface.lineSplitter(value[0..index].retro).front.byChar.walkLength;
         const frontLength = Typeface.lineSplitter(value[index..$]).front.byChar.walkLength;
         const start = index - backLength;
         const end = index + frontLength;
-        ptrdiff_t[2] selection = [selectionStart, selectionEnd];
+        size_t[2] selection = [selectionStart, selectionEnd];
 
         // Combine everything on the same line, before and after the cursor
         value = value.replace(start, end, newValue);
@@ -2090,6 +2088,33 @@ class TextInput : InputNode!Node, FluidScrollable {
         assert(root.value[root.selectionEnd] == 'e');
         assert(root.selectionStart == 5);
         assert(root.selectionEnd == 20);
+
+    }
+
+    /// Get the index of the start or end of the line — from index of any character on the same line.
+    size_t lineStartByIndex(size_t index) {
+
+        return index - column!char(index);
+
+    }
+
+    /// ditto
+    size_t lineEndByIndex(size_t index) {
+
+        return lineStartByIndex(index) + lineByIndex(index).length;
+
+    }
+
+    ///
+    unittest {
+
+        auto root = textInput(.multiline);
+        root.value = "Hello, World!\nHello, Fluid!";
+
+        assert(root.lineStartByIndex(5) == 0);
+        assert(root.lineEndByIndex(5) == 13);
+        assert(root.lineStartByIndex(18) == 14);
+        assert(root.lineEndByIndex(18) == root.value.length);
 
     }
 
