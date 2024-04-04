@@ -3007,7 +3007,8 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
-    /// Move the caret to the beginning of the line.
+    /// Move the caret to the beginning of the line. This function perceives the line visually, so if the text wraps, it
+    /// will go to the beginning of the visible line, instead of the hard line break.
     @(FluidInputAction.toLineStart)
     void caretToLineStart() {
 
