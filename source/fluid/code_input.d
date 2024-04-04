@@ -267,6 +267,33 @@ class CodeInput : TextInput {
 
     }
 
+    /// Returns the index of the first character in a line that is not a space, given index of any character on
+    /// the same line.
+    size_t lineHomeByIndex(size_t index) {
+
+        const indentWidth = lineByIndex(index)
+            .until!(a => a != ' ')
+            .walkLength;
+
+        return lineStartByIndex(index) + indentWidth;
+
+    }
+
+    unittest {
+
+        auto root = codeInput();
+        root.value = "a\n    b";
+        root.draw();
+
+        assert(root.lineHomeByIndex(0) == 0);
+        assert(root.lineHomeByIndex(1) == 0);
+        assert(root.lineHomeByIndex(2) == 6);
+        assert(root.lineHomeByIndex(4) == 6);
+        assert(root.lineHomeByIndex(6) == 6);
+        assert(root.lineHomeByIndex(7) == 6);
+
+    }
+
     /// Get indent count for offset at given index.
     int indentLevelByIndex(size_t i) {
 
@@ -298,11 +325,10 @@ class CodeInput : TextInput {
 
     }
 
+    /// Get suitable indent size for the line at given index, according to information from `indentor`.
     int targetIndentLevelByIndex(size_t i) {
 
-        const line = lineByIndex(i);
-        const col = column!char;
-        const lineStart = i - col;
+        const lineStart = lineStartByIndex(i);
 
         // Find the previous line so it can be used as reference.
         // For the first line, `0` is used.
@@ -314,8 +340,7 @@ class CodeInput : TextInput {
         // Use the indentor if available
         if (indentor) {
 
-            const lineEnd = lineStart + line.length;
-            const indentEnd = lineStart + line[].until!(a => a != ' ').walkLength;
+            const indentEnd = lineHomeByIndex(i);
 
             return max(0, previousLineIndent + indentor.indentDifference(indentEnd));
 
@@ -595,7 +620,7 @@ class CodeInput : TextInput {
 
         char[maxIndentWidth] insertTab = ' ';
 
-        // TODO
+        // TODO Implement reformatLine for selections
         if (isSelecting) return;
 
         const col = column!char(caretIndex);
@@ -621,6 +646,125 @@ class CodeInput : TextInput {
 
         // Parse again
         reparse();
+
+    }
+
+    /// CodeInput moves `toLineStart` action handler to `toggleHome`
+    override void caretToLineStart() {
+
+        super.caretToLineStart();
+
+    }
+
+    /// Move the caret to the "home" position of the line, see `lineHomeByIndex`.
+    void caretToLineHome() {
+
+        caretIndex = lineHomeByIndex(caretIndex);
+        updateCaretPosition(true);
+        moveOrClearSelection();
+        horizontalAnchor = caretPosition.x;
+
+    }
+
+    /// Move the caret to the "home" position of the line — or if the caret is already at that position, move it to
+    /// line start. This function perceives the line visually, so if the text wraps, it will go to the beginning of the
+    /// visible line, instead of the hard line break or the home.
+    ///
+    /// See_Also: `caretToLineHome` and `lineHomeByIndex`
+    @(FluidInputAction.toLineStart)
+    void toggleHome() {
+
+        const home = lineHomeByIndex(caretIndex);
+        const oldIndex = caretIndex;
+
+        // Move to visual start of line
+        caretToLineStart();
+
+        const shouldMove = caretIndex < home
+            || caretIndex == oldIndex;
+
+        // Unless the caret was already at home, or it didn't move to start, navigate home
+        if (oldIndex != home && shouldMove) {
+
+            caretToLineHome();
+
+        }
+
+    }
+
+    unittest {
+
+        auto root = codeInput();
+        root.value = "int main() {\n    return 0;\n}";
+        root.caretIndex = root.value.countUntil("return");
+        root.draw();
+        assert(root.caretIndex == root.lineHomeByIndex(root.caretIndex));
+
+        const home = root.caretIndex;
+
+        // Toggle home should move to line start, because the cursor is already at home
+        root.toggleHome();
+        assert(root.caretIndex == home - 4);
+        assert(root.caretIndex == root.lineStartByIndex(home));
+
+        // Toggle again
+        root.toggleHome();
+        assert(root.caretIndex == home);
+
+        // Move one character left
+        root.caretIndex = root.caretIndex - 1;
+        assert(root.caretIndex != home);
+        root.toggleHome();
+        root.draw();
+        assert(root.caretIndex == home);
+
+        // Move to first line and see if toggle home works well even if there's no indent
+        root.caretIndex = 4;
+        root.updateCaretPosition();
+        root.toggleHome();
+        assert(root.caretIndex == 0);
+
+        root.toggleHome();
+        assert(root.caretIndex == 0);
+
+    }
+
+    unittest {
+
+        auto io = new HeadlessBackend;
+        auto root = codeInput();
+        root.io = io;
+        root.value = "    long line that wraps because the viewport is too small to make it fit";
+        root.caretIndex = 4;
+        root.draw();
+
+        // Move to start
+        root.toggleHome();
+        assert(root.caretIndex == 0);
+
+        // Move home
+        root.toggleHome();
+        assert(root.caretIndex == 4);
+
+        // Move to line below
+        root.runInputAction!(FluidInputAction.nextLine);
+
+        // Move to line start
+        root.caretToLineStart();
+        assert(root.caretIndex > 4);
+
+        const secondLineStart = root.caretIndex;
+
+        // Move a few characters to the right, and move to line start again
+        root.caretIndex = root.caretIndex + 5;
+        root.toggleHome();
+        assert(root.caretIndex == secondLineStart);
+
+        // If the caret is already at the start, it should move home
+        root.toggleHome();
+        assert(root.caretIndex == 4);
+        root.toggleHome();
+        assert(root.caretIndex == 0);
 
     }
 
@@ -651,7 +795,7 @@ interface CodeHighlighter {
     ///     highlight, should return `init`.
     CodeSlice query(size_t byteIndex)
     in (byteIndex != size_t.max, "Invalid byte index (-1)")
-    out (r; r.end != byteIndex, "query() must return empty ranges");
+    out (r; r.end != byteIndex, "query() must not return empty ranges");
 
     /// Produce a TextStyleSlice range using the result.
     /// Returns: `CodeHighlighterRange` suitable for use as a `Text` style map.
