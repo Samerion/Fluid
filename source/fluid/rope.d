@@ -30,20 +30,20 @@ struct Rope {
     size_t start, length;
 
     /// Create a rope holding given text.
-    this(const(char)[] text) {
+    this(inout const(char)[] text) inout pure {
 
         // No text, stay with Rope.init
         if (text == "")
             this(null, 0, 0);
         else
-            this(new RopeNode(text));
+            this(new inout RopeNode(text));
 
     }
 
     /// Create a rope concatenating two other ropes.
     ///
     /// Avoids gaps: If either node is empty, copies and becomes the other node.
-    this(inout Rope left, inout Rope right) inout {
+    this(inout Rope left, inout Rope right) inout pure {
 
         // No need to create a new node there's empty space
         if (left.length == 0) {
@@ -98,7 +98,7 @@ struct Rope {
     }
 
     /// Create a rope from given node.
-    this(inout const(RopeNode)* node) inout {
+    this(const inout(RopeNode)* node) inout pure {
 
         // No node given, set all to init
         if (node is null) return;
@@ -110,13 +110,13 @@ struct Rope {
     }
 
     /// Copy a `Rope`.
-    this(inout const Rope rope) inout {
+    this(inout const Rope rope) inout pure {
 
         this(rope.node, rope.start, rope.length);
 
     }
 
-    private this(inout(RopeNode)* node, size_t start, size_t length) inout {
+    private this(inout(RopeNode)* node, size_t start, size_t length) inout pure {
 
         this.node = node;
         this.start = start;
@@ -164,21 +164,21 @@ struct Rope {
     }
 
     /// Concatenate two ropes together.
-    Rope opBinary(string op : "~")(Rope that) {
+    Rope opBinary(string op : "~")(const Rope that) const {
 
         return Rope(this, that);
 
     }
 
     /// Concatenate with a string.
-    Rope opBinary(string op : "~")(const(char)[] text) {
+    Rope opBinary(string op : "~")(const(char)[] text) const {
 
         return Rope(this, Rope(text));
 
     }
 
     /// ditto
-    Rope opBinaryRight(string op : "~")(const(char)[] text) {
+    Rope opBinaryRight(string op : "~")(const(char)[] text) const {
 
         return Rope(Rope(text), this);
 
@@ -888,11 +888,20 @@ struct Rope {
     }
 
     /// Append text to the rope.
-    ref Rope opOpAssign(string op : "~")(ref const(char)[] value) return {
+    ref Rope opOpAssign(string op : "~")(const(char)[] value) return {
 
         auto left = this;
 
         return this = Rope(left, Rope(value));
+
+    }
+
+    /// Append another rope to the rope.
+    ref Rope opOpAssign(string op : "~")(const Rope value) return {
+
+        auto left = this;
+
+        return this = Rope(left, value);
 
     }
 
@@ -1131,14 +1140,14 @@ struct RopeNode {
     }
 
     /// Create a leaf node from a slice
-    this(const(char)[] text) {
+    this(inout const(char)[] text) inout pure {
 
         this.value = text;
 
     }
 
     /// Create a node from two other node; Concatenate the two other nodes. Both must not be null.
-    this(inout Rope left, inout Rope right) inout {
+    this(inout Rope left, inout Rope right) inout pure {
 
         this.left = left;
         this.right = right;
@@ -1146,7 +1155,7 @@ struct RopeNode {
     }
 
     /// Get length of this node.
-    size_t length() const {
+    size_t length() const pure {
 
         return isLeaf
             ? value.length
@@ -1155,7 +1164,7 @@ struct RopeNode {
     }
 
     /// True if this is a leaf node and contains text rather than child nodes.
-    bool isLeaf() const {
+    bool isLeaf() const pure {
 
         return left.node is null
             && right.node is null;
