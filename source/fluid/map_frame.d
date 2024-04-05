@@ -144,6 +144,14 @@ class MapFrame : Frame {
         updateSize();
     }
 
+    void addChild(Node node, Vector2 vector)
+    if ([vector.tupleof].any!isFinite, format!"Given %s isn't valid, values must be finite"(position))
+    do {
+        children ~= node;
+        positions[node].coords = vector;
+        updateSize();
+    }
+
     /// ditto
     void addFocusedChild(Node node, Position position) {
 
