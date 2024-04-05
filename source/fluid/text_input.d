@@ -2238,6 +2238,9 @@ class TextInput : InputNode!Node, FluidScrollable {
 
             int opApply(scope int delegate(Rope line, scope SetLine setLine) @safe yield) {
 
+                // TODO Can't I just take line by ref?
+                //      Use an "is" to check for changes and replace right after yield returns (before stop)
+
                 while (index <= end) {
 
                     const line = input.value.lineByIndex!(Yes.keepTerminator)(index);
@@ -2288,6 +2291,12 @@ class TextInput : InputNode!Node, FluidScrollable {
 
                 // Add the terminator
                 nextLine = index + lineTerminatorLength;
+
+                // Update the front
+                front = line;
+
+                assert(nextLine >= index);
+                assert(nextLine <= input.value.length);
 
             }
 
@@ -2410,10 +2419,43 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
+    unittest {
+
+        auto root = textInput();
+        root.value = "some text, some line, some stuff\ntext";
+
+        foreach (line, setLine; root.eachLineByIndex(root.value.length, root.value.length)) {
+
+            setLine(Rope(""));
+            setLine(Rope("woo"));
+            setLine(Rope("n"));
+            setLine(Rope(" ąąą "));
+            setLine(Rope(""));
+
+        }
+
+        assert(root.value == "");
+
+    }
+
     /// Return each line containing the selection.
     auto eachSelectedLine() {
 
         return eachLineByIndex(selectionLowIndex, selectionHighIndex);
+
+    }
+
+    unittest {
+
+        auto root = textInput();
+
+        foreach (line, setLine; root.eachSelectedLine) {
+
+            setLine(Rope("value"));
+
+        }
+
+        assert(root.value == "value");
 
     }
 

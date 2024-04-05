@@ -15,6 +15,22 @@ import fluid.text_input;
 @safe:
 
 
+/// Node parameter for `CodeInput` enabling tabs as the character used for indents.
+auto useTabs(bool value = true) {
+
+    struct UseTabs {
+
+        void apply(CodeInput node) {
+            node.useTabs = value;
+        }
+
+    }
+
+    return UseTabs();
+
+}
+
+
 /// A CodeInput is a special variant of `TextInput` that provides syntax highlighting and a gutter (column with line
 /// numbers).
 alias codeInput = simpleConstructor!CodeInput;
@@ -35,8 +51,8 @@ class CodeInput : TextInput {
         int indentWidth = 4;
         invariant(indentWidth <= maxIndentWidth);
 
-        /// If true, uses the tab character for indents. Not supported at the moment.
-        enum bool isTabIndent = false;
+        /// If true, uses the tab character for indents.
+        bool useTabs = false;
 
     }
 
@@ -118,6 +134,58 @@ class CodeInput : TextInput {
             text.draw(styles, inner.start);
 
         }
+
+    }
+
+    /// Get a rope representing given indent level.
+    Rope indentRope(int indentLevel = 1) const {
+
+        static tabRope = const Rope("\t");
+        static spaceRope = const Rope("                ");
+
+        static assert(spaceRope.length == maxIndentWidth);
+
+        Rope result;
+
+        // TODO this be more performant by using as much of a single rope as possible
+
+        // Insert a tab
+        if (useTabs)
+            foreach (i; 0 .. indentLevel) {
+
+                result ~= tabRope;
+
+            }
+
+        // Insert a space
+        else foreach (i; 0 .. indentLevel) {
+
+            result ~= spaceRope[0 .. indentWidth];
+
+        }
+
+        return result;
+
+    }
+
+    ///
+    unittest {
+
+        auto root = codeInput(.useTabs);
+
+        assert(root.indentRope == "\t");
+        assert(root.indentRope(2) == "\t\t");
+        assert(root.indentRope(3) == "\t\t\t");
+
+    }
+
+    unittest {
+
+        auto root = codeInput();
+
+        assert(root.indentRope == "    ");
+        assert(root.indentRope(2) == "        ");
+        assert(root.indentRope(3) == "            ");
 
     }
 
@@ -272,7 +340,7 @@ class CodeInput : TextInput {
     size_t lineHomeByIndex(size_t index) {
 
         const indentWidth = lineByIndex(index)
-            .until!(a => a != ' ')
+            .until!(a => !a.among(' ', '\t'))
             .walkLength;
 
         return lineStartByIndex(index) + indentWidth;
@@ -294,15 +362,87 @@ class CodeInput : TextInput {
 
     }
 
+    unittest {
+
+        auto root = codeInput();
+        root.value = "a\n\tb";
+        root.draw();
+
+        assert(root.lineHomeByIndex(0) == 0);
+        assert(root.lineHomeByIndex(1) == 0);
+        assert(root.lineHomeByIndex(2) == 3);
+        assert(root.lineHomeByIndex(3) == 3);
+        assert(root.lineHomeByIndex(4) == 3);
+
+        root.value = " \t b";
+        foreach (i; 0 .. root.value.length) {
+
+            assert(root.lineHomeByIndex(i) == 3);
+
+        }
+
+    }
+
+    /// Get the column the given index (or caret index) is at, but count tabs as however characters they display as.
+    ptrdiff_t visualColumn(size_t i) {
+
+        // Select characters on the same before the given index
+        auto indents = lineByIndex(i)[0 .. column!char(i)];
+
+        return foldIndents(indents);
+
+    }
+
+    /// ditto
+    ptrdiff_t visualColumn() {
+
+        return visualColumn(caretIndex);
+
+    }
+
+    unittest {
+
+        auto root = codeInput();
+        root.value = "    ą bcd";
+
+        foreach (i; 0 .. root.value.length) {
+            assert(root.visualColumn(i) == i);
+        }
+
+        root.value = "\t \t  \t   \t\n";
+        assert(root.visualColumn(0) == 0);   // 0 spaces, tab
+        assert(root.visualColumn(1) == 4);   // 1 space, tab
+        assert(root.visualColumn(2) == 5);
+        assert(root.visualColumn(3) == 8);   // 2 spaces, tab
+        assert(root.visualColumn(4) == 9);
+        assert(root.visualColumn(5) == 10);
+        assert(root.visualColumn(6) == 12);  // 3 spaces, tab
+        assert(root.visualColumn(7) == 13);
+        assert(root.visualColumn(8) == 14);
+        assert(root.visualColumn(9) == 15);
+        assert(root.visualColumn(10) == 16);  // Line feed
+        assert(root.visualColumn(11) == 0);
+
+    }
+
     /// Get indent count for offset at given index.
     int indentLevelByIndex(size_t i) {
 
-        // Select tabs on the given line
-        return cast(int) lineByIndex(i)
-            .until!(a => a != ' ')
+        // Select indents on the given line
+        auto indents = lineByIndex(i).byDchar
+            .until!(a => !a.among(' ', '\t'));
 
-            // Count their width
-            .walkLength / indentWidth;
+        return cast(int) foldIndents(indents) / indentWidth;
+
+    }
+
+    /// Count width of the given text, counting tabs using their visual size, while other characters are of width of 1
+    private auto foldIndents(T)(T input) {
+
+        return input.fold!(
+            (a, c) => c == '\t'
+                ? a + indentWidth - (a % indentWidth)
+                : a + 1)(0);
 
     }
 
@@ -322,6 +462,25 @@ class CodeInput : TextInput {
         assert(root.indentLevelByIndex(29) == 1);
         assert(root.indentLevelByIndex(37) == 1);
         assert(root.indentLevelByIndex(48) == 2);
+
+    }
+
+    unittest {
+
+        auto root = codeInput();
+        root.value = "hello,\t\n"
+            ~ "  world\ta\n"
+            ~ "\t\n"
+            ~ "\tfoo\n"
+            ~ "   \t world\n"
+            ~ "\t\tworld\n";
+
+        assert(root.indentLevelByIndex(0) == 0);
+        assert(root.indentLevelByIndex(8) == 0);
+        assert(root.indentLevelByIndex(18) == 1);
+        assert(root.indentLevelByIndex(20) == 1);
+        assert(root.indentLevelByIndex(25) == 1);
+        assert(root.indentLevelByIndex(36) == 2);
 
     }
 
@@ -347,7 +506,12 @@ class CodeInput : TextInput {
         }
 
         // Perform basic autoindenting if indentor is not available
-        else return previousLineIndent;
+        // Inherit from previous line if blank
+        else if (lineByIndex(i).length == 0)
+            return previousLineIndent;
+
+        // Or, keep current indent
+        else return indentLevelByIndex(i);
 
     }
 
@@ -356,6 +520,13 @@ class CodeInput : TextInput {
 
         // Indent selection
         if (isSelecting) indent();
+
+        // Insert a tab character
+        else if (useTabs) {
+
+            push('\t');
+
+        }
 
         // Align to tab
         else {
@@ -393,6 +564,27 @@ class CodeInput : TextInput {
 
     unittest {
 
+        auto root = codeInput(.useTabs);
+        root.insertTab();
+        assert(root.value == "\t");
+        root.push("aa");
+        root.insertTab();
+        assert(root.value == "\taa\t");
+        root.insertTab();
+        assert(root.value == "\taa\t\t");
+        root.push("\n");
+        root.insertTab();
+        assert(root.value == "\taa\t\t\n\t");
+        root.insertTab();
+        assert(root.value == "\taa\t\t\n\t\t");
+        root.push("||");
+        root.insertTab();
+        assert(root.value == "\taa\t\t\n\t\t||\t");
+
+    }
+
+    unittest {
+
         const originalValue = "Fïrst line\nSëcond line\r\n Thirð\n\n line\n    Fourth line\nFifth line";
 
         auto root = codeInput();
@@ -424,35 +616,86 @@ class CodeInput : TextInput {
     }
 
     @(FluidInputAction.indent)
-    void indent() {
+    void onIndent() {
 
-        char[maxIndentWidth] insertTab = ' ';
-        const indent = Rope(insertTab[0 .. indentWidth].dup);
+        indent();
+
+    }
+
+    void indent(int indentCount = 1, bool includeEmptyLines = false) {
 
         // Indent every selected line
         foreach (line, setLine; eachSelectedLine) {
 
             // Skip empty lines
-            if (line == "") continue;
+            if (!includeEmptyLines && line == "") continue;
 
-            setLine(indent[] ~ line);
+            setLine(indentRope(indentCount) ~ line);
 
         }
 
     }
 
+    unittest {
+
+        auto root = codeInput();
+        root.value = "a";
+        root.indent();
+        assert(root.value == "    a");
+
+        root.value = "abc\ndef\nghi\njkl";
+        root.selectionStart = 4;
+        root.selectionEnd = 9;
+        root.indent();
+        assert(root.value == "abc\n    def\n    ghi\njkl");
+
+        root.indent(2);
+        assert(root.value == "abc\n            def\n            ghi\njkl");
+
+    }
+
+    unittest {
+
+        auto root = codeInput(.useTabs);
+        root.value = "a";
+        root.indent();
+        assert(root.value == "\ta");
+
+        root.value = "abc\ndef\nghi\njkl";
+        root.selectionStart = 4;
+        root.selectionEnd = 9;
+        root.indent();
+        assert(root.value == "abc\n\tdef\n\tghi\njkl");
+
+        root.indent(2);
+        assert(root.value == "abc\n\t\t\tdef\n\t\t\tghi\njkl");
+
+    }
+
     @(FluidInputAction.outdent)
-    void outdent() {
+    void onOutdent() {
+
+        outdent();
+
+    }
+
+    void outdent(int i = 1) {
 
         // Outdent every selected line
         foreach (line, setLine; eachSelectedLine) {
 
-            const leadingWidth = line.take(indentWidth)
-                .until!(a => a != ' ')
-                .walkLength;
+            // Do it for each indent
+            foreach (j; 0..i) {
 
-            // Remove the tab
-            setLine(line[leadingWidth .. $]);
+                const leadingWidth = line.take(indentWidth)
+                    .until!(a => !a.among(' ', '\t'))
+                    .until("\t", No.openRight)
+                    .walkLength;
+
+                // Remove the tab
+                setLine(line = line[leadingWidth .. $]);
+
+            }
 
         }
 
@@ -465,6 +708,10 @@ class CodeInput : TextInput {
         assert(root.value == "");
 
         root.push("  ");
+        root.outdent();
+        assert(root.value == "");
+
+        root.push("\t");
         root.outdent();
         assert(root.value == "");
 
@@ -484,34 +731,103 @@ class CodeInput : TextInput {
         root.outdent();
         assert(root.value == "foobarbaz      ");
 
+        root.push('\t');
+        root.outdent();
+        assert(root.value == "foobarbaz      \t");
+
         root.push("\n   abc  ");
         root.outdent();
-        assert(root.value == "foobarbaz      \nabc  ");
+        assert(root.value == "foobarbaz      \t\nabc  ");
+
+        root.push("\n   \ta");
+        root.outdent();
+        assert(root.value == "foobarbaz      \t\nabc  \na");
+
+        root.value = "\t    \t\t\ta";
+        root.outdent();
+        assert(root.value == "    \t\t\ta");
+
+        root.outdent();
+        assert(root.value == "\t\t\ta");
+
+        root.outdent(2);
+        assert(root.value == "\ta");
+
+    }
+
+    unittest {
+
+        auto io = new HeadlessBackend;
+        auto root = codeInput();
+        root.io = io;
+        root.focus();
+
+        // Tab twice
+        foreach (i; 0..2) {
+
+            assert(root.value.length == i*4);
+
+            io.nextFrame;
+            io.press(KeyboardKey.tab);
+            root.draw();
+
+            io.nextFrame;
+            io.release(KeyboardKey.tab);
+            root.draw();
+
+        }
+
+        io.nextFrame;
+        root.draw();
+
+        assert(root.value == "        ");
+        assert(root.valueBeforeCaret == "        ");
+
+        // Outdent
+        io.nextFrame;
+        io.press(KeyboardKey.leftShift);
+        io.press(KeyboardKey.tab);
+        root.draw();
+
+        io.nextFrame;
+        root.draw();
+
+        assert(root.value == "    ");
+        assert(root.valueBeforeCaret == "    ");
 
     }
 
     override void chop(bool forward = false) {
 
-        // Make it possible to backspace tabs
+        // Make it possible to backspace space-based indents
         if (!forward && !isSelecting) {
 
-            const col = column!char;
-            const line = caretLine;
-            const isIndent = line[0 .. col].all!(a => a == ' ');
-            const oldCaretIndex = caretIndex;
+            const lineStart = lineStartByIndex(caretIndex);
+            const lineHome = lineHomeByIndex(caretIndex);
+            const isIndent = caretIndex > lineStart && caretIndex <= lineHome;
 
-            // Remove spaces as if they were tabs
-            if (isIndent && col) {
+            // This is an indent
+            if (isIndent) {
 
-                const tabWidth = either(column!dchar % indentWidth, indentWidth);
+                const line = caretLine;
+                const col = column!char;
+                const tabWidth = either(visualColumn % indentWidth, indentWidth);
+                const tabStart = max(0, col - tabWidth);
+                const allSpaces = line[tabStart .. col].all!(a => a == ' ');
 
-                caretLine = line[tabWidth .. $];
-                caretIndex = oldCaretIndex - tabWidth;
+                // Remove spaces as if they were tabs
+                if (allSpaces) {
 
-                return;
+                    const oldCaretIndex = caretIndex;
+
+                    caretLine = line[0 .. tabStart] ~ line[col .. $];
+                    caretIndex = oldCaretIndex - tabWidth;
+
+                    return;
+
+                }
 
             }
-
 
         }
 
@@ -568,10 +884,52 @@ class CodeInput : TextInput {
 
     }
 
+    unittest {
+
+        auto root = codeInput();
+        // 2 spaces, tab, 7 spaces
+        // Effectively 2.75 of an indent
+        root.value = "  \t       ";
+        root.caretToEnd();
+        root.chop();
+
+        assert(root.value == "  \t    ");
+        root.chop();
+
+        // Tabs are not treated specially by chop, though
+        // They could be, maybe, but it's such a dumb edgecase, this should be good enough for everybody
+        // (I've checked that Kate does remove this in a single chop)
+        assert(root.value == "  \t");
+        root.chop();
+        assert(root.value == "  ");
+        root.chop();
+        assert(root.value == "");
+
+        root.value = "  \t  \t  \t";
+        root.caretToEnd();
+        root.chop();
+        assert(root.value == "  \t  \t  ");
+
+        root.chop();
+        assert(root.value == "  \t  \t");
+
+        root.chop();
+        assert(root.value == "  \t  ");
+
+        root.chop();
+        assert(root.value == "  \t");
+
+        root.value = "\t\t\t ";
+        root.caretToEnd();
+        root.chop();
+        assert(root.value == "\t\t\t");
+        root.chop();
+        assert(root.value == "\t\t");
+
+    }
+
     @(FluidInputAction.breakLine)
     protected override bool onBreakLine() {
-
-        char[maxIndentWidth] insertTab = ' ';
 
         // Break the line
         if (super.onBreakLine()) {
@@ -618,34 +976,74 @@ class CodeInput : TextInput {
 
         import std.math;
 
-        char[maxIndentWidth] insertTab = ' ';
-
         // TODO Implement reformatLine for selections
         if (isSelecting) return;
 
-        const col = column!char(caretIndex);
-        const index = caretIndex;
-        const currentIndent = indentLevelByIndex(index);
-        const newIndent = targetIndentLevelByIndex(index);
+        const newIndentLevel = targetIndentLevelByIndex(caretIndex);
+
+        const line = lineByIndex(caretIndex);
+        const lineStart = lineStartByIndex(caretIndex);
+        const lineHome = lineHomeByIndex(caretIndex);
+        const newIndent = indentRope(newIndentLevel);
+        const oldIndentLength = lineHome - lineStart;
 
         // Ignore if indent is the same
-        if (newIndent == currentIndent) return;
+        if (newIndent.length == oldIndentLength) return;
 
-        const diff = newIndent - currentIndent;
         const oldCaretIndex = caretIndex;
+        const newLine = newIndent ~ line[oldIndentLength .. $];
 
-        // Indent reduced
-        if (newIndent < currentIndent)
-            caretLine = caretLine[-diff * indentWidth .. $];
+        // Write the new indent, replacing the old one
+        lineByIndex(caretIndex, newLine);
 
-        // Indent increased
-        else foreach (i; 0 .. diff)
-            caretLine = insertTab[0 .. indentWidth].dup ~ caretLine;
-
-        caretIndex = oldCaretIndex + diff*indentWidth;
+        // Update caret index
+        caretIndex = clamp(oldCaretIndex + newIndent.length - oldIndentLength,
+            lineStart + newIndent.length,
+            lineStart + newLine.length);
 
         // Parse again
         reparse();
+
+    }
+
+    unittest {
+
+        auto root = codeInput();
+
+        // 3 tabs -> 3 indents
+        root.push("\t\t\t\n");
+        root.reformatLine;
+        assert(root.value == "\t\t\t\n            ");
+
+        // mixed tabs (8 width total) -> 2 indents
+        root.value = "  \t  \t\n";
+        root.caretToEnd();
+        root.reformatLine;
+        assert(root.value == "  \t  \t\n        ");
+
+        // 6 spaces -> 1 indent
+        root.value = "      \n";
+        root.caretToEnd();
+        root.reformatLine;
+        assert(root.value == "      \n    ");
+
+        // Same but now with tabs
+        root.useTabs = true;
+        root.reformatLine;
+        assert(root.indentRope(1) == "\t");
+        assert(root.value == "      \n\t");
+
+        // 3 tabs -> 3 indents
+        root.value = "\t\t\t\n";
+        root.caretToEnd();
+        root.reformatLine;
+        assert(root.value == "\t\t\t\n\t\t\t");
+
+        // mixed tabs (8 width total) -> 2 indents
+        root.value = "  \t  \t\n";
+        root.caretToEnd();
+        root.reformatLine;
+        assert(root.value == "  \t  \t\n\t\t");
 
     }
 
@@ -727,46 +1125,84 @@ class CodeInput : TextInput {
         root.toggleHome();
         assert(root.caretIndex == 0);
 
+        // Switch to tabs
+        const previousValue = root.value;
+        root.useTabs = true;
+        root.reformatLine();
+        assert(root.value == previousValue);
+
+        // Move to line below
+        root.runInputAction!(FluidInputAction.nextLine);
+        root.reformatLine();
+        assert(root.value == "int main() {\n\treturn 0;\n}");
+        assert(root.valueBeforeCaret == "int main() {\n\t");
+
+        const secondLineHome = root.caretIndex;
+        root.draw();
+        root.toggleHome();
+        assert(root.caretIndex == secondLineHome - 1);
+
+        root.toggleHome();
+        assert(root.caretIndex == secondLineHome);
+
     }
 
     unittest {
 
-        auto io = new HeadlessBackend;
-        auto root = codeInput();
-        root.io = io;
-        root.value = "    long line that wraps because the viewport is too small to make it fit";
-        root.caretIndex = 4;
-        root.draw();
+        foreach (useTabs; [false, true]) {
 
-        // Move to start
-        root.toggleHome();
-        assert(root.caretIndex == 0);
+            const tabLength = useTabs ? 1 : 4;
 
-        // Move home
-        root.toggleHome();
-        assert(root.caretIndex == 4);
+            auto io = new HeadlessBackend;
+            auto root = codeInput();
+            root.io = io;
+            root.useTabs = useTabs;
+            root.value = root.indentRope ~ "long line that wraps because the viewport is too small to make it fit";
+            root.caretIndex = tabLength;
+            root.draw();
 
-        // Move to line below
-        root.runInputAction!(FluidInputAction.nextLine);
+            // Move to start
+            root.toggleHome();
+            assert(root.caretIndex == 0);
 
-        // Move to line start
-        root.caretToLineStart();
-        assert(root.caretIndex > 4);
+            // Move home
+            root.toggleHome();
+            assert(root.caretIndex == tabLength);
 
-        const secondLineStart = root.caretIndex;
+            // Move to line below
+            root.runInputAction!(FluidInputAction.nextLine);
 
-        // Move a few characters to the right, and move to line start again
-        root.caretIndex = root.caretIndex + 5;
-        root.toggleHome();
-        assert(root.caretIndex == secondLineStart);
+            // Move to line start
+            root.caretToLineStart();
+            assert(root.caretIndex > tabLength);
 
-        // If the caret is already at the start, it should move home
-        root.toggleHome();
-        assert(root.caretIndex == 4);
-        root.toggleHome();
-        assert(root.caretIndex == 0);
+            const secondLineStart = root.caretIndex;
+
+            // Move a few characters to the right, and move to line start again
+            root.caretIndex = root.caretIndex + 5;
+            root.toggleHome();
+            assert(root.caretIndex == secondLineStart);
+
+            // If the caret is already at the start, it should move home
+            root.toggleHome();
+            assert(root.caretIndex == tabLength);
+            root.toggleHome();
+            assert(root.caretIndex == 0);
+
+        }
 
     }
+
+}
+
+///
+unittest {
+
+    // Start a code editor.
+    codeInput();
+
+    // Start a code editor that uses tabs
+    codeInput(.useTabs);
 
 }
 
