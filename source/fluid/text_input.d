@@ -516,6 +516,34 @@ class TextInput : InputNode!Node, FluidScrollable {
     /// Point where selection ends. Corresponds to caret position.
     alias selectionEnd = caretIndex;
 
+    /// Select a part of text. This is preferred to setting `selectionStart` & `selectionEnd` directly, since the two
+    /// properties are synchronized together and a change might be ignored.
+    void selectSlice(size_t start, size_t end)
+    in (end <= value.length, format!"Slice [%s .. %s] exceeds textInput value length of %s"(start, end, value.length))
+    do {
+
+        selectionEnd = end;
+        selectionStart = start;
+
+    }
+
+    unittest {
+
+        auto root = textInput();
+        root.value = "foo bar baz";
+        root.selectSlice(0, 3);
+        assert(root.selectedValue == "foo");
+
+        root.caretIndex = 4;
+        root.selectSlice(4, 7);
+        assert(root.selectedValue == "bar");
+
+        root.caretIndex = 11;
+        root.selectSlice(8, 11);
+        assert(root.selectedValue == "baz");
+
+    }
+
     ///
     void clearSelection() {
 
