@@ -29,7 +29,8 @@ else {
 
 /// Low-level interface for drawing text. Represents a single typeface.
 ///
-/// Unlike the rest of Fluid, Typeface doesn't define pixels as 1/96th of an inch. DPI must also be specified manually.
+/// Unlike the rest of Fluid, Typeface uses screen-space dots directly, instead of fixed-size pixels. Consequently, DPI
+/// must be specified manually.
 ///
 /// See: [fluid.text.Text] for an interface on a higher level.
 interface Typeface {
@@ -44,12 +45,14 @@ interface Typeface {
     int lineHeight() const;
 
     /// Width of an indent/tab character, in dots.
-    int indentWidth() const;
+    /// `Text` sets `indentWidth` automatically.
+    ref inout(int) indentWidth() inout;
 
     /// Get advance vector for the given glyph. Uses dots, not pixels, as the unit.
     Vector2 advance(dchar glyph);
 
     /// Set font scale. This should be called at least once before drawing.
+    /// `Text` sets DPI automatically.
     ///
     /// Font renderer should cache this and not change the scale unless updated.
     ///
@@ -613,7 +616,7 @@ class FreetypeTypeface : Typeface {
 
     }
 
-    int indentWidth() const => _indentWidth;
+    ref inout(int) indentWidth() inout => _indentWidth;
     bool isOwner() const => _isOwner;
     bool isOwner(bool value) @system => _isOwner = value;
 
@@ -666,9 +669,6 @@ class FreetypeTypeface : Typeface {
 
         // Clear the cache
         advanceCache.clear();
-
-        // Load indent width
-        _indentWidth = cast(int) (4 * advance(' ').x);
 
         return dpi;
 
@@ -764,6 +764,7 @@ unittest {
     auto image = generateColorImage(10, 10, color("#fff"));
     auto tf = FreetypeTypeface.defaultTypeface;
     tf.dpi = Vector2(96, 96);
+    tf.indentWidth = cast(int) (tf.advance(' ').x * 4);
 
     Vector2 measure(string text) {
 
@@ -778,6 +779,7 @@ unittest {
 
     assert(indentReference.x > 0);
     assert(indentReference.x == tf.advance(' ').x * 4);
+    assert(indentReference.x == tf.indentWidth);
 
     assert(measure("\t") == indentReference);
     assert(measure("a\t") == indentReference);

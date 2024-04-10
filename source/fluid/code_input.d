@@ -16,17 +16,44 @@ import fluid.text_input;
 
 
 /// Node parameter for `CodeInput` enabling tabs as the character used for indents.
-auto useTabs(bool value = true) {
+/// Params:
+///     width = Indent width; number of character a single tab corresponds to. Optional, if set to 0 or left default,
+///         keeps the old/default value.
+auto useTabs(int width = 0) {
 
     struct UseTabs {
 
+        int width;
+
         void apply(CodeInput node) {
-            node.useTabs = value;
+            node.useTabs = true;
+            if (width)
+                node.indentWidth = width;
         }
 
     }
 
-    return UseTabs();
+    return UseTabs(width);
+
+}
+
+/// Node parameter for `CodeInput`, setting spaces as the character used for indents.
+/// Params:
+///     width = Indent width; number of spaces a single indent consists of.
+auto useSpaces(int width) {
+
+    struct UseSpaces {
+
+        int width;
+
+        void apply(CodeInput node) {
+            node.useTabs = false;
+            node.indentWidth = width;
+        }
+
+    }
+
+    return UseSpaces(width);
 
 }
 
@@ -122,7 +149,12 @@ class CodeInput : TextInput {
 
             assert(text.hasFastEdits);
 
+            auto typeface = pickStyle().getTypeface;
+
+            typeface.dpi = io.dpi;
+
             this.text.value = super.text.value;
+            text.indentWidth = indentWidth * typeface.advance(' ').x / io.hidpiScale.x;
             text.resize(available);
             minSize = text.size;
 
@@ -1513,5 +1545,80 @@ unittest {
     io.nextFrame;
     root.draw();
     assert(root.value == "    begin end ");
+
+}
+
+unittest {
+
+    auto roots = [
+        codeInput(.nullTheme, .useSpaces(2)),
+        codeInput(.nullTheme, .useTabs(2)),
+    ];
+
+    // Draw each root
+    foreach (i, root; roots) {
+        root.insertTab();
+        root.push("a");
+        root.draw();
+    }
+
+    assert(roots[0].value == "  a");
+    assert(roots[1].value == "\ta");
+
+    // Drawn text content has to be identical, since both have the same indent width
+    assert(roots.all!(a => a.contentLabel.text.texture.chunks.length == 1));
+    assert(roots[0].contentLabel.text.texture.chunks[0].image.data
+        == roots[1].contentLabel.text.texture.chunks[0].image.data);
+
+}
+
+unittest {
+
+    auto roots = [
+        codeInput(.nullTheme, .useSpaces(1)),
+        codeInput(.nullTheme, .useSpaces(2)),
+        codeInput(.nullTheme, .useSpaces(4)),
+        codeInput(.nullTheme, .useSpaces(8)),
+        codeInput(.nullTheme, .useTabs(1)),
+        codeInput(.nullTheme, .useTabs(2)),
+        codeInput(.nullTheme, .useTabs(4)),
+        codeInput(.nullTheme, .useTabs(8)),
+    ];
+
+    foreach (root; roots) {
+        root.insertTab();
+        root.push("a");
+        root.draw();
+    }
+
+    assert(roots[0].value == " a");
+    assert(roots[1].value == "  a");
+    assert(roots[2].value == "    a");
+    assert(roots[3].value == "        a");
+
+    foreach (root; roots[4..8]) {
+
+        assert(root.value == "\ta");
+
+    }
+
+    float indentWidth(CodeInput root) {
+        return root.contentLabel.text.indentWidth;
+    }
+
+    foreach (i; [0, 4]) {
+
+        assert(indentWidth(roots[i + 0]) * 2 == indentWidth(roots[i + 1]));
+        assert(indentWidth(roots[i + 1]) * 2 == indentWidth(roots[i + 2]));
+        assert(indentWidth(roots[i + 2]) * 2 == indentWidth(roots[i + 3]));
+
+    }
+
+    foreach (i; 0..4) {
+
+        assert(indentWidth(roots[0 + i]) == indentWidth(roots[4 + i]),
+            "Indent widths should be the same for both space and tab based roots");
+
+    }
 
 }
