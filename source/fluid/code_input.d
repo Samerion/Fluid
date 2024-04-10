@@ -1349,19 +1349,56 @@ class CodeInput : TextInput {
     @(FluidInputAction.paste)
     override void paste() {
 
-        const pasteStart = selectionLowIndex;
-        const pasteEnd = pasteStart + io.clipboard.length;
-        const indentLevel = indentLevelByIndex(pasteStart);
+        import fluid.typeface : Typeface;
 
-        // TODO outdent the clipboard
-        push(io.clipboard);
+        const pasteStart = selectionLowIndex;
+        const clipboard = io.clipboard;
+        auto indentLevel = indentLevelByIndex(pasteStart);
+
+        // Find the smallest indent in the clipboard
+        // Skip the first line because it's likely to be without indent when copy-pasting
+        auto lines = Typeface.lineSplitter(clipboard).drop(1);
+
+        // Count indents on each line, skip blank lines
+        auto significantIndents = lines
+            .map!(a => a
+                .countUntil!(a => !a.among(' ', '\t')))
+            .filter!(a => a != -1);
+
+        // Test blank lines only if all lines are blank
+        const commonIndent
+            = !significantIndents.empty ? significantIndents.minElement()
+            : !lines.empty ? lines.front.length
+            : 0;
+
+        // Remove the common indent
+        auto outdentedClipboard = Typeface.lineSplitter!(Yes.keepTerminator)(clipboard)
+            .map!((a) {
+                const localIndent = a
+                    .until!(a => !a.among(' ', '\t'))
+                    .walkLength;
+
+                return a.drop(min(commonIndent, localIndent));
+            });
+
+        // Push each line
+        // TODO perhaps reformatting could be done during the same step
+        foreach (line; outdentedClipboard)
+            push(line);
+
         reparse();
+
+        const pasteEnd = caretIndex;
 
         // Reformat each line
         foreach (index, ref line; eachLineByIndex(pasteStart, pasteEnd)) {
 
-            // Skip the first line
-            if (index <= pasteStart) continue;
+            // Save indent of the first line, but don't reformat
+            // `min` is used in case text is pasted inside the indent
+            if (index <= pasteStart) {
+                indentLevel = min(indentLevel, indentLevelByIndex(pasteStart));
+                continue;
+            }
 
             // Use the reformatter if available
             if (indentor) {
@@ -1406,6 +1443,39 @@ class CodeInput : TextInput {
         root.paste();
         assert(root.value == "text\ntext\n\ttext\n\ttext");
 
+        io.clipboard = "  {\n    text\n  }\n";
+        root.value = "";
+        root.paste();
+        assert(root.value == "{\n  text\n}\n");
+
+        root.value = "\t";
+        root.caretToEnd();
+        root.paste();
+        assert(root.value == "\t{\n\t  text\n\t}\n\t");
+
+        root.value = "\t";
+        root.caretToStart();
+        root.paste();
+        assert(root.value == "{\n  text\n}\n\t");
+
+    }
+
+    unittest {
+
+        auto io = new HeadlessBackend;
+        auto root = codeInput();
+        root.io = io;
+
+        foreach (i, clipboard; ["", "  ", "    ", "\t", "\t\t"]) {
+
+            io.clipboard = clipboard;
+            root.value = "";
+            root.paste();
+            assert(root.value == clipboard,
+                format!"Clipboard preset index %s (%s) not preserved"(i, clipboard));
+
+        }
+
     }
 
     unittest {
@@ -1421,8 +1491,16 @@ class CodeInput : TextInput {
             root.value.indexOf("baz"),
         );
         root.paste();
-
         assert(root.value == "let foo() {\n\ttext\n\ttextbaz\n}");
+
+        io.clipboard = "\t\ttext\n\ttext";
+        root.value = "let foo() {\n\tbar\t\tbaz\n}";
+        root.selectSlice(
+            root.value.indexOf("bar"),
+            root.value.indexOf("baz"),
+        );
+        root.paste();
+        assert(root.value == "let foo() {\n\t\ttext\n\ttextbaz\n}");
 
     }
 
@@ -1487,6 +1565,26 @@ class CodeInput : TextInput {
 
     }
 
+    unittest {
+
+        auto io = new HeadlessBackend;
+        auto root = codeInput(.useTabs);
+
+        io.clipboard = "  foo\n  ";
+        root.io = io;
+        root.value = "let foo() {\n\t\n}";
+        root.caretIndex = root.value.indexOf("\n}");
+        root.paste();
+        assert(root.value == "let foo() {\n\tfoo\n\t\n}");
+
+        io.clipboard = "foo\n  bar\n";
+        root.value = "let foo() {\n\tx\n}";
+        root.caretIndex = root.value.indexOf("x");
+        root.paste();
+        assert(root.value == "let foo() {\n\tfoo\n\tbar\n\tx\n}");
+
+    }
+
 }
 
 ///
@@ -1514,6 +1612,8 @@ alias CodeSlice = TextStyleSlice;
 // produce a minimal example to open a bug ticket, sorry.
 alias CodeHighlighterRange = typeof(CodeHighlighter.save());
 
+/// Implements syntax highlighting for `CodeInput`.
+/// Warning: This API is unstable and might change without warning.
 interface CodeHighlighter {
 
     /// Get a name for the token at given index. Returns null if there isn't a token at given index. Indices must be
