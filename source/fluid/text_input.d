@@ -2264,21 +2264,27 @@ class TextInput : InputNode!Node, FluidScrollable {
 
             alias SetLine = void delegate(Rope line) @safe;
 
-            int opApply(scope int delegate(Rope line, scope SetLine setLine) @safe yield) {
-
-                // TODO Can't I just take line by ref?
-                //      Use an "is" to check for changes and replace right after yield returns (before stop)
+            int opApply(scope int delegate(size_t startIndex, ref Rope line) @safe yield) {
 
                 while (index <= end) {
 
                     const line = input.value.lineByIndex!(Yes.keepTerminator)(index);
-                    front = line[].chomp;
 
                     // Get index of the next line
-                    nextLine = index + line.length - input.column!char(index);
+                    const lineStart = index - input.column!char(index);
+                    nextLine = lineStart + line.length;
 
                     // Output the line
-                    if (auto stop = yield(front, &setLine)) return stop;
+                    const originalFront = front = line[].chomp;
+                    auto stop = yield(lineStart, front);
+
+                    // Update indices in case the line has changed
+                    if (front !is originalFront) {
+                        setLine(originalFront, front);
+                    }
+
+                    // Stop if requested
+                    if (stop) return stop;
 
                     // Stop if reached the end of string
                     if (index == nextLine) return 0;
@@ -2292,9 +2298,9 @@ class TextInput : InputNode!Node, FluidScrollable {
 
             }
 
-            int opApply(scope int delegate(Rope line) @safe yield) {
+            int opApply(scope int delegate(ref Rope line) @safe yield) {
 
-                foreach (line, setLine; this) {
+                foreach (index, ref line; this) {
 
                     if (auto stop = yield(line)) return stop;
 
@@ -2305,24 +2311,22 @@ class TextInput : InputNode!Node, FluidScrollable {
             }
 
             /// Replace the current line with a new one.
-            void setLine(Rope line) @safe {
+            private void setLine(Rope oldLine, Rope line) @safe {
 
                 const lineStart = index - input.column!char(index);
 
                 // Get the size of the line terminator
-                const lineTerminatorLength = nextLine - lineStart - front.length;
+                const lineTerminatorLength = nextLine - lineStart - oldLine.length;
 
                 // Update the line
                 input.lineByIndex(index, line);
                 index = lineStart + line.length;
-                end += line.length - front.length;
+                end += line.length - oldLine.length;
 
                 // Add the terminator
                 nextLine = index + lineTerminatorLength;
 
-                // Update the front
-                front = line;
-
+                assert(line == front);
                 assert(nextLine >= index);
                 assert(nextLine <= input.value.length);
 
@@ -2394,24 +2398,28 @@ class TextInput : InputNode!Node, FluidScrollable {
         assert(root.lineByIndex(12) == "two");
 
         size_t i;
-        foreach (line, setLine; root.eachLineByIndex(5, root.value.length)) {
+        foreach (lineStart, ref line; root.eachLineByIndex(5, root.value.length)) {
 
             if (i == 0) {
-                setLine(Rope("value"));
                 assert(line == "onë");
-                assert(root.value == "skip\nvalue\r\ntwo\r\nthree\n");
+                assert(lineStart == 5);
+                line = Rope("value");
             }
             else if (i == 1) {
-                setLine(Rope("\nbar-bar-bar-bar-bar"));
+                assert(root.value == "skip\nvalue\r\ntwo\r\nthree\n");
+                assert(lineStart == 12);
                 assert(line == "two");
-                assert(root.value == "skip\nvalue\r\n\nbar-bar-bar-bar-bar\r\nthree\n");
+                line = Rope("\nbar-bar-bar-bar-bar");
             }
             else if (i == 2) {
-                setLine(Rope.init);
+                assert(root.value == "skip\nvalue\r\n\nbar-bar-bar-bar-bar\r\nthree\n");
+                assert(lineStart == 34);
                 assert(line == "three");
-                assert(root.value == "skip\nvalue\r\n\nbar-bar-bar-bar-bar\r\n\n");
+                line = Rope.init;
             }
             else if (i == 3) {
+                assert(root.value == "skip\nvalue\r\n\nbar-bar-bar-bar-bar\r\n\n");
+                assert(lineStart == root.value.length);
                 assert(line == "");
             }
             else assert(false);
@@ -2430,15 +2438,15 @@ class TextInput : InputNode!Node, FluidScrollable {
         root.push("Fïrst line\nSëcond line\r\n Third line\n    Fourth line\rFifth line");
 
         size_t i = 0;
-        foreach (line, setLine; root.eachLineByIndex(19, 49)) {
-
-            setLine("    " ~ line);
+        foreach (ref line; root.eachLineByIndex(19, 49)) {
 
             if (i == 0) assert(line == "Sëcond line");
             else if (i == 1) assert(line == " Third line");
             else if (i == 2) assert(line == "    Fourth line");
             else assert(false);
             i++;
+
+            line = "    " ~ line;
 
         }
         assert(i == 3);
@@ -2452,13 +2460,13 @@ class TextInput : InputNode!Node, FluidScrollable {
         auto root = textInput();
         root.value = "some text, some line, some stuff\ntext";
 
-        foreach (line, setLine; root.eachLineByIndex(root.value.length, root.value.length)) {
+        foreach (ref line; root.eachLineByIndex(root.value.length, root.value.length)) {
 
-            setLine(Rope(""));
-            setLine(Rope("woo"));
-            setLine(Rope("n"));
-            setLine(Rope(" ąąą "));
-            setLine(Rope(""));
+            line = Rope("");
+            line = Rope("woo");
+            line = Rope("n");
+            line = Rope(" ąąą ");
+            line = Rope("");
 
         }
 
@@ -2477,9 +2485,9 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         auto root = textInput();
 
-        foreach (line, setLine; root.eachSelectedLine) {
+        foreach (ref line; root.eachSelectedLine) {
 
-            setLine(Rope("value"));
+            line = Rope("value");
 
         }
 
