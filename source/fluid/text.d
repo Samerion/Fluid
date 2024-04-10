@@ -51,6 +51,9 @@ struct Text(T : Node, StyleRange = TextStyleSlice[]) {
         /// If true, enables optimizations for frequently edited text.
         bool hasFastEdits;
 
+        /// Indent width, in pixels.
+        float indentWidth = 32;
+
     }
 
     private {
@@ -160,12 +163,15 @@ struct Text(T : Node, StyleRange = TextStyleSlice[]) {
     void resize() {
 
         auto style = node.pickStyle;
-        auto dpi = backend.dpi;
+        auto typeface = style.getTypeface;
+        const dpi = backend.dpi;
+        const scale = backend.hidpiScale;
 
         style.setDPI(dpi);
+        typeface.indentWidth = cast(int) (indentWidth * scale.x);
 
         // Update the size
-        _sizeDots = style.getTypeface.measure(value);
+        _sizeDots = typeface.measure(value);
         _wrap = false;
         clearTextures();
 
@@ -175,11 +181,13 @@ struct Text(T : Node, StyleRange = TextStyleSlice[]) {
     void resize(alias splitter = Typeface.defaultWordChunks)(Vector2 space, bool wrap = true) {
 
         auto style = node.pickStyle;
-        auto dpi = backend.dpi;
-        auto scale = backend.hidpiScale;
+        auto typeface = style.getTypeface;
+        const dpi = backend.dpi;
+        const scale = backend.hidpiScale;
 
         // Apply DPI
         style.setDPI(dpi);
+        typeface.indentWidth = cast(int) (indentWidth * scale.x);
         space.x *= scale.x;
         space.y *= scale.y;
 
@@ -217,7 +225,12 @@ struct Text(T : Node, StyleRange = TextStyleSlice[]) {
 
         auto style = node.pickStyle;
         auto typeface = style.getTypeface;
-        const dpi = node.backend.dpi;
+        const dpi = backend.dpi;
+        const scale = backend.hidpiScale;
+
+        // Apply sizing settings
+        style.setDPI(dpi);
+        typeface.indentWidth = cast(int) (indentWidth * scale.x);
 
         // Ignore chunks which have already been generated
         auto newChunks = chunks
