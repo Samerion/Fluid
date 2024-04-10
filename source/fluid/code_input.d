@@ -681,12 +681,13 @@ class CodeInput : TextInput {
     void indent(int indentCount = 1, bool includeEmptyLines = false) {
 
         // Indent every selected line
-        foreach (line, setLine; eachSelectedLine) {
+        foreach (ref line; eachSelectedLine) {
 
             // Skip empty lines
             if (!includeEmptyLines && line == "") continue;
 
-            setLine(indentRope(indentCount) ~ line);
+            // Prepend the indent
+            line = indentRope(indentCount) ~ line;
 
         }
 
@@ -755,7 +756,7 @@ class CodeInput : TextInput {
     void outdent(int i = 1) {
 
         // Outdent every selected line
-        foreach (line, setLine; eachSelectedLine) {
+        foreach (ref line; eachSelectedLine) {
 
             // Do it for each indent
             foreach (j; 0..i) {
@@ -766,7 +767,7 @@ class CodeInput : TextInput {
                     .walkLength;
 
                 // Remove the tab
-                setLine(line = line[leadingWidth .. $]);
+                line = line[leadingWidth .. $];
 
             }
 
