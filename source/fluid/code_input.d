@@ -929,6 +929,7 @@ class CodeInput : TextInput {
                 }
         };
         root.runInputAction!(FluidInputAction.nextWord);
+        assert(root.caretIndex == root.value.indexOf("if"));
         root.chop();
         assert(root.value == q{
             if (condition) {
@@ -1089,19 +1090,20 @@ class CodeInput : TextInput {
 
     }
 
-    /// Reformat the current line.
-    void reformatLine() {
+    /// Reformat a line by index of any character it contains.
+    void reformatLineByIndex(size_t index) {
 
         import std.math;
 
         // TODO Implement reformatLine for selections
         if (isSelecting) return;
 
-        const newIndentLevel = targetIndentLevelByIndex(caretIndex);
+        const newIndentLevel = targetIndentLevelByIndex(index);
 
-        const line = lineByIndex(caretIndex);
-        const lineStart = lineStartByIndex(caretIndex);
-        const lineHome = lineHomeByIndex(caretIndex);
+        const line = lineByIndex(index);
+        const lineStart = lineStartByIndex(index);
+        const lineHome = lineHomeByIndex(index);
+        const lineEnd = lineEndByIndex(index);
         const newIndent = indentRope(newIndentLevel);
         const oldIndentLength = lineHome - lineStart;
 
@@ -1112,15 +1114,23 @@ class CodeInput : TextInput {
         const newLine = newIndent ~ line[oldIndentLength .. $];
 
         // Write the new indent, replacing the old one
-        lineByIndex(caretIndex, newLine);
+        lineByIndex(index, newLine);
 
         // Update caret index
-        caretIndex = clamp(oldCaretIndex + newIndent.length - oldIndentLength,
-            lineStart + newIndent.length,
-            lineStart + newLine.length);
+        if (oldCaretIndex >= lineStart && oldCaretIndex <= lineEnd)
+            caretIndex = clamp(oldCaretIndex + newIndent.length - oldIndentLength,
+                lineStart + newIndent.length,
+                lineStart + newLine.length);
 
         // Parse again
         reparse();
+
+    }
+
+    /// Reformat the current line.
+    void reformatLine() {
+
+        reformatLineByIndex(caretIndex);
 
     }
 
@@ -1333,6 +1343,147 @@ class CodeInput : TextInput {
             assert(root.caretIndex == 0);
 
         }
+
+    }
+
+    @(FluidInputAction.paste)
+    override void paste() {
+
+        const pasteStart = selectionLowIndex;
+        const pasteEnd = pasteStart + io.clipboard.length;
+        const indentLevel = indentLevelByIndex(pasteStart);
+
+        // TODO outdent the clipboard
+        push(io.clipboard);
+        reparse();
+
+        // Reformat each line
+        foreach (index, ref line; eachLineByIndex(pasteStart, pasteEnd)) {
+
+            // Skip the first line
+            if (index <= pasteStart) continue;
+
+            // Use the reformatter if available
+            if (indentor) {
+                reformatLineByIndex(index);
+                line = lineByIndex(index);
+            }
+
+            // If not, prepend the indent
+            else {
+                line = indentRope(indentLevel) ~ line;
+            }
+
+        }
+
+        // Make sure the input is parsed completely
+        reparse();
+
+    }
+
+    unittest {
+
+        auto io = new HeadlessBackend;
+        auto root = codeInput(.useTabs);
+
+        io.clipboard = "text";
+        root.io = io;
+        root.insertTab;
+        root.paste();
+        assert(root.value == "\ttext");
+
+        root.onBreakLine;
+        root.paste();
+        assert(root.value == "\ttext\n\ttext");
+
+        io.clipboard = "text\ntext";
+        root.value = "";
+        root.paste();
+        assert(root.value == "text\ntext");
+
+        root.onBreakLine;
+        root.insertTab;
+        root.paste();
+        assert(root.value == "text\ntext\n\ttext\n\ttext");
+
+    }
+
+    unittest {
+
+        auto io = new HeadlessBackend;
+        auto root = codeInput(.useTabs);
+
+        io.clipboard = "text\ntext";
+        root.io = io;
+        root.value = "let foo() {\n\tbar\t\tbaz\n}";
+        root.selectSlice(
+            root.value.indexOf("bar"),
+            root.value.indexOf("baz"),
+        );
+        root.paste();
+
+        assert(root.value == "let foo() {\n\ttext\n\ttextbaz\n}");
+
+    }
+
+    unittest {
+
+        auto indentor = new class CodeIndentor {
+
+            Rope text;
+
+            void parse(Rope text) {
+
+                this.text = text;
+
+            }
+
+            int indentDifference(ptrdiff_t offset) {
+
+                int lastLine;
+                int current;
+                int nextLine;
+
+                foreach (ch; text[0 .. offset+1].byDchar) {
+
+                    if (ch == '{')
+                        nextLine++;
+                    else if (ch == '}')
+                        current--;
+                    else if (ch == '\n') {
+                        lastLine = current;
+                        current = nextLine;
+                    }
+
+                }
+
+                return current - lastLine;
+
+            }
+
+        };
+        auto io = new HeadlessBackend;
+        auto root = codeInput(.useTabs);
+
+        // In this test, the indentor does nothing but preserve last indent
+        io.clipboard = "text\ntext";
+        root.io = io;
+        root.indentor = indentor;
+        root.insertTab;
+        root.paste();
+        assert(root.value == "\ttext\n\ttext");
+
+        io.clipboard = "let foo() {\n\tbar\n}";
+        root.value = "";
+        root.paste();
+        assert(root.value == "let foo() {\n\tbar\n}");
+
+        root.caretIndex = root.value.indexOf("bar");
+        root.runInputAction!(FluidInputAction.selectNextWord);
+        assert(root.selectedValue == "bar");
+
+        root.paste();
+        assert(root.value == "let foo() {\n\tlet foo() {\n\t\tbar\n\t}\n}");
 
     }
 

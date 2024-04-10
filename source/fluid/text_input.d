@@ -2288,6 +2288,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
                     // Stop if reached the end of string
                     if (index == nextLine) return 0;
+                    if (line.length == originalFront.length) return 0;
 
                     // Move to the next line
                     index = nextLine;
@@ -2471,6 +2472,35 @@ class TextInput : InputNode!Node, FluidScrollable {
         }
 
         assert(root.value == "");
+
+    }
+
+    unittest {
+
+        auto root = textInput();
+        root.value = "test";
+
+        {
+            size_t i;
+            foreach (line; root.eachLineByIndex(1, 4)) {
+
+                assert(i++ == 0);
+                assert(line == "test");
+
+            }
+        }
+
+        {
+            size_t i;
+            foreach (ref line; root.eachLineByIndex(1, 4)) {
+
+                assert(i++ == 0);
+                assert(line == "test");
+                line = "tested";
+
+            }
+            assert(root.value == "tested");
+        }
 
     }
 
@@ -3137,13 +3167,13 @@ class TextInput : InputNode!Node, FluidScrollable {
         root.runInputAction!(FluidInputAction.nextLine);
 
         assert(root.valueBeforeCaret.wordBack == "Moon");
-        assert(root.valueAfterCaret.wordFront == "\n\n");
+        assert(root.valueAfterCaret.wordFront == "\n");
 
         // Move to the blank line
         root.runInputAction!(FluidInputAction.nextLine);
 
         const blankLine = root.caretIndex;
-        assert(root.valueBeforeCaret.wordBack == "Moon\n");
+        assert(root.valueBeforeCaret.wordBack == "\n");
         assert(root.valueAfterCaret.wordFront == "\n");
 
         // toLineEnd and toLineStart should have no effect
@@ -3156,7 +3186,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         // The anchor has been reset to the beginning
         root.runInputAction!(FluidInputAction.nextLine);
 
-        assert(root.valueBeforeCaret.wordBack == "Moon\n\n");
+        assert(root.valueBeforeCaret.wordBack == "\n");
         assert(root.valueAfterCaret.wordFront == "Hello");
 
         // Move to the very end
@@ -3497,9 +3527,12 @@ T wordFront(T)(T text, bool excludeWhite = false) {
 
         const nextChar = remaining.decodeFrontStatic;
 
+        // Stop if the next character is a line feed
+        if (nextChar.only.chomp.empty && !only(lastChar, nextChar).equal("\r\n")) break;
+
         // Continue if the next character is whitespace
         // Includes any case where the previous character is followed by whitespace
-        if (nextChar.isWhite) continue;
+        else if (nextChar.isWhite) continue;
 
         // Stop if whitespace follows a non-white character
         else if (lastChar.isWhite) break;
@@ -3536,9 +3569,12 @@ T wordBack(T)(T text, bool excludeWhite = false) {
 
         const nextChar = remaining.decodeBackStatic;
 
+        // Stop if the character is a line feed
+        if (lastChar.only.chomp.empty && !only(nextChar, lastChar).equal("\r\n")) break;
+
         // Continue if the current character is whitespace
         // Inverse to `wordFront`
-        if (lastChar.isWhite) continue;
+        else if (lastChar.isWhite) continue;
 
         // Stop if whitespace follows a non-white character
         else if (nextChar.isWhite) break;
@@ -3599,5 +3635,37 @@ unittest {
     assert(" świecie!".wordFront(true) == "");
     assert("witaj świecie".wordBack(true) == "świecie");
     assert("witaj ".wordBack(true) == "");
+
+}
+
+unittest {
+
+    assert("\nabc\n".wordFront == "\n");
+    assert("\n  abc\n".wordFront == "\n  ");
+    assert("abc\n".wordFront == "abc");
+    assert("abc  \n".wordFront == "abc  ");
+    assert("  \n".wordFront == "  ");
+    assert("\n     abc".wordFront == "\n     ");
+
+    assert("\nabc\n".wordBack == "\n");
+    assert("\nabc".wordBack == "abc");
+    assert("abc  \n".wordBack == "\n");
+    assert("abc  ".wordFront == "abc  ");
+    assert("\nabc\n  ".wordBack == "\n  ");
+    assert("\nabc\n  a".wordBack == "a");
+
+    assert("\r\nabc\r\n".wordFront == "\r\n");
+    assert("\r\n  abc\r\n".wordFront == "\r\n  ");
+    assert("abc\r\n".wordFront == "abc");
+    assert("abc  \r\n".wordFront == "abc  ");
+    assert("  \r\n".wordFront == "  ");
+    assert("\r\n     abc".wordFront == "\r\n     ");
+
+    assert("\r\nabc\r\n".wordBack == "\r\n");
+    assert("\r\nabc".wordBack == "abc");
+    assert("abc  \r\n".wordBack == "\r\n");
+    assert("abc  ".wordFront == "abc  ");
+    assert("\r\nabc\r\n  ".wordBack == "\r\n  ");
+    assert("\r\nabc\r\n  a".wordBack == "a");
 
 }
