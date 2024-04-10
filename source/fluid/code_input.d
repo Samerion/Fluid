@@ -179,7 +179,7 @@ class CodeInput : TextInput {
 
         Rope result;
 
-        // TODO this be more performant by using as much of a single rope as possible
+        // TODO this could be more performant by using as much of a single rope as possible
 
         // Insert a tab
         if (useTabs)
@@ -596,6 +596,30 @@ class CodeInput : TextInput {
 
     unittest {
 
+        auto root = codeInput(.useSpaces(2));
+        root.insertTab();
+        assert(root.value == "  ");
+        root.push("aa");
+        root.insertTab();
+        assert(root.value == "  aa  ");
+        root.insertTab();
+        assert(root.value == "  aa    ");
+        root.push("\n");
+        root.insertTab();
+        assert(root.value == "  aa    \n  ");
+        root.insertTab();
+        assert(root.value == "  aa    \n    ");
+        root.push("||");
+        root.insertTab();
+        assert(root.value == "  aa    \n    ||  ");
+        root.push("x");
+        root.insertTab();
+        assert(root.value == "  aa    \n    ||  x ");
+
+    }
+
+    unittest {
+
         auto root = codeInput(.useTabs);
         root.insertTab();
         assert(root.value == "\t");
@@ -676,13 +700,31 @@ class CodeInput : TextInput {
         assert(root.value == "    a");
 
         root.value = "abc\ndef\nghi\njkl";
-        root.selectionStart = 4;
-        root.selectionEnd = 9;
+        root.selectSlice(4, 9);
         root.indent();
         assert(root.value == "abc\n    def\n    ghi\njkl");
 
         root.indent(2);
         assert(root.value == "abc\n            def\n            ghi\njkl");
+
+    }
+
+    unittest {
+
+        auto root = codeInput(.useSpaces(3));
+        root.value = "a";
+        root.indent();
+        assert(root.value == "   a");
+
+        root.value = "abc\ndef\nghi\njkl";
+        assert(root.lineByIndex(4) == "def");
+        root.selectSlice(4, 9);
+        root.indent();
+
+        assert(root.value == "abc\n   def\n   ghi\njkl");
+
+        root.indent(2);
+        assert(root.value == "abc\n         def\n         ghi\njkl");
 
     }
 
@@ -694,8 +736,7 @@ class CodeInput : TextInput {
         assert(root.value == "\ta");
 
         root.value = "abc\ndef\nghi\njkl";
-        root.selectionStart = 4;
-        root.selectionEnd = 9;
+        root.selectSlice(4, 9);
         root.indent();
         assert(root.value == "abc\n\tdef\n\tghi\njkl");
 
@@ -826,6 +867,17 @@ class CodeInput : TextInput {
 
         assert(root.value == "    ");
         assert(root.valueBeforeCaret == "    ");
+
+    }
+
+    unittest {
+
+        auto root = codeInput(.useSpaces(2));
+        root.value = "    abc";
+        root.outdent();
+        assert(root.value == "  abc");
+        root.outdent();
+        assert(root.value == "abc");
 
     }
 
@@ -960,6 +1012,23 @@ class CodeInput : TextInput {
 
     }
 
+    unittest {
+
+        auto root = codeInput(.useSpaces(2));
+        root.value = "      abc";
+        root.caretIndex = 6;
+        root.chop();
+        assert(root.value == "    abc");
+        root.chop();
+        assert(root.value == "  abc");
+        root.chop();
+        assert(root.value == "abc");
+        root.chop();
+        assert(root.value == "abc");
+
+
+    }
+
     @(FluidInputAction.breakLine)
     protected override bool onBreakLine() {
 
@@ -1000,6 +1069,22 @@ class CodeInput : TextInput {
 
         root.runInputAction!(FluidInputAction.breakLine);
         assert(root.value == "abcdef\n    \n        \n\n");
+
+    }
+
+    unittest {
+
+        auto root = codeInput(.useSpaces(2));
+        root.push("abcdef\n");
+        root.insertTab;
+        assert(root.caretLine == "  ");
+        root.onBreakLine();
+        assert(root.caretLine == "  ");
+        root.onBreakLine();
+        root.push("a");
+        assert(root.caretLine == "  a");
+
+        assert(root.value == "abcdef\n  \n  \n  a");
 
     }
 
@@ -1076,6 +1161,31 @@ class CodeInput : TextInput {
         root.caretToEnd();
         root.reformatLine;
         assert(root.value == "  \t  \t\n\t\t");
+
+        // Same but now with 2 spaces
+        root.useTabs = false;
+        root.indentWidth = 2;
+        root.reformatLine;
+        assert(root.indentRope(1) == "  ");
+        assert(root.value == "  \t  \t\n    ");
+
+        // 3 tabs -> 3 indents
+        root.value = "\t\t\t\n";
+        root.caretToStart;
+        root.reformatLine;
+        assert(root.value == "      \n");
+
+        // mixed tabs (8 width total) -> 2 indents
+        root.value = "  \t  \t\n";
+        root.caretToEnd();
+        root.reformatLine;
+        assert(root.value == "  \t  \t\n        ");
+
+        // 6 spaces -> 3 indents
+        root.value = "      \n";
+        root.caretToEnd();
+        root.reformatLine;
+        assert(root.value == "      \n      ");
 
     }
 
@@ -1230,11 +1340,18 @@ class CodeInput : TextInput {
 ///
 unittest {
 
-    // Start a code editor.
+    // Start a code editor
     codeInput();
 
     // Start a code editor that uses tabs
-    codeInput(.useTabs);
+    codeInput(
+        .useTabs
+    );
+
+    // Or, 2 spaces, if you prefer — the default is 4 spaces
+    codeInput(
+        .useSpaces(2)
+    );
 
 }
 
