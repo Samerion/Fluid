@@ -516,6 +516,34 @@ class TextInput : InputNode!Node, FluidScrollable {
     /// Point where selection ends. Corresponds to caret position.
     alias selectionEnd = caretIndex;
 
+    /// Select a part of text. This is preferred to setting `selectionStart` & `selectionEnd` directly, since the two
+    /// properties are synchronized together and a change might be ignored.
+    void selectSlice(size_t start, size_t end)
+    in (end <= value.length, format!"Slice [%s .. %s] exceeds textInput value length of %s"(start, end, value.length))
+    do {
+
+        selectionEnd = end;
+        selectionStart = start;
+
+    }
+
+    unittest {
+
+        auto root = textInput();
+        root.value = "foo bar baz";
+        root.selectSlice(0, 3);
+        assert(root.selectedValue == "foo");
+
+        root.caretIndex = 4;
+        root.selectSlice(4, 7);
+        assert(root.selectedValue == "bar");
+
+        root.caretIndex = 11;
+        root.selectSlice(8, 11);
+        assert(root.selectedValue == "baz");
+
+    }
+
     ///
     void clearSelection() {
 
@@ -1006,7 +1034,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
-    protected override bool keyboardImpl() @trusted {
+    protected override bool keyboardImpl() {
 
         import std.uni : isAlpha, isWhite;
         import std.range : back;
@@ -1985,6 +2013,518 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
+    /// Get line in the input by a byte index.
+    /// Returns: A rope slice with the line containing the given index.
+    Rope lineByIndex(KeepTerminator keepTerminator = No.keepTerminator)(size_t index) const {
+
+        return value.lineByIndex!keepTerminator(index);
+
+    }
+
+    /// Update a line with given byte index.
+    const(char)[] lineByIndex(size_t index, const(char)[] value) {
+
+        lineByIndex(index, Rope(value));
+        return value;
+
+    }
+
+    /// ditto
+    Rope lineByIndex(size_t index, Rope newValue) {
+
+        import std.utf;
+        import fluid.typeface;
+
+        const backLength = Typeface.lineSplitter(value[0..index].retro).front.byChar.walkLength;
+        const frontLength = Typeface.lineSplitter(value[index..$]).front.byChar.walkLength;
+        const start = index - backLength;
+        const end = index + frontLength;
+        size_t[2] selection = [selectionStart, selectionEnd];
+
+        // Combine everything on the same line, before and after the cursor
+        value = value.replace(start, end, newValue);
+
+        // Caret/selection needs updating
+        foreach (i, ref caret; selection) {
+
+            const diff = newValue.length - end + start;
+
+            if (caret < start) continue;
+
+            // Move the caret to the start or end, depending on its type
+            if (caret <= end) {
+
+                // Selection start moves to the beginning
+                // But only if selection is active
+                if (i == 0 && isSelecting)
+                    caret = start;
+
+                // End moves to the end
+                else
+                    caret = start + newValue.length;
+
+            }
+
+            // Offset the caret
+            else caret += diff;
+
+        }
+
+        // Update the carets
+        selectionStart = selection[0];
+        selectionEnd = selection[1];
+
+        return newValue;
+
+    }
+
+    unittest {
+
+        auto root = textInput(.multiline);
+        root.push("foo");
+        root.lineByIndex(0, "foobar");
+        assert(root.value == "foobar");
+        assert(root.valueBeforeCaret == "foobar");
+
+        root.push("\nąąąźź");
+        root.lineByIndex(6, "~");
+        root.caretIndex = root.caretIndex - 2;
+        assert(root.value == "~\nąąąźź");
+        assert(root.valueBeforeCaret == "~\nąąąź");
+
+        root.push("\n\nstuff");
+        assert(root.value == "~\nąąąź\n\nstuffź");
+
+        root.lineByIndex(11, "");
+        assert(root.value == "~\nąąąź\n\nstuffź");
+
+        root.lineByIndex(11, "*");
+        assert(root.value == "~\nąąąź\n*\nstuffź");
+
+    }
+
+    unittest {
+
+        auto root = textInput(.multiline);
+        root.push("óne\nßwo\nßhree");
+        root.selectionStart = 5;
+        root.selectionEnd = 14;
+        root.lineByIndex(5, "[REDACTED]");
+        assert(root.value[root.selectionEnd] == 'e');
+        assert(root.value == "óne\n[REDACTED]\nßhree");
+
+        assert(root.value[root.selectionEnd] == 'e');
+        assert(root.selectionStart == 5);
+        assert(root.selectionEnd == 20);
+
+    }
+
+    /// Get the index of the start or end of the line — from index of any character on the same line.
+    size_t lineStartByIndex(size_t index) {
+
+        return value.lineStartByIndex(index);
+
+    }
+
+    /// ditto
+    size_t lineEndByIndex(size_t index) {
+
+        return value.lineEndByIndex(index);
+
+    }
+
+    /// Get the current line
+    Rope caretLine() {
+
+        return value.lineByIndex(caretIndex);
+
+    }
+
+    unittest {
+
+        auto root = textInput(.multiline);
+        assert(root.caretLine == "");
+        root.push("aąaa");
+        assert(root.caretLine == root.value);
+        root.caretIndex = 0;
+        assert(root.caretLine == root.value);
+        root.push("bbb");
+        assert(root.caretLine == root.value);
+        assert(root.value == "bbbaąaa");
+        root.push("\n");
+        assert(root.value == "bbb\naąaa");
+        assert(root.caretLine == "aąaa");
+        root.caretToEnd();
+        root.push("xx");
+        assert(root.caretLine == "aąaaxx");
+        root.push("\n");
+        assert(root.caretLine == "");
+        root.push("\n");
+        assert(root.caretLine == "");
+        root.caretIndex = root.caretIndex - 1;
+        assert(root.caretLine == "");
+        root.caretToStart();
+        assert(root.caretLine == "bbb");
+
+    }
+
+    /// Change the current line. Moves the cursor to the end of the newly created line.
+    const(char)[] caretLine(const(char)[] newValue) {
+
+        return lineByIndex(caretIndex, newValue);
+
+    }
+
+    /// ditto
+    Rope caretLine(Rope newValue) {
+
+        return lineByIndex(caretIndex, newValue);
+
+    }
+
+    unittest {
+
+        auto root = textInput(.multiline);
+        root.push("a\nbb\nccc\n");
+        assert(root.caretLine == "");
+
+        root.caretIndex = root.caretIndex - 1;
+        assert(root.caretLine == "ccc");
+
+        root.caretLine = "hi";
+        assert(root.value == "a\nbb\nhi\n");
+
+        assert(!root.isSelecting);
+        assert(root.valueBeforeCaret == "a\nbb\nhi");
+
+        root.caretLine = "";
+        assert(root.value == "a\nbb\n\n");
+        assert(root.valueBeforeCaret == "a\nbb\n");
+
+        root.caretLine = "new value";
+        assert(root.value == "a\nbb\nnew value\n");
+        assert(root.valueBeforeCaret == "a\nbb\nnew value");
+
+        root.caretIndex = 0;
+        root.caretLine = "insert";
+        assert(root.value == "insert\nbb\nnew value\n");
+        assert(root.valueBeforeCaret == "insert");
+        assert(root.caretLine == "insert");
+
+    }
+
+    /// Get the column the given index (or the cursor, if omitted) is on.
+    /// Returns:
+    ///     Return value depends on the type fed into the function. `column!dchar` will use characters and `column!char`
+    ///     will use bytes. The type does not have effect on the input index.
+    ptrdiff_t column(Chartype)(ptrdiff_t index) {
+
+        return value.column!Chartype(index);
+
+    }
+
+    /// ditto
+    ptrdiff_t column(Chartype)() {
+
+        return column!Chartype(caretIndex);
+
+    }
+
+    unittest {
+
+        auto root = textInput(.multiline);
+        assert(root.column!dchar == 0);
+        root.push(" ");
+        assert(root.column!dchar == 1);
+        root.push("a");
+        assert(root.column!dchar == 2);
+        root.push("ąąą");
+        assert(root.column!dchar == 5);
+        assert(root.column!char == 8);
+        root.push("O\n");
+        assert(root.column!dchar == 0);
+        root.push(" ");
+        assert(root.column!dchar == 1);
+        root.push("HHH");
+        assert(root.column!dchar == 4);
+
+    }
+
+    /// Iterate on each line in an interval.
+    auto eachLineByIndex(ptrdiff_t start, ptrdiff_t end) {
+
+        struct LineIterator {
+
+            TextInput input;
+            ptrdiff_t index;
+            ptrdiff_t end;
+
+            private Rope front;
+            private ptrdiff_t nextLine;
+
+            alias SetLine = void delegate(Rope line) @safe;
+
+            int opApply(scope int delegate(size_t startIndex, ref Rope line) @safe yield) {
+
+                while (index <= end) {
+
+                    const line = input.value.lineByIndex!(Yes.keepTerminator)(index);
+
+                    // Get index of the next line
+                    const lineStart = index - input.column!char(index);
+                    nextLine = lineStart + line.length;
+
+                    // Output the line
+                    const originalFront = front = line[].chomp;
+                    auto stop = yield(lineStart, front);
+
+                    // Update indices in case the line has changed
+                    if (front !is originalFront) {
+                        setLine(originalFront, front);
+                    }
+
+                    // Stop if requested
+                    if (stop) return stop;
+
+                    // Stop if reached the end of string
+                    if (index == nextLine) return 0;
+                    if (line.length == originalFront.length) return 0;
+
+                    // Move to the next line
+                    index = nextLine;
+
+                }
+
+                return 0;
+
+            }
+
+            int opApply(scope int delegate(ref Rope line) @safe yield) {
+
+                foreach (index, ref line; this) {
+
+                    if (auto stop = yield(line)) return stop;
+
+                }
+
+                return 0;
+
+            }
+
+            /// Replace the current line with a new one.
+            private void setLine(Rope oldLine, Rope line) @safe {
+
+                const lineStart = index - input.column!char(index);
+
+                // Get the size of the line terminator
+                const lineTerminatorLength = nextLine - lineStart - oldLine.length;
+
+                // Update the line
+                input.lineByIndex(index, line);
+                index = lineStart + line.length;
+                end += line.length - oldLine.length;
+
+                // Add the terminator
+                nextLine = index + lineTerminatorLength;
+
+                assert(line == front);
+                assert(nextLine >= index);
+                assert(nextLine <= input.value.length);
+
+            }
+
+        }
+
+        return LineIterator(this, start, end);
+
+    }
+
+    unittest {
+
+        auto root = textInput(.multiline);
+        root.push("aaaąąą@\r\n#\n##ąąśðą\nĄŚ®ŒĘ¥Ę®\n");
+
+        size_t i;
+        foreach (line; root.eachLineByIndex(4, 18)) {
+
+            if (i == 0) assert(line == "aaaąąą@");
+            if (i == 1) assert(line == "#");
+            if (i == 2) assert(line == "##ąąśðą");
+            assert(i.among(0, 1, 2));
+            i++;
+
+        }
+        assert(i == 3);
+
+        i = 0;
+        foreach (line; root.eachLineByIndex(22, 27)) {
+
+            if (i == 0) assert(line == "##ąąśðą");
+            if (i == 1) assert(line == "ĄŚ®ŒĘ¥Ę®");
+            assert(i.among(0, 1));
+            i++;
+
+        }
+        assert(i == 2);
+
+        i = 0;
+        foreach (line; root.eachLineByIndex(44, 44)) {
+
+            assert(i == 0);
+            assert(line == "");
+            i++;
+
+        }
+        assert(i == 1);
+
+        i = 0;
+        foreach (line; root.eachLineByIndex(1, 1)) {
+
+            assert(i == 0);
+            assert(line == "aaaąąą@");
+            i++;
+
+        }
+        assert(i == 1);
+
+    }
+
+    unittest {
+
+        auto root = textInput(.multiline);
+        root.push("skip\nonë\r\ntwo\r\nthree\n");
+
+        assert(root.lineByIndex(4) == "skip");
+        assert(root.lineByIndex(8) == "onë");
+        assert(root.lineByIndex(12) == "two");
+
+        size_t i;
+        foreach (lineStart, ref line; root.eachLineByIndex(5, root.value.length)) {
+
+            if (i == 0) {
+                assert(line == "onë");
+                assert(lineStart == 5);
+                line = Rope("value");
+            }
+            else if (i == 1) {
+                assert(root.value == "skip\nvalue\r\ntwo\r\nthree\n");
+                assert(lineStart == 12);
+                assert(line == "two");
+                line = Rope("\nbar-bar-bar-bar-bar");
+            }
+            else if (i == 2) {
+                assert(root.value == "skip\nvalue\r\n\nbar-bar-bar-bar-bar\r\nthree\n");
+                assert(lineStart == 34);
+                assert(line == "three");
+                line = Rope.init;
+            }
+            else if (i == 3) {
+                assert(root.value == "skip\nvalue\r\n\nbar-bar-bar-bar-bar\r\n\n");
+                assert(lineStart == root.value.length);
+                assert(line == "");
+            }
+            else assert(false);
+
+            i++;
+
+        }
+
+        assert(i == 4);
+
+    }
+
+    unittest {
+
+        auto root = textInput(.multiline);
+        root.push("Fïrst line\nSëcond line\r\n Third line\n    Fourth line\rFifth line");
+
+        size_t i = 0;
+        foreach (ref line; root.eachLineByIndex(19, 49)) {
+
+            if (i == 0) assert(line == "Sëcond line");
+            else if (i == 1) assert(line == " Third line");
+            else if (i == 2) assert(line == "    Fourth line");
+            else assert(false);
+            i++;
+
+            line = "    " ~ line;
+
+        }
+        assert(i == 3);
+        root.selectionStart = 19;
+        root.selectionEnd = 49;
+
+    }
+
+    unittest {
+
+        auto root = textInput();
+        root.value = "some text, some line, some stuff\ntext";
+
+        foreach (ref line; root.eachLineByIndex(root.value.length, root.value.length)) {
+
+            line = Rope("");
+            line = Rope("woo");
+            line = Rope("n");
+            line = Rope(" ąąą ");
+            line = Rope("");
+
+        }
+
+        assert(root.value == "");
+
+    }
+
+    unittest {
+
+        auto root = textInput();
+        root.value = "test";
+
+        {
+            size_t i;
+            foreach (line; root.eachLineByIndex(1, 4)) {
+
+                assert(i++ == 0);
+                assert(line == "test");
+
+            }
+        }
+
+        {
+            size_t i;
+            foreach (ref line; root.eachLineByIndex(1, 4)) {
+
+                assert(i++ == 0);
+                assert(line == "test");
+                line = "tested";
+
+            }
+            assert(root.value == "tested");
+        }
+
+    }
+
+    /// Return each line containing the selection.
+    auto eachSelectedLine() {
+
+        return eachLineByIndex(selectionLowIndex, selectionHighIndex);
+
+    }
+
+    unittest {
+
+        auto root = textInput();
+
+        foreach (ref line; root.eachSelectedLine) {
+
+            line = Rope("value");
+
+        }
+
+        assert(root.value == "value");
+
+    }
+
     /// Open the context menu
     @(FluidInputAction.contextMenu)
     protected void onContextMenu() {
@@ -2575,7 +3115,8 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
-    /// Move the caret to the beginning of the line.
+    /// Move the caret to the beginning of the line. This function perceives the line visually, so if the text wraps, it
+    /// will go to the beginning of the visible line, instead of the hard line break.
     @(FluidInputAction.toLineStart)
     void caretToLineStart() {
 
@@ -2626,13 +3167,13 @@ class TextInput : InputNode!Node, FluidScrollable {
         root.runInputAction!(FluidInputAction.nextLine);
 
         assert(root.valueBeforeCaret.wordBack == "Moon");
-        assert(root.valueAfterCaret.wordFront == "\n\n");
+        assert(root.valueAfterCaret.wordFront == "\n");
 
         // Move to the blank line
         root.runInputAction!(FluidInputAction.nextLine);
 
         const blankLine = root.caretIndex;
-        assert(root.valueBeforeCaret.wordBack == "Moon\n");
+        assert(root.valueBeforeCaret.wordBack == "\n");
         assert(root.valueAfterCaret.wordFront == "\n");
 
         // toLineEnd and toLineStart should have no effect
@@ -2645,7 +3186,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         // The anchor has been reset to the beginning
         root.runInputAction!(FluidInputAction.nextLine);
 
-        assert(root.valueBeforeCaret.wordBack == "Moon\n\n");
+        assert(root.valueBeforeCaret.wordBack == "\n");
         assert(root.valueAfterCaret.wordFront == "Hello");
 
         // Move to the very end
@@ -2986,9 +3527,12 @@ T wordFront(T)(T text, bool excludeWhite = false) {
 
         const nextChar = remaining.decodeFrontStatic;
 
+        // Stop if the next character is a line feed
+        if (nextChar.only.chomp.empty && !only(lastChar, nextChar).equal("\r\n")) break;
+
         // Continue if the next character is whitespace
         // Includes any case where the previous character is followed by whitespace
-        if (nextChar.isWhite) continue;
+        else if (nextChar.isWhite) continue;
 
         // Stop if whitespace follows a non-white character
         else if (lastChar.isWhite) break;
@@ -3025,9 +3569,12 @@ T wordBack(T)(T text, bool excludeWhite = false) {
 
         const nextChar = remaining.decodeBackStatic;
 
+        // Stop if the character is a line feed
+        if (lastChar.only.chomp.empty && !only(nextChar, lastChar).equal("\r\n")) break;
+
         // Continue if the current character is whitespace
         // Inverse to `wordFront`
-        if (lastChar.isWhite) continue;
+        else if (lastChar.isWhite) continue;
 
         // Stop if whitespace follows a non-white character
         else if (nextChar.isWhite) break;
@@ -3088,5 +3635,37 @@ unittest {
     assert(" świecie!".wordFront(true) == "");
     assert("witaj świecie".wordBack(true) == "świecie");
     assert("witaj ".wordBack(true) == "");
+
+}
+
+unittest {
+
+    assert("\nabc\n".wordFront == "\n");
+    assert("\n  abc\n".wordFront == "\n  ");
+    assert("abc\n".wordFront == "abc");
+    assert("abc  \n".wordFront == "abc  ");
+    assert("  \n".wordFront == "  ");
+    assert("\n     abc".wordFront == "\n     ");
+
+    assert("\nabc\n".wordBack == "\n");
+    assert("\nabc".wordBack == "abc");
+    assert("abc  \n".wordBack == "\n");
+    assert("abc  ".wordFront == "abc  ");
+    assert("\nabc\n  ".wordBack == "\n  ");
+    assert("\nabc\n  a".wordBack == "a");
+
+    assert("\r\nabc\r\n".wordFront == "\r\n");
+    assert("\r\n  abc\r\n".wordFront == "\r\n  ");
+    assert("abc\r\n".wordFront == "abc");
+    assert("abc  \r\n".wordFront == "abc  ");
+    assert("  \r\n".wordFront == "  ");
+    assert("\r\n     abc".wordFront == "\r\n     ");
+
+    assert("\r\nabc\r\n".wordBack == "\r\n");
+    assert("\r\nabc".wordBack == "abc");
+    assert("abc  \r\n".wordBack == "\r\n");
+    assert("abc  ".wordFront == "abc  ");
+    assert("\r\nabc\r\n  ".wordBack == "\r\n  ");
+    assert("\r\nabc\r\n  a".wordBack == "a");
 
 }

@@ -29,7 +29,8 @@ else {
 
 /// Low-level interface for drawing text. Represents a single typeface.
 ///
-/// Unlike the rest of Fluid, Typeface doesn't define pixels as 1/96th of an inch. DPI must also be specified manually.
+/// Unlike the rest of Fluid, Typeface uses screen-space dots directly, instead of fixed-size pixels. Consequently, DPI
+/// must be specified manually.
 ///
 /// See: [fluid.text.Text] for an interface on a higher level.
 interface Typeface {
@@ -43,10 +44,15 @@ interface Typeface {
     /// Get line height.
     int lineHeight() const;
 
+    /// Width of an indent/tab character, in dots.
+    /// `Text` sets `indentWidth` automatically.
+    ref inout(int) indentWidth() inout;
+
     /// Get advance vector for the given glyph. Uses dots, not pixels, as the unit.
     Vector2 advance(dchar glyph);
 
     /// Set font scale. This should be called at least once before drawing.
+    /// `Text` sets DPI automatically.
     ///
     /// Font renderer should cache this and not change the scale unless updated.
     ///
@@ -75,7 +81,7 @@ interface Typeface {
     /// Default word splitter used by measure/draw.
     alias defaultWordChunks = .breakWords;
 
-    /// Updated version of std lineSplitter that includes trailing empty lines.
+    /// Updated version of `std.string.lineSplitter` that includes trailing empty lines.
     ///
     /// `lineSplitterIndex` will produce a tuple with the index into the original text as the first element.
     static lineSplitter(KeepTerminator keepTerm = No.keepTerminator, Range)(Range text)
@@ -278,6 +284,20 @@ interface Typeface {
 
     }
 
+    /// Helper function for typeface implementations, providing a "draw" function for tabs, adjusting the pen position
+    /// automatically.
+    protected final void drawTab(ref Vector2 penPosition) const {
+
+        penPosition.x += _tabWidth(penPosition.x);
+
+    }
+
+    private final float _tabWidth(float xoffset) const {
+
+        return indentWidth - (xoffset % indentWidth);
+
+    }
+
 }
 
 /// Break words on whitespace and punctuation. Splitter characters stick to the word that precedes them, e.g.
@@ -442,7 +462,13 @@ struct TextRuler {
         // Measure each glyph
         foreach (glyph; byDchar(word)) {
 
-            wordSpan += typeface.advance(glyph).x;
+            // Tab aligns to set indent width
+            if (glyph == '\t')
+                wordSpan += typeface._tabWidth(penPosition.x + wordSpan);
+
+            // Other characters use their regular advance value
+            else
+                wordSpan += typeface.advance(glyph).x;
 
         }
 
@@ -513,6 +539,8 @@ class FreetypeTypeface : Typeface {
 
         /// Current DPI set for the typeface.
         int _dpiX, _dpiY;
+
+        int _indentWidth;
 
     }
 
@@ -588,6 +616,7 @@ class FreetypeTypeface : Typeface {
 
     }
 
+    ref inout(int) indentWidth() inout => _indentWidth;
     bool isOwner() const => _isOwner;
     bool isOwner(bool value) @system => _isOwner = value;
 
@@ -677,6 +706,14 @@ class FreetypeTypeface : Typeface {
 
         foreach (glyph; text.byDchar) {
 
+            // Tab character
+            if (glyph == '\t') {
+
+                drawTab(penPosition);
+                continue;
+
+            }
+
             // Load the glyph
             if (auto error = FT_Load_Char(cast(FT_FaceRec*) face, glyph, FT_LOAD_RENDER)) {
 
@@ -719,6 +756,46 @@ class FreetypeTypeface : Typeface {
         }
 
     }
+
+}
+
+unittest {
+
+    auto image = generateColorImage(10, 10, color("#fff"));
+    auto tf = FreetypeTypeface.defaultTypeface;
+    tf.dpi = Vector2(96, 96);
+    tf.indentWidth = cast(int) (tf.advance(' ').x * 4);
+
+    Vector2 measure(string text) {
+
+        Vector2 penPosition;
+        tf.drawLine(image, penPosition, Rope(text), 0);
+        return penPosition;
+
+    }
+
+    // Draw 4 spaces to use as reference in the test
+    const indentReference = measure("    ");
+
+    assert(indentReference.x > 0);
+    assert(indentReference.x == tf.advance(' ').x * 4);
+    assert(indentReference.x == tf.indentWidth);
+
+    assert(measure("\t") == indentReference);
+    assert(measure("a\t") == indentReference);
+
+    const doubleAIndent = measure("aa").x > indentReference.x
+        ? 2
+        : 1;
+    const tripleAIndent = measure("aaa").x > doubleAIndent * indentReference.x
+        ? doubleAIndent + 1
+        : doubleAIndent;
+
+    assert(measure("aa\t")  == indentReference * doubleAIndent);
+    assert(measure("aaa\t") == indentReference * tripleAIndent);
+    assert(measure("\t\t") == indentReference * 2);
+    assert(measure("a\ta\t") == indentReference * 2);
+    assert(measure("aa\taa\t") == 2 * indentReference * doubleAIndent);
 
 }
 
