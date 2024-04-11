@@ -50,6 +50,7 @@ public import
     fluid.password_input,
     fluid.popup_button,
     fluid.popup_frame,
+    fluid.progress_bar,
     fluid.radiobox,
     fluid.scroll,
     fluid.scroll_input,
