@@ -30,20 +30,20 @@ struct Rope {
     size_t start, length;
 
     /// Create a rope holding given text.
-    this(const(char)[] text) {
+    this(inout const(char)[] text) inout pure {
 
         // No text, stay with Rope.init
         if (text == "")
             this(null, 0, 0);
         else
-            this(new RopeNode(text));
+            this(new inout RopeNode(text));
 
     }
 
     /// Create a rope concatenating two other ropes.
     ///
     /// Avoids gaps: If either node is empty, copies and becomes the other node.
-    this(inout Rope left, inout Rope right) inout {
+    this(inout Rope left, inout Rope right) inout pure {
 
         // No need to create a new node there's empty space
         if (left.length == 0) {
@@ -98,7 +98,7 @@ struct Rope {
     }
 
     /// Create a rope from given node.
-    this(inout const(RopeNode)* node) inout {
+    this(const inout(RopeNode)* node) inout pure {
 
         // No node given, set all to init
         if (node is null) return;
@@ -110,13 +110,13 @@ struct Rope {
     }
 
     /// Copy a `Rope`.
-    this(inout const Rope rope) inout {
+    this(inout const Rope rope) inout pure {
 
         this(rope.node, rope.start, rope.length);
 
     }
 
-    private this(inout(RopeNode)* node, size_t start, size_t length) inout {
+    private this(inout(RopeNode)* node, size_t start, size_t length) inout pure {
 
         this.node = node;
         this.start = start;
@@ -164,21 +164,21 @@ struct Rope {
     }
 
     /// Concatenate two ropes together.
-    Rope opBinary(string op : "~")(Rope that) {
+    Rope opBinary(string op : "~")(const Rope that) const {
 
         return Rope(this, that);
 
     }
 
     /// Concatenate with a string.
-    Rope opBinary(string op : "~")(const(char)[] text) {
+    Rope opBinary(string op : "~")(const(char)[] text) const {
 
         return Rope(this, Rope(text));
 
     }
 
     /// ditto
-    Rope opBinaryRight(string op : "~")(const(char)[] text) {
+    Rope opBinaryRight(string op : "~")(const(char)[] text) const {
 
         return Rope(Rope(text), this);
 
@@ -391,6 +391,50 @@ struct Rope {
 
         auto e = Rope(d, d);
         assert(e.depth == 4);
+
+    }
+
+    /// Get a leaf node that is a subrope starting with the given index. The length of the node may vary, and does not
+    /// have to reach the end of the rope.
+    Rope leafFrom(size_t start) const
+    out (r; r.isLeaf)
+    do {
+
+        auto slice = this[start..$];
+
+        // The slice is a leaf node, return it
+        if (slice.isLeaf)
+            return slice;
+
+        // Not a leaf, get the chunk containing the node
+        if (slice.left.empty)
+            return slice.right.leafFrom(0);
+        else
+            return slice.left.leafFrom(0);
+
+    }
+
+    ///
+    unittest {
+
+        auto myRope = Rope(
+            Rope("Hello, "),
+            Rope(
+                Rope("Flu"),
+                Rope("id"),
+            ),
+        );
+
+        assert(myRope.leafFrom(0) == Rope("Hello, "));
+        assert(myRope.leafFrom(7) == Rope("Flu"));
+        assert(myRope.leafFrom(10) == Rope("id"));
+
+        assert(myRope.leafFrom(2) == Rope("llo, "));
+        assert(myRope.leafFrom(7) == Rope("Flu"));
+        assert(myRope.leafFrom(8) == Rope("lu"));
+        assert(myRope.leafFrom(9) == Rope("u"));
+
+        assert(myRope.leafFrom(myRope.length) == Rope.init);
 
     }
 
@@ -844,11 +888,20 @@ struct Rope {
     }
 
     /// Append text to the rope.
-    ref Rope opOpAssign(string op : "~")(ref const(char)[] value) return {
+    ref Rope opOpAssign(string op : "~")(const(char)[] value) return {
 
         auto left = this;
 
         return this = Rope(left, Rope(value));
+
+    }
+
+    /// Append another rope to the rope.
+    ref Rope opOpAssign(string op : "~")(const Rope value) return {
+
+        auto left = this;
+
+        return this = Rope(left, value);
 
     }
 
@@ -958,6 +1011,115 @@ struct Rope {
 
     }
 
+    /// Get line in the rope by a byte index.
+    /// Returns: A rope slice with the line containing the given index.
+    Rope lineByIndex(KeepTerminator keepTerminator = No.keepTerminator)(size_t index) const
+    in (index >= 0 && index <= length, format!"Index %s is out of bounds of Rope of length %s"(index, length))
+    do {
+
+        import fluid.typeface : Typeface;
+
+        auto back  = Typeface.lineSplitter(this[0..index].retro).front;
+        auto front = Typeface.lineSplitter!keepTerminator(this[index..$]).front;
+
+        static assert(is(ElementType!(typeof(back)) == char));
+        static assert(is(ElementType!(typeof(front)) == char));
+
+        const backLength  = back.walkLength;
+        const frontLength = front.walkLength;
+
+        // Combine everything on the same line, before and after the cursor
+        return this[index - backLength .. index + frontLength];
+
+    }
+
+    unittest {
+
+        Rope root;
+        assert(root.lineByIndex(0) == "");
+
+        root = root ~ "aaą\nbbČb\n c \r\n\n **Ą\n";
+        assert(root.lineByIndex(0) == "aaą");
+        assert(root.lineByIndex(1) == "aaą");
+        assert(root.lineByIndex(4) == "aaą");
+        assert(root.lineByIndex(5) == "bbČb");
+        assert(root.lineByIndex(7) == "bbČb");
+        assert(root.lineByIndex(10) == "bbČb");
+        assert(root.lineByIndex(11) == " c ");
+        assert(root.lineByIndex!(Yes.keepTerminator)(11) == " c \r\n");
+        assert(root.lineByIndex(16) == "");
+        assert(root.lineByIndex!(Yes.keepTerminator)(16) == "\n");
+        assert(root.lineByIndex(17) == " **Ą");
+        assert(root.lineByIndex(root.value.length) == "");
+        assert(root.lineByIndex!(Yes.keepTerminator)(root.value.length) == "");
+
+    }
+
+    /// Get the column the given index is on.
+    /// Returns:
+    ///     Return value depends on the type fed into the function. `column!dchar` will use characters and `column!char`
+    ///     will use bytes. The type does not have effect on the input index.
+    ptrdiff_t column(Chartype)(size_t index) const {
+
+        import std.utf : byUTF;
+        import fluid.typeface : Typeface;
+
+        // Get last line
+        return Typeface.lineSplitter(this[0..index].retro).front
+
+            // Count characters
+            .byUTF!Chartype.walkLength;
+
+    }
+
+    unittest {
+
+        Rope root;
+        assert(root.column!dchar(0) == 0);
+
+        root = Rope(" aąąą");
+        assert(root.column!dchar(8) == 5);
+        assert(root.column!char(8) == 8);
+
+        root = Rope(" aąąąO\n");
+        assert(root.column!dchar(10) == 0);
+        assert(root.column!char(10) == 0);
+
+        root = Rope(" aąąąO\n ");
+        assert(root.column!dchar(11) == 1);
+
+        root = Rope(" aąąąO\n Ω = 1+2");
+        assert(root.column!dchar(14) == 3);
+        assert(root.column!char(14) == 4);
+
+    }
+
+    /// Get the index of the start or end of the line — from index of any character on the same line.
+    size_t lineStartByIndex(size_t index) {
+
+        return index - column!char(index);
+
+    }
+
+    /// ditto
+    size_t lineEndByIndex(size_t index) {
+
+        return lineStartByIndex(index) + lineByIndex(index).length;
+
+    }
+
+    ///
+    unittest {
+
+        auto rope = Rope("Hello, World!\nHello, Fluid!");
+
+        assert(rope.lineStartByIndex(5) == 0);
+        assert(rope.lineEndByIndex(5) == 13);
+        assert(rope.lineStartByIndex(18) == 14);
+        assert(rope.lineEndByIndex(18) == rope.length);
+
+    }
+
 }
 
 struct RopeNode {
@@ -978,14 +1140,14 @@ struct RopeNode {
     }
 
     /// Create a leaf node from a slice
-    this(const(char)[] text) {
+    this(inout const(char)[] text) inout pure {
 
         this.value = text;
 
     }
 
     /// Create a node from two other node; Concatenate the two other nodes. Both must not be null.
-    this(inout Rope left, inout Rope right) inout {
+    this(inout Rope left, inout Rope right) inout pure {
 
         this.left = left;
         this.right = right;
@@ -993,7 +1155,7 @@ struct RopeNode {
     }
 
     /// Get length of this node.
-    size_t length() const {
+    size_t length() const pure {
 
         return isLeaf
             ? value.length
@@ -1002,7 +1164,7 @@ struct RopeNode {
     }
 
     /// True if this is a leaf node and contains text rather than child nodes.
-    bool isLeaf() const {
+    bool isLeaf() const pure {
 
         return left.node is null
             && right.node is null;

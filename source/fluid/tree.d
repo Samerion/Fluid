@@ -506,6 +506,7 @@ struct LayoutTree {
                 [
                     bind!focusPrevious(KeyboardKey.tab),
                     bind!entryPrevious(KeyboardKey.tab),
+                    bind!outdent(KeyboardKey.tab),
                     bind!selectPreviousChar(KeyboardKey.left),
                     bind!selectNextChar(KeyboardKey.right),
                     bind!selectPreviousLine(KeyboardKey.up),
@@ -566,6 +567,7 @@ struct LayoutTree {
                     bind!entryNext(GamepadButton.dpadDown),
                     bind!toLineStart(KeyboardKey.home),
                     bind!toLineEnd(KeyboardKey.end),
+                    bind!insertTab(KeyboardKey.tab),
 
                     // Scrolling
                     bind!scrollLeft(KeyboardKey.left),

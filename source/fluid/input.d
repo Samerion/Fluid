@@ -58,6 +58,9 @@ enum FluidInputAction {
     copy,           /// Copy selected content.
     cut,            /// Cut (copy and delete) selected content.
     paste,          /// Paste selected content.
+    insertTab,      /// Insert a tab into a code editor (tab key)
+    indent,         /// Indent current line or selection in a code editor.
+    outdent,        /// Outdent current line or selection in a code editor (shift+tab).
 
     // Selection
     selectPreviousChar,  /// Select previous character in text.
@@ -727,9 +730,40 @@ interface FluidHoverable {
 
     }
 
+    /// Handle input actions. This function is called by `runInputAction` and can be overriden to preprocess input
+    /// actions in some cases.
+    ///
+    /// Example: Override a specific action by running a different input action.
+    ///
+    /// ---
+    /// override bool inputActionImpl(InputActionID id, bool active) {
+    ///
+    ///     if (active && id == InputActionID.from!(FluidInputAction.press)) {
+    ///
+    ///         return runInputAction!(FluidInputAction.press);
+    ///
+    ///     }
+    ///
+    ///     return false;
+    ///
+    /// }
+    /// ---
+    ///
+    /// Params:
+    ///     id     = ID of the action to run.
+    ///     active = Actions trigger many times while the corresponding key or button is held down, but usually only one
+    ///         of these triggers is interesting — in which case this value will be `true`. This trigger will be the one
+    ///         that runs all UDA handler functions.
+    /// Returns:
+    ///     * `true` if the handler took care of the action; processing of the action will finish.
+    ///     * `false` if the action should be handled by the default input action handler.
+    bool inputActionImpl(InputActionID id, bool active);
+
     /// Run input actions.
     ///
-    /// Use `mixin enableInputActions` to implement. Manual implementation is discouraged.
+    /// Use `mixin enableInputActions` to implement.
+    ///
+    /// Manual implementation is discouraged; override `inputActionImpl` instead.
     bool runInputAction(InputActionID action, bool active = true);
 
     final bool runInputAction(alias action)(bool active = true) {
@@ -811,6 +845,14 @@ interface FluidHoverable {
 
         }
 
+        // Provide a default implementation of inputActionImpl
+        static if (!is(typeof(super) : FluidHoverable))
+        bool inputActionImpl(InputActionID id, bool active) {
+
+            return false;
+
+        }
+
         override bool runInputAction(InputActionID action, bool active = true) {
 
             return runInputActionImpl(action, active);
@@ -821,10 +863,8 @@ interface FluidHoverable {
 
             import std.meta : Filter;
 
-            // Check if this class has implemented this method
-            // BUG Breaks template types like nodeSlot
-            /*assert(typeid(this) is typeid(This),
-                format!"%s is missing `mixin enableInputActions;`"(typeid(this)));*/
+            // The programmer may override the action
+            if (inputActionImpl(action, active)) return true;
 
             bool handled;
 
