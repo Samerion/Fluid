@@ -324,7 +324,13 @@ class CodeInput : TextInput {
         // Resize the field
         super.resizeImpl(vector);
 
+    }
+
+    override void drawImpl(Rectangle outer, Rectangle inner) {
+
         // Reload token styles
+        contentLabel.styles[0] = pickStyle();
+
         if (highlighter) {
 
             CodeToken tokenIndex;
@@ -339,6 +345,8 @@ class CodeInput : TextInput {
             }
 
         }
+
+        super.drawImpl(outer, inner);
 
     }
 
