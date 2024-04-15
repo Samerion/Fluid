@@ -41,6 +41,7 @@ class Raylib5Backend : FluidBackend {
         Shader _palettedAlphaImageShader;
         int _palettedAlphaImageShader_palette;
         fluid.backend.Texture _paletteTexture;
+        int[uint] _mipmapCount;
 
     }
 
@@ -417,6 +418,7 @@ class Raylib5Backend : FluidBackend {
 
         if (!__ctfe && IsWindowReady && id != 0) {
 
+            _mipmapCount.remove(id);
             rlUnloadTexture(id);
 
         }
@@ -472,7 +474,27 @@ class Raylib5Backend : FluidBackend {
 
         auto rayTexture = texture.toRaylib;
 
-        SetTextureFilter(rayTexture, TextureFilter.TEXTURE_FILTER_BILINEAR);
+        // Ensure the texture has mipmaps, if possible, to enable trilinear filtering
+        if (auto mipmapCount = texture.id in _mipmapCount) {
+
+            rayTexture.mipmaps = *mipmapCount;
+
+        }
+
+        else {
+
+            // Generate mipmaps
+            GenTextureMipmaps(&rayTexture);
+            _mipmapCount[texture.id] = rayTexture.mipmaps;
+
+        }
+
+        // Set filter accordingly
+        const filter = rayTexture.mipmaps == 1
+            ? TextureFilter.TEXTURE_FILTER_BILINEAR
+            : TextureFilter.TEXTURE_FILTER_TRILINEAR;
+
+        SetTextureFilter(rayTexture, filter);
         drawTexture(texture, rectangle, tint, false);
 
     }
