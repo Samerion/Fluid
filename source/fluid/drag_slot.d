@@ -126,10 +126,14 @@ class DragSlot : NodeSlot!Node, FluidHoverable {
         handle.resize(tree, theme, available);
 
         // Add space for the handle
-        minSize.y += handle.minSize.y + style.gap;
+        if (!handle.isHidden) {
 
-        if (handle.minSize.x > minSize.x) {
-            minSize.x = handle.minSize.x;
+            minSize.y += handle.minSize.y + style.gap;
+
+            if (handle.minSize.x > minSize.x) {
+                minSize.x = handle.minSize.x;
+            }
+
         }
 
     }
@@ -160,8 +164,10 @@ class DragSlot : NodeSlot!Node, FluidHoverable {
 
         // Split the inner rectangle to fit the handle
         handleRect.h = handleWidth;
-        valueRect.y += handleWidth + style.gap;
-        valueRect.h -= handleWidth + style.gap;
+        if (!handle.isHidden) {
+            valueRect.y += handleWidth + style.gap;
+            valueRect.h -= handleWidth + style.gap;
+        }
 
         // Draw the value
         super.drawImpl(outer, valueRect);
@@ -245,6 +251,32 @@ class DragHandle : Node {
         io.drawCircle(start(inner) + circleVec, radius, color);
         io.drawCircle(end(inner) - circleVec, radius, color);
         io.drawRectangle(fill, color);
+
+    }
+
+    unittest {
+
+        import std.algorithm;
+
+        import fluid.label;
+        import fluid.theme;
+
+        auto theme = nullTheme.derive(
+            rule(
+                gap = 4,
+            ),
+        );
+        auto io = new HeadlessBackend;
+        auto content = label("a");
+        auto root = dragSlot(theme, content);
+        root.io = io;
+        root.handle.hide();
+        root.draw();
+
+        assert(root.minSize == content.minSize);
+        assert(io.textures.canFind!(a
+            => a.position == Vector2(0, 0)
+            && a.id == content.text.texture.chunks[0].texture.id));
 
     }
 
