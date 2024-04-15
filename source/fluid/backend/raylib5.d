@@ -378,7 +378,7 @@ class Raylib5Backend : FluidBackend {
 
     fluid.backend.Texture loadTexture(fluid.backend.Image image) @system {
 
-        return fromRaylib(LoadTextureFromImage(image.toRaylib));
+        return fromRaylib(LoadTextureFromImage(image.toRaylib), image.format);
 
     }
 
@@ -386,7 +386,7 @@ class Raylib5Backend : FluidBackend {
 
         import std.string;
 
-        return fromRaylib(LoadTexture(filename.toStringz));
+        return fromRaylib(LoadTexture(filename.toStringz), fluid.backend.Image.Format.rgba);
 
     }
 
@@ -398,13 +398,11 @@ class Raylib5Backend : FluidBackend {
 
     }
 
-    private fluid.backend.Texture fromRaylib(raylib.Texture texture) {
-
-        const format = cast(raylib.PixelFormat) texture.format;
+    private fluid.backend.Texture fromRaylib(raylib.Texture texture, fluid.backend.Image.Format format) {
 
         fluid.backend.Texture result;
         result.id = texture.id;
-        result.format = format.fromRaylib;
+        result.format = format;
         result.tombstone = reaper.makeTombstone(this, result.id);
         result.width = texture.width;
         result.height = texture.height;
@@ -681,25 +679,6 @@ raylib.PixelFormat toRaylib(fluid.backend.Image.Format imageFormat) {
 
         case imageFormat.alpha:
             return PixelFormat.PIXELFORMAT_UNCOMPRESSED_GRAYSCALE;
-
-    }
-
-}
-
-fluid.backend.Image.Format fromRaylib(raylib.PixelFormat pixelFormat) {
-
-    switch (pixelFormat) {
-
-        case pixelFormat.PIXELFORMAT_UNCOMPRESSED_R8G8B8A8:
-            return fluid.backend.Image.Format.rgba;
-
-        case pixelFormat.PIXELFORMAT_UNCOMPRESSED_GRAY_ALPHA:
-            return fluid.backend.Image.Format.palettedAlpha;
-
-        case pixelFormat.PIXELFORMAT_UNCOMPRESSED_GRAYSCALE:
-            return fluid.backend.Image.Format.alpha;
-
-        default: assert(false, "Unrecognized format");
 
     }
 
