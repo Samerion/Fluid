@@ -22,11 +22,10 @@ public import raylib : Vector2, Rectangle, Color;
 
 
 // Coordinate scaling will translate Fluid coordinates, where each pixels is 1/96th of an inch, to screen coordinates,
-// making use of DPI information provided by the system. This flag, always set, disables this.
-// Oddly, this version used to be set only on macOS, and I used to claim scaling was necessary on other platforms. I
-// have no evidence to support this currently, and it appears scaling works out of the box on each of the three major
-// platforms.
-version = Fluid_DisableScaling;
+// making use of DPI information provided by the system. This flag is only set on macOS, where the system handles this
+// automatically.
+version (OSX)
+    version = Fluid_DisableScaling;
 
 class Raylib5Backend : FluidBackend {
 
@@ -517,13 +516,13 @@ class Raylib5Backend : FluidBackend {
 
         import std.math;
 
-        destination = toRaylibCoords(destination);
-
         // Align texture to pixel boundaries
         if (alignPixels) {
-            destination.x = floor(destination.x);
-            destination.y = floor(destination.y);
+            destination.x = floor(destination.x * hidpiScale.x) / hidpiScale.x;
+            destination.y = floor(destination.y * hidpiScale.y) / hidpiScale.y;
         }
+
+        destination = toRaylibCoords(destination);
 
         const source = Rectangle(0, 0, texture.width, texture.height);
         Shader shader;
