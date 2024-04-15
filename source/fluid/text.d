@@ -661,7 +661,7 @@ struct CompositeTexture {
 
     }
 
-    /// Get position of the given chunk
+    /// Get position of the given chunk in dots.
     Vector2 chunkPosition(size_t i) const {
 
         const x = column(i);
@@ -671,7 +671,7 @@ struct CompositeTexture {
 
     }
 
-    /// Get the rectangle of the given chunk.
+    /// Get the rectangle of the given chunk in dots.
     /// Params:
     ///     i      = Index of the chunk.
     ///     offset = Translate the resulting rectangle by this vector.
@@ -793,7 +793,9 @@ struct CompositeTexture {
             debug assert(backend is chunks[index].texture.backend,
                 .format!"Backend mismatch %s != %s"(backend, chunks[index].texture.backend));
 
-            const rect = chunkRectangle(index, rectangle.start);
+            const start = rectangle.start + chunkPosition(index);
+            const size = chunks[index].texture.viewportSize;
+            const rect = Rectangle(start.tupleof, size.tupleof);
 
             // Assign palette
             chunks[index].palette = palette;
