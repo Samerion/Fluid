@@ -22,11 +22,10 @@ public import raylib : Vector2, Rectangle, Color;
 
 
 // Coordinate scaling will translate Fluid coordinates, where each pixels is 1/96th of an inch, to screen coordinates,
-// making use of DPI information provided by the system. This flag, always set, disables this.
-// Oddly, this version used to be set only on macOS, and I used to claim scaling was necessary on other platforms. I
-// have no evidence to support this currently, and it appears scaling works out of the box on each of the three major
-// platforms.
-version = Fluid_DisableScaling;
+// making use of DPI information provided by the system. This flag is only set on macOS, where the system handles this
+// automatically.
+version (OSX)
+    version = Fluid_DisableScaling;
 
 class Raylib5Backend : FluidBackend {
 
@@ -41,6 +40,7 @@ class Raylib5Backend : FluidBackend {
         Shader _palettedAlphaImageShader;
         int _palettedAlphaImageShader_palette;
         fluid.backend.Texture _paletteTexture;
+        int[uint] _mipmapCount;
 
     }
 
@@ -70,10 +70,10 @@ class Raylib5Backend : FluidBackend {
         uniform vec4 colDiffuse;
         void main() {
             // index.r is alpha/opacity
-            // index.g is palette index
+            // index.a is palette index
             vec4 index = texture(texture0, fragTexCoord);
             vec4 texel = texture(palette, vec2(index.a, 0));
-            finalColor = vec4(texel.x, texel.y, texel.z, index.r) * colDiffuse * fragColor;
+            finalColor = texel * vec4(1, 1, 1, index.r) * colDiffuse * fragColor;
         }
     };
 
@@ -378,7 +378,7 @@ class Raylib5Backend : FluidBackend {
 
     fluid.backend.Texture loadTexture(fluid.backend.Image image) @system {
 
-        return fromRaylib(LoadTextureFromImage(image.toRaylib));
+        return fromRaylib(LoadTextureFromImage(image.toRaylib), image.format);
 
     }
 
@@ -386,7 +386,7 @@ class Raylib5Backend : FluidBackend {
 
         import std.string;
 
-        return fromRaylib(LoadTexture(filename.toStringz));
+        return fromRaylib(LoadTexture(filename.toStringz), fluid.backend.Image.Format.rgba);
 
     }
 
@@ -398,13 +398,11 @@ class Raylib5Backend : FluidBackend {
 
     }
 
-    private fluid.backend.Texture fromRaylib(raylib.Texture texture) {
-
-        const format = cast(raylib.PixelFormat) texture.format;
+    private fluid.backend.Texture fromRaylib(raylib.Texture texture, fluid.backend.Image.Format format) {
 
         fluid.backend.Texture result;
         result.id = texture.id;
-        result.format = format.fromRaylib;
+        result.format = format;
         result.tombstone = reaper.makeTombstone(this, result.id);
         result.width = texture.width;
         result.height = texture.height;
@@ -417,6 +415,7 @@ class Raylib5Backend : FluidBackend {
 
         if (!__ctfe && IsWindowReady && id != 0) {
 
+            _mipmapCount.remove(id);
             rlUnloadTexture(id);
 
         }
@@ -472,7 +471,27 @@ class Raylib5Backend : FluidBackend {
 
         auto rayTexture = texture.toRaylib;
 
-        SetTextureFilter(rayTexture, TextureFilter.TEXTURE_FILTER_BILINEAR);
+        // Ensure the texture has mipmaps, if possible, to enable trilinear filtering
+        if (auto mipmapCount = texture.id in _mipmapCount) {
+
+            rayTexture.mipmaps = *mipmapCount;
+
+        }
+
+        else {
+
+            // Generate mipmaps
+            GenTextureMipmaps(&rayTexture);
+            _mipmapCount[texture.id] = rayTexture.mipmaps;
+
+        }
+
+        // Set filter accordingly
+        const filter = rayTexture.mipmaps == 1
+            ? TextureFilter.TEXTURE_FILTER_BILINEAR
+            : TextureFilter.TEXTURE_FILTER_TRILINEAR;
+
+        SetTextureFilter(rayTexture, filter);
         drawTexture(texture, rectangle, tint, false);
 
     }
@@ -495,13 +514,13 @@ class Raylib5Backend : FluidBackend {
 
         import std.math;
 
-        destination = toRaylibCoords(destination);
-
         // Align texture to pixel boundaries
         if (alignPixels) {
-            destination.x = floor(destination.x);
-            destination.y = floor(destination.y);
+            destination.x = floor(destination.x * hidpiScale.x) / hidpiScale.x;
+            destination.y = floor(destination.y * hidpiScale.y) / hidpiScale.y;
         }
+
+        destination = toRaylibCoords(destination);
 
         const source = Rectangle(0, 0, texture.width, texture.height);
         Shader shader;
@@ -660,25 +679,6 @@ raylib.PixelFormat toRaylib(fluid.backend.Image.Format imageFormat) {
 
         case imageFormat.alpha:
             return PixelFormat.PIXELFORMAT_UNCOMPRESSED_GRAYSCALE;
-
-    }
-
-}
-
-fluid.backend.Image.Format fromRaylib(raylib.PixelFormat pixelFormat) {
-
-    switch (pixelFormat) {
-
-        case pixelFormat.PIXELFORMAT_UNCOMPRESSED_R8G8B8A8:
-            return fluid.backend.Image.Format.rgba;
-
-        case pixelFormat.PIXELFORMAT_UNCOMPRESSED_GRAY_ALPHA:
-            return fluid.backend.Image.Format.palettedAlpha;
-
-        case pixelFormat.PIXELFORMAT_UNCOMPRESSED_GRAYSCALE:
-            return fluid.backend.Image.Format.alpha;
-
-        default: assert(false, "Unrecognized format");
 
     }
 
