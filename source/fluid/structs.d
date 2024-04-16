@@ -276,6 +276,44 @@ struct TagList {
 
     }
 
+    /// Remove given tags from the list.
+    TagList remove(input...)() {
+
+        TagID[input.length] targetTags;
+
+        // Load the tags
+        static foreach (i, tag; input) {
+
+            targetTags[i] = tagID!tag;
+
+        }
+
+        // Sort them
+        sort(targetTags[]);
+
+        return TagList(
+            setDifference(this.range, targetTags[])
+                .array
+                .assumeSorted
+        );
+
+    }
+
+    unittest {
+
+        @NodeTag
+        enum Foo { a, b, c, d }
+
+        auto myTags = tags!(Foo.a, Foo.b, Foo.c);
+
+        assert(myTags.remove!(Foo.b, Foo.a) == tags!(Foo.c));
+        assert(myTags.remove!(Foo.d) == myTags);
+        assert(myTags.remove!() == myTags);
+        assert(myTags.remove!(Foo.a, Foo.b, Foo.c) == tags!());
+        assert(myTags.remove!(Foo.a, Foo.b, Foo.c, Foo.d) == tags!());
+
+    }
+
     /// Get the intesection of the two tag lists.
     /// Returns: A range with tags that are present in both of the lists.
     auto intersect(TagList tags) {

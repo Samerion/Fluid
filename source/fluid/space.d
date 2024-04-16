@@ -131,8 +131,15 @@ class Space : Node {
 
         }
 
+        const gapSpace = style.gap * (children.length - 1);
+
         // Reserve space for gaps
-        reservedSpace += style.gap * (children.length - 1);
+        reservedSpace += gapSpace;
+
+        if (isHorizontal)
+            minSize.x += gapSpace;
+        else
+            minSize.y += gapSpace;
 
         // Calculate the size of expanding children last
         foreach (child; expandChildren) {
@@ -159,6 +166,36 @@ class Space : Node {
 
         // Add the expand space
         minSize = addSize(expandSize, minSize);
+
+    }
+
+    unittest {
+
+        import std.meta;
+        import fluid.frame;
+        import fluid.size_lock;
+
+        auto theme = nullTheme.derive(
+            rule!Space(
+                Rule.gap = 12,
+            ),
+        );
+
+        auto root = vspace(
+            theme,
+            sizeLock!vframe(
+                sizeLimitY = 200
+            ),
+            sizeLock!vframe(
+                sizeLimitY = 200
+            ),
+            sizeLock!vframe(
+                sizeLimitY = 200
+            ),
+        );
+        root.draw();
+
+        assert(isClose(root.minSize.y, 200 * 3 + 12 * 2));
 
     }
 
