@@ -145,7 +145,7 @@ class MapFrame : Frame {
     }
 
     void addChild(Node node, Vector2 vector)
-    if ([vector.tupleof].any!isFinite, format!"Given %s isn't valid, values must be finite"(position))
+    in ([vector.tupleof].any!isFinite, format!"Given %s isn't valid, values must be finite"(vector))
     do {
         children ~= node;
         positions[node].coords = vector;
