@@ -16,7 +16,7 @@ import fluid.backend;
 import fluid.backend : MouseButton, KeyboardKey, GamepadButton;
 
 public import raylib : Vector2, Rectangle, Color;
-
+public static import raylib;
 
 @safe:
 
@@ -696,4 +696,25 @@ raylib.Texture toRaylib(fluid.backend.Texture texture) @trusted {
 
     return result;
 
+}
+
+alias Image = fluid.backend.Image;
+
+Image to(T=Image)(raylib.Image rayImage) @trusted if(is(T==Image)) {
+    import raylib: PixelFormat, LoadImageColors;
+    
+    Color[] rgbaPixels = rayImage.LoadImageColors[0 .. rayImage.width * rayImage.height];
+    Image result = Image(rgbaPixels, rayImage.width, rayImage.height);
+
+    return result;
+}
+
+alias Texture = fluid.Texture;
+
+Texture to(T=Texture)(raylib.Texture rayTexture) if (is(T==Texture)) {
+    return Texture(
+        id: rayTexture.id,
+        width: rayTexture.width,
+        height: rayTexture.height,
+    );
 }

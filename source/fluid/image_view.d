@@ -82,6 +82,20 @@ class ImageView : Node {
 
         }
 
+        Image texture(Image image) @trusted {
+            
+            clear();
+            _texture = tree.io.loadTexture(image);
+            _isOwner = true;
+
+            return image;
+        }
+
+        version (Have_raylib_d) static import raylib;
+        version (Have_raylib_d) fluid.backend.Image texture(raylib.Image rayImage) {
+            return texture(rayImage.to!Image);
+        }
+
         /// Load the texture from a filename.
         string texture(string filename) @trusted {
 
@@ -120,6 +134,24 @@ class ImageView : Node {
 
             io.assertTexture(root.texture, Vector2(0, 0), color!"fff");
 
+            version (Have_raylib_d) {
+                import std.string: toStringz;
+                raylib.Image loadImage(string path) @trusted => raylib.LoadImage(path.toStringz);
+                raylib.Texture loadTexture(string path) @trusted => raylib.LoadTexture(path.toStringz);
+
+                raylib.Texture rayTexture = loadTexture("logo.png");
+                Texture texture = rayTexture.to!Texture;
+
+                root = imageView(.nullTheme, texture);
+
+                Image image = loadImage("logo.png").to!Image;
+                
+                root = imageView(.nullTheme, image);
+
+                io.assertTexture(root.texture, Vector2(0, 0), color!"fff");
+                import std.stdio;
+                writeln("Passed");
+            }
         }
 
         /// Get the current texture.
