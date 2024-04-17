@@ -10,7 +10,12 @@ import fluid.style;
 import fluid.backend;
 
 alias button = simpleConstructor!Button;
+deprecated("Use vframeButton instead")
 alias frameButton = simpleConstructor!FrameButton;
+alias hframeButton = simpleConstructor!(FrameButton, (a) {
+    a.isHorizontal = true;
+});
+alias vframeButton = simpleConstructor!FrameButton;
 alias Button = ButtonImpl!Label;
 alias FrameButton = ButtonImpl!Frame;
 
