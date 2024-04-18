@@ -16,6 +16,7 @@ import fluid.structs;
 
 
 alias grid = simpleConstructor!Grid;
+alias gridFrame = grid;
 alias gridRow = simpleConstructor!GridRow;
 
 // TODO rename segments to columns?
@@ -57,8 +58,10 @@ Segments segments(uint columns)() {
 
 }
 
-/// The Grid node will align its children in a 2D grid.
-class Grid : Frame {
+alias Grid = GridFrame;
+
+/// The GridFrame node will align its children in a 2D grid.
+class GridFrame : Frame {
 
     size_t segmentCount;
 
