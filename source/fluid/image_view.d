@@ -14,7 +14,10 @@ alias imageView = simpleConstructor!ImageView;
 ///
 /// The image will automatically scale to fit available space. It will keep aspect ratio by default and will be
 /// displayed in the middle of the available box.
-class ImageView : Node {
+alias ImageView = SpecialImageView!Texture;
+
+// A node that can display images from any format with a `.draw` function.
+class SpecialImageView(ImageType) : Node {
 
     public {
 
@@ -91,11 +94,6 @@ class ImageView : Node {
             return image;
         }
 
-        version (Have_raylib_d) static import raylib;
-        version (Have_raylib_d) fluid.backend.Image texture(raylib.Image rayImage) {
-            return texture(rayImage.to!Image);
-        }
-
         /// Load the texture from a filename.
         string texture(string filename) @trusted {
 
@@ -136,12 +134,15 @@ class ImageView : Node {
 
             version (Have_raylib_d) {
                 import std.string: toStringz;
-                raylib.Image loadImage(string path) @trusted => raylib.LoadImage(path.toStringz);
-                raylib.Texture loadTexture(string path) @trusted => raylib.LoadTexture(path.toStringz);
+                raylib.Image LoadImage(string path) @trusted => raylib.LoadImage(path.toStringz);
+                raylib.Texture LoadTexture(string path) @trusted => raylib.LoadTexture(path.toStringz);
+                void InitWindow() @trusted => raylib.InitWindow(80, 80, "");
+                void CloseWindow() @trusted => raylib.CloseWindow();
 
-                raylib.Texture rayTexture = loadTexture("logo.png");
-                Texture texture = rayTexture.to!Texture;
-
+                InitWindow;
+                raylib.Texture rayTexture = LoadTexture("logo.png");
+                Texture texture = (cast(Raylib5Backend)defaultFluidBackend).fromRaylib(rayTexture, Image.Format.rgba);
+                
                 root = imageView(.nullTheme, texture);
 
                 Image image = loadImage("logo.png").to!Image;
@@ -149,6 +150,7 @@ class ImageView : Node {
                 root = imageView(.nullTheme, image);
 
                 io.assertTexture(root.texture, Vector2(0, 0), color!"fff");
+                CloseWindow;
                 import std.stdio;
                 writeln("Passed");
             }
