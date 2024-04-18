@@ -13,6 +13,8 @@ import std.algorithm;
 public import fluid.backend.raylib5;
 public import fluid.backend.headless;
 
+version (Have_raylib_d) public static import raylib;
+
 
 @safe:
 
@@ -945,6 +947,7 @@ struct Image {
 
 }
 
+
 /// Image or texture can be rendered by Fluid, for example, a texture stored in VRAM.
 ///
 /// Textures make use of manual memory management. See `TextureGC` for a GC-managed texture.
@@ -975,6 +978,10 @@ struct Texture {
         && height == other.height
         && dpiX == other.dpiX
         && dpiY == other.dpiY;
+
+    version (Have_raylib_d)void opAssign(raylib.Texture rayTexture) {
+        this = (cast(Raylib5Backend)defaultFluidBackend).fromRaylib(rayTexture, Image.Format.rgba);
+    }
 
     /// Get the backend for this texture. Doesn't work after freeing the tombstone.
     inout(FluidBackend) backend() inout @trusted
