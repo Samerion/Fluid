@@ -24,7 +24,9 @@ import fluid.backend;
 /// is overflow.
 enum MapDropDirection {
 
-    start, center, end, automatic
+    start, center, end, automatic,
+
+    centre = center,
 
 }
 
