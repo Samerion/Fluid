@@ -887,6 +887,25 @@ struct Rope {
 
     }
 
+    /// Replace given substring with a new value
+    Rope replace(String)(String oldValue, Rope value) const {
+
+        const start = this[].indexOf(oldValue);
+        const end = start + oldValue.length;
+
+        // Substring not found, do nothing
+        if (start == -1) return this;
+
+        return replace(start, end, value);
+
+    }
+
+    unittest {
+
+        assert(Rope("foo baz baz").replace("baz", Rope("bar")) == "foo bar baz");
+
+    }
+
     /// Append text to the rope.
     ref Rope opOpAssign(string op : "~")(const(char)[] value) return {
 
@@ -1117,6 +1136,157 @@ struct Rope {
         assert(rope.lineEndByIndex(5) == 13);
         assert(rope.lineStartByIndex(18) == 14);
         assert(rope.lineEndByIndex(18) == rope.length);
+
+    }
+
+    struct DiffRegion {
+
+        size_t start;
+        Rope first;
+        Rope second;
+
+        alias asArray this;
+
+        inout(Rope)[2] asArray() inout {
+
+            return [first, second];
+
+        }
+
+    }
+
+    /// Find the difference between the two ropes, in terms of a single contiguous region.
+    /// Params:
+    ///     other = Rope to compare this rope to.
+    /// Returns:
+    ///     The region containing the change, in terms of two subropes. The first rope is a subrope exclusive to this
+    ///     rope, and the second is a subrope exclusive to the other.
+    ///
+    ///     The return value includes a `start` field which indicates the exact index the resulting range starts with.
+    DiffRegion diff(const Rope other) const {
+
+        if (!isLeaf) {
+
+            // Left side is identical, compare right side only
+            if (left is other.left) {
+
+                auto result = right.diff(other.right);
+
+                return DiffRegion(left.length + left.start, result.first, result.second);
+
+            }
+
+            // Or, right side is identical
+            else if (right is other.right) {
+
+                return left.diff(other.left);
+
+            }
+
+        }
+
+        Rope result;
+
+        // Perform string comparison
+        const prefix = commonPrefix(this[], other[]).length;
+        const suffix = commonPrefix(this[prefix..$].retro, other[prefix..$].retro).length;
+
+        const start = prefix;
+        const thisEnd = this.length - suffix;
+        const otherEnd = other.length - suffix;
+
+        return DiffRegion(start,
+            thisEnd == 0
+                ? Rope()
+                : this[start .. thisEnd],
+            otherEnd == 0
+                ? Rope()
+                : other[start .. otherEnd]);
+
+    }
+
+    unittest {
+
+        auto rope1 = Rope("Hello, World!");
+        auto rope2 = Rope("Hello, Fluid!");
+        auto diff = rope1.diff(rope2);
+
+        assert(diff.start == 7);
+        assert(diff[].equal(["Worl", "Flui"]));
+
+    }
+
+    unittest {
+
+        auto rope1 = Rope("Hello!");
+        auto rope2 = Rope("Hello!");
+
+        assert(rope1.diff(rope2)[] == [Rope(), Rope()]);
+
+    }
+
+    unittest {
+
+        auto rope1 = Rope(
+            Rope("Hello, "),
+            Rope("World!"));
+        auto rope2 = Rope("Hello, Fluid!");
+        auto diff = rope1.diff(rope2);
+
+        assert(diff.start == 7);
+        assert(diff[].equal([
+            "Worl",
+            "Flui",
+        ]));
+
+    }
+
+    unittest {
+
+        auto rope = Rope(
+            Rope(
+                Rope("auto rope"),
+                Rope(
+                    Rope("1"),
+                    Rope(" = Rope();"),
+                )
+            ),
+            Rope(
+                Rope(
+                    Rope("auto rope2 = Rope(\""),
+                    Rope("Hello, Fluid!")
+                ),
+                Rope(
+                    Rope("\");"),
+                    Rope("auto diff = rope1.diff(rope2);"),
+                ),
+            )
+        );
+
+        assert(
+            rope.replace(0, 4, Rope("Rope"))
+                .diff(rope)
+            == DiffRegion(0, Rope("Rope"), Rope("auto"))
+        );
+
+        auto tmp = rope;
+
+        auto findRope1() {
+
+            return tmp.indexOf("rope1");
+
+        }
+
+        assert(
+            rope
+                .replace("rope1", Rope("rope"))
+                .replace("rope1", Rope("rope"))
+                .diff(rope)
+            == DiffRegion(
+                9,
+                Rope(` = Rope();auto rope2 = Rope("Hello, Fluid!");auto diff = rope`),
+                Rope(`1 = Rope();auto rope2 = Rope("Hello, Fluid!");auto diff = rope1`))
+        );
 
     }
 
