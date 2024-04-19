@@ -3,6 +3,7 @@ module fluid.rope;
 import std.range;
 import std.string;
 import std.algorithm;
+import std.exception;
 
 
 @safe:
@@ -30,7 +31,7 @@ struct Rope {
     size_t start, length;
 
     /// Create a rope holding given text.
-    this(inout const(char)[] text) inout pure {
+    this(inout const(char)[] text) inout pure nothrow {
 
         // No text, stay with Rope.init
         if (text == "")
@@ -43,7 +44,7 @@ struct Rope {
     /// Create a rope concatenating two other ropes.
     ///
     /// Avoids gaps: If either node is empty, copies and becomes the other node.
-    this(inout Rope left, inout Rope right) inout pure {
+    this(inout Rope left, inout Rope right) inout pure nothrow {
 
         // No need to create a new node there's empty space
         if (left.length == 0) {
@@ -98,7 +99,7 @@ struct Rope {
     }
 
     /// Create a rope from given node.
-    this(const inout(RopeNode)* node) inout pure {
+    this(const inout(RopeNode)* node) inout pure nothrow {
 
         // No node given, set all to init
         if (node is null) return;
@@ -110,13 +111,13 @@ struct Rope {
     }
 
     /// Copy a `Rope`.
-    this(inout const Rope rope) inout pure {
+    this(inout const Rope rope) inout pure nothrow {
 
         this(rope.node, rope.start, rope.length);
 
     }
 
-    private this(inout(RopeNode)* node, size_t start, size_t length) inout pure {
+    private this(inout(RopeNode)* node, size_t start, size_t length) inout pure nothrow {
 
         this.node = node;
         this.start = start;
@@ -132,29 +133,71 @@ struct Rope {
 
     }
 
+    /// Get a hash of the rope.
+    size_t toHash() const nothrow {
+
+        import std.digest.murmurhash;
+
+        auto hash = MurmurHash3!32();
+
+        // Hash each item
+        foreach (item; byNode) {
+
+            assert(item.isLeaf);
+
+            hash.put(cast(const ubyte[]) item.value);
+
+        }
+
+        return hash.get();
+
+    }
+
+    unittest {
+
+        auto rope = Rope("This is Fluid!");
+        auto rope2 = Rope(
+            Rope("This is "),
+            Rope("Fluid!"),
+        );
+
+        assert(rope.toHash == rope.toHash);
+        assert(rope.toHash == rope2.toHash);
+        assert(rope2.toHash == rope2.toHash);
+        assert(rope2.left.toHash == rope2.left.toHash);
+        assert(rope2.right.toHash == rope2.right.toHash);
+
+        assert(rope2.left.toHash != rope2.right.toHash);
+        assert(rope2.left.toHash != rope2.toHash);
+        assert(rope2.left.toHash != rope.toHash);
+        assert(rope2.right.toHash != rope2.toHash);
+        assert(rope2.right.toHash != rope.toHash);
+
+    }
+
     /// Compare the text to a string.
-    bool opEquals(const char[] str) const {
+    bool opEquals(const char[] str) const nothrow {
 
         return equal(this[], str[]);
 
     }
 
     /// Compare two ropes.
-    bool opEquals(const Rope str) const {
+    bool opEquals(const Rope str) const nothrow {
 
         return equal(this[], str[]);
 
     }
 
     /// Assign a new value to the rope.
-    ref opAssign(const char[] str) return {
+    ref opAssign(const char[] str) return nothrow {
 
         return opAssign(new RopeNode(str));
 
     }
 
     /// ditto
-    ref opAssign(RopeNode* node) return {
+    ref opAssign(RopeNode* node) return nothrow {
 
         this.node = node;
         this.start = 0;
@@ -164,42 +207,42 @@ struct Rope {
     }
 
     /// Concatenate two ropes together.
-    Rope opBinary(string op : "~")(const Rope that) const {
+    Rope opBinary(string op : "~")(const Rope that) const nothrow {
 
         return Rope(this, that);
 
     }
 
     /// Concatenate with a string.
-    Rope opBinary(string op : "~")(const(char)[] text) const {
+    Rope opBinary(string op : "~")(const(char)[] text) const nothrow {
 
         return Rope(this, Rope(text));
 
     }
 
     /// ditto
-    Rope opBinaryRight(string op : "~")(const(char)[] text) const {
+    Rope opBinaryRight(string op : "~")(const(char)[] text) const nothrow {
 
         return Rope(Rope(text), this);
 
     }
 
     /// True if the node is a leaf.
-    bool isLeaf() const {
+    bool isLeaf() const nothrow {
 
         return node is null
             || node.isLeaf;
 
     }
 
-    Rope save() const {
+    Rope save() const nothrow {
 
         return this;
 
     }
 
     /// If true, the rope is empty.
-    bool empty() const {
+    bool empty() const nothrow {
 
         return node is null
             || length == 0;
@@ -207,7 +250,7 @@ struct Rope {
     }
 
     /// Get the first *byte* from the rope.
-    char front() const {
+    char front() const nothrow {
 
         assert(!empty, "Cannot access `.front` in an empty rope");
 
@@ -226,7 +269,7 @@ struct Rope {
     }
 
     /// Remove the first byte from the rope.
-    void popFront() {
+    void popFront() nothrow {
 
         assert(!empty, "Cannot `.popFront` in an empty rope");
 
@@ -236,7 +279,7 @@ struct Rope {
     }
 
     /// Get the last *byte* from the rope.
-    char back() const {
+    char back() const nothrow {
 
         assert(!empty, "Cannot access `.back` in an empty rope");
 
@@ -255,23 +298,23 @@ struct Rope {
     }
 
     /// Remove the last byte from the rope.
-    void popBack() {
+    void popBack() nothrow {
 
         length--;
 
     }
 
     /// Return a mutable slice.
-    Rope opIndex() const {
+    Rope opIndex() const nothrow {
 
         return this;
 
     }
 
     /// Get character at given index.
-    char opIndex(size_t index) const {
+    char opIndex(size_t index) const nothrow {
 
-        assert(index < length, format!"Given index [%s] exceeds rope length %s"(index, length));
+        assert(index < length, format!"Given index [%s] exceeds rope length %s"(index, length).assumeWontThrow);
 
         // Access the nth byte of the leaf
         if (node.isLeaf)
@@ -288,21 +331,24 @@ struct Rope {
     }
 
     /// Get the rope's length.
-    size_t opDollar() const {
+    size_t opDollar() const nothrow {
 
         return length;
 
     }
 
     /// Slice the rope.
-    Rope opIndex(size_t[2] slice, string caller = __PRETTY_FUNCTION__) const {
+    Rope opIndex(size_t[2] slice, string caller = __PRETTY_FUNCTION__) const nothrow {
 
         assert(slice[0] <= length,
-            format!"Left boundary of slice [%s .. %s] exceeds rope length %s"(slice[0], slice[1], length));
+            format!"Left boundary of slice [%s .. %s] exceeds rope length %s"(slice[0], slice[1], length)
+                .assumeWontThrow);
         assert(slice[1] <= length,
-            format!"Right boundary of slice [%s .. %s] exceeds rope length %s"(slice[0], slice[1], length));
+            format!"Right boundary of slice [%s .. %s] exceeds rope length %s"(slice[0], slice[1], length)
+                .assumeWontThrow);
         assert(slice[0] <= slice[1],
-            format!"Right boundary of slice [%s .. %s] is greater than left boundary"(slice[0], slice[1]));
+            format!"Right boundary of slice [%s .. %s] is greater than left boundary"(slice[0], slice[1])
+                .assumeWontThrow);
 
         // .init stays the same
         if (node is null) return Rope.init;
@@ -356,14 +402,14 @@ struct Rope {
 
     }
 
-    size_t[2] opSlice(size_t dim : 0)(size_t left, size_t right) const {
+    size_t[2] opSlice(size_t dim : 0)(size_t left, size_t right) const nothrow {
 
         return [left, right];
 
     }
 
     /// Get the depth of the rope.
-    size_t depth() const {
+    size_t depth() const nothrow {
 
         // Leafs have depth of 1
         if (isLeaf) return 1;
@@ -396,7 +442,7 @@ struct Rope {
 
     /// Get a leaf node that is a subrope starting with the given index. The length of the node may vary, and does not
     /// have to reach the end of the rope.
-    Rope leafFrom(size_t start) const
+    Rope leafFrom(size_t start) const nothrow
     out (r; r.isLeaf)
     do {
 
@@ -439,7 +485,7 @@ struct Rope {
     }
 
     /// Get the left side of the rope
-    Rope left() const {
+    Rope left() const nothrow {
 
         if (node is null) return Rope.init;
 
@@ -498,7 +544,7 @@ struct Rope {
     }
 
     /// Get the right side of the rope
-    Rope right() const {
+    Rope right() const nothrow {
 
         if (node is null) return Rope.init;
 
@@ -560,7 +606,7 @@ struct Rope {
     }
 
     /// Get the value of this rope. Only works for leaf nodes.
-    const(char)[] value() const {
+    const(char)[] value() const nothrow {
 
         // Null node → null string
         if (node is null) return null;
@@ -572,11 +618,11 @@ struct Rope {
     /// Split the rope, creating a new root node that connects the left and right side of the split.
     ///
     /// This functions never returns leaf nodes, but either side of the node may be empty.
-    Rope split(size_t index) const
+    Rope split(size_t index) const nothrow
     out (r; !r.node.isLeaf)
     do {
 
-        assert(index <= length, format!"Split index (%s) exceeds rope length %s"(index, length));
+        assert(index <= length, format!"Split index (%s) exceeds rope length %s"(index, length).assumeWontThrow);
 
         auto left = this.left;
         auto right = this.right;
@@ -712,7 +758,7 @@ struct Rope {
     }
 
     /// Insert a new node into the rope.
-    Rope insert(size_t index, Rope value) const {
+    Rope insert(size_t index, Rope value) const nothrow {
 
         // Perform a split
         auto split = split(index);
@@ -762,12 +808,14 @@ struct Rope {
     ///     low   = Low index, inclusive; First index to delete.
     ///     high  = High index, exclusive; First index after the newly inserted fragment to keep.
     ///     value = Value to insert.
-    Rope replace(size_t low, size_t high, Rope value) const {
+    Rope replace(size_t low, size_t high, Rope value) const nothrow {
 
         assert(low <= high,
-            format!"Low boundary of replace slice [%s .. %s] is greater than the high boundary"(low, high));
+            format!"Low boundary of replace slice [%s .. %s] is greater than the high boundary"(low, high)
+                .assumeWontThrow);
         assert(high <= length,
-            format!"Replace slice [%s .. %s] exceeds Rope length %s"(low, high, length));
+            format!"Replace slice [%s .. %s] exceeds Rope length %s"(low, high, length)
+                .assumeWontThrow);
 
         // Return the value as-is if the node is empty
         if (length == 0)
@@ -888,7 +936,7 @@ struct Rope {
     }
 
     /// Replace given substring with a new value
-    Rope replace(String)(String oldValue, Rope value) const {
+    Rope replace(String)(String oldValue, Rope value) const nothrow {
 
         const start = this[].indexOf(oldValue);
         const end = start + oldValue.length;
@@ -907,7 +955,7 @@ struct Rope {
     }
 
     /// Append text to the rope.
-    ref Rope opOpAssign(string op : "~")(const(char)[] value) return {
+    ref Rope opOpAssign(string op : "~")(const(char)[] value) return nothrow {
 
         auto left = this;
 
@@ -916,7 +964,7 @@ struct Rope {
     }
 
     /// Append another rope to the rope.
-    ref Rope opOpAssign(string op : "~")(const Rope value) return {
+    ref Rope opOpAssign(string op : "~")(const Rope value) return nothrow {
 
         auto left = this;
 
@@ -941,7 +989,7 @@ struct Rope {
     }
 
     /// Perform deep-first search through nodes of the rope.
-    auto byNode() {
+    auto byNode() inout {
 
         import std.container.dlist;
 
@@ -952,7 +1000,7 @@ struct Rope {
             bool empty;
 
             /// Switch to the next sibling or ascend.
-            void popFront() @safe {
+            void popFront() @safe nothrow {
 
                 assert(!empty);
 
@@ -972,7 +1020,7 @@ struct Rope {
             }
 
             /// Descend into given node.
-            void descend(Rope node) @safe {
+            void descend(Rope node) @safe nothrow {
 
                 // Leaf node, set as front
                 if (node.isLeaf) {
@@ -1310,14 +1358,14 @@ struct RopeNode {
     }
 
     /// Create a leaf node from a slice
-    this(inout const(char)[] text) inout pure {
+    this(inout const(char)[] text) inout pure nothrow {
 
         this.value = text;
 
     }
 
     /// Create a node from two other node; Concatenate the two other nodes. Both must not be null.
-    this(inout Rope left, inout Rope right) inout pure {
+    this(inout Rope left, inout Rope right) inout pure nothrow {
 
         this.left = left;
         this.right = right;
@@ -1325,7 +1373,7 @@ struct RopeNode {
     }
 
     /// Get length of this node.
-    size_t length() const pure {
+    size_t length() const pure nothrow {
 
         return isLeaf
             ? value.length
@@ -1334,7 +1382,7 @@ struct RopeNode {
     }
 
     /// True if this is a leaf node and contains text rather than child nodes.
-    bool isLeaf() const pure {
+    bool isLeaf() const pure nothrow {
 
         return left.node is null
             && right.node is null;
