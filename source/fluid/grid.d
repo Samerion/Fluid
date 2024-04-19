@@ -15,7 +15,7 @@ import fluid.structs;
 @safe:
 
 
-alias grid = simpleConstructor!Grid;
+deprecated("Renamed to `gridFrame`") alias grid = simpleConstructor!Grid;
 alias gridFrame = grid;
 alias gridRow = simpleConstructor!GridRow;
 
@@ -58,7 +58,7 @@ Segments segments(uint columns)() {
 
 }
 
-alias Grid = GridFrame;
+deprecated("Renamed to `GridFrame`") alias Grid = GridFrame;
 
 /// The GridFrame node will align its children in a 2D grid.
 class GridFrame : Frame {
