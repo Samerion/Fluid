@@ -1338,6 +1338,65 @@ struct Rope {
 
     }
 
+    /// Put the rope's contents inside given output range.
+    void toString(Writer)(ref Writer w) const {
+
+        foreach (node; byNode) {
+
+            put(w, node.value);
+
+        }
+
+    }
+
+    unittest {
+
+        auto rope1 = Rope("bar");
+        const rope2 = Rope(
+            Rope("b"),
+            Rope(
+                Rope("a"),
+                Rope("r"),
+            ),
+        );
+
+        assert(format!"Foo, %s, baz"(rope1) == "Foo, bar, baz");
+        assert(format!"Foo, %s, baz"(rope2) == "Foo, bar, baz");
+
+    }
+
+    string toString() const @trusted {
+
+        // Allocate space for the string
+        auto buffer = new char[length];
+
+        // Write all characters
+        foreach (i, char ch; this[].enumerate) {
+
+            buffer[i] = ch;
+
+        }
+
+        return cast(string) buffer;
+
+    }
+
+    unittest {
+
+        auto rope1 = Rope("bar");
+        const rope2 = Rope(
+            Rope("b"),
+            Rope(
+                Rope("a"),
+                Rope("r"),
+            ),
+        );
+
+        assert(rope1.toString == "bar");
+        assert(rope2.toString == "bar");
+
+    }
+
 }
 
 struct RopeNode {
