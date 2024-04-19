@@ -378,7 +378,7 @@ class Raylib5Backend : FluidBackend {
 
     fluid.backend.Texture loadTexture(fluid.backend.Image image) @system {
 
-        return fromRaylib(LoadTextureFromImage(image.toRaylib), image.format);
+        return toFluid(LoadTextureFromImage(image.toRaylib), image.format);
 
     }
 
@@ -386,7 +386,7 @@ class Raylib5Backend : FluidBackend {
 
         import std.string;
 
-        return fromRaylib(LoadTexture(filename.toStringz), fluid.backend.Image.Format.rgba);
+        return toFluid(LoadTexture(filename.toStringz), fluid.backend.Image.Format.rgba);
 
     }
 
@@ -398,14 +398,14 @@ class Raylib5Backend : FluidBackend {
 
     }
 
-    public fluid.backend.Texture fromRaylib(raylib.Texture texture, fluid.backend.Image.Format format) {
+    public fluid.backend.Texture toFluid(raylib.Texture rayTexture, fluid.backend.Image.Format format) @system {
 
         fluid.backend.Texture result;
-        result.id = texture.id;
+        result.id = rayTexture.id;
         result.format = format;
         result.tombstone = reaper.makeTombstone(this, result.id);
-        result.width = texture.width;
-        result.height = texture.height;
+        result.width = rayTexture.width;
+        result.height = rayTexture.height;
         return result;
 
     }
@@ -696,4 +696,13 @@ raylib.Texture toRaylib(fluid.backend.Texture texture) @trusted {
 
     return result;
 
+}
+
+fluid.backend.Texture toFluid(raylib.Texture rayTexture) @system {
+    fluid.backend.Texture result;
+    result.id = rayTexture.id;
+    result.format = fluid.backend.Image.Format.rgba;
+    result.width = rayTexture.width;
+    result.height = rayTexture.height;
+    return result;
 }

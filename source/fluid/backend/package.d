@@ -979,8 +979,8 @@ struct Texture {
         && dpiX == other.dpiX
         && dpiY == other.dpiY;
 
-    version (Have_raylib_d)void opAssign(raylib.Texture rayTexture) {
-        this = (cast(Raylib5Backend)defaultFluidBackend).fromRaylib(rayTexture, Image.Format.rgba);
+    version (Have_raylib_d)void opAssign(raylib.Texture rayTexture) @system {
+        this = (cast(Raylib5Backend)defaultFluidBackend).toFluid(rayTexture, Image.Format.rgba);
     }
 
     /// Get the backend for this texture. Doesn't work after freeing the tombstone.

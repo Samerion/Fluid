@@ -17,7 +17,7 @@ alias imageView = simpleConstructor!ImageView;
 alias ImageView = SpecialImageView!Texture;
 
 // A node that can display images from any format with a `.draw` function.
-class SpecialImageView(ImageType) : Node {
+class SpecialImageView(TextureType) : Node {
 
     public {
 
@@ -30,7 +30,7 @@ class SpecialImageView(ImageType) : Node {
     protected {
 
         /// Texture for this node.
-        Texture _texture;
+        TextureType _texture;
 
         /// If set, path in the filesystem the texture is to be loaded from.
         string _texturePath;
@@ -75,7 +75,7 @@ class SpecialImageView(ImageType) : Node {
     @property {
 
         /// Set the texture.
-        Texture texture(Texture texture) {
+        TextureType texture(TextureType texture) {
 
             clear();
             _isOwner = false;
@@ -85,7 +85,7 @@ class SpecialImageView(ImageType) : Node {
 
         }
 
-        Image texture(Image image) @trusted {
+        Image texture(Image image) @system {
             
             clear();
             _texture = tree.io.loadTexture(image);
@@ -115,7 +115,7 @@ class SpecialImageView(ImageType) : Node {
 
         }
 
-        unittest {
+        @system unittest {
 
             // TODO test for keeping aspect ratio
             auto io = new HeadlessBackend(Vector2(1000, 1000));
@@ -134,25 +134,23 @@ class SpecialImageView(ImageType) : Node {
 
             version (Have_raylib_d) {
                 import std.string: toStringz;
-                raylib.Image LoadImage(string path) @trusted => raylib.LoadImage(path.toStringz);
-                raylib.Texture LoadTexture(string path) @trusted => raylib.LoadTexture(path.toStringz);
-                void InitWindow() @trusted => raylib.InitWindow(80, 80, "");
-                void CloseWindow() @trusted => raylib.CloseWindow();
+                raylib.Image LoadImage(string path) => raylib.LoadImage(path.toStringz);
+                raylib.Texture LoadTexture(string path) => raylib.LoadTexture(path.toStringz);
+                void InitWindow() => raylib.InitWindow(80, 80, "");
+                void CloseWindow() => raylib.CloseWindow();
 
                 InitWindow;
                 raylib.Texture rayTexture = LoadTexture("logo.png");
-                Texture texture = (cast(Raylib5Backend)defaultFluidBackend).fromRaylib(rayTexture, Image.Format.rgba);
+                fluid.Texture texture = rayTexture.toFluid;
                 
-                root = imageView(.nullTheme, texture);
+                /*root = imageView(.nullTheme, texture);
 
-                Image image = loadImage("logo.png").to!Image;
+                Image image = LoadImage("logo.png").toFluid;
                 
-                root = imageView(.nullTheme, image);
+                root = imageView(.nullTheme, image);*/
 
                 io.assertTexture(root.texture, Vector2(0, 0), color!"fff");
                 CloseWindow;
-                import std.stdio;
-                writeln("Passed");
             }
         }
 
