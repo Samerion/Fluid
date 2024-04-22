@@ -55,12 +55,30 @@
 				"libdparse": "~>0.23.2",
 				"fluid": { "path": "." }
 			},
-			"name": "showcase",
+			"name": "tour",
 			"libs": [
 				"raylib"
 			],
 			"sourcePaths": [
-				"examples"
+				"tour"
+			],
+			"targetPath": "build",
+			"targetType": "executable"
+		},
+		{
+			"dependencies": {
+				"libdparse": "~>0.23.2",
+				"fluid": { "path": "." }
+			},
+			"name": "showcase",
+			"libs": [
+				"raylib"
+			],
+			"preBuildCommands": [
+				"echo Warning: fluid:showcase is deprecated in favor of fluid:tour"
+			],
+			"sourcePaths": [
+				"tour"
 			],
 			"targetPath": "build",
 			"targetType": "executable"

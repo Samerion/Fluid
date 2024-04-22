@@ -1,9 +1,9 @@
-module fluid.showcase.buttons;
+module fluid.tour.buttons;
 
 import std.range;
 
 import fluid;
-import fluid.showcase;
+import fluid.tour;
 
 
 @safe:

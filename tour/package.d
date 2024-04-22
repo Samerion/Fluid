@@ -1,15 +1,14 @@
-/// This showcase is a set of examples and tutorials designed to illustrate core features of Fluid and provide a quick
+/// This tour is a set of examples and tutorials designed to illustrate core features of Fluid and provide a quick
 /// start guide to developing applications using Fluid.
 ///
-/// This module is the central piece of the showcase, gluing it together. It loads and parses each module to display
+/// This module is the central piece of the tour, gluing it together. It loads and parses each module to display
 /// it as a document. It's not trivial; other modules from this package are designed to offer better guidance on Fluid
 /// usage, but it might also be useful to people intending to implement similar functionality.
 ///
-/// To get started with the showcase, use `dub run fluid:showcase`, which should compile and run the showcase. The
-/// program explains different components of the library and provides code examples, but you're free to browse through
-/// its files if you like! introduction.d might be a good start. I hope this directory proves as a useful learning
-/// resource.
-module fluid.showcase;
+/// To get started with the tour, use `dub run fluid:tour`, which should compile and run the tour. The program explains
+/// different parts of the library and provides code examples, but you're free to browse through its files if you
+/// like! introduction.d might be a good start. I hope this directory proves as a useful learning resource.
+module fluid.tour;
 
 import fluid;
 import dparse.ast;
@@ -100,7 +99,7 @@ static this() {
     codeTheme = mainTheme.derive(
 
         rule!Node(
-            typeface = Style.loadTypeface(thisExePath.dirName.buildPath("../examples/ibm-plex-mono.ttf"), 11),
+            typeface = Style.loadTypeface(thisExePath.dirName.buildPath("../tour/ibm-plex-mono.ttf"), 11),
         ),
         rule!Frame(
             padding = 0,
@@ -157,7 +156,7 @@ void main(string[] args) {
     // Prepare the window
     SetConfigFlags(ConfigFlags.FLAG_WINDOW_RESIZABLE);
     SetTraceLogLevel(TraceLogLevel.LOG_WARNING);
-    InitWindow(1000, 750, "Fluid showcase");
+    InitWindow(1000, 750, "Fluid tour");
     SetTargetFPS(60);
     SetExitKey(0);
     scope (exit) CloseWindow();
@@ -459,11 +458,11 @@ Space render(Chapter chapter)() @trusted {
     enum name = chapter.to!string;
 
     // Import the module
-    mixin("import fluid.showcase.", name, ";");
-    alias mod = mixin("fluid.showcase.", name);
+    mixin("import fluid.tour.", name, ";");
+    alias mod = mixin("fluid.tour.", name);
 
     // Get the module filename
-    const sourceDirectory = thisExePath.dirName.buildPath("../examples");
+    const sourceDirectory = thisExePath.dirName.buildPath("../tour");
     const filename = buildPath(sourceDirectory, name ~ ".d");
 
     // Load the file

@@ -1,8 +1,8 @@
-module fluid.showcase.themes;
+module fluid.tour.themes;
 
 import fluid;
 import fluid.theme;
-import fluid.showcase;
+import fluid.tour;
 
 
 @safe:

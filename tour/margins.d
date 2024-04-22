@@ -1,4 +1,4 @@
-module fluid.showcase.margins;
+module fluid.tour.margins;
 
 import fluid;
 
