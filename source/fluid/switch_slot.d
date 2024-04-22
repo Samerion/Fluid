@@ -31,6 +31,13 @@ class SwitchSlot : Node {
 
     }
 
+    protected {
+
+        /// Last available space assigned to this node.
+        Vector2 _availableSpace;
+
+    }
+
     @property {
 
         alias isHidden = typeof(super).isHidden;
@@ -70,27 +77,38 @@ class SwitchSlot : Node {
 
     }
 
-    override void resizeImpl(Vector2 availbleSpace) {
+    override void resizeImpl(Vector2 availableSpace) {
 
         minSize = Vector2();
         this.node = null;
+        _availableSpace = availableSpace;
 
         // Try each option
-        foreach (node; availableNodes) {
+        foreach (i, node; availableNodes) {
 
             this.node = node;
 
             // Null node reached, stop with no minSize
             if (node is null) return;
 
-            node.resize(tree, theme, availbleSpace);
+            auto previousTree = node.tree;
+            auto previousTheme = node.theme;
+            auto previousSize = node.minSize;
 
-            // Check if it fits within available space
-            if (node.minSize.x > availbleSpace.x) continue;
-            if (node.minSize.y > availbleSpace.y) continue;
+            node.resize(tree, theme, availableSpace);
 
-            // Found a match, stop
-            break;
+            // Stop if it fits within available space
+            if (node.minSize.x <= availableSpace.x && node.minSize.y <= availableSpace.y) break;
+
+            // Restore previous info, unless this is the last node
+            if (i+1 != availableNodes.length && previousTree) {
+
+                // Resize the node again to recursively restore old parameters
+                node.tree = null;
+                node.theme = Theme.init;
+                node.resize(previousTree, previousTheme, previousSize);
+
+            }
 
         }
 
@@ -256,5 +274,75 @@ unittest {
 
     assert(principalDrawn == 1);
     assert(deputyDrawn == 1);
+
+}
+
+unittest {
+
+    import std.algorithm;
+
+    import fluid.space;
+    import fluid.structs;
+
+    SwitchSlot slot;
+
+    auto checker = new class Node {
+
+        Vector2 size;
+        Vector2[] spacesGiven;
+
+        override void resizeImpl(Vector2 space) {
+
+            spacesGiven ~= space;
+            size = minSize = Vector2(500, 200);
+
+        }
+
+        override void drawImpl(Rectangle, Rectangle) {
+
+        }
+
+    };
+
+    auto parentSlot = switchSlot(checker, null);
+    auto childSlot = parentSlot.retry(checker);
+
+    auto root = vspace(
+        layout!"fill",
+        nullTheme,
+
+        // Two slots: child slot that gets resized earlier
+        hspace(
+            layout!"fill",
+            childSlot,
+        ),
+
+        // Parent slot that doesn't give enough space for the child to fit
+        hspace(
+            layout!"fill",
+            vspace(
+                layout!(1, "fill"),
+                parentSlot,
+            ),
+            vspace(
+                layout!(3, "fill"),
+            ),
+        ),
+    );
+
+    root.draw();
+
+    // The principal slot gives the least space, namely the width of the window divided by 4
+    assert(checker.spacesGiven.map!"a.x".minElement == HeadlessBackend.defaultWindowSize.x / 4);
+
+    // The window size that is accepted is equal to its size, as it was assigned by the fallback slot
+    assert(checker.spacesGiven[$-1] == checker.size);
+
+    // A total of three resizes were performed: one by the fallback, one by the parent and one, final, by the parent
+    // using previous parameters
+    assert(checker.spacesGiven.length == 3);
+
+    // The first one (which should be the child's) has the largest width given, equal to the window width
+    assert(checker.spacesGiven[0].x == HeadlessBackend.defaultWindowSize.x);
 
 }
