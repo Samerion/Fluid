@@ -1,9 +1,9 @@
-// This example is excluded from the showcase for now.
+// This example is excluded from the tour for now.
 // TODO
-module fluid.showcase.drag_and_drop;
+module fluid.tour.drag_and_drop;
 
 import fluid;
-import fluid.showcase;
+import fluid.tour;
 
 
 @safe:
