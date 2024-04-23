@@ -80,6 +80,9 @@ class TextInput : InputNode!Node, FluidScrollable {
         /// Underlying label controlling the content.
         ContentLabel contentLabel;
 
+        /// Maximum entries in the history.
+        int maxHistorySize = 256;
+
     }
 
     protected {
@@ -90,6 +93,58 @@ class TextInput : InputNode!Node, FluidScrollable {
             size_t selectionStart;
             size_t selectionEnd;
 
+            /// A history entry is "additive" if it adds any new content to the input. An entry is "subtractive" if it
+            /// removes any part of the input. An entry that replaces content is simultaneously additive and
+            /// subtractive.
+            ///
+            /// See_Also: `setPreviousEntry`, `canMergeWith`
+            bool isAdditive;
+
+            /// ditto.
+            bool isSubtractive;
+
+            /// Set `isAdditive` and `isSubtractive` based on the given text representing the last input.
+            void setPreviousEntry(Rope previousValue) {
+
+                const diff = previousValue.diff(value);
+
+                isAdditive = diff.second.length != 0;
+                isSubtractive = diff.first.length != 0;
+
+            }
+
+            /// Check if this entry can be merged with (newer) entry given its text content. This is used to combine
+            /// runs of similar actions together, for example when typing a word, the whole word will form a single
+            /// entry, instead of creating separate entries per character.
+            ///
+            /// Two entries can be combined if they are:
+            ///
+            /// 1. Both additive, and the latter is not subtractive. This combines runs input, including if the first
+            ///    item in the run replaces some text. However, replacing text will break an existing chain of actions.
+            /// 2. Both subtractive, and neither is additive.
+            ///
+            /// See_Also: `isAdditive`
+            bool canMergeWith(Rope nextValue) const {
+
+                // Create a dummy entry based on the text
+                auto nextEntry = HistoryEntry(nextValue, 0, 0);
+                nextEntry.setPreviousEntry(value);
+
+                const mergeAdditive = this.isAdditive
+                    && nextEntry.isAdditive
+                    && !nextEntry.isSubtractive;
+
+                if (mergeAdditive) return true;
+
+                const mergeSubtractive = !this.isAdditive
+                    && this.isSubtractive
+                    && !nextEntry.isAdditive
+                    && nextEntry.isSubtractive;
+
+                return mergeSubtractive;
+
+            }
+
         }
 
         /// If true, current movement action is performed while selecting.
@@ -99,7 +154,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         Rectangle _inner = Rectangle(0, 0, 0, 0);
 
         /// Current action history, expressed as two stacks, indicating undoable and redoable actions, controllable via
-        /// `makeSnapshot`, `undo` and `redo`.
+        /// `snapshot`, `pushSnapshot`, `undo` and `redo`.
         DList!HistoryEntry _undoStack;
 
         /// ditto
@@ -1214,7 +1269,9 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         }
 
-        makeSnapshot();
+        // Save previous value in undo stack
+        const previousState = snapshot();
+        scope (success) pushSnapshot(previousState);
 
         // Insert the text by replacing the old node, if present
         value = value.replace(caretIndex - originalLength, caretIndex, Rope(bufferNode));
@@ -1229,7 +1286,9 @@ class TextInput : InputNode!Node, FluidScrollable {
     /// ditto
     void push(Rope text) {
 
-        makeSnapshot();
+        // Save previous value in undo stack
+        const previousState = snapshot();
+        scope (success) pushSnapshot(previousState);
 
         // If selection is active, overwrite the selection
         if (isSelecting) {
@@ -1429,7 +1488,9 @@ class TextInput : InputNode!Node, FluidScrollable {
         import std.uni;
         import std.range;
 
-        makeSnapshot();
+        // Save previous value in undo stack
+        const previousState = snapshot();
+        scope (success) pushSnapshot(previousState);
 
         // Selection active, delete it
         if (isSelecting) {
@@ -1621,7 +1682,9 @@ class TextInput : InputNode!Node, FluidScrollable {
     ///     forward = If true, removes character after the caret, otherwise removes the one before.
     void chop(bool forward = false) {
 
-        makeSnapshot();
+        // Save previous value in undo stack
+        const previousState = snapshot();
+        scope (success) pushSnapshot(previousState);
 
         // Selection active
         if (isSelecting) {
@@ -3379,8 +3442,9 @@ class TextInput : InputNode!Node, FluidScrollable {
     @(FluidInputAction.cut)
     void cut() {
 
-        makeSnapshot();
+        auto snap = snapshot();
         copy();
+        pushSnapshot(snap);
         selectedValue = null;
 
     }
@@ -3474,8 +3538,9 @@ class TextInput : InputNode!Node, FluidScrollable {
     @(FluidInputAction.paste)
     void paste() {
 
-        makeSnapshot();
+        auto snap = snapshot();
         push(io.clipboard);
+        pushSnapshot(snap);
 
     }
 
@@ -3504,14 +3569,23 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
-    /// Create a snapshot of the current state (value, caret & selection) and push it to the undo stack.
-    void makeSnapshot() {
+    /// Push the given state snapshot (value, caret & selection) into the undo stack. Refuses to push if the current
+    /// state can be merged with it, unless `forcePushSnapshot` is used.
+    void pushSnapshot(HistoryEntry entry) {
 
-        auto entry = this.snapshot;
+        // Current state is compatible, ignore
+        if (entry.canMergeWith(value)) return;
 
-        // Ignore if the history is already up to date
-        // TODO merge with front
-        if (!_undoStack.empty && entry is _undoStack.back) return;
+        // Push state
+        forcePushSnapshot(entry);
+
+    }
+
+    /// ditto
+    void forcePushSnapshot(HistoryEntry entry) {
+
+        // Ignore if the last entry is identical
+        if (!_undoStack.empty && _undoStack.back is entry) return;
 
         // Truncate the history to match the index, insert the current value.
         _undoStack.insertBack(entry);
@@ -3524,7 +3598,13 @@ class TextInput : InputNode!Node, FluidScrollable {
     /// Produce a snapshot for the current state. Returns the snapshot.
     protected HistoryEntry snapshot() const {
 
-        return HistoryEntry(value, selectionStart, selectionEnd);
+        auto entry = HistoryEntry(value, selectionStart, selectionEnd);
+
+        // Get previous entry in the history
+        if (!_undoStack.empty)
+            entry.setPreviousEntry(_undoStack.back.value);
+
+        return entry;
 
     }
 
