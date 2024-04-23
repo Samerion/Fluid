@@ -8,6 +8,7 @@ import std.string;
 import std.traits;
 import std.datetime;
 import std.algorithm;
+import std.container.dlist;
 
 import fluid.node;
 import fluid.text;
@@ -83,11 +84,26 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     protected {
 
+        struct HistoryEntry {
+
+            Rope value;
+            size_t selectionStart;
+            size_t selectionEnd;
+
+        }
+
         /// If true, current movement action is performed while selecting.
         bool selectionMovement;
 
         /// Last padding box assigned to this node, with scroll applied.
         Rectangle _inner = Rectangle(0, 0, 0, 0);
+
+        /// Current action history, expressed as two stacks, indicating undoable and redoable actions, controllable via
+        /// `makeSnapshot`, `undo` and `redo`.
+        DList!HistoryEntry _undoStack;
+
+        /// ditto
+        DList!HistoryEntry _redoStack;
 
     }
 
@@ -1198,6 +1214,8 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         }
 
+        makeSnapshot();
+
         // Insert the text by replacing the old node, if present
         value = value.replace(caretIndex - originalLength, caretIndex, Rope(bufferNode));
 
@@ -1210,6 +1228,8 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     /// ditto
     void push(Rope text) {
+
+        makeSnapshot();
 
         // If selection is active, overwrite the selection
         if (isSelecting) {
@@ -1409,6 +1429,8 @@ class TextInput : InputNode!Node, FluidScrollable {
         import std.uni;
         import std.range;
 
+        makeSnapshot();
+
         // Selection active, delete it
         if (isSelecting) {
 
@@ -1598,6 +1620,8 @@ class TextInput : InputNode!Node, FluidScrollable {
     /// Params:
     ///     forward = If true, removes character after the caret, otherwise removes the one before.
     void chop(bool forward = false) {
+
+        makeSnapshot();
 
         // Selection active
         if (isSelecting) {
@@ -3355,6 +3379,7 @@ class TextInput : InputNode!Node, FluidScrollable {
     @(FluidInputAction.cut)
     void cut() {
 
+        makeSnapshot();
         copy();
         selectedValue = null;
 
@@ -3449,6 +3474,7 @@ class TextInput : InputNode!Node, FluidScrollable {
     @(FluidInputAction.paste)
     void paste() {
 
+        makeSnapshot();
         push(io.clipboard);
 
     }
@@ -3475,6 +3501,72 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         assert(root.caretIndex == 3);
         assert(root.value == "BarFoo Bar");
+
+    }
+
+    /// Create a snapshot of the current state (value, caret & selection) and push it to the undo stack.
+    void makeSnapshot() {
+
+        auto entry = this.snapshot;
+
+        // Ignore if the history is already up to date
+        // TODO merge with front
+        if (!_undoStack.empty && entry is _undoStack.back) return;
+
+        // Truncate the history to match the index, insert the current value.
+        _undoStack.insertBack(entry);
+
+        // Clear the redo stack
+        _redoStack.clear();
+
+    }
+
+    /// Produce a snapshot for the current state. Returns the snapshot.
+    protected HistoryEntry snapshot() const {
+
+        return HistoryEntry(value, selectionStart, selectionEnd);
+
+    }
+
+    /// Restore state from snapshot
+    protected HistoryEntry snapshot(HistoryEntry entry) {
+
+        value = entry.value;
+        selectSlice(entry.selectionStart, entry.selectionEnd);
+
+        return entry;
+
+    }
+
+    /// Restore the last value in history.
+    @(FluidInputAction.undo)
+    void undo() {
+
+        // Nothing to undo
+        if (_undoStack.empty) return;
+
+        // Push the current state to redo stack
+        _redoStack.insertBack(snapshot);
+
+        // Restore the value
+        this.snapshot = _undoStack.back;
+        _undoStack.removeBack;
+
+    }
+
+    /// Perform the last undone action again.
+    @(FluidInputAction.redo)
+    void redo() {
+
+        // Nothing to redo
+        if (_redoStack.empty) return;
+
+        // Push the current state to undo stack
+        _undoStack.insertBack(snapshot);
+
+        // Restore the value
+        this.snapshot = _redoStack.back;
+        _redoStack.removeBack;
 
     }
 
