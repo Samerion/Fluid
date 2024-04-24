@@ -87,11 +87,17 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     protected {
 
-        struct HistoryEntry {
+        static struct HistoryEntry {
 
             Rope value;
             size_t selectionStart;
             size_t selectionEnd;
+
+            /// Change made by this entry.
+            ///
+            /// `first` and `second` should represent the old and new value respectively; `second` is effectively a
+            /// substring of `value`.
+            Rope.DiffRegion diff;
 
             /// A history entry is "additive" if it adds any new content to the input. An entry is "subtractive" if it
             /// removes any part of the input. An entry that replaces content is simultaneously additive and
@@ -108,8 +114,16 @@ class TextInput : InputNode!Node, FluidScrollable {
 
                 const diff = previousValue.diff(value);
 
-                isAdditive = diff.second.length != 0;
-                isSubtractive = diff.first.length != 0;
+                setPreviousEntry(diff);
+
+            }
+
+            /// ditto
+            void setPreviousEntry(Rope.DiffRegion diff) {
+
+                this.diff = diff;
+                this.isAdditive = diff.second.length != 0;
+                this.isSubtractive = diff.first.length != 0;
 
             }
 
@@ -119,27 +133,32 @@ class TextInput : InputNode!Node, FluidScrollable {
             ///
             /// Two entries can be combined if they are:
             ///
-            /// 1. Both additive, and the latter is not subtractive. This combines runs input, including if the first
-            ///    item in the run replaces some text. However, replacing text will break an existing chain of actions.
-            /// 2. Both subtractive, and neither is additive.
+            /// 1. Both additive, and the latter is not subtractive. Newly inserted text must immediately follow what
+            ///    was inserted last. This combines runs input, including if the first item in the run replaces some
+            ///    text. However, replacing text will break an existing chain of actions.
+            /// 2. Both subtractive, and neither is additive. Removed text must immediately precede last removed
+            ///    fragment.
             ///
             /// See_Also: `isAdditive`
             bool canMergeWith(Rope nextValue) const {
 
                 // Create a dummy entry based on the text
                 auto nextEntry = HistoryEntry(nextValue, 0, 0);
-                nextEntry.setPreviousEntry(value);
+                auto nextDiff = value.diff(nextValue);
+                nextEntry.setPreviousEntry(nextDiff);
 
                 const mergeAdditive = this.isAdditive
                     && nextEntry.isAdditive
-                    && !nextEntry.isSubtractive;
+                    && !nextEntry.isSubtractive
+                    && diff.start + diff.second.length == nextDiff.start;
 
                 if (mergeAdditive) return true;
 
                 const mergeSubtractive = !this.isAdditive
                     && this.isSubtractive
                     && !nextEntry.isAdditive
-                    && nextEntry.isSubtractive;
+                    && nextEntry.isSubtractive
+                    && diff.start == nextDiff.start + nextDiff.first.length;
 
                 return mergeSubtractive;
 
@@ -3586,6 +3605,9 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         // Current state is compatible, ignore
         if (entry.canMergeWith(value)) return;
+
+        // No change was made
+        if (entry.value is this.value) return;
 
         // Push state
         forcePushSnapshot(entry);
