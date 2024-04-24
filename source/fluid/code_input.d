@@ -674,6 +674,44 @@ class CodeInput : TextInput {
 
     }
 
+    unittest {
+
+        auto root = codeInput(.useTabs);
+
+        root.push("Hello, World!");
+        root.caretToStart();
+        root.insertTab();
+        assert(root.value == "\tHello, World!");
+        assert(root.valueBeforeCaret == "\t");
+
+        root.undo();
+        assert(root.value == "Hello, World!");
+        assert(root.valueBeforeCaret == "");
+
+        root.redo();
+        assert(root.value == "\tHello, World!");
+        assert(root.valueBeforeCaret == "\t");
+
+        root.caretToEnd();
+        root.outdent();
+        assert(root.value == "Hello, World!");
+        assert(root.valueBeforeCaret == root.value);
+        assert(root.valueAfterCaret == "");
+
+        root.undo();
+        assert(root.value == "\tHello, World!");
+        assert(root.valueBeforeCaret == root.value);
+
+        root.undo();
+        assert(root.value == "Hello, World!");
+        assert(root.valueBeforeCaret == "");
+
+        root.undo();
+        assert(root.value == "");
+        assert(root.valueBeforeCaret == "");
+
+    }
+
     @(FluidInputAction.indent)
     void onIndent() {
 
@@ -682,6 +720,10 @@ class CodeInput : TextInput {
     }
 
     void indent(int indentCount = 1, bool includeEmptyLines = false) {
+
+        // Write an undo/redo history entry
+        auto shot = snapshot();
+        scope (success) pushSnapshot(shot);
 
         // Indent every selected line
         foreach (ref line; eachSelectedLine) {
@@ -757,6 +799,10 @@ class CodeInput : TextInput {
     }
 
     void outdent(int i = 1) {
+
+        // Write an undo/redo history entry
+        auto shot = snapshot();
+        scope (success) pushSnapshot(shot);
 
         // Outdent every selected line
         foreach (ref line; eachSelectedLine) {
@@ -908,6 +954,10 @@ class CodeInput : TextInput {
 
                     const oldCaretIndex = caretIndex;
 
+                    // Write an undo/redo history entry
+                    auto shot = snapshot();
+                    scope (success) pushSnapshot(shot);
+
                     caretLine = line[0 .. tabStart] ~ line[col .. $];
                     caretIndex = oldCaretIndex - tabWidth;
 
@@ -1031,6 +1081,10 @@ class CodeInput : TextInput {
         root.chop();
         assert(root.value == "abc");
 
+        root.undo();
+        assert(root.value == "      abc");
+        assert(root.valueAfterCaret == "abc");
+
 
     }
 
@@ -1043,11 +1097,14 @@ class CodeInput : TextInput {
         if (super.onBreakLine()) {
 
             // Copy indent from the previous line
+            // Enable continuous input to merge the indent with the line break in the history
+            _isContinuous = true;
             push(indentRope(currentIndent));
             reparse();
 
             // Ask the autoindentor to complete the job
             reformatLine();
+            _isContinuous = false;
 
             return true;
 
@@ -1057,7 +1114,6 @@ class CodeInput : TextInput {
 
     }
 
-    /// CodeInput implements autoindenting.
     unittest {
 
         auto root = codeInput();
@@ -1080,6 +1136,17 @@ class CodeInput : TextInput {
 
         root.runInputAction!(FluidInputAction.breakLine);
         assert(root.value == "abcdef\n    \n        \n\n");
+
+        root.undo();
+        assert(root.value == "abcdef\n    \n        \n");
+        root.undo();
+        assert(root.value == "abcdef\n    \n        \n        ");
+        root.undo();
+        assert(root.value == "abcdef\n    \n        ");
+        root.undo();
+        assert(root.value == "abcdef\n    \n    ");
+        root.undo();
+        assert(root.value == "abcdef\n    ");
 
     }
 
@@ -1365,6 +1432,10 @@ class CodeInput : TextInput {
 
         import fluid.typeface : Typeface;
 
+        // Write an undo/redo history entry
+        auto shot = snapshot();
+        scope (success) forcePushSnapshot(shot);
+
         const pasteStart = selectionLowIndex;
         const clipboard = io.clipboard;
         auto indentLevel = indentLevelByIndex(pasteStart);
@@ -1515,6 +1586,96 @@ class CodeInput : TextInput {
         );
         root.paste();
         assert(root.value == "let foo() {\n\t\ttext\n\ttextbaz\n}");
+
+    }
+
+    unittest {
+
+        auto io = new HeadlessBackend;
+        auto root = codeInput(.useSpaces(2));
+        root.io = io;
+
+        io.clipboard = "World";
+        root.push("  Hello,");
+        root.runInputAction!(FluidInputAction.breakLine);
+        root.paste();
+        assert(!root._isContinuous);
+        root.push("!");
+        assert(root.value == "  Hello,\n  World!");
+
+        // Undo the exclamation mark
+        root.undo();
+        assert(root.value == "  Hello,\n  World");
+
+        // Undo moves before pasting
+        root.undo();
+        assert(root.value == "  Hello,\n  ");
+        assert(root.valueBeforeCaret == root.value);
+
+        // Next undo moves before line break
+        root.undo();
+        assert(root.value == "  Hello,");
+
+        // Next undo clears all changes
+        root.undo();
+        assert(root.value == "");
+
+        // No change
+        root.undo();
+        assert(root.value == "");
+
+        // It can all be redone
+        root.redo();
+        assert(root.value == "  Hello,");
+        assert(root.valueBeforeCaret == root.value);
+        root.redo();
+        assert(root.value == "  Hello,\n  ");
+        assert(root.valueBeforeCaret == root.value);
+        root.redo();
+        assert(root.value == "  Hello,\n  World");
+        assert(root.valueBeforeCaret == root.value);
+        root.redo();
+        assert(root.value == "  Hello,\n  World!");
+        assert(root.valueBeforeCaret == root.value);
+        root.redo();
+        assert(root.value == "  Hello,\n  World!");
+
+    }
+
+    unittest {
+
+        // Same test as above, but insert a space instead of line break
+
+        auto io = new HeadlessBackend;
+        auto root = codeInput(.useSpaces(2));
+        root.io = io;
+
+        io.clipboard = "World";
+        root.push("  Hello,");
+        root.push(" ");
+        root.paste();
+        root.push("!");
+        assert(root.value == "  Hello, World!");
+
+        // Undo the exclamation mark
+        root.undo();
+        assert(root.value == "  Hello, World");
+
+        // Next undo moves before pasting, just like above
+        root.undo();
+        assert(root.value == "  Hello, ");
+        assert(root.valueBeforeCaret == root.value);
+
+        root.undo();
+        assert(root.value == "");
+
+        // No change
+        root.undo();
+        assert(root.value == "");
+
+        root.redo();
+        assert(root.value == "  Hello, ");
+        assert(root.valueBeforeCaret == root.value);
 
     }
 
@@ -1888,6 +2049,8 @@ unittest {
 
     };
 
+    // Every new line indents. If "end" is found in the text, every new line *outdents*, effectively making the text
+    // flat.
     auto io = new HeadlessBackend;
     auto root = codeInput();
     root.io = io;
@@ -1928,6 +2091,26 @@ unittest {
     io.nextFrame;
     root.draw();
     assert(root.value == "    begin end ");
+
+    io.nextFrame;
+    root.value = "Hello\n    bar";
+    root.clearHistory();
+    root.caretIndex = 5;
+    root.runInputAction!(FluidInputAction.breakLine);
+    assert(root.value == "Hello\n    \n    bar");
+
+    root.runInputAction!(FluidInputAction.undo);
+    assert(root.value == "Hello\n    bar");
+
+    root.indent();
+    assert(root.value == "    Hello\n    bar");
+
+    root.caretIndex = 9;
+    root.runInputAction!(FluidInputAction.breakLine);
+    assert(root.value == "    Hello\n        \n    bar");
+
+    root.runInputAction!(FluidInputAction.undo);
+    assert(root.value == "    Hello\n    bar");
 
 }
 
