@@ -1185,6 +1185,20 @@ class TextInput : InputNode!Node, FluidScrollable {
         root.push(bufferFiller);
         assert(root.value.byNode.equal(["H", "enl", bufferFiller, "o"]));
 
+        // Undo all pushes until the initial fill
+        root.undo();
+        assert(root.value == "Ho");
+        assert(root.valueBeforeCaret == "H");
+
+        // Undo will not clear the initial value
+        root.undo();
+        assert(root.value == "Ho");
+        assert(root.valueBeforeCaret == "H");
+
+        // The above undo does not add a new redo stack entry; effectively, this redo cancels both undo actions above
+        root.redo();
+        assert(root.value.byNode.equal(["H", "enl", bufferFiller, "o"]));
+
     }
 
     unittest {
@@ -1213,7 +1227,7 @@ class TextInput : InputNode!Node, FluidScrollable {
             assert(root.value == "¡Hola, mundo!");
         }
 
-        // Input stuff
+        // The text will be displayed the next frame
         {
             io.nextFrame;
             root.draw();
@@ -1379,6 +1393,11 @@ class TextInput : InputNode!Node, FluidScrollable {
         root.push("hello");
         root.runInputAction!(FluidInputAction.breakLine);
 
+        assert(root.value == "hello\n");
+
+        root.undo();
+        assert(root.value == "");
+        root.redo();
         assert(root.value == "hello\n");
 
     }
@@ -3625,6 +3644,60 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         // Clear the redo stack
         _redoStack.clear();
+
+    }
+
+    unittest {
+
+        auto root = textInput(.multiline);
+        root.push("Hello, ");
+        root.runInputAction!(FluidInputAction.breakLine);
+        root.push("new");
+        root.runInputAction!(FluidInputAction.breakLine);
+        root.push("line");
+        root.chop;
+        root.chopWord;
+        root.push("few");
+        root.push(" lines");
+        assert(root.value == "Hello, \nnew\nfew lines");
+
+        // Move back to last chop
+        root.undo();
+        assert(root.value == "Hello, \nnew\n");
+
+        // Test redo
+        root.redo();
+        assert(root.value == "Hello, \nnew\nfew lines");
+        root.undo();
+        assert(root.value == "Hello, \nnew\n");
+
+        // Move back to last insert
+        root.undo();
+        assert(root.value == "Hello, \nnew\nline");
+
+        root.undo();
+        assert(root.value == "");
+        root.redo();
+        assert(root.value == "Hello, \nnew\nline");
+        root.redo();
+        assert(root.value == "Hello, \nnew\n");
+        root.redo();
+        assert(root.value == "Hello, \nnew\nfew lines");
+
+        // Navigate and replace "Hello"
+        root.caretIndex = 5;
+        root.runInputAction!(FluidInputAction.selectPreviousWord);
+        root.push("Hi");
+        assert(root.value == "Hi, \nnew\nfew lines");
+        assert(root.valueBeforeCaret == "Hi");
+
+        root.undo();
+        assert(root.value == "Hello, \nnew\nfew lines");
+        assert(root.selectedValue == "Hello");
+
+        root.undo();
+        assert(root.value == "Hello, \nnew\n");
+        assert(root.valueAfterCaret == "");
 
     }
 
