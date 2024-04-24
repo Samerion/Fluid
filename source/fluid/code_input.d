@@ -1097,11 +1097,14 @@ class CodeInput : TextInput {
         if (super.onBreakLine()) {
 
             // Copy indent from the previous line
+            // Enable continuous input to merge the indent with the line break in the history
+            _isContinuous = true;
             push(indentRope(currentIndent));
             reparse();
 
             // Ask the autoindentor to complete the job
             reformatLine();
+            _isContinuous = false;
 
             return true;
 
@@ -1111,7 +1114,6 @@ class CodeInput : TextInput {
 
     }
 
-    /// CodeInput implements autoindenting.
     unittest {
 
         auto root = codeInput();
@@ -1137,12 +1139,14 @@ class CodeInput : TextInput {
 
         root.undo();
         assert(root.value == "abcdef\n    \n        \n");
-
         root.undo();
         assert(root.value == "abcdef\n    \n        \n        ");
-
         root.undo();
-        assert(root.value == "");
+        assert(root.value == "abcdef\n    \n        ");
+        root.undo();
+        assert(root.value == "abcdef\n    \n    ");
+        root.undo();
+        assert(root.value == "abcdef\n    ");
 
     }
 
@@ -1595,15 +1599,24 @@ class CodeInput : TextInput {
         root.push("  Hello,");
         root.runInputAction!(FluidInputAction.breakLine);
         root.paste();
+        assert(!root._isContinuous);
         root.push("!");
         assert(root.value == "  Hello,\n  World!");
+
+        // Undo the exclamation mark
+        root.undo();
+        assert(root.value == "  Hello,\n  World");
 
         // Undo moves before pasting
         root.undo();
         assert(root.value == "  Hello,\n  ");
         assert(root.valueBeforeCaret == root.value);
 
-        // Next undo moves to start
+        // Next undo moves before line break
+        root.undo();
+        assert(root.value == "  Hello,");
+
+        // Next undo clears all changes
         root.undo();
         assert(root.value == "");
 
@@ -1613,8 +1626,19 @@ class CodeInput : TextInput {
 
         // It can all be redone
         root.redo();
+        assert(root.value == "  Hello,");
+        assert(root.valueBeforeCaret == root.value);
+        root.redo();
         assert(root.value == "  Hello,\n  ");
         assert(root.valueBeforeCaret == root.value);
+        root.redo();
+        assert(root.value == "  Hello,\n  World");
+        assert(root.valueBeforeCaret == root.value);
+        root.redo();
+        assert(root.value == "  Hello,\n  World!");
+        assert(root.valueBeforeCaret == root.value);
+        root.redo();
+        assert(root.value == "  Hello,\n  World!");
 
     }
 
@@ -1633,7 +1657,11 @@ class CodeInput : TextInput {
         root.push("!");
         assert(root.value == "  Hello, World!");
 
-        // Undo moves before pasting, just like above
+        // Undo the exclamation mark
+        root.undo();
+        assert(root.value == "  Hello, World");
+
+        // Next undo moves before pasting, just like above
         root.undo();
         assert(root.value == "  Hello, ");
         assert(root.valueBeforeCaret == root.value);
@@ -2021,6 +2049,8 @@ unittest {
 
     };
 
+    // Every new line indents. If "end" is found in the text, every new line *outdents*, effectively making the text
+    // flat.
     auto io = new HeadlessBackend;
     auto root = codeInput();
     root.io = io;
@@ -2061,6 +2091,26 @@ unittest {
     io.nextFrame;
     root.draw();
     assert(root.value == "    begin end ");
+
+    io.nextFrame;
+    root.value = "Hello\n    bar";
+    root.clearHistory();
+    root.caretIndex = 5;
+    root.runInputAction!(FluidInputAction.breakLine);
+    assert(root.value == "Hello\n    \n    bar");
+
+    root.runInputAction!(FluidInputAction.undo);
+    assert(root.value == "Hello\n    bar");
+
+    root.indent();
+    assert(root.value == "    Hello\n    bar");
+
+    root.caretIndex = 9;
+    root.runInputAction!(FluidInputAction.breakLine);
+    assert(root.value == "    Hello\n        \n    bar");
+
+    root.runInputAction!(FluidInputAction.undo);
+    assert(root.value == "    Hello\n    bar");
 
 }
 
