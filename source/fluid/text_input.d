@@ -3569,6 +3569,17 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
+    /// Clear the undo/redo action history.
+    ///
+    /// Calling this will erase both the undo and redo stack, making it impossible to restore any changes made in prior,
+    /// through means such as Ctrl+Z and Ctrl+Y.
+    void clearHistory() {
+
+        _undoStack.clear();
+        _redoStack.clear();
+
+    }
+
     /// Push the given state snapshot (value, caret & selection) into the undo stack. Refuses to push if the current
     /// state can be merged with it, unless `forcePushSnapshot` is used.
     void pushSnapshot(HistoryEntry entry) {
