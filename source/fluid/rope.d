@@ -1195,6 +1195,13 @@ struct Rope {
 
         alias asArray this;
 
+        /// Returns true if the two compared ropes are identical.
+        bool isSame() const {
+
+            return first.empty && second.empty;
+
+        }
+
         inout(Rope)[2] asArray() inout {
 
             return [first, second];

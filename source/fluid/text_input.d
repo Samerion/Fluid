@@ -93,6 +93,10 @@ class TextInput : InputNode!Node, FluidScrollable {
             size_t selectionStart;
             size_t selectionEnd;
 
+            /// If true, the entry results from an action that was executed immediately after the last action, without
+            /// changing caret position in the meantime.
+            bool isContinuous;
+
             /// Change made by this entry.
             ///
             /// `first` and `second` should represent the old and new value respectively; `second` is effectively a
@@ -110,18 +114,16 @@ class TextInput : InputNode!Node, FluidScrollable {
             bool isSubtractive;
 
             /// Set `isAdditive` and `isSubtractive` based on the given text representing the last input.
-            void setPreviousEntry(Rope previousValue) {
+            void setPreviousEntry(HistoryEntry entry) {
 
-                const diff = previousValue.diff(value);
-
-                setPreviousEntry(diff);
+                setPreviousEntry(entry.value);
 
             }
 
             /// ditto
-            void setPreviousEntry(Rope.DiffRegion diff) {
+            void setPreviousEntry(Rope previousValue) {
 
-                this.diff = diff;
+                this.diff = previousValue.diff(value);
                 this.isAdditive = diff.second.length != 0;
                 this.isSubtractive = diff.first.length != 0;
 
@@ -133,32 +135,34 @@ class TextInput : InputNode!Node, FluidScrollable {
             ///
             /// Two entries can be combined if they are:
             ///
-            /// 1. Both additive, and the latter is not subtractive. Newly inserted text must immediately follow what
-            ///    was inserted last. This combines runs input, including if the first item in the run replaces some
-            ///    text. However, replacing text will break an existing chain of actions.
-            /// 2. Both subtractive, and neither is additive. Removed text must immediately precede last removed
-            ///    fragment.
+            /// 1. Both additive, and the latter is not subtractive. This combines runs input, including if the first
+            ///    item in the run replaces some text. However, replacing text will break an existing chain of actions.
+            /// 2. Both subtractive, and neither is additive.
             ///
             /// See_Also: `isAdditive`
             bool canMergeWith(Rope nextValue) const {
 
                 // Create a dummy entry based on the text
                 auto nextEntry = HistoryEntry(nextValue, 0, 0);
-                auto nextDiff = value.diff(nextValue);
-                nextEntry.setPreviousEntry(nextDiff);
+                nextEntry.setPreviousEntry(value);
+
+                return canMergeWith(nextEntry);
+
+            }
+
+            /// ditto
+            bool canMergeWith(HistoryEntry nextEntry) const {
 
                 const mergeAdditive = this.isAdditive
                     && nextEntry.isAdditive
-                    && !nextEntry.isSubtractive
-                    && diff.start + diff.second.length == nextDiff.start;
+                    && !nextEntry.isSubtractive;
 
                 if (mergeAdditive) return true;
 
                 const mergeSubtractive = !this.isAdditive
                     && this.isSubtractive
                     && !nextEntry.isAdditive
-                    && nextEntry.isSubtractive
-                    && diff.start == nextDiff.start + nextDiff.first.length;
+                    && nextEntry.isSubtractive;
 
                 return mergeSubtractive;
 
@@ -171,6 +175,9 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         /// Last padding box assigned to this node, with scroll applied.
         Rectangle _inner = Rectangle(0, 0, 0, 0);
+
+        /// If true, the caret index has not changed since last `pushSnapshot`.
+        bool _isContinuous;
 
         /// Current action history, expressed as two stacks, indicating undoable and redoable actions, controllable via
         /// `snapshot`, `pushSnapshot`, `undo` and `redo`.
@@ -560,6 +567,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         touch();
         _bufferNode = null;
+        _isContinuous = false;
         return _caretIndex = index;
 
     }
@@ -1369,7 +1377,9 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         if (!multiline) return false;
 
+        auto snap = snapshot();
         push('\n');
+        forcePushSnapshot(snap);
 
         return true;
 
@@ -1392,11 +1402,19 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         root.push("hello");
         root.runInputAction!(FluidInputAction.breakLine);
-
         assert(root.value == "hello\n");
 
         root.undo();
+        assert(root.value == "hello");
+        root.redo();
+        assert(root.value == "hello\n");
+
+        root.undo();
+        assert(root.value == "hello");
+        root.undo();
         assert(root.value == "");
+        root.redo();
+        assert(root.value == "hello");
         root.redo();
         assert(root.value == "hello\n");
 
@@ -1417,6 +1435,34 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         assert(root.value == "Привет, мир!\nЭто пример текста для тестирования поддержки Unicode во Fluid.\n");
         assert(root.caretIndex == root.value.length);
+
+    }
+
+    unittest {
+
+        auto root = textInput(.multiline);
+        root.push("first line");
+        root.onBreakLine();
+        root.push("second line");
+        root.onBreakLine();
+        assert(root.value == "first line\nsecond line\n");
+
+        root.undo();
+        assert(root.value == "first line\nsecond line");
+        root.undo();
+        assert(root.value == "first line\n");
+        root.undo();
+        assert(root.value == "first line");
+        root.undo();
+        assert(root.value == "");
+        root.redo();
+        assert(root.value == "first line");
+        root.redo();
+        assert(root.value == "first line\n");
+        root.redo();
+        assert(root.value == "first line\nsecond line");
+        root.redo();
+        assert(root.value == "first line\nsecond line\n");
 
     }
 
@@ -3578,7 +3624,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         auto snap = snapshot();
         push(io.clipboard);
-        pushSnapshot(snap);
+        forcePushSnapshot(snap);
 
     }
 
@@ -3620,13 +3666,23 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     /// Push the given state snapshot (value, caret & selection) into the undo stack. Refuses to push if the current
     /// state can be merged with it, unless `forcePushSnapshot` is used.
+    ///
+    /// A snapshot pushed through `forcePushSnapshot` will break continuity — it will not be merged with any other
+    /// snapshot.
     void pushSnapshot(HistoryEntry entry) {
 
-        // Current state is compatible, ignore
-        if (entry.canMergeWith(value)) return;
+        // Compare against current state, so it can be dismissed if it's too similar
+        auto currentState = snapshot();
+        currentState.setPreviousEntry(entry);
 
-        // No change was made
-        if (entry.value is this.value) return;
+        // Mark as continuous, so runs of similar characters can be merged together
+        scope (success) _isContinuous = true;
+
+        // No change was made, ignore
+        if (currentState.diff.isSame()) return;
+
+        // Current state is compatible, ignore
+        if (entry.isContinuous && entry.canMergeWith(currentState)) return;
 
         // Push state
         forcePushSnapshot(entry);
@@ -3636,8 +3692,11 @@ class TextInput : InputNode!Node, FluidScrollable {
     /// ditto
     void forcePushSnapshot(HistoryEntry entry) {
 
+        // Break continuity
+        _isContinuous = false;
+
         // Ignore if the last entry is identical
-        if (!_undoStack.empty && _undoStack.back is entry) return;
+        if (!_undoStack.empty && _undoStack.back == entry) return;
 
         // Truncate the history to match the index, insert the current value.
         _undoStack.insertBack(entry);
@@ -3671,12 +3730,27 @@ class TextInput : InputNode!Node, FluidScrollable {
         root.undo();
         assert(root.value == "Hello, \nnew\n");
 
-        // Move back to last insert
+        // Move back through isnerts
         root.undo();
         assert(root.value == "Hello, \nnew\nline");
-
+        root.undo();
+        assert(root.value == "Hello, \nnew\n");
+        root.undo();
+        assert(root.value == "Hello, \nnew");
+        root.undo();
+        assert(root.value == "Hello, \n");
+        root.undo();
+        assert(root.value == "Hello, ");
         root.undo();
         assert(root.value == "");
+        root.redo();
+        assert(root.value == "Hello, ");
+        root.redo();
+        assert(root.value == "Hello, \n");
+        root.redo();
+        assert(root.value == "Hello, \nnew");
+        root.redo();
+        assert(root.value == "Hello, \nnew\n");
         root.redo();
         assert(root.value == "Hello, \nnew\nline");
         root.redo();
@@ -3701,10 +3775,35 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
+    unittest {
+
+        auto root = textInput();
+
+        foreach (i; 0..4) {
+            root.caretToStart();
+            root.push("a");
+        }
+
+        assert(root.value == "aaaa");
+        assert(root.valueBeforeCaret == "a");
+        root.undo();
+        assert(root.value == "aaa");
+        assert(root.valueBeforeCaret == "");
+        root.undo();
+        assert(root.value == "aa");
+        assert(root.valueBeforeCaret == "");
+        root.undo();
+        assert(root.value == "a");
+        assert(root.valueBeforeCaret == "");
+        root.undo();
+        assert(root.value == "");
+
+    }
+
     /// Produce a snapshot for the current state. Returns the snapshot.
     protected HistoryEntry snapshot() const {
 
-        auto entry = HistoryEntry(value, selectionStart, selectionEnd);
+        auto entry = HistoryEntry(value, selectionStart, selectionEnd, _isContinuous);
 
         // Get previous entry in the history
         if (!_undoStack.empty)
