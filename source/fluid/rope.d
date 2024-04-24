@@ -1195,6 +1195,13 @@ struct Rope {
 
         alias asArray this;
 
+        /// Returns true if the two compared ropes are identical.
+        bool isSame() const {
+
+            return first.empty && second.empty;
+
+        }
+
         inout(Rope)[2] asArray() inout {
 
             return [first, second];
@@ -1220,7 +1227,7 @@ struct Rope {
 
                 auto result = right.diff(other.right);
 
-                return DiffRegion(left.length + left.start, result.first, result.second);
+                return DiffRegion(left.length + result.start, result.first, result.second);
 
             }
 
@@ -1335,6 +1342,48 @@ struct Rope {
                 Rope(` = Rope();auto rope2 = Rope("Hello, Fluid!");auto diff = rope`),
                 Rope(`1 = Rope();auto rope2 = Rope("Hello, Fluid!");auto diff = rope1`))
         );
+
+    }
+
+    unittest {
+
+        auto core = Rope("foobar");
+        auto rope1 = core[0..5];
+        auto rope2 = rope1.replace(0, 5, core);
+
+        assert(rope1 == "fooba");
+        assert(rope2 == "foobar");
+        assert(rope1.diff(rope2) == DiffRegion(5, Rope(""), Rope("r")));
+
+    }
+
+    unittest {
+
+        auto core = Rope("foobar");
+        auto rope1 = Rope(core[0..5], Rope(";"));
+        auto rope2 = rope1.replace(0, 5, core);
+
+        assert(rope1 == "fooba;");
+        assert(rope2 == "foobar;");
+        assert(rope1.diff(rope2) == DiffRegion(5, Rope(""), Rope("r")));
+
+    }
+
+    unittest {
+
+        auto core = Rope("foobar");
+        auto rope1 = Rope(
+            Rope("return "),
+            Rope(
+                core[0..5],
+                Rope(`("Hello, World!");`)
+            ),
+        );
+        auto rope2 = rope1.replace(7, 7+5, core);
+
+        assert(rope1 == `return fooba("Hello, World!");`);
+        assert(rope2 == `return foobar("Hello, World!");`);
+        assert(rope1.diff(rope2) == DiffRegion(12, Rope(""), Rope("r")));
 
     }
 
