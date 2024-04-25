@@ -50,21 +50,7 @@
 		"resources"
 	],
 	"subPackages": [
-		{
-			"dependencies": {
-				"libdparse": "~>0.23.2",
-				"fluid": { "path": "." }
-			},
-			"name": "tour",
-			"libs": [
-				"raylib"
-			],
-			"sourcePaths": [
-				"tour"
-			],
-			"targetPath": "build",
-			"targetType": "executable"
-		},
+		"./tour",
 		{
 			"dependencies": {
 				"libdparse": "~>0.23.2",
@@ -75,12 +61,13 @@
 				"raylib"
 			],
 			"preBuildCommands": [
-				"echo Warning: fluid:showcase is deprecated in favor of fluid:tour"
+				"echo Deprecated: fluid:showcase has been renamed to fluid:tour"
 			],
 			"sourcePaths": [
 				"tour"
 			],
 			"targetPath": "build",
+			"targetName": "fluid-tour",
 			"targetType": "executable"
 		},
 		{

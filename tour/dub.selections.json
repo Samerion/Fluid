@@ -1,0 +1,9 @@
+{
+	"fileVersion": 1,
+	"versions": {
+		"bindbc-freetype": "1.1.1",
+		"bindbc-loader": "1.1.5",
+		"libdparse": "0.23.2",
+		"raylib-d": "5.0.1"
+	}
+}
