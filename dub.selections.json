@@ -8,7 +8,6 @@
 		"elemi": "1.2.2",
 		"fluent-asserts": "0.13.3",
 		"libdparse": "0.23.2",
-		"raylib-d": "5.0.1",
 		"stdx-allocator": "2.77.5"
 	}
 }
