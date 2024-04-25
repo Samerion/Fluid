@@ -16,6 +16,7 @@ import lib_tree_sitter;
 
 import std.format;
 import std.string;
+import std.range;
 import std.algorithm;
 
 import fluid.node;
@@ -91,27 +92,6 @@ static this() @system {
         (
             (comment)+ @comment
         )
-        ;;[
-        ;;    (module_declaration)
-        ;;    (import_declaration)
-        ;;    (mixin_declaration)
-        ;;    (variable_declaration)
-        ;;    (auto_declaration)
-        ;;    (alias_declaration)
-        ;;    (attribute_declaration)
-        ;;    (pragma_declaration)
-        ;;    (struct_declaration)
-        ;;    (union_declaration)
-        ;;    (invariant_declaration)
-        ;;    (class_declaration)
-        ;;    (interface_declaration)
-        ;;    (enum_declaration)
-        ;;    (anonymous_enum_declaration)
-        ;;    (function_declaration)
-        ;;    (template_declaration)
-        ;;    (mixin_template_declaration)
-        ;;    (unittest_declaration)
-        ;;] @declaration
     };
 
     documentationQuery = ts_query_new(language, query.ptr, cast(uint) query.length, &errorOffset, &error);
@@ -153,13 +133,31 @@ template moduleView(alias mod) {
         // Perform a query to find possibly relevant comments
         ts_query_cursor_exec(cursor, documentationQuery, root);
         TSQueryMatch match;
-        while (ts_query_cursor_next_match(cursor, &match)) {
+        captures: while (ts_query_cursor_next_match(cursor, &match)) {
 
             auto captures = match.captures[0 .. match.capture_count];
+            auto node = captures[$-1].node;
 
             // Load the comment
-            result ~= readDocs(source, captures)
+            auto docs = readDocs(source, captures)
                 .interpretDocs;
+
+            // Find the symbol the comment is attached to
+            while (true) {
+
+                node = ts_node_next_named_sibling(node);
+                if (ts_node_is_null(node)) break;
+
+                // Once found, annotate and append to result
+                if (auto annotated = source.annotate(docs, node)) {
+                    result ~= annotated;
+                    continue captures;
+                }
+
+            }
+
+            // Nothing relevant found, paste the documentation as-is
+            result ~= docs;
 
         }
 
@@ -207,6 +205,7 @@ private Rope readDocs(string source, TSQueryCapture[] captures) @trusted {
 
 private Space interpretDocs(Rope rope) {
 
+    import std.conv : to;
     import fluid.typeface : Typeface;
 
     const space = Rope(" ");
@@ -223,7 +222,10 @@ private Space interpretDocs(Rope rope) {
     // TODO DDoc
     CodeInput lastCode;
     auto lastParagraph = label("");
-    auto result = vspace(lastParagraph);
+    auto result = vspace(
+        .layout!"fill",
+        lastParagraph
+    );
 
     string preformattedDelimiter;
 
@@ -246,7 +248,7 @@ private Space interpretDocs(Rope rope) {
             // TODO common space (prefix)
             else if (line == "---") {
                 preformattedDelimiter = "---";
-                result ~= lastCode = dlangInput();
+                result ~= lastCode = dlangInput().disable();
             }
 
             // Append text to previous line
@@ -263,7 +265,7 @@ private Space interpretDocs(Rope rope) {
             if (line.strip == preformattedDelimiter) {
                 preformattedDelimiter = null;
                 result ~= lastParagraph = label("");
-                // TODO outdent the code
+                lastCode.value = lastCode.value.to!string.outdent;
             }
 
             /// Append text to previous line
@@ -288,5 +290,74 @@ private CodeInput dlangInput() @trusted {
         .layout!"fill",
         highlighter,
     );
+
+}
+
+/// Returns:
+///     Space to represent the node in the output, or `null` if the given TSNode doesn't correspond to any known valid
+///     symbol.
+private Space annotate(string source, Space documentation, TSNode node) @trusted {
+
+    const typeC = ts_node_type(node);
+    const type = typeC[0 .. strlen(typeC)];
+
+    const start = ts_node_start_byte(node);
+    const end = ts_node_end_byte(node);
+    const symbolSource = source[start .. end];
+
+    switch (type) {
+
+        // unittest
+        case "unittest_declaration":
+
+            // Enter the code block
+            auto input = dlangInput().disable();
+            input.value = symbolSource.find("{").dropOne
+                .retro.find("}").dropOne
+                .retro
+                .outdent
+                .strip;
+
+            // Append code editor to the result
+            documentation.children ~= input;
+            return documentation;
+
+        // Declarations that aren't implemented
+        case "module_declaration":
+        case "import_declaration":
+        case "mixin_declaration":
+        case "variable_declaration":
+        case "auto_declaration":
+        case "alias_declaration":
+        case "attribute_declaration":
+        case "pragma_declaration":
+        case "struct_declaration":
+        case "union_declaration":
+        case "invariant_declaration":
+        case "class_declaration":
+        case "interface_declaration":
+        case "enum_declaration":
+        case "anonymous_enum_declaration":
+        case "function_declaration":
+        case "template_declaration":
+        case "mixin_template_declaration":
+            return documentation;
+
+        // Unknown declaration, skip
+        default:
+            return null;
+
+    }
+
+}
+
+/// Outdent a rope.
+///
+/// A saner wrapper over `std.string.outdent` that actually does what it should do.
+private string outdent(string rope) {
+
+    import std.string : outdent;
+
+    return rope.splitLines.outdent.join("\n");
 
 }

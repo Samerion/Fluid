@@ -68,6 +68,10 @@ static this() {
             padding.sideX = 12,
             padding.sideY = 16,
 
+            when!"a.isDisabled"(
+                backgroundColor = color!"#dedede",
+            ),
+
             // TODO These colors are "borrowed" from Tree-sitter CLI, how about making our own?
             when!`a.token.startsWith("keyword")`    (textColor = color("#5f00d7")),
             when!`a.token.startsWith("attribute")`  (textColor = color("#af0000")),
