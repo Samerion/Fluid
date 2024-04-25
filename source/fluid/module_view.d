@@ -310,16 +310,22 @@ private Space annotate(string source, Space documentation, TSNode node) @trusted
         // unittest
         case "unittest_declaration":
 
-            // Enter the code block
-            auto input = dlangInput().disable();
-            input.value = symbolSource.find("{").dropOne
-                .retro.find("}").dropOne
-                .retro
+            // Create the code block
+            auto input = dlangInput();
+
+            // Find the surrounding context
+            const prefixLength = symbolSource.countUntil("{") + 1;
+            const suffixLength = symbolSource.retro.countUntil("}") + 1;
+
+            // Write the values
+            input.prefix = source[0 .. prefixLength + start];
+            input.suffix = source[end - suffixLength .. $];
+            input.value = symbolSource[prefixLength .. $ - suffixLength]
                 .outdent
                 .strip;
 
             // Append code editor to the result
-            documentation.children ~= input;
+            documentation.children ~= input.disable();
             return documentation;
 
         // Declarations that aren't implemented

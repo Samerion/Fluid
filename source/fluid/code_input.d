@@ -74,6 +74,13 @@ class CodeInput : TextInput {
         CodeHighlighter highlighter;
         CodeIndentor indentor;
 
+        /// Additional context to pass to the highlighter. Will not be displayed, but can be used to improve syntax
+        /// highlighting and code analysis.
+        Rope prefix;
+
+        /// ditto
+        Rope suffix;
+
         /// Character width of a single indent level.
         int indentWidth = 4;
         invariant(indentWidth <= maxIndentWidth);
@@ -223,20 +230,23 @@ class CodeInput : TextInput {
 
     protected void reparse() {
 
+        // TODO This will allocate. Can it be avoided?
+        const fullValue = prefix ~ value ~ suffix;
+
         // Parse the file
         if (highlighter) {
 
-            highlighter.parse(value);
+            highlighter.parse(fullValue);
 
             // Apply highlighting to the label
-            contentLabel.text.styleMap = highlighter.save;
+            contentLabel.text.styleMap = highlighter.save(cast(int) prefix.length);
 
         }
 
         // Pass the file to the indentor
         if (indentor && cast(Object) indentor !is cast(Object) highlighter) {
 
-            indentor.parse(value);
+            indentor.parse(fullValue);
 
         }
 
@@ -541,7 +551,7 @@ class CodeInput : TextInput {
 
             const indentEnd = lineHomeByIndex(i);
 
-            return max(0, previousLineIndent + indentor.indentDifference(indentEnd));
+            return max(0, previousLineIndent + indentor.indentDifference(indentEnd + prefix.length));
 
         }
 
@@ -1810,13 +1820,16 @@ interface CodeHighlighter {
     out (r; r.end != byteIndex, "query() must not return empty ranges");
 
     /// Produce a TextStyleSlice range using the result.
+    /// Params:
+    ///     offset = Number of bytes to skip. Apply the offset to all resulting items.
     /// Returns: `CodeHighlighterRange` suitable for use as a `Text` style map.
-    final save() {
+    final save(int offset = 0) {
 
         static struct HighlighterRange {
 
             CodeHighlighter highlighter;
             TextStyleSlice front;
+            int offset;
 
             bool empty() const {
 
@@ -1827,7 +1840,7 @@ interface CodeHighlighter {
             // Continue where the last token ended
             void popFront() {
 
-                do front = highlighter.query(front.end);
+                do front = highlighter.query(front.end + offset).offset(-offset);
 
                 // Pop again if got a null token
                 while (front.styleIndex == 0 && front !is front.init);
@@ -1842,7 +1855,7 @@ interface CodeHighlighter {
 
         }
 
-        return HighlighterRange(this, query(0));
+        return HighlighterRange(this, query(offset).offset(-offset), offset);
 
     }
 
