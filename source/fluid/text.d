@@ -414,6 +414,13 @@ struct TextStyleSlice {
 
     }
 
+    /// Apply some offset to the slice.
+    TextStyleSlice offset(int offset) const {
+
+        return TextStyleSlice(start + offset, end + offset, styleIndex);
+
+    }
+
 }
 
 unittest {
