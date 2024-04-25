@@ -1,16 +1,21 @@
 {
 	"dependencies": {
-		"libdparse": "~>0.23.2",
-		"fluid": { "path": ".." }
+		"fluid": {
+			"path": ".."
+		},
+		"fluid:module_view": {
+			"path": ".."
+		},
+		"libdparse": "~>0.23.2"
 	},
-	"name": "tour",
 	"libs": [
 		"raylib"
 	],
+	"name": "tour",
 	"sourcePaths": [
 		"."
 	],
-	"targetPath": "../build",
 	"targetName": "fluid-tour",
+	"targetPath": "../build",
 	"targetType": "executable"
 }

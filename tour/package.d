@@ -137,6 +137,7 @@ enum Chapter {
     @"Themes" themes,
     @"Margin, padding and border" margins,
     @"Writing forms" forms,
+    @"moduleView" module_view,
     // @"Popups" popups,
     // @"Drag and drop" drag_and_drop,
 };
@@ -464,6 +465,18 @@ Space render(Chapter chapter)() @trusted {
     // Get the module filename
     const sourceDirectory = thisExePath.dirName.buildPath("../tour");
     const filename = buildPath(sourceDirectory, name ~ ".d");
+
+    // Use moduleView for rendering its module
+    if (chapter == Chapter.module_view) {
+
+        import fluid.module_view;
+
+        return moduleView!mod.fromFile(
+            .layout!"fill",
+            filename,
+        );
+
+    }
 
     // Load the file
     auto sourceCode = readText(filename);
