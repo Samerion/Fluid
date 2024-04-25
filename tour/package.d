@@ -495,7 +495,7 @@ Space render(Chapter chapter)() @trusted {
 
         import fluid.module_view;
 
-        return moduleView!mod.fromFile(
+        return moduleViewFile(
             .layout!"fill",
             filename,
         );

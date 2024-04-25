@@ -110,69 +110,174 @@ static ~this() @system {
 }
 
 /// Create an overview display of the given module.
-template moduleView(alias mod) {
+Frame moduleViewSource(Params...)(Params params, string source) @trusted {
 
-    /// Load the module source from source code.
-    Frame fromSource(Params...)(Params params, string source) @trusted {
+    auto language = treeSitterLanguage!"d";
+    auto parser = ts_parser_new();
+    scope (exit) ts_parser_delete(parser);
 
-        auto language = treeSitterLanguage!"d";
-        auto parser = ts_parser_new();
-        scope (exit) ts_parser_delete(parser);
+    ts_parser_set_language(parser, language);
 
-        ts_parser_set_language(parser, language);
+    // Parse the source
+    auto tree = ts_parser_parse_string(parser, null, source.ptr, cast(uint) source.length);
+    scope (exit) ts_tree_delete(tree);
+    auto root = ts_tree_root_node(tree);
+    auto cursor = ts_query_cursor_new();
+    scope (exit) ts_query_cursor_delete(cursor);
 
-        // Parse the source
-        auto tree = ts_parser_parse_string(parser, null, source.ptr, cast(uint) source.length);
-        scope (exit) ts_tree_delete(tree);
-        auto root = ts_tree_root_node(tree);
-        auto cursor = ts_query_cursor_new();
-        scope (exit) ts_query_cursor_delete(cursor);
+    auto result = vframe(params);
 
-        auto result = vframe(params);
+    // Perform a query to find possibly relevant comments
+    ts_query_cursor_exec(cursor, documentationQuery, root);
+    TSQueryMatch match;
+    captures: while (ts_query_cursor_next_match(cursor, &match)) {
 
-        // Perform a query to find possibly relevant comments
-        ts_query_cursor_exec(cursor, documentationQuery, root);
-        TSQueryMatch match;
-        captures: while (ts_query_cursor_next_match(cursor, &match)) {
+        auto captures = match.captures[0 .. match.capture_count];
+        auto node = captures[$-1].node;
 
-            auto captures = match.captures[0 .. match.capture_count];
-            auto node = captures[$-1].node;
+        // Load the comment
+        auto docs = readDocs(source, captures)
+            .interpretDocs;
 
-            // Load the comment
-            auto docs = readDocs(source, captures)
-                .interpretDocs;
+        // Find the symbol the comment is attached to
+        while (true) {
 
-            // Find the symbol the comment is attached to
-            while (true) {
+            node = ts_node_next_named_sibling(node);
+            if (ts_node_is_null(node)) break;
 
-                node = ts_node_next_named_sibling(node);
-                if (ts_node_is_null(node)) break;
-
-                // Once found, annotate and append to result
-                if (auto annotated = source.annotate(docs, node)) {
-                    result ~= annotated;
-                    continue captures;
-                }
-
+            // Once found, annotate and append to result
+            if (auto annotated = annotate(source, docs, node)) {
+                result ~= annotated;
+                continue captures;
             }
-
-            // Nothing relevant found, paste the documentation as-is
-            result ~= docs;
 
         }
 
-        return result;
+        // Nothing relevant found, paste the documentation as-is
+        result ~= docs;
 
     }
 
-    /// Load the module source from a file.
-    Frame fromFile(Params...)(Params params, string filename) {
+    return result;
 
-        import std.file : readText;
+}
 
-        return fromSource(params, filename.readText);
+/// Load the module source from a file.
+Frame moduleViewFile(Params...)(Params params, string filename) {
+
+    import std.file : readText;
+
+    return moduleViewSource(params, filename.readText);
+
+}
+
+/// Returns:
+///     Space to represent the node in the output, or `null` if the given TSNode doesn't correspond to any known valid
+///     symbol.
+private Space annotate(string source, Space documentation, TSNode node) @trusted {
+
+    const typeC = ts_node_type(node);
+    const type = typeC[0 .. strlen(typeC)];
+
+    const start = ts_node_start_byte(node);
+    const end = ts_node_end_byte(node);
+    const symbolSource = source[start .. end];
+
+    switch (type) {
+
+        // unittest
+        case "unittest_declaration":
+
+            // Create the code block
+            auto input = dlangInput();
+
+            // Find the surrounding context
+            const exampleStart = start + symbolSource.countUntil("{") + 1;
+            const exampleEnd = end - symbolSource.retro.countUntil("}") - 1;
+
+            // Append code editor to the result
+            documentation.children ~= exampleView(source, [exampleStart, exampleEnd]);
+            return documentation;
+
+        // Declarations that aren't implemented
+        case "module_declaration":
+        case "import_declaration":
+        case "mixin_declaration":
+        case "variable_declaration":
+        case "auto_declaration":
+        case "alias_declaration":
+        case "attribute_declaration":
+        case "pragma_declaration":
+        case "struct_declaration":
+        case "union_declaration":
+        case "invariant_declaration":
+        case "class_declaration":
+        case "interface_declaration":
+        case "enum_declaration":
+        case "anonymous_enum_declaration":
+        case "function_declaration":
+        case "template_declaration":
+        case "mixin_template_declaration":
+            return documentation;
+
+        // Unknown declaration, skip
+        default:
+            return null;
 
     }
+
+}
+
+/// Produce an example.
+Frame exampleView(CodeInput input) {
+
+    input.disable();
+
+    // TODO Run the delegate on a separate thread to prevent locking up.
+    return hframe(
+        .layout!"fill",
+        vspace(
+            .layout!(1, "fill"),
+            input,
+        ),
+        vspace(
+            .layout!(1, "fill"),
+            // TODO stdin/stdout
+            //      Probably no way to do without running a compiler and explicitly starting a new process.
+        ).hide(),
+    );
+
+}
+
+/// ditto
+Frame exampleView(string source, size_t[2] slice) {
+
+    const start = slice[0];
+    const end = slice[1];
+
+    auto input = dlangInput();
+
+    input.prefix = source[0 .. start];
+    input.suffix = source[end .. $];
+    input.value = source[start .. end]
+        .outdent
+        .strip;
+
+    return exampleView(input);
+
+}
+
+/// Creates a `CodeInput` with D syntax highlighting.
+CodeInput dlangInput(void delegate() @safe submitted = null) @trusted {
+
+    auto language = treeSitterLanguage!"d";
+    auto highlighter = new TreeSitterHighlighter(language, dlangQuery);
+
+    return codeInput(
+        .layout!"fill",
+        highlighter,
+        submitted
+    );
 
 }
 
@@ -278,82 +383,6 @@ private Space interpretDocs(Rope rope) {
     }
 
     return result;
-
-}
-
-private CodeInput dlangInput() @trusted {
-
-    auto language = treeSitterLanguage!"d";
-    auto highlighter = new TreeSitterHighlighter(language, dlangQuery);
-
-    return codeInput(
-        .layout!"fill",
-        highlighter,
-    );
-
-}
-
-/// Returns:
-///     Space to represent the node in the output, or `null` if the given TSNode doesn't correspond to any known valid
-///     symbol.
-private Space annotate(string source, Space documentation, TSNode node) @trusted {
-
-    const typeC = ts_node_type(node);
-    const type = typeC[0 .. strlen(typeC)];
-
-    const start = ts_node_start_byte(node);
-    const end = ts_node_end_byte(node);
-    const symbolSource = source[start .. end];
-
-    switch (type) {
-
-        // unittest
-        case "unittest_declaration":
-
-            // Create the code block
-            auto input = dlangInput();
-
-            // Find the surrounding context
-            const prefixLength = symbolSource.countUntil("{") + 1;
-            const suffixLength = symbolSource.retro.countUntil("}") + 1;
-
-            // Write the values
-            input.prefix = source[0 .. prefixLength + start];
-            input.suffix = source[end - suffixLength .. $];
-            input.value = symbolSource[prefixLength .. $ - suffixLength]
-                .outdent
-                .strip;
-
-            // Append code editor to the result
-            documentation.children ~= input.disable();
-            return documentation;
-
-        // Declarations that aren't implemented
-        case "module_declaration":
-        case "import_declaration":
-        case "mixin_declaration":
-        case "variable_declaration":
-        case "auto_declaration":
-        case "alias_declaration":
-        case "attribute_declaration":
-        case "pragma_declaration":
-        case "struct_declaration":
-        case "union_declaration":
-        case "invariant_declaration":
-        case "class_declaration":
-        case "interface_declaration":
-        case "enum_declaration":
-        case "anonymous_enum_declaration":
-        case "function_declaration":
-        case "template_declaration":
-        case "mixin_template_declaration":
-            return documentation;
-
-        // Unknown declaration, skip
-        default:
-            return null;
-
-    }
 
 }
 
