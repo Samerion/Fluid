@@ -6,6 +6,7 @@ module fluid.module_view;
 
 version (Fluid_ModuleView):
 version (Have_fluid_tree_sitter):
+version (Have_fluid_tree_sitter_d):
 
 debug (Fluid_BuildMessages) {
     pragma(msg, "Fluid: Using moduleView");
@@ -22,6 +23,8 @@ import fluid.rope;
 import fluid.label;
 import fluid.space;
 import fluid.frame;
+import fluid.structs;
+import fluid.code_input;
 import fluid.tree_sitter;
 
 
@@ -74,6 +77,7 @@ ref RunCallback mockRun() {
 private {
 
     TSQuery* documentationQuery;
+    TSQuery* dlangQuery;
 
 }
 
@@ -113,11 +117,15 @@ static this() @system {
     documentationQuery = ts_query_new(language, query.ptr, cast(uint) query.length, &errorOffset, &error);
     assert(documentationQuery, format!"%s at offset %s"(error, errorOffset));
 
+    dlangQuery = ts_query_new(language, dQuerySource.ptr, cast(uint) dQuerySource.length, &errorOffset, &error);
+    assert(dlangQuery, format!"%s at offset %s"(error, errorOffset));
+
 }
 
 static ~this() @system {
 
     ts_query_delete(documentationQuery);
+    ts_query_delete(dlangQuery);
 
 }
 
@@ -202,6 +210,7 @@ private Space interpretDocs(Rope rope) {
     import fluid.typeface : Typeface;
 
     const space = Rope(" ");
+    const lineFeed = Rope("\n");
 
     rope = rope.strip;
 
@@ -212,31 +221,54 @@ private Space interpretDocs(Rope rope) {
     if (rope == "ditto") return vspace();
 
     // TODO DDoc
-    auto lastLine = label("");
-    auto result = vspace(lastLine);
+    CodeInput lastCode;
+    auto lastParagraph = label("");
+    auto result = vspace(lastParagraph);
 
-    bool preformatted;
+    string preformattedDelimiter;
 
     // Read line by line
     foreach (line; Typeface.lineSplitter(rope)) {
 
-        line = line.strip();
+        // Regular documentation line
+        if (preformattedDelimiter.empty) {
 
-        if (preformatted) {
-
-        }
-
-        else {
+            line = line.strip();
 
             // Start a new paragraph if the line is blank
             if (line.empty) {
-                if (!lastLine.text.empty)
-                    result ~= lastLine = label("");
+                if (!lastParagraph.text.empty)
+                    result ~= lastParagraph = label("");
+            }
+
+            // Preformatted line
+            // TODO other delimiters
+            // TODO common space (prefix)
+            else if (line == "---") {
+                preformattedDelimiter = "---";
+                result ~= lastCode = dlangInput();
             }
 
             // Append text to previous line
             else {
-                lastLine.text ~= Rope(Rope(line), space);
+                lastParagraph.text ~= Rope(line, space);
+            }
+
+        }
+
+        // Preformatted fragments/code
+        else {
+
+            // Reached the other delimiter, turn preformatted lines off
+            if (line.strip == preformattedDelimiter) {
+                preformattedDelimiter = null;
+                result ~= lastParagraph = label("");
+                // TODO outdent the code
+            }
+
+            /// Append text to previous line
+            else {
+                lastCode.push(Rope(line, lineFeed));
             }
 
         }
@@ -244,5 +276,17 @@ private Space interpretDocs(Rope rope) {
     }
 
     return result;
+
+}
+
+private CodeInput dlangInput() @trusted {
+
+    auto language = treeSitterLanguage!"d";
+    auto highlighter = new TreeSitterHighlighter(language, dlangQuery);
+
+    return codeInput(
+        .layout!"fill",
+        highlighter,
+    );
 
 }

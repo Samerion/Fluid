@@ -41,6 +41,8 @@ static this() {
     enum warningColor = color!"#ffe186";
     enum warningAccentColor = color!"#ffc30f";
 
+    auto monospace = Style.loadTypeface(thisExePath.dirName.buildPath("../tour/ibm-plex-mono.ttf"), 11);
+
     mainTheme = Theme(
         rule!Frame(
             margin.sideX = 12,
@@ -57,6 +59,30 @@ static this() {
         rule!Grid(margin.sideY = 0),
         rule!GridRow(margin = 0),
         rule!ScrollFrame(margin = 0),
+
+        /// Code input
+        rule!CodeInput(
+            margin = 0,
+            typeface = monospace,
+            backgroundColor = color!"#dedede",
+            padding.sideX = 12,
+            padding.sideY = 16,
+
+            // TODO These colors are "borrowed" from Tree-sitter CLI, how about making our own?
+            when!`a.token.startsWith("keyword")`    (textColor = color("#5f00d7")),
+            when!`a.token.startsWith("attribute")`  (textColor = color("#af0000")),
+            when!`a.token.startsWith("property")`   (textColor = color("#af0000")),
+            when!`a.token.startsWith("punctuation")`(textColor = color("#4e4e4e")),
+            when!`a.token.startsWith("type")`       (textColor = color("#005f5f")),
+            when!`a.token.startsWith("operator")`   (textColor = color("#50228a")),
+            when!`a.token.startsWith("comment")`    (textColor = color("#8a8a8a")),
+            when!`a.token.startsWith("number")`     (textColor = color("#875f00")),
+            when!`a.token.startsWith("string")`     (textColor = color("#008700")),
+            when!`a.token.startsWith("constant")`   (textColor = color("#875f00")),
+            when!`a.token.startsWith("variable")`   (textColor = color("#875f00")),
+            when!`a.token.startsWith("function")`   (textColor = color("#005fd7")),
+            when!`a.token.startsWith("module")`     (textColor = color("#af8700")),
+        ),
 
         // Heading
         rule!(Label, Tags.heading)(
@@ -99,16 +125,10 @@ static this() {
     codeTheme = mainTheme.derive(
 
         rule!Node(
-            typeface = Style.loadTypeface(thisExePath.dirName.buildPath("../tour/ibm-plex-mono.ttf"), 11),
+            typeface = monospace,
         ),
         rule!Frame(
             padding = 0,
-        ),
-        rule!CodeInput(
-            margin = 0,
-            backgroundColor = color!"#dedede",
-            padding.sideX = 12,
-            padding.sideY = 16,
         ),
         rule!Label(
             margin = 0,
