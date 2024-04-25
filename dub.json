@@ -86,8 +86,8 @@
 			"targetType": "library",
 			"targetPath": "build",
 			"dependencies": {
-				"fluid-tree-sitter": "~>0.1.3",
-				"fluid-tree-sitter:d": "~>0.1.3"
+				"fluid-tree-sitter": "~>0.1.4",
+				"fluid-tree-sitter:d": "~>0.1.4"
 			}
 		}
 	],
