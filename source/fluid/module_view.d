@@ -14,9 +14,9 @@ debug (Fluid_BuildMessages) {
 
 import lib_tree_sitter;
 
+import std.range;
 import std.format;
 import std.string;
-import std.range;
 import std.algorithm;
 
 import fluid.node;
@@ -31,15 +31,6 @@ import fluid.tree_sitter;
 
 @safe:
 
-
-/// Temporary...
-unittest {
-
-    run(
-        label("Hello, World!"),
-    );
-
-}
 
 /// Temporary...
 void run(Node node) {
@@ -106,6 +97,162 @@ static ~this() @system {
 
     ts_query_delete(documentationQuery);
     ts_query_delete(dlangQuery);
+
+}
+
+/// Provides information about the companion D compiler to use for evaluating examples.
+struct DlangCompiler {
+
+    import std.conv;
+    import std.regex;
+    import std.process;
+
+    enum Type {
+        dmd,
+        ldc,
+    }
+
+    /// Type (vendor) of the compiler. Either DMD or LDC.
+    Type type;
+
+    /// Executable name or path to the compiler executable. If null, no compiler is available.
+    string executable;
+
+    /// DMD frontend version of the compiler. Major version is assumed to be 2.
+    int frontendMinor;
+
+    /// ditto
+    int frontendPatch;
+
+    /// ditto
+    enum frontendMajor = 2;
+
+    /// Returns true if this entry points to a valid compiler.
+    bool opCast(T : bool)() const {
+
+        return executable !is null
+            && frontendMinor != 0;
+
+    }
+
+    /// Find any suitable in the system.
+    static DlangCompiler findCompiler() {
+
+        return either(
+            findDMD,
+            findLDC,
+        );
+
+    }
+
+    /// Find DMD in the system.
+    static DlangCompiler findDMD() {
+
+        // According to run.dlang.io, this pattern has been used since at least 2.068.2
+        auto pattern = regex(r"D Compiler v2.(\d+).(\d+)");
+        auto explicitDMD = std.process.environment.get("DMD");
+        auto candidates = explicitDMD.empty
+            ? ["dmd"]
+            : [explicitDMD];
+
+        // Test the executables
+        foreach (name; candidates) {
+
+            auto process = execute([name, "--version"]);
+
+            // Found a compatible compiler
+            if (auto match = process.output.matchFirst(pattern)) {
+
+                return DlangCompiler(Type.dmd, name, match[1].to!int, match[2].to!int);
+
+            }
+
+        }
+
+        return DlangCompiler.init;
+
+    }
+
+    /// Find LDC in the system.
+    static DlangCompiler findLDC() {
+
+        // This pattern appears to be stable as, according to the blame, hasn't changed in at least 5 years
+        auto pattern = regex(r"based on DMD v2\.(\d+)\.(\d+)");
+        auto explicitLDC = std.process.environment.get("LDC");
+        auto candidates = explicitLDC.empty
+            ? ["ldc2", "ldc"]
+            : [explicitLDC];
+
+        // Test the executables
+        foreach (name; candidates) {
+
+            auto process = execute([name, "--version"]);
+
+            // Found a compatible compiler
+            if (auto match = process.output.matchFirst(pattern)) {
+
+                return DlangCompiler(Type.ldc, name, match[1].to!int, match[2].to!int);
+
+            }
+
+        }
+
+        return DlangCompiler.init;
+
+    }
+
+    unittest {
+
+        import std.stdio;
+
+        auto dmd = findDMD();
+        auto ldc = findLDC();
+
+        // Output search results
+        // Correctness of these tests has to be verified by the CI runner script or the programmer
+        if (dmd) {
+            writefln!"Found DMD (%s) 2.%s.%s"(dmd.executable, dmd.frontendMinor, dmd.frontendPatch);
+            assert(dmd.type == Type.dmd);
+        }
+        else
+            writefln!"DMD wasn't found";
+
+        if (ldc) {
+            writefln!"Found LDC (%s) compatible with DMD 2.%s.%s"(ldc.executable, ldc.frontendMinor, ldc.frontendPatch);
+            assert(ldc.type == Type.ldc);
+        }
+        else
+            writefln!"LDC wasn't found";
+
+        // Leading zeros have to be ignored
+        assert("068".to!int == 68);
+
+        // Compare results of the compiler-agnostic and compiler-specific functions
+        if (auto compiler = findCompiler()) {
+
+            final switch (compiler.type) {
+
+                case Type.dmd:
+                    assert(dmd);
+                    break;
+
+                case Type.ldc:
+                    assert(ldc);
+                    break;
+
+            }
+
+        }
+
+        // No compiler found
+        else {
+
+            assert(!dmd);
+            assert(!ldc);
+
+        }
+
+    }
 
 }
 
