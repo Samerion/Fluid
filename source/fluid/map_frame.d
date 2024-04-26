@@ -138,6 +138,7 @@ class MapFrame : Frame {
 
     /// Add a new child to the space and assign it some position.
     void addChild(Node node, Position position)
+    in (node, format!"Given node must not be null")
     in ([position.coords.tupleof].any!isFinite, format!"Given %s isn't valid, values must be finite"(position))
     do {
 
@@ -155,7 +156,9 @@ class MapFrame : Frame {
     }
 
     /// ditto
-    void addFocusedChild(Node node, Position position) {
+    void addFocusedChild(Node node, Position position)
+    in (node, format!"Given node must not be null")
+    do {
 
         addChild(node, position);
         node.focusRecurse();
@@ -163,6 +166,7 @@ class MapFrame : Frame {
     }
 
     void moveChild(Node node, Position position)
+    in (node, format!"Given node must not be null")
     in ([position.coords.tupleof].any!isFinite, format!"Given %s isn't valid, values must be finite"(position))
     do {
 
@@ -171,6 +175,7 @@ class MapFrame : Frame {
     }
 
     void moveChild(Node node, Vector2 vector)
+    in (node, format!"Given node must not be null")
     in ([vector.tupleof].any!isFinite, format!"Given %s isn't valid, values must be finite"(vector))
     do {
 
@@ -178,7 +183,9 @@ class MapFrame : Frame {
 
     }
 
-    void moveChild(Node node, DropVector vector) {
+    void moveChild(Node node, DropVector vector)
+    in (node, format!"Given node must not be null")
+    do {
 
         positions[node].drop = vector;
 

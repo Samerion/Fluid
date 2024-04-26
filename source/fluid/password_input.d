@@ -60,7 +60,7 @@ class PasswordInput : TextInput {
     /// explicitly overwriting their contents.
     ///
     /// Do note that shredding is never performed automatically — this function has to be called explicitly.
-    /// Furthermore, text provided through different means than explicit input or `push(char[])` will not be cleared.
+    /// Furthermore, text provided through different means than explicit input or `push(Rope)` will not be cleared.
     ///
     /// [1]: https://en.wikipedia.org/wiki/Memory_safety
     void shred() {
@@ -76,6 +76,9 @@ class PasswordInput : TextInput {
         // Clear the input and buffer history
         clear();
         _bufferHistory = [buffer];
+
+        // Clear undo stack
+        clearHistory();
 
     }
 
@@ -114,6 +117,34 @@ class PasswordInput : TextInput {
         assert(root.value == "");
         assert(value2 == "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF");
         assert(value3 == value2);
+
+    }
+
+    unittest {
+
+        auto root = passwordInput();
+        root.push("Hello, x");
+        root.chop();
+        root.push("World!");
+
+        assert(root.value == "Hello, World!");
+
+        root.undo();
+
+        assert(root.value == "Hello, ");
+
+        root.shred();
+
+        assert(root.value == "");
+
+        root.undo();
+
+        assert(root.value == "");
+
+        root.redo();
+        root.redo();
+
+        assert(root.value == "");
 
     }
 

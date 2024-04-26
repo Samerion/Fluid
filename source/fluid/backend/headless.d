@@ -26,6 +26,8 @@ else
 
 class HeadlessBackend : FluidBackend {
 
+    enum defaultWindowSize = Vector2(800, 600);
+
     enum State {
 
         up,
@@ -200,7 +202,7 @@ class HeadlessBackend : FluidBackend {
 
     }
 
-    this(Vector2 windowSize = Vector2(800, 600)) {
+    this(Vector2 windowSize = defaultWindowSize) {
 
         this._windowSize = windowSize;
 

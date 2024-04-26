@@ -1,7 +1,7 @@
-module fluid.showcase.forms;
+module fluid.tour.forms;
 
 import fluid;
-import fluid.showcase;
+import fluid.tour;
 
 
 @safe:

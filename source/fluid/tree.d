@@ -591,12 +591,13 @@ struct LayoutTree {
                     InputLayer(
                         InputStroke(KeyboardKey.leftShift, KeyboardKey.leftSuper),
                         [
-                            // Note: Command should *expand selection* on macOS instead of current
+                            // TODO Command should *expand selection* on macOS instead of current
                             // toLineStart/toLineEnd behavior
                             bind!selectToLineStart(KeyboardKey.left),
                             bind!selectToLineEnd(KeyboardKey.right),
                             bind!selectToStart(KeyboardKey.up),
                             bind!selectToEnd(KeyboardKey.down),
+                            bind!redo(KeyboardKey.z),
                         ]
                     ),
 
@@ -621,6 +622,8 @@ struct LayoutTree {
                             bind!copy(KeyboardKey.c),
                             bind!cut(KeyboardKey.x),
                             bind!paste(KeyboardKey.v),
+                            bind!undo(KeyboardKey.z),
+                            bind!redo(KeyboardKey.y),
                             bind!submit(KeyboardKey.enter),
                         ]
                     ),
@@ -661,6 +664,7 @@ struct LayoutTree {
                             bind!selectNextWord(KeyboardKey.right),
                             bind!selectToStart(KeyboardKey.home),
                             bind!selectToEnd(KeyboardKey.end),
+                            bind!redo(KeyboardKey.z),
                         ]
                     ),
 
@@ -680,6 +684,8 @@ struct LayoutTree {
                             bind!copy(KeyboardKey.c),
                             bind!cut(KeyboardKey.x),
                             bind!paste(KeyboardKey.v),
+                            bind!undo(KeyboardKey.z),
+                            bind!redo(KeyboardKey.y),
                             bind!toStart(KeyboardKey.home),
                             bind!toEnd(KeyboardKey.end),
 
