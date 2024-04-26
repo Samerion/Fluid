@@ -16,7 +16,7 @@ import fluid.backend;
 import fluid.backend : MouseButton, KeyboardKey, GamepadButton;
 
 public import raylib : Vector2, Rectangle, Color;
-
+public static import raylib;
 
 @safe:
 
@@ -178,7 +178,7 @@ class Raylib5Backend : FluidBackend {
 
     Vector2 mousePosition() const @trusted {
 
-        return toFluidCoords(GetMousePosition);
+        return fromRaylibCoords(GetMousePosition);
 
     }
 
@@ -230,7 +230,7 @@ class Raylib5Backend : FluidBackend {
 
     Vector2 windowSize() const @trusted {
 
-        return toFluidCoords(GetScreenWidth, GetScreenHeight);
+        return fromRaylibCoords(GetScreenWidth, GetScreenHeight);
 
     }
 
@@ -285,7 +285,7 @@ class Raylib5Backend : FluidBackend {
 
     }
 
-    Vector2 toFluidCoords(Vector2 position) const @trusted {
+    Vector2 fromRaylibCoords(Vector2 position) const @trusted {
 
         version (Fluid_DisableScaling)
             return position;
@@ -294,7 +294,7 @@ class Raylib5Backend : FluidBackend {
 
     }
 
-    Vector2 toFluidCoords(float x, float y) const @trusted {
+    Vector2 fromRaylibCoords(float x, float y) const @trusted {
 
         version (Fluid_DisableScaling)
             return Vector2(x, y);
@@ -303,7 +303,7 @@ class Raylib5Backend : FluidBackend {
 
     }
 
-    Rectangle toFluidCoords(Rectangle rec) const @trusted {
+    Rectangle fromRaylibCoords(Rectangle rec) const @trusted {
 
         version (Fluid_DisableScaling)
             return rec;
@@ -398,14 +398,14 @@ class Raylib5Backend : FluidBackend {
 
     }
 
-    private fluid.backend.Texture fromRaylib(raylib.Texture texture, fluid.backend.Image.Format format) {
+    protected fluid.backend.Texture fromRaylib(raylib.Texture rayTexture, fluid.backend.Image.Format format) @system {
 
         fluid.backend.Texture result;
-        result.id = texture.id;
+        result.id = rayTexture.id;
         result.format = format;
         result.tombstone = reaper.makeTombstone(this, result.id);
-        result.width = texture.width;
-        result.height = texture.height;
+        result.width = rayTexture.width;
+        result.height = rayTexture.height;
         return result;
 
     }
@@ -696,4 +696,15 @@ raylib.Texture toRaylib(fluid.backend.Texture texture) @trusted {
 
     return result;
 
+}
+
+/// Convert a Raylib texture to a Fluid texture
+fluid.backend.Texture toFluid(raylib.Texture rayTexture) @system {
+    fluid.backend.Texture result;
+    result.id = rayTexture.id;
+    result.format = fluid.backend.Image.Format.rgba;
+    result.width = rayTexture.width;
+    result.height = rayTexture.height;
+
+    return result;
 }
