@@ -14,10 +14,7 @@ alias imageView = simpleConstructor!ImageView;
 ///
 /// The image will automatically scale to fit available space. It will keep aspect ratio by default and will be
 /// displayed in the middle of the available box.
-alias ImageView = SpecialImageView!Texture;
-
-// A node that can display images from any format with a `.draw` function.
-class SpecialImageView(ImageType) : Node {
+class ImageView : Node {
 
     public {
 
@@ -30,7 +27,7 @@ class SpecialImageView(ImageType) : Node {
     protected {
 
         /// Texture for this node.
-        ImageType _texture;
+        Texture _texture;
 
         /// If set, path in the filesystem the texture is to be loaded from.
         string _texturePath;
@@ -75,7 +72,7 @@ class SpecialImageView(ImageType) : Node {
     @property {
 
         /// Set the texture.
-        ImageType texture(ImageType texture) {
+        Texture texture(Texture texture) {
 
             clear();
             _isOwner = false;
