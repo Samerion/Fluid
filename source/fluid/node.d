@@ -1298,7 +1298,7 @@ abstract class Node {
 }
 
 ///
-export void run(Node node) {
+void run(Node node) {
 
     pragma(msg, run.mangleof);
 
@@ -1309,9 +1309,8 @@ export void run(Node node) {
 
     }
 
-    // TODO check which backend the node uses
-    // TODO move this function elsewhere
-    assert(false, "Default backend does not expose an event loop interface.");
+    // TODO Create the event loop interface
+    else assert(false, "Default backend does not expose an event loop interface.");
 
 }
 

@@ -1,5 +1,7 @@
 /// `moduleView` is a work-in-progress component used to display an overview of a module.
 ///
+/// Warning: This module is unstable. Significant changes may be made without prior warning.
+///
 /// This module is not enabled, unless additonal dependencies, `fluid-tree-sitter` and `fluid-tree-sitter:d` are also
 /// compiled in.
 module fluid.module_view;
@@ -22,6 +24,7 @@ import std.string;
 import std.algorithm;
 
 import fluid.node;
+import fluid.slot;
 import fluid.rope;
 import fluid.label;
 import fluid.space;
@@ -265,7 +268,9 @@ struct DlangCompiler {
     }
 
     /// Compile a shared library from given source file.
-    void compileSharedLibrary(string source) const
+    ///
+    /// TODO make this async
+    auto compileSharedLibrary(string source, out string outputPath) const
     in (this)
     do {
 
@@ -282,41 +287,16 @@ struct DlangCompiler {
         // Write the source
         fs.write(path, source);
 
-        // TODO use the correct extension
-        const outputPath = path.setExtension(".so");
+        // Find the correct extension for the system
+        version (Windows)
+            outputPath = path.setExtension(".dll");
+        else version (OSX)
+            outputPath = path.setExtension(".dylib");
+        else
+            outputPath = path.setExtension(".so");
 
-        import std.stdio;
-        debug writefln!"compiling: %s %s %s -of=%s %(%s %)"
-            (executable, sharedLibraryFlag, path, outputPath, importPathsFlag);
-
-        debug writefln!"test: %s"(environment.get("DUB"));
-
-        // Compile the program (TODO: async)
-        auto run = execute([executable, sharedLibraryFlag, unittestFlag, path, "-of=" ~ outputPath] ~ importPathsFlag);
-
-        debug writefln!"%s"(run.output);
-
-        debug {
-
-            // Load the resulting library
-            // TODO unload library when recompiling the same example
-            auto library = bindbc.load(outputPath.ptr);
-            //scope (exit) bindbc.unload(library);
-            scope (failure) {
-                foreach (error; bindbc.errors)
-                    printf("%s %s", error.error, error.message);
-            }
-
-            assert(library != bindbc.invalidHandle, format!"%s"(bindbc.errors));
-
-            void function() entrypoint;
-            bindbc.bindSymbol(library, cast(void**) &entrypoint, "fluid_moduleView_entrypoint");
-
-            assert(entrypoint, format!"%s"(bindbc.errors));
-
-            entrypoint();
-
-        }
+        // Compile the program
+        return execute([executable, sharedLibraryFlag, unittestFlag, path, "-of=" ~ outputPath] ~ importPathsFlag);
 
     }
 
@@ -462,24 +442,81 @@ private struct ModuleView {
 /// Produce an example.
 Frame exampleView(DlangCompiler compiler, CodeInput input) {
 
+    auto stdoutLabel = label(.layout!"fill", "");
+    auto resultCanvas = nodeSlot!Frame(.layout!"fill");
+
+    bindbc.SharedLib library;
+
+    /// Compile the program
+    void compileAndRun() {
+
+        string outputPath;
+
+        // Unload the previous library
+        if (library != bindbc.invalidHandle) () @trusted {
+
+            bindbc.unload(library);
+
+        }();
+
+        auto result = compiler.compileSharedLibrary(input.sourceValue.to!string, outputPath);
+
+        // Compiled successfully
+        if (result.status == 0) {
+
+            // Prepare the output
+            resultCanvas.value = vframe(.layout!(1, "fill"));
+            resultCanvas.show();
+            stdoutLabel.hide();
+
+            // Run the snippet and output the results
+            mockRun((node) {
+                resultCanvas.value ~= node;
+            });
+            scope (exit) mockRun(null);
+
+            library = runSharedLibrary(outputPath);
+            resultCanvas.updateSize();
+
+        }
+
+        // Write compiler output
+        else {
+
+            stdoutLabel.show();
+            stdoutLabel.text = result.output;
+            resultCanvas.hide();
+
+        }
+
+    }
+
+    // Compile and run the program; do the same when submitted
+    if (compiler) {
+
+        compileAndRun();
+        input.submitted = &compileAndRun;
+
+        // TODO Run the delegate on a separate thread to prevent locking up.
+        return hframe(
+            .layout!"fill",
+            vspace(
+                .layout!(1, "fill"),
+                input,
+            ),
+            vspace(
+                .layout!(1, "fill"),
+                resultCanvas,
+                stdoutLabel,
+            ),
+        );
+
+    }
+
     // Disable edits if there's no compiler available
-    if (!compiler) input.disable();
-
-    // Compile the program
-    compiler.compileSharedLibrary(input.sourceValue.to!string);
-
-    // TODO Run the delegate on a separate thread to prevent locking up.
-    return hframe(
+    else return hframe(
         .layout!"fill",
-        vspace(
-            .layout!(1, "fill"),
-            input,
-        ),
-        vspace(
-            .layout!(1, "fill"),
-            // TODO stdin/stdout
-            //      Probably no way to do without running a compiler and explicitly starting a new process.
-        ).hide(),
+        input.disable(),
     );
 
 }
@@ -487,14 +524,7 @@ Frame exampleView(DlangCompiler compiler, CodeInput input) {
 /// ditto
 Frame exampleView(DlangCompiler compiler, Rope prefix, string value, Rope suffix) {
 
-    CodeInput input;
-
-    input = dlangInput(delegate {
-
-        compiler.compileSharedLibrary(input.sourceValue.to!string);
-
-    });
-
+    auto input = dlangInput();
     input.prefix = prefix ~ "\n";
     input.suffix = "\n" ~ suffix;
     input.value = value
@@ -502,6 +532,30 @@ Frame exampleView(DlangCompiler compiler, Rope prefix, string value, Rope suffix
         .strip;
 
     return exampleView(compiler, input);
+
+}
+
+/// Run a Fluid snippet from a shared library.
+private bindbc.SharedLib runSharedLibrary(string path) @trusted {
+
+    // Load the resulting library
+    auto library = bindbc.load(path.toStringz);
+
+    // Failed to load
+    if (library == bindbc.invalidHandle) {
+
+        foreach (error; bindbc.errors)
+            printf("%s %s", error.error, error.message);
+
+        return library;
+
+    }
+
+    void function() entrypoint;
+    bindbc.bindSymbol(library, cast(void**) &entrypoint, "fluid_moduleView_entrypoint");
+    entrypoint();
+
+    return library;
 
 }
 

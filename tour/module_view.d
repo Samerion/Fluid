@@ -25,9 +25,6 @@ import fluid;
 /// To present, here's a unittest that outputs a node:
 unittest {
 
-    import std.stdio;
-    writeln("Hello, World!");
-
     run(
         label("Hello, World!")
     );
