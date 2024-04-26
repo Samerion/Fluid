@@ -24,7 +24,9 @@ import fluid.backend;
 /// is overflow.
 enum MapDropDirection {
 
-    start, center, end, automatic
+    start, center, end, automatic,
+
+    centre = center,
 
 }
 
@@ -142,6 +144,14 @@ class MapFrame : Frame {
 
         children ~= node;
         positions[node] = position;
+        updateSize();
+    }
+
+    void addChild(Node node, Vector2 vector)
+    in ([vector.tupleof].any!isFinite, format!"Given %s isn't valid, values must be finite"(vector))
+    do {
+        children ~= node;
+        positions[node] = MapPosition(vector);
         updateSize();
     }
 
