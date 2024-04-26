@@ -178,7 +178,7 @@ class Raylib5Backend : FluidBackend {
 
     Vector2 mousePosition() const @trusted {
 
-        return toFluidCoords(GetMousePosition);
+        return fromRaylibCoords(GetMousePosition);
 
     }
 
@@ -230,7 +230,7 @@ class Raylib5Backend : FluidBackend {
 
     Vector2 windowSize() const @trusted {
 
-        return toFluidCoords(GetScreenWidth, GetScreenHeight);
+        return fromRaylibCoords(GetScreenWidth, GetScreenHeight);
 
     }
 
@@ -285,7 +285,7 @@ class Raylib5Backend : FluidBackend {
 
     }
 
-    Vector2 toFluidCoords(Vector2 position) const @trusted {
+    Vector2 fromRaylibCoords(Vector2 position) const @trusted {
 
         version (Fluid_DisableScaling)
             return position;
@@ -294,7 +294,7 @@ class Raylib5Backend : FluidBackend {
 
     }
 
-    Vector2 toFluidCoords(float x, float y) const @trusted {
+    Vector2 fromRaylibCoords(float x, float y) const @trusted {
 
         version (Fluid_DisableScaling)
             return Vector2(x, y);
@@ -303,7 +303,7 @@ class Raylib5Backend : FluidBackend {
 
     }
 
-    Rectangle toFluidCoords(Rectangle rec) const @trusted {
+    Rectangle fromRaylibCoords(Rectangle rec) const @trusted {
 
         version (Fluid_DisableScaling)
             return rec;
@@ -378,7 +378,7 @@ class Raylib5Backend : FluidBackend {
 
     fluid.backend.Texture loadTexture(fluid.backend.Image image) @system {
 
-        return toFluid(LoadTextureFromImage(image.toRaylib), image.format);
+        return fromRaylib(LoadTextureFromImage(image.toRaylib), image.format);
 
     }
 
@@ -386,7 +386,7 @@ class Raylib5Backend : FluidBackend {
 
         import std.string;
 
-        return toFluid(LoadTexture(filename.toStringz), fluid.backend.Image.Format.rgba);
+        return fromRaylib(LoadTexture(filename.toStringz), fluid.backend.Image.Format.rgba);
 
     }
 
@@ -398,7 +398,7 @@ class Raylib5Backend : FluidBackend {
 
     }
 
-    public fluid.backend.Texture toFluid(raylib.Texture rayTexture, fluid.backend.Image.Format format) @system {
+    protected fluid.backend.Texture fromRaylib(raylib.Texture rayTexture, fluid.backend.Image.Format format) @system {
 
         fluid.backend.Texture result;
         result.id = rayTexture.id;
@@ -698,11 +698,13 @@ raylib.Texture toRaylib(fluid.backend.Texture texture) @trusted {
 
 }
 
+/// Convert a Raylib texture to a Fluid texture
 fluid.backend.Texture toFluid(raylib.Texture rayTexture) @system {
     fluid.backend.Texture result;
     result.id = rayTexture.id;
     result.format = fluid.backend.Image.Format.rgba;
     result.width = rayTexture.width;
     result.height = rayTexture.height;
+
     return result;
 }

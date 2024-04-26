@@ -150,7 +150,7 @@ class MapFrame : Frame {
     in ([vector.tupleof].any!isFinite, format!"Given %s isn't valid, values must be finite"(vector))
     do {
         children ~= node;
-        positions[node].coords = vector;
+        positions[node] = MapPosition(vector);
         updateSize();
     }
 
