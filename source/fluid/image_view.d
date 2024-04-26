@@ -17,7 +17,7 @@ alias imageView = simpleConstructor!ImageView;
 alias ImageView = SpecialImageView!Texture;
 
 // A node that can display images from any format with a `.draw` function.
-class SpecialImageView(TextureType) : Node {
+class SpecialImageView(ImageType) : Node {
 
     public {
 
@@ -30,7 +30,7 @@ class SpecialImageView(TextureType) : Node {
     protected {
 
         /// Texture for this node.
-        TextureType _texture;
+        ImageType _texture;
 
         /// If set, path in the filesystem the texture is to be loaded from.
         string _texturePath;
@@ -75,7 +75,7 @@ class SpecialImageView(TextureType) : Node {
     @property {
 
         /// Set the texture.
-        TextureType texture(TextureType texture) {
+        ImageType texture(ImageType texture) {
 
             clear();
             _isOwner = false;
@@ -142,12 +142,6 @@ class SpecialImageView(TextureType) : Node {
                 InitWindow;
                 raylib.Texture rayTexture = LoadTexture("logo.png");
                 fluid.Texture texture = rayTexture.toFluid;
-                
-                /*root = imageView(.nullTheme, texture);
-
-                Image image = LoadImage("logo.png").toFluid;
-                
-                root = imageView(.nullTheme, image);*/
 
                 io.assertTexture(root.texture, Vector2(0, 0), color!"fff");
                 CloseWindow;
