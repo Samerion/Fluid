@@ -13,6 +13,7 @@ debug (Fluid_BuildMessages) {
 }
 
 import lib_tree_sitter;
+import bindbc = bindbc.loader;
 
 import std.conv;
 import std.range;
@@ -32,40 +33,6 @@ import fluid.tree_sitter;
 
 @safe:
 
-
-/// Temporary...
-void run(Node node) {
-
-    // Mock run callback is available
-    if (mockRun) {
-
-        mockRun()(node);
-
-    }
-
-    // TODO check which backend the node uses
-    // TODO move this function elsewhere
-    assert(false, "Default backend does not expose an event loop interface.");
-
-}
-
-alias RunCallback = void delegate(Node node) @safe;
-
-/// Set a new function to use instead of `run`.
-RunCallback mockRun(RunCallback callback) {
-
-    // Assign the callback
-    mockRun() = callback;
-    return mockRun();
-
-}
-
-ref RunCallback mockRun() {
-
-    static RunCallback callback;
-    return callback;
-
-}
 
 private {
 
@@ -285,6 +252,18 @@ struct DlangCompiler {
 
     }
 
+    /// Get the flag to include unittests.
+    string unittestFlag() const {
+
+        final switch (type) {
+
+            case Type.dmd: return "-unittest";
+            case Type.ldc: return "--unittest";
+
+        }
+
+    }
+
     /// Compile a shared library from given source file.
     void compileSharedLibrary(string source) const
     in (this)
@@ -310,10 +289,34 @@ struct DlangCompiler {
         debug writefln!"compiling: %s %s %s -of=%s %(%s %)"
             (executable, sharedLibraryFlag, path, outputPath, importPathsFlag);
 
+        debug writefln!"test: %s"(environment.get("DUB"));
+
         // Compile the program (TODO: async)
-        auto run = execute([executable, sharedLibraryFlag, path, "-of=" ~ outputPath] ~ importPathsFlag);
+        auto run = execute([executable, sharedLibraryFlag, unittestFlag, path, "-of=" ~ outputPath] ~ importPathsFlag);
 
         debug writefln!"%s"(run.output);
+
+        debug {
+
+            // Load the resulting library
+            // TODO unload library when recompiling the same example
+            auto library = bindbc.load(outputPath.ptr);
+            //scope (exit) bindbc.unload(library);
+            scope (failure) {
+                foreach (error; bindbc.errors)
+                    printf("%s %s", error.error, error.message);
+            }
+
+            assert(library != bindbc.invalidHandle, format!"%s"(bindbc.errors));
+
+            void function() entrypoint;
+            bindbc.bindSymbol(library, cast(void**) &entrypoint, "fluid_moduleView_entrypoint");
+
+            assert(entrypoint, format!"%s"(bindbc.errors));
+
+            entrypoint();
+
+        }
 
     }
 
@@ -335,6 +338,7 @@ Frame moduleViewSource(Params...)(Params params, DlangCompiler compiler, string 
     auto cursor = ts_query_cursor_new();
     scope (exit) ts_query_cursor_delete(cursor);
 
+    auto view = ModuleView(compiler, source);
     auto result = vframe(params);
 
     // Perform a query to find possibly relevant comments
@@ -356,7 +360,7 @@ Frame moduleViewSource(Params...)(Params params, DlangCompiler compiler, string 
             if (ts_node_is_null(node)) break;
 
             // Once found, annotate and append to result
-            if (auto annotated = annotate(compiler, source, docs, node)) {
+            if (auto annotated = view.annotate(docs, node)) {
                 result ~= annotated;
                 continue captures;
             }
@@ -381,58 +385,75 @@ Frame moduleViewFile(Params...)(Params params, DlangCompiler compiler, string fi
 
 }
 
-/// Returns:
-///     Space to represent the node in the output, or `null` if the given TSNode doesn't correspond to any known valid
-///     symbol.
-private Space annotate(DlangCompiler compiler, string source, Space documentation, TSNode node) @trusted {
+private struct ModuleView {
 
-    const typeC = ts_node_type(node);
-    const type = typeC[0 .. strlen(typeC)];
+    DlangCompiler compiler;
+    string source;
+    int unittestNumber;
 
-    const start = ts_node_start_byte(node);
-    const end = ts_node_end_byte(node);
-    const symbolSource = source[start .. end];
+    /// Returns:
+    ///     Space to represent the node in the output, or `null` if the given TSNode doesn't correspond to any known valid
+    ///     symbol.
+    Space annotate(Space documentation, TSNode node) @trusted {
 
-    switch (type) {
+        const typeC = ts_node_type(node);
+        const type = typeC[0 .. strlen(typeC)];
 
-        // unittest
-        case "unittest_declaration":
+        const start = ts_node_start_byte(node);
+        const end = ts_node_end_byte(node);
+        const symbolSource = source[start .. end];
 
-            // Create the code block
-            auto input = dlangInput();
+        switch (type) {
 
-            // Find the surrounding context
-            const exampleStart = start + symbolSource.countUntil("{") + 1;
-            const exampleEnd = end - symbolSource.retro.countUntil("}") - 1;
+            // unittest
+            case "unittest_declaration":
 
-            // Append code editor to the result
-            documentation.children ~= exampleView(compiler, source, [exampleStart, exampleEnd]);
-            return documentation;
+                // Create the code block
+                auto input = dlangInput();
 
-        // Declarations that aren't implemented
-        case "module_declaration":
-        case "import_declaration":
-        case "mixin_declaration":
-        case "variable_declaration":
-        case "auto_declaration":
-        case "alias_declaration":
-        case "attribute_declaration":
-        case "pragma_declaration":
-        case "struct_declaration":
-        case "union_declaration":
-        case "invariant_declaration":
-        case "class_declaration":
-        case "interface_declaration":
-        case "enum_declaration":
-        case "anonymous_enum_declaration":
-        case "function_declaration":
-        case "template_declaration":
-        case "mixin_template_declaration":
-            return documentation;
+                // Find the surrounding context
+                const exampleStart = start + symbolSource.countUntil("{") + 1;
+                const exampleEnd = end - symbolSource.retro.countUntil("}") - 1;
 
-        // Unknown declaration, skip
-        default:
-            return null;
+                // Set a constant mangle for the example by injecting it into source
+                const injectSource = Rope(q{
+                    pragma(mangle, "fluid_moduleView_entrypoint")
+                });
+
+                const prefix = source[0 .. start] ~ injectSource ~ source[start .. exampleStart];
+                const value = source[exampleStart .. exampleEnd];
+                const suffix = Rope(source[exampleEnd .. $]);
+
+                // Append code editor to the result
+                documentation.children ~= exampleView(compiler, prefix, value, suffix);
+                return documentation;
+
+            // Declarations that aren't implemented
+            case "module_declaration":
+            case "import_declaration":
+            case "mixin_declaration":
+            case "variable_declaration":
+            case "auto_declaration":
+            case "alias_declaration":
+            case "attribute_declaration":
+            case "pragma_declaration":
+            case "struct_declaration":
+            case "union_declaration":
+            case "invariant_declaration":
+            case "class_declaration":
+            case "interface_declaration":
+            case "enum_declaration":
+            case "anonymous_enum_declaration":
+            case "function_declaration":
+            case "template_declaration":
+            case "mixin_template_declaration":
+                return documentation;
+
+            // Unknown declaration, skip
+            default:
+                return null;
+
+        }
 
     }
 
@@ -464,10 +485,7 @@ Frame exampleView(DlangCompiler compiler, CodeInput input) {
 }
 
 /// ditto
-Frame exampleView(DlangCompiler compiler, string source, size_t[2] slice) {
-
-    const start = slice[0];
-    const end = slice[1];
+Frame exampleView(DlangCompiler compiler, Rope prefix, string value, Rope suffix) {
 
     CodeInput input;
 
@@ -477,9 +495,9 @@ Frame exampleView(DlangCompiler compiler, string source, size_t[2] slice) {
 
     });
 
-    input.prefix = source[0 .. start];
-    input.suffix = source[end .. $];
-    input.value = source[start .. end]
+    input.prefix = prefix ~ "\n";
+    input.suffix = "\n" ~ suffix;
+    input.value = value
         .outdent
         .strip;
 
