@@ -46,10 +46,10 @@ stable and ready for use, but is still likely to receive a few breaking changes 
 
 ## Get Fluid
 
-For a quick start guide on Fluid, check out the showcase:
+For a quick start guide on Fluid, check out the tour:
 
 ```
-dub run fluid:showcase
+dub run fluid:tour
 ```
 
 Create a new [dub][dub] project based on Fluid:

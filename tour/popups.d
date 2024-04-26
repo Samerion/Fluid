@@ -1,9 +1,9 @@
 // This module is not currently present in the example list.
 // TODO
-module fluid.showcase.popups;
+module fluid.tour.popups;
 
 import fluid;
-import fluid.showcase;
+import fluid.tour;
 
 
 @safe:
