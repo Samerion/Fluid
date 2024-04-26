@@ -14,6 +14,7 @@ debug (Fluid_BuildMessages) {
 
 import lib_tree_sitter;
 
+import std.conv;
 import std.range;
 import std.format;
 import std.string;
@@ -103,7 +104,6 @@ static ~this() @system {
 /// Provides information about the companion D compiler to use for evaluating examples.
 struct DlangCompiler {
 
-    import std.conv;
     import std.regex;
     import std.process;
 
@@ -127,6 +127,9 @@ struct DlangCompiler {
     /// ditto
     enum frontendMajor = 2;
 
+    /// Import paths to pass to the compiler.
+    string[] importPaths;
+
     /// Returns true if this entry points to a valid compiler.
     bool opCast(T : bool)() const {
 
@@ -136,7 +139,7 @@ struct DlangCompiler {
     }
 
     /// Find any suitable in the system.
-    static DlangCompiler findCompiler() {
+    static DlangCompiler findAny() {
 
         return either(
             findDMD,
@@ -228,7 +231,7 @@ struct DlangCompiler {
         assert("068".to!int == 68);
 
         // Compare results of the compiler-agnostic and compiler-specific functions
-        if (auto compiler = findCompiler()) {
+        if (auto compiler = findAny()) {
 
             final switch (compiler.type) {
 
@@ -254,10 +257,70 @@ struct DlangCompiler {
 
     }
 
+    /// Get the flag for importing from given directory.
+    string importFlag(string directory) const {
+
+        return "-I" ~ directory;
+
+    }
+
+    /// Get the flag for adding all import directories specified in compiler config.
+    string[] importPathsFlag() const {
+
+        return importPaths
+            .map!(a => importFlag(a))
+            .array;
+
+    }
+
+    /// Get the flag to generate a shared library for the given compiler.
+    string sharedLibraryFlag() const {
+
+        final switch (type) {
+
+            case Type.dmd: return "-shared";
+            case Type.ldc: return "--shared";
+
+        }
+
+    }
+
+    /// Compile a shared library from given source file.
+    void compileSharedLibrary(string source) const
+    in (this)
+    do {
+
+        import fs = std.file;
+        import random = std.random;
+        import std.path : buildPath, setExtension;
+
+        static string path;
+
+        // Build a path to contain the program's source
+        if (!path)
+            path = fs.tempDir.buildPath("fluid_" ~ random.uniform!uint.to!string ~ ".d");
+
+        // Write the source
+        fs.write(path, source);
+
+        // TODO use the correct extension
+        const outputPath = path.setExtension(".so");
+
+        import std.stdio;
+        debug writefln!"compiling: %s %s %s -of=%s %(%s %)"
+            (executable, sharedLibraryFlag, path, outputPath, importPathsFlag);
+
+        // Compile the program (TODO: async)
+        auto run = execute([executable, sharedLibraryFlag, path, "-of=" ~ outputPath] ~ importPathsFlag);
+
+        debug writefln!"%s"(run.output);
+
+    }
+
 }
 
 /// Create an overview display of the given module.
-Frame moduleViewSource(Params...)(Params params, string source) @trusted {
+Frame moduleViewSource(Params...)(Params params, DlangCompiler compiler, string source) @trusted {
 
     auto language = treeSitterLanguage!"d";
     auto parser = ts_parser_new();
@@ -293,7 +356,7 @@ Frame moduleViewSource(Params...)(Params params, string source) @trusted {
             if (ts_node_is_null(node)) break;
 
             // Once found, annotate and append to result
-            if (auto annotated = annotate(source, docs, node)) {
+            if (auto annotated = annotate(compiler, source, docs, node)) {
                 result ~= annotated;
                 continue captures;
             }
@@ -310,18 +373,18 @@ Frame moduleViewSource(Params...)(Params params, string source) @trusted {
 }
 
 /// Load the module source from a file.
-Frame moduleViewFile(Params...)(Params params, string filename) {
+Frame moduleViewFile(Params...)(Params params, DlangCompiler compiler, string filename) {
 
     import std.file : readText;
 
-    return moduleViewSource(params, filename.readText);
+    return moduleViewSource(params, compiler, filename.readText);
 
 }
 
 /// Returns:
 ///     Space to represent the node in the output, or `null` if the given TSNode doesn't correspond to any known valid
 ///     symbol.
-private Space annotate(string source, Space documentation, TSNode node) @trusted {
+private Space annotate(DlangCompiler compiler, string source, Space documentation, TSNode node) @trusted {
 
     const typeC = ts_node_type(node);
     const type = typeC[0 .. strlen(typeC)];
@@ -343,7 +406,7 @@ private Space annotate(string source, Space documentation, TSNode node) @trusted
             const exampleEnd = end - symbolSource.retro.countUntil("}") - 1;
 
             // Append code editor to the result
-            documentation.children ~= exampleView(source, [exampleStart, exampleEnd]);
+            documentation.children ~= exampleView(compiler, source, [exampleStart, exampleEnd]);
             return documentation;
 
         // Declarations that aren't implemented
@@ -376,9 +439,13 @@ private Space annotate(string source, Space documentation, TSNode node) @trusted
 }
 
 /// Produce an example.
-Frame exampleView(CodeInput input) {
+Frame exampleView(DlangCompiler compiler, CodeInput input) {
 
-    input.disable();
+    // Disable edits if there's no compiler available
+    if (!compiler) input.disable();
+
+    // Compile the program
+    compiler.compileSharedLibrary(input.sourceValue.to!string);
 
     // TODO Run the delegate on a separate thread to prevent locking up.
     return hframe(
@@ -397,12 +464,18 @@ Frame exampleView(CodeInput input) {
 }
 
 /// ditto
-Frame exampleView(string source, size_t[2] slice) {
+Frame exampleView(DlangCompiler compiler, string source, size_t[2] slice) {
 
     const start = slice[0];
     const end = slice[1];
 
-    auto input = dlangInput();
+    CodeInput input;
+
+    input = dlangInput(delegate {
+
+        compiler.compileSharedLibrary(input.sourceValue.to!string);
+
+    });
 
     input.prefix = source[0 .. start];
     input.suffix = source[end .. $];
@@ -410,7 +483,7 @@ Frame exampleView(string source, size_t[2] slice) {
         .outdent
         .strip;
 
-    return exampleView(input);
+    return exampleView(compiler, input);
 
 }
 

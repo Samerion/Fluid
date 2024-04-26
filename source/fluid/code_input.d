@@ -176,6 +176,14 @@ class CodeInput : TextInput {
 
     }
 
+    /// Get the full value of the text, including context provided via `prefix` and `suffix`.
+    Rope sourceValue() const {
+
+        // TODO This will allocate. Can it be avoided?
+        return prefix ~ value ~ suffix;
+
+    }
+
     /// Get a rope representing given indent level.
     Rope indentRope(int indentLevel = 1) const {
 
@@ -230,8 +238,7 @@ class CodeInput : TextInput {
 
     protected void reparse() {
 
-        // TODO This will allocate. Can it be avoided?
-        const fullValue = prefix ~ value ~ suffix;
+        const fullValue = sourceValue;
 
         // Parse the file
         if (highlighter) {
