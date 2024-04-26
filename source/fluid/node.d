@@ -1296,3 +1296,39 @@ abstract class Node {
     }
 
 }
+
+///
+export void run(Node node) {
+
+    pragma(msg, run.mangleof);
+
+    // Mock run callback is available
+    if (mockRun) {
+
+        mockRun()(node);
+
+    }
+
+    // TODO check which backend the node uses
+    // TODO move this function elsewhere
+    assert(false, "Default backend does not expose an event loop interface.");
+
+}
+
+alias RunCallback = void delegate(Node node) @safe;
+
+/// Set a new function to use instead of `run`.
+RunCallback mockRun(RunCallback callback) {
+
+    // Assign the callback
+    mockRun() = callback;
+    return mockRun();
+
+}
+
+ref RunCallback mockRun() {
+
+    static RunCallback callback;
+    return callback;
+
+}
