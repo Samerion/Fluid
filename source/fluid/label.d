@@ -25,6 +25,10 @@ class Label : Node {
 
     }
 
+    @property void textSize(T)(T size) {
+        text.fontSize = cast(uint) size;
+    }
+
     this(Rope text) {
 
         this.text = Text!Label(this, text);

@@ -70,7 +70,7 @@ interface Typeface {
     ///     penPosition  = Pen position for the beginning of the line. Updated to the pen position at the end of th line.
     ///     text         = Text to draw.
     ///     paletteIndex = If the image has a palette, this is the index to get colors from.
-    void drawLine(ref Image target, ref Vector2 penPosition, Rope text, ubyte paletteIndex = 0) const;
+    void drawLine(ref Image target, ref Vector2 penPosition, Rope text, ubyte paletteIndex = 0, const uint size = 0) const;
 
     /// Instances of Typeface have to be comparable in a memory-safe manner.
     bool opEquals(const Object object) @safe const;
@@ -700,9 +700,19 @@ class FreetypeTypeface : Typeface {
     }
 
     /// Draw a line of text
-    void drawLine(ref Image target, ref Vector2 penPosition, const Rope text, ubyte paletteIndex) const @trusted {
+    void drawLine(ref Image target, ref Vector2 penPosition, const Rope text, ubyte paletteIndex) const
+        => drawLine(target, penPosition, text, paletteIndex, 0);
+    void drawLine(ref Image target, ref Vector2 penPosition, const Rope text, ubyte paletteIndex, const uint size) const @trusted {
 
         assert(_dpiX && _dpiY, "Font DPI hasn't been set");
+
+        FT_Error setSizeError;
+        if (size == 0) {
+            setSizeError = FT_Set_Char_Size(cast(FT_FaceRec*) face, 0, _size*64, _dpiX, _dpiY);
+        } else {
+            setSizeError = FT_Set_Char_Size(cast(FT_FaceRec*) face, 0, size*64, _dpiX, _dpiY);
+        }
+        if (setSizeError) throw new Exception("Text size setting failed.");
 
         foreach (glyph; text.byDchar) {
 

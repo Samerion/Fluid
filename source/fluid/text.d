@@ -54,6 +54,9 @@ struct Text(T : Node, StyleRange = TextStyleSlice[]) {
         /// Indent width, in pixels.
         float indentWidth = 32;
 
+        /// Text size. Set to 0 for default size.
+        uint fontSize = 0;
+
     }
 
     private {
@@ -312,7 +315,7 @@ struct Text(T : Node, StyleRange = TextStyleSlice[]) {
 
                         // Note: relativePenPosition is passed by ref
                         auto image = texture.chunks[chunkIndex].image;
-                        typeface.drawLine(image, relativePenPosition, wordFragment, styleIndex);
+                        typeface.drawLine(image, relativePenPosition, wordFragment, styleIndex, fontSize);
 
                         // Update the pen position; Result of this should be the same for each chunk
                         penPosition = relativePenPosition + chunkRect.start;
