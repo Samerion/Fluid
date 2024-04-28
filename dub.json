@@ -54,6 +54,9 @@
 	"stringImportPaths": [
 		"resources"
 	],
+	"excludedSourceFiles": [
+		"source/fluid/module_view.d"
+	],
 	"subPackages": [
 		"./tour",
 		{
