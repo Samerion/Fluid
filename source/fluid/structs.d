@@ -33,7 +33,9 @@ enum isNodeParam(T, NodeType = Node)
 
 enum NodeAlign {
 
-    start, center, end, fill
+    start, center, end, fill,
+    
+    centre = center
 
 }
 
