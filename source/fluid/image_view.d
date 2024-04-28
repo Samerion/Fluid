@@ -82,6 +82,15 @@ class ImageView : Node {
 
         }
 
+        Image texture(Image image) @system {
+            
+            clear();
+            _texture = tree.io.loadTexture(image);
+            _isOwner = true;
+
+            return image;
+        }
+
         /// Load the texture from a filename.
         string texture(string filename) @trusted {
 
@@ -103,7 +112,7 @@ class ImageView : Node {
 
         }
 
-        unittest {
+        @system unittest {
 
             // TODO test for keeping aspect ratio
             auto io = new HeadlessBackend(Vector2(1000, 1000));
@@ -120,6 +129,20 @@ class ImageView : Node {
 
             io.assertTexture(root.texture, Vector2(0, 0), color!"fff");
 
+            version (Have_raylib_d) {
+                import std.string: toStringz;
+                raylib.Image LoadImage(string path) => raylib.LoadImage(path.toStringz);
+                raylib.Texture LoadTexture(string path) => raylib.LoadTexture(path.toStringz);
+                void InitWindow() => raylib.InitWindow(80, 80, "");
+                void CloseWindow() => raylib.CloseWindow();
+
+                InitWindow;
+                raylib.Texture rayTexture = LoadTexture("logo.png");
+                fluid.Texture texture = rayTexture.toFluid;
+
+                io.assertTexture(root.texture, Vector2(0, 0), color!"fff");
+                CloseWindow;
+            }
         }
 
         /// Get the current texture.
