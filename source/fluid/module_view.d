@@ -11,7 +11,7 @@ version (Have_fluid_tree_sitter):
 version (Have_fluid_tree_sitter_d):
 
 debug (Fluid_BuildMessages) {
-    pragma(msg, "Fluid: Using moduleView");
+    pragma(msg, "Fluid: Including moduleView");
 }
 
 import lib_tree_sitter;
@@ -39,12 +39,17 @@ import fluid.tree_sitter;
 
 private {
 
+    bool initialized;
     TSQuery* documentationQuery;
     TSQuery* dlangQuery;
 
 }
 
 static this() @system {
+
+    // Guard to keep this only running once
+    if (initialized) return;
+    initialized = true;
 
     TSQueryError error;
     uint errorOffset;
@@ -65,6 +70,10 @@ static this() @system {
 }
 
 static ~this() @system {
+
+    // Guard to keep this only running once
+    if (!initialized) return;
+    initialized = false;
 
     ts_query_delete(documentationQuery);
     ts_query_delete(dlangQuery);
@@ -295,8 +304,15 @@ struct DlangCompiler {
         else
             outputPath = path.setExtension(".so");
 
+        auto cmdline = [executable, sharedLibraryFlag, unittestFlag, path, "-of=" ~ outputPath] ~ importPathsFlag;
+
+        debug (Fluid_BuildMessages) {
+            import std.stdio;
+            writefln!"Fluid: compiling $ %s"(escapeShellCommand(cmdline));
+        }
+
         // Compile the program
-        return execute([executable, sharedLibraryFlag, unittestFlag, path, "-of=" ~ outputPath] ~ importPathsFlag);
+        return execute(cmdline);
 
     }
 
@@ -445,7 +461,25 @@ Frame exampleView(DlangCompiler compiler, CodeInput input) {
     auto stdoutLabel = label(.layout!"fill", "");
     auto resultCanvas = nodeSlot!Frame(.layout!"fill");
 
-    bindbc.SharedLib library;
+    /// Wrapper over bindbc.SharedLib to ensure proper library destruction.
+    struct SharedLib {
+
+        bindbc.SharedLib library;
+        alias library this;
+
+        ~this() {
+            clear();
+        }
+
+        void clear() @trusted {
+            if (library != bindbc.invalidHandle) {
+                bindbc.unload(library);
+            }
+        }
+
+    }
+
+    auto library = new SharedLib;
 
     /// Compile the program
     void compileAndRun() {
@@ -453,11 +487,7 @@ Frame exampleView(DlangCompiler compiler, CodeInput input) {
         string outputPath;
 
         // Unload the previous library
-        if (library != bindbc.invalidHandle) () @trusted {
-
-            bindbc.unload(library);
-
-        }();
+        library.clear();
 
         auto result = compiler.compileSharedLibrary(input.sourceValue.to!string, outputPath);
 
@@ -475,7 +505,7 @@ Frame exampleView(DlangCompiler compiler, CodeInput input) {
             });
             scope (exit) mockRun(null);
 
-            library = runSharedLibrary(outputPath);
+            library.library = runSharedLibrary(outputPath);
             resultCanvas.updateSize();
 
         }

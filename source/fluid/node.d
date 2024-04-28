@@ -1300,8 +1300,6 @@ abstract class Node {
 ///
 void run(Node node) {
 
-    pragma(msg, run.mangleof);
-
     // Mock run callback is available
     if (mockRun) {
 
