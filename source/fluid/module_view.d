@@ -28,7 +28,9 @@ import fluid.slot;
 import fluid.rope;
 import fluid.label;
 import fluid.space;
+import fluid.style;
 import fluid.frame;
+import fluid.button;
 import fluid.structs;
 import fluid.code_input;
 import fluid.tree_sitter;
@@ -319,7 +321,9 @@ struct DlangCompiler {
 }
 
 /// Create an overview display of the given module.
-Frame moduleViewSource(Params...)(Params params, DlangCompiler compiler, string source) @trusted {
+Frame moduleViewSource(Params...)(Params params, DlangCompiler compiler, string source,
+    Theme contentTheme = fluidDefaultTheme) @trusted
+do {
 
     auto language = treeSitterLanguage!"d";
     auto parser = ts_parser_new();
@@ -334,7 +338,7 @@ Frame moduleViewSource(Params...)(Params params, DlangCompiler compiler, string 
     auto cursor = ts_query_cursor_new();
     scope (exit) ts_query_cursor_delete(cursor);
 
-    auto view = ModuleView(compiler, source);
+    auto view = ModuleView(compiler, source, contentTheme);
     auto result = vframe(params);
 
     // Perform a query to find possibly relevant comments
@@ -373,11 +377,13 @@ Frame moduleViewSource(Params...)(Params params, DlangCompiler compiler, string 
 }
 
 /// Load the module source from a file.
-Frame moduleViewFile(Params...)(Params params, DlangCompiler compiler, string filename) {
+Frame moduleViewFile(Params...)(Params params, DlangCompiler compiler, string filename,
+    Theme contentTheme = fluidDefaultTheme)
+do {
 
     import std.file : readText;
 
-    return moduleViewSource(params, compiler, filename.readText);
+    return moduleViewSource!Params(params, compiler, filename.readText, contentTheme);
 
 }
 
@@ -385,6 +391,7 @@ private struct ModuleView {
 
     DlangCompiler compiler;
     string source;
+    Theme contentTheme;
     int unittestNumber;
 
     /// Returns:
@@ -421,7 +428,7 @@ private struct ModuleView {
                 const suffix = Rope(source[exampleEnd .. $]);
 
                 // Append code editor to the result
-                documentation.children ~= exampleView(compiler, prefix, value, suffix);
+                documentation.children ~= exampleView(compiler, prefix, value, suffix, contentTheme);
                 return documentation;
 
             // Declarations that aren't implemented
@@ -456,7 +463,7 @@ private struct ModuleView {
 }
 
 /// Produce an example.
-Frame exampleView(DlangCompiler compiler, CodeInput input) {
+Frame exampleView(DlangCompiler compiler, CodeInput input, Theme contentTheme) {
 
     auto stdoutLabel = label(.layout!"fill", "");
     auto resultCanvas = nodeSlot!Frame(.layout!"fill");
@@ -495,7 +502,10 @@ Frame exampleView(DlangCompiler compiler, CodeInput input) {
         if (result.status == 0) {
 
             // Prepare the output
-            resultCanvas.value = vframe(.layout!(1, "fill"));
+            resultCanvas.value = vframe(
+                .layout!(1, "fill"),
+                contentTheme,
+            );
             resultCanvas.show();
             stdoutLabel.hide();
 
@@ -532,6 +542,9 @@ Frame exampleView(DlangCompiler compiler, CodeInput input) {
             .layout!"fill",
             vspace(
                 .layout!(1, "fill"),
+                hframe(
+                    button("Run", () => compileAndRun()),
+                ),
                 input,
             ),
             vspace(
@@ -552,7 +565,7 @@ Frame exampleView(DlangCompiler compiler, CodeInput input) {
 }
 
 /// ditto
-Frame exampleView(DlangCompiler compiler, Rope prefix, string value, Rope suffix) {
+Frame exampleView(DlangCompiler compiler, Rope prefix, string value, Rope suffix, Theme contentTheme) {
 
     auto input = dlangInput();
     input.prefix = prefix ~ "\n";
@@ -561,7 +574,7 @@ Frame exampleView(DlangCompiler compiler, Rope prefix, string value, Rope suffix
         .outdent
         .strip;
 
-    return exampleView(compiler, input);
+    return exampleView(compiler, input, contentTheme);
 
 }
 

@@ -507,6 +507,16 @@ Space render(Chapter chapter)() @trusted {
 
         return moduleViewFile(
             .layout!"fill",
+            mainTheme.derive(
+                rule!Frame(
+                    Rule.padding = 0,
+                    Rule.margin = 0,
+                    Rule.gap = 4,
+                ),
+                rule!Button(
+                    Rule.margin = 0,
+                ),
+            ),
             compiler,
             filename,
         );
