@@ -59,6 +59,10 @@ static this() {
         rule!Grid(margin.sideY = 0),
         rule!GridRow(margin = 0),
         rule!ScrollFrame(margin = 0),
+        rule!PopupFrame(
+            padding.sideX = 2,
+            padding.sideY = 4,
+        ),
 
         /// Code input
         rule!CodeInput(
@@ -494,6 +498,7 @@ Space render(Chapter chapter)() @trusted {
     if (chapter == Chapter.module_view) {
 
         import std.path;
+        import fluid.theme;
         import fluid.module_view;
 
         auto compiler = DlangCompiler.findAny();
@@ -509,12 +514,12 @@ Space render(Chapter chapter)() @trusted {
             .layout!"fill",
             mainTheme.derive(
                 rule!Frame(
-                    Rule.padding = 0,
-                    Rule.margin = 0,
-                    Rule.gap = 4,
+                    padding = 0,
+                    margin = 0,
+                    gap = 4,
                 ),
                 rule!Button(
-                    Rule.margin = 0,
+                    margin = 0,
                 ),
             ),
             compiler,

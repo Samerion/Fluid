@@ -32,6 +32,7 @@ import fluid.style;
 import fluid.frame;
 import fluid.button;
 import fluid.structs;
+import fluid.popup_button;
 import fluid.code_input;
 import fluid.tree_sitter;
 
@@ -487,6 +488,7 @@ Frame exampleView(DlangCompiler compiler, CodeInput input, Theme contentTheme) {
     }
 
     auto library = new SharedLib;
+    auto originalValue = input.value;
 
     /// Compile the program
     void compileAndRun() {
@@ -515,6 +517,7 @@ Frame exampleView(DlangCompiler compiler, CodeInput input, Theme contentTheme) {
             });
             scope (exit) mockRun(null);
 
+            // TODO Run the result on a separate thread to prevent the app from locking up
             library.library = runSharedLibrary(outputPath);
             resultCanvas.updateSize();
 
@@ -531,19 +534,46 @@ Frame exampleView(DlangCompiler compiler, CodeInput input, Theme contentTheme) {
 
     }
 
+    /// Restore original source code.
+    void restoreSource() {
+
+        input.value = originalValue;
+        input.updateSize();
+
+    }
+
     // Compile and run the program; do the same when submitted
     if (compiler) {
 
         compileAndRun();
         input.submitted = &compileAndRun;
 
-        // TODO Run the delegate on a separate thread to prevent locking up.
-        return hframe(
+        Frame root;
+
+        return root = hframe(
             .layout!"fill",
             vspace(
                 .layout!(1, "fill"),
                 hframe(
                     button("Run", () => compileAndRun()),
+                    popupButton("Reset",
+                        label("Reset original content? Changes\n"
+                            ~ "will not be saved."),
+                        hspace(
+                            .layout!"end",
+                            button("Cancel", delegate {
+
+                                root.tree.focus = null;
+
+                            }),
+                            button("Reset content", delegate {
+
+                                restoreSource();
+                                root.tree.focus = null;
+
+                            }),
+                        ),
+                    ),
                 ),
                 input,
             ),
