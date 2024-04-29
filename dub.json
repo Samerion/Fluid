@@ -2,21 +2,25 @@
 	"authors": [
 		"Artha"
 	],
+	"subConfigurations": {
+		"bindbc-freetype": "staticBC"
+	},
+	"libs": ["freetype"],
+	"lflags-windows": ["/LIBPATH:$PACKAGE_DIR/libraries/windows"],
+	"lflags-osx": ["-L$PACKAGE_DIR/libraries/macos"],
+	"lflags-linux": ["-L$PACKAGE_DIR/libraries/ubuntu"],
+	"copyFiles-windows": [
+		"$PACKAGE_DIR/libraries/windows/freetype.dll",
+		"$PACKAGE_DIR/libraries/windows/raylib.dll"
+	],
 	"configurations": [
 		{
 			"name": "default",
-			"targetType": "library",
-			"subConfigurations": {
-				"bindbc-freetype": "staticBC"
-			},
-			"libs": ["freetype"],
-			"lflags-windows": ["/LIBPATH:$PACKAGE_DIR/libraries/windows"],
-			"lflags-osx": ["-L$PACKAGE_DIR/libraries/macos"],
-			"lflags-linux": ["-L$PACKAGE_DIR/libraries/ubuntu"],
-			"copyFiles-windows": [
-				"$PACKAGE_DIR/libraries/windows/freetype.dll",
-				"$PACKAGE_DIR/libraries/windows/raylib.dll"
-			]
+			"targetType": "staticLibrary"
+		},
+		{
+			"name": "dynamic",
+			"targetType": "dynamicLibrary"
 		},
 		{
 			"libs": [
@@ -33,6 +37,7 @@
 			"version": "~>11.3"
 		},
 		"bindbc-freetype": "~>1.1.1",
+		"bindbc-loader": "~>1.1.3",
 		"elemi": {
 			"optional": true,
 			"version": "~>1.2.2"
@@ -49,22 +54,11 @@
 	"stringImportPaths": [
 		"resources"
 	],
+	"excludedSourceFiles": [
+		"source/fluid/module_view.d"
+	],
 	"subPackages": [
-		{
-			"dependencies": {
-				"libdparse": "~>0.23.2",
-				"fluid": { "path": "." }
-			},
-			"name": "tour",
-			"libs": [
-				"raylib"
-			],
-			"sourcePaths": [
-				"tour"
-			],
-			"targetPath": "build",
-			"targetType": "executable"
-		},
+		"./tour",
 		{
 			"dependencies": {
 				"libdparse": "~>0.23.2",
@@ -75,12 +69,13 @@
 				"raylib"
 			],
 			"preBuildCommands": [
-				"echo Warning: fluid:showcase is deprecated in favor of fluid:tour"
+				"echo Deprecated: fluid:showcase has been renamed to fluid:tour"
 			],
 			"sourcePaths": [
 				"tour"
 			],
 			"targetPath": "build",
+			"targetName": "fluid-tour",
 			"targetType": "executable"
 		},
 		{
@@ -90,8 +85,23 @@
 			"sourcePaths": [],
 			"targetType": "executable",
 			"targetPath": "build"
+		},
+		{
+			"name": "module_view",
+			"versions": ["Fluid_ModuleView"],
+			"sourceFiles": ["source/fluid/module_view.d"],
+			"sourcePaths": [],
+			"targetType": "library",
+			"targetPath": "build",
+			"subConfigurations": {
+				"fluid": "dynamic"
+			},
+			"dependencies": {
+				"fluid": { "path": "." },
+				"fluid-tree-sitter": "~>0.1.5",
+				"fluid-tree-sitter:d": "~>0.1.5"
+			}
 		}
 	],
-	"targetPath": "build",
-	"targetType": "library"
+	"targetPath": "build"
 }

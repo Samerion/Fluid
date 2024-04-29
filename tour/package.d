@@ -41,6 +41,8 @@ static this() {
     enum warningColor = color!"#ffe186";
     enum warningAccentColor = color!"#ffc30f";
 
+    auto monospace = Style.loadTypeface(thisExePath.dirName.buildPath("../tour/ibm-plex-mono.ttf"), 11);
+
     mainTheme = Theme(
         rule!Frame(
             margin.sideX = 12,
@@ -57,6 +59,38 @@ static this() {
         rule!Grid(margin.sideY = 0),
         rule!GridRow(margin = 0),
         rule!ScrollFrame(margin = 0),
+        rule!PopupFrame(
+            padding.sideX = 2,
+            padding.sideY = 4,
+        ),
+
+        /// Code input
+        rule!CodeInput(
+            margin = 0,
+            typeface = monospace,
+            backgroundColor = color!"#dedede",
+            padding.sideX = 12,
+            padding.sideY = 16,
+
+            when!"a.isDisabled"(
+                backgroundColor = color!"#dedede",
+            ),
+
+            // TODO These colors are "borrowed" from Tree-sitter CLI, how about making our own?
+            when!`a.token.startsWith("keyword")`    (textColor = color("#5f00d7")),
+            when!`a.token.startsWith("attribute")`  (textColor = color("#af0000")),
+            when!`a.token.startsWith("property")`   (textColor = color("#af0000")),
+            when!`a.token.startsWith("punctuation")`(textColor = color("#4e4e4e")),
+            when!`a.token.startsWith("type")`       (textColor = color("#005f5f")),
+            when!`a.token.startsWith("operator")`   (textColor = color("#50228a")),
+            when!`a.token.startsWith("comment")`    (textColor = color("#8a8a8a")),
+            when!`a.token.startsWith("number")`     (textColor = color("#875f00")),
+            when!`a.token.startsWith("string")`     (textColor = color("#008700")),
+            when!`a.token.startsWith("constant")`   (textColor = color("#875f00")),
+            when!`a.token.startsWith("variable")`   (textColor = color("#875f00")),
+            when!`a.token.startsWith("function")`   (textColor = color("#005fd7")),
+            when!`a.token.startsWith("module")`     (textColor = color("#af8700")),
+        ),
 
         // Heading
         rule!(Label, Tags.heading)(
@@ -99,16 +133,10 @@ static this() {
     codeTheme = mainTheme.derive(
 
         rule!Node(
-            typeface = Style.loadTypeface(thisExePath.dirName.buildPath("../tour/ibm-plex-mono.ttf"), 11),
+            typeface = monospace,
         ),
         rule!Frame(
             padding = 0,
-        ),
-        rule!CodeInput(
-            margin = 0,
-            backgroundColor = color!"#dedede",
-            padding.sideX = 12,
-            padding.sideY = 16,
         ),
         rule!Label(
             margin = 0,
@@ -137,6 +165,7 @@ enum Chapter {
     @"Themes" themes,
     @"Margin, padding and border" margins,
     @"Writing forms" forms,
+    @"moduleView" module_view,
     // @"Popups" popups,
     // @"Drag and drop" drag_and_drop,
 };
@@ -464,6 +493,40 @@ Space render(Chapter chapter)() @trusted {
     // Get the module filename
     const sourceDirectory = thisExePath.dirName.buildPath("../tour");
     const filename = buildPath(sourceDirectory, name ~ ".d");
+
+    // Use moduleView for rendering its module
+    if (chapter == Chapter.module_view) {
+
+        import std.path;
+        import fluid.theme;
+        import fluid.module_view;
+
+        auto compiler = DlangCompiler.findAny();
+        compiler.importPaths ~= [
+            "source",
+            "../source",
+            expandTilde("~/.dub/packages/bindbc-freetype/1.1.1/bindbc-freetype/source"),
+            expandTilde("~/.dub/packages/bindbc-loader/1.1.5/bindbc-loader/source"),
+        ];
+        // TODO figure out the correct freetype path (or vendor)
+
+        return moduleViewFile(
+            .layout!"fill",
+            mainTheme.derive(
+                rule!Frame(
+                    padding = 0,
+                    margin = 0,
+                    gap = 4,
+                ),
+                rule!Button(
+                    margin = 0,
+                ),
+            ),
+            compiler,
+            filename,
+        );
+
+    }
 
     // Load the file
     auto sourceCode = readText(filename);

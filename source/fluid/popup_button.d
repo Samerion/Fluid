@@ -47,8 +47,10 @@ class PopupButton : ButtonImpl!Label {
                 parentPopup.spawnChildPopup(popup);
 
             // No parent
-            else
+            else {
+                popup.theme = theme;
                 tree.spawnPopup(popup);
+            }
 
         });
 
