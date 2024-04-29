@@ -44,6 +44,11 @@ void spawnChildPopup(PopupFrame parent, PopupFrame popup) {
 
     auto tree = parent.tree;
 
+    // Inherit theme from parent
+    // TODO This may not work...
+    if (!popup.theme)
+        popup.theme = parent.theme;
+
     // Assign the child
     parent.childPopup = popup;
 

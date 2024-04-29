@@ -1,0 +1,21 @@
+{
+	"dependencies": {
+		"fluid": {
+			"path": ".."
+		},
+		"fluid:module_view": {
+			"path": ".."
+		},
+		"libdparse": "~>0.23.2"
+	},
+	"libs": [
+		"raylib"
+	],
+	"name": "tour",
+	"sourcePaths": [
+		"."
+	],
+	"targetName": "fluid-tour",
+	"targetPath": "../build",
+	"targetType": "executable"
+}

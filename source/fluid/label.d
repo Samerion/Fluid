@@ -20,6 +20,8 @@ class Label : Node {
         /// Text of this label.
         Text!Label text;
 
+        alias value = text;
+
         /// If true, the content of the label should not be wrapped into new lines if it's too long to fit into one.
         bool isWrapDisabled;
 
