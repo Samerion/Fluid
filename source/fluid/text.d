@@ -54,9 +54,6 @@ struct Text(T : Node, StyleRange = TextStyleSlice[]) {
         /// Indent width, in pixels.
         float indentWidth = 32;
 
-        /// Text size. Set to 0 for default size.
-        uint fontSize = 0;
-
     }
 
     private {
@@ -165,8 +162,8 @@ struct Text(T : Node, StyleRange = TextStyleSlice[]) {
     /// Set new bounding box for the text.
     void resize() {
 
-        auto style = node.pickStyle;
-        auto typeface = style.getTypeface;
+        Style style = node.pickStyle;
+        Typeface typeface = style.getTypeface;
         const dpi = backend.dpi;
         const scale = backend.hidpiScale;
 
@@ -183,8 +180,8 @@ struct Text(T : Node, StyleRange = TextStyleSlice[]) {
     /// Set new bounding box for the text; wrap the text if it doesn't fit in boundaries.
     void resize(alias splitter = Typeface.defaultWordChunks)(Vector2 space, bool wrap = true) {
 
-        auto style = node.pickStyle;
-        auto typeface = style.getTypeface;
+        Style style = node.pickStyle;
+        Typeface typeface = style.getTypeface;
         const dpi = backend.dpi;
         const scale = backend.hidpiScale;
 
@@ -226,8 +223,8 @@ struct Text(T : Node, StyleRange = TextStyleSlice[]) {
         // Empty, nothing to do
         if (chunks.empty) return;
 
-        auto style = node.pickStyle;
-        auto typeface = style.getTypeface;
+        Style style = node.pickStyle;
+        Typeface typeface = style.getTypeface;
         const dpi = backend.dpi;
         const scale = backend.hidpiScale;
 
@@ -315,7 +312,7 @@ struct Text(T : Node, StyleRange = TextStyleSlice[]) {
 
                         // Note: relativePenPosition is passed by ref
                         auto image = texture.chunks[chunkIndex].image;
-                        typeface.drawLine(image, relativePenPosition, wordFragment, styleIndex, fontSize);
+                        typeface.drawLine(image, relativePenPosition, wordFragment, styleIndex, cast(uint)(style.textSize*64));
 
                         // Update the pen position; Result of this should be the same for each chunk
                         penPosition = relativePenPosition + chunkRect.start;

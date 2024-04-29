@@ -136,6 +136,7 @@ enum Chapter {
     @"Node slots" slots,
     @"Themes" themes,
     @"Margin, padding and border" margins,
+    @"Text styling" text_styling,
     @"Writing forms" forms,
     // @"Popups" popups,
     // @"Drag and drop" drag_and_drop,

@@ -35,6 +35,25 @@ class Label : Node {
 
     }
 
+    debug float cachedTextSize;
+    this(string text, float size) {
+        debug cachedTextSize = size;
+
+        this.text = Text!Label(this, text);
+
+        theme = theme.derive(
+            rule(Rule.textSize = size)
+        );
+        reloadStyles;
+
+        debug {
+            import std.stdio, std.conv;
+            writeln("textSize = ", size);
+            assert(this.style.textSize == size, "Textsize should be "~size.to!string~", instead it is "~style.textSize.to!string);
+        }
+
+    }
+
     this(const(char)[] text) {
 
         this.text = Text!Label(this, text);
@@ -77,6 +96,11 @@ class Label : Node {
         const style = pickStyle();
         style.drawBackground(tree.io, outer);
         text.draw(style, inner.start);
+
+        debug {
+            import std.conv, std.math.traits;
+            assert(style.textSize.isNaN || style.textSize == cachedTextSize, "style.textsize = "~this.style.textSize.to!string~", cachedTextSize = "~cachedTextSize.to!string);
+        }
 
     }
 

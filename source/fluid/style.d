@@ -45,6 +45,9 @@ struct Style {
         /// Text color.
         Color textColor;
 
+        /// Text height.
+        float textSize;
+
     }
 
     // Background & content

@@ -706,11 +706,14 @@ class FreetypeTypeface : Typeface {
 
         assert(_dpiX && _dpiY, "Font DPI hasn't been set");
 
+        debug import std.stdio;
         FT_Error setSizeError;
-        if (size == 0) {
+        if (!size) {
             setSizeError = FT_Set_Char_Size(cast(FT_FaceRec*) face, 0, _size*64, _dpiX, _dpiY);
+            debug writeln("Size is zero.");
         } else {
-            setSizeError = FT_Set_Char_Size(cast(FT_FaceRec*) face, 0, size*64, _dpiX, _dpiY);
+            setSizeError = FT_Set_Char_Size(cast(FT_FaceRec*) face, 0, size, _dpiX, _dpiY);
+            debug writeln("Size isn't zero.");
         }
         if (setSizeError) throw new Exception("Text size setting failed.");
 
