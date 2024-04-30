@@ -56,7 +56,7 @@ static this() {
             margin.sideX = 12,
             margin.sideY = 7,
         ),
-        rule!Grid(margin.sideY = 0),
+        rule!GridFrame(margin.sideY = 0),
         rule!GridRow(margin = 0),
         rule!ScrollFrame(margin = 0),
         rule!PopupFrame(
@@ -342,7 +342,7 @@ Space exampleList(void delegate(Chapter) @safe changeChapter) @safe {
     import std.array;
     import std.range;
 
-    auto chapterGrid = grid(
+    auto chapterGrid = gridFrame(
         .layout!"fill",
         .segments(3),
     );

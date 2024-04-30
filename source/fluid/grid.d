@@ -15,8 +15,14 @@ import fluid.structs;
 @safe:
 
 
-deprecated("Renamed to `gridFrame`") alias grid = simpleConstructor!Grid;
-alias gridFrame = grid;
+deprecated("`Grid` and `grid` were renamed to `GridFrame` and `gridFrame` respectively. To be removed in 0.8.0.") {
+
+    alias grid = simpleConstructor!GridFrame;
+    alias Grid = GridFrame;
+
+}
+
+alias gridFrame = simpleConstructor!GridFrame;
 alias gridRow = simpleConstructor!GridRow;
 
 // TODO rename segments to columns?
@@ -29,7 +35,7 @@ struct Segments {
     uint amount = 1;
 
     /// Set the number of columns present in a grid.
-    void apply(Grid grid) {
+    void apply(GridFrame grid) {
 
         grid.segmentCount = amount;
 
@@ -57,8 +63,6 @@ Segments segments(uint columns)() {
     return Segments(columns);
 
 }
-
-deprecated("Renamed to `GridFrame`") alias Grid = GridFrame;
 
 /// The GridFrame node will align its children in a 2D grid.
 class GridFrame : Frame {
@@ -108,12 +112,8 @@ class GridFrame : Frame {
         import fluid.label;
 
         auto io = new HeadlessBackend;
-        auto root = grid(
-            .Theme.init.makeTheme!q{
-                Label.styleAdd!q{
-                    textColor = color!"000";
-                };
-            },
+        auto root = gridFrame(
+            .nullTheme,
             .layout!"fill",
             .segments!4,
 
@@ -350,7 +350,7 @@ class GridFrame : Frame {
         // 1. One label to span 6 segments
         // 2. Each 3 segments
         // 3. Each 2 segments
-        auto g = grid(
+        auto g = gridFrame(
             [ label("") ],
             [ label(""), label("") ],
             [ label(""), label(""), label("") ],
@@ -368,14 +368,14 @@ class GridFrame : Frame {
 /// A single row in a `Grid`.
 class GridRow : Frame {
 
-    Grid parent;
+    GridFrame parent;
     size_t segmentCount;
 
     /// Params:
     ///     params = Standard Fluid constructor parameters.
     ///     parent = Grid this row will be placed in.
     ///     nodes = Children to be placed in the row.
-    this(T...)(Grid parent, T nodes) {
+    this(T...)(GridFrame parent, T nodes) {
 
         super(nodes);
         this.layout.nodeAlign = NodeAlign.fill;

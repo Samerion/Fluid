@@ -81,7 +81,7 @@ unittest {
     import fluid.button;
 
     auto io = new HeadlessBackend;
-    auto root = frameButton(
+    auto root = vframeButton(
         button("", delegate { }),
         button("", delegate { }),
         delegate { }
