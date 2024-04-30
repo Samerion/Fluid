@@ -211,7 +211,7 @@ class PasswordInput : TextInput {
         // Ignore if selection is empty
         if (selectionStart == selectionEnd) return;
 
-        const typeface = style.getTypeface;
+        auto typeface = style.getTypeface;
 
         const low = min(selectionStart, selectionEnd);
         const high = max(selectionStart, selectionEnd);
@@ -221,7 +221,7 @@ class PasswordInput : TextInput {
 
         const rect = Rectangle(
             (inner.start + Vector2(start, 0)).tupleof,
-            size, typeface.lineHeight,
+            size, typeface.lineHeight(style.fontSize),
         );
 
         io.drawRectangle(rect, style.selectionBackgroundColor);
@@ -234,7 +234,7 @@ class PasswordInput : TextInput {
 
         // Use the "X" character as reference
         auto typeface = style.getTypeface;
-        auto x = typeface.advance('X').x;
+        auto x = typeface.advance('X', style.fontSize).x;
 
         radius = x / 2f;
         advance = x * 1.2;

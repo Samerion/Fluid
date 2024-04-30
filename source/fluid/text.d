@@ -171,7 +171,7 @@ struct Text(T : Node, StyleRange = TextStyleSlice[]) {
         typeface.indentWidth = cast(int) (indentWidth * scale.x);
 
         // Update the size
-        _sizeDots = typeface.measure(value);
+        _sizeDots = typeface.measure(value, style.fontSize);
         _wrap = false;
         clearTextures();
 
@@ -192,7 +192,7 @@ struct Text(T : Node, StyleRange = TextStyleSlice[]) {
         space.y *= scale.y;
 
         // Update the size
-        _sizeDots = style.getTypeface.measure!splitter(space, value, wrap);
+        _sizeDots = style.getTypeface.measure!splitter(space, value, wrap, style.fontSize);
         _wrap = wrap;
         clearTextures();
 
@@ -312,7 +312,7 @@ struct Text(T : Node, StyleRange = TextStyleSlice[]) {
 
                         // Note: relativePenPosition is passed by ref
                         auto image = texture.chunks[chunkIndex].image;
-                        typeface.drawLine(image, relativePenPosition, wordFragment, styleIndex, cast(uint)(style.textSize*64));
+                        typeface.drawLine(image, relativePenPosition, wordFragment, styleIndex, style.fontSize);
 
                         // Update the pen position; Result of this should be the same for each chunk
                         penPosition = relativePenPosition + chunkRect.start;

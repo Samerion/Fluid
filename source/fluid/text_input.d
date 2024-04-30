@@ -711,7 +711,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         root.io = io;
         root.draw();
 
-        Vector2 textSize() {
+        Vector2 fontSize() {
 
             return root.contentLabel.minSize;
 
@@ -832,7 +832,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
                 decode(word[], index);  // index by reference
 
-                auto size = typeface.measure(word[0..index]);
+                auto size = typeface.measure(word[0..index], style.fontSize);
                 auto end = startPosition.x + size.x;
                 auto half = (match.position.x + end)/2;
 
@@ -962,6 +962,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         auto typeface = style.getTypeface;
         auto ruler = textRuler();
+        ruler.fontSize = style.fontSize;
         auto slice = value[0 .. caretIndex + tail.length];
 
         // Measure text until the caret; include the word that follows to keep proper wrapping
@@ -970,7 +971,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         auto caretPosition = ruler.caret.start;
 
         // Measure the word itself, and remove it
-        caretPosition.x -= typeface.measure(tail[]).x;
+        caretPosition.x -= typeface.measure(tail[], style.fontSize).x;
 
         return caretPosition;
 
@@ -1096,7 +1097,7 @@ class TextInput : InputNode!Node, FluidScrollable {
                 // Selection starts here
                 if (startIndex <= low && low <= endIndex) {
 
-                    const dent = typeface.measure(word[0 .. low - startIndex]);
+                    const dent = typeface.measure(word[0 .. low - startIndex], style.fontSize);
 
                     lineStart = caret.start + Vector2(dent.x, 0);
 
@@ -1105,7 +1106,7 @@ class TextInput : InputNode!Node, FluidScrollable {
                 // Selection ends here
                 if (startIndex <= high && high <= endIndex) {
 
-                    const dent = typeface.measure(word[0 .. high - startIndex]);
+                    const dent = typeface.measure(word[0 .. high - startIndex], FontSize.init);
                     const lineEnd = caret.end + Vector2(dent.x, 0);
                     const rect = Rectangle(
                         (inner.start + lineStart).tupleof,

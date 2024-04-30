@@ -46,7 +46,8 @@ struct Style {
         Color textColor;
 
         /// Text height.
-        float textSize;
+        float fontSize = 14;
+        deprecated alias textSize = fontSize;
 
     }
 

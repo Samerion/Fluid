@@ -6,6 +6,7 @@ import std.range;
 import std.traits;
 import std.string;
 import std.algorithm;
+import std.math.rounding;
 
 import fluid.rope;
 import fluid.utils;
@@ -27,6 +28,9 @@ else {
     }
 }
 
+/// The type used to set text height in pixels.
+alias FontSize = float;
+
 /// Low-level interface for drawing text. Represents a single typeface.
 ///
 /// Unlike the rest of Fluid, Typeface uses screen-space dots directly, instead of fixed-size pixels. Consequently, DPI
@@ -42,14 +46,15 @@ interface Typeface {
     Vector2 penPosition() const;
 
     /// Get line height.
-    int lineHeight() const;
+    uint lineHeight() const;
+    uint lineHeight(const FontSize fontSize);
 
     /// Width of an indent/tab character, in dots.
     /// `Text` sets `indentWidth` automatically.
     ref inout(int) indentWidth() inout;
 
-    /// Get advance vector for the given glyph. Uses dots, not pixels, as the unit.
-    Vector2 advance(dchar glyph);
+    /// Get advance vector for the given glyph. `fontSize`` is in pixels, but the output is in dots.
+    Vector2 advance(dchar glyph, FontSize fontSize);
 
     /// Set font scale. This should be called at least once before drawing.
     /// `Text` sets DPI automatically.
@@ -70,7 +75,7 @@ interface Typeface {
     ///     penPosition  = Pen position for the beginning of the line. Updated to the pen position at the end of th line.
     ///     text         = Text to draw.
     ///     paletteIndex = If the image has a palette, this is the index to get colors from.
-    void drawLine(ref Image target, ref Vector2 penPosition, Rope text, ubyte paletteIndex = 0, const uint size = 0) const;
+    void drawLine(ref Image target, ref Vector2 penPosition, Rope text, ubyte paletteIndex = 0, const FontSize = FontSize.init);
 
     /// Instances of Typeface have to be comparable in a memory-safe manner.
     bool opEquals(const Object object) @safe const;
@@ -160,10 +165,10 @@ interface Typeface {
     /// Returns:
     ///     Vector2 representing the text size, if `TextRuler` is not specified as an argument.
     final Vector2 measure(alias chunkWords = defaultWordChunks, String)
-        (Vector2 availableSpace, String text, bool wrap = true)
+        (Vector2 availableSpace, String text, bool wrap = true, FontSize fontSize)
     do {
 
-        auto ruler = TextRuler(this, wrap ? availableSpace.x : float.nan);
+        auto ruler = TextRuler(this, fontSize, wrap ? availableSpace.x : float.nan);
 
         measure!chunkWords(ruler, text, wrap);
 
@@ -172,10 +177,10 @@ interface Typeface {
     }
 
     /// ditto
-    final Vector2 measure(String)(String text) {
+    final Vector2 measure(String)(String text, FontSize fontSize) {
 
         // No wrap, only explicit in-text line breaks
-        auto ruler = TextRuler(this);
+        auto ruler = TextRuler(this, fontSize);
 
         measure(ruler, text, false);
 
@@ -390,6 +395,9 @@ struct TextRuler {
     /// Typeface to use for the text.
     Typeface typeface;
 
+    /// Desired font size.
+    FontSize fontSize;
+
     /// Maximum width for a single line. If `NaN`, no word breaking is performed.
     float lineWidth;
 
@@ -402,29 +410,30 @@ struct TextRuler {
     /// Index of the word within the line.
     size_t wordLineIndex;
 
-    this(Typeface typeface, float lineWidth = float.nan) {
+    this(Typeface typeface, FontSize fontSize, float lineWidth = float.nan) {
 
         this.typeface = typeface;
         this.lineWidth = lineWidth;
+        this.fontSize = fontSize;
         this.penPosition = typeface.penPosition;
 
     }
 
     /// Get the caret as a 0 width rectangle.
-    Rectangle caret() const {
+    Rectangle caret() {
 
         return caret(penPosition);
 
     }
 
     /// Get the caret as a 0 width rectangle for the given pen position.
-    Rectangle caret(Vector2 penPosition) const {
+    Rectangle caret(Vector2 penPosition) {
 
         const start = penPosition - Vector2(0, typeface.penPosition.y);
 
         return Rectangle(
             start.tupleof,
-            0, typeface.lineHeight,
+            0, typeface.lineHeight(fontSize),
         );
 
     }
@@ -468,7 +477,7 @@ struct TextRuler {
 
             // Other characters use their regular advance value
             else
-                wordSpan += typeface.advance(glyph).x;
+                wordSpan += typeface.advance(glyph, fontSize).x;
 
         }
 
@@ -554,7 +563,7 @@ class FreetypeTypeface : Typeface {
     }
 
     /// Load the default typeface
-    this(int size) @trusted {
+    this(uint fontSize) @trusted {
 
         static typefaceFile = cast(ubyte[]) import("ruda-regular.ttf");
         const typefaceSize = cast(int) typefaceFile.length;
@@ -562,22 +571,22 @@ class FreetypeTypeface : Typeface {
         // Load the font
         if (auto error = FT_New_Memory_Face(freetype, typefaceFile.ptr, typefaceSize, 0, &face)) {
 
-            assert(false, format!"Failed to load default Fluid typeface at size %s, error no. %s"(size, error));
+            assert(false, format!"Failed to load default Fluid typeface at size %s, error no. %s"(fontSize, error));
 
         }
 
         // Mark self as the owner
-        this._size = size;
+        setSize(fontSize);
         this.isOwner = true;
         this.lineHeightFactor = 1.16;
 
     }
 
     /// Use an existing freetype2 font.
-    this(FT_Face face, int size) {
+    this(FT_Face face, uint fontSize) {
 
         this.face = face;
-        this._size = size;
+        setSize(fontSize);
 
     }
 
@@ -585,11 +594,10 @@ class FreetypeTypeface : Typeface {
     /// Params:
     ///     backend  = I/O Fluid backend, used to adjust the scale of the font.
     ///     filename = Filename of the font file.
-    ///     size     = Size of the font to load (in points).
-    this(string filename, int size) @trusted {
+    ///     fontSize     = Size of the font to load (in points).
+    this(string filename, uint fontSize) @trusted {
 
         this._isOwner = true;
-        this._size = size;
 
         // TODO proper exceptions
         if (auto error = FT_New_Face(freetype, filename.toStringz, 0, &this.face)) {
@@ -597,6 +605,8 @@ class FreetypeTypeface : Typeface {
             throw new Exception(format!"Failed to load `%s`, error no. %s"(filename, error));
 
         }
+
+        setSize(fontSize);
 
     }
 
@@ -634,10 +644,15 @@ class FreetypeTypeface : Typeface {
     }
 
     /// Line height.
-    int lineHeight() const {
+    uint lineHeight(const FontSize fontSize) {
+        setSize(fontSize);
+        return lineHeight();
+    }
 
+    uint lineHeight() const {
+        
         // +1 is an error margin
-        return cast(int) (face.size.metrics.height * lineHeightFactor / 64) + 1;
+        return cast(uint) (face.size.metrics.height * lineHeightFactor / 64) + 1;
 
     }
 
@@ -659,7 +674,7 @@ class FreetypeTypeface : Typeface {
         _dpiY = dpiY;
 
         // Load size
-        if (auto error = FT_Set_Char_Size(face, 0, _size*64, dpiX, dpiY)) {
+        if (auto error = FT_Set_Char_Size(face, 0, _size, dpiX, dpiY)) {
 
             throw new Exception(
                 format!"Failed to load font at size %s at DPI %sx%s, error no. %s"(_size, dpiX, dpiY, error)
@@ -674,13 +689,32 @@ class FreetypeTypeface : Typeface {
 
     }
 
+    /// Change the size of the text. Returns whether the text was resized.
+    /// TODO Cache previously-set sizes in associative array.
+    protected bool setSize(const FontSize heightPixels) @trusted {
+    
+        if (heightPixels == FontSize.init || _size == cast(uint)ceil(heightPixels * 64)) {
+            return false;
+        }
+        else _size = cast(uint)ceil(heightPixels * 64);
+    
+        if (auto error = FT_Set_Char_Size(face, 0, _size, _dpiX, _dpiY)) {
+            import std.stdio;
+            debug if (error == 35) writeln(face);
+            throw new Exception(format!"Failed to set typeface size. Error #%s. Size of %s pt"(error, _size));
+        }
+        else return true;
+    }
+
     /// Get advance vector for the given glyph
-    Vector2 advance(dchar glyph) @trusted {
+    Vector2 advance(dchar glyph, FontSize textSize) @trusted {
 
         assert(_dpiX && _dpiY, "Font DPI hasn't been set");
+        debug assert(textSize > 0, "textSize is not a valid number");
 
         // Return the stored value if the result is cached
-        if (auto result = glyph in advanceCache) {
+        auto result = glyph in advanceCache;
+        if (setSize(textSize) && result) {
 
             return *result;
 
@@ -700,22 +734,14 @@ class FreetypeTypeface : Typeface {
     }
 
     /// Draw a line of text
-    void drawLine(ref Image target, ref Vector2 penPosition, const Rope text, ubyte paletteIndex) const
-        => drawLine(target, penPosition, text, paletteIndex, 0);
-    void drawLine(ref Image target, ref Vector2 penPosition, const Rope text, ubyte paletteIndex, const uint size) const @trusted {
+    void drawLine(ref Image target, ref Vector2 penPosition, const Rope text, ubyte paletteIndex)
+        => drawLine(target, penPosition, text, paletteIndex, 0f);
+    void drawLine(ref Image target, ref Vector2 penPosition, const Rope text, ubyte paletteIndex, const FontSize fontSize) @trusted {
 
         assert(_dpiX && _dpiY, "Font DPI hasn't been set");
 
-        debug import std.stdio;
-        FT_Error setSizeError;
-        if (!size) {
-            setSizeError = FT_Set_Char_Size(cast(FT_FaceRec*) face, 0, _size*64, _dpiX, _dpiY);
-            debug writeln("Size is zero.");
-        } else {
-            setSizeError = FT_Set_Char_Size(cast(FT_FaceRec*) face, 0, size, _dpiX, _dpiY);
-            debug writeln("Size isn't zero.");
-        }
-        if (setSizeError) throw new Exception("Text size setting failed.");
+        setSize(fontSize);
+        debug assert(_size != 0, format!"`FreetypeTypeface._size` has not been set. `size` = %s"(fontSize));
 
         foreach (glyph; text.byDchar) {
 
@@ -728,7 +754,7 @@ class FreetypeTypeface : Typeface {
             }
 
             // Load the glyph
-            if (auto error = FT_Load_Char(cast(FT_FaceRec*) face, glyph, FT_LOAD_RENDER)) {
+            if (auto error = FT_Load_Char(face, glyph, FT_LOAD_RENDER)) {
 
                 continue;
 

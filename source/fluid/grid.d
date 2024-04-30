@@ -16,7 +16,7 @@ import fluid.structs;
 
 
 deprecated("Renamed to `gridFrame`") alias grid = simpleConstructor!Grid;
-alias gridFrame = grid;
+alias gridFrame = simpleConstructor!GridFrame;
 alias gridRow = simpleConstructor!GridRow;
 
 // TODO rename segments to columns?
@@ -29,7 +29,7 @@ struct Segments {
     uint amount = 1;
 
     /// Set the number of columns present in a grid.
-    void apply(Grid grid) {
+    void apply(GridFrame grid) {
 
         grid.segmentCount = amount;
 
@@ -82,7 +82,7 @@ class GridFrame : Frame {
         // Check the other arguments
         static foreach (i, arg; children) {{
 
-            // Grid row (via array)
+            // GridFramerow (via array)
             static if (is(typeof(arg) : U[], U)) {
 
                 this.children[i] = gridRow(this, arg);
@@ -368,14 +368,14 @@ class GridFrame : Frame {
 /// A single row in a `Grid`.
 class GridRow : Frame {
 
-    Grid parent;
+    GridFrame parent;
     size_t segmentCount;
 
     /// Params:
     ///     params = Standard Fluid constructor parameters.
-    ///     parent = Grid this row will be placed in.
+    ///     parent = GridFramethis row will be placed in.
     ///     nodes = Children to be placed in the row.
-    this(T...)(Grid parent, T nodes) {
+    this(T...)(GridFrame parent, T nodes) {
 
         super(nodes);
         this.layout.nodeAlign = NodeAlign.fill;
