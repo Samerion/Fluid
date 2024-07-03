@@ -850,6 +850,30 @@ struct Image {
 
     }
 
+    unittest {
+
+        auto colors = [
+            PalettedColor(0, ubyte(0)),
+            PalettedColor(1, ubyte(127)),
+            PalettedColor(2, ubyte(127)),
+            PalettedColor(3, ubyte(255)),
+        ];
+
+        auto image = Image(colors, 2, 2);
+        image.palette = [
+            Color(0, 0, 0, 255),
+            Color(255, 0, 0, 255),
+            Color(0, 255, 0, 255),
+            Color(0, 0, 255, 255),
+        ];
+
+        assert(image.get(0, 0) == Color(0, 0, 0, 0));
+        assert(image.get(1, 0) == Color(255, 0, 0, 127));
+        assert(image.get(0, 1) == Color(0, 255, 0, 127));
+        assert(image.get(1, 1) == Color(0, 0, 255, 255));
+
+    }
+
     /// Set color at given position. Does nothing if position is out of bounds.
     ///
     /// The `set(int, int, Color)` overload only supports true color images. For paletted images, use
@@ -1312,6 +1336,21 @@ Color setAlpha(Color color, float alpha) {
     import std.algorithm : clamp;
 
     color.a = cast(ubyte) clamp(ubyte.max * alpha, 0, ubyte.max);
+    return color;
+
+}
+
+Color setAlpha()(Color color, int alpha) {
+
+    static assert(false, "Overload setAlpha(Color, int). Explicitly choose setAlpha(Color, float) (0...1 range) or "
+        ~ "setAlpha(Color, ubyte) (0...255 range)");
+
+}
+
+/// Set the alpha channel for the given color, as a float.
+Color setAlpha(Color color, ubyte alpha) {
+
+    color.a = alpha;
     return color;
 
 }
