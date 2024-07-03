@@ -698,7 +698,7 @@ static Image generateColorImage(int width, int height, Color color) {
 static Image generatePalettedImage(int width, int height, ubyte alpha) {
 
     auto data = new PalettedColor[width * height];
-    data[] = PalettedColor(alpha, 0);
+    data[] = PalettedColor(0, alpha);
 
     return Image(data, width, height);
 
@@ -719,7 +719,7 @@ static Image generateAlphaMask(int width, int height, ubyte value) {
 struct PalettedColor {
 
     ubyte index;
-    ubyte alpha = 255;
+    ubyte alpha;
 
 }
 
