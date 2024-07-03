@@ -535,7 +535,7 @@ class FreetypeTypeface : Typeface {
         bool _isOwner;
 
         /// Font size loaded (points).
-        int _size;
+        float _size;
 
         /// Current DPI set for the typeface.
         int _dpiX, _dpiY;
@@ -554,7 +554,7 @@ class FreetypeTypeface : Typeface {
     }
 
     /// Load the default typeface
-    this(int size) @trusted {
+    this(float size) @trusted {
 
         static typefaceFile = cast(ubyte[]) import("ruda-regular.ttf");
         const typefaceSize = cast(int) typefaceFile.length;
@@ -574,7 +574,7 @@ class FreetypeTypeface : Typeface {
     }
 
     /// Use an existing freetype2 font.
-    this(FT_Face face, int size) {
+    this(FT_Face face, float size) {
 
         this.face = face;
         this._size = size;
@@ -586,7 +586,7 @@ class FreetypeTypeface : Typeface {
     ///     backend  = I/O Fluid backend, used to adjust the scale of the font.
     ///     filename = Filename of the font file.
     ///     size     = Size of the font to load (in points).
-    this(string filename, int size) @trusted {
+    this(string filename, float size) @trusted {
 
         this._isOwner = true;
         this._size = size;
@@ -658,8 +658,10 @@ class FreetypeTypeface : Typeface {
         _dpiX = dpiX;
         _dpiY = dpiY;
 
+        auto intSize = cast(int) (_size * 64 + 1);
+
         // Load size
-        if (auto error = FT_Set_Char_Size(face, 0, _size*64, dpiX, dpiY)) {
+        if (auto error = FT_Set_Char_Size(face, 0, intSize, dpiX, dpiY)) {
 
             throw new Exception(
                 format!"Failed to load font at size %s at DPI %sx%s, error no. %s"(_size, dpiX, dpiY, error)
@@ -744,7 +746,7 @@ class FreetypeTypeface : Typeface {
                     const ubyte newAlpha = ubyte.max * pixel / pixel.max;
 
                     if (newAlpha >= oldAlpha)
-                        target.set(targetX, targetY, PalettedColor(newAlpha, paletteIndex));
+                        target.set(targetX, targetY, PalettedColor(paletteIndex, newAlpha));
 
                 }
 
