@@ -718,8 +718,8 @@ static Image generateAlphaMask(int width, int height, ubyte value) {
 /// alpha value.
 struct PalettedColor {
 
-    ubyte alpha;
     ubyte index;
+    ubyte alpha = 255;
 
 }
 

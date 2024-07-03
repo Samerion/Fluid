@@ -69,11 +69,11 @@ class Raylib5Backend : FluidBackend {
         uniform sampler2D palette;
         uniform vec4 colDiffuse;
         void main() {
-            // index.r is alpha/opacity
-            // index.a is palette index
+            // index.a is alpha/opacity
+            // index.r is palette index
             vec4 index = texture(texture0, fragTexCoord);
-            vec4 texel = texture(palette, vec2(index.a, 0));
-            finalColor = texel * vec4(1, 1, 1, index.r) * colDiffuse * fragColor;
+            vec4 texel = texture(palette, vec2(index.r, 0));
+            finalColor = texel * vec4(1, 1, 1, index.a) * colDiffuse * fragColor;
         }
     };
 
