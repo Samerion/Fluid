@@ -35,8 +35,7 @@
 			"targetType": "library",
 			"dflags-ldc": [
 				"--ftime-trace", 
-				"--ftime-trace-file=build/trace.json", 
-				"--ftime-trace-granularity=200000"
+				"--ftime-trace-file=build/trace.json"
 			]
 		}
 	],
