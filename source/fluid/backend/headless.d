@@ -199,7 +199,7 @@ class HeadlessBackend : FluidBackend {
         float _deltaTime = 1f / 60f;
         bool _justResized;
         bool _scissorsOn;
-        Color _tint = color!"fff";
+        Color _tint = Color(0xff, 0xff, 0xff, 0xff);
         string _clipboard;
 
         /// Currently allocated/used textures as URLs.
