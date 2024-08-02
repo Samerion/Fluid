@@ -36,7 +36,7 @@ void main() {
                 BeginDrawing();
                 scope (exit) EndDrawing();
 
-                ClearBackground(color!"fff");
+                ClearBackground(color("fff"));
 
                 ui.draw();
 

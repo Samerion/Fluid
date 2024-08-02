@@ -88,10 +88,13 @@ interface Typeface {
     if (isSomeChar!(ElementType!Range))
     do {
 
-        import std.utf : UTFException, byDchar;
-        import std.uni : lineSep, paraSep;
+        enum dchar lineSep = '\u2028';  // Line separator.
+        enum dchar paraSep = '\u2029';  // Paragraph separator.
+        enum dchar nelSep  = '\u0085';  // Next line.
 
-        const hasEmptyLine = byDchar(text).endsWith('\r', '\n', '\v', '\f', "\r\n", lineSep, paraSep, '\u0085') != 0;
+        import std.utf : byDchar;
+
+        const hasEmptyLine = byDchar(text).endsWith('\r', '\n', '\v', '\f', "\r\n", lineSep, paraSep, nelSep) != 0;
         auto split = .lineSplitter!keepTerm(text);
 
         // Include the empty line if present
