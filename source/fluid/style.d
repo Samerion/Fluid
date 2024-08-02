@@ -102,7 +102,7 @@ struct Style {
 
         /// Apply tint to all node contents, including children.
         @Themable
-        Color tint = color!"fff";
+        Color tint = Color(0xff, 0xff, 0xff, 0xff);
 
         /// Cursor icon to use while this node is hovered.
         ///
