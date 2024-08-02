@@ -27,7 +27,17 @@
 				"raylib"
 			],
 			"name": "unittest",
-			"targetType": "library"
+			"targetType": "library",
+			"versions": ["Fluid_HeadlessOutput"]
+		},
+		{
+			"name": "time-trace",
+			"targetType": "library",
+			"dflags-ldc": [
+				"--ftime-trace", 
+				"--ftime-trace-file=build/trace.json", 
+				"--ftime-trace-granularity=200000"
+			]
 		}
 	],
 	"copyright": "Copyright © 2021–2024, Artha",

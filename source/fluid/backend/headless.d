@@ -1,3 +1,13 @@
+/// A headless backend. This backend does not actually render anything. This allows apps reliant on Fluid to run 
+/// outside of graphical environments, provided an alternative method of access exist.
+///
+/// This backend is used internally in Fluid for performing tests. For this reason, this module may be configured to 
+/// capture the output in a way that can be analyzed or compared againt later. This functionality is disabled by 
+/// default due to significant overhead — use version `Fluid_HeadlessOutput` to turn it on.
+///
+/// If `elemi` is added as a dependency and `Fluid_HeadlessOutput` is set, the backend will also expose its 
+/// experimental SVG export functionality through `saveSVG`. It is only intended for testing; note it will export text 
+/// as embedded raster images rather than proper vector text.
 module fluid.backend.headless;
 
 debug (Fluid_BuildMessages) {
@@ -8,10 +18,13 @@ import std.math;
 import std.array;
 import std.range;
 import std.string;
-import std.sumtype;
 import std.algorithm;
 
 import fluid.backend;
+
+version (Fluid_HeadlessOutput) {
+    import std.sumtype;
+}
 
 
 @safe:
@@ -161,7 +174,14 @@ class HeadlessBackend : FluidBackend {
 
     }
 
-    alias Drawing = SumType!(DrawnLine, DrawnTriangle, DrawnCircle, DrawnRectangle, DrawnTexture);
+    version (Fluid_HeadlessOutput) {
+    
+        alias Drawing = SumType!(DrawnLine, DrawnTriangle, DrawnCircle, DrawnRectangle, DrawnTexture);
+
+        /// All items drawn during the last frame
+        Appender!(Drawing[]) canvas;
+
+    }
 
     private {
 
@@ -195,13 +215,6 @@ class HeadlessBackend : FluidBackend {
 
     }
 
-    public {
-
-        /// All items drawn during the last frame
-        Appender!(Drawing[]) canvas;
-
-    }
-
     this(Vector2 windowSize = defaultWindowSize) {
 
         this._windowSize = windowSize;
@@ -217,7 +230,10 @@ class HeadlessBackend : FluidBackend {
         characterQueue = null;
         _justResized = false;
         _scroll = Vector2();
-        canvas.clear();
+
+        version (Fluid_HeadlessOutput) {
+            canvas.clear();
+        }
 
         // Update input
         foreach (ref state; chain(mouse[], keyboard[], gamepad[])) {
@@ -631,7 +647,10 @@ class HeadlessBackend : FluidBackend {
     void drawLine(Vector2 start, Vector2 end, Color color) {
 
         color = multiply(color, tint);
-        canvas ~= Drawing(DrawnLine(start, end, color));
+
+        version (Fluid_HeadlessOutput) {
+            canvas ~= Drawing(DrawnLine(start, end, color));
+        }
 
     }
 
@@ -639,7 +658,9 @@ class HeadlessBackend : FluidBackend {
     void drawTriangle(Vector2 a, Vector2 b, Vector2 c, Color color) {
 
         color = multiply(color, tint);
-        canvas ~= Drawing(DrawnTriangle(a, b, c, color));
+        version (Fluid_HeadlessOutput) {
+            canvas ~= Drawing(DrawnTriangle(a, b, c, color));
+        }
 
     }
 
@@ -647,7 +668,9 @@ class HeadlessBackend : FluidBackend {
     void drawCircle(Vector2 position, float radius, Color color) {
 
         color = multiply(color, tint);
-        canvas ~= Drawing(DrawnCircle(position, radius, color));
+        version (Fluid_HeadlessOutput) {
+            canvas ~= Drawing(DrawnCircle(position, radius, color));
+        }
 
     }
 
@@ -655,7 +678,9 @@ class HeadlessBackend : FluidBackend {
     void drawCircleOutline(Vector2 position, float radius, Color color) {
 
         color = multiply(color, tint);
-        canvas ~= Drawing(DrawnCircle(position, radius, color, true));
+        version (Fluid_HeadlessOutput) {
+            canvas ~= Drawing(DrawnCircle(position, radius, color, true));
+        }
 
     }
 
@@ -663,7 +688,9 @@ class HeadlessBackend : FluidBackend {
     void drawRectangle(Rectangle rectangle, Color color) {
 
         color = multiply(color, tint);
-        canvas ~= Drawing(DrawnRectangle(rectangle, color));
+        version (Fluid_HeadlessOutput) {
+            canvas ~= Drawing(DrawnRectangle(rectangle, color));
+        }
 
     }
 
@@ -673,7 +700,9 @@ class HeadlessBackend : FluidBackend {
     do {
 
         tint = multiply(tint, this.tint);
-        canvas ~= Drawing(DrawnTexture(texture, rectangle, tint));
+        version (Fluid_HeadlessOutput) {
+            canvas ~= Drawing(DrawnTexture(texture, rectangle, tint));
+        }
 
     }
 
@@ -687,28 +716,33 @@ class HeadlessBackend : FluidBackend {
     }
 
     /// Get items from the canvas that match the given type.
-    auto filterCanvas(T)()
+    version (Fluid_HeadlessOutput) {
 
-        => canvas[]
+        auto filterCanvas(T)()
 
-        // Filter out items that don't match what was requested
-        .filter!(a => a.match!(
-            (T item) => true,
-            (_) => false
-        ))
+            => canvas[]
 
-        // Return items that match
-        .map!(a => a.match!(
-            (T item) => item,
-            (_) => assert(false),
-        ));
+            // Filter out items that don't match what was requested
+            .filter!(a => a.match!(
+                (T item) => true,
+                (_) => false
+            ))
 
-    alias lines = filterCanvas!DrawnLine;
-    alias triangles = filterCanvas!DrawnTriangle;
-    alias rectangles = filterCanvas!DrawnRectangle;
-    alias textures = filterCanvas!DrawnTexture;
+            // Return items that match
+            .map!(a => a.match!(
+                (T item) => item,
+                (_) => assert(false),
+            ));
+
+        alias lines = filterCanvas!DrawnLine;
+        alias triangles = filterCanvas!DrawnTriangle;
+        alias rectangles = filterCanvas!DrawnRectangle;
+        alias textures = filterCanvas!DrawnTexture;
+
+    }
 
     /// Throw an `AssertError` if given line was never drawn.
+    version (Fluid_HeadlessOutput)
     void assertLine(Vector2 a, Vector2 b, Color color) {
 
         assert(
@@ -719,6 +753,7 @@ class HeadlessBackend : FluidBackend {
     }
 
     /// Throw an `AssertError` if given triangle was never drawn.
+    version (Fluid_HeadlessOutput)
     void assertTriangle(Vector2 a, Vector2 b, Vector2 c, Color color) {
 
         assert(
@@ -729,6 +764,7 @@ class HeadlessBackend : FluidBackend {
     }
 
     /// Throw an `AssertError` if given rectangle was never drawn.
+    version (Fluid_HeadlessOutput)
     void assertRectangle(Rectangle r, Color color) {
 
         assert(
@@ -739,6 +775,7 @@ class HeadlessBackend : FluidBackend {
     }
 
     /// Throw an `AssertError` if the texture was never drawn with given parameters.
+    version (Fluid_HeadlessOutput)
     void assertTexture(const Texture texture, Vector2 position, Color tint) {
 
         assert(texture.backend is this, "Given texture comes from a different backend");
@@ -757,6 +794,7 @@ class HeadlessBackend : FluidBackend {
     }
 
     /// Throw an `AssertError` if given texture was never drawn.
+    version (Fluid_HeadlessOutput)
     void assertTexture(Rectangle r, Color color) {
 
         assert(
@@ -766,6 +804,7 @@ class HeadlessBackend : FluidBackend {
 
     }
 
+    version (Fluid_HeadlessOutput)
     version (Have_elemi) {
 
         import std.conv;
