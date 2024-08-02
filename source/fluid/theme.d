@@ -325,9 +325,13 @@ unittest {
 // Define field setters for each field, to use by importing or through `Rule.property = value`
 static foreach (field; StyleTemplate.fields) {
 
-    mixin(format!q{
-        alias %1$s = Field!("%1$s", typeof(field)).make;
-    }(__traits(identifier, field)));
+    mixin(
+        `alias `,
+        __traits(identifier, field),
+        `= Field!("`,
+        __traits(identifier, field),
+        `", typeof(field)).make;`
+    );
 
 }
 
@@ -798,7 +802,7 @@ struct StyleTemplate {
 
     }
 
-    string toString() const @trusted {
+    string toString()() const @trusted {
 
         string[] items;
 
@@ -808,11 +812,11 @@ struct StyleTemplate {
             auto value = mixin("this.", name);
 
             if (value.isSet)
-                items ~= format!"%s: %s"(name, value);
+                items ~= format("%s: %s", name, value);
 
         }}
 
-        return format!"StyleTemplate(%-(%s, %))"(items);
+        return format("StyleTemplate(%-(%s, %))", items);
 
     }
 
