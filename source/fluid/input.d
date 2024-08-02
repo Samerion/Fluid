@@ -405,7 +405,7 @@ struct InputStroke {
 
     }
 
-    string toString() const {
+    string toString()() const {
 
         return format!"InputStroke(%(%s + %))"(input);
 
@@ -780,38 +780,7 @@ interface FluidHoverable {
     /// false.
     final bool runMouseInputActions() {
 
-        return runInputActionsImpl(true);
-
-    }
-
-    private final bool runInputActionsImpl(bool mouse) {
-
-        auto tree = asNode.tree;
-        bool handled;
-
-        // Run all active actions
-        if (!mouse || isHovered)
-        foreach_reverse (binding; tree.activeActions[]) {
-
-            if (InputStroke.isMouseItem(binding.trigger) != mouse) continue;
-
-            handled = runInputAction(binding.action, true) || handled;
-
-            // Stop once handled
-            if (handled) break;
-
-        }
-
-        // Run all "while down" actions
-        foreach (binding; tree.downActions[]) {
-
-            if (InputStroke.isMouseItem(binding.trigger) != mouse) continue;
-
-            handled = runInputAction(binding.action, false) || handled;
-
-        }
-
-        return handled;
+        return this.runInputActionsImpl(true);
 
     }
 
@@ -857,13 +826,9 @@ interface FluidHoverable {
 
         override bool runInputAction(InputActionID action, bool active = true) {
 
-            return runInputActionImpl(action, active);
-
-        }
-
-        bool runInputActionImpl(this This)(InputActionID action, bool active = true) {
-
             import std.meta : Filter;
+
+            alias This = typeof(this);
 
             // The programmer may override the action
             if (inputActionImpl(action, active)) return true;
@@ -874,57 +839,36 @@ interface FluidHoverable {
             static foreach (memberName; __traits(allMembers, This)) {
 
                 static if (!__traits(isDeprecated, __traits(getMember, This, memberName)))
-                static foreach (overload; __traits(getOverloads, This, memberName)) {{
-
-                    // Make sure no method is marked `@InputAction`, that's invalid usage
-                    alias inputActionUDAs = getUDAs!(overload, InputAction);
-
-                    // Check for `@whileDown`
-                    enum activateWhileDown = hasUDA!(overload, fluid.input.whileDown);
-
-                    static assert(inputActionUDAs.length == 0,
-                        format!"Please use @(%s) instead of @InputAction!(%1$s)"(inputActionUDAs[0].type));
+                static foreach (overload; __traits(getOverloads, This, memberName)) {
 
                     // Find the matching action
-                    static foreach (actionType; __traits(getAttributes, overload))
-                    static if (isInputActionType!actionType)
-                    if (InputActionID.from!actionType == action) {{
+                    static foreach (actionType; __traits(getAttributes, overload)) {
 
-                        // Run the action if the stroke was performed
-                        if (activateWhileDown || active) {
+                        // Input action
+                        static if (isInputActionType!actionType) {
+                            if (InputActionID.from!actionType == action) {
 
-                            // Pass the action type if applicable
-                            static if (__traits(compiles, overload(actionType))) {
+                                // Run the action if the stroke was performed
+                                if (shouldActivateWhileDown!overload || active) {
 
-                                // Run the action and mark as handled
-                                static if (is(typeof(overload(actionType)) == void)) {
-
-                                    overload(actionType);
-                                    handled = true;
+                                    handled = runInputActionHandler(actionType, &__traits(child, this, overload));
 
                                 }
 
-                                else handled = overload(actionType);
-
                             }
+                        }
 
-                            // TODO Support action ID?
+                        // Prevent usage via @InputAction
+                        else static if (is(typeof(actionType)) && isInstanceOf!(typeof(actionType), InputAction)) {
 
-                            // Run empty
-                            else static if (is(typeof(overload()) == void)) {
-
-                                overload();
-                                handled = true;
-
-                            }
-
-                            else handled = overload();
+                            static assert(false,
+                                format!"Please use @(%s) instead of @InputAction!(%1$s)"(actionType.type));
 
                         }
 
-                    }}
+                    }
 
-                }}
+                }
 
             }
 
@@ -933,6 +877,70 @@ interface FluidHoverable {
         }
 
     }
+
+}
+
+/// Check for `@whileDown`
+enum shouldActivateWhileDown(alias overload) = hasUDA!(overload, fluid.input.whileDown);
+
+/// Helper function to run an input action handler through one of the possible overloads.
+bool runInputActionHandler(T)(T action, bool delegate(T action) @safe handler) {
+
+    return handler(action);
+
+}
+
+/// ditto
+bool runInputActionHandler(T)(T action, void delegate(T action) @safe handler) {
+
+    handler(action);
+    return true;
+
+}
+
+/// ditto
+bool runInputActionHandler(T)(T, bool delegate() @safe handler) {
+
+    return handler();
+
+}
+
+/// ditto
+bool runInputActionHandler(T)(T, void delegate() @safe handler) {
+
+    handler();
+    return true;
+
+}
+
+private bool runInputActionsImpl(FluidHoverable hoverable, bool mouse) {
+
+    auto tree = hoverable.asNode.tree;
+    bool handled;
+
+    // Run all active actions
+    if (!mouse || hoverable.isHovered)
+    foreach_reverse (binding; tree.activeActions[]) {
+
+        if (InputStroke.isMouseItem(binding.trigger) != mouse) continue;
+
+        handled = hoverable.runInputAction(binding.action, true) || handled;
+
+        // Stop once handled
+        if (handled) break;
+
+    }
+
+    // Run all "while down" actions
+    foreach (binding; tree.downActions[]) {
+
+        if (InputStroke.isMouseItem(binding.trigger) != mouse) continue;
+
+        handled = hoverable.runInputAction(binding.action, false) || handled;
+
+    }
+
+    return handled;
 
 }
 
@@ -983,7 +991,7 @@ interface FluidFocusable : FluidHoverable {
     /// false.
     final bool runFocusInputActions() {
 
-        return runInputActionsImpl(false);
+        return this.runInputActionsImpl(false);
 
     }
 

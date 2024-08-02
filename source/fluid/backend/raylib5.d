@@ -34,7 +34,7 @@ class Raylib5Backend : FluidBackend {
         TextureReaper _reaper;
         FluidMouseCursor lastMouseCursor;
         Rectangle drawArea;
-        Color _tint = color!"fff";
+        Color _tint = Color(0xff, 0xff, 0xff, 0xff);
         float _scale = 1;
         Shader _alphaImageShader;
         Shader _palettedAlphaImageShader;

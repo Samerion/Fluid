@@ -1038,7 +1038,7 @@ struct Texture {
     }
 
     /// Draw this texture.
-    void draw(Vector2 position, Color tint = color!"fff") {
+    void draw(Vector2 position, Color tint = Color(0xff, 0xff, 0xff, 0xff)) {
 
         auto rectangle = Rectangle(position.tupleof, viewportSize.tupleof);
 
@@ -1046,7 +1046,7 @@ struct Texture {
 
     }
 
-    void draw(Rectangle rectangle, Color tint = color!"fff") {
+    void draw(Rectangle rectangle, Color tint = Color(0xff, 0xff, 0xff, 0xff)) {
 
         backend.drawTexture(this, rectangle, tint);
 
@@ -1266,8 +1266,8 @@ Color color(string hexCode)() {
 /// ditto
 Color color(string hexCode) pure {
 
+    import std.conv: to;
     import std.string : chompPrefix;
-    import std.format : format, formattedRead;
 
     // Remove the # if there is any
     const hex = hexCode.chompPrefix("#");
@@ -1279,7 +1279,7 @@ Color color(string hexCode) pure {
 
         // 4 digit RGBA
         case 4:
-            formattedRead!"%x"(hex[3..4], result.a);
+            result.a = hex[3..4].to!ubyte(16);
             result.a *= 17;
 
             // Parse the rest like RGB
@@ -1287,9 +1287,9 @@ Color color(string hexCode) pure {
 
         // 3 digit RGB
         case 3:
-            formattedRead!"%x"(hex[0..1], result.r);
-            formattedRead!"%x"(hex[1..2], result.g);
-            formattedRead!"%x"(hex[2..3], result.b);
+            result.r = hex[0..1].to!ubyte(16);
+            result.g = hex[0..1].to!ubyte(16);
+            result.b = hex[0..1].to!ubyte(16);
             result.r *= 17;
             result.g *= 17;
             result.b *= 17;
@@ -1297,14 +1297,14 @@ Color color(string hexCode) pure {
 
         // 8 digit RGBA
         case 8:
-            formattedRead!"%x"(hex[6..8], result.a);
+            result.a = hex[6..8].to!ubyte(16);
             goto case;
 
         // 6 digit RGB
         case 6:
-            formattedRead!"%x"(hex[0..2], result.r);
-            formattedRead!"%x"(hex[2..4], result.g);
-            formattedRead!"%x"(hex[4..6], result.b);
+            result.r = hex[0..2].to!ubyte(16);
+            result.g = hex[2..4].to!ubyte(16);
+            result.b = hex[4..6].to!ubyte(16);
             break;
 
         default:
