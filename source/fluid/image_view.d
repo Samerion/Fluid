@@ -83,7 +83,7 @@ class ImageView : Node {
         }
 
         Image texture(Image image) @system {
-            
+
             clear();
             _texture = tree.io.loadTexture(image);
             _isOwner = true;
@@ -208,7 +208,14 @@ class ImageView : Node {
         // Adjust size
         if (isSizeAutomatic) {
 
-            minSize = _texture.viewportSize;
+            // No texture loaded, shrink to nothingness
+            if (_texture is _texture.init) {
+
+                minSize = Vector2(0, 0);
+
+            }
+
+            else minSize = _texture.viewportSize;
 
         }
 

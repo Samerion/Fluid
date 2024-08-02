@@ -1093,7 +1093,7 @@ struct TextureGC {
     /// dynamic arrays. Changing the size of the array will copy the contents without performing a proper move of the
     /// old items. The postblit is the only kind of move constructor that will be called in this case, and a copy
     /// constructor does not do its job.
-    this(this) @system {
+    this(this) @trusted {
 
         if (tombstone)
         tombstone.markCopied();
