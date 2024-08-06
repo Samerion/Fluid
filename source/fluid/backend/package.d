@@ -1288,8 +1288,8 @@ Color color(string hexCode) pure {
         // 3 digit RGB
         case 3:
             result.r = hex[0..1].to!ubyte(16);
-            result.g = hex[0..1].to!ubyte(16);
-            result.b = hex[0..1].to!ubyte(16);
+            result.g = hex[1..2].to!ubyte(16);
+            result.b = hex[2..3].to!ubyte(16);
             result.r *= 17;
             result.g *= 17;
             result.b *= 17;
