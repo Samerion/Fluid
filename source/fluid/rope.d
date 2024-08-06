@@ -1446,6 +1446,43 @@ struct Rope {
 
     }
 
+    immutable(char)* toStringz() const @trusted {
+
+        return cast(immutable) toStringzMutable;
+
+    }
+
+    char* toStringzMutable() const {
+
+        // Allocate space for the whole string and a null terminator
+        auto buffer = new char[length + 1];
+
+        // Write all characters
+        foreach (i, char ch; this[].enumerate) {
+
+            buffer[i] = ch;
+
+        }
+
+        // Add a terminator null byte
+        buffer[$-1] = '\0';
+
+        return &buffer[0];
+
+    }
+
+    @system
+    unittest {
+
+        import core.stdc.string;
+        
+        auto input = Rope("Hello, World!");
+
+        assert(strlen(input.toStringzMutable) == input.length);
+
+    }
+
+
 }
 
 struct RopeNode {
