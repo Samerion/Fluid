@@ -219,8 +219,9 @@ class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable {
 
     }
 
-    override void drawImpl(Rectangle outer, Rectangle inner) {
+    override void drawImpl(Rectangle originalOuter, Rectangle inner) {
 
+        auto outer = originalOuter;
         auto scrollBarRect = outer;
 
         scrollBar.horizontal = isHorizontal;
@@ -273,7 +274,7 @@ class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable {
         scrollBar.draw(scrollBarRect);
 
         // Draw the frame
-        super.drawImpl(outer, inner);
+        super.drawImpl(originalOuter, inner);
 
     }
 
