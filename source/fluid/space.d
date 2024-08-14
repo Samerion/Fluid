@@ -103,7 +103,10 @@ class Space : Node {
 
         // Collect expanding children in a separate array
         Node[] expandChildren;
+        size_t visibleChildren;
         foreach (child; children) {
+
+            visibleChildren += !child.isHidden;
 
             // This node expands and isn't hidden
             if (child.layout.expand && !child.isHidden) {
@@ -131,7 +134,9 @@ class Space : Node {
 
         }
 
-        const gapSpace = style.gap * (children.length - 1);
+        const gapSpace = visibleChildren == 0
+            ? 0
+            : style.gap * (visibleChildren - 1u);
 
         // Reserve space for gaps
         reservedSpace += gapSpace;
@@ -206,6 +211,9 @@ class Space : Node {
         auto position = start(area);
 
         foreach (child; filterChildren) {
+
+            // Ignore if this child is not visible
+            if (child.isHidden) continue;
 
             // Get params
             const size = childSpace(child, size(area), true);
@@ -637,5 +645,47 @@ unittest {
     io.assertRectangle(Rectangle(0, 151, 800, 147), color("#f00"));
     io.assertRectangle(Rectangle(0, 302, 800, 147), color("#f00"));
     io.assertRectangle(Rectangle(0, 453, 800, 147), color("#f00"));
+
+}
+
+@("Gaps do not apply to invisible children")
+unittest {
+
+    import fluid.theme;
+
+    auto theme = nullTheme.derive(
+        rule!Space(gap = 4),
+    );
+
+    auto spy = new class Space {
+
+        Vector2 position;
+
+        override void drawImpl(Rectangle outer, Rectangle inner) {
+
+            position = outer.start;
+
+        }
+        
+    };
+
+    auto root = vspace(
+        theme,
+        hspace(),
+        hspace(),
+        hspace(),
+        spy,
+    );
+
+    root.draw();
+
+    assert(spy.position == Vector2(0, 12));
+
+    // Hide one child
+    root.children[0].hide();
+    root.draw();
+
+    assert(spy.position == Vector2(0, 8));
+    
 
 }
