@@ -134,6 +134,14 @@ struct Style {
 
     }
 
+    public {
+
+        /// Breadcrumbs associated with this style. Used to keep track of tree-aware theme selectors, such as 
+        /// `children`.
+        Breadcrumbs breadcrumbs;
+
+    }
+
     private this(Typeface typeface) {
 
         this.typeface = typeface;

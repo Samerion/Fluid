@@ -13,6 +13,7 @@ import fluid.utils;
 import fluid.input;
 import fluid.actions;
 import fluid.structs;
+import fluid.theme : Breadcrumbs;
 
 
 @safe:
@@ -564,6 +565,9 @@ abstract class Node {
         tree.focusDirection = FocusDirection(tree.focusBox);
         tree.focusBox = Rectangle(float.nan);
 
+        // Clear breadcrumbs
+        tree.breadcrumbs = Breadcrumbs.init;
+
         // Update input
         tree.poll();
 
@@ -856,7 +860,13 @@ abstract class Node {
         const contentBox = style.cropBox(paddingBox, style.padding);
         const mainBox    = borderBox;
 
-        const currentStyle = pickStyle();
+        auto currentStyle = pickStyle();
+        auto oldBreadcrumbs = tree.breadcrumbs;
+
+        // Write breadcrumbs to the tree
+        // Restore when done
+        tree.breadcrumbs = currentStyle.breadcrumbs;
+        scope (exit) tree.breadcrumbs = oldBreadcrumbs;
 
         // Get the visible part of the padding box — so overflowed content doesn't get mouse focus
         const visibleBox = tree.intersectScissors(paddingBox);
@@ -995,6 +1005,11 @@ abstract class Node {
         // Load the theme
         reloadStyles();
 
+        // Write breadcrumbs into the tree
+        auto oldBreadcrumbs = tree.breadcrumbs;
+        tree.breadcrumbs = _style.breadcrumbs;
+        scope (exit) tree.breadcrumbs = oldBreadcrumbs;
+
         // Queue actions into the tree
         tree.actions ~= _queuedActions;
         _queuedActions = null;
@@ -1108,12 +1123,23 @@ abstract class Node {
         // Pick the current style
         auto result = _style;
 
-        // Apply it
+        // Load breadcrumbs from the tree
+        result.breadcrumbs = tree.breadcrumbs;
+
+        // Load style from breadcrumbs
+        // Note breadcrumbs may change while drawing, but should also be able to affect sizing
+        // For this reason static breadcrumbs are applied both when reloading and when picking
+        result.breadcrumbs.applyStatic(this, result);
+
+        // Run delegates
         foreach (dg; _styleDelegates) {
 
             dg(this).apply(this, result);
 
         }
+
+        // Load dynamic breadcrumb styles
+        result.breadcrumbs.applyDynamic(this, result);
 
         return result;
 
@@ -1127,8 +1153,14 @@ abstract class Node {
         // Reset style
         _style = Style.init;
 
+        // Load breadcrumbs
+        _style.breadcrumbs = tree.breadcrumbs;
+
         // Apply theme to the given style
         _styleDelegates = theme.apply(this, _style);
+
+        // Load breadcrumb styles
+        style.breadcrumbs.applyStatic(this, _style);
 
         // Update size
         updateSize();
