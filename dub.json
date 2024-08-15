@@ -2,17 +2,6 @@
 	"authors": [
 		"Artha"
 	],
-	"subConfigurations": {
-		"bindbc-freetype": "staticBC"
-	},
-	"libs": ["freetype"],
-	"lflags-windows": ["/LIBPATH:$PACKAGE_DIR/libraries/windows"],
-	"lflags-osx": ["-L$PACKAGE_DIR/libraries/macos"],
-	"lflags-linux": ["-L$PACKAGE_DIR/libraries/ubuntu"],
-	"copyFiles-windows": [
-		"$PACKAGE_DIR/libraries/windows/freetype.dll",
-		"$PACKAGE_DIR/libraries/windows/raylib.dll"
-	],
 	"configurations": [
 		{
 			"name": "default",
@@ -28,16 +17,25 @@
 			],
 			"name": "unittest",
 			"targetType": "library",
-			"versions": ["Fluid_HeadlessOutput"]
+			"versions": [
+				"Fluid_HeadlessOutput"
+			],
+			"dependencies": {
+				"silly": "~>1.1.1"
+			}
 		},
 		{
-			"name": "time-trace",
-			"targetType": "library",
 			"dflags-ldc": [
-				"--ftime-trace", 
+				"--ftime-trace",
 				"--ftime-trace-file=build/trace.json"
-			]
+			],
+			"name": "time-trace",
+			"targetType": "library"
 		}
+	],
+	"copyFiles-windows": [
+		"$PACKAGE_DIR/libraries/windows/freetype.dll",
+		"$PACKAGE_DIR/libraries/windows/raylib.dll"
 	],
 	"copyright": "Copyright © 2021–2024, Artha",
 	"dependencies": {
@@ -54,62 +52,89 @@
 		"raylib-d": {
 			"default": true,
 			"optional": true,
-			"version": "~>5.0"
+			"version": "~>5"
 		}
 	},
 	"description": "A straightforward and easy to use GUI library.",
+	"excludedSourceFiles": [
+		"source/fluid/module_view.d"
+	],
+	"lflags-linux": [
+		"-L$PACKAGE_DIR/libraries/ubuntu"
+	],
+	"lflags-osx": [
+		"-L$PACKAGE_DIR/libraries/macos"
+	],
+	"lflags-windows": [
+		"/LIBPATH:$PACKAGE_DIR/libraries/windows"
+	],
+	"libs": [
+		"freetype"
+	],
 	"license": "BSL",
 	"name": "fluid",
 	"stringImportPaths": [
 		"resources"
 	],
-	"excludedSourceFiles": [
-		"source/fluid/module_view.d"
-	],
+	"subConfigurations": {
+		"bindbc-freetype": "staticBC"
+	},
 	"subPackages": [
 		"./tour",
 		{
 			"dependencies": {
-				"libdparse": "~>0.23.2",
-				"fluid": { "path": "." }
+				"fluid": {
+					"path": "."
+				},
+				"libdparse": "~>0.23.2"
 			},
-			"name": "showcase",
 			"libs": [
 				"raylib"
 			],
+			"name": "showcase",
 			"preBuildCommands": [
 				"echo Deprecated: fluid:showcase has been renamed to fluid:tour"
 			],
 			"sourcePaths": [
 				"tour"
 			],
-			"targetPath": "build",
 			"targetName": "fluid-tour",
+			"targetPath": "build",
 			"targetType": "executable"
 		},
 		{
 			"name": "init-exec",
-			"versions": ["Fluid_InitExec"],
-			"sourceFiles": ["source/fluid/dub_template.d"],
+			"sourceFiles": [
+				"source/fluid/dub_template.d"
+			],
 			"sourcePaths": [],
+			"targetPath": "build",
 			"targetType": "executable",
-			"targetPath": "build"
+			"versions": [
+				"Fluid_InitExec"
+			]
 		},
 		{
+			"dependencies": {
+				"fluid": {
+					"path": "."
+				},
+				"fluid-tree-sitter": "~>0.1.5",
+				"fluid-tree-sitter:d": "~>0.1.5"
+			},
 			"name": "module_view",
-			"versions": ["Fluid_ModuleView"],
-			"sourceFiles": ["source/fluid/module_view.d"],
+			"sourceFiles": [
+				"source/fluid/module_view.d"
+			],
 			"sourcePaths": [],
-			"targetType": "library",
-			"targetPath": "build",
 			"subConfigurations": {
 				"fluid": "dynamic"
 			},
-			"dependencies": {
-				"fluid": { "path": "." },
-				"fluid-tree-sitter": "~>0.1.5",
-				"fluid-tree-sitter:d": "~>0.1.5"
-			}
+			"targetPath": "build",
+			"targetType": "library",
+			"versions": [
+				"Fluid_ModuleView"
+			]
 		}
 	],
 	"targetPath": "build"

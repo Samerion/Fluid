@@ -7,6 +7,7 @@ import std.meta;
 import std.range;
 import std.string;
 import std.traits;
+import std.exception;
 
 import fluid.node;
 import fluid.style;
@@ -568,7 +569,7 @@ template rule(T : Node = Node, tags...) {
                 else static if (is(typeof(dg) : Rule)) {
 
                     if (dg.styleDelegate)
-                    dynamicResult = dg.styleDelegate(node);
+                    dg.styleDelegate(node).apply(node, dynamicResult);
 
                 }
 
@@ -594,7 +595,6 @@ unittest {
 
     import fluid.label;
     import fluid.button;
-    import std.exception;
     import core.exception : AssertError;
 
     auto generalRule = rule(
@@ -611,6 +611,27 @@ unittest {
 
     assertNotThrown(rule!Button(buttonRule));
     assertNotThrown(rule!Button(rule!Label()));
+
+}
+
+@("Dynamic rules cannot inherit from mismatched rules")
+unittest {
+
+    import fluid.space;
+    import fluid.frame;
+
+    auto theme = nullTheme.derive(
+        rule!Space(
+            (Space a) => rule!Frame(
+                backgroundColor = color("#123"),
+            ),
+        ),
+    );
+
+    auto root = vspace();
+    root.draw();
+
+    assert(root.pickStyle.backgroundColor == Color.init);
 
 }
 
@@ -683,8 +704,6 @@ struct Rule {
 
         // Apply changes
         fields.apply(style);
-
-        // TODO dynamic rules
 
         return true;
 

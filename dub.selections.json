@@ -9,6 +9,7 @@
 		"fluent-asserts": "0.13.3",
 		"fluid-tree-sitter": "0.1.5",
 		"libdparse": "0.23.2",
+		"silly": "1.1.1",
 		"stdx-allocator": "2.77.5"
 	}
 }
