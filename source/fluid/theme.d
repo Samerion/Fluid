@@ -523,8 +523,19 @@ template rule(T : Node = Node, tags...) {
 
                 // Copy fields
                 field.fields.apply(result.fields);
+
+                // Insert breadcrumbs
+                result.breadcrumbs ~= field.breadcrumbs;
+                
                 // Also add delegates below...
 
+            }
+
+            // Children rule
+            else static if (is(typeof(field) : ChildrenRule)) {
+
+                // Insert the rule into breadcrumbs
+                result.breadcrumbs.rules ~= field.rule;
 
             }
 
@@ -652,14 +663,24 @@ struct Rule {
     /// Callback for updating the style dynamically. May be null.
     StyleDelegate styleDelegate;
 
+    /// Breadcrumbs, if any, assigned to nodes matching this rule.
+    Breadcrumbs breadcrumbs;
+
     alias field(string name) = __traits(getMember, StyleTemplate, name);
     alias FieldType(string name) = field!name.Type;
+
+    /// Returns true if the rule can be applied to the given node.
+    bool canApply(Node node) {
+
+        return selector.test(node);
+
+    }
 
     /// Combine with another rule. Applies dynamic rules immediately.
     bool apply(Node node, ref Rule rule) {
 
         // Test against the selector
-        if (!selector.test(node)) return false;
+        if (!canApply(node)) return false;
 
         // Apply changes
         fields.apply(rule.fields);
@@ -700,10 +721,13 @@ struct Rule {
     bool applyStatic(Node node, ref Style style) {
 
         // Test against the selector
-        if (!selector.test(node)) return false;
+        if (!canApply(node)) return false;
 
         // Apply changes
         fields.apply(style);
+
+        // Load breadcrumbs
+        style.breadcrumbs ~= breadcrumbs;
 
         return true;
 
@@ -741,7 +765,6 @@ struct WhenRule(alias dg) {
         return result;
 
     }
-
 
 }
 
@@ -781,6 +804,173 @@ unittest {
     assert(myLabel.pickStyle().textColor == color!"100");
     assert(myLabel.pickStyle().backgroundColor == color!"010");
     assert(myLabel.style.backgroundColor == color!"aaa");
+
+}
+
+/// Create a rule that affects the children of a node. To be placed inside a regular rule.
+///
+/// A `children` rule creates a "breadcrumb" which is a tag applied to the node that tracks
+/// all `children` rules affecting it, including all `children` rules it has spawned. Every node will
+/// then activate corresponding rules
+template children(T : Node = Node, tags...) {
+
+    ChildrenRule children(Ts...)(Ts fields) {
+
+        return ChildrenRule(rule(fields));
+
+    }
+
+}
+
+@("Basic children rules work")
+unittest {
+
+    import fluid.space;
+    import fluid.frame;
+    import fluid.label;
+    import std.algorithm;
+
+    auto theme = nullTheme.derive(
+
+        // Labels are red by default
+        rule!Label(
+            textColor = color("#f00"),
+        ),
+        // Labels inside frames turn green
+        rule!Frame(
+            children!Label(
+                textColor = color("#0f0"),
+            ),
+        ),
+
+    );
+
+    Label[2] greenLabels;
+    Label[2] redLabels;
+
+    auto root = vspace(
+        theme,
+        redLabels[0] = label("red"),
+        vframe(
+            greenLabels[0] = label("green"),
+            hspace(
+                greenLabels[1] = label("green"),
+            ),
+        ),
+        redLabels[1] = label("red"),
+    );
+
+    root.draw();
+
+    assert(redLabels[]  .all!(a => a.pickStyle.textColor == color("#f00")), "All red labels are red");
+    assert(greenLabels[].all!(a => a.pickStyle.textColor == color("#0f0")), "All green labels are green");
+
+}
+
+/// A version of `Rule` that affects children.
+struct ChildrenRule {
+
+    Rule rule;
+
+}
+
+struct Breadcrumbs {
+
+    alias Key = size_t;
+
+    /// All rules activated by this instance.
+    Rule[] rules;
+
+    /// Parent of this instance.
+    Breadcrumbs* parent;
+
+    /// Cached children instances.
+    Breadcrumbs[Key] children;
+
+    bool opCast(T : bool)() const {
+
+        return this !is this.init;
+
+    }    
+
+    /// Get an ID representing key for the style created by this instance.
+    Key key() const {
+
+        return cast(Key) rules.ptr;
+
+    }
+
+    /// Apply the breadcrumbs on the given node. Runs static rules only.
+    void applyStatic(Node node, ref Style style) {
+
+        foreach (rule; rules) {
+
+            // Apply the styles
+            // applyStatic tests compatibility automatically
+            rule.applyStatic(node, style);
+
+        }
+
+        if (parent) {
+             parent.applyStatic(node, style);
+        }
+
+    }
+
+    /// Apply the breadcrumbs on the given node. Runs dynamic rules only.
+    void applyDynamic(Node node, ref Style style) {
+
+        foreach (rule; rules) {
+
+            if (rule.styleDelegate && rule.canApply(node)) {
+
+                rule.styleDelegate(node).apply(node, style);
+
+            }
+
+        }
+
+        if (parent) {
+            parent.applyDynamic(node, style);
+        }
+
+    }
+
+    /// Combine with another breadcrumbs instance.
+    ///
+    /// This breadcrumb will now point to the same breadcrumb as the one given, but the chain will be combined to 
+    /// include both of them.
+    ref Breadcrumbs opOpAssign(string op : "~")(Breadcrumbs other) return {
+
+        // Stop if there's nothing to do
+        if (!other) return this;
+
+        // Add breadcrumbs in order — from parent to child
+        if (other.parent) {
+            this ~= *other.parent;
+        }
+
+        // Loop up the entry in the cache
+        children.update(other.key,
+
+            // No such entry exists, create one:
+            // Include all the rules, and make the current breadcrumbs its parent
+            () => this = Breadcrumbs(other.rules, heapify),
+
+            // An entry exists already, return it
+            (ref Breadcrumbs entry) => this = entry,
+
+        );
+
+        return this;
+        
+    }
+
+    private Breadcrumbs* heapify() {
+
+        return new Breadcrumbs(this.tupleof);
+
+    }
 
 }
 
