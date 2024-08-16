@@ -500,6 +500,7 @@ template rule(T : Node = Node, tags...) {
         enum isDynamicRule(alias field) = isCallable!field || isWhenRule!field || is(typeof(field) : Rule);
 
         Rule result;
+        Rule[] crumbs;
 
         // Create the selector
         result.selector = Selector(typeid(T)).addTags!tags;
@@ -523,8 +524,19 @@ template rule(T : Node = Node, tags...) {
 
                 // Copy fields
                 field.fields.apply(result.fields);
+
+                // Merge breadcrumbs
+                result.breadcrumbs.crumbs ~= field.breadcrumbs.crumbs;
+                
                 // Also add delegates below...
 
+            }
+
+            // Children rule
+            else static if (is(typeof(field) : ChildrenRule)) {
+
+                // Insert the rule into breadcrumbs
+                crumbs ~= field.rule;
 
             }
 
@@ -582,6 +594,11 @@ template rule(T : Node = Node, tags...) {
 
         };
 
+        // Append ruleset from breadcrumbs to current breadcrumbs
+        if (crumbs) {
+            result.breadcrumbs.crumbs ~= crumbs;
+        }
+
         return result;
 
     }
@@ -622,13 +639,13 @@ unittest {
 
     auto theme = nullTheme.derive(
         rule!Space(
-            (Space a) => rule!Frame(
+            (Space _) => rule!Frame(
                 backgroundColor = color("#123"),
             ),
         ),
     );
 
-    auto root = vspace();
+    auto root = vspace(theme);
     root.draw();
 
     assert(root.pickStyle.backgroundColor == Color.init);
@@ -652,17 +669,30 @@ struct Rule {
     /// Callback for updating the style dynamically. May be null.
     StyleDelegate styleDelegate;
 
+    /// Breadcrumbs, if any, assigned to nodes matching this rule.
+    Breadcrumbs breadcrumbs;
+
     alias field(string name) = __traits(getMember, StyleTemplate, name);
     alias FieldType(string name) = field!name.Type;
+
+    /// Returns true if the rule can be applied to the given node.
+    bool canApply(Node node) {
+
+        return selector.test(node);
+
+    }
 
     /// Combine with another rule. Applies dynamic rules immediately.
     bool apply(Node node, ref Rule rule) {
 
         // Test against the selector
-        if (!selector.test(node)) return false;
+        if (!canApply(node)) return false;
 
         // Apply changes
         fields.apply(rule.fields);
+
+        // Load breadcrumbs
+        rule.breadcrumbs ~= breadcrumbs;
 
         // Check for delegates
         if (styleDelegate) {
@@ -700,10 +730,13 @@ struct Rule {
     bool applyStatic(Node node, ref Style style) {
 
         // Test against the selector
-        if (!selector.test(node)) return false;
+        if (!canApply(node)) return false;
 
         // Apply changes
         fields.apply(style);
+
+        // Load breadcrumbs
+        style.breadcrumbs ~= breadcrumbs;
 
         return true;
 
@@ -741,7 +774,6 @@ struct WhenRule(alias dg) {
         return result;
 
     }
-
 
 }
 
@@ -781,6 +813,407 @@ unittest {
     assert(myLabel.pickStyle().textColor == color!"100");
     assert(myLabel.pickStyle().backgroundColor == color!"010");
     assert(myLabel.style.backgroundColor == color!"aaa");
+
+}
+
+/// Create a rule that affects the children of a node. To be placed inside a regular rule.
+///
+/// A `children` rule creates a "breadcrumb" which is a tag applied to the node that tracks
+/// all `children` rules affecting it, including all `children` rules it has spawned. Every node will
+/// then activate corresponding rules
+template children(T : Node = Node, tags...) {
+
+    ChildrenRule children(Ts...)(Ts fields) {
+
+        return ChildrenRule(rule!(T, tags)(fields));
+
+    }
+
+}
+
+@("Basic children rules work")
+unittest {
+
+    import fluid.space;
+    import fluid.frame;
+    import fluid.label;
+    import std.algorithm;
+
+    auto theme = nullTheme.derive(
+
+        // Labels are red by default
+        rule!Label(
+            textColor = color("#f00"),
+        ),
+        // Labels inside frames turn green
+        rule!Frame(
+            children!Label(
+                textColor = color("#0f0"),
+            ),
+        ),
+
+    );
+
+    Label[2] greenLabels;
+    Label[2] redLabels;
+
+    auto root = vspace(
+        theme,
+        redLabels[0] = label("red"),
+        vframe(
+            greenLabels[0] = label("green"),
+            hspace(
+                greenLabels[1] = label("green"),
+            ),
+        ),
+        redLabels[1] = label("red"),
+    );
+
+    root.draw();
+
+    assert(redLabels[]  .all!(a => a.pickStyle.textColor == color("#f00")), "All red labels are red");
+    assert(greenLabels[].all!(a => a.pickStyle.textColor == color("#0f0")), "All green labels are green");
+
+}
+
+@("Children rules can be nested")
+unittest {
+
+    import fluid.space;
+    import fluid.frame;
+    import fluid.label;
+    import std.algorithm;
+
+    auto theme = nullTheme.derive(
+
+        // Labels are red by default
+        rule!Label(
+            textColor = color("#f00"),
+        ),
+        rule!Frame(
+            // Labels inside frames turn blue
+            children!Label(
+                textColor = color("#00f"),
+            ),
+            // But if nested further, they turn green
+            children!Frame(
+                textColor = color("#000"),
+                children!Label(
+                    textColor = color("#0f0"),
+                ),
+            ),
+        ),
+
+    );
+
+    Label[2] redLabels;
+    Label[3] blueLabels;
+    Label[4] greenLabels;
+
+    auto root = vspace(
+        theme,
+        redLabels[0] = label("Red"),
+        vframe(
+            blueLabels[0] = label("Blue"),
+            vframe(
+                greenLabels[0] = label("Green"),
+                vframe(
+                    greenLabels[1] = label("Green"),
+                ),
+            ),
+            blueLabels[1] = label("Blue"),
+            vframe(
+                greenLabels[2] = label("Green"),
+            )
+        ),
+        vspace(
+            vframe(
+                blueLabels[2] = label("Blue"),
+                vspace(
+                    vframe(
+                        greenLabels[3] = label("Green")
+                    ),
+                ),
+            ),
+            redLabels[1] = label("Red"),
+        ),
+    );
+
+    root.draw();
+
+    assert(redLabels[]  .all!(a => a.pickStyle.textColor == color("#f00")), "All red labels must be red");
+    assert(blueLabels[] .all!(a => a.pickStyle.textColor == color("#00f")), "All blue labels must be blue");
+    assert(greenLabels[].all!(a => a.pickStyle.textColor == color("#0f0")), "All green labels must be green");
+
+}
+
+@("`children` rules work inside of `when`")
+unittest {
+
+    import fluid.frame;
+    import fluid.label;
+    import fluid.button;
+
+    auto theme = nullTheme.derive(
+        rule!FrameButton(
+            children!Label(
+                textColor = color("#f00"),
+            ),
+            when!"a.isFocused"(
+                children!Label(
+                    textColor = color("#0f0"),
+                ),
+            ),
+        ),
+    );
+
+    FrameButton first, second;
+    Label firstLabel, secondLabel;
+
+    auto root = vframe(
+        theme,
+        first = vframeButton(
+            firstLabel = label("Hello"),
+            delegate { }
+        ),
+        second = vframeButton(
+            secondLabel = label("Hello"),
+            delegate { }
+        ),
+    );
+
+    root.draw();
+
+    assert(firstLabel.pickStyle.textColor == color("#f00"));
+    assert(secondLabel.pickStyle.textColor == color("#f00"));
+
+    first.focus();
+    root.draw();
+    
+    assert(firstLabel.pickStyle.textColor == color("#0f0"));
+    assert(secondLabel.pickStyle.textColor == color("#f00"));
+
+    second.focus();
+    root.draw();
+
+    assert(firstLabel.pickStyle.textColor == color("#f00"));
+    assert(secondLabel.pickStyle.textColor == color("#0f0"));
+
+}
+
+@("`children` rules work inside of delegates")
+unittest {
+
+    // Note: This is impractical; in reality this will allocate memory excessively.
+    // This could be avoided by allocating all breadcrumbs on a stack.
+    import fluid.frame;
+    import fluid.label;
+    import fluid.button;
+
+    class ColorFrame : Frame {
+
+        Color color;
+
+        this(Color color, Node[] nodes...) {
+            this.color = color;
+            super(nodes);
+        }
+
+    }
+
+    auto theme = nullTheme.derive(
+        rule!Label(
+            textColor = color("#000"),
+        ),
+        rule!ColorFrame(
+            (ColorFrame a) => rule(
+                children!Label(
+                    textColor = a.color,
+                )
+            )
+        ),
+    );
+
+    ColorFrame frame;
+    Label target;
+    Label sample;
+
+    auto root = vframe(
+        theme,
+        frame = new ColorFrame(
+            color("#00f"),
+            target = label("Colorful label"),
+        ),
+        sample = label("Never affected"),
+    );
+
+    root.draw();
+
+    assert(target.pickStyle.textColor == color("#00f"));
+    assert(sample.pickStyle.textColor == color("#000"));
+
+    frame.color = color("#0f0"),
+    root.draw();
+    
+    assert(target.pickStyle.textColor == color("#0f0"));
+    assert(sample.pickStyle.textColor == color("#000"));
+
+}
+
+@("Children rules can contain `when` clauses and delegates")
+unittest {
+
+    import fluid.frame;
+    import fluid.space;
+    import fluid.button;
+    
+    // Focused button turns red, or green if inside of a frame
+    auto theme = nullTheme.derive(
+        rule!Frame(
+            children!Button(
+                when!"a.isFocused"(
+                    textColor = color("#0f0"),
+                ),
+                (Node b) => rule(
+                    backgroundColor = color("#123"),
+                ),
+            ),
+        ),
+        rule!Button(
+            textColor = color("#000"),
+            backgroundColor = color("#000"),
+            when!"a.isFocused"(
+                textColor = color("#f00"),
+            ),
+        ),
+    );
+
+    Button greenButton;
+    Button redButton;
+
+    auto root = vspace(
+        theme,
+        vframe(
+            greenButton = button("Green", delegate { }),
+        ),
+        redButton = button("Red", delegate { }),
+    );
+
+    root.draw();
+    
+    assert(greenButton.pickStyle.textColor == color("#000"));
+    assert(greenButton.pickStyle.backgroundColor == color("#123"));
+    assert(redButton.pickStyle.textColor == color("#000"));
+    assert(redButton.pickStyle.backgroundColor == color("#000"));
+
+    greenButton.focus();
+    root.draw();
+
+    assert(greenButton.isFocused);
+    assert(greenButton.pickStyle.textColor == color("#0f0"));
+    assert(greenButton.pickStyle.backgroundColor == color("#123"));
+    assert(redButton.pickStyle.textColor == color("#000"));
+    assert(redButton.pickStyle.backgroundColor == color("#000"));
+
+    redButton.focus();
+    root.draw();
+
+    assert(greenButton.pickStyle.textColor == color("#000"));
+    assert(greenButton.pickStyle.backgroundColor == color("#123"));
+    assert(redButton.pickStyle.textColor == color("#f00"));
+    assert(redButton.pickStyle.backgroundColor == color("#000"));
+
+}
+
+/// A version of `Rule` that affects children.
+struct ChildrenRule {
+
+    Rule rule;
+
+}
+
+struct Breadcrumbs {
+
+    alias Key = size_t;
+
+    /// All rules activated by this instance.
+    Rule[][] crumbs;
+
+    /// Cached children instances.
+    Breadcrumbs[Key] children;
+
+    bool opCast(T : bool)() const {
+
+        return this !is this.init;
+
+    }    
+
+    /// Get an key for the given ruleset.
+    static Key key(Rule[] rules) {
+
+        return cast(Key) rules.ptr;
+
+    }
+
+    /// Apply the breadcrumbs on the given node. Runs static rules only.
+    void applyStatic(Node node, ref Style style) {
+        
+        foreach (rules; crumbs) {
+        
+            foreach (rule; rules) {
+
+                // Apply the styles
+                // applyStatic tests compatibility automatically
+                rule.applyStatic(node, style);
+
+            }
+
+        }
+
+    }
+
+    /// Apply the breadcrumbs on the given node. Runs dynamic rules only.
+    void applyDynamic(Node node, ref Style style) {
+
+        foreach (rules; crumbs) {
+
+            foreach (rule; rules) {
+
+                if (rule.styleDelegate && rule.canApply(node)) {
+
+                    rule.styleDelegate(node).apply(node, style);
+
+                }
+
+            }
+
+        }
+
+    }
+
+    /// Combine with another breadcrumbs instance.
+    ///
+    /// This breadcrumb will now point to the same breadcrumb as the one given, but the chain will be combined to 
+    /// include both of them.
+    ref Breadcrumbs opOpAssign(string op : "~")(Breadcrumbs other) return {
+
+        // Stop if there's nothing to do
+        if (!other) return this;
+
+        foreach (rules; other.crumbs) {
+
+            // Skip empty crumbs
+            if (rules.length == 0) continue;
+
+            // Loop up the entry in the cache
+            // If one isn't present, create a new one with the ruleset appended
+            this = children.require(key(rules), Breadcrumbs(crumbs ~ rules));
+
+        }
+
+        return this;
+        
+    }
 
 }
 
