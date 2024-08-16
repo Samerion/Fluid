@@ -691,6 +691,9 @@ struct Rule {
         // Apply changes
         fields.apply(rule.fields);
 
+        // Load breadcrumbs
+        rule.breadcrumbs ~= breadcrumbs;
+
         // Check for delegates
         if (styleDelegate) {
 
@@ -941,6 +944,60 @@ unittest {
     assert(redLabels[]  .all!(a => a.pickStyle.textColor == color("#f00")), "All red labels must be red");
     assert(blueLabels[] .all!(a => a.pickStyle.textColor == color("#00f")), "All blue labels must be blue");
     assert(greenLabels[].all!(a => a.pickStyle.textColor == color("#0f0")), "All green labels must be green");
+
+}
+
+@("`children` rules work inside of `when`")
+unittest {
+
+    import fluid.frame;
+    import fluid.label;
+    import fluid.button;
+
+    auto theme = nullTheme.derive(
+        rule!FrameButton(
+            children!Label(
+                textColor = color("#f00"),
+            ),
+            when!"a.isFocused"(
+                children!Label(
+                    textColor = color("#0f0"),
+                ),
+            ),
+        ),
+    );
+
+    FrameButton first, second;
+    Label firstLabel, secondLabel;
+
+    auto root = vframe(
+        theme,
+        first = vframeButton(
+            firstLabel = label("Hello"),
+            delegate { }
+        ),
+        second = vframeButton(
+            secondLabel = label("Hello"),
+            delegate { }
+        ),
+    );
+
+    root.draw();
+
+    assert(firstLabel.pickStyle.textColor == color("#f00"));
+    assert(secondLabel.pickStyle.textColor == color("#f00"));
+
+    first.focus();
+    root.draw();
+    
+    assert(firstLabel.pickStyle.textColor == color("#0f0"));
+    assert(secondLabel.pickStyle.textColor == color("#f00"));
+
+    second.focus();
+    root.draw();
+
+    assert(firstLabel.pickStyle.textColor == color("#f00"));
+    assert(secondLabel.pickStyle.textColor == color("#0f0"));
 
 }
 
