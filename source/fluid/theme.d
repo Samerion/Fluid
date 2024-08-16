@@ -1001,6 +1001,130 @@ unittest {
 
 }
 
+@("`children` rules work inside of delegates")
+unittest {
+
+    // Note: This is impractical; in reality this will allocate memory excessively.
+    // This could be avoided by allocating all breadcrumbs on a stack.
+    import fluid.frame;
+    import fluid.label;
+    import fluid.button;
+
+    class ColorFrame : Frame {
+
+        Color color;
+
+        this(Color color, Node[] nodes...) {
+            this.color = color;
+            super(nodes);
+        }
+
+    }
+
+    auto theme = nullTheme.derive(
+        rule!Label(
+            textColor = color("#000"),
+        ),
+        rule!ColorFrame(
+            (ColorFrame a) => rule(
+                children!Label(
+                    textColor = a.color,
+                )
+            )
+        ),
+    );
+
+    ColorFrame frame;
+    Label target;
+    Label sample;
+
+    auto root = vframe(
+        theme,
+        frame = new ColorFrame(
+            color("#00f"),
+            target = label("Colorful label"),
+        ),
+        sample = label("Never affected"),
+    );
+
+    root.draw();
+
+    assert(target.pickStyle.textColor == color("#00f"));
+    assert(sample.pickStyle.textColor == color("#000"));
+
+    frame.color = color("#0f0"),
+    root.draw();
+    
+    assert(target.pickStyle.textColor == color("#0f0"));
+    assert(sample.pickStyle.textColor == color("#000"));
+
+}
+
+@("Children rules can contain `when` clauses and delegates")
+unittest {
+
+    import fluid.frame;
+    import fluid.space;
+    import fluid.button;
+    
+    // Focused button turns red, or green if inside of a frame
+    auto theme = nullTheme.derive(
+        rule!Frame(
+            children!Button(
+                when!"a.isFocused"(
+                    textColor = color("#0f0"),
+                ),
+                (Node b) => rule(
+                    backgroundColor = color("#123"),
+                ),
+            ),
+        ),
+        rule!Button(
+            textColor = color("#000"),
+            backgroundColor = color("#000"),
+            when!"a.isFocused"(
+                textColor = color("#f00"),
+            ),
+        ),
+    );
+
+    Button greenButton;
+    Button redButton;
+
+    auto root = vspace(
+        theme,
+        vframe(
+            greenButton = button("Green", delegate { }),
+        ),
+        redButton = button("Red", delegate { }),
+    );
+
+    root.draw();
+    
+    assert(greenButton.pickStyle.textColor == color("#000"));
+    assert(greenButton.pickStyle.backgroundColor == color("#123"));
+    assert(redButton.pickStyle.textColor == color("#000"));
+    assert(redButton.pickStyle.backgroundColor == color("#000"));
+
+    greenButton.focus();
+    root.draw();
+
+    assert(greenButton.isFocused);
+    assert(greenButton.pickStyle.textColor == color("#0f0"));
+    assert(greenButton.pickStyle.backgroundColor == color("#123"));
+    assert(redButton.pickStyle.textColor == color("#000"));
+    assert(redButton.pickStyle.backgroundColor == color("#000"));
+
+    redButton.focus();
+    root.draw();
+
+    assert(greenButton.pickStyle.textColor == color("#000"));
+    assert(greenButton.pickStyle.backgroundColor == color("#123"));
+    assert(redButton.pickStyle.textColor == color("#f00"));
+    assert(redButton.pickStyle.backgroundColor == color("#000"));
+
+}
+
 /// A version of `Rule` that affects children.
 struct ChildrenRule {
 

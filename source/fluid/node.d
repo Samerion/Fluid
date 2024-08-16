@@ -870,9 +870,6 @@ abstract class Node {
         // Write dynamic breadcrumbs to the tree
         // Restore when done
         tree.breadcrumbs ~= currentStyle.breadcrumbs;
-        import std.stdio;
-        debug writefln!"%s %s"(typeid(this), currentStyle.breadcrumbs.crumbs.map!(a => Breadcrumbs.key(a)));
-        
         scope (exit) tree.breadcrumbs = breadcrumbs;
 
         // Get the visible part of the padding box — so overflowed content doesn't get mouse focus
