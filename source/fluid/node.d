@@ -63,6 +63,9 @@ abstract class Node {
         /// Tags assigned for this node.
         TagList tags;
 
+        /// Breadcrumbs assigned and applicable to this node. Loaded every resize and every draw.
+        Breadcrumbs breadcrumbs;
+
         /// If true, this node will be removed from the tree on the next draw.
         bool toRemove;
 
@@ -860,13 +863,14 @@ abstract class Node {
         const contentBox = style.cropBox(paddingBox, style.padding);
         const mainBox    = borderBox;
 
+        // Load breadcrumbs from the tree
+        breadcrumbs = tree.breadcrumbs;
         auto currentStyle = pickStyle();
-        auto oldBreadcrumbs = tree.breadcrumbs;
 
-        // Write breadcrumbs to the tree
+        // Write dynamic breadcrumbs to the tree
         // Restore when done
-        tree.breadcrumbs = currentStyle.breadcrumbs;
-        scope (exit) tree.breadcrumbs = oldBreadcrumbs;
+        tree.breadcrumbs ~= currentStyle.breadcrumbs;
+        scope (exit) tree.breadcrumbs = breadcrumbs;
 
         // Get the visible part of the padding box — so overflowed content doesn't get mouse focus
         const visibleBox = tree.intersectScissors(paddingBox);
@@ -1002,13 +1006,15 @@ abstract class Node {
         this.tree = tree;
         if (!this.theme) this.theme = theme;
 
+        // Load breadcrumbs from the tree
+        breadcrumbs = tree.breadcrumbs;
+
         // Load the theme
         reloadStyles();
 
         // Write breadcrumbs into the tree
-        auto oldBreadcrumbs = tree.breadcrumbs;
-        tree.breadcrumbs = _style.breadcrumbs;
-        scope (exit) tree.breadcrumbs = oldBreadcrumbs;
+        tree.breadcrumbs ~= _style.breadcrumbs;
+        scope (exit) tree.breadcrumbs = breadcrumbs;
 
         // Queue actions into the tree
         tree.actions ~= _queuedActions;
@@ -1123,13 +1129,10 @@ abstract class Node {
         // Pick the current style
         auto result = _style;
 
-        // Load breadcrumbs from the tree
-        result.breadcrumbs = tree.breadcrumbs;
-
         // Load style from breadcrumbs
         // Note breadcrumbs may change while drawing, but should also be able to affect sizing
         // For this reason static breadcrumbs are applied both when reloading and when picking
-        result.breadcrumbs.applyStatic(this, result);
+        breadcrumbs.applyStatic(this, result);
 
         // Run delegates
         foreach (dg; _styleDelegates) {
@@ -1139,7 +1142,7 @@ abstract class Node {
         }
 
         // Load dynamic breadcrumb styles
-        result.breadcrumbs.applyDynamic(this, result);
+        breadcrumbs.applyDynamic(this, result);
 
         return result;
 
@@ -1153,14 +1156,11 @@ abstract class Node {
         // Reset style
         _style = Style.init;
 
-        // Load breadcrumbs
-        _style.breadcrumbs = tree.breadcrumbs;
-
         // Apply theme to the given style
         _styleDelegates = theme.apply(this, _style);
 
-        // Load breadcrumb styles
-        style.breadcrumbs.applyStatic(this, _style);
+        // Apply breadcrumbs
+        breadcrumbs.applyStatic(this, _style);
 
         // Update size
         updateSize();
