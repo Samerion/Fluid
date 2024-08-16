@@ -500,6 +500,7 @@ template rule(T : Node = Node, tags...) {
         enum isDynamicRule(alias field) = isCallable!field || isWhenRule!field || is(typeof(field) : Rule);
 
         Rule result;
+        Rule[] crumbs;
 
         // Create the selector
         result.selector = Selector(typeid(T)).addTags!tags;
@@ -524,8 +525,8 @@ template rule(T : Node = Node, tags...) {
                 // Copy fields
                 field.fields.apply(result.fields);
 
-                // Insert breadcrumbs
-                result.breadcrumbs ~= field.breadcrumbs;
+                // Merge breadcrumbs
+                result.breadcrumbs.crumbs ~= field.breadcrumbs.crumbs;
                 
                 // Also add delegates below...
 
@@ -535,7 +536,7 @@ template rule(T : Node = Node, tags...) {
             else static if (is(typeof(field) : ChildrenRule)) {
 
                 // Insert the rule into breadcrumbs
-                result.breadcrumbs.rules ~= field.rule;
+                crumbs ~= field.rule;
 
             }
 
@@ -593,6 +594,11 @@ template rule(T : Node = Node, tags...) {
 
         };
 
+        // Append ruleset from breadcrumbs to current breadcrumbs
+        if (crumbs) {
+            result.breadcrumbs.crumbs ~= crumbs;
+        }
+
         return result;
 
     }
@@ -633,13 +639,13 @@ unittest {
 
     auto theme = nullTheme.derive(
         rule!Space(
-            (Space a) => rule!Frame(
+            (Space _) => rule!Frame(
                 backgroundColor = color("#123"),
             ),
         ),
     );
 
-    auto root = vspace();
+    auto root = vspace(theme);
     root.draw();
 
     assert(root.pickStyle.backgroundColor == Color.init);
@@ -816,7 +822,7 @@ template children(T : Node = Node, tags...) {
 
     ChildrenRule children(Ts...)(Ts fields) {
 
-        return ChildrenRule(rule(fields));
+        return ChildrenRule(rule!(T, tags)(fields));
 
     }
 
@@ -867,6 +873,77 @@ unittest {
 
 }
 
+@("Children rules can be nested")
+unittest {
+
+    import fluid.space;
+    import fluid.frame;
+    import fluid.label;
+    import std.algorithm;
+
+    auto theme = nullTheme.derive(
+
+        // Labels are red by default
+        rule!Label(
+            textColor = color("#f00"),
+        ),
+        rule!Frame(
+            // Labels inside frames turn blue
+            children!Label(
+                textColor = color("#00f"),
+            ),
+            // But if nested further, they turn green
+            children!Frame(
+                textColor = color("#000"),
+                children!Label(
+                    textColor = color("#0f0"),
+                ),
+            ),
+        ),
+
+    );
+
+    Label[2] redLabels;
+    Label[3] blueLabels;
+    Label[4] greenLabels;
+
+    auto root = vspace(
+        theme,
+        redLabels[0] = label("Red"),
+        vframe(
+            blueLabels[0] = label("Blue"),
+            vframe(
+                greenLabels[0] = label("Green"),
+                vframe(
+                    greenLabels[1] = label("Green"),
+                ),
+            ),
+            blueLabels[1] = label("Blue"),
+            vframe(
+                greenLabels[2] = label("Green"),
+            )
+        ),
+        vspace(
+            vframe(
+                blueLabels[2] = label("Blue"),
+                vspace(
+                    vframe(
+                        greenLabels[3] = label("Green")
+                    ),
+                ),
+            ),
+            redLabels[1] = label("Red"),
+        ),
+    );
+
+    root.draw();
+
+    assert(redLabels[]  .all!(a => a.pickStyle.textColor == color("#f00")), "All red labels must be red");
+    assert(blueLabels[] .all!(a => a.pickStyle.textColor == color("#00f")), "All blue labels must be blue");
+    assert(greenLabels[].all!(a => a.pickStyle.textColor == color("#0f0")), "All green labels must be green");
+
+}
+
 /// A version of `Rule` that affects children.
 struct ChildrenRule {
 
@@ -879,10 +956,7 @@ struct Breadcrumbs {
     alias Key = size_t;
 
     /// All rules activated by this instance.
-    Rule[] rules;
-
-    /// Parent of this instance.
-    Breadcrumbs* parent;
+    Rule[][] crumbs;
 
     /// Cached children instances.
     Breadcrumbs[Key] children;
@@ -893,8 +967,8 @@ struct Breadcrumbs {
 
     }    
 
-    /// Get an ID representing key for the style created by this instance.
-    Key key() const {
+    /// Get an key for the given ruleset.
+    static Key key(Rule[] rules) {
 
         return cast(Key) rules.ptr;
 
@@ -902,17 +976,17 @@ struct Breadcrumbs {
 
     /// Apply the breadcrumbs on the given node. Runs static rules only.
     void applyStatic(Node node, ref Style style) {
+        
+        foreach (rules; crumbs) {
+        
+            foreach (rule; rules) {
 
-        foreach (rule; rules) {
+                // Apply the styles
+                // applyStatic tests compatibility automatically
+                rule.applyStatic(node, style);
 
-            // Apply the styles
-            // applyStatic tests compatibility automatically
-            rule.applyStatic(node, style);
+            }
 
-        }
-
-        if (parent) {
-             parent.applyStatic(node, style);
         }
 
     }
@@ -920,18 +994,18 @@ struct Breadcrumbs {
     /// Apply the breadcrumbs on the given node. Runs dynamic rules only.
     void applyDynamic(Node node, ref Style style) {
 
-        foreach (rule; rules) {
+        foreach (rules; crumbs) {
 
-            if (rule.styleDelegate && rule.canApply(node)) {
+            foreach (rule; rules) {
 
-                rule.styleDelegate(node).apply(node, style);
+                if (rule.styleDelegate && rule.canApply(node)) {
+
+                    rule.styleDelegate(node).apply(node, style);
+
+                }
 
             }
 
-        }
-
-        if (parent) {
-            parent.applyDynamic(node, style);
         }
 
     }
@@ -945,31 +1019,19 @@ struct Breadcrumbs {
         // Stop if there's nothing to do
         if (!other) return this;
 
-        // Add breadcrumbs in order — from parent to child
-        if (other.parent) {
-            this ~= *other.parent;
+        foreach (rules; other.crumbs) {
+
+            // Skip empty crumbs
+            if (rules.length == 0) continue;
+
+            // Loop up the entry in the cache
+            // If one isn't present, create a new one with the ruleset appended
+            this = children.require(key(rules), Breadcrumbs(crumbs ~ rules));
+
         }
-
-        // Loop up the entry in the cache
-        children.update(other.key,
-
-            // No such entry exists, create one:
-            // Include all the rules, and make the current breadcrumbs its parent
-            () => this = Breadcrumbs(other.rules, heapify),
-
-            // An entry exists already, return it
-            (ref Breadcrumbs entry) => this = entry,
-
-        );
 
         return this;
         
-    }
-
-    private Breadcrumbs* heapify() {
-
-        return new Breadcrumbs(this.tupleof);
-
     }
 
 }

@@ -448,7 +448,9 @@ struct LayoutTree {
         /// True if the current tree branch is marked as disabled (doesn't take input).
         bool isBranchDisabled;
 
-        /// Current breadcrumbs
+        /// Current breadcrumbs. These are assigned to any node that is resized or drawn at the time.
+        ///
+        /// Any node that introduces its own breadcrumbs will push onto this stack, and pop once finished.
         Breadcrumbs breadcrumbs;
 
     }
