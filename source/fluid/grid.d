@@ -428,11 +428,12 @@ class GridRow : Frame {
         size_t segment;
 
         // Resize the children
-        foreach (child; children) {
+        foreach (i, child; children) {
 
             const segments = either(child.layout.expand, 1);
+            const gapSpace = style.gap * (cast(ptrdiff_t) children.length - 1);
             const childSpace = Vector2(
-                space.x * segments / segmentCount,
+                space.x * segments / segmentCount - gapSpace,
                 minSize.y,
             );
 
@@ -443,8 +444,11 @@ class GridRow : Frame {
 
             auto range = parent.segmentSizes[segment..segment+segments];
 
+            // Include the gap for all, but the first child
+            const gap = i == 0 ? 0 : style.gap;
+
             // Second step: Expand the segments to give some space for the child
-            minSize.x += range.redistributeSpace(child.minSize.x);
+            minSize.x += range.redistributeSpace(child.minSize.x + gap);
 
             // Increase vertical space, if needed
             if (child.minSize.y > minSize.y) {
@@ -466,15 +470,16 @@ class GridRow : Frame {
         /// Child position.
         auto position = Vector2(inner.x, inner.y);
 
-        foreach (child; filterChildren) {
+        foreach (i, child; filterChildren) {
 
             const segments = either(child.layout.expand, 1);
+            const gap = i == 0 ? 0 : style.gap;
             const width = parent.segmentSizes[segment..segment+segments].sum;
 
             // Draw the child
             child.draw(Rectangle(
-                position.x, position.y,
-                width, inner.height,
+                position.x + gap, position.y,
+                width - gap, inner.height,
             ));
 
             // Proceed to the next segment
@@ -482,6 +487,70 @@ class GridRow : Frame {
             position.x += width;
 
         }
+
+    }
+
+    @("Grid rows can have gaps")
+    unittest {
+
+        auto theme = nullTheme.derive(
+            rule!GridFrame(
+                Rule.gap = 4,
+            ),
+            rule!GridRow(
+                Rule.gap = 6,
+            ),
+        );
+
+        static class Warden : Frame {
+
+            Vector2 position;
+
+            override void resizeImpl(Vector2 space) {
+                super.resizeImpl(space);
+                minSize = Vector2(10, 10);
+            }
+
+            override void drawImpl(Rectangle outer, Rectangle) {
+                position = outer.start;
+            }
+
+        }
+
+        alias warden = simpleConstructor!Warden;
+
+        Warden[3] row1;
+        Warden[6] row2;
+
+        auto grid = gridFrame(
+            theme,
+            [
+                row1[0] = warden(.segments!2),
+                row1[1] = warden(.segments!2),
+                row1[2] = warden(.segments!2),
+            ],
+            [
+                row2[0] = warden(),
+                row2[1] = warden(),
+                row2[2] = warden(),
+                row2[3] = warden(),
+                row2[4] = warden(),
+                row2[5] = warden(),
+            ],
+        );
+
+        grid.draw();
+
+        assert(row1[0].position == Vector2( 0, 0));
+        assert(row1[1].position == Vector2(32, 0));
+        assert(row1[2].position == Vector2(64, 0));
+
+        assert(row2[0].position == Vector2( 0, 14));
+        assert(row2[1].position == Vector2(16, 14));
+        assert(row2[2].position == Vector2(32, 14));
+        assert(row2[3].position == Vector2(48, 14));
+        assert(row2[4].position == Vector2(64, 14));
+        assert(row2[5].position == Vector2(80, 14));
 
     }
 
