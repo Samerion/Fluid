@@ -89,7 +89,7 @@ class GridFrame : Frame {
             // Grid row (via array)
             static if (is(typeof(arg) : U[], U)) {
 
-                this.children[i] = gridRow(this, arg);
+                this.children[i] = gridRow(arg);
 
             }
 
@@ -266,6 +266,9 @@ class GridFrame : Frame {
                 // Only count rows
                 if (auto row = cast(GridRow) child) {
 
+                    // Set self as parent
+                    row.parent = this;
+
                     // Recalculate the segments needed by the row
                     row.calculateSegments();
 
@@ -273,6 +276,19 @@ class GridFrame : Frame {
                     // count of this row
                     segmentCount = lcm(segmentCount, row.segmentCount);
 
+                }
+
+            }
+
+        }
+
+        else {
+
+            foreach (child; children) {
+
+                // Assign self as parent to all rows
+                if (auto row = cast(GridRow) child) {
+                    row.parent = this;
                 }
 
             }
@@ -372,14 +388,11 @@ class GridRow : Frame {
     size_t segmentCount;
 
     /// Params:
-    ///     params = Standard Fluid constructor parameters.
-    ///     parent = Grid this row will be placed in.
     ///     nodes = Children to be placed in the row.
-    this(T...)(GridFrame parent, T nodes) {
+    this(Ts...)(Ts nodes) {
 
         super(nodes);
         this.layout.nodeAlign = NodeAlign.fill;
-        this.parent = parent;
         this.directionHorizontal = true;
 
     }
