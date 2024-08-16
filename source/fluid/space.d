@@ -241,10 +241,24 @@ class Space : Node {
 
             int opApply(int delegate(Node) @safe fun) @trusted {
 
+                foreach (_, node; this) {
+
+                    if (auto result = fun(node)) {
+                        return result;
+                    }
+
+                }
+                return 0;
+
+            }
+
+            int opApply(int delegate(size_t index, Node) @safe fun) @trusted {
+
                 node.children.lock();
                 scope (exit) node.children.unlock();
 
                 size_t destinationIndex = 0;
+                int end = 0;
 
                 // Iterate through all children. When we come upon ones that are queued for deletion,
                 foreach (sourceIndex, child; node.children) {
@@ -256,7 +270,8 @@ class Space : Node {
                     if (toRemove) continue;
 
                     // Yield the child
-                    const status = fun(child);
+                    if (!end)
+                        end = fun(destinationIndex, child);
 
                     // Move the child if needed
                     if (sourceIndex != destinationIndex) {
@@ -265,8 +280,8 @@ class Space : Node {
 
                     }
 
-                    // Stop iteration if requested
-                    else if (status) return status;
+                    // Stop iteration if requested — and if there's nothing to move
+                    else if (end) return end;
 
                     // Set space for next nodes
                     destinationIndex++;
