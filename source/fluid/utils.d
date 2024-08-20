@@ -11,14 +11,18 @@ import fluid.backend;
 @safe:
 
 
+alias simpleConstructor = componentBuilder;
+alias SimpleConstructor = ComponentBuilder;
+alias isSimpleConstructor = isComponentBuilder;
+
 // For saner testing and debugging.
 version (unittest)
 private extern(C) __gshared string[] rt_options = ["oncycle=ignore"];
 
-/// Create a simple node constructor for declarative usage.
+/// Create a component builder for declarative usage.
 ///
 /// Initial properties can be provided in the function provided in the second argument.
-enum simpleConstructor(T, alias fun = "a") = SimpleConstructor!(T, fun).init;
+enum componentBuilder(T, alias fun = "a") = ComponentBuilder!(T, fun).init;
 
 /// Create a simple template node constructor for declarative usage.
 ///
@@ -26,9 +30,9 @@ enum simpleConstructor(T, alias fun = "a") = SimpleConstructor!(T, fun).init;
 /// usually specifies the parent in templates, so it has more importance.
 ///
 /// T must be a template accepting a single parameter — Parent type will be passed to it.
-template simpleConstructor(alias T, alias Parent, alias fun = "a") {
+template componentBuilder(alias T, alias Parent, alias fun = "a") {
 
-    alias simpleConstructor = simpleConstructor!(T!(Parent.Type), (a) {
+    alias componentBuilder = componentBuilder!(T!(Parent.Type), (a) {
 
         alias initializer = unaryFun!fun;
 
@@ -40,11 +44,11 @@ template simpleConstructor(alias T, alias Parent, alias fun = "a") {
 }
 
 /// ditto
-alias simpleConstructor(alias T, Parent, alias fun = "a") = simpleConstructor!(T!Parent, fun);
+alias componentBuilder(alias T, Parent, alias fun = "a") = componentBuilder!(T!Parent, fun);
 
-enum isSimpleConstructor(T) = is(T : SimpleConstructor!(A, a), A, alias a);
+enum isComponentBuilder(T) = is(T : ComponentBuilder!(A, a), A, alias a);
 
-struct SimpleConstructor(T, alias fun = "a") {
+struct ComponentBuilder(T, alias fun = "a") {
 
     import fluid.style;
     import fluid.structs;
@@ -78,7 +82,7 @@ struct SimpleConstructor(T, alias fun = "a") {
     /// compile-time.
     ///
     /// If a node parameter is passed *after* a non-parameter, it will not be included in the count, and will not be
-    /// treated as one by simpleConstructor.
+    /// treated as one by ComponentBuilder.
     static int leadingParams(Args...)() {
 
         assert(__ctfe, "leadingParams is not available at runtime");
@@ -109,10 +113,10 @@ unittest {
 
     }
 
-    alias xfoo = simpleConstructor!Foo;
+    alias xfoo = componentBuilder!Foo;
     assert(xfoo().value == "");
 
-    alias yfoo = simpleConstructor!(Foo, (a) {
+    alias yfoo = componentBuilder!(Foo, (a) {
         a.value = "foo";
     });
     assert(yfoo().value == "foo");
@@ -133,7 +137,7 @@ unittest {
 
     }
 
-    alias xbar(alias T) = simpleConstructor!(Bar, T);
+    alias xbar(alias T) = componentBuilder!(Bar, T);
 
     const barA = xbar!Foo(1);
     assert(barA.value == "");
