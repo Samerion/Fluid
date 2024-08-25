@@ -127,6 +127,8 @@ class ImageView : Node {
             // Texture should be loaded by now
             assert(root.texture != Texture.init);
 
+            import std.stdio;
+            debug writefln!"%s among\n%s"(root.texture, io.textures);
             io.assertTexture(root.texture, Vector2(0, 0), color!"fff");
 
             version (Have_raylib_d) {
@@ -194,8 +196,10 @@ class ImageView : Node {
         return _targetArea;
 
     }
-
+    
     override protected void resizeImpl(Vector2 space) @trusted {
+
+        import std.algorithm : min;
 
         // Lazy-load the texture if the backend wasn't present earlier
         if (_texture == _texture.init && _texturePath) {
@@ -210,12 +214,12 @@ class ImageView : Node {
 
             // No texture loaded, shrink to nothingness
             if (_texture is _texture.init) {
-
                 minSize = Vector2(0, 0);
-
             }
 
-            else minSize = _texture.viewportSize;
+            else {
+                minSize = fitInto(texture.viewportSize, space);
+            }
 
         }
 
@@ -228,13 +232,7 @@ class ImageView : Node {
         // Ignore if there is no texture to draw
         if (texture.id <= 0) return;
 
-        // Get the scale
-        const scale = min(
-            rect.width / texture.width,
-            rect.height / texture.height
-        );
-
-        const size     = Vector2(texture.width * scale, texture.height * scale);
+        const size     = fitInto(texture.viewportSize, rect.size);
         const position = center(rect) - size/2;
 
         _targetArea = Rectangle(position.tupleof, size.tupleof);
@@ -247,5 +245,22 @@ class ImageView : Node {
         return _targetArea.contains(mouse);
 
     }
+
+}
+
+/// Returns: A vector smaller than `space` using the same aspect ratio as `reference`.
+/// Params:
+///     reference = Vector to use the aspect ratio of.
+///     space     = Available space; maximum size on each axis for the result vector.
+Vector2 fitInto(Vector2 reference, Vector2 space) {
+
+    import std.algorithm : min;
+
+    const scale = min(
+        space.x / reference.x,
+        space.y / reference.y,
+    );
+
+    return reference * scale;
 
 }
