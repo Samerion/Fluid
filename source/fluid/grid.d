@@ -191,7 +191,7 @@ class GridFrame : Frame {
     /// Add a new row to this grid.
     void addRow(Ts...)(Ts content) {
 
-        children ~= gridRow(this, content);
+        children ~= gridRow(content);
 
     }
 
