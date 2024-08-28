@@ -127,8 +127,6 @@ class ImageView : Node {
             // Texture should be loaded by now
             assert(root.texture != Texture.init);
 
-            import std.stdio;
-            debug writefln!"%s among\n%s"(root.texture, io.textures);
             io.assertTexture(root.texture, Vector2(0, 0), color!"fff");
 
             version (Have_raylib_d) {
