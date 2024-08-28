@@ -1,11 +1,14 @@
 ///
 module fluid.frame;
 
+import std.meta;
+
 import fluid.node;
 import fluid.space;
 import fluid.style;
 import fluid.utils;
 import fluid.input;
+import fluid.structs;
 import fluid.backend;
 
 
@@ -18,9 +21,11 @@ import fluid.backend;
 /// cause undefined behavior.
 ///
 /// Params:
+///     Node     = Require dropped nodes to be of given type.
 ///     tags     = Restrict dropped nodes to those that have the given tag.
 ///     selector = Selector to limit nodes that the frame accepts. Optional — Tags are often enough.
-auto acceptDrop(tags...)(Selector selector = Selector.init) {
+auto acceptDrop(tags...)(Selector selector = Selector.init)
+if (allSatisfy!(isNodeTag, tags)) {
 
     struct AcceptDrop {
 
@@ -35,6 +40,16 @@ auto acceptDrop(tags...)(Selector selector = Selector.init) {
     }
 
     return AcceptDrop(selector.addTags!tags);
+
+}
+
+/// ditto
+auto acceptDrop(Node, tags...)()
+if (allSatisfy!(isNodeTag, tags)) {
+
+    auto selector = Selector(typeid(Node));
+
+    return acceptDrop!(tags)(selector);
 
 }
 
