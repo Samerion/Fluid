@@ -64,7 +64,7 @@ static this() {
                 backgroundColor = color("#fff"),
             ),
             rule!Button(
-                backgroundColor = color("#eee"),
+                backgroundColor = color("#dadada"),
                 mouseCursor = FluidMouseCursor.pointer,
                 margin.sideY = 2,
                 padding.sideX = 6,
