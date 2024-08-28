@@ -6,8 +6,6 @@ import std.traits;
 
 import fluid.node;
 
-import fluid.node;
-
 
 @safe:
 
@@ -441,5 +439,124 @@ if (isNodeTag!nodeTag) {
     /// For what's important, the _id field is not the ID; its pointer however, is.
     align(1)
     private static immutable bool _id;
+
+}
+
+/// This node property will disable mouse input on the given node.
+/// 
+/// Params:
+///     value = If set to false, the effect is reversed and mouse input is instead enabled.
+auto ignoreMouse(bool value = true) {
+
+    static struct IgnoreMouse {
+
+        bool value;
+
+        void apply(Node node) {
+
+            node.ignoreMouse = value;
+
+        }
+
+    }
+
+    return IgnoreMouse(value);
+
+}
+
+///
+unittest {
+
+    import fluid.label;
+    import fluid.button;
+
+    // Prevents the label from blocking the button
+    vframeButton(
+        label(.ignoreMouse, "Click me!"),
+        delegate { }
+    );
+
+}
+
+@("ignoreMouse property sets Node.ignoreMouse to true")
+unittest {
+
+    import fluid.space;
+
+    assert(vspace().ignoreMouse == false);
+    assert(vspace(.ignoreMouse).ignoreMouse == true);
+    assert(vspace(.ignoreMouse(false)).ignoreMouse == false);
+    assert(vspace(.ignoreMouse(true)).ignoreMouse == true);
+
+}
+
+/// This node property will make the subject hidden, setting the `isHidden` field to true.
+/// 
+/// Params:
+///     value = If set to false, the effect is reversed and the node is set to be visible instead.
+/// See_Also: `Node.isHidden`
+auto hidden(bool value = true) {
+
+    static struct Hidden {
+
+        bool value;
+
+        void apply(Node node) {
+
+            node.isHidden = value;
+
+        }
+
+    }
+
+    return Hidden(value);
+
+}
+
+///
+unittest {
+
+    import fluid.label;
+
+    auto myLabel = label(.hidden, "The user will never see this label");
+    myLabel.draw();  // doesn't draw anything!
+
+}
+
+/// This node property will disable the subject, setting the `isHidden` field to true.
+/// 
+/// Params:
+///     value = If set to false, the effect is reversed and the node is set to be enabled instead.
+/// See_Also: `Node.isDisabled`
+auto disabled(bool value = true) {
+
+    static struct Disabled {
+
+        bool value;
+
+        void apply(Node node) {
+
+            node.isDisabled = value;
+
+        }
+
+    }
+
+    return Disabled(value);
+
+}
+
+unittest {
+
+    import fluid.button;
+
+    button(
+        .disabled,
+        "You cannot press this button!",
+        delegate {
+            assert(false);
+        }
+    );
+
 
 }
