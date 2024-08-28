@@ -1679,3 +1679,36 @@ private struct FieldValueOther(T) {
     }
 
 }
+
+@("Rules using tags from different enums do not collide")
+unittest {
+
+    import fluid.label;
+    import fluid.space;
+
+    @NodeTag enum Foo { tag }
+    @NodeTag enum Bar { tag }
+
+    auto theme = nullTheme.derive(
+        rule!Label(
+            textColor = color("#f00"),
+        ),
+        rule!(Label, Foo.tag)(
+            textColor = color("#0f0"),
+        ),
+    );
+
+    Label fooLabel, barLabel;
+
+    auto root = vspace(
+        theme,
+        fooLabel = label(.tags!(Foo.tag), "foo"),
+        barLabel = label(.tags!(Bar.tag), "bar"),
+    );
+
+    root.draw();
+
+    assert(fooLabel.pickStyle().textColor == color("#0f0"));
+    assert(barLabel.pickStyle().textColor == color("#f00"));
+
+}

@@ -208,8 +208,20 @@ unittest {
 
 /// Check if the given item is a node tag.
 enum isNodeTag(alias tag)
-    = hasUDA!(tag, NodeTag)
-    || (!isType!tag && hasUDA!(typeof(tag), NodeTag));
+    // @NodeTag enum Tag;
+    // enum Tag { @NodeTag tag }
+    = (isSomeEnum!tag
+      && hasUDA!(tag, NodeTag)) 
+
+    // @NodeTag enum Enum { tag }
+    || (!isType!tag 
+        && is(__traits(parent, tag) == enum)
+        && hasUDA!(typeof(tag), NodeTag));
+
+/// Test if the given symbol is an enum, or an enum member. 
+enum isSomeEnum(alias tag) 
+    = is(tag == enum)
+    || is(__traits(parent, tag) == enum);
 
 /// Specify tags for the next node to add.
 TagList tags(input...)() {
@@ -437,8 +449,22 @@ if (isNodeTag!nodeTag) {
 
     /// Implementation is the same as input action IDs, see fluid.input.InputAction.
     /// For what's important, the _id field is not the ID; its pointer however, is.
-    align(1)
     private static immutable bool _id;
+
+}
+
+@("Members of anonymous enums cannot be NodeTags.")
+unittest {
+
+    class A {
+        @NodeTag enum { foo }
+    }
+    class B : A {
+        @NodeTag enum { bar }
+    }
+
+    assert(!__traits(compiles, tagID!(B.foo)));
+    assert(!__traits(compiles, tagID!(B.bar)));
 
 }
 
