@@ -78,6 +78,9 @@ static this() {
                     // TODO disabled should apply opacity, and should work for every node
                 ),
             ),
+            rule!FrameButton(
+                mouseCursor = FluidMouseCursor.pointer,
+            ),
             rule!TextInput(
                 backgroundColor = color("#fff"),
                 borderStyle = colorBorder(color("#aaa")),
@@ -120,6 +123,10 @@ static this() {
             rule!PopupFrame(
                 border = 1,
                 borderStyle = colorBorder(color("#555a")),
+                children!Button(
+                    backgroundColor = Color.init,
+                    margin = 0,
+                ),
             ),
             /*rule!FileInputSuggestion(
                 margin = 0,

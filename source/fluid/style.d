@@ -12,7 +12,8 @@ import fluid.utils;
 import fluid.backend;
 import fluid.typeface;
 
-public import fluid.theme : makeTheme, Theme, Selector, rule, Rule, when, WhenRule, Field, Breadcrumbs;
+public import fluid.theme : makeTheme, Theme, Selector, rule, Rule, when, WhenRule, children, ChildrenRule, Field, 
+    Breadcrumbs;
 public import fluid.border;
 public import fluid.default_theme;
 public import fluid.backend : color;
