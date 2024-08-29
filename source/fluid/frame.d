@@ -198,9 +198,14 @@ class Frame : Space, FluidDroppable {
 
     }
 
+    /// Returns: 
+    ///     True if the given node can be dropped into this frame.
+    /// 
+    ///     No node can be dropped into a frame that is disabled.
     bool canDrop(Node node) {
 
-        return dropSelector.test(node);
+        return dropSelector.test(node)
+            && !isDisabledInherited;
 
     }
 
