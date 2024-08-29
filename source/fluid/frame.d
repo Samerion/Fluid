@@ -44,10 +44,10 @@ if (allSatisfy!(isNodeTag, tags)) {
 }
 
 /// ditto
-auto acceptDrop(Node, tags...)()
-if (allSatisfy!(isNodeTag, tags)) {
+auto acceptDrop(N, tags...)()
+if (is(N : Node) && allSatisfy!(isNodeTag, tags)) {
 
-    auto selector = Selector(typeid(Node));
+    auto selector = Selector(typeid(N));
 
     return acceptDrop!(tags)(selector);
 
