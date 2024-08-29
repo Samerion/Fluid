@@ -169,8 +169,15 @@ class DragSlot : NodeSlot!Node, FluidHoverable {
             valueRect.h -= handleWidth + style.gap;
         }
 
+        // Disable the children while dragging
+        const disable = _drawDragged && !tree.isBranchDisabled;
+
+        if (disable) tree.isBranchDisabled = true;
+
         // Draw the value
         super.drawImpl(outer, valueRect);
+
+        if (disable) tree.isBranchDisabled = false;
 
         // Draw the handle
         handle.draw(handleRect);
