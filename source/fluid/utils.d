@@ -11,9 +11,15 @@ import fluid.backend;
 @safe:
 
 
-alias simpleConstructor = componentBuilder;
-alias SimpleConstructor = ComponentBuilder;
-alias isSimpleConstructor = isComponentBuilder;
+alias simpleConstructor = nodeBuilder;
+alias SimpleConstructor = NodeBuilder;
+alias isSimpleConstructor = isNodeBuilder;
+
+deprecated("Use NodeBuilder instead") {
+    alias componentBuilder = nodeBuilder;
+    alias ComponentBuilder = NodeBuilder;
+    alias isComponentBuilder = isNodeBuilder;
+}
 
 // For saner testing and debugging.
 version (unittest)
@@ -22,7 +28,7 @@ private extern(C) __gshared string[] rt_options = ["oncycle=ignore"];
 /// Create a component builder for declarative usage.
 ///
 /// Initial properties can be provided in the function provided in the second argument.
-enum componentBuilder(T, alias fun = "a") = ComponentBuilder!(T, fun).init;
+enum nodeBuilder(T, alias fun = "a") = NodeBuilder!(T, fun).init;
 
 /// Create a simple template node constructor for declarative usage.
 ///
@@ -30,9 +36,9 @@ enum componentBuilder(T, alias fun = "a") = ComponentBuilder!(T, fun).init;
 /// usually specifies the parent in templates, so it has more importance.
 ///
 /// T must be a template accepting a single parameter — Parent type will be passed to it.
-template componentBuilder(alias T, alias Parent, alias fun = "a") {
+template nodeBuilder(alias T, alias Parent, alias fun = "a") {
 
-    alias componentBuilder = componentBuilder!(T!(Parent.Type), (a) {
+    alias nodeBuilder = nodeBuilder!(T!(Parent.Type), (a) {
 
         alias initializer = unaryFun!fun;
 
@@ -44,11 +50,11 @@ template componentBuilder(alias T, alias Parent, alias fun = "a") {
 }
 
 /// ditto
-alias componentBuilder(alias T, Parent, alias fun = "a") = componentBuilder!(T!Parent, fun);
+alias nodeBuilder(alias T, Parent, alias fun = "a") = nodeBuilder!(T!Parent, fun);
 
-enum isComponentBuilder(T) = is(T : ComponentBuilder!(A, a), A, alias a);
+enum isNodeBuilder(T) = is(T : NodeBuilder!(A, a), A, alias a);
 
-struct ComponentBuilder(T, alias fun = "a") {
+struct NodeBuilder(T, alias fun = "a") {
 
     import fluid.style;
     import fluid.structs;
@@ -113,10 +119,10 @@ unittest {
 
     }
 
-    alias xfoo = componentBuilder!Foo;
+    alias xfoo = nodeBuilder!Foo;
     assert(xfoo().value == "");
 
-    alias yfoo = componentBuilder!(Foo, (a) {
+    alias yfoo = nodeBuilder!(Foo, (a) {
         a.value = "foo";
     });
     assert(yfoo().value == "foo");
@@ -137,7 +143,7 @@ unittest {
 
     }
 
-    alias xbar(alias T) = componentBuilder!(Bar, T);
+    alias xbar(alias T) = nodeBuilder!(Bar, T);
 
     const barA = xbar!Foo(1);
     assert(barA.value == "");
