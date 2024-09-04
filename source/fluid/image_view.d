@@ -6,9 +6,26 @@ import fluid.utils;
 import fluid.style;
 import fluid.backend;
 
+@safe:
+
 alias imageView = simpleConstructor!ImageView;
 
-@safe:
+auto autoExpand(bool value = true) {
+
+    static struct AutoExpand {
+
+        bool value;
+
+        void apply(ImageView node) {
+            node.isAutoExpand = value;
+        }
+
+    }
+
+    return AutoExpand(value);
+    
+
+}
 
 /// A node specifically to display images.
 ///
@@ -21,6 +38,10 @@ class ImageView : Node {
         /// If true, size of this imageView is adjusted automatically. Changes made to `minSize` will be reversed on
         /// size update.
         bool isSizeAutomatic;
+
+        /// Experimental. Acquire space from the parent to display the largest image while preserving aspect ratio.
+        /// May not work if there's multiple similarly sized nodes in the same container.
+        bool isAutoExpand;
 
     }
 
@@ -215,8 +236,12 @@ class ImageView : Node {
                 minSize = Vector2(0, 0);
             }
 
-            else {
+            else if (isAutoExpand) {
                 minSize = fitInto(texture.viewportSize, space);
+            }
+
+            else {
+                minSize = texture.viewportSize;
             }
 
         }
