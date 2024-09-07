@@ -8,7 +8,6 @@ import fluid.style;
 import fluid.backend;
 
 
-
 @safe:
 
 
@@ -35,6 +34,12 @@ struct SizeLimit {
     size_t x;
     size_t y;
 
+    void apply(T)(SizeLock!T node) {
+
+        node.limit = this;
+
+    }
+
 }
 
 /// `sizeLock` "locks" a node, restricting space avilable to it, and making it fill the space, if possible.
@@ -51,7 +56,7 @@ class SizeLock(T : Node) : T {
     /// If a value on either axis is `0`, limit will not be applied on the axis.
     SizeLimit limit;
 
-    this(T...)(SizeLimit limit, T args) {
+    this(T...)(T args) {
 
         super(args);
         this.limit = limit;
