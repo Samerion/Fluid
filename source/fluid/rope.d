@@ -30,12 +30,15 @@ struct Rope {
     /// Start and length of the rope, in UTF-8 bytes.
     size_t start, length;
 
+    /// Depth of the node.
+    int depth = 1;
+
     /// Create a rope holding given text.
     this(inout const(char)[] text) inout pure nothrow {
 
         // No text, stay with Rope.init
         if (text == "")
-            this(null, 0, 0);
+            this(null, 0, 0, 1);
         else
             this(new inout RopeNode(text));
 
@@ -51,7 +54,7 @@ struct Rope {
 
             // Both empty, return .init
             if (right.length == 0)
-                this(null, 0, 0);
+                this(null, 0, 0, 1);
 
             // Right node only, clone it
             else
@@ -107,21 +110,25 @@ struct Rope {
         this.node = node;
         this.start = 0;
         this.length = node.length;
+        this.depth = node.isLeaf
+            ? 1
+            : max(node.left.depth, node.right.depth) + 1;
 
     }
 
     /// Copy a `Rope`.
     this(inout const Rope rope) inout pure nothrow {
 
-        this(rope.node, rope.start, rope.length);
+        this(rope.node, rope.start, rope.length, rope.depth);
 
     }
 
-    private this(inout(RopeNode)* node, size_t start, size_t length) inout pure nothrow {
+    private this(inout(RopeNode)* node, size_t start, size_t length, int depth) inout pure nothrow {
 
         this.node = node;
         this.start = start;
         this.length = length;
+        this.depth = depth;
 
     }
 
@@ -228,7 +235,11 @@ struct Rope {
     }
 
     /// True if the node is a leaf.
-    bool isLeaf() const nothrow {
+    bool isLeaf() const nothrow
+    out (r) {
+        assert(!r || depth == 1, "Leaf nodes must have depth of 1");
+    }
+    do {
 
         return node is null
             || node.isLeaf;
@@ -338,7 +349,7 @@ struct Rope {
     }
 
     /// Slice the rope.
-    Rope opIndex(size_t[2] slice, string caller = __PRETTY_FUNCTION__) const nothrow {
+    Rope opIndex(size_t[2] slice) const nothrow {
 
         assert(slice[0] <= length,
             format!"Left boundary of slice [%s .. %s] exceeds rope length %s"(slice[0], slice[1], length)
@@ -372,7 +383,7 @@ struct Rope {
         }
 
         // Overlap or a leaf: return both as they are
-        return Rope(node, slice[0], slice[1] - slice[0]);
+        return Rope(node, slice[0], slice[1] - slice[0], depth);
 
     }
 
@@ -408,13 +419,10 @@ struct Rope {
 
     }
 
-    /// Get the depth of the rope.
-    size_t depth() const nothrow {
+    /// Returns: A copy of the rope, optimized to improve reading performance.
+    Rope rebalance() const {
 
-        // Leafs have depth of 1
-        if (isLeaf) return 1;
-
-        return max(node.left.depth, node.right.depth) + 1;
+        assert(false);
 
     }
 
@@ -507,9 +515,9 @@ struct Rope {
         assert(ab[3..$].left.equal(""));
         assert(ab[4..$].left.equal(""));
         assert(ab[0..4].left.equal("ABC"));
-        assert(Rope(ab.node, 0, 3).left.equal("ABC"));
-        assert(Rope(ab.node, 0, 2).left.equal("AB"));
-        assert(Rope(ab.node, 0, 1).left.equal("A"));
+        assert(Rope(ab.node, 0, 3, 1).left.equal("ABC"));
+        assert(Rope(ab.node, 0, 2, 1).left.equal("AB"));
+        assert(Rope(ab.node, 0, 1, 1).left.equal("A"));
         assert(ab[0..0].left.equal(""));
         assert(ab[1..1].left.equal(""));
         assert(ab[4..4].left.equal(""));
@@ -532,8 +540,8 @@ struct Rope {
         assert(ab[4..$].left.equal(""));
         assert(ab[0..4].left.equal("BC"));
         assert(ab[0..3].left.equal("BC"));
-        assert(Rope(ab.node, 0, 2).left.equal("BC"));
-        assert(Rope(ab.node, 0, 1).left.equal("B"));
+        assert(Rope(ab.node, 0, 2, 1).left.equal("BC"));
+        assert(Rope(ab.node, 0, 1, 1).left.equal("B"));
         assert(ab[0..0].left.equal(""));
         assert(ab[1..1].left.equal(""));
         assert(ab[4..4].left.equal(""));
@@ -566,10 +574,10 @@ struct Rope {
 
         assert(ab.right.equal("DEF"));
         assert(ab[1..$].right.equal("DEF"));
-        assert(Rope(ab.node, 3, 3).right.equal("DEF"));
-        assert(Rope(ab.node, 4, 2).right.equal("EF"));
-        assert(Rope(ab.node, 4, 1).right.equal("E"));
-        assert(Rope(ab.node, 3, 2).right.equal("DE"));
+        assert(Rope(ab.node, 3, 3, 1).right.equal("DEF"));
+        assert(Rope(ab.node, 4, 2, 1).right.equal("EF"));
+        assert(Rope(ab.node, 4, 1, 1).right.equal("E"));
+        assert(Rope(ab.node, 3, 2, 1).right.equal("DE"));
         assert(ab[2..$-1].right.equal("DE"));
         assert(ab[1..1].right.equal(""));
         assert(ab[4..4].right.equal(""));
@@ -589,11 +597,11 @@ struct Rope {
 
         assert(ab.right.equal("EF"));
         assert(ab[1..$].right.equal("EF"));
-        assert(Rope(ab.node, 3, 1).right.equal("F"));
-        assert(Rope(ab.node, 4, 0).right.equal(""));
-        assert(Rope(ab.node, 1, 2).right.equal("E"));
-        assert(Rope(ab.node, 2, 1).right.equal("E"));
-        assert(Rope(ab.node, 3, 0).right.equal(""));
+        assert(Rope(ab.node, 3, 1, 1).right.equal("F"));
+        assert(Rope(ab.node, 4, 0, 1).right.equal(""));
+        assert(Rope(ab.node, 1, 2, 1).right.equal("E"));
+        assert(Rope(ab.node, 2, 1, 1).right.equal("E"));
+        assert(Rope(ab.node, 3, 0, 1).right.equal(""));
         assert(ab[1..1].right.equal(""));
         assert(ab[4..4].right.equal(""));
 
@@ -1239,8 +1247,6 @@ struct Rope {
             }
 
         }
-
-        Rope result;
 
         // Perform string comparison
         const prefix = commonPrefix(this[], other[]).length;
