@@ -71,7 +71,7 @@ struct FocusDirection {
     ///
     /// Params:
     ///     current = Node to update the focus info with.
-    ///     box     = Box defining node boundaries (padding box)
+    ///     box     = Box defining node boundaries (focus box)
     ///     depth   = Current tree depth. Pass in `tree.depth`.
     void update(Node current, Rectangle box, uint depth)
     in (current !is null, "Current node must not be null")
