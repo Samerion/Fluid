@@ -46,7 +46,11 @@ auto multiline(bool value = true) {
 
 
 /// Text input field.
-alias textInput = simpleConstructor!TextInput;
+alias textInput = nodeBuilder!TextInput;
+alias lineInput = nodeBuilder!TextInput;
+alias multilineInput = nodeBuilder!(TextInput, (a) {
+    a.multiline = true;
+});
 
 /// ditto
 class TextInput : InputNode!Node, FluidScrollable {
@@ -4084,4 +4088,43 @@ unittest {
     assert("\r\nabc\r\n  ".wordBack == "\r\n  ");
     assert("\r\nabc\r\n  a".wordBack == "a");
 
+}
+
+@("TextInput automatically updates scrolling ancestors")
+unittest {
+
+    // Note: This theme relies on properties of the default typeface
+
+    import fluid.scroll;
+
+    const viewportHeight = 50;
+    
+    auto theme = nullTheme.derive(
+        rule!Node(
+            Rule.typeface = Style.loadTypeface(20),
+            Rule.textColor = color("#fff"),
+            Rule.backgroundColor = color("#000"),
+        ),
+    );
+    auto input = multilineInput();
+    auto root = vscrollFrame(theme, input);
+    auto io = new HeadlessBackend(Vector2(200, viewportHeight));
+    root.io = io;
+
+    root.draw();
+    assert(root.scroll == 0);
+
+    // Begin typing
+    input.push("FLUID\nIS\nAWESOME");
+    input.caretToStart();
+    input.push("FLUID\nIS\nAWESOME\n");
+    root.draw();
+    root.draw();
+
+    const focusBox = input.focusBoxImpl(Rectangle(0, 0, 200, 50));
+
+    assert(focusBox.start == input.caretPosition);
+    assert(focusBox.end.y - viewportHeight == root.scroll);
+    
+    
 }
