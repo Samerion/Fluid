@@ -17,7 +17,10 @@ import fluid.backend;
 
 /// Make a InputAction handler react to every frame as long as the action is being held (mouse button held down,
 /// key held down, etc.).
-enum whileDown;
+enum WhileDown;
+
+deprecated ("`whileDown` has been deprecated and will be removed in Fluid 0.8.0. Use `WhileDown` instead.")
+alias whileDown = WhileDown;
 
 /// Default input actions one can listen to.
 @InputAction
@@ -880,8 +883,8 @@ interface FluidHoverable {
 
 }
 
-/// Check for `@whileDown`
-enum shouldActivateWhileDown(alias overload) = hasUDA!(overload, fluid.input.whileDown);
+/// Check for `@WhileDown`
+enum shouldActivateWhileDown(alias overload) = hasUDA!(overload, fluid.input.WhileDown);
 
 /// Helper function to run an input action handler through one of the possible overloads.
 bool runInputActionHandler(T)(T action, bool delegate(T action) @safe handler) {

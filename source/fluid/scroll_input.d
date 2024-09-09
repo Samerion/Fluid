@@ -377,7 +377,7 @@ class ScrollInputHandle : Node, FluidHoverable {
 
     }
 
-    @(FluidInputAction.press, fluid.input.whileDown)
+    @(FluidInputAction.press, fluid.input.WhileDown)
     protected void whileDown() @trusted {
 
         const mousePosition = io.mousePosition;

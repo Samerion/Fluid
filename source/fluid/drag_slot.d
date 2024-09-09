@@ -59,7 +59,7 @@ class DragSlot : NodeSlot!Node, FluidHoverable {
     }
 
     /// Drag the node.
-    @(FluidInputAction.press, .whileDown)
+    @(FluidInputAction.press, .WhileDown)
     void drag()
     in (tree)
     do {
