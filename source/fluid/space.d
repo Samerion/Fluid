@@ -134,9 +134,10 @@ class Space : Node {
 
         }
 
-        const gapSpace = visibleChildren == 0
-            ? 0
-            : style.gap * (visibleChildren - 1u);
+        const gapSpace 
+            = visibleChildren == 0 ? 0
+            : isHorizontal ? style.gap.sideX * (visibleChildren - 1u)
+            :                style.gap.sideY * (visibleChildren - 1u);
 
         // Reserve space for gaps
         reservedSpace += gapSpace;
@@ -338,9 +339,9 @@ class Space : Node {
     protected Vector2 childOffset(Vector2 currentOffset, Vector2 childSpace) {
 
         if (isHorizontal)
-            return currentOffset + Vector2(childSpace.x + style.gap, 0);
+            return currentOffset + Vector2(childSpace.x + style.gap.sideX, 0);
         else
-            return currentOffset + Vector2(0, childSpace.y + style.gap);
+            return currentOffset + Vector2(0, childSpace.y + style.gap.sideY);
 
     }
 
@@ -702,5 +703,47 @@ unittest {
 
     assert(spy.position == Vector2(0, 8));
     
+
+}
+
+@("applied style.gap depends on axis")
+unittest {
+
+    auto theme = nullTheme.derive(
+        rule!Space(
+            Rule.gap = [2, 4],
+        ),
+    );
+
+    class Warden : Space {
+
+        Rectangle outer;
+
+        override void drawImpl(Rectangle outer, Rectangle inner) {
+            super.drawImpl(this.outer = outer, inner);
+        }
+
+    }
+
+    Warden[4] wardens;
+
+    auto root = vspace(
+        theme,
+        hspace(
+            wardens[0] = new Warden,
+            wardens[1] = new Warden,
+        ),
+        vspace(
+            wardens[2] = new Warden,
+            wardens[3] = new Warden,
+        ),
+    );
+
+    root.draw();
+    
+    assert(wardens[0].outer.start == Vector2(0, 0));
+    assert(wardens[1].outer.start == Vector2(2, 0));
+    assert(wardens[2].outer.start == Vector2(0, 4));
+    assert(wardens[3].outer.start == Vector2(0, 8));
 
 }
