@@ -1366,6 +1366,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         // Insert the text by replacing the old node, if present
         value = value.replace(caretIndex - originalLength, caretIndex, Rope(bufferNode));
+        assert(value.isBalanced);
 
         // Move the caret
         caretIndex = caretIndex + ch.length;
