@@ -235,11 +235,7 @@ struct Rope {
     }
 
     /// True if the node is a leaf.
-    bool isLeaf() const nothrow pure
-    out (r) {
-        assert(!r || depth == 1, "Leaf nodes must have depth of 1");
-    }
-    do {
+    bool isLeaf() const nothrow pure {
 
         return node is null
             || node.isLeaf;
@@ -431,7 +427,7 @@ struct Rope {
         const depthDifference = node.left.depth - node.right.depth;
 
         return depthDifference >= -maxDistance
-            && depthDifference <= -maxDistance;
+            && depthDifference <= +maxDistance;
 
     }
 
@@ -440,27 +436,34 @@ struct Rope {
     ///     If the rope is already balanced, returns the original rope unmodified.
     /// Params:
     ///     maxDistance = Maximum allowed `depth` difference before rebalancing happens.
-    Rope rebalance() const nothrow {
+    Rope rebalance() const nothrow
+    out (r) {
+        assert(r.isBalanced, 
+            format("rebalance(%s) failed. Depth %s (left %s, right %s)", this, depth, left.depth, right.depth)
+                .assumeWontThrow);
+    }
+    do {
 
         import std.array;
 
         if (isBalanced) return this;
 
-        /// Merge the given array of leaf ropes into a single rope.
-        Rope merge(Rope[] leaves) {
-
-            if (leaves.length == 1)
-                return leaves[0];
-            else if (leaves.length == 2)
-                return Rope(leaves[0], leaves[1]);
-            else
-                return Rope(merge(leaves[0 .. $/2]), merge(leaves[$/2 .. $]));
-
-        }
-
         return merge(byNode.array);
 
     }
+
+    /// Returns: A rope created by concatenating an array of leaves together.
+    static Rope merge(Rope[] leaves) nothrow {
+
+        if (leaves.length == 1)
+            return leaves[0];
+        else if (leaves.length == 2)
+            return Rope(leaves[0], leaves[1]);
+        else
+            return Rope(merge(leaves[0 .. $/2]), merge(leaves[$/2 .. $]));
+
+    }
+
 
     unittest {
 
@@ -1264,6 +1267,10 @@ struct Rope {
     ///     The return value includes a `start` field which indicates the exact index the resulting range starts with.
     DiffRegion diff(const Rope other) const {
 
+        if (this is other) {
+            return DiffRegion.init;
+        }
+
         if (!isLeaf) {
 
             // Left side is identical, compare right side only
@@ -1285,7 +1292,9 @@ struct Rope {
         }
 
         // Perform string comparison
-        const prefix = commonPrefix(this[], other[]).length;
+        const prefix = commonPrefix(
+            BasicRopeRange(this[]), 
+            BasicRopeRange(other[])).length;
         const suffix = commonPrefix(this[prefix..$].retro, other[prefix..$].retro).length;
 
         const start = prefix;
@@ -1602,3 +1611,31 @@ unittest {
 
 /// `std.utf.codeLength` implementation for Rope.
 alias codeLength(T : Rope) = imported!"std.utf".codeLength!char;
+
+/// A wrapper over Range which disables slicing. Some algorithms assume slicing is faster than regular range access, 
+/// but it's not the case for `Rope`.
+struct BasicRopeRange {
+
+    Rope rope;
+
+    size_t length() const {
+        return rope.length;
+    }
+
+    bool empty() const {
+        return rope.empty;
+    }
+
+    void popFront() {
+        rope.popFront;
+    }
+
+    char front() const {
+        return rope.front;
+    }
+
+    BasicRopeRange save() {
+        return this;
+    }
+
+}

@@ -1481,12 +1481,12 @@ class CodeInput : TextInput {
                     .walkLength;
 
                 return a.drop(min(commonIndent, localIndent));
-            });
+            })
+            .map!(a => Rope(a))
+            .array;
 
         // Push each line
-        // TODO perhaps reformatting could be done during the same step
-        foreach (line; outdentedClipboard)
-            push(line);
+        push(Rope.merge(outdentedClipboard));
 
         reparse();
 
