@@ -455,7 +455,9 @@ struct Rope {
     /// Returns: A rope created by concatenating an array of leaves together.
     static Rope merge(Rope[] leaves) nothrow {
 
-        if (leaves.length == 1)
+        if (leaves.length == 0)
+            return Rope.init;
+        else if (leaves.length == 1)
             return leaves[0];
         else if (leaves.length == 2)
             return Rope(leaves[0], leaves[1]);
