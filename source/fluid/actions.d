@@ -234,7 +234,7 @@ class ScrollIntoViewAction : TreeAction {
 
     }
 
-    override void afterDraw(Node node, Rectangle, Rectangle paddingBox, Rectangle) {
+    override void afterDraw(Node node, Rectangle, Rectangle paddingBox, Rectangle contentBox) {
 
         // Target node was drawn
         if (node is startNode) {
@@ -247,7 +247,7 @@ class ScrollIntoViewAction : TreeAction {
             viewport = node.tree.io.windowSize;
 
             // Get the node's padding box
-            childBox = paddingBox;
+            childBox = node.focusBoxImpl(contentBox);
 
 
         }
