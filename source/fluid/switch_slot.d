@@ -105,7 +105,7 @@ class SwitchSlot : Node {
 
                 // Resize the node again to recursively restore old parameters
                 node.tree = null;
-                node.theme = Theme.init;
+                node.inheritTheme(Theme.init);
                 node.resize(previousTree, previousTheme, previousSize);
 
             }
@@ -135,6 +135,7 @@ class SwitchSlot : Node {
 
 }
 
+@("SwitchSlot works")
 unittest {
 
     import fluid.frame;
