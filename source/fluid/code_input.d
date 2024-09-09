@@ -142,7 +142,7 @@ class CodeInput : TextInput {
     class ContentLabel : TextInput.ContentLabel {
 
         /// Use our own `Text`.
-        Text!(ContentLabel, CodeHighlighterRange) text;
+        StyledText!CodeHighlighterRange text;
         Style[256] styles;
 
         this() {

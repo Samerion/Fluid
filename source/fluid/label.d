@@ -18,7 +18,7 @@ class Label : Node {
     public {
 
         /// Text of this label.
-        Text!Label text;
+        Text text;
 
         alias value = text;
 
@@ -29,13 +29,13 @@ class Label : Node {
 
     this(Rope text) {
 
-        this.text = Text!Label(this, text);
+        this.text = Text(this, text);
 
     }
 
     this(const(char)[] text) {
 
-        this.text = Text!Label(this, text);
+        this.text = Text(this, text);
 
     }
 
