@@ -730,13 +730,13 @@ class CodeInput : TextInput {
     }
 
     @(FluidInputAction.indent)
-    void onIndent() {
+    void indent() {
 
-        indent();
+        indent(1);
 
     }
 
-    void indent(int indentCount = 1, bool includeEmptyLines = false) {
+    void indent(int indentCount, bool includeEmptyLines = false) {
 
         // Write an undo/redo history entry
         auto shot = snapshot();
@@ -809,13 +809,13 @@ class CodeInput : TextInput {
     }
 
     @(FluidInputAction.outdent)
-    void onOutdent() {
+    void outdent() {
 
-        outdent();
+        outdent(1);
 
     }
-
-    void outdent(int i = 1) {
+    
+    void outdent(int i) {
 
         // Write an undo/redo history entry
         auto shot = snapshot();
