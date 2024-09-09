@@ -203,6 +203,12 @@ struct Style {
 
     }
 
+    const(Typeface) getTypeface() const {
+
+        return either(typeface, Typeface.defaultTypeface);
+
+    }
+
     /// Draw the background & border.
     void drawBackground(FluidBackend backend, Rectangle rect) const {
 

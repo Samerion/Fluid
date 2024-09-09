@@ -421,6 +421,9 @@ abstract class Node {
         // Set this node as the start for the given action
         action.startNode = this;
 
+        // Reset the action
+        action.toStop = false;
+
         // Insert the action into the tree's queue
         if (tree) tree.queueAction(action);
 
@@ -977,14 +980,16 @@ abstract class Node {
         // If not disabled
         if (!branchDisabled) {
 
+            const focusBox = focusBoxImpl(contentBox);
+
             // Update focus info
-            tree.focusDirection.update(this, mainBox, tree.depth);
+            tree.focusDirection.update(this, focusBox, tree.depth);
 
             // If this node is focused
             if (this is cast(Node) tree.focus) {
 
                 // Set the focus box
-                tree.focusBox = mainBox;
+                tree.focusBox = focusBox;
 
             }
 
@@ -1127,6 +1132,16 @@ abstract class Node {
             return rect.contains(mousePosition);
 
         }
+
+    }
+
+    /// The focus box defines the *focused* part of the node. This is relevant in nodes which may have a selectable 
+    /// subset, such as a dropdown box, which may be more important at present moment (selected). Scrolling actions 
+    /// like `scrollIntoView` will use the focus box to make sure the selected area is presented to the user.
+    /// Returns: The focus box of the node. 
+    Rectangle focusBoxImpl(Rectangle inner) const {
+
+        return inner;
 
     }
 

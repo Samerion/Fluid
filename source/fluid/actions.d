@@ -221,6 +221,13 @@ unittest {
 
 class ScrollIntoViewAction : TreeAction {
 
+    public {
+
+        /// If true, try to display the child at the top.
+        bool alignToTop;
+
+    }
+
     private {
 
         /// The node this action attempts to put into view.
@@ -229,12 +236,16 @@ class ScrollIntoViewAction : TreeAction {
         Vector2 viewport;
         Rectangle childBox;
 
-        /// If true, try to display the child at the top.
-        bool alignToTop;
+    }
+
+    void reset(bool alignToTop = false) {
+
+        this.toStop = false;
+        this.alignToTop = alignToTop;
 
     }
 
-    override void afterDraw(Node node, Rectangle, Rectangle paddingBox, Rectangle) {
+    override void afterDraw(Node node, Rectangle, Rectangle paddingBox, Rectangle contentBox) {
 
         // Target node was drawn
         if (node is startNode) {
@@ -247,7 +258,7 @@ class ScrollIntoViewAction : TreeAction {
             viewport = node.tree.io.windowSize;
 
             // Get the node's padding box
-            childBox = paddingBox;
+            childBox = node.focusBoxImpl(contentBox);
 
 
         }
