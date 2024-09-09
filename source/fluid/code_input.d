@@ -1106,12 +1106,12 @@ class CodeInput : TextInput {
     }
 
     @(FluidInputAction.breakLine)
-    protected override bool onBreakLine() {
+    protected override bool breakLine() {
 
         const currentIndent = indentLevelByIndex(caretIndex);
 
         // Break the line
-        if (super.onBreakLine()) {
+        if (super.breakLine()) {
 
             // Copy indent from the previous line
             // Enable continuous input to merge the indent with the line break in the history
@@ -1173,9 +1173,9 @@ class CodeInput : TextInput {
         root.push("abcdef\n");
         root.insertTab;
         assert(root.caretLine == "  ");
-        root.onBreakLine();
+        root.breakLine();
         assert(root.caretLine == "  ");
-        root.onBreakLine();
+        root.breakLine();
         root.push("a");
         assert(root.caretLine == "  a");
 
@@ -1188,7 +1188,7 @@ class CodeInput : TextInput {
         auto root = codeInput();
         root.value = "    abcdef";
         root.caretIndex = 8;
-        root.onBreakLine;
+        root.breakLine;
         assert(root.value == "    abcd\n    ef");
 
     }
@@ -1243,18 +1243,18 @@ class CodeInput : TextInput {
 
         // 3 tabs -> 3 indents
         root.push("\t\t\t");
-        root.onBreakLine();
+        root.breakLine();
         assert(root.value == "\t\t\t\n            ");
 
         // mixed tabs (8 width total) -> 2 indents
         root.value = "  \t  \t";
         root.caretToEnd();
-        root.onBreakLine();
+        root.breakLine();
         assert(root.value == "  \t  \t\n        ");
 
         // 6 spaces -> 1 indent
         root.value = "      ";
-        root.onBreakLine();
+        root.breakLine();
         assert(root.value == "      \n    ");
 
         // Same but now with tabs
@@ -1265,12 +1265,12 @@ class CodeInput : TextInput {
 
         // 3 tabs -> 3 indents
         root.value = "\t\t\t";
-        root.onBreakLine();
+        root.breakLine();
         assert(root.value == "\t\t\t\n\t\t\t");
 
         // mixed tabs (8 width total) -> 2 indents
         root.value = "  \t  \t";
-        root.onBreakLine();
+        root.breakLine();
         assert(root.value == "  \t  \t\n\t\t");
 
         // Same but now with 2 spaces
@@ -1288,12 +1288,12 @@ class CodeInput : TextInput {
 
         // mixed tabs (8 width total) -> 2 indents
         root.value = "  \t  \t";
-        root.onBreakLine();
+        root.breakLine();
         assert(root.value == "  \t  \t\n        ");
 
         // 6 spaces -> 3 indents
         root.value = "      ";
-        root.onBreakLine();
+        root.breakLine();
         assert(root.value == "      \n      ");
 
     }
@@ -1531,7 +1531,7 @@ class CodeInput : TextInput {
         root.paste();
         assert(root.value == "\ttext");
 
-        root.onBreakLine;
+        root.breakLine;
         root.paste();
         assert(root.value == "\ttext\n\ttext");
 
@@ -1540,7 +1540,7 @@ class CodeInput : TextInput {
         root.paste();
         assert(root.value == "text\ntext");
 
-        root.onBreakLine;
+        root.breakLine;
         root.insertTab;
         root.paste();
         assert(root.value == "text\ntext\n\ttext\n\ttext");

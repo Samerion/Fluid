@@ -60,10 +60,10 @@ class ButtonImpl(T : Node = Label) : InputNode!T {
 
     /// Handle mouse input. By default, this will call the `pressed` delegate if the button is pressed.
     @(FluidInputAction.press)
-    protected void _pressed() @trusted {
+    protected void press() @trusted {
 
         // Run the callback
-        pressed();
+        if (pressed) pressed();
 
     }
 

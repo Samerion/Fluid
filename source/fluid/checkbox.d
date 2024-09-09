@@ -124,14 +124,15 @@ class Checkbox : InputNode!Node {
     void toggle() {
 
         isChecked = !isChecked;
+        if (changed) changed();
 
     }
 
+    /// ditto
     @(FluidInputAction.press)
-    protected void _pressed() {
+    protected void press() {
 
         toggle();
-        if (changed) changed();
 
     }
 

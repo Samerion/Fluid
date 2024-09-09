@@ -315,6 +315,14 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
+    /// Mark the text input as modified and fire the "changed" event.
+    void touchText() {
+
+        touch();
+        if (changed) changed();
+
+    }
+
     /// Value written in the input.
     inout(Rope) value() inout {
 
@@ -1160,7 +1168,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         if (changed) {
 
             // Trigger the callback
-            _changed();
+            touchText();
 
             return true;
 
@@ -1360,20 +1368,9 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
-    /// Called whenever the text input is updated.
-    protected void _changed() {
-
-        // Mark as modified
-        touch();
-
-        // Run the callback
-        if (changed) changed();
-
-    }
-
     /// Start a new line
     @(FluidInputAction.breakLine)
-    protected bool onBreakLine() {
+    protected bool breakLine() {
 
         if (!multiline) return false;
 
@@ -1442,9 +1439,9 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         auto root = textInput(.multiline);
         root.push("first line");
-        root.onBreakLine();
+        root.breakLine();
         root.push("second line");
-        root.onBreakLine();
+        root.breakLine();
         assert(root.value == "first line\nsecond line\n");
 
         root.undo();
@@ -1645,7 +1642,7 @@ class TextInput : InputNode!Node, FluidScrollable {
     protected void onBackspaceWord() {
 
         chopWord();
-        _changed();
+        touchText();
 
     }
 
@@ -1708,7 +1705,7 @@ class TextInput : InputNode!Node, FluidScrollable {
     protected void onDeleteWord() {
 
         chopWord(true);
-        _changed();
+        touchText();
 
     }
 
@@ -1800,7 +1797,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         }
 
         // Trigger the callback
-        _changed();
+        touchText();
 
         // Update the size of the box
         updateSize();
