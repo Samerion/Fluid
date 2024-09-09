@@ -67,7 +67,7 @@ struct Rope {
             this(left);
 
         // Neither is empty, create a new node
-        else
+        else 
             this(new inout RopeNode(left, right));
 
     }
@@ -216,26 +216,26 @@ struct Rope {
     /// Concatenate two ropes together.
     Rope opBinary(string op : "~")(const Rope that) const nothrow {
 
-        return Rope(this, that);
+        return Rope(this, that).rebalance();
 
     }
 
     /// Concatenate with a string.
     Rope opBinary(string op : "~")(const(char)[] text) const nothrow {
 
-        return Rope(this, Rope(text));
+        return Rope(this, Rope(text)).rebalance();
 
     }
 
     /// ditto
     Rope opBinaryRight(string op : "~")(const(char)[] text) const nothrow {
 
-        return Rope(Rope(text), this);
+        return Rope(Rope(text), this).rebalance();
 
     }
 
     /// True if the node is a leaf.
-    bool isLeaf() const nothrow
+    bool isLeaf() const nothrow pure
     out (r) {
         assert(!r || depth == 1, "Leaf nodes must have depth of 1");
     }
@@ -419,10 +419,46 @@ struct Rope {
 
     }
 
-    /// Returns: A copy of the rope, optimized to improve reading performance.
-    Rope rebalance() const {
+    /// Returns: 
+    ///     True if the rope is fairly balanced.
+    /// Params:
+    ///     maxDistance = Maximum allowed `depth` difference
+    bool isBalanced(int maxDistance = 3) const nothrow {
 
-        assert(false);
+        // Leaves are always balanced
+        if (isLeaf) return true;
+
+        const depthDifference = node.left.depth - node.right.depth;
+
+        return depthDifference >= -maxDistance
+            && depthDifference <= -maxDistance;
+
+    }
+
+    /// Returns: 
+    ///     If the rope is unbalanced, returns a copy of the rope, optimized to improve reading performance. 
+    ///     If the rope is already balanced, returns the original rope unmodified.
+    /// Params:
+    ///     maxDistance = Maximum allowed `depth` difference before rebalancing happens.
+    Rope rebalance() const nothrow {
+
+        import std.array;
+
+        if (isBalanced) return this;
+
+        /// Merge the given array of leaf ropes into a single rope.
+        Rope merge(Rope[] leaves) {
+
+            if (leaves.length == 1)
+                return leaves[0];
+            else if (leaves.length == 2)
+                return Rope(leaves[0], leaves[1]);
+            else
+                return Rope(merge(leaves[0 .. $/2]), merge(leaves[$/2 .. $]));
+
+        }
+
+        return merge(byNode.array);
 
     }
 
@@ -772,7 +808,7 @@ struct Rope {
         auto split = split(index);
 
         // Insert the element
-        return Rope(split.left, Rope(value, split.right));
+        return Rope(split.left, Rope(value, split.right)).rebalance();
 
     }
 
@@ -839,7 +875,7 @@ struct Rope {
                 value,
                 rightSplit.right,
             ),
-        );
+        ).rebalance();
 
     }
 
@@ -967,7 +1003,7 @@ struct Rope {
 
         auto left = this;
 
-        return this = Rope(left, Rope(value));
+        return this = Rope(left, Rope(value)).rebalance;
 
     }
 
@@ -976,7 +1012,7 @@ struct Rope {
 
         auto left = this;
 
-        return this = Rope(left, value);
+        return this = Rope(left, value).rebalance();
 
     }
 
@@ -996,7 +1032,7 @@ struct Rope {
 
     }
 
-    /// Perform deep-first search through nodes of the rope.
+    /// Perform deep-first search through leaf nodes of the rope.
     auto byNode() inout {
 
         import std.container.dlist;
