@@ -76,7 +76,7 @@ class ProgressBar : Node {
         int maxValue;
 
         /// Text used by the node.
-        Text!ProgressBar text;
+        Text text;
 
         /// Node used as the filling for this progress bar.
         ProgressBarFill fill;
@@ -96,7 +96,7 @@ class ProgressBar : Node {
         this.value = value;
         this.maxValue = maxValue;
         this.fill = new ProgressBarFill(this);
-        this.text = Text!ProgressBar(this, "");
+        this.text = Text(this, "");
 
     }
 
