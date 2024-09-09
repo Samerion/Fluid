@@ -315,6 +315,14 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
+    /// Mark the text input as modified and fire the "changed" event.
+    void touchText() {
+
+        touch();
+        if (changed) changed();
+
+    }
+
     /// Value written in the input.
     inout(Rope) value() inout {
 
@@ -1160,7 +1168,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         if (changed) {
 
             // Trigger the callback
-            _changed();
+            touchText();
 
             return true;
 
@@ -1360,20 +1368,9 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
-    /// Called whenever the text input is updated.
-    protected void _changed() {
-
-        // Mark as modified
-        touch();
-
-        // Run the callback
-        if (changed) changed();
-
-    }
-
     /// Start a new line
     @(FluidInputAction.breakLine)
-    protected bool onBreakLine() {
+    protected bool breakLine() {
 
         if (!multiline) return false;
 
@@ -1442,9 +1439,9 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         auto root = textInput(.multiline);
         root.push("first line");
-        root.onBreakLine();
+        root.breakLine();
         root.push("second line");
-        root.onBreakLine();
+        root.breakLine();
         assert(root.value == "first line\nsecond line\n");
 
         root.undo();
@@ -1468,7 +1465,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     /// Submit the input.
     @(FluidInputAction.submit)
-    protected void onSubmit() {
+    void submit() {
 
         import std.sumtype : match;
 
@@ -1641,11 +1638,12 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
+    /// Remove a word before the caret.
     @(FluidInputAction.backspaceWord)
-    protected void onBackspaceWord() {
+    void backspaceWord() {
 
         chopWord();
-        _changed();
+        touchText();
 
     }
 
@@ -1704,11 +1702,12 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
+    /// Delete a word in front of the caret.
     @(FluidInputAction.deleteWord)
-    protected void onDeleteWord() {
+    void deleteWord() {
 
         chopWord(true);
-        _changed();
+        touchText();
 
     }
 
@@ -1800,7 +1799,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         }
 
         // Trigger the callback
-        _changed();
+        touchText();
 
         // Update the size of the box
         updateSize();
@@ -1901,7 +1900,7 @@ class TextInput : InputNode!Node, FluidScrollable {
             // First click, merely move the caret while selecting
             case 0: break;
 
-            // Second click, select the word surrounding the cursor
+            // Second click, select the word surrounding the caret
             case 1:
                 selectWord();
                 break;
@@ -2212,7 +2211,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         const end = index + frontLength;
         size_t[2] selection = [selectionStart, selectionEnd];
 
-        // Combine everything on the same line, before and after the cursor
+        // Combine everything on the same line, before and after the caret
         value = value.replace(start, end, newValue);
 
         // Caret/selection needs updating
@@ -2696,9 +2695,9 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
-    /// Open the context menu
+    /// Open the input's context menu.
     @(FluidInputAction.contextMenu)
-    protected void onContextMenu() {
+    void openContextMenu() {
 
         // Move the caret
         if (!isSelecting)
@@ -2712,15 +2711,17 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
+    /// Remove a character before the caret. Same as `chop`.
     @(FluidInputAction.backspace)
-    protected void onBackspace() {
+    void backspace() {
 
         chop();
 
     }
 
+    /// Delete one character in front of the cursor.
     @(FluidInputAction.deleteChar)
-    protected void onDeleteChar() {
+    void deleteChar() {
 
         chop(true);
 
@@ -2994,9 +2995,9 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
-    /// Move caret to the next character
+    /// Move caret to the previous or next character.
     @(FluidInputAction.previousChar, FluidInputAction.nextChar)
-    protected void onXChar(FluidInputAction action) {
+    protected void previousOrNextChar(FluidInputAction action) {
 
         const forward = action == FluidInputAction.nextChar;
 
@@ -3074,9 +3075,9 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
-    /// Move caret to the next word
+    /// Move caret to the previous or next word.
     @(FluidInputAction.previousWord, FluidInputAction.nextWord)
-    protected void onXWord(FluidInputAction action) {
+    protected void previousOrNextWord(FluidInputAction action) {
 
         // Previous word
         if (action == FluidInputAction.previousWord) {
@@ -3100,7 +3101,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     /// Move the caret to the previous or next line.
     @(FluidInputAction.previousLine, FluidInputAction.nextLine)
-    protected void onXLine(FluidInputAction action) {
+    protected void previousOrNextLine(FluidInputAction action) {
 
         auto typeface = style.getTypeface;
         auto search = Vector2(horizontalAnchor, caretPosition.y);
@@ -3476,7 +3477,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         FluidInputAction.selectToStart,
         FluidInputAction.selectToEnd,
     )
-    protected void onSelectX(FluidInputAction action) {
+    protected void select(FluidInputAction action) {
 
         selectionMovement = true;
         scope (exit) selectionMovement = false;
