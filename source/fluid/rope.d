@@ -30,12 +30,15 @@ struct Rope {
     /// Start and length of the rope, in UTF-8 bytes.
     size_t start, length;
 
+    /// Depth of the node.
+    int depth = 1;
+
     /// Create a rope holding given text.
     this(inout const(char)[] text) inout pure nothrow {
 
         // No text, stay with Rope.init
         if (text == "")
-            this(null, 0, 0);
+            this(null, 0, 0, 1);
         else
             this(new inout RopeNode(text));
 
@@ -51,7 +54,7 @@ struct Rope {
 
             // Both empty, return .init
             if (right.length == 0)
-                this(null, 0, 0);
+                this(null, 0, 0, 1);
 
             // Right node only, clone it
             else
@@ -64,7 +67,7 @@ struct Rope {
             this(left);
 
         // Neither is empty, create a new node
-        else
+        else 
             this(new inout RopeNode(left, right));
 
     }
@@ -107,21 +110,25 @@ struct Rope {
         this.node = node;
         this.start = 0;
         this.length = node.length;
+        this.depth = node.isLeaf
+            ? 1
+            : max(node.left.depth, node.right.depth) + 1;
 
     }
 
     /// Copy a `Rope`.
     this(inout const Rope rope) inout pure nothrow {
 
-        this(rope.node, rope.start, rope.length);
+        this(rope.node, rope.start, rope.length, rope.depth);
 
     }
 
-    private this(inout(RopeNode)* node, size_t start, size_t length) inout pure nothrow {
+    private this(inout(RopeNode)* node, size_t start, size_t length, int depth) inout pure nothrow {
 
         this.node = node;
         this.start = start;
         this.length = length;
+        this.depth = depth;
 
     }
 
@@ -209,26 +216,26 @@ struct Rope {
     /// Concatenate two ropes together.
     Rope opBinary(string op : "~")(const Rope that) const nothrow {
 
-        return Rope(this, that);
+        return Rope(this, that).rebalance();
 
     }
 
     /// Concatenate with a string.
     Rope opBinary(string op : "~")(const(char)[] text) const nothrow {
 
-        return Rope(this, Rope(text));
+        return Rope(this, Rope(text)).rebalance();
 
     }
 
     /// ditto
     Rope opBinaryRight(string op : "~")(const(char)[] text) const nothrow {
 
-        return Rope(Rope(text), this);
+        return Rope(Rope(text), this).rebalance();
 
     }
 
     /// True if the node is a leaf.
-    bool isLeaf() const nothrow {
+    bool isLeaf() const nothrow pure {
 
         return node is null
             || node.isLeaf;
@@ -338,7 +345,7 @@ struct Rope {
     }
 
     /// Slice the rope.
-    Rope opIndex(size_t[2] slice, string caller = __PRETTY_FUNCTION__) const nothrow {
+    Rope opIndex(size_t[2] slice) const nothrow {
 
         assert(slice[0] <= length,
             format!"Left boundary of slice [%s .. %s] exceeds rope length %s"(slice[0], slice[1], length)
@@ -372,7 +379,7 @@ struct Rope {
         }
 
         // Overlap or a leaf: return both as they are
-        return Rope(node, slice[0], slice[1] - slice[0]);
+        return Rope(node, slice[0], slice[1] - slice[0], depth);
 
     }
 
@@ -408,15 +415,57 @@ struct Rope {
 
     }
 
-    /// Get the depth of the rope.
-    size_t depth() const nothrow {
+    /// Returns: 
+    ///     True if the rope is fairly balanced.
+    /// Params:
+    ///     maxDistance = Maximum allowed `depth` difference
+    bool isBalanced(int maxDistance = 3) const nothrow {
 
-        // Leafs have depth of 1
-        if (isLeaf) return 1;
+        // Leaves are always balanced
+        if (isLeaf) return true;
 
-        return max(node.left.depth, node.right.depth) + 1;
+        const depthDifference = node.left.depth - node.right.depth;
+
+        return depthDifference >= -maxDistance
+            && depthDifference <= +maxDistance;
 
     }
+
+    /// Returns: 
+    ///     If the rope is unbalanced, returns a copy of the rope, optimized to improve reading performance. 
+    ///     If the rope is already balanced, returns the original rope unmodified.
+    /// Params:
+    ///     maxDistance = Maximum allowed `depth` difference before rebalancing happens.
+    Rope rebalance() const nothrow
+    out (r) {
+        assert(r.isBalanced, 
+            format("rebalance(%s) failed. Depth %s (left %s, right %s)", this, depth, left.depth, right.depth)
+                .assumeWontThrow);
+    }
+    do {
+
+        import std.array;
+
+        if (isBalanced) return this;
+
+        return merge(byNode.array);
+
+    }
+
+    /// Returns: A rope created by concatenating an array of leaves together.
+    static Rope merge(Rope[] leaves) nothrow {
+
+        if (leaves.length == 0)
+            return Rope.init;
+        else if (leaves.length == 1)
+            return leaves[0];
+        else if (leaves.length == 2)
+            return Rope(leaves[0], leaves[1]);
+        else
+            return Rope(merge(leaves[0 .. $/2]), merge(leaves[$/2 .. $]));
+
+    }
+
 
     unittest {
 
@@ -507,9 +556,9 @@ struct Rope {
         assert(ab[3..$].left.equal(""));
         assert(ab[4..$].left.equal(""));
         assert(ab[0..4].left.equal("ABC"));
-        assert(Rope(ab.node, 0, 3).left.equal("ABC"));
-        assert(Rope(ab.node, 0, 2).left.equal("AB"));
-        assert(Rope(ab.node, 0, 1).left.equal("A"));
+        assert(Rope(ab.node, 0, 3, 1).left.equal("ABC"));
+        assert(Rope(ab.node, 0, 2, 1).left.equal("AB"));
+        assert(Rope(ab.node, 0, 1, 1).left.equal("A"));
         assert(ab[0..0].left.equal(""));
         assert(ab[1..1].left.equal(""));
         assert(ab[4..4].left.equal(""));
@@ -532,8 +581,8 @@ struct Rope {
         assert(ab[4..$].left.equal(""));
         assert(ab[0..4].left.equal("BC"));
         assert(ab[0..3].left.equal("BC"));
-        assert(Rope(ab.node, 0, 2).left.equal("BC"));
-        assert(Rope(ab.node, 0, 1).left.equal("B"));
+        assert(Rope(ab.node, 0, 2, 1).left.equal("BC"));
+        assert(Rope(ab.node, 0, 1, 1).left.equal("B"));
         assert(ab[0..0].left.equal(""));
         assert(ab[1..1].left.equal(""));
         assert(ab[4..4].left.equal(""));
@@ -566,10 +615,10 @@ struct Rope {
 
         assert(ab.right.equal("DEF"));
         assert(ab[1..$].right.equal("DEF"));
-        assert(Rope(ab.node, 3, 3).right.equal("DEF"));
-        assert(Rope(ab.node, 4, 2).right.equal("EF"));
-        assert(Rope(ab.node, 4, 1).right.equal("E"));
-        assert(Rope(ab.node, 3, 2).right.equal("DE"));
+        assert(Rope(ab.node, 3, 3, 1).right.equal("DEF"));
+        assert(Rope(ab.node, 4, 2, 1).right.equal("EF"));
+        assert(Rope(ab.node, 4, 1, 1).right.equal("E"));
+        assert(Rope(ab.node, 3, 2, 1).right.equal("DE"));
         assert(ab[2..$-1].right.equal("DE"));
         assert(ab[1..1].right.equal(""));
         assert(ab[4..4].right.equal(""));
@@ -589,11 +638,11 @@ struct Rope {
 
         assert(ab.right.equal("EF"));
         assert(ab[1..$].right.equal("EF"));
-        assert(Rope(ab.node, 3, 1).right.equal("F"));
-        assert(Rope(ab.node, 4, 0).right.equal(""));
-        assert(Rope(ab.node, 1, 2).right.equal("E"));
-        assert(Rope(ab.node, 2, 1).right.equal("E"));
-        assert(Rope(ab.node, 3, 0).right.equal(""));
+        assert(Rope(ab.node, 3, 1, 1).right.equal("F"));
+        assert(Rope(ab.node, 4, 0, 1).right.equal(""));
+        assert(Rope(ab.node, 1, 2, 1).right.equal("E"));
+        assert(Rope(ab.node, 2, 1, 1).right.equal("E"));
+        assert(Rope(ab.node, 3, 0, 1).right.equal(""));
         assert(ab[1..1].right.equal(""));
         assert(ab[4..4].right.equal(""));
 
@@ -764,7 +813,7 @@ struct Rope {
         auto split = split(index);
 
         // Insert the element
-        return Rope(split.left, Rope(value, split.right));
+        return Rope(split.left, Rope(value, split.right)).rebalance();
 
     }
 
@@ -831,7 +880,7 @@ struct Rope {
                 value,
                 rightSplit.right,
             ),
-        );
+        ).rebalance();
 
     }
 
@@ -959,7 +1008,7 @@ struct Rope {
 
         auto left = this;
 
-        return this = Rope(left, Rope(value));
+        return this = Rope(left, Rope(value)).rebalance;
 
     }
 
@@ -968,7 +1017,7 @@ struct Rope {
 
         auto left = this;
 
-        return this = Rope(left, value);
+        return this = Rope(left, value).rebalance();
 
     }
 
@@ -988,7 +1037,7 @@ struct Rope {
 
     }
 
-    /// Perform deep-first search through nodes of the rope.
+    /// Perform deep-first search through leaf nodes of the rope.
     auto byNode() inout {
 
         import std.container.dlist;
@@ -1220,6 +1269,10 @@ struct Rope {
     ///     The return value includes a `start` field which indicates the exact index the resulting range starts with.
     DiffRegion diff(const Rope other) const {
 
+        if (this is other) {
+            return DiffRegion.init;
+        }
+
         if (!isLeaf) {
 
             // Left side is identical, compare right side only
@@ -1240,10 +1293,10 @@ struct Rope {
 
         }
 
-        Rope result;
-
         // Perform string comparison
-        const prefix = commonPrefix(this[], other[]).length;
+        const prefix = commonPrefix(
+            BasicRopeRange(this[]), 
+            BasicRopeRange(other[])).length;
         const suffix = commonPrefix(this[prefix..$].retro, other[prefix..$].retro).length;
 
         const start = prefix;
@@ -1560,3 +1613,31 @@ unittest {
 
 /// `std.utf.codeLength` implementation for Rope.
 alias codeLength(T : Rope) = imported!"std.utf".codeLength!char;
+
+/// A wrapper over Range which disables slicing. Some algorithms assume slicing is faster than regular range access, 
+/// but it's not the case for `Rope`.
+struct BasicRopeRange {
+
+    Rope rope;
+
+    size_t length() const {
+        return rope.length;
+    }
+
+    bool empty() const {
+        return rope.empty;
+    }
+
+    void popFront() {
+        rope.popFront;
+    }
+
+    char front() const {
+        return rope.front;
+    }
+
+    BasicRopeRange save() {
+        return this;
+    }
+
+}
