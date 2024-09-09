@@ -166,14 +166,15 @@ class NumberInput(T) : AbstractNumberInput {
 
     }
 
+    /// Submit the value.
     @(FluidInputAction.submit)
-    override protected void onSubmit() {
+    override void submit() {
 
         // Evaluate the expression
         evaluate();
 
         // Submit
-        super.onSubmit();
+        super.submit();
 
     }
 
