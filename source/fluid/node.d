@@ -73,6 +73,12 @@ abstract class Node {
         /// if the node wasn't there. The node will still detect hover like normal.
         bool ignoreMouse;
 
+        /// True if the theme has been assigned explicitly by a direct assignment. If false, the node will instead
+        /// inherit themes from the parent.
+        ///
+        /// This can be set to false to reset the theme.
+        bool isThemeExplicit;
+
     }
 
     /// Minimum size of the node.
@@ -112,28 +118,6 @@ abstract class Node {
 
     @property {
 
-        /// Get the current theme.
-        pragma(inline)
-        inout(Theme) theme() inout { return _theme; }
-
-        /// Set the theme.
-        Theme theme(Theme value) @trusted {
-
-            _theme = cast(Theme) value;
-            updateSize();
-            return _theme;
-
-        }
-
-        /// Current style, used for sizing. Does not include any changes made by `when` clauses or callbacks.
-        ///
-        /// Direct changes are discouraged, and are likely to be discarded when reloading themes. Use themes instead.
-        ref inout(Style) style() inout { return _style; }
-
-    }
-
-    @property {
-
         /// Check if the node is hidden.
         bool isHidden() const return { return _isHidden; }
 
@@ -167,6 +151,84 @@ abstract class Node {
     /// See_Also:
     ///     `fluid.utils.simpleConstructor`
     this() { }
+
+    /// Get the current theme.
+    inout(Theme) theme() inout { return _theme; }
+
+    /// Set the theme.
+    Theme theme(Theme value) {
+
+        isThemeExplicit = true;
+        updateSize();
+        return _theme = value;
+
+    }
+
+    /// Nodes automatically inherit theme from their parent, and the root node implictly inherits the default theme.
+    /// An explicitly-set theme will override any inherited themes recursively, stopping at nodes that also have themes 
+    /// set explicitly.
+    /// Params:
+    ///     value = Theme to inherit.
+    /// See_Also: `theme`
+    void inheritTheme(Theme value) {
+
+        // Do not override explicitly-set themes
+        if (isThemeExplicit) return;
+
+        _theme = value;
+        updateSize();
+
+    }
+
+    @("Themes can be changed at runtime https://git.samerion.com/Samerion/Fluid/issues/114")
+    unittest {
+
+        import fluid.frame;
+
+        auto theme1 = nullTheme.derive(
+            rule!Frame(
+                Rule.backgroundColor = color("#000"),
+            ),
+        );
+        auto theme2 = nullTheme.derive(
+            rule!Frame(
+                Rule.backgroundColor = color("#fff"),
+            ),
+        );
+
+        auto deepFrame = vframe();
+        auto blackFrame = vframe(theme1);
+        auto root = vframe(
+            theme1,
+            vframe(
+                vframe(deepFrame),
+            ),
+            vframe(blackFrame),
+        );
+
+        root.draw();
+        assert(deepFrame.pickStyle.backgroundColor == color("#000"));
+        assert(blackFrame.pickStyle.backgroundColor == color("#000"));
+        root.theme = theme2;
+        root.draw();
+        assert(deepFrame.pickStyle.backgroundColor == color("#fff"));
+        assert(blackFrame.pickStyle.backgroundColor == color("#000"));
+
+    }
+
+    /// Clear the currently assigned theme
+    void resetTheme() {
+
+        _theme = Theme.init;
+        isThemeExplicit = false;
+        updateSize();
+
+    }
+
+    /// Current style, used for sizing. Does not include any changes made by `when` clauses or callbacks.
+    ///
+    /// Direct changes are discouraged, and are likely to be discarded when reloading themes. Use themes instead.
+    ref inout(Style) style() inout { return _style; }
 
     bool opEquals(const Node otherNode) const {
 
@@ -560,7 +622,7 @@ abstract class Node {
         if (!theme) {
 
             import fluid.default_theme;
-            theme = fluidDefaultTheme;
+            inheritTheme(fluidDefaultTheme);
 
         }
 
@@ -1016,7 +1078,7 @@ abstract class Node {
 
         // Inherit tree and theme
         this.tree = tree;
-        if (!this.theme) this.theme = theme;
+        inheritTheme(theme);
 
         // Load breadcrumbs from the tree
         breadcrumbs = tree.breadcrumbs;
@@ -1383,3 +1445,4 @@ ref RunCallback mockRun() {
     return callback;
 
 }
+
