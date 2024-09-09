@@ -221,6 +221,13 @@ unittest {
 
 class ScrollIntoViewAction : TreeAction {
 
+    public {
+
+        /// If true, try to display the child at the top.
+        bool alignToTop;
+
+    }
+
     private {
 
         /// The node this action attempts to put into view.
@@ -229,8 +236,12 @@ class ScrollIntoViewAction : TreeAction {
         Vector2 viewport;
         Rectangle childBox;
 
-        /// If true, try to display the child at the top.
-        bool alignToTop;
+    }
+
+    void reset(bool alignToTop = false) {
+
+        this.toStop = false;
+        this.alignToTop = alignToTop;
 
     }
 
