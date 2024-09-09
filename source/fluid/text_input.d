@@ -207,7 +207,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         /// Node the buffer is stored in.
         RopeNode* _bufferNode;
-        invariant(_bufferNode is null || _bufferNode.value.sameTail(_buffer[0 .. _usedBufferSize]),
+        invariant(_bufferNode is null || _bufferNode.left.value.sameTail(_buffer[0 .. _usedBufferSize]),
             "_bufferNode must be in sync with _buffer");
 
         /// Value of the text input.
@@ -1333,7 +1333,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         // Selection is active, overwrite it
         if (isSelecting) {
 
-            bufferNode = new RopeNode(slice);
+            bufferNode = new RopeNode(Rope(slice), Rope.init);
             push(Rope(bufferNode));
             return;
 
@@ -1347,7 +1347,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         // Make sure there is a node to write to
         if (!bufferNode)
-            bufferNode = new RopeNode(slice);
+            bufferNode = new RopeNode(Rope(slice), Rope.init);
 
         // If writing in a single sequence, reuse the last inserted node
         else {
@@ -1356,7 +1356,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
             // Append the character to its value
             // The bufferNode will always share tail with the buffer
-            bufferNode.value = usedBuffer[$ - originalLength - ch.length .. $];
+            bufferNode.left = usedBuffer[$ - originalLength - ch.length .. $];
 
         }
 
