@@ -178,7 +178,7 @@ class ScrollInput : InputNode!Node {
 
     @(FluidInputAction.pageLeft, FluidInputAction.pageRight)
     @(FluidInputAction.pageUp, FluidInputAction.pageDown)
-    protected void _scrollPage(FluidInputAction action) {
+    protected void scrollPage(FluidInputAction action) {
 
         with (FluidInputAction) {
 
@@ -199,18 +199,18 @@ class ScrollInput : InputNode!Node {
 
     @(FluidInputAction.scrollLeft, FluidInputAction.scrollRight)
     @(FluidInputAction.scrollUp, FluidInputAction.scrollDown)
-    protected void _scroll() @trusted {
+    protected void scroll(FluidInputAction action) @trusted {
 
         const isPlus = isHorizontal
-            ? &isDown!(FluidInputAction.scrollRight)
-            : &isDown!(FluidInputAction.scrollDown);
+            ? action == FluidInputAction.scrollRight
+            : action == FluidInputAction.scrollDown;
         const isMinus = isHorizontal
-            ? &isDown!(FluidInputAction.scrollLeft)
-            : &isDown!(FluidInputAction.scrollUp);
+            ? action == FluidInputAction.scrollLeft
+            : action == FluidInputAction.scrollUp;
 
         const change
-            = isPlus(tree)  ? +actionScrollSpeed
-            : isMinus(tree) ? -actionScrollSpeed
+            = isPlus  ? +actionScrollSpeed
+            : isMinus ? -actionScrollSpeed
             : 0;
 
         emitChange(change);

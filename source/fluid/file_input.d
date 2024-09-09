@@ -172,7 +172,7 @@ class FileInput : PopupFrame {
         }
 
         @(FluidInputAction.entryUp)
-        protected void _entryUp() {
+        protected void entryUp() {
 
             typedFilename = input.value = input.value.dirName ~ "/";
             updateSuggestions();
@@ -180,21 +180,21 @@ class FileInput : PopupFrame {
         }
 
         @(FluidInputAction.cancel)
-        protected void _cancel() {
+        protected void cancel() {
 
             cancel();
 
         }
 
         @(FluidInputAction.entryPrevious)
-        protected void _entryPrevious() {
+        protected void entryPrevious() {
 
             offsetSuggestion(-1);
 
         }
 
         @(FluidInputAction.entryNext)
-        protected void _entryNext() {
+        protected void entryNext() {
 
             offsetSuggestion(+1);
 

@@ -159,7 +159,7 @@ class NumberInput(T) : AbstractNumberInput {
 
     }
 
-    override protected void _changed() {
+    override protected void touchText() {
 
         // Instead of calling the callback, simply mark the input as dirty
         isDirty = true;
@@ -444,7 +444,7 @@ class NumberInputSpinner : Node, FluidHoverable {
     }
 
     @(FluidInputAction.press)
-    void _pressed() {
+    void press() {
 
         // Above center (increment)
         if (io.mousePosition.y < center(_lastRectangle).y) {

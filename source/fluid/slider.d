@@ -242,7 +242,7 @@ abstract class AbstractSlider : InputNode!Node {
     }
 
     @(FluidInputAction.press, whileDown)
-    protected void _pressed() {
+    protected void press() {
 
         // Get mouse position relative to the first step
         const offset = io.mousePosition.x - firstStepX + stepDistance/2;

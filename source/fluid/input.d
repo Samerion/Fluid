@@ -1149,14 +1149,14 @@ unittest {
         }
 
         @(FluidInputAction.press)
-        void _pressed() {
+        void press() {
 
             pressCount++;
 
         }
 
         @(FluidInputAction.cancel)
-        void _cancelled() {
+        void cancel() {
 
             cancelCount++;
 
