@@ -421,6 +421,9 @@ abstract class Node {
         // Set this node as the start for the given action
         action.startNode = this;
 
+        // Reset the action
+        action.toStop = false;
+
         // Insert the action into the tree's queue
         if (tree) tree.queueAction(action);
 

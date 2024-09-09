@@ -17,6 +17,7 @@ import fluid.label;
 import fluid.style;
 import fluid.utils;
 import fluid.scroll;
+import fluid.actions;
 import fluid.backend;
 import fluid.structs;
 import fluid.typeface;
@@ -190,6 +191,9 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     private {
 
+        /// Action used to keep the text input in view.
+        ScrollIntoViewAction _scrollAction;
+
         /// Buffer used to store recently inserted text.
         /// See_Also: `buffer`
         char[] _buffer;
@@ -312,6 +316,7 @@ class TextInput : InputNode!Node, FluidScrollable {
     void touch() {
 
         lastTouch = Clock.currTime;
+        scrollIntoView();
 
     }
 
@@ -320,6 +325,27 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         touch();
         if (changed) changed();
+
+    }
+
+    /// Scroll ancestors so the text input becomes visible.
+    ///
+    /// `TextInput` keeps its own instance of `ScrollIntoViewAction`, reusing it every time it is needed.
+    ///
+    /// Params:
+    ///     alignToTop = If true, the top of the element will be aligned to the top of the scrollable area.
+    ScrollIntoViewAction scrollIntoView(bool alignToTop = false) {
+
+        // Create the action
+        if (!_scrollAction) {
+            _scrollAction = .scrollIntoView(this, alignToTop);
+        }
+        else {
+            _scrollAction.reset(alignToTop);
+            queueAction(_scrollAction);
+        }
+
+        return _scrollAction;
 
     }
 
