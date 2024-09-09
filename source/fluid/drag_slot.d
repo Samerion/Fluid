@@ -128,7 +128,7 @@ class DragSlot : NodeSlot!Node, FluidHoverable {
         // Add space for the handle
         if (!handle.isHidden) {
 
-            minSize.y += handle.minSize.y + style.gap;
+            minSize.y += handle.minSize.y + style.gap.sideY;
 
             if (handle.minSize.x > minSize.x) {
                 minSize.x = handle.minSize.x;
@@ -165,8 +165,8 @@ class DragSlot : NodeSlot!Node, FluidHoverable {
         // Split the inner rectangle to fit the handle
         handleRect.h = handleWidth;
         if (!handle.isHidden) {
-            valueRect.y += handleWidth + style.gap;
-            valueRect.h -= handleWidth + style.gap;
+            valueRect.y += handleWidth + style.gap.sideY;
+            valueRect.h -= handleWidth + style.gap.sideY;
         }
 
         // Disable the children while dragging

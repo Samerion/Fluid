@@ -352,7 +352,7 @@ class GridFrame : Frame {
             child.draw(rect);
 
             // Offset position
-            position += child.minSize.y + style.gap;
+            position += child.minSize.y + style.gap.sideY;
 
         }
 
@@ -431,7 +431,10 @@ class GridRow : Frame {
         foreach (i, child; children) {
 
             const segments = either(child.layout.expand, 1);
-            const gapSpace = style.gap * (cast(ptrdiff_t) children.length - 1);
+            const gapSpace = max(
+                0, 
+                style.gap.sideX * (cast(ptrdiff_t) children.length - 1)
+            );
             const childSpace = Vector2(
                 space.x * segments / segmentCount - gapSpace,
                 minSize.y,
@@ -445,7 +448,7 @@ class GridRow : Frame {
             auto range = parent.segmentSizes[segment..segment+segments];
 
             // Include the gap for all, but the first child
-            const gap = i == 0 ? 0 : style.gap;
+            const gap = i == 0 ? 0 : style.gap.sideX;
 
             // Second step: Expand the segments to give some space for the child
             minSize.x += range.redistributeSpace(child.minSize.x + gap);
@@ -473,7 +476,7 @@ class GridRow : Frame {
         foreach (i, child; filterChildren) {
 
             const segments = either(child.layout.expand, 1);
-            const gap = i == 0 ? 0 : style.gap;
+            const gap = i == 0 ? 0 : style.gap.sideX;
             const width = parent.segmentSizes[segment..segment+segments].sum;
 
             // Draw the child

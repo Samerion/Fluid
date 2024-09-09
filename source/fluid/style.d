@@ -89,7 +89,7 @@ struct Style {
         /// Margin/gap between two neighboring elements; for container nodes that support it.
         ///
         /// Updating the gap requires a resize.
-        float gap = 0;
+        float[2] gap = 0;
 
         /// Border style to use.
         ///
@@ -292,7 +292,7 @@ struct Style {
 /// functions to get a `float[2]` array of the values corresponding to the given axis (which can also be assigned like
 /// `array.sideX = 8`) or the `sideLeft`, `sideRight`, `sideTop` and `sideBottom` functions corresponding to the given
 /// sides.
-enum isSideArray(T) = is(T == X[4], X);
+enum isSideArray(T) = is(T == X[4], X) && T.length == 4;
 
 /// ditto
 enum isSomeSideArray(T) = isSideArray!T
@@ -314,6 +314,18 @@ unittest {
     assert(sides.sideX == sides.sideY);
 
 }
+
+/// An axis array is similar to a size array, but does not distinguish between invididual directions on a single axis.
+/// Thus, it contains only two values, one for the X axis, and one for the Y axis.
+///
+/// `sideX` and `sideY` can be used to access individual items of an axis array by name.
+enum isAxisArray(T) = is(T == X[2], X) && T.length == 2;
+
+static assert(!isSideArray!(float[2]));
+static assert( isSideArray!(float[4]));
+
+static assert( isAxisArray!(float[2]));
+static assert(!isAxisArray!(float[4]));
 
 /// Get a reference to the left, right, top or bottom side of the given side array.
 auto ref sideLeft(T)(return auto ref inout T sides)
@@ -361,7 +373,7 @@ unittest {
 
 }
 
-/// Get a reference to the X axis for the given side array.
+/// Get a reference to the X axis for the given side or axis array.
 ref inout(ElementType!T[2]) sideX(T)(return ref inout T sides)
 if (isSideArray!T) {
 
@@ -379,7 +391,15 @@ if (isSomeSideArray!T && !isSideArray!T) {
 
 }
 
-/// Get a reference to the Y axis for the given side array.
+/// ditto
+ref inout(ElementType!T) sideX(T)(return ref inout T sides)
+if (isAxisArray!T) {
+
+    return sides[0];
+
+}
+
+/// Get a reference to the Y axis for the given side or axis array.
 ref inout(ElementType!T[2]) sideY(T)(return ref inout T sides)
 if (isSideArray!T) {
 
@@ -397,7 +417,15 @@ if (isSomeSideArray!T && !isSideArray!T) {
 
 }
 
-///
+/// ditto
+ref inout(ElementType!T) sideY(T)(return ref inout T sides)
+if (isAxisArray!T) {
+
+    return sides[1];
+
+}
+
+/// Assigning values to an axis of a side array.
 unittest {
 
     float[4] sides = [1, 2, 3, 4];
@@ -413,6 +441,22 @@ unittest {
 
     assert(sides == [8, 8, 4, 4]);
 
+}
+
+/// Operating on an axis array.
+@("sideX/sideY work on axis arrays")
+unittest {
+
+    float[2] sides;
+
+    sides.sideX = 1;
+    sides.sideY = 2;
+
+    assert(sides == [1, 2]);
+
+    assert(sides.sideX == 1);
+    assert(sides.sideY == 2);
+    
 }
 
 /// Returns a side array created from either: another side array like it, a two item array with each representing an
