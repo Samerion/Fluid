@@ -86,19 +86,20 @@ class Radiobox : Checkbox {
     /// Check this radiobox.
     void select() {
 
-        group.selection = this;
-
-    }
-
-    @(FluidInputAction.press)
-    override protected void _pressed() {
-
         // Do nothing if already checked
         if (isChecked) return;
 
         // Check the box
-        select();
+        group.selection = this;
         if (changed) changed();
+
+    }
+
+    /// ditto
+    @(FluidInputAction.press)
+    override void press() {
+
+        select();
 
     }
 

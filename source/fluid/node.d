@@ -793,7 +793,7 @@ abstract class Node {
 
     /// Switch to the previous or next focused item
     @(FluidInputAction.focusPrevious,FluidInputAction.focusNext)
-    protected void _focusPrevNext(FluidInputAction actionType) {
+    protected void focusPreviousOrNext(FluidInputAction actionType) {
 
         auto direction = tree.focusDirection;
 
@@ -814,7 +814,7 @@ abstract class Node {
     /// Switch focus towards a specified direction.
     @(FluidInputAction.focusLeft, FluidInputAction.focusRight)
     @(FluidInputAction.focusUp, FluidInputAction.focusDown)
-    protected void _focusDirection(FluidInputAction action) {
+    protected void focusInDirection(FluidInputAction action) {
 
         with (FluidInputAction) {
 

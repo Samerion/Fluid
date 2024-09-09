@@ -36,7 +36,7 @@ class HoverButtonImpl(T : Node = Label) : ButtonImpl!T {
     }
 
     // Disable action on `press`.
-    protected override void _pressed() {
+    protected override void press() {
 
     }
 
