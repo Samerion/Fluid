@@ -1049,6 +1049,18 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
+    override Rectangle focusBoxImpl(Rectangle inner) const {
+
+        const lineHeight = style.getTypeface.lineHeight;
+        const position = inner.start + caretPosition;
+
+        return Rectangle(
+            position.tupleof,
+            1, lineHeight
+        );
+
+    }
+
     /// Get an appropriate text ruler for this input.
     protected TextRuler textRuler() {
 
