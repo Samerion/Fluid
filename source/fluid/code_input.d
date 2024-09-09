@@ -1485,7 +1485,7 @@ class CodeInput : TextInput {
             .map!(a => Rope(a))
             .array;
 
-        // Push each line
+        // Push the clipboard
         push(Rope.merge(outdentedClipboard));
 
         reparse();
