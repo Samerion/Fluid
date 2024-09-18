@@ -30,7 +30,9 @@ alias Text = StyledText!();
 /// Draws text: handles updates, formatting and styling.
 struct StyledText(StyleRange = TextStyleSlice[]) {
 
-    static assert(isForwardRange!(StyleRange, TextStyleSlice),
+    static assert(isForwardRange!StyleRange,
+        "StyleRange must be a valid forward range of TextStyleSlices");
+    static assert(is(ElementType!StyleRange : TextStyleSlice),
         "StyleRange must be a valid forward range of TextStyleSlices");
 
     public {
