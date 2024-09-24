@@ -315,7 +315,17 @@ struct DlangCompiler {
         }
 
         // Compile the program
-        return execute(cmdline);
+        auto result = execute(cmdline);
+
+        debug (Fluid_BuildMessages) {
+            import std.stdio;
+            if (result.status == 0)
+                writefln!"Fluid: Compilation succeeded.";
+            else
+                writefln!"Fluid: Compilation failed.\n%s"(result.output.stripRight);
+        }
+        
+        return result;
 
     }
 
@@ -618,7 +628,9 @@ private bindbc.SharedLib runSharedLibrary(string path) @trusted {
     if (library == bindbc.invalidHandle) {
 
         foreach (error; bindbc.errors)
-            printf("%s %s", error.error, error.message);
+            fprintf(stderr, "%s %s\n", error.error, error.message);
+        fflush(stderr);
+        bindbc.resetErrors();
 
         return library;
 
