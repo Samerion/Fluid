@@ -12,6 +12,10 @@
 			"targetType": "dynamicLibrary"
 		},
 		{
+			"name": "source",
+			"targetType": "sourceLibrary"
+		},
+		{
 			"libs": [
 				"raylib"
 			],
@@ -128,8 +132,21 @@
 			],
 			"sourcePaths": [],
 			"subConfigurations": {
-				"fluid": "dynamic"
+				"fluid": "source"
 			},
+			"configurations": [
+				{
+					"name": "linux-dynamic",
+					"platforms": [
+						"linux"
+					],
+					"targetType": "dynamicLibrary"
+				},
+				{
+					"name": "static",
+					"targetType": "staticLibrary"
+				}
+			],
 			"targetPath": "build",
 			"targetType": "library",
 			"versions": [
