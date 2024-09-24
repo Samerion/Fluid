@@ -1,0 +1,43 @@
+name: Run all tests
+on: [push, pull_request]
+
+jobs:
+  test:
+    name: DUB tests
+    strategy:
+      matrix:
+        #os: [ubuntu-latest, windows-latest, macOS-latest, macos-12]
+        #dc: [dmd, ldc, ldc-1.28.1 ]
+        #dub: [dub, redub]
+        os: [ubuntu-latest]
+        dc: [dmd]
+        dub: [dub]
+        exclude:
+          - { os: macos-latest, dc: dmd }
+          - { os: macos-12, dc: dmd }
+
+    runs-on: ${{ matrix.os }}
+    env: 
+      DUB: dub
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install D compiler
+        uses: dlang-community/setup-dlang@v2
+        with:
+          compiler: ${{ matrix.dc }}
+
+      - name: Install Redub
+        if: matrix.dub == 'redub'
+        shell: bash
+        run: |
+          dub fetch redub
+          echo "DUB=dub run redub" >> "$GITHUB_ENV"
+
+      - name: Run tests
+        shell: bash
+        run: $DUB test
+
+      - name: Compile tour
+        shell: bash
+        run: $DUB build :tour
