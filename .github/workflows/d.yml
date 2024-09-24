@@ -21,7 +21,6 @@ jobs:
       DUB: dub
     steps:
       - uses: actions/checkout@v4
-
       - name: Install D compiler
         uses: dlang-community/setup-dlang@v2
         with:
@@ -41,3 +40,9 @@ jobs:
       - name: Compile tour
         shell: bash
         run: $DUB build :tour
+
+      - name: Setup upterm session
+        uses: lhotari/action-upterm@v1
+        with:
+          limit-access-to-actor: true
+        if: failure()
