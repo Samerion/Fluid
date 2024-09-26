@@ -126,13 +126,13 @@
 				"fluid-tree-sitter": "~>0.1.6",
 				"fluid-tree-sitter:d": "~>0.1.6"
 			},
-			"name": "module_view",
+			"name": "module-view",
 			"sourceFiles": [
 				"source/fluid/module_view.d"
 			],
 			"sourcePaths": [],
 			"subConfigurations": {
-				"fluid": "source"
+				"fluid": "default"
 			},
 			"configurations": [
 				{
@@ -144,7 +144,10 @@
 				},
 				{
 					"name": "static",
-					"targetType": "staticLibrary"
+					"targetType": "staticLibrary",
+					"preRunCommands-windows": [
+						"ldd build/fluid-module-view-test-static.exe"
+					]
 				}
 			],
 			"targetPath": "build",
