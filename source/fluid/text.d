@@ -114,9 +114,11 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
     }
 
-    inout(FluidBackend) backend() inout
+    inout(FluidBackend) backend() inout {
 
-        => node.tree.backend;
+        return node.tree.backend;
+
+    }
 
     Rope opAssign(Rope text) {
 

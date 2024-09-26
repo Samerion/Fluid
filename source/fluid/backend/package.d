@@ -313,17 +313,25 @@ shared struct TextureTombstone {
     }
 
     /// Check if a request for destruction has been made for the texture.
-    bool isDestroyed() @system => _references.atomicLoad == 0;
+    bool isDestroyed() @system {
+        return _references.atomicLoad == 0;
+    }
 
     /// Check if the texture has been disowned by the backend. A disowned tombstone refers to a texture that has been
     /// freed.
-    private bool isDisowned() @system => _disowned.atomicLoad;
+    private bool isDisowned() @system {
+        return _disowned.atomicLoad;
+    }
 
     /// Get number of references to this tombstone.
-    private int references() @system => _references.atomicLoad;
+    private int references() @system {
+        return _references.atomicLoad;
+    }
 
     /// Get the backend owning this texture.
-    inout(shared FluidBackend) backend() inout => _backend;
+    inout(shared FluidBackend) backend() inout {
+        return _backend;
+    }
 
     /// Mark the texture as destroyed.
     void markDestroyed() @system {
@@ -995,40 +1003,42 @@ struct Texture {
     /// If relevant, the texture is to use this palette.
     Color[] palette;
 
-    bool opEquals(const Texture other) const
+    bool opEquals(const Texture other) const {
+        return id == other.id
+            && width == other.width
+            && height == other.height
+            && dpiX == other.dpiX
+            && dpiY == other.dpiY;
 
-        => id == other.id
-        && width == other.width
-        && height == other.height
-        && dpiX == other.dpiX
-        && dpiY == other.dpiY;
+    }
 
-    version (Have_raylib_d)void opAssign(raylib.Texture rayTexture) @system {
+    version (Have_raylib_d)
+    void opAssign(raylib.Texture rayTexture) @system {
         this = rayTexture.toFluid();
     }
 
     /// Get the backend for this texture. Doesn't work after freeing the tombstone.
-    inout(FluidBackend) backend() inout @trusted
-
-        => cast(inout FluidBackend) tombstone.backend;
+    inout(FluidBackend) backend() inout @trusted {
+        return cast(inout FluidBackend) tombstone.backend;
+    }
 
     /// DPI value of the texture.
-    Vector2 dpi() const
-
-        => Vector2(dpiX, dpiY);
+    Vector2 dpi() const {
+        return Vector2(dpiX, dpiY);
+    }
 
     /// Get texture size as a vector.
-    Vector2 canvasSize() const
-
-        => Vector2(width, height);
+    Vector2 canvasSize() const {
+        return Vector2(width, height);
+    }
 
     /// Get the size the texture will occupy within the viewport.
-    Vector2 viewportSize() const
-
-        => Vector2(
+    Vector2 viewportSize() const {
+        return Vector2(
             width * 96 / dpiX,
             height * 96 / dpiY
         );
+    }
 
     /// Update the texture to match the given image.
     void update(Image image) @system {
