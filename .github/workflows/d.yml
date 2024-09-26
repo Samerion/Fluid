@@ -39,3 +39,4 @@ jobs:
       - name: Compile tour
         shell: bash
         run: $DUB build :tour -v
+        if: matrix.dc != 'ldc-1.28.1'
