@@ -445,7 +445,7 @@ private struct ModuleView {
                 const prefix = source[0 .. start] ~ injectSource ~ source[start .. exampleStart];
                 const value = source[exampleStart .. exampleEnd];
                 const suffix = Rope(source[exampleEnd .. $]);
-
+                
                 // Append code editor to the result
                 documentation.children ~= exampleView(compiler, prefix, value, suffix, contentTheme);
                 return documentation;
@@ -493,6 +493,9 @@ Frame exampleView(DlangCompiler compiler, CodeInput input, Theme contentTheme) {
         bindbc.SharedLib library;
         alias library this;
 
+        // BUG  this crashes the tour on exit
+        //      without this, memory is leaked
+        version (none)
         ~this() {
             clear();
         }
@@ -509,7 +512,7 @@ Frame exampleView(DlangCompiler compiler, CodeInput input, Theme contentTheme) {
     auto originalValue = input.value;
 
     /// Compile the program
-    void compileAndRun() {
+    void compileAndRun() @trusted {
 
         string outputPath;
 
@@ -627,7 +630,7 @@ Frame exampleView(DlangCompiler compiler, Rope prefix, string value, Rope suffix
 }
 
 /// Run a Fluid snippet from a shared library.
-private bindbc.SharedLib runSharedLibrary(string path) @trusted {
+private bindbc.SharedLib runSharedLibrary(string path) @system {
 
     // Load the resulting library
     auto library = bindbc.load(path.toStringz);
@@ -649,6 +652,51 @@ private bindbc.SharedLib runSharedLibrary(string path) @trusted {
     entrypoint();
 
     return library;
+
+}
+
+@system unittest {
+
+    import std.path;
+
+    auto source = q{
+        import fluid;
+
+        pragma(mangle, "fluid_moduleView_entrypoint")
+        void entrypoint() {
+            run(label("Hello, World!"));
+        }
+    };
+
+    // Configure the compiler
+    auto compiler = DlangCompiler.findAny();
+    compiler.importPaths ~= [
+        "source",
+        "../source",
+        expandTilde("~/.dub/packages/bindbc-freetype/1.1.1/bindbc-freetype/source"),
+        expandTilde("~/.dub/packages/bindbc-loader/1.1.5/bindbc-loader/source"),
+    ];
+
+    // Compile the pogram
+    string outputPath;
+    auto program = compiler.compileSharedLibrary(source, outputPath);
+    assert(program.status == 0, program.output);
+
+    // Prepare the environment
+    Node output;
+    mockRun = delegate (node) {
+        output = node;
+    };
+    scope (exit) mockRun = null;
+    
+    // Make sure it could be loaded
+    auto library = runSharedLibrary(outputPath);
+    assert(library != bindbc.invalidHandle);
+    scope (exit) bindbc.unload(library);
+
+    // And test the output
+    auto result = cast(Label) output;
+    assert(result.text == "Hello, World!");
 
 }
 

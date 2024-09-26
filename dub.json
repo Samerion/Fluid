@@ -9,7 +9,16 @@
 		},
 		{
 			"name": "dynamic",
-			"targetType": "dynamicLibrary"
+			"targetType": "dynamicLibrary",
+			"dflags-posix-dmd": [
+				"-defaultlib=libphobos2.so"
+			],
+			"dflags-ldc": [
+				"--link-defaultlib-shared"
+			],
+			"libs-windows": [
+				"LIBCMT"
+			]
 		},
 		{
 			"name": "source",
@@ -132,7 +141,7 @@
 			],
 			"sourcePaths": [],
 			"subConfigurations": {
-				"fluid": "default"
+				"fluid": "dynamic"
 			},
 			"configurations": [
 				{
@@ -140,7 +149,13 @@
 					"platforms": [
 						"linux"
 					],
-					"targetType": "dynamicLibrary"
+					"targetType": "staticLibrary",
+					"dflags-posix-dmd": [
+						"-defaultlib=libphobos2.so"
+					],
+					"dflags-ldc": [
+						"--link-defaultlib-shared"
+					]
 				},
 				{
 					"name": "static",
