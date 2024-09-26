@@ -502,13 +502,6 @@ Space render(Chapter chapter)() @trusted {
         import fluid.module_view;
 
         auto compiler = DlangCompiler.findAny();
-        compiler.importPaths ~= [
-            "source",
-            "../source",
-            expandTilde("~/.dub/packages/bindbc-freetype/1.1.1/bindbc-freetype/source"),
-            expandTilde("~/.dub/packages/bindbc-loader/1.1.5/bindbc-loader/source"),
-        ];
-        // TODO figure out the correct freetype path (or vendor)
 
         return moduleViewFile(
             .layout!"fill",
