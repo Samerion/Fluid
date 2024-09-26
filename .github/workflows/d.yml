@@ -33,16 +33,16 @@ jobs:
           dub fetch redub
           echo "DUB=dub run redub" >> "$GITHUB_ENV"
 
-      - name: Run tests
+      - name: Test moduleView
         shell: bash
-        run: $DUB test
+        run: $DUB test :module-view -d Fluid_BuildMessages
+        if: matrix.dc != 'ldc-1.28.1'
 
       - name: Compile tour
         shell: bash
-        run: $DUB build :tour -v
+        run: $DUB build :tour
         if: matrix.dc != 'ldc-1.28.1'
 
-      - name: Test moduleView
+      - name: Run tests
         shell: bash
-        run: $DUB test :module-view
-        if: matrix.dc != 'ldc-1.28.1'
+        run: $DUB test

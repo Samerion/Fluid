@@ -36,6 +36,9 @@ version (Have_arsd_official_image_files)
 else
     enum svgTextures = false;
 
+debug (Fluid_BuildMessages) {
+    pragma(msg, "Fluid: SVG output support " ~ (svgTextures ? "ON" : "OFF"));
+}
 
 class HeadlessBackend : FluidBackend {
 

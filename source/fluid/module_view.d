@@ -83,6 +83,58 @@ static ~this() @system {
 
 }
 
+static immutable string[] fluidImportPaths;
+static immutable string[] fluidExtraFlags;
+static immutable string[] fluidExtraFlagsLDC;
+
+shared static this() {
+
+    import std.path;
+    import std.process;
+    import std.file : thisExePath;
+
+    import std.stdio;
+    debug writeln("HELLO");
+
+    fluidImportPaths = [
+        "source",
+        "../source",
+        environment.get("BINDBC_FREETYPE_PACKAGE_DIR").buildPath("source"),
+        environment.get("BINDBC_LOADER_PACKAGE_DIR").buildPath("source"),
+    ];
+    version (Windows) {
+        fluidExtraFlags = [
+           // scraped from LDC's linker output
+           "msvcrt.lib",
+           "vcruntime.lib",
+           //"kernel32.lib",
+           //"user32.lib",
+           //"gdi32.lib",
+           //"winspool.lib",
+           //"shell32.lib",
+           //"ole32.lib",
+           //"oleaut32.lib",
+           //"uuid.lib",
+           //"comdlg32.lib",
+           //"advapi32.lib",
+           "oldnames.lib",
+           //"legacy_stdio_definitions.lib",
+           //
+
+            "fluid.lib",
+            "freetype.lib",
+            "raylib.lib",
+            "-L/LIBPATH:" ~ thisExePath.dirName,
+            "-L/LIBPATH:" ~ environment.get("FLUID_LIBPATH", "."),
+        ];
+        fluidExtraFlagsLDC = fluidExtraFlags ~ "--link-defaultlib-shared";
+    }
+    else {
+        fluidExtraFlags = [];
+        fluidExtraFlagsLDC = [];
+    }
+}
+
 /// Provides information about the companion D compiler to use for evaluating examples.
 struct DlangCompiler {
 
@@ -106,11 +158,11 @@ struct DlangCompiler {
     /// ditto
     int frontendPatch;
 
+    /// Import paths to pass to the compiler.
+    const(string)[] importPaths;
+
     /// ditto
     enum frontendMajor = 2;
-
-    /// Import paths to pass to the compiler.
-    string[] importPaths;
 
     /// Returns true if this entry points to a valid compiler.
     bool opCast(T : bool)() const {
@@ -148,7 +200,7 @@ struct DlangCompiler {
             // Found a compatible compiler
             if (auto match = process.output.matchFirst(pattern)) {
 
-                return DlangCompiler(Type.dmd, name, match[1].to!int, match[2].to!int);
+                return DlangCompiler(Type.dmd, name, match[1].to!int, match[2].to!int, fluidImportPaths);
 
             }
 
@@ -178,7 +230,7 @@ struct DlangCompiler {
                 // Found a compatible compiler
                 if (auto match = process.output.matchFirst(pattern)) {
 
-                    return DlangCompiler(Type.ldc, name, match[1].to!int, match[2].to!int);
+                    return DlangCompiler(Type.ldc, name, match[1].to!int, match[2].to!int, fluidImportPaths);
 
                 }
 
@@ -263,6 +315,20 @@ struct DlangCompiler {
 
     }
 
+    /// Get the flag to generate a debug binary for the current compiler.
+    const(string)[] debugFlags() const {
+
+        static immutable flags = ["-g", "-debug"];
+
+        final switch (type) {
+
+            case Type.dmd: return flags[];
+            case Type.ldc: return flags[0..1];
+
+        }
+
+    }
+
     /// Get the flag to generate a shared library for the given compiler.
     string sharedLibraryFlag() const {
 
@@ -282,6 +348,18 @@ struct DlangCompiler {
 
             case Type.dmd: return "-unittest";
             case Type.ldc: return "--unittest";
+
+        }
+
+    }
+
+    /// Extra, platform-specific flags needed to build a shared library.
+    const(string)[] extraFlags() const {
+
+        final switch (type) {
+
+            case Type.dmd: return fluidExtraFlags;
+            case Type.ldc: return fluidExtraFlagsLDC;
 
         }
 
@@ -315,7 +393,10 @@ struct DlangCompiler {
         else
             outputPath = path.setExtension(".so");
 
-        auto cmdline = [executable, sharedLibraryFlag, unittestFlag, path, "-of=" ~ outputPath] ~ importPathsFlag;
+        auto cmdline = [executable, sharedLibraryFlag, unittestFlag, path, "-of=" ~ outputPath] 
+            ~ debugFlags
+            ~ importPathsFlag
+            ~ extraFlags;
 
         debug (Fluid_BuildMessages) {
             import std.stdio;
@@ -670,12 +751,6 @@ private bindbc.SharedLib runSharedLibrary(string path) @system {
 
     // Configure the compiler
     auto compiler = DlangCompiler.findAny();
-    compiler.importPaths ~= [
-        "source",
-        "../source",
-        expandTilde("~/.dub/packages/bindbc-freetype/1.1.1/bindbc-freetype/source"),
-        expandTilde("~/.dub/packages/bindbc-loader/1.1.5/bindbc-loader/source"),
-    ];
 
     // Compile the pogram
     string outputPath;
