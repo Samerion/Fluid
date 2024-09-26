@@ -5,6 +5,7 @@ jobs:
   test:
     name: DUB tests
     strategy:
+      fail-fast: false
       matrix:
         #os: [ubuntu-latest, windows-latest, macOS-latest, macos-12]
         dc: [dmd, ldc, ldc-1.28.1]
@@ -39,4 +40,9 @@ jobs:
       - name: Compile tour
         shell: bash
         run: $DUB build :tour -v
+        if: matrix.dc != 'ldc-1.28.1'
+
+      - name: Test moduleView
+        shell: bash
+        run: $DUB test :module-view
         if: matrix.dc != 'ldc-1.28.1'

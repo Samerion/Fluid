@@ -171,13 +171,21 @@ struct DlangCompiler {
         // Test the executables
         foreach (name; candidates) {
 
-            auto process = execute([name, "--version"]);
+            try {
 
-            // Found a compatible compiler
-            if (auto match = process.output.matchFirst(pattern)) {
+                auto process = execute([name, "--version"]);
 
-                return DlangCompiler(Type.ldc, name, match[1].to!int, match[2].to!int);
+                // Found a compatible compiler
+                if (auto match = process.output.matchFirst(pattern)) {
 
+                    return DlangCompiler(Type.ldc, name, match[1].to!int, match[2].to!int);
+
+                }
+
+            }
+
+            catch (ProcessException) {
+                continue;
             }
 
         }
