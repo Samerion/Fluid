@@ -4,21 +4,21 @@
 	],
 	"configurations": [
 		{
-			"name": "default",
-			"targetType": "staticLibrary"
-		},
-		{
-			"name": "dynamic",
+			"name": "linux-dynamic",
+			"platforms": [
+				"linux"
+			],
 			"targetType": "dynamicLibrary",
 			"dflags-posix-dmd": [
 				"-defaultlib=libphobos2.so"
 			],
 			"dflags-ldc": [
 				"--link-defaultlib-shared"
-			],
-			"libs-windows": [
-				"LIBCMT"
 			]
+		},
+		{
+			"name": "default",
+			"targetType": "staticLibrary"
 		},
 		{
 			"name": "source",
@@ -140,36 +140,16 @@
 				"source/fluid/module_view.d"
 			],
 			"sourcePaths": [],
-			"subConfigurations": {
-				"fluid": "dynamic"
-			},
-			"configurations": [
-				{
-					"name": "linux-dynamic",
-					"platforms": [
-						"linux"
-					],
-					"targetType": "staticLibrary",
-					"dflags-posix-dmd": [
-						"-defaultlib=libphobos2.so"
-					],
-					"dflags-ldc": [
-						"--link-defaultlib-shared"
-					]
-				},
-				{
-					"name": "static",
-					"targetType": "staticLibrary",
-					"preRunCommands-windows": [
-						"ldd build/fluid-module-view-test-static.exe"
-					]
-				}
-			],
 			"targetPath": "build",
 			"targetType": "library",
 			"versions": [
 				"Fluid_ModuleView"
-			]
+			],
+			"environments": {
+				"BINDBC_FREETYPE_PACKAGE_DIR": "$BINDBC_FREETYPE_PACKAGE_DIR",
+				"BINDBC_LOADER_PACKAGE_DIR": "$BINDBC_LOADER_PACKAGE_DIR",
+				"FLUID_LIBPATH": "$PACKAGE_DIR/libraries/windows"
+			}
 		}
 	],
 	"targetPath": "build"
