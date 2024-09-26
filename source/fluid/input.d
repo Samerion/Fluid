@@ -219,7 +219,9 @@ struct InputStroke {
     }
 
     /// Get number of items in the stroke.
-    size_t length() const => input.length;
+    size_t length() const {
+        return input.length;
+    }
 
     /// Get a copy of the input stroke with the last item removed, if any.
     ///

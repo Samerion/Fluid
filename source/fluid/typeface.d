@@ -76,7 +76,9 @@ interface Typeface {
     bool opEquals(const Object object) @safe const;
 
     /// Get the default Fluid typeface.
-    static defaultTypeface() => FreetypeTypeface.defaultTypeface;
+    static defaultTypeface() {
+        return FreetypeTypeface.defaultTypeface;
+    }
 
     /// Default word splitter used by measure/draw.
     alias defaultWordChunks = .breakWords;
@@ -331,7 +333,10 @@ auto breakWords(Range)(Range range) {
         Range range;
         Range front = Range.init;
 
-        bool empty() const => front.empty;
+        bool empty() const {
+            return front.empty;
+        }
+
         void popFront() {
 
             dchar lastChar = 0;
@@ -619,9 +624,15 @@ class FreetypeTypeface : Typeface {
 
     }
 
-    ref inout(int) indentWidth() inout => _indentWidth;
-    bool isOwner() const => _isOwner;
-    bool isOwner(bool value) @system => _isOwner = value;
+    ref inout(int) indentWidth() inout {
+        return _indentWidth;
+    }
+    bool isOwner() const {
+        return _isOwner;
+    }
+    bool isOwner(bool value) @system {
+        return _isOwner = value;
+    }
 
     long glyphCount() const {
 

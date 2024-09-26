@@ -1969,9 +1969,9 @@ unittest {
                 .front
                 .indent;
 
-        };
+        }
 
-    };
+    }
 
     auto indentor = new Indentor;
     auto highlighter = new class Indentor, CodeHighlighter {
