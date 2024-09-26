@@ -2065,9 +2065,9 @@ unittest {
             else
                 return 1;
 
-        };
+        }
 
-    };
+    }
 
     // Every new line indents. If "end" is found in the text, every new line *outdents*, effectively making the text
     // flat.
