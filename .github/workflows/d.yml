@@ -7,10 +7,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        #os: [ubuntu-latest, windows-latest, macOS-latest, macos-12]
+        os: [ubuntu-latest, windows-latest, macOS-latest, macos-12]
         dc: [dmd, ldc, ldc-1.28.1]
         #dub: [dub, redub]
-        os: [ubuntu-latest, windows-latest]  # DEBUG
+        #os: [ubuntu-latest, windows-latest]  # DEBUG
         dub: [dub]                           # DEBUG
         exclude:
           - { os: macos-latest, dc: dmd }

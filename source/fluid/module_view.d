@@ -126,7 +126,12 @@ shared static this() {
     }
     else {
         fluidExtraFlags = [];
-        fluidExtraFlagsLDC = [];
+        fluidExtraFlagsLDC = [
+            "-L-lfluid",
+            "-L-lfreetype",
+            "-L-L" ~ thisExePath.dirName,
+            "-L-L" ~ environment.get("FLUID_LIBPATH", "."),
+        ];
     }
 }
 
@@ -169,6 +174,15 @@ struct DlangCompiler {
 
     /// Find any suitable in the system.
     static DlangCompiler findAny() {
+
+        if (auto explicitD = environment.get("DC", null)) {
+
+            if (explicitD.canFind("dmd"))
+                return findDMD();
+            else
+                return findLDC();
+
+        }
 
         return either(
             findDMD,
@@ -745,6 +759,8 @@ Frame exampleView(DlangCompiler compiler, Rope prefix, string value, Rope suffix
 
 /// Run a Fluid snippet from a shared library.
 private bindbc.SharedLib runSharedLibrary(string path) @system {
+
+    import core.stdc.stdio;
 
     // Load the resulting library
     auto library = bindbc.load(path.toStringz);
