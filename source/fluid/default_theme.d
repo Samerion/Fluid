@@ -3,9 +3,11 @@ module fluid.default_theme;
 import fluid.node;
 import fluid.frame;
 import fluid.style;
+import fluid.label;
 import fluid.button;
 import fluid.slider;
 import fluid.backend;
+import fluid.structs;
 import fluid.checkbox;
 import fluid.radiobox;
 import fluid.typeface;
@@ -28,7 +30,17 @@ Theme nullTheme;
 /// the role of each node understandable.
 Theme fluidDefaultTheme;
 
+@NodeTag 
+enum FluidTag {
+    warning,
+}
+
+Rule warningRule;
+
 static this() {
+
+    const warningColor = color("#ffe186");
+    const warningAccentColor = color("#ffc30f");
 
     Image loadBWImage(string filename)(int width, int height) @trusted {
 
@@ -49,6 +61,15 @@ static this() {
     }
 
     with (Rule) {
+
+        warningRule = rule(
+            Rule.padding.sideX = 16,
+            Rule.padding.sideY = 6,
+            Rule.border = 1,
+            Rule.borderStyle = colorBorder(warningAccentColor),
+            Rule.backgroundColor = warningColor,
+            Rule.textColor = color("#000"),
+        );
 
         nullTheme.add(
             rule!Node(),
@@ -176,6 +197,22 @@ static this() {
                 padding.sideX = 8,
                 padding.sideY = 6,
                 extra = new DragHandle.Extra(5),
+            ),
+
+            // Warning
+            rule!(Frame, FluidTag.warning)(
+                warningRule,
+                children(
+                    textColor = color("#000"),
+                ),
+                children!Button(
+                    border = 1,
+                    borderStyle = colorBorder(warningAccentColor),
+                    backgroundColor = color("#fff"),
+                ),
+            ),
+            rule!(Label, FluidTag.warning)(
+                warningRule,
             ),
         );
 

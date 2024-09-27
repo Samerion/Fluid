@@ -2,6 +2,9 @@
 ///
 /// Warning: This module is unstable. Significant changes may be made without prior warning.
 ///
+/// At the present moment, interactive playground functionality is disabled on Windows, because of how troublesome it is
+/// to get it to run.
+///
 /// This module is not enabled, unless additonal dependencies, `fluid-tree-sitter` and `fluid-tree-sitter:d` are also
 /// compiled in.
 module fluid.module_view;
@@ -35,6 +38,13 @@ import fluid.structs;
 import fluid.popup_button;
 import fluid.code_input;
 import fluid.tree_sitter;
+import fluid.default_theme;
+
+// Disable playground functionality under Windows
+version (Windows)
+    version = Fluid_DisablePlayground;
+debug (Fluid_DisablePlayground)
+    version = Fluid_DisablePlayground;
 
 
 @safe:
@@ -93,9 +103,6 @@ shared static this() {
     import std.process;
     import std.file : thisExePath;
 
-    import std.stdio;
-    debug writeln("HELLO");
-
     fluidImportPaths = [
         "source",
         "../source",
@@ -104,22 +111,10 @@ shared static this() {
     ];
     version (Windows) {
         fluidExtraFlags = [
-           // scraped from LDC's linker output
-           "msvcrt.lib",
-           "vcruntime.lib",
-           //"kernel32.lib",
-           //"user32.lib",
-           //"gdi32.lib",
-           //"winspool.lib",
-           //"shell32.lib",
-           //"ole32.lib",
-           //"oleaut32.lib",
-           //"uuid.lib",
-           //"comdlg32.lib",
-           //"advapi32.lib",
-           "oldnames.lib",
-           //"legacy_stdio_definitions.lib",
-           //
+            // scraped from LDC's linker output
+            "msvcrt.lib",
+            "vcruntime.lib",
+            "oldnames.lib",
 
             "fluid.lib",
             "freetype.lib",
@@ -185,64 +180,78 @@ struct DlangCompiler {
     /// Find DMD in the system.
     static DlangCompiler findDMD() {
 
-        // According to run.dlang.io, this pattern has been used since at least 2.068.2
-        auto pattern = regex(r"D Compiler v2.(\d+).(\d+)");
-        auto explicitDMD = std.process.environment.get("DMD");
-        auto candidates = explicitDMD.empty
-            ? ["dmd"]
-            : [explicitDMD];
-
-        // Test the executables
-        foreach (name; candidates) {
-
-            auto process = execute([name, "--version"]);
-
-            // Found a compatible compiler
-            if (auto match = process.output.matchFirst(pattern)) {
-
-                return DlangCompiler(Type.dmd, name, match[1].to!int, match[2].to!int, fluidImportPaths);
-
-            }
-
+        version (Fluid_DisablePlayground) {
+            return DlangCompiler.init;
         }
+        else {
 
-        return DlangCompiler.init;
+            // According to run.dlang.io, this pattern has been used since at least 2.068.2
+            auto pattern = regex(r"D Compiler v2.(\d+).(\d+)");
+            auto explicitDMD = std.process.environment.get("DMD");
+            auto candidates = explicitDMD.empty
+                ? ["dmd"]
+                : [explicitDMD];
 
-    }
-
-    /// Find LDC in the system.
-    static DlangCompiler findLDC() {
-
-        // This pattern appears to be stable as, according to the blame, hasn't changed in at least 5 years
-        auto pattern = regex(r"based on DMD v2\.(\d+)\.(\d+)");
-        auto explicitLDC = std.process.environment.get("LDC");
-        auto candidates = explicitLDC.empty
-            ? ["ldc2", "ldc"]
-            : [explicitLDC];
-
-        // Test the executables
-        foreach (name; candidates) {
-
-            try {
+            // Test the executables
+            foreach (name; candidates) {
 
                 auto process = execute([name, "--version"]);
 
                 // Found a compatible compiler
                 if (auto match = process.output.matchFirst(pattern)) {
 
-                    return DlangCompiler(Type.ldc, name, match[1].to!int, match[2].to!int, fluidImportPaths);
+                    return DlangCompiler(Type.dmd, name, match[1].to!int, match[2].to!int, fluidImportPaths);
 
                 }
 
             }
 
-            catch (ProcessException) {
-                continue;
-            }
+            return DlangCompiler.init;
 
         }
 
-        return DlangCompiler.init;
+    }
+
+    /// Find LDC in the system.
+    static DlangCompiler findLDC() {
+
+        version (Fluid_DisablePlayground) {
+            return DlangCompiler.init;
+        }
+        else {
+
+            // This pattern appears to be stable as, according to the blame, hasn't changed in at least 5 years
+            auto pattern = regex(r"based on DMD v2\.(\d+)\.(\d+)");
+            auto explicitLDC = std.process.environment.get("LDC");
+            auto candidates = explicitLDC.empty
+                ? ["ldc2", "ldc"]
+                : [explicitLDC];
+
+            // Test the executables
+            foreach (name; candidates) {
+
+                try {
+
+                    auto process = execute([name, "--version"]);
+
+                    // Found a compatible compiler
+                    if (auto match = process.output.matchFirst(pattern)) {
+
+                        return DlangCompiler(Type.ldc, name, match[1].to!int, match[2].to!int, fluidImportPaths);
+
+                    }
+
+                }
+
+                catch (ProcessException) {
+                    continue;
+                }
+
+            }
+
+            return DlangCompiler.init;
+
+        }
 
     }
 
@@ -440,6 +449,30 @@ do {
 
     auto view = ModuleView(compiler, source, contentTheme);
     auto result = vframe(params);
+
+    if (compiler == compiler.init) {
+
+        version (Fluid_DisablePlayground) {
+            auto message = [
+                label("Warning: Interactive playground is disabled on this platform. See issue #182 for more details."),
+                button("Open #182 in browser", delegate {
+                    import fluid.utils;
+                    openURL("https://git.samerion.com/Samerion/Fluid/issues/182");
+                }),
+            ];
+        }
+        else {
+            auto message = [
+                label("Warning: No suitable D compiler could be found; interactive playground is disabled.")
+            ];
+        }
+        
+        result ~= vframe(
+            .layout!"fill",
+            .tags!(FluidTag.warning),
+            message,
+        );
+    }
 
     // Perform a query to find possibly relevant comments
     ts_query_cursor_exec(cursor, documentationQuery, root);
@@ -752,26 +785,34 @@ private bindbc.SharedLib runSharedLibrary(string path) @system {
     // Configure the compiler
     auto compiler = DlangCompiler.findAny();
 
-    // Compile the pogram
-    string outputPath;
-    auto program = compiler.compileSharedLibrary(source, outputPath);
-    assert(program.status == 0, program.output);
+    version (Fluid_DisablePlayground) {
+        assert(compiler == DlangCompiler.init);
+    }
 
-    // Prepare the environment
-    Node output;
-    mockRun = delegate (node) {
-        output = node;
-    };
-    scope (exit) mockRun = null;
+    else {
+
+        // Compile the pogram
+        string outputPath;
+        auto program = compiler.compileSharedLibrary(source, outputPath);
+        assert(program.status == 0, program.output);
+
+        // Prepare the environment
+        Node output;
+        mockRun = delegate (node) {
+            output = node;
+        };
+        scope (exit) mockRun = null;
     
-    // Make sure it could be loaded
-    auto library = runSharedLibrary(outputPath);
-    assert(library != bindbc.invalidHandle);
-    scope (exit) bindbc.unload(library);
+        // Make sure it could be loaded
+        auto library = runSharedLibrary(outputPath);
+        assert(library != bindbc.invalidHandle);
+        scope (exit) bindbc.unload(library);
 
-    // And test the output
-    auto result = cast(Label) output;
-    assert(result.text == "Hello, World!");
+        // And test the output
+        auto result = cast(Label) output;
+        assert(result.text == "Hello, World!");
+
+    }
 
 }
 
@@ -782,7 +823,7 @@ CodeInput dlangInput(void delegate() @safe submitted = null) @trusted {
     auto highlighter = new TreeSitterHighlighter(language, dlangQuery);
 
     return codeInput(
-        .layout!"fill",
+        .layout!(1, "fill"),
         highlighter,
         submitted
     );
