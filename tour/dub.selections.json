@@ -1,8 +1,10 @@
 {
 	"fileVersion": 1,
 	"versions": {
+		"arsd-official": "11.5.1",
 		"bindbc-freetype": "1.1.1",
 		"bindbc-loader": "1.1.5",
+		"elemi": "1.2.2",
 		"fluid-tree-sitter": "0.1.7",
 		"libdparse": "0.23.2",
 		"raylib-d": "5.0.1",
