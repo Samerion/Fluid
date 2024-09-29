@@ -11,6 +11,14 @@
 	"libs": [
 		"raylib"
 	],
+	"lflags-osx": [
+		"-framework",
+		"IOKit",
+		"-framework",
+		"Cocoa",
+		"-framework",
+		"OpenGL"
+	],
 	"name": "tour",
 	"sourcePaths": [
 		"."

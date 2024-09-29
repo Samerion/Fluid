@@ -40,11 +40,19 @@ import fluid.code_input;
 import fluid.tree_sitter;
 import fluid.default_theme;
 
-// Disable playground functionality under Windows
+// Disable playground functionality under Windows & macOS
+// Hopefully this can be resolved soon
 version (Windows)
+    version = Fluid_DisablePlayground;
+version (OSX)
     version = Fluid_DisablePlayground;
 debug (Fluid_DisablePlayground)
     version = Fluid_DisablePlayground;
+
+debug (Fluid_BuildMessages) {
+    version (Fluid_DisablePlayground) 
+        pragma(msg, "Fluid: moduleView: Disabling interactive playground");
+}
 
 
 @safe:
@@ -209,13 +217,21 @@ struct DlangCompiler {
             // Test the executables
             foreach (name; candidates) {
 
-                auto process = execute([name, "--version"]);
+                try {
 
-                // Found a compatible compiler
-                if (auto match = process.output.matchFirst(pattern)) {
+                    auto process = execute([name, "--version"]);
 
-                    return DlangCompiler(Type.dmd, name, match[1].to!int, match[2].to!int, fluidImportPaths);
+                    // Found a compatible compiler
+                    if (auto match = process.output.matchFirst(pattern)) {
 
+                        return DlangCompiler(Type.dmd, name, match[1].to!int, match[2].to!int, fluidImportPaths);
+
+                    }
+
+                }
+
+                catch (ProcessException) {
+                    continue;
                 }
 
             }
