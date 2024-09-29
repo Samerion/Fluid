@@ -18,7 +18,7 @@
 		},
 		{
 			"name": "default",
-			"targetType": "staticLibrary",
+			"targetType": "staticLibrary"
 		},
 		{
 			"name": "source",
@@ -148,17 +148,17 @@
 			"environments-windows": {
 				"BINDBC_FREETYPE_PACKAGE_DIR": "$BINDBC_FREETYPE_PACKAGE_DIR",
 				"BINDBC_LOADER_PACKAGE_DIR": "$BINDBC_LOADER_PACKAGE_DIR",
-				"FLUID_LIBPATH": "$PACKAGE_DIR/libraries/windows"
+				"FLUID_LIBPATH": "$FLUID_PACKAGE_DIR/libraries/windows"
 			},
 			"environments-osx": {
 				"BINDBC_FREETYPE_PACKAGE_DIR": "$BINDBC_FREETYPE_PACKAGE_DIR",
 				"BINDBC_LOADER_PACKAGE_DIR": "$BINDBC_LOADER_PACKAGE_DIR",
-				"FLUID_LIBPATH": "$PACKAGE_DIR/libraries/macos"
+				"FLUID_LIBPATH": "$FLUID_PACKAGE_DIR/libraries/macos"
 			},
 			"environments-linux": {
 				"BINDBC_FREETYPE_PACKAGE_DIR": "$BINDBC_FREETYPE_PACKAGE_DIR",
 				"BINDBC_LOADER_PACKAGE_DIR": "$BINDBC_LOADER_PACKAGE_DIR",
-				"FLUID_LIBPATH": "$PACKAGE_DIR/libraries/ubuntu"
+				"FLUID_LIBPATH": "$FLUID_PACKAGE_DIR/libraries/ubuntu"
 			}
 		}
 	],
