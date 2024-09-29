@@ -219,7 +219,9 @@ struct InputStroke {
     }
 
     /// Get number of items in the stroke.
-    size_t length() const => input.length;
+    size_t length() const {
+        return input.length;
+    }
 
     /// Get a copy of the input stroke with the last item removed, if any.
     ///
@@ -575,7 +577,10 @@ unittest {
     // Nothing pressed, action not activated
     assert(!tree.isDown!(FluidInputAction.backspaceWord));
 
-    io.press(KeyboardKey.leftControl);
+    version (OSX) 
+        io.press(KeyboardKey.leftOption);
+    else 
+        io.press(KeyboardKey.leftControl);
     io.press(KeyboardKey.backspace);
     tree.poll();
 
@@ -583,6 +588,10 @@ unittest {
     assert(tree.isDown!(FluidInputAction.backspaceWord));
 
     io.release(KeyboardKey.backspace);
+    version (OSX) {
+        io.release(KeyboardKey.leftOption);
+        io.press(KeyboardKey.leftControl);
+    }
     io.press(KeyboardKey.w);
     tree.poll();
 
@@ -762,18 +771,24 @@ interface FluidHoverable {
     /// Returns:
     ///     * `true` if the handler took care of the action; processing of the action will finish.
     ///     * `false` if the action should be handled by the default input action handler.
-    bool inputActionImpl(InputActionID id, bool active);
+    bool inputActionImpl(immutable InputActionID id, bool active);
 
     /// Run input actions.
     ///
     /// Use `mixin enableInputActions` to implement.
     ///
     /// Manual implementation is discouraged; override `inputActionImpl` instead.
-    bool runInputAction(InputActionID action, bool active = true);
+    bool runInputActionImpl(immutable InputActionID action, bool active = true);
+
+    final bool runInputAction(immutable InputActionID action, bool active = true) {
+
+        return runInputActionImpl(action, active);
+
+    }
 
     final bool runInputAction(alias action)(bool active = true) {
 
-        return runInputAction(InputActionID.from!action, active);
+        return runInputActionImpl(InputActionID.from!action, active);
 
     }
 
@@ -812,22 +827,15 @@ interface FluidHoverable {
         static assert(is(typeof(this) : Node),
             format!"%s : FluidHoverable must inherit from Node"(typeid(this)));
 
-        // For some reason, a simple alias to FluidHoverable.runInputAction doesn't work
-        final bool runInputAction(alias action)(bool active = true) {
-
-            return runInputAction(InputActionID.from!action, active);
-
-        }
-
         // Provide a default implementation of inputActionImpl
         static if (!is(typeof(super) : FluidHoverable))
-        bool inputActionImpl(InputActionID id, bool active) {
+        bool inputActionImpl(immutable InputActionID id, bool active) {
 
             return false;
 
         }
 
-        override bool runInputAction(InputActionID action, bool active = true) {
+        override bool runInputActionImpl(immutable InputActionID action, bool active) {
 
             import std.meta : Filter;
 

@@ -10,6 +10,7 @@ import std.traits;
 import std.exception;
 
 import fluid.node;
+import fluid.utils;
 import fluid.style;
 import fluid.backend;
 import fluid.structs;
@@ -156,7 +157,7 @@ unittest {
 
 }
 
-unittest {
+@system unittest {
 
     import fluid.frame;
 
@@ -1535,9 +1536,9 @@ private struct FieldValueStaticArray(E, size_t n) {
         isSet = true;
 
         // Assign each field
-        foreach (i, ref field; this.value.tupleof) {
+        foreach (i, ref field; this.value[]) {
 
-            field = value.tupleof[i];
+            field = value[i];
 
         }
 
@@ -1599,8 +1600,8 @@ private struct FieldValueStaticArray(E, size_t n) {
 
         if (!isSet) return;
 
-        foreach (i, field; this.value.tupleof) {
-            field.apply(value.tupleof[i]);
+        foreach (i, field; this.value[]) {
+            field.apply(value[i]);
         }
 
     }
@@ -1612,7 +1613,7 @@ private struct FieldValueStaticArray(E, size_t n) {
 
         value.isSet = true;
 
-        foreach (i, field; this.value.tupleof) {
+        foreach (i, field; this.value[]) {
             field.apply(value.value[i]);
         }
 

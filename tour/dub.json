@@ -3,13 +3,21 @@
 		"fluid": {
 			"path": ".."
 		},
-		"fluid:module_view": {
+		"fluid:module-view": {
 			"path": ".."
 		},
 		"libdparse": "~>0.23.2"
 	},
 	"libs": [
 		"raylib"
+	],
+	"lflags-osx": [
+		"-framework",
+		"IOKit",
+		"-framework",
+		"Cocoa",
+		"-framework",
+		"OpenGL"
 	],
 	"name": "tour",
 	"sourcePaths": [

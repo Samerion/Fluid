@@ -183,7 +183,7 @@ struct Layout {
 /// Tags are optional "marks" left on nodes that are used to apply matching styles. Tags closely resemble
 /// [HTML classes](https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/class).
 ///
-/// Tags have to be explicitly defined before usage, by creating an enum and marking it with the `@NodeTag` attribute.
+/// Tags have to be explicitly defined before usage by creating an enum and marking it with the `@NodeTag` attribute.
 /// Such tags can then be applied by passing them to the constructor.
 enum NodeTag;
 
@@ -197,6 +197,8 @@ unittest {
         myTag,
     }
 
+    static assert(isNodeTag!(Tags.myTag));
+
     auto myLabel = label(
         .tags!(Tags.myTag),
         "Hello, World!"
@@ -207,16 +209,25 @@ unittest {
 }
 
 /// Check if the given item is a node tag.
-enum isNodeTag(alias tag)
+template isNodeTag(alias tag) {
+
     // @NodeTag enum Tag;
     // enum Tag { @NodeTag tag }
-    = (isSomeEnum!tag
-      && hasUDA!(tag, NodeTag)) 
+    enum isDirectTag
+        = isSomeEnum!tag
+        && hasUDA!(tag, NodeTag);
 
     // @NodeTag enum Enum { tag }
-    || (!isType!tag 
-        && is(__traits(parent, tag) == enum)
-        && hasUDA!(typeof(tag), NodeTag));
+    static if (isType!tag) 
+        enum isTagMember = false;
+    else 
+        enum isTagMember
+            = is(typeof(tag)== enum)
+            && hasUDA!(typeof(tag), NodeTag);
+
+    enum isNodeTag = isDirectTag || isTagMember;
+
+}
 
 /// Test if the given symbol is an enum, or an enum member. 
 enum isSomeEnum(alias tag) 
