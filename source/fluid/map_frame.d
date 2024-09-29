@@ -496,7 +496,7 @@ class MapFrame : Frame {
         const position = MapPosition(rectangle.start);
 
         // Already a child
-        if (children.canFind(node)) {
+        if (children.canFind!"a is b"(node)) {
 
             positions[node] = position;
 

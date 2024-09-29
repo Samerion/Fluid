@@ -1593,7 +1593,10 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         // Press ctrl+enter
         io.nextFrame();
-        io.press(KeyboardKey.leftControl);
+        version (OSX)
+            io.press(KeyboardKey.leftCommand);
+        else 
+            io.press(KeyboardKey.leftControl);
         io.press(KeyboardKey.enter);
         root.draw();
 

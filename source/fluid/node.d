@@ -230,6 +230,12 @@ abstract class Node {
     /// Direct changes are discouraged, and are likely to be discarded when reloading themes. Use themes instead.
     ref inout(Style) style() inout { return _style; }
 
+    override bool opEquals(const Object other) const @safe {
+
+        return this is other;
+
+    }
+
     bool opEquals(const Node otherNode) const {
 
         return this is otherNode;
@@ -494,7 +500,7 @@ abstract class Node {
 
     }
 
-    unittest {
+    @system unittest {
 
         import fluid.space;
 
@@ -538,7 +544,7 @@ abstract class Node {
 
         root.draw();
 
-        assert(visitedNodes == allNodes[1..3]);
+        assert(visitedNodes[].equal(allNodes[1..3]));
 
     }
 

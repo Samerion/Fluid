@@ -188,10 +188,10 @@ bool contains(Rectangle rectangle, Vector2 point) {
 /// Check if the two rectangles overlap.
 bool overlap(Rectangle a, Rectangle b) {
 
-    const x = start(b).x <= a.x && a.x <= end(b).x
-        ||    start(a).x <= b.x && b.x <= end(a).x;
-    const y = start(b).y <= a.y && a.y <= end(b).y
-        ||    start(a).y <= b.y && b.y <= end(a).y;
+    const x = (start(b).x <= a.x && a.x <= end(b).x)
+        ||    (start(a).x <= b.x && b.x <= end(a).x);
+    const y = (start(b).y <= a.y && a.y <= end(b).y)
+        ||    (start(a).y <= b.y && b.y <= end(a).y);
 
     return x && y;
 
@@ -200,16 +200,24 @@ bool overlap(Rectangle a, Rectangle b) {
 // Extremely useful Rectangle utilities
 
 /// Get the top-left corner of a rectangle.
-Vector2 start(Rectangle r) => Vector2(r.x, r.y);
+Vector2 start(Rectangle r) {
+    return Vector2(r.x, r.y);
+}
 
 /// Get the bottom-right corner of a rectangle.
-Vector2 end(Rectangle r) => Vector2(r.x + r.w, r.y + r.h);
+Vector2 end(Rectangle r) {
+    return Vector2(r.x + r.w, r.y + r.h);
+}
 
 /// Get the center of a rectangle.
-Vector2 center(Rectangle r) => Vector2(r.x + r.w/2, r.y + r.h/2);
+Vector2 center(Rectangle r) {
+    return Vector2(r.x + r.w/2, r.y + r.h/2);
+}
 
 /// Get the size of a rectangle.
-Vector2 size(Rectangle r) => Vector2(r.w, r.h);
+Vector2 size(Rectangle r) {
+    return Vector2(r.w, r.h);
+}
 
 /// Get names of static fields in the given object.
 ///
