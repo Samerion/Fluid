@@ -577,7 +577,10 @@ unittest {
     // Nothing pressed, action not activated
     assert(!tree.isDown!(FluidInputAction.backspaceWord));
 
-    io.press(KeyboardKey.leftControl);
+    version (OSX) 
+        io.press(KeyboardKey.leftOption);
+    else 
+        io.press(KeyboardKey.leftControl);
     io.press(KeyboardKey.backspace);
     tree.poll();
 
@@ -585,6 +588,10 @@ unittest {
     assert(tree.isDown!(FluidInputAction.backspaceWord));
 
     io.release(KeyboardKey.backspace);
+    version (OSX) {
+        io.release(KeyboardKey.leftOption);
+        io.press(KeyboardKey.leftControl);
+    }
     io.press(KeyboardKey.w);
     tree.poll();
 
