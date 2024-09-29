@@ -1,166 +1,144 @@
 {
-	"authors": [
-		"Artha"
-	],
-	"configurations": [
-		{
-			"name": "linux-dynamic",
-			"platforms": [
-				"linux"
-			],
-			"targetType": "dynamicLibrary",
-			"dflags-posix-dmd": [
-				"-defaultlib=libphobos2.so"
-			],
-			"dflags-ldc": [
-				"--link-defaultlib-shared"
-			]
-		},
-		{
-			"name": "default",
-			"targetType": "staticLibrary"
-		},
-		{
-			"name": "source",
-			"targetType": "sourceLibrary"
-		},
-		{
-			"libs": [
-				"raylib"
-			],
-			"name": "unittest",
-			"targetType": "library",
-			"versions": [
-				"Fluid_HeadlessOutput"
-			],
-			"dependencies": {
-				"silly": "~>1.1.1"
-			}
-		},
-		{
-			"dflags-ldc": [
-				"--ftime-trace",
-				"--ftime-trace-file=build/trace.json"
-			],
-			"name": "time-trace",
-			"targetType": "library"
-		}
-	],
-	"copyFiles-windows": [
-		"$PACKAGE_DIR/libraries/windows/freetype.dll",
-		"$PACKAGE_DIR/libraries/windows/raylib.dll"
-	],
-	"copyright": "Copyright © 2021–2024, Artha",
-	"dependencies": {
-		"arsd-official:image_files": {
-			"optional": true,
-			"version": "~>11.3"
-		},
-		"bindbc-freetype": "~>1.1.1",
-		"bindbc-loader": "~>1.1.3",
-		"elemi": {
-			"optional": true,
-			"version": "~>1.2.2"
-		},
-		"raylib-d": {
-			"default": true,
-			"optional": true,
-			"version": "~>5"
-		}
-	},
-	"description": "A straightforward and easy to use GUI library.",
-	"excludedSourceFiles": [
-		"source/fluid/module_view.d"
-	],
-	"lflags-linux": [
-		"-L$PACKAGE_DIR/libraries/ubuntu"
-	],
-	"lflags-osx": [
-		"-L$PACKAGE_DIR/libraries/macos"
-	],
-	"lflags-windows": [
-		"/LIBPATH:$PACKAGE_DIR/libraries/windows"
-	],
-	"libs": [
-		"freetype"
-	],
-	"license": "BSL",
-	"name": "fluid",
-	"stringImportPaths": [
-		"resources"
-	],
-	"subConfigurations": {
-		"bindbc-freetype": "staticBC"
-	},
-	"subPackages": [
-		"./tour",
-		{
-			"dependencies": {
-				"fluid": {
-					"path": "."
-				},
-				"libdparse": "~>0.23.2"
-			},
-			"libs": [
-				"raylib"
-			],
-			"name": "showcase",
-			"preBuildCommands": [
-				"echo Deprecated: fluid:showcase has been renamed to fluid:tour"
-			],
-			"sourcePaths": [
-				"tour"
-			],
-			"targetName": "fluid-tour",
-			"targetPath": "build",
-			"targetType": "executable"
-		},
-		{
-			"name": "init-exec",
-			"sourceFiles": [
-				"source/fluid/dub_template.d"
-			],
-			"sourcePaths": [],
-			"targetPath": "build",
-			"targetType": "executable",
-			"versions": [
-				"Fluid_InitExec"
-			]
-		},
-		{
-			"dependencies": {
-				"fluid": {
-					"path": "."
-				},
-				"fluid-tree-sitter": "~>0.1.6",
-				"fluid-tree-sitter:d": "~>0.1.6"
-			},
-			"name": "module-view",
-			"sourceFiles": [
-				"source/fluid/module_view.d"
-			],
-			"sourcePaths": [],
-			"targetPath": "build",
-			"targetType": "library",
-			"versions": [
-				"Fluid_ModuleView"
-			],
-			"environments-windows": {
-				"BINDBC_FREETYPE_PACKAGE_DIR": "$BINDBC_FREETYPE_PACKAGE_DIR",
-				"BINDBC_LOADER_PACKAGE_DIR": "$BINDBC_LOADER_PACKAGE_DIR",
-				"FLUID_LIBPATH": "$FLUID_PACKAGE_DIR/libraries/windows"
-			},
-			"environments-osx": {
-				"BINDBC_FREETYPE_PACKAGE_DIR": "$BINDBC_FREETYPE_PACKAGE_DIR",
-				"BINDBC_LOADER_PACKAGE_DIR": "$BINDBC_LOADER_PACKAGE_DIR",
-				"FLUID_LIBPATH": "$FLUID_PACKAGE_DIR/libraries/macos"
-			},
-			"environments-linux": {
-				"BINDBC_FREETYPE_PACKAGE_DIR": "$BINDBC_FREETYPE_PACKAGE_DIR",
-				"BINDBC_LOADER_PACKAGE_DIR": "$BINDBC_LOADER_PACKAGE_DIR",
-				"FLUID_LIBPATH": "$FLUID_PACKAGE_DIR/libraries/ubuntu"
-			}
-		}
-	],
-	"targetPath": "build"
+  "authors": [
+    "Artha"
+  ],
+  "copyright": "Copyright © 2021, Artha",
+  "description": "A flexible UI library: minimal setup, declarative, non-intrusive.",
+  "name": "fluid",
+  "targetPath": "build",
+  "dependencies": {
+    "fluid:nodes": {
+      "path": "."
+    },
+    "fluid:backend": {
+      "path": "."
+    },
+    "fluid:font": {
+      "path": "."
+    }
+  },
+  "subPackages": [
+    "./tour",
+    {
+      "name": "nodes",
+      "targetType": "staticLibrary",
+      "targetPath": "build",
+      "stringImportPaths": [
+        "resources"
+      ],
+      "excludedSourceFiles": [
+        "source/fluid/backend/*.d",
+        "source/fluid/font/*.d"
+      ]
+    },
+    {
+      "name": "backend",
+      "targetType": "staticLibrary",
+      "targetPath": "build",
+      "sourcePaths": [
+        "source/fluid/backend"
+      ],
+      "dependencies": {
+        "fluid:nodes": {
+          "path": "."
+        }
+      },
+      "configurations": [
+        {
+          "name": "raylib",
+          "versions": [
+            "Fluid_Raylib",
+            "Fluid_DefaultRaylib"
+          ],
+          "libs": [
+            "raylib"
+          ],
+          "dependencies": {
+            "raylib-d": "~>5.0"
+          }
+        },
+        {
+          "name": "headless",
+          "versions": [
+            "Fluid_Headless",
+            "Fluid_DefaultHeadless"
+          ]
+        },
+        {
+          "name": "headless-svg",
+          "versions": [
+            "Fluid_Headless",
+            "Fluid_HeadlessOutput",
+            "Fluid_DefaultHeadless"
+          ],
+          "dependencies": {
+            "elemi": "~>1.2.2",
+            "arsd-official:image_files": ">=11.3.0 <11.5.2"
+          }
+        },
+        {
+          "name": "unittest",
+          "versions": [
+            "Fluid_Headless",
+            "Fluid_DefaultHeadless"
+          ]
+        },
+        {
+          "name": "none"
+        }
+      ]
+    },
+    {
+      "name": "font",
+      "targetType": "staticLibrary",
+      "targetPath": "build",
+      "sourcePaths": [
+        "source/fluid/font"
+      ],
+      "stringImportPaths": [
+        "resources"
+      ],
+      "dependencies": {
+        "fluid:nodes": {
+          "path": "."
+        }
+      },
+      "configurations": [
+        {
+          "name": "freetype",
+          "versions": [
+            "Fluid_Freetype",
+            "Fluid_DefaultFreetype"
+          ],
+          "dependencies": {
+            "bindbc-freetype": "~>1.1.1",
+            "bindbc-loader": "~>1.1.3"
+          }
+        },
+        {
+          "name": "none"
+        }
+      ]
+    }
+  ],
+  "configurations": [
+    {
+      "name": "default",
+      "targetType": "none"
+    },
+    {
+      "name": "unittest",
+      "dependencies": {
+        "silly": "~>1.1.1"
+      },
+      "subConfigurations": {
+        "fluid:backend": "headless-svg"
+      },
+      "sourcePaths": [],
+      "sourceFiles": [
+        "source/fluid/test.d"
+      ],
+      "targetType": "library"
+    }
+  ]
 }

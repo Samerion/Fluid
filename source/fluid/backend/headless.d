@@ -1,6 +1,9 @@
 /// A headless backend. This backend does not actually render anything. This allows apps reliant on Fluid to run 
 /// outside of graphical environments, provided an alternative method of access exist.
 ///
+/// To enable this module, set version `Fluid_Headless` or [set `fluid:backend` configuration][1] to `headless`.
+/// Add version `Fluid_HeadlessOutput` to capture emitted output. Use `headless-svg` to enable SVG output.
+///
 /// This backend is used internally in Fluid for performing tests. For this reason, this module may be configured to 
 /// capture the output in a way that can be analyzed or compared againt later. This functionality is disabled by 
 /// default due to significant overhead — use version `Fluid_HeadlessOutput` to turn it on.
@@ -8,7 +11,11 @@
 /// If `elemi` is added as a dependency and `Fluid_HeadlessOutput` is set, the backend will also expose its 
 /// experimental SVG export functionality through `saveSVG`. It is only intended for testing; note it will export text 
 /// as embedded raster images rather than proper vector text.
+///
+/// [1]: https://dub.pm/dub-reference/build_settings/#subconfigurations
 module fluid.backend.headless;
+
+version (Fluid_Headless):
 
 debug (Fluid_BuildMessages) {
     pragma(msg, "Fluid: Building with headless backend");

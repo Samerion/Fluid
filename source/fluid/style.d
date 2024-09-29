@@ -151,13 +151,13 @@ struct Style {
 
     static Typeface loadTypeface(string file, float fontSize) @trusted {
 
-        return new FreetypeTypeface(file, fontSize);
+        return .loadTypeface(file, fontSize);
 
     }
 
     static Typeface loadTypeface(float fontSize) @trusted {
 
-        return new FreetypeTypeface(fontSize);
+        return .loadTypeface(fontSize);
 
     }
 
