@@ -11,9 +11,9 @@ import fluid.graphics;
 
 @safe:
 
-Typeface delegate(string file, float fontSize) @safe loadTypefaceFromFile;
-Typeface delegate(float fontSize) @safe loadDefaultTypeface;
-Typeface delegate() @safe getDefaultTypeface;
+shared Typeface delegate(string file, float fontSize) @safe loadTypefaceFromFile;
+shared Typeface delegate(float fontSize) @safe loadDefaultTypeface;
+shared Typeface delegate() @safe getDefaultTypeface;
 
 Typeface loadTypeface(string file, float fontSize) {
     return loadTypefaceFromFile(file, fontSize);

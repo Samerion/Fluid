@@ -33,10 +33,6 @@ version (Fluid_HeadlessOutput) {
     import std.sumtype;
 }
 
-
-@safe:
-
-
 /// Rendering textures in SVG requires arsd.image
 version (Have_arsd_official_image_files)
     enum svgTextures = true;
@@ -55,13 +51,15 @@ version (Fluid_DefaultHeadless) {
     }
 
     pragma(mangle, "fluid_defaultBackend")
-    static this() {
+    shared static this() {
 
         getDefaultFluidBackend = () => new HeadlessBackend;
 
     }
 
 }
+
+@safe:
 
 class HeadlessBackend : FluidBackend {
 

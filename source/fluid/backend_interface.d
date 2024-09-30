@@ -6,7 +6,8 @@ import fluid.backend;
 
 @safe:
 
-FluidBackend delegate() @safe getDefaultFluidBackend = () => null;
+shared FluidBackend delegate() @safe getDefaultFluidBackend = () => null;
+
 FluidBackend defaultFluidBackend() {
     return getDefaultFluidBackend();
 }

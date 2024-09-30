@@ -32,17 +32,20 @@ else {
 
 @safe:
 
-version (Fluid_DefaultFreetype)
-static this() {
+version (Fluid_DefaultFreetype) {
 
-    loadTypefaceFromFile = (file, fontSize) 
-        => new FreetypeTypeface(file, fontSize);
+    shared static this() {
 
-    loadDefaultTypeface = (fontSize) 
-        => new FreetypeTypeface(fontSize);
+        loadTypefaceFromFile = (file, fontSize) 
+            => new FreetypeTypeface(file, fontSize);
 
-    getDefaultTypeface = ()
-        => FreetypeTypeface.defaultTypeface;
+        loadDefaultTypeface = (fontSize) 
+            => new FreetypeTypeface(fontSize);
+
+        getDefaultTypeface = ()
+            => FreetypeTypeface.defaultTypeface;
+
+    }
 
 }
 

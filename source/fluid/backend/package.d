@@ -19,7 +19,6 @@ version (Have_raylib_d) {
     public static import raylib;
 }
 
-
 @safe:
 
 alias VoidDelegate = void delegate() @safe;

@@ -5,7 +5,9 @@
   "copyright": "Copyright © 2021, Artha",
   "description": "A flexible UI library: minimal setup, declarative, non-intrusive.",
   "name": "fluid",
+  "targetType": "none",
   "targetPath": "build",
+  "sourcePaths": [],
   "dependencies": {
     "fluid:nodes": {
       "path": "."
@@ -41,12 +43,11 @@
       ],
       "configurations": [
         {
-          "name": "static",
-          "targetType": "staticLibrary"
+          "name": "default"
         },
         {
-          "name": "dynamic",
-          "targetType": "dynamicLibrary"
+          "name": "unittest",
+          "targetType": "sourceLibrary"
         }
       ]
     },
@@ -97,10 +98,16 @@
         },
         {
           "name": "unittest",
+          "targetType": "sourceLibrary",
           "versions": [
             "Fluid_Headless",
+            "Fluid_HeadlessOutput",
             "Fluid_DefaultHeadless"
-          ]
+          ],
+          "dependencies": {
+            "elemi": "~>1.2.2",
+            "arsd-official:image_files": ">=11.3.0 <11.5.2"
+          }
         },
         {
           "name": "none"
@@ -125,6 +132,18 @@
       "configurations": [
         {
           "name": "freetype",
+          "versions": [
+            "Fluid_Freetype",
+            "Fluid_DefaultFreetype"
+          ],
+          "dependencies": {
+            "bindbc-freetype": "~>1.1.1",
+            "bindbc-loader": "~>1.1.3"
+          }
+        },
+        {
+          "name": "unittest",
+          "targetType": "sourceLibrary",
           "versions": [
             "Fluid_Freetype",
             "Fluid_DefaultFreetype"
@@ -163,9 +182,6 @@
         "fluid-tree-sitter": "~>0.1.6",
         "fluid-tree-sitter:d": "~>0.1.6"
       },
-      "subConfigurations": {
-        "fluid:nodes": "dynamic"
-      },
       "configurations": [
         {
           "name": "default"
@@ -189,11 +205,12 @@
         "silly": "~>1.1.1"
       },
       "subConfigurations": {
-        "fluid:backend": "headless-svg"
+        "fluid:backend": "unittest",
+        "fluid:nodes": "unittest",
+        "fluid:font": "unittest"
       },
-      "sourcePaths": [],
-      "sourceFiles": [
-        "source/fluid/test.d"
+      "sourcePaths": [
+        "source"
       ],
       "targetType": "library"
     }

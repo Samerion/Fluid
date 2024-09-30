@@ -34,7 +34,7 @@ version (Fluid_DefaultRaylib) {
     }
 
     pragma(mangle, "fluid_defaultBackend")
-    static this() {
+    shared static this() {
 
         getDefaultFluidBackend = () => new Raylib5Backend;
 
