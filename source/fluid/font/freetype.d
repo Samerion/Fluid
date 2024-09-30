@@ -32,22 +32,17 @@ else {
 
 @safe:
 
-version (Fluid_DefaultFreetype) {
+version (Fluid_DefaultFreetype)
+static this() {
 
-    pragma(mangle, "fluid_loadTypeface") 
-    Typeface loadTypeface(string file, float fontSize) {
-        return new FreetypeTypeface(file, fontSize);
-    }
+    loadTypefaceFromFile = (file, fontSize) 
+        => new FreetypeTypeface(file, fontSize);
 
-    pragma(mangle, "fluid_loadDefaultTypeface")
-    Typeface loadTypeface(float fontSize) {
-        return new FreetypeTypeface(fontSize);
-    }
+    loadDefaultTypeface = (fontSize) 
+        => new FreetypeTypeface(fontSize);
 
-    pragma(mangle, "fluid_defaultTypeface") 
-    Typeface defaultTypeface() {
-        return FreetypeTypeface.defaultTypeface;
-    }
+    getDefaultTypeface = ()
+        => FreetypeTypeface.defaultTypeface;
 
 }
 

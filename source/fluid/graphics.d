@@ -1,6 +1,11 @@
 module fluid.graphics;
 
 import fluid.backend;
+public import raylib.raylib_types;
+
+version (Have_raylib_d) {
+    public import raylib : Color;
+}
 
 @safe:
 

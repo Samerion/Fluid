@@ -26,6 +26,22 @@ public static import raylib;
 version (OSX)
     version = Fluid_DisableScaling;
 
+// Install default backend
+version (Fluid_DefaultRaylib) {
+
+    debug (Fluid_BuildMessages) {
+        pragma(msg, "Fluid: Using Raylib 5 as the default backend");
+    }
+
+    pragma(mangle, "fluid_defaultBackend")
+    static this() {
+
+        getDefaultFluidBackend = () => new Raylib5Backend;
+
+    }
+
+}
+
 class Raylib5Backend : FluidBackend {
 
     private {

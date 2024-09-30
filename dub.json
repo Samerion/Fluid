@@ -38,6 +38,16 @@
       "excludedSourceFiles": [
         "source/fluid/backend/*.d",
         "source/fluid/font/*.d"
+      ],
+      "configurations": [
+        {
+          "name": "static",
+          "targetType": "staticLibrary"
+        },
+        {
+          "name": "dynamic",
+          "targetType": "dynamicLibrary"
+        }
       ]
     },
     {
@@ -152,6 +162,9 @@
         },
         "fluid-tree-sitter": "~>0.1.6",
         "fluid-tree-sitter:d": "~>0.1.6"
+      },
+      "subConfigurations": {
+        "fluid:nodes": "dynamic"
       },
       "configurations": [
         {

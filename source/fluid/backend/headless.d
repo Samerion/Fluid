@@ -47,6 +47,22 @@ debug (Fluid_BuildMessages) {
     pragma(msg, "Fluid: SVG output support " ~ (svgTextures ? "ON" : "OFF"));
 }
 
+// Install default backend
+version (Fluid_DefaultHeadless) {
+
+    debug (Fluid_BuildMessages) {
+        pragma(msg, "Fluid: Using headless as the default backend (unittest)");
+    }
+
+    pragma(mangle, "fluid_defaultBackend")
+    static this() {
+
+        getDefaultFluidBackend = () => new HeadlessBackend;
+
+    }
+
+}
+
 class HeadlessBackend : FluidBackend {
 
     enum defaultWindowSize = Vector2(800, 600);

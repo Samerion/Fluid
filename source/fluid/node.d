@@ -1425,7 +1425,7 @@ void run(Node node) {
     // Mock run callback is available
     if (mockRun) {
 
-        mockRun()(node);
+        mockRun(node);
 
     }
 
@@ -1437,18 +1437,6 @@ void run(Node node) {
 alias RunCallback = void delegate(Node node) @safe;
 
 /// Set a new function to use instead of `run`.
-RunCallback mockRun(RunCallback callback) {
-
-    // Assign the callback
-    mockRun() = callback;
-    return mockRun();
-
-}
-
-ref RunCallback mockRun() {
-
-    static RunCallback callback;
-    return callback;
-
-}
+RunCallback mockRun;
+// TODO use a stack
 

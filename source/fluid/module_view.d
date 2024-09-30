@@ -670,10 +670,10 @@ Frame exampleView(DlangCompiler compiler, CodeInput input, Theme contentTheme) {
             stdoutLabel.hide();
 
             // Run the snippet and output the results
-            mockRun((node) {
+            mockRun = (node) {
                 resultCanvas.value ~= node;
-            });
-            scope (exit) mockRun(null);
+            };
+            scope (exit) mockRun = null;
 
             // TODO Run the result on a separate thread to prevent the app from locking up
             library.library = runSharedLibrary(outputPath);
@@ -774,6 +774,9 @@ private bindbc.SharedLib runSharedLibrary(string path) @system {
     import std.string;
     import std.demangle;
 
+    import fluid.backend_interface;
+    import fluid.typeface_interface;
+
     // Load the resulting library
     auto library = bindbc.load(path.toStringz);
 
@@ -796,7 +799,30 @@ private bindbc.SharedLib runSharedLibrary(string path) @system {
     }
 
     void function() entrypoint;
+
+    // Load entrypoint
     bindbc.bindSymbol(library, cast(void**) &entrypoint, "fluid_moduleView_entrypoint");
+
+    void reverseBind(alias symbol)(bindbc.SharedLib library) {
+
+        typeof(symbol)* dllSymbol;
+        bindbc.bindSymbol(library, cast(void**) &dllSymbol, symbol.mangleof);
+        *dllSymbol = symbol;
+
+    }
+
+    // Bind mocking
+    reverseBind!mockRun(library);
+
+    // Bind to :backend
+    reverseBind!getDefaultFluidBackend(library);
+
+    // Bind to :typeface
+    reverseBind!loadTypefaceFromFile(library);
+    reverseBind!loadDefaultTypeface(library);
+    reverseBind!getDefaultTypeface(library);
+
+    // Run the library
     entrypoint();
 
     return library;
