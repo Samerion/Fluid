@@ -113,9 +113,7 @@ shared static this() {
 
     fluidImportPaths = [
         "source",
-        "../source",
-        environment.get("BINDBC_FREETYPE_PACKAGE_DIR").buildPath("source"),
-        environment.get("BINDBC_LOADER_PACKAGE_DIR").buildPath("source"),
+        "../source"
     ];
     version (Windows) {
         fluidExtraFlags = [
@@ -124,22 +122,17 @@ shared static this() {
             "vcruntime.lib",
             "oldnames.lib",
 
-            "fluid.lib",
-            "freetype.lib",
-            "raylib.lib",
+            "fluid_nodes.lib",
             "-L/LIBPATH:" ~ thisExePath.dirName,
-            "-L/LIBPATH:" ~ environment.get("FLUID_LIBPATH", "."),
         ];
         fluidExtraFlagsLDC = fluidExtraFlags ~ "--link-defaultlib-shared";
     }
     else {
-        fluidExtraFlags = [];
-        fluidExtraFlagsLDC = [
-            "-L-lfluid",
-            "-L-lfreetype",
+        fluidExtraFlags = [
+            "-L-lfluid_nodes",
             "-L-L" ~ thisExePath.dirName,
-            "-L-L" ~ environment.get("FLUID_LIBPATH", "."),
         ];
+        fluidExtraFlagsLDC = fluidExtraFlags ~ "--link-defaultlib-shared";
     }
 }
 
@@ -776,7 +769,10 @@ Frame exampleView(DlangCompiler compiler, Rope prefix, string value, Rope suffix
 /// Run a Fluid snippet from a shared library.
 private bindbc.SharedLib runSharedLibrary(string path) @system {
 
-    import core.stdc.stdio;
+    import std.stdio;
+    import std.ascii;
+    import std.string;
+    import std.demangle;
 
     // Load the resulting library
     auto library = bindbc.load(path.toStringz);
@@ -784,9 +780,15 @@ private bindbc.SharedLib runSharedLibrary(string path) @system {
     // Failed to load
     if (library == bindbc.invalidHandle) {
 
-        foreach (error; bindbc.errors)
-            fprintf(stderr, "%s %s\n", error.error, error.message);
-        fflush(stderr);
+        foreach (error; bindbc.errors) {
+            auto message = error.message
+                .fromStringz
+                .chunkBy!(a => isAlphaNum(a) || a == '_')
+                .map!(a => a[1].to!string.demangle)
+                .joiner;
+            stderr.writeln(error.error.fromStringz, " ", message);
+        }
+        stderr.flush();
         bindbc.resetErrors();
 
         return library;

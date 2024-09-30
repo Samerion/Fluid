@@ -1,0 +1,3 @@
+# Helix search ignore file
+libraries/*
+!libraries/*.md

@@ -15,7 +15,6 @@ import std.algorithm;
 import fluid.backend;
 import fluid.backend : MouseButton, KeyboardKey, GamepadButton;
 
-public import raylib : Vector2, Rectangle, Color;
 public static import raylib;
 
 @safe:
