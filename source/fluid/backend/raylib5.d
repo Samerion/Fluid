@@ -1,11 +1,5 @@
 module fluid.backend.raylib5;
 
-version (Have_raylib_d):
-
-debug (Fluid_BuildMessages) {
-    pragma(msg, "Fluid: Building with Raylib 5 support");
-}
-
 import raylib;
 
 import std.range;
@@ -42,7 +36,12 @@ version (Fluid_DefaultRaylib) {
 
 }
 
+version (Fluid_Raylib)
 class Raylib5Backend : FluidBackend {
+
+    debug (Fluid_BuildMessages) {
+        pragma(msg, "Fluid: Building with Raylib 5 support");
+    }
 
     private {
 

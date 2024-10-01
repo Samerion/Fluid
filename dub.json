@@ -61,7 +61,8 @@
       "dependencies": {
         "fluid:nodes": {
           "path": "."
-        }
+        },
+        "raylib-d": "~>5.0"
       },
       "configurations": [
         {
@@ -72,10 +73,7 @@
           ],
           "libs": [
             "raylib"
-          ],
-          "dependencies": {
-            "raylib-d": "~>5.0"
-          }
+          ]
         },
         {
           "name": "headless",
