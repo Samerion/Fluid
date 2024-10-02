@@ -175,6 +175,29 @@ float distance2(Vector2 a, Vector2 b) {
 
 }
 
+/// Convert points to pixels.
+/// Params:
+///     points = Input value in points.
+/// Returns: Given value in pixels.
+float pt(float points) {
+
+    // 1 pt = 1/72 in
+    // 1 px = 1/96 in
+    // 96 px = 72 pt
+
+    return points / 72 * 96;
+
+}
+
+///
+unittest {
+
+    import std.conv;
+
+    assert(to!int(4.pt * 100) == 533);
+
+}
+
 /// Check if the rectangle contains a point.
 bool contains(Rectangle rectangle, Vector2 point) {
 

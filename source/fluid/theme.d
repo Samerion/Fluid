@@ -1377,18 +1377,19 @@ struct Field(string fieldName, T) {
 
 unittest {
 
-    auto typeface = Style.loadTypeface(4);
-    auto sample = Rule.typeface = typeface;
+    import fluid.typeface;
 
-    const originalTypeface = typeface;
+    auto typeface = new FreetypeTypeface;
+    auto sample = Rule.typeface = typeface;
 
     assert(sample.name == "typeface");
 
-    auto target = Style.loadTypeface(3);
+    auto target = Style.defaultTypeface;
+    assert(target !is typeface);
     sample.value.apply(target);
 
     assert(target is typeface);
-    assert(typeface is originalTypeface);
+    assert(typeface is typeface);
 
 }
 

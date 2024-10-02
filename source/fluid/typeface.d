@@ -58,10 +58,21 @@ interface Typeface {
     ///
     /// Params:
     ///     scale = Horizontal and vertical DPI value, for example (96, 96)
+    deprecated("Use setSize instead.")
     Vector2 dpi(Vector2 scale);
 
     /// Get curently set DPI.
     Vector2 dpi() const;
+
+    /// Set the font size. This should be called at least once before drawing.
+    /// `Text`, if used, sets this automatically.
+    ///
+    /// Font renderer should cache this and not change the scale unless updated.
+    ///
+    /// Params:
+    ///     dpi  = Horizontal and vertical DPI value, for example (96, 96).
+    ///     size = Size of the font, in pixels.
+    void setSize(Vector2 dpi, float size);
 
     /// Draw a line of text.
     /// Note: This API is unstable and might change over time.
@@ -542,7 +553,7 @@ class FreetypeTypeface : Typeface {
         /// If true, this typeface has been loaded using this class, making the class responsible for freeing the font.
         bool _isOwner;
 
-        /// Font size loaded (points).
+        /// Font size loaded (in pixels).
         float _size;
 
         /// Current DPI set for the typeface.
@@ -557,12 +568,12 @@ class FreetypeTypeface : Typeface {
     static this() @trusted {
 
         // Set the default typeface
-        FreetypeTypeface.defaultTypeface = new FreetypeTypeface(14);
+        FreetypeTypeface.defaultTypeface = new FreetypeTypeface;
 
     }
 
-    /// Load the default typeface
-    this(float size) @trusted {
+    /// Load the default typeface.
+    this() @trusted {
 
         static typefaceFile = cast(ubyte[]) import("ruda-regular.ttf");
         const typefaceSize = cast(int) typefaceFile.length;
@@ -570,34 +581,30 @@ class FreetypeTypeface : Typeface {
         // Load the font
         if (auto error = FT_New_Memory_Face(freetype, typefaceFile.ptr, typefaceSize, 0, &face)) {
 
-            assert(false, format!"Failed to load default Fluid typeface at size %s, error no. %s"(size, error));
+            assert(false, format!"Failed to load default Fluid typeface, error no. %s"(error));
 
         }
 
         // Mark self as the owner
-        this._size = size;
         this.isOwner = true;
         this.lineHeightFactor = 1.16;
 
     }
 
-    /// Use an existing freetype2 font.
-    this(FT_Face face, float size) {
+    /// Params:
+    ///     face = Existing freetype2 typeface to use.
+    this(FT_Face face) {
 
         this.face = face;
-        this._size = size;
 
     }
 
     /// Load a font from a file.
     /// Params:
-    ///     backend  = I/O Fluid backend, used to adjust the scale of the font.
     ///     filename = Filename of the font file.
-    ///     size     = Size of the font to load (in points).
-    this(string filename, float size) @trusted {
+    this(string filename) @trusted {
 
         this._isOwner = true;
-        this._size = size;
 
         // TODO proper exceptions
         if (auto error = FT_New_Face(freetype, filename.toStringz, 0, &this.face)) {
@@ -661,32 +668,37 @@ class FreetypeTypeface : Typeface {
 
     }
 
-    Vector2 dpi(Vector2 dpi) @trusted {
+    deprecated("Use setSize instead")
+    Vector2 dpi(Vector2 dpi) {
+
+        setSize(dpi, _size);
+        return dpi;
+
+    }
+
+    void setSize(Vector2 dpi, float size) @trusted {
 
         const dpiX = cast(int) dpi.x;
         const dpiY = cast(int) dpi.y;
 
         // Ignore if there's no change
-        if (dpiX == _dpiX && dpiY == _dpiY) return dpi;
+        if (dpiX == _dpiX && dpiY == _dpiY && size == _size) return;
 
         _dpiX = dpiX;
         _dpiY = dpiY;
+        _size = size;
 
-        auto intSize = cast(int) (_size * 64 + 1);
-
+        const pixelsX = cast(int) (size * dpiX / 96);
+        const pixelsY = cast(int) (size * dpiY / 96);
+        
         // Load size
-        if (auto error = FT_Set_Char_Size(face, 0, intSize, dpiX, dpiY)) {
+        if (auto error = FT_Set_Pixel_Sizes(face, pixelsX, pixelsY)) {
 
             throw new Exception(
-                format!"Failed to load font at size %s at DPI %sx%s, error no. %s"(_size, dpiX, dpiY, error)
+                format!"Failed to load font at size %s at DPI %sx%s, error no. %s"(size, dpiX, dpiY, error)
             );
 
         }
-
-        // Clear the cache
-        advanceCache.clear();
-
-        return dpi;
 
     }
 
