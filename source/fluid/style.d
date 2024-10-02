@@ -185,19 +185,7 @@ struct Style {
     /// Set current DPI.
     void setDPI(Vector2 dpi) {
 
-        // Update the typeface
-        if (typeface) {
-
-            typeface.dpi = dpi;
-
-        }
-
-        // Update the default typeface if none is assigned
-        else {
-
-            Typeface.defaultTypeface.dpi = dpi;
-
-        }
+        getTypeface.setSize(dpi, fontSize);
 
     }
 

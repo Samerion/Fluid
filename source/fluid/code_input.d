@@ -156,9 +156,9 @@ class CodeInput : TextInput {
 
             assert(text.hasFastEdits);
 
-            auto typeface = pickStyle().getTypeface;
+            auto typeface = style.getTypeface;
 
-            typeface.dpi = io.dpi;
+            typeface.setSize(io.dpi, style.fontSize);
 
             this.text.value = super.text.value;
             text.indentWidth = indentWidth * typeface.advance(' ').x / io.hidpiScale.x;
