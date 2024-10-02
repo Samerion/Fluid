@@ -4105,7 +4105,8 @@ unittest {
     
     auto theme = nullTheme.derive(
         rule!Node(
-            Rule.typeface = Style.loadTypeface(20),
+            Rule.typeface = Style.defaultTypeface,
+            Rule.fontSize = 20.pt,
             Rule.textColor = color("#fff"),
             Rule.backgroundColor = color("#000"),
         ),
