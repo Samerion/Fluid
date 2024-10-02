@@ -791,7 +791,7 @@ unittest {
 
     auto image = generateColorImage(10, 10, color("#fff"));
     auto tf = FreetypeTypeface.defaultTypeface;
-    tf.dpi = Vector2(96, 96);
+    tf.setSize(Vector2(96, 96), 14.pt);
     tf.indentWidth = cast(int) (tf.advance(' ').x * 4);
 
     Vector2 measure(string text) {
