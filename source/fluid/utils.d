@@ -185,16 +185,27 @@ float pt(float points) {
     // 1 px = 1/96 in
     // 96 px = 72 pt
 
-    return points / 72 * 96;
+    return points * 96 / 72;
 
 }
 
-///
+/// Convert pixels to points.
+/// Params:
+///     points = Input value in pixels.
+/// Returns: Given value in points.
+float pxToPt(float px) {
+
+    return px * 72 / 96;
+
+}
+
 unittest {
 
     import std.conv;
 
     assert(to!int(4.pt * 100) == 533);
+    assert(to!int(5.33.pxToPt * 100) == 399);
+
 
 }
 

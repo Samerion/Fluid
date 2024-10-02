@@ -543,8 +543,13 @@ class FreetypeTypeface : Typeface {
 
     protected {
 
+        struct AdvanceCacheKey {
+            dchar ch;
+            float size;
+        }
+
         /// Cache for character sizes.
-        Vector2[dchar] advanceCache;
+        Vector2[AdvanceCacheKey] advanceCache;
 
     }
 
@@ -688,11 +693,20 @@ class FreetypeTypeface : Typeface {
         _dpiY = dpiY;
         _size = size;
 
-        const pixelsX = cast(int) (size * dpiX / 96);
-        const pixelsY = cast(int) (size * dpiY / 96);
-        
+        // dunno why, but FT_Set_Char_Size yields better results, kerning specifically, than FT_Set_Pixel_Sizes
+        version (all) {
+            const error = FT_Set_Char_Size(face, 0, cast(int) (size.pxToPt * 64 + 1), dpiX, dpiY);
+        }
+
         // Load size
-        if (auto error = FT_Set_Pixel_Sizes(face, pixelsX, pixelsY)) {
+        else {
+            const dotsX = cast(int) (size * dpi.x / 96);
+            const dotsY = cast(int) (size * dpi.y / 96);
+            const error = FT_Set_Pixel_Sizes(face, dotsX, dotsY);
+        }
+
+        // Test for errors
+        if (error) {
 
             throw new Exception(
                 format!"Failed to load font at size %s at DPI %sx%s, error no. %s"(size, dpiX, dpiY, error)
@@ -701,29 +715,30 @@ class FreetypeTypeface : Typeface {
         }
 
     }
-
-    /// Get advance vector for the given glyph
+    
     Vector2 advance(dchar glyph) @trusted {
 
         assert(_dpiX && _dpiY, "Font DPI hasn't been set");
 
+        const key = AdvanceCacheKey(glyph, _size);
+
         // Return the stored value if the result is cached
-        if (auto result = glyph in advanceCache) {
+        if (auto result = key in advanceCache) {
 
             return *result;
 
         }
 
         // Load the glyph
-        if (auto error = FT_Load_Char(cast(FT_FaceRec*) face, glyph, FT_LOAD_DEFAULT)) {
+        if (auto error = FT_Load_Char(cast(FT_Face) face, glyph, FT_LOAD_DEFAULT)) {
 
-            return advanceCache[glyph] = Vector2(0, 0);
+            return advanceCache[key] = Vector2(0, 0);
 
         }
 
         // Advance the cursor position
         // TODO RTL layouts
-        return advanceCache[glyph] = Vector2(face.glyph.advance.tupleof) / 64;
+        return advanceCache[key] = Vector2(face.glyph.advance.tupleof) / 64;
 
     }
 
@@ -743,7 +758,7 @@ class FreetypeTypeface : Typeface {
             }
 
             // Load the glyph
-            if (auto error = FT_Load_Char(cast(FT_FaceRec*) face, glyph, FT_LOAD_RENDER)) {
+            if (auto error = FT_Load_Char(cast(FT_Face) face, glyph, FT_LOAD_RENDER)) {
 
                 continue;
 
@@ -777,7 +792,7 @@ class FreetypeTypeface : Typeface {
                 }
 
             }
-
+            
             // Advance pen positon
             penPosition += Vector2(face.glyph.advance.tupleof) / 64;
 
