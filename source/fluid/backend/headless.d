@@ -883,6 +883,7 @@ class HeadlessBackend : FluidBackend {
                 attr("version") = "1.1",
                 attr("width") = text(cast(int) windowSize.x),
                 attr("height") = text(cast(int) windowSize.y),
+                attr("style") = "background: #000",
 
                 canvas[].map!(a => a.match!(
                     (DrawnLine line) => elem!"line"(
