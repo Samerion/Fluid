@@ -38,7 +38,7 @@ static this() {
     import fluid.theme;
     import std.file, std.path;
 
-    auto monospace = Style.loadTypeface(thisExePath.dirName.buildPath("../tour/ibm-plex-mono.ttf"), 11);
+    auto monospace = Style.loadTypeface(thisExePath.dirName.buildPath("../tour/ibm-plex-mono.ttf"));
 
     mainTheme = Theme(
         rule!Frame(
@@ -65,6 +65,7 @@ static this() {
         rule!CodeInput(
             margin = 0,
             typeface = monospace,
+            fontSize = 11.pt,
             backgroundColor = color!"#dedede",
             padding.sideX = 12,
             padding.sideY = 16,
@@ -91,12 +92,14 @@ static this() {
 
         // Heading
         rule!(Label, Tags.heading)(
-            typeface = Style.loadTypeface(20),
+            typeface = Style.defaultTypeface,
+            fontSize = 20.pt,
             margin.sideTop = 20,
             margin.sideBottom = 10,
         ),
         rule!(Label, Tags.subheading)(
-            typeface = Style.loadTypeface(16),
+            typeface = Style.defaultTypeface,
+            fontSize = 16.pt,
             margin.sideTop = 16,
             margin.sideBottom = 8,
         ),
@@ -121,6 +124,7 @@ static this() {
 
         rule!Node(
             typeface = monospace,
+            fontSize = 11.pt,
         ),
         rule!Frame(
             padding = 0,
