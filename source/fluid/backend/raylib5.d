@@ -79,22 +79,38 @@ class Raylib5Backend : FluidBackend {
 
     @trusted {
 
-        bool isPressed(MouseButton button) const
-            => IsMouseButtonPressed(button.toRaylib);
-        bool isReleased(MouseButton button) const
-            => IsMouseButtonReleased(button.toRaylib);
-        bool isDown(MouseButton button) const
-            => IsMouseButtonDown(button.toRaylib);
-        bool isUp(MouseButton button) const
-            => IsMouseButtonUp(button.toRaylib);
+        bool isPressed(MouseButton button) const {
+            return IsMouseButtonPressed(button.toRaylib);
+        }
+        bool isReleased(MouseButton button) const {
+            return IsMouseButtonReleased(button.toRaylib);
+        }
+        bool isDown(MouseButton button) const {
+            return IsMouseButtonDown(button.toRaylib);
+        }
+        bool isUp(MouseButton button) const {
+            return IsMouseButtonUp(button.toRaylib);
+        }
 
-        bool isPressed(KeyboardKey key) const => IsKeyPressed(key.toRaylib);
-        bool isReleased(KeyboardKey key) const => IsKeyReleased(key.toRaylib);
-        bool isDown(KeyboardKey key) const => IsKeyDown(key.toRaylib);
-        bool isUp(KeyboardKey key) const => IsKeyUp(key.toRaylib);
-        bool isRepeated(KeyboardKey key) const => IsKeyPressedRepeat(key.toRaylib);
+        bool isPressed(KeyboardKey key) const {
+            return IsKeyPressed(key.toRaylib);
+        }
+        bool isReleased(KeyboardKey key) const {
+            return IsKeyReleased(key.toRaylib);
+        }
+        bool isDown(KeyboardKey key) const {
+            return IsKeyDown(key.toRaylib);
+        }
+        bool isUp(KeyboardKey key) const {
+            return IsKeyUp(key.toRaylib);
+        }
+        bool isRepeated(KeyboardKey key) const {
+            return IsKeyPressedRepeat(key.toRaylib);
+        }
 
-        dchar inputCharacter() => cast(dchar) GetCharPressed();
+        dchar inputCharacter() {
+            return cast(dchar) GetCharPressed();
+        }
 
         int isPressed(GamepadButton button) const {
             auto btn = button.toRaylib;

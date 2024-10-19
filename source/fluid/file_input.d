@@ -505,12 +505,18 @@ class FileInputSuggestion : Button {
     }
 
     /// File input the button belongs to.
-    inout(FileInput) parent() inout => _input;
+    inout(FileInput) parent() inout {
+        return _input;
+    }
 
     /// Index of the button.
-    int index() const => _index;
+    int index() const {
+        return _index;
+    }
 
     /// True if this suggestion is selected.
-    bool isSelected() const => _input.currentSuggestion == _index+1;
+    bool isSelected() const {
+        return _input.currentSuggestion == _index+1;
+    }
 
 }

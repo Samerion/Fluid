@@ -68,7 +68,7 @@ Space checkboxExample() {
 }
 
 @(
-    () => label(.layout!"fill", .tags!(Tags.warning), "Note: Make sure your fieldSlots only contain a single "
+    () => label(.layout!"fill", .tags!(FluidTag.warning), "Note: Make sure your fieldSlots only contain a single "
         ~ "input node. Placing two checkboxes or text inputs inside one might cause unexpected behavior."),
     () => label("Moreover, 'FieldSlot' might be used by external tools to analyze the content, and for example, "
         ~ "provide information for screen readers. Fluid doesn't come with such tools at the time of writing, "

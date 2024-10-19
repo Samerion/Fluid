@@ -43,6 +43,11 @@ struct Style {
 
         alias font = typeface;
 
+        /// Size of the font in use, in pixels.
+        ///
+        /// Changing the size requires a resize.
+        float fontSize = 14.pt;
+
         /// Text color.
         Color textColor;
 
@@ -149,15 +154,15 @@ struct Style {
 
     }
 
-    static Typeface loadTypeface(string file, float fontSize) @trusted {
+    static Typeface defaultTypeface() {
 
-        return new FreetypeTypeface(file, fontSize);
+        return Typeface.defaultTypeface;
 
     }
 
-    static Typeface loadTypeface(float fontSize) @trusted {
+    static Typeface loadTypeface(string file) {
 
-        return new FreetypeTypeface(fontSize);
+        return new FreetypeTypeface(file);
 
     }
 
@@ -180,19 +185,7 @@ struct Style {
     /// Set current DPI.
     void setDPI(Vector2 dpi) {
 
-        // Update the typeface
-        if (typeface) {
-
-            typeface.dpi = dpi;
-
-        }
-
-        // Update the default typeface if none is assigned
-        else {
-
-            Typeface.defaultTypeface.dpi = dpi;
-
-        }
+        getTypeface.setSize(dpi, fontSize);
 
     }
 

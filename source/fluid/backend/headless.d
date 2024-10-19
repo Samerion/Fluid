@@ -36,6 +36,9 @@ version (Have_arsd_official_image_files)
 else
     enum svgTextures = false;
 
+debug (Fluid_BuildMessages) {
+    pragma(msg, "Fluid: SVG output support " ~ (svgTextures ? "ON" : "OFF"));
+}
 
 class HeadlessBackend : FluidBackend {
 
@@ -56,8 +59,8 @@ class HeadlessBackend : FluidBackend {
         Vector2 start, end;
         Color color;
 
-        bool isClose(Vector2 a, Vector2 b) const
-            => (
+        bool isClose(Vector2 a, Vector2 b) const {
+            return (
                 .isClose(start.x, this.start.x)
                 && .isClose(start.y, this.start.y)
                 && .isClose(end.x, this.end.x)
@@ -67,6 +70,7 @@ class HeadlessBackend : FluidBackend {
                 && .isClose(end.y, this.end.y)
                 && .isClose(start.x, this.start.x)
                 && .isClose(start.y, this.start.y));
+        }
 
     }
 
@@ -75,13 +79,14 @@ class HeadlessBackend : FluidBackend {
         Vector2 a, b, c;
         Color color;
 
-        bool isClose(Vector2 a, Vector2 b, Vector2 c) const
-            => .isClose(a.x, this.a.x)
-            && .isClose(a.y, this.a.y)
-            && .isClose(b.x, this.b.x)
-            && .isClose(b.y, this.b.y)
-            && .isClose(c.x, this.c.x)
-            && .isClose(c.y, this.c.y);
+        bool isClose(Vector2 a, Vector2 b, Vector2 c) const {
+            return .isClose(a.x, this.a.x)
+                && .isClose(a.y, this.a.y)
+                && .isClose(b.x, this.b.x)
+                && .isClose(b.y, this.b.y)
+                && .isClose(c.x, this.c.x)
+                && .isClose(c.y, this.c.y);
+        }
 
     }
 
@@ -92,10 +97,11 @@ class HeadlessBackend : FluidBackend {
         Color color;
         bool outlineOnly;
 
-        bool isClose(Vector2 position, float radius) const
-            => .isClose(position.x, this.position.x)
-            && .isClose(position.y, this.position.y)
-            && .isClose(radius, this.radius);
+        bool isClose(Vector2 position, float radius) const {
+            return .isClose(position.x, this.position.x)
+                && .isClose(position.y, this.position.y)
+                && .isClose(radius, this.radius);
+        }
 
     }
 
@@ -106,25 +112,25 @@ class HeadlessBackend : FluidBackend {
 
         alias rectangle this;
 
-        bool isClose(Rectangle rectangle) const
+        bool isClose(Rectangle rectangle) const {
+            return isClose(rectangle.tupleof);
+        }
 
-            => isClose(rectangle.tupleof);
+        bool isClose(float x, float y, float width, float height) const {
+            return .isClose(this.rectangle.x, x)
+                && .isClose(this.rectangle.y, y)
+                && .isClose(this.rectangle.width, width)
+                && .isClose(this.rectangle.height, height);
+        }
 
-        bool isClose(float x, float y, float width, float height) const
+        bool isStartClose(Vector2 start) const {
+            return isStartClose(start.tupleof);
+        }
 
-            => .isClose(this.rectangle.x, x)
-            && .isClose(this.rectangle.y, y)
-            && .isClose(this.rectangle.width, width)
-            && .isClose(this.rectangle.height, height);
-
-        bool isStartClose(Vector2 start) const
-
-            => isStartClose(start.tupleof);
-
-        bool isStartClose(float x, float y) const
-
-            => .isClose(this.rectangle.x, x)
-            && .isClose(this.rectangle.y, y);
+        bool isStartClose(float x, float y) const {
+            return .isClose(this.rectangle.x, x)
+                && .isClose(this.rectangle.y, y);
+        }
 
     }
 
@@ -153,24 +159,24 @@ class HeadlessBackend : FluidBackend {
 
         }
 
-        Vector2 position() const
+        Vector2 position() const {
+            return Vector2(rectangle.x, rectangle.y);
+        }
 
-            => Vector2(rectangle.x, rectangle.y);
-
-        DrawnRectangle drawnRectangle() const
-
-            => DrawnRectangle(rectangle, tint);
+        DrawnRectangle drawnRectangle() const {
+            return DrawnRectangle(rectangle, tint);
+        }
 
         alias isPositionClose = isStartClose;
 
-        bool isStartClose(Vector2 start) const
+        bool isStartClose(Vector2 start) const {
+            return isStartClose(start.tupleof);
+        }
 
-            => isStartClose(start.tupleof);
-
-        bool isStartClose(float x, float y) const
-
-            => .isClose(rectangle.x, x)
-            && .isClose(rectangle.y, y);
+        bool isStartClose(float x, float y) const {
+            return .isClose(rectangle.x, x)
+                && .isClose(rectangle.y, y);
+        }
 
     }
 
@@ -312,49 +318,49 @@ class HeadlessBackend : FluidBackend {
     }
 
     /// Check if the given mouse button has just been pressed/released or, if it's held down or not (up).
-    bool isPressed(MouseButton button) const
+    bool isPressed(MouseButton button) const {
+         return mouse[button] == State.pressed;
+    }
 
-        => mouse[button] == State.pressed;
+    bool isReleased(MouseButton button) const {
+        return mouse[button] == State.released;
+    }
 
-    bool isReleased(MouseButton button) const
+    bool isDown(MouseButton button) const {
+        return mouse[button] == State.pressed
+            || mouse[button] == State.repeated
+            || mouse[button] == State.down;
+    }
 
-        => mouse[button] == State.released;
-
-    bool isDown(MouseButton button) const
-
-        => mouse[button] == State.pressed
-        || mouse[button] == State.repeated
-        || mouse[button] == State.down;
-
-    bool isUp(MouseButton button) const
-
-        => mouse[button] == State.released
-        || mouse[button] == State.up;
+    bool isUp(MouseButton button) const {
+        return mouse[button] == State.released
+            || mouse[button] == State.up;
+    }
 
     /// Check if the given keyboard key has just been pressed/released or, if it's held down or not (up).
-    bool isPressed(KeyboardKey key) const
+    bool isPressed(KeyboardKey key) const {
+        return keyboard[key] == State.pressed;
+    }
 
-        => keyboard[key] == State.pressed;
+    bool isReleased(KeyboardKey key) const {
+        return keyboard[key] == State.released;
+    }
 
-    bool isReleased(KeyboardKey key) const
+    bool isDown(KeyboardKey key) const {
+        return keyboard[key] == State.pressed
+            || keyboard[key] == State.repeated
+            || keyboard[key] == State.down;
+    }
 
-        => keyboard[key] == State.released;
-
-    bool isDown(KeyboardKey key) const
-
-        => keyboard[key] == State.pressed
-        || keyboard[key] == State.repeated
-        || keyboard[key] == State.down;
-
-    bool isUp(KeyboardKey key) const
-
-        => keyboard[key] == State.released
-        || keyboard[key] == State.up;
+    bool isUp(KeyboardKey key) const {
+        return keyboard[key] == State.released
+            || keyboard[key] == State.up;
+    }
 
     /// If true, the given keyboard key has been virtually pressed again, through a long-press.
-    bool isRepeated(KeyboardKey key) const
-
-        => keyboard[key] == State.repeated;
+    bool isRepeated(KeyboardKey key) const {
+        return keyboard[key] == State.repeated;
+    }
 
     /// Get next queued character from user's input. The queue should be cleared every frame. Return null if no
     /// character was pressed.
@@ -383,121 +389,114 @@ class HeadlessBackend : FluidBackend {
     }
 
     /// Check if the given gamepad button has been pressed/released or, if it's held down or not (up).
-    int isPressed(GamepadButton button) const
+    int isPressed(GamepadButton button) const {
+		return gamepad[button] == State.pressed;
+	}
 
-        => gamepad[button] == State.pressed;
+	int isReleased(GamepadButton button) const {
+		return gamepad[button] == State.released;
+	}
 
-    int isReleased(GamepadButton button) const
+	int isDown(GamepadButton button) const {
+		return gamepad[button] == State.pressed
+			|| gamepad[button] == State.repeated
+			|| gamepad[button] == State.down;
+	}
 
-        => gamepad[button] == State.released;
+    int isUp(GamepadButton button) const {
+        return gamepad[button] == State.released
+            || gamepad[button] == State.up;
+    }
 
-    int isDown(GamepadButton button) const
-
-        => gamepad[button] == State.pressed
-        || gamepad[button] == State.repeated
-        || gamepad[button] == State.down;
-
-    int isUp(GamepadButton button) const
-
-        => gamepad[button] == State.released
-        || gamepad[button] == State.up;
-
-    int isRepeated(GamepadButton button) const
-
-        => gamepad[button] == State.repeated;
+    int isRepeated(GamepadButton button) const {
+        return gamepad[button] == State.repeated;
+    }
 
     /// Get/set mouse position
-    Vector2 mousePosition(Vector2 value)
+    Vector2 mousePosition(Vector2 value) {
+        return _mousePosition = value;}
 
-        => _mousePosition = value;
-
-    Vector2 mousePosition() const
-
-        => _mousePosition;
+    Vector2 mousePosition() const {
+        return _mousePosition;
+    }
 
     /// Get/set mouse scroll
-    Vector2 scroll(Vector2 value)
+    Vector2 scroll(Vector2 value) {
+        return _scroll = scroll;
+    }
 
-        => _scroll = scroll;
-
-    Vector2 scroll() const
-
-        => _scroll;
+    Vector2 scroll() const {
+        return _scroll;
+    }
 
     string clipboard(string value) @trusted {
-
         return _clipboard = value;
-
     }
 
     string clipboard() const @trusted {
-
         return _clipboard;
-
     }
 
     /// Get time elapsed since last frame in seconds.
-    float deltaTime() const
-
-        => _deltaTime;
+    float deltaTime() const {
+        return _deltaTime;
+    }
 
     /// True if the user has just resized the window.
-    bool hasJustResized() const
-
-        => _justResized;
+    bool hasJustResized() const {
+        return _justResized;
+    }
 
     /// Get or set the size of the window.
     Vector2 windowSize(Vector2 value) {
-
         resize(value);
         return value;
-
     }
 
-    Vector2 windowSize() const
+    Vector2 windowSize() const {
+        return _windowSize;
+    }
 
-        => _windowSize;
+    float scale() const {
+        return _scale;
+    }
 
-    float scale() const
-
-        => _scale;
-
-    float scale(float value)
-
-        => _scale = value;
+    float scale(float value) {
+        return _scale = value;
+    }
 
     /// Get HiDPI scale of the window. This is not currently supported by this backend.
-    Vector2 dpi() const
-
-        => _dpi * _scale;
+    Vector2 dpi() const {
+        return _dpi * _scale;
+    }
 
     /// Set area within the window items will be drawn to; any pixel drawn outside will be discarded.
     Rectangle area(Rectangle rect) {
-
         _scissorsOn = true;
         return _area = rect;
-
     }
 
-    Rectangle area() const
+    Rectangle area() const {
 
-        => _scissorsOn ? _area : Rectangle(0, 0, _windowSize.tupleof);
+        if (_scissorsOn) 
+            return _area;
+        else
+            return Rectangle(0, 0, _windowSize.tupleof);
+    }
 
     /// Restore the capability to draw anywhere in the window.
     void restoreArea() {
-
         _scissorsOn = false;
-
     }
 
     /// Get or set mouse cursor icon.
-    FluidMouseCursor mouseCursor(FluidMouseCursor cursor)
+    FluidMouseCursor mouseCursor(FluidMouseCursor cursor) {
+        return _cursor = cursor;
+    }
 
-        => _cursor = cursor;
-
-    FluidMouseCursor mouseCursor() const
-
-        => _cursor;
+    FluidMouseCursor mouseCursor() const {
+        return _cursor;
+    }
 
     TextureReaper* reaper() return scope {
 
@@ -718,21 +717,23 @@ class HeadlessBackend : FluidBackend {
     /// Get items from the canvas that match the given type.
     version (Fluid_HeadlessOutput) {
 
-        auto filterCanvas(T)()
+        auto filterCanvas(T)() {
 
-            => canvas[]
+            return canvas[]
 
-            // Filter out items that don't match what was requested
-            .filter!(a => a.match!(
-                (T item) => true,
-                (_) => false
-            ))
+                // Filter out items that don't match what was requested
+                .filter!(a => a.match!(
+                    (T item) => true,
+                    (_) => false
+                ))
 
-            // Return items that match
-            .map!(a => a.match!(
-                (T item) => item,
-                (_) => assert(false),
-            ));
+                // Return items that match
+                .map!(a => a.match!(
+                    (T item) => item,
+                    (_) => assert(false),
+                ));
+
+        }
 
         alias lines = filterCanvas!DrawnLine;
         alias triangles = filterCanvas!DrawnTriangle;
@@ -827,9 +828,9 @@ class HeadlessBackend : FluidBackend {
         }
 
         /// ditto
-        string toSVG() const
-
-            => Element.XMLDeclaration1_0 ~ this.toSVGElement;
+        string toSVG() const {
+            return Element.XMLDeclaration1_0 ~ this.toSVGElement;
+        }
 
         /// ditto
         Element toSVGElement() const {
@@ -882,6 +883,7 @@ class HeadlessBackend : FluidBackend {
                 attr("version") = "1.1",
                 attr("width") = text(cast(int) windowSize.x),
                 attr("height") = text(cast(int) windowSize.y),
+                attr("style") = "background: #000",
 
                 canvas[].map!(a => a.match!(
                     (DrawnLine line) => elem!"line"(

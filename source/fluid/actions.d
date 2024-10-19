@@ -189,7 +189,9 @@ unittest {
     root.children[1].scrollIntoView;
     root.draw();
 
-    auto getPositions() => io.textures.map!(a => a.position).array;
+    auto getPositions() {
+        return io.textures.map!(a => a.position).array;
+    }
 
     // Find label positions
     auto positions = getPositions();

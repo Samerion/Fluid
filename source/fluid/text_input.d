@@ -1593,7 +1593,10 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         // Press ctrl+enter
         io.nextFrame();
-        io.press(KeyboardKey.leftControl);
+        version (OSX)
+            io.press(KeyboardKey.leftCommand);
+        else 
+            io.press(KeyboardKey.leftControl);
         io.press(KeyboardKey.enter);
         root.draw();
 
@@ -3206,13 +3209,16 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
-    /// Move the caret to the given position.
+    /// Move the caret to the given screen position (viewport space).
+    /// Params:
+    ///     position = Position in the screen to move the cursor to.
     void caretTo(Vector2 position) {
 
         caretIndex = nearestCharacter(position);
 
     }
 
+    @("TextInput.caretTo works")
     unittest {
 
         // Note: This test depends on parameters specific to the default typeface.
@@ -4102,7 +4108,8 @@ unittest {
     
     auto theme = nullTheme.derive(
         rule!Node(
-            Rule.typeface = Style.loadTypeface(20),
+            Rule.typeface = Style.defaultTypeface,
+            Rule.fontSize = 20.pt,
             Rule.textColor = color("#fff"),
             Rule.backgroundColor = color("#000"),
         ),
