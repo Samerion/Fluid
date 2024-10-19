@@ -4,12 +4,25 @@
 	],
 	"configurations": [
 		{
+			"name": "linux-dynamic",
+			"platforms": [
+				"linux"
+			],
+			"targetType": "dynamicLibrary",
+			"dflags-posix-dmd": [
+				"-defaultlib=libphobos2.so"
+			],
+			"dflags-ldc": [
+				"--link-defaultlib-shared"
+			]
+		},
+		{
 			"name": "default",
 			"targetType": "staticLibrary"
 		},
 		{
-			"name": "dynamic",
-			"targetType": "dynamicLibrary"
+			"name": "source",
+			"targetType": "sourceLibrary"
 		},
 		{
 			"libs": [
@@ -119,22 +132,34 @@
 				"fluid": {
 					"path": "."
 				},
-				"fluid-tree-sitter": "~>0.1.5",
-				"fluid-tree-sitter:d": "~>0.1.5"
+				"fluid-tree-sitter": "~>0.1.6",
+				"fluid-tree-sitter:d": "~>0.1.6"
 			},
-			"name": "module_view",
+			"name": "module-view",
 			"sourceFiles": [
 				"source/fluid/module_view.d"
 			],
 			"sourcePaths": [],
-			"subConfigurations": {
-				"fluid": "dynamic"
-			},
 			"targetPath": "build",
 			"targetType": "library",
 			"versions": [
 				"Fluid_ModuleView"
-			]
+			],
+			"environments-windows": {
+				"BINDBC_FREETYPE_PACKAGE_DIR": "$BINDBC_FREETYPE_PACKAGE_DIR",
+				"BINDBC_LOADER_PACKAGE_DIR": "$BINDBC_LOADER_PACKAGE_DIR",
+				"FLUID_LIBPATH": "$FLUID_PACKAGE_DIR/libraries/windows"
+			},
+			"environments-osx": {
+				"BINDBC_FREETYPE_PACKAGE_DIR": "$BINDBC_FREETYPE_PACKAGE_DIR",
+				"BINDBC_LOADER_PACKAGE_DIR": "$BINDBC_LOADER_PACKAGE_DIR",
+				"FLUID_LIBPATH": "$FLUID_PACKAGE_DIR/libraries/macos"
+			},
+			"environments-linux": {
+				"BINDBC_FREETYPE_PACKAGE_DIR": "$BINDBC_FREETYPE_PACKAGE_DIR",
+				"BINDBC_LOADER_PACKAGE_DIR": "$BINDBC_LOADER_PACKAGE_DIR",
+				"FLUID_LIBPATH": "$FLUID_PACKAGE_DIR/libraries/ubuntu"
+			}
 		}
 	],
 	"targetPath": "build"

@@ -150,20 +150,6 @@ class ImageView : Node {
 
             io.assertTexture(root.texture, Vector2(0, 0), color!"fff");
 
-            version (Have_raylib_d) {
-                import std.string: toStringz;
-                raylib.Image LoadImage(string path) => raylib.LoadImage(path.toStringz);
-                raylib.Texture LoadTexture(string path) => raylib.LoadTexture(path.toStringz);
-                void InitWindow() => raylib.InitWindow(80, 80, "");
-                void CloseWindow() => raylib.CloseWindow();
-
-                InitWindow;
-                raylib.Texture rayTexture = LoadTexture("logo.png");
-                fluid.Texture texture = rayTexture.toFluid;
-
-                io.assertTexture(root.texture, Vector2(0, 0), color!"fff");
-                CloseWindow;
-            }
         }
 
         /// Get the current texture.

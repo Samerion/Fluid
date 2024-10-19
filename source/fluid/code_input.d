@@ -156,9 +156,9 @@ class CodeInput : TextInput {
 
             assert(text.hasFastEdits);
 
-            auto typeface = pickStyle().getTypeface;
+            auto typeface = style.getTypeface;
 
-            typeface.dpi = io.dpi;
+            typeface.setSize(io.dpi, style.fontSize);
 
             this.text.value = super.text.value;
             text.indentWidth = indentWidth * typeface.advance(' ').x / io.hidpiScale.x;
@@ -1969,9 +1969,9 @@ unittest {
                 .front
                 .indent;
 
-        };
+        }
 
-    };
+    }
 
     auto indentor = new Indentor;
     auto highlighter = new class Indentor, CodeHighlighter {
@@ -2065,9 +2065,9 @@ unittest {
             else
                 return 1;
 
-        };
+        }
 
-    };
+    }
 
     // Every new line indents. If "end" is found in the text, every new line *outdents*, effectively making the text
     // flat.

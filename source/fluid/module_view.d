@@ -2,6 +2,9 @@
 ///
 /// Warning: This module is unstable. Significant changes may be made without prior warning.
 ///
+/// At the present moment, interactive playground functionality is disabled on Windows, because of how troublesome it is
+/// to get it to run.
+///
 /// This module is not enabled, unless additonal dependencies, `fluid-tree-sitter` and `fluid-tree-sitter:d` are also
 /// compiled in.
 module fluid.module_view;
@@ -35,6 +38,21 @@ import fluid.structs;
 import fluid.popup_button;
 import fluid.code_input;
 import fluid.tree_sitter;
+import fluid.default_theme;
+
+// Disable playground functionality under Windows & macOS
+// Hopefully this can be resolved soon
+version (Windows)
+    version = Fluid_DisablePlayground;
+version (OSX)
+    version = Fluid_DisablePlayground;
+debug (Fluid_DisablePlayground)
+    version = Fluid_DisablePlayground;
+
+debug (Fluid_BuildMessages) {
+    version (Fluid_DisablePlayground) 
+        pragma(msg, "Fluid: moduleView: Disabling interactive playground");
+}
 
 
 @safe:
@@ -83,6 +101,48 @@ static ~this() @system {
 
 }
 
+static immutable string[] fluidImportPaths;
+static immutable string[] fluidExtraFlags;
+static immutable string[] fluidExtraFlagsLDC;
+
+shared static this() {
+
+    import std.path;
+    import std.process;
+    import std.file : thisExePath;
+
+    fluidImportPaths = [
+        "source",
+        "../source",
+        environment.get("BINDBC_FREETYPE_PACKAGE_DIR").buildPath("source"),
+        environment.get("BINDBC_LOADER_PACKAGE_DIR").buildPath("source"),
+    ];
+    version (Windows) {
+        fluidExtraFlags = [
+            // scraped from LDC's linker output
+            "msvcrt.lib",
+            "vcruntime.lib",
+            "oldnames.lib",
+
+            "fluid.lib",
+            "freetype.lib",
+            "raylib.lib",
+            "-L/LIBPATH:" ~ thisExePath.dirName,
+            "-L/LIBPATH:" ~ environment.get("FLUID_LIBPATH", "."),
+        ];
+        fluidExtraFlagsLDC = fluidExtraFlags ~ "--link-defaultlib-shared";
+    }
+    else {
+        fluidExtraFlags = [];
+        fluidExtraFlagsLDC = [
+            "-L-lfluid",
+            "-L-lfreetype",
+            "-L-L" ~ thisExePath.dirName,
+            "-L-L" ~ environment.get("FLUID_LIBPATH", "."),
+        ];
+    }
+}
+
 /// Provides information about the companion D compiler to use for evaluating examples.
 struct DlangCompiler {
 
@@ -106,11 +166,11 @@ struct DlangCompiler {
     /// ditto
     int frontendPatch;
 
+    /// Import paths to pass to the compiler.
+    const(string)[] importPaths;
+
     /// ditto
     enum frontendMajor = 2;
-
-    /// Import paths to pass to the compiler.
-    string[] importPaths;
 
     /// Returns true if this entry points to a valid compiler.
     bool opCast(T : bool)() const {
@@ -123,6 +183,15 @@ struct DlangCompiler {
     /// Find any suitable in the system.
     static DlangCompiler findAny() {
 
+        if (auto explicitD = environment.get("DC", null)) {
+
+            if (explicitD.canFind("dmd"))
+                return findDMD();
+            else
+                return findLDC();
+
+        }
+
         return either(
             findDMD,
             findLDC,
@@ -133,56 +202,86 @@ struct DlangCompiler {
     /// Find DMD in the system.
     static DlangCompiler findDMD() {
 
-        // According to run.dlang.io, this pattern has been used since at least 2.068.2
-        auto pattern = regex(r"D Compiler v2.(\d+).(\d+)");
-        auto explicitDMD = std.process.environment.get("DMD");
-        auto candidates = explicitDMD.empty
-            ? ["dmd"]
-            : [explicitDMD];
+        version (Fluid_DisablePlayground) {
+            return DlangCompiler.init;
+        }
+        else {
 
-        // Test the executables
-        foreach (name; candidates) {
+            // According to run.dlang.io, this pattern has been used since at least 2.068.2
+            auto pattern = regex(r"D Compiler v2.(\d+).(\d+)");
+            auto explicitDMD = std.process.environment.get("DMD");
+            auto candidates = explicitDMD.empty
+                ? ["dmd"]
+                : [explicitDMD];
 
-            auto process = execute([name, "--version"]);
+            // Test the executables
+            foreach (name; candidates) {
 
-            // Found a compatible compiler
-            if (auto match = process.output.matchFirst(pattern)) {
+                try {
 
-                return DlangCompiler(Type.dmd, name, match[1].to!int, match[2].to!int);
+                    auto process = execute([name, "--version"]);
+
+                    // Found a compatible compiler
+                    if (auto match = process.output.matchFirst(pattern)) {
+
+                        return DlangCompiler(Type.dmd, name, match[1].to!int, match[2].to!int, fluidImportPaths);
+
+                    }
+
+                }
+
+                catch (ProcessException) {
+                    continue;
+                }
 
             }
 
-        }
+            return DlangCompiler.init;
 
-        return DlangCompiler.init;
+        }
 
     }
 
     /// Find LDC in the system.
     static DlangCompiler findLDC() {
 
-        // This pattern appears to be stable as, according to the blame, hasn't changed in at least 5 years
-        auto pattern = regex(r"based on DMD v2\.(\d+)\.(\d+)");
-        auto explicitLDC = std.process.environment.get("LDC");
-        auto candidates = explicitLDC.empty
-            ? ["ldc2", "ldc"]
-            : [explicitLDC];
+        version (Fluid_DisablePlayground) {
+            return DlangCompiler.init;
+        }
+        else {
 
-        // Test the executables
-        foreach (name; candidates) {
+            // This pattern appears to be stable as, according to the blame, hasn't changed in at least 5 years
+            auto pattern = regex(r"based on DMD v2\.(\d+)\.(\d+)");
+            auto explicitLDC = std.process.environment.get("LDC");
+            auto candidates = explicitLDC.empty
+                ? ["ldc2", "ldc"]
+                : [explicitLDC];
 
-            auto process = execute([name, "--version"]);
+            // Test the executables
+            foreach (name; candidates) {
 
-            // Found a compatible compiler
-            if (auto match = process.output.matchFirst(pattern)) {
+                try {
 
-                return DlangCompiler(Type.ldc, name, match[1].to!int, match[2].to!int);
+                    auto process = execute([name, "--version"]);
+
+                    // Found a compatible compiler
+                    if (auto match = process.output.matchFirst(pattern)) {
+
+                        return DlangCompiler(Type.ldc, name, match[1].to!int, match[2].to!int, fluidImportPaths);
+
+                    }
+
+                }
+
+                catch (ProcessException) {
+                    continue;
+                }
 
             }
 
-        }
+            return DlangCompiler.init;
 
-        return DlangCompiler.init;
+        }
 
     }
 
@@ -255,6 +354,20 @@ struct DlangCompiler {
 
     }
 
+    /// Get the flag to generate a debug binary for the current compiler.
+    const(string)[] debugFlags() const {
+
+        static immutable flags = ["-g", "-debug"];
+
+        final switch (type) {
+
+            case Type.dmd: return flags[];
+            case Type.ldc: return flags[0..1];
+
+        }
+
+    }
+
     /// Get the flag to generate a shared library for the given compiler.
     string sharedLibraryFlag() const {
 
@@ -274,6 +387,18 @@ struct DlangCompiler {
 
             case Type.dmd: return "-unittest";
             case Type.ldc: return "--unittest";
+
+        }
+
+    }
+
+    /// Extra, platform-specific flags needed to build a shared library.
+    const(string)[] extraFlags() const {
+
+        final switch (type) {
+
+            case Type.dmd: return fluidExtraFlags;
+            case Type.ldc: return fluidExtraFlagsLDC;
 
         }
 
@@ -307,7 +432,10 @@ struct DlangCompiler {
         else
             outputPath = path.setExtension(".so");
 
-        auto cmdline = [executable, sharedLibraryFlag, unittestFlag, path, "-of=" ~ outputPath] ~ importPathsFlag;
+        auto cmdline = [executable, sharedLibraryFlag, unittestFlag, path, "-of=" ~ outputPath] 
+            ~ debugFlags
+            ~ importPathsFlag
+            ~ extraFlags;
 
         debug (Fluid_BuildMessages) {
             import std.stdio;
@@ -315,7 +443,17 @@ struct DlangCompiler {
         }
 
         // Compile the program
-        return execute(cmdline);
+        auto result = execute(cmdline);
+
+        debug (Fluid_BuildMessages) {
+            import std.stdio;
+            if (result.status == 0)
+                writefln!"Fluid: Compilation succeeded.";
+            else
+                writefln!"Fluid: Compilation failed.\n%s"(result.output.stripRight);
+        }
+        
+        return result;
 
     }
 
@@ -341,6 +479,30 @@ do {
 
     auto view = ModuleView(compiler, source, contentTheme);
     auto result = vframe(params);
+
+    if (compiler == compiler.init) {
+
+        version (Fluid_DisablePlayground) {
+            auto message = [
+                label("Warning: Interactive playground is disabled on this platform. See issue #182 for more details."),
+                button("Open #182 in browser", delegate {
+                    import fluid.utils;
+                    openURL("https://git.samerion.com/Samerion/Fluid/issues/182");
+                }),
+            ];
+        }
+        else {
+            auto message = [
+                label("Warning: No suitable D compiler could be found; interactive playground is disabled.")
+            ];
+        }
+        
+        result ~= vframe(
+            .layout!"fill",
+            .tags!(FluidTag.warning),
+            message,
+        );
+    }
 
     // Perform a query to find possibly relevant comments
     ts_query_cursor_exec(cursor, documentationQuery, root);
@@ -427,7 +589,7 @@ private struct ModuleView {
                 const prefix = source[0 .. start] ~ injectSource ~ source[start .. exampleStart];
                 const value = source[exampleStart .. exampleEnd];
                 const suffix = Rope(source[exampleEnd .. $]);
-
+                
                 // Append code editor to the result
                 documentation.children ~= exampleView(compiler, prefix, value, suffix, contentTheme);
                 return documentation;
@@ -475,6 +637,9 @@ Frame exampleView(DlangCompiler compiler, CodeInput input, Theme contentTheme) {
         bindbc.SharedLib library;
         alias library this;
 
+        // BUG  this crashes the tour on exit
+        //      without this, memory is leaked
+        version (none)
         ~this() {
             clear();
         }
@@ -491,7 +656,7 @@ Frame exampleView(DlangCompiler compiler, CodeInput input, Theme contentTheme) {
     auto originalValue = input.value;
 
     /// Compile the program
-    void compileAndRun() {
+    void compileAndRun() @trusted {
 
         string outputPath;
 
@@ -609,7 +774,9 @@ Frame exampleView(DlangCompiler compiler, Rope prefix, string value, Rope suffix
 }
 
 /// Run a Fluid snippet from a shared library.
-private bindbc.SharedLib runSharedLibrary(string path) @trusted {
+private bindbc.SharedLib runSharedLibrary(string path) @system {
+
+    import core.stdc.stdio;
 
     // Load the resulting library
     auto library = bindbc.load(path.toStringz);
@@ -618,7 +785,9 @@ private bindbc.SharedLib runSharedLibrary(string path) @trusted {
     if (library == bindbc.invalidHandle) {
 
         foreach (error; bindbc.errors)
-            printf("%s %s", error.error, error.message);
+            fprintf(stderr, "%s %s\n", error.error, error.message);
+        fflush(stderr);
+        bindbc.resetErrors();
 
         return library;
 
@@ -632,6 +801,53 @@ private bindbc.SharedLib runSharedLibrary(string path) @trusted {
 
 }
 
+@system unittest {
+
+    import std.path;
+
+    auto source = q{
+        import fluid;
+
+        pragma(mangle, "fluid_moduleView_entrypoint")
+        void entrypoint() {
+            run(label("Hello, World!"));
+        }
+    };
+
+    // Configure the compiler
+    auto compiler = DlangCompiler.findAny();
+
+    version (Fluid_DisablePlayground) {
+        assert(compiler == DlangCompiler.init);
+    }
+
+    else {
+
+        // Compile the pogram
+        string outputPath;
+        auto program = compiler.compileSharedLibrary(source, outputPath);
+        assert(program.status == 0, program.output);
+
+        // Prepare the environment
+        Node output;
+        mockRun = delegate (node) {
+            output = node;
+        };
+        scope (exit) mockRun = null;
+    
+        // Make sure it could be loaded
+        auto library = runSharedLibrary(outputPath);
+        assert(library != bindbc.invalidHandle);
+        scope (exit) bindbc.unload(library);
+
+        // And test the output
+        auto result = cast(Label) output;
+        assert(result.text == "Hello, World!");
+
+    }
+
+}
+
 /// Creates a `CodeInput` with D syntax highlighting.
 CodeInput dlangInput(void delegate() @safe submitted = null) @trusted {
 
@@ -639,7 +855,7 @@ CodeInput dlangInput(void delegate() @safe submitted = null) @trusted {
     auto highlighter = new TreeSitterHighlighter(language, dlangQuery);
 
     return codeInput(
-        .layout!"fill",
+        .layout!(1, "fill"),
         highlighter,
         submitted
     );

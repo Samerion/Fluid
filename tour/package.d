@@ -38,10 +38,7 @@ static this() {
     import fluid.theme;
     import std.file, std.path;
 
-    enum warningColor = color!"#ffe186";
-    enum warningAccentColor = color!"#ffc30f";
-
-    auto monospace = Style.loadTypeface(thisExePath.dirName.buildPath("../tour/ibm-plex-mono.ttf"), 11);
+    auto monospace = Style.loadTypeface(thisExePath.dirName.buildPath("../tour/ibm-plex-mono.ttf"));
 
     mainTheme = Theme(
         rule!Frame(
@@ -68,6 +65,7 @@ static this() {
         rule!CodeInput(
             margin = 0,
             typeface = monospace,
+            fontSize = 11.pt,
             backgroundColor = color!"#dedede",
             padding.sideX = 12,
             padding.sideY = 16,
@@ -94,24 +92,16 @@ static this() {
 
         // Heading
         rule!(Label, Tags.heading)(
-            typeface = Style.loadTypeface(20),
+            typeface = Style.defaultTypeface,
+            fontSize = 20.pt,
             margin.sideTop = 20,
             margin.sideBottom = 10,
         ),
         rule!(Label, Tags.subheading)(
-            typeface = Style.loadTypeface(16),
+            typeface = Style.defaultTypeface,
+            fontSize = 16.pt,
             margin.sideTop = 16,
             margin.sideBottom = 8,
-        ),
-
-        // Warning
-        rule!(Label, Tags.warning)(
-            padding.sideX = 16,
-            padding.sideY = 6,
-            border = 1,
-            borderStyle = colorBorder(warningAccentColor),
-            backgroundColor = warningColor,
-            textColor = color!"#000",
         ),
     );
 
@@ -134,6 +124,7 @@ static this() {
 
         rule!Node(
             typeface = monospace,
+            fontSize = 11.pt,
         ),
         rule!Frame(
             padding = 0,
@@ -168,13 +159,12 @@ enum Chapter {
     @"moduleView" module_view,
     // @"Popups" popups,
     // @"Drag and drop" drag_and_drop,
-};
+}
 
 @NodeTag
 enum Tags {
     heading,
     subheading,
-    warning,
 }
 
 /// The entrypoint prepares themes and the window.
@@ -371,7 +361,7 @@ Space exampleList(void delegate(Chapter) @safe changeChapter) @safe {
         label(.layout!"center", .tags!(Tags.heading), "Hello, World!"),
         label("Pick a chapter of the tutorial to get started. Start with the first one or browse the chapters that "
             ~ "interest you! Output previews are shown next to code samples to help you understand the content."),
-        label(.layout!"fill", .tags!(Tags.warning), "While this tutorial covers the most important parts of Fluid, "
+        label(.layout!"fill", .tags!(FluidTag.warning), "While this tutorial covers the most important parts of Fluid, "
             ~ "it's still incomplete. Content will be added in further updates of Fluid. Contributions are welcome."),
         chapterGrid,
     );
@@ -502,13 +492,6 @@ Space render(Chapter chapter)() @trusted {
         import fluid.module_view;
 
         auto compiler = DlangCompiler.findAny();
-        compiler.importPaths ~= [
-            "source",
-            "../source",
-            expandTilde("~/.dub/packages/bindbc-freetype/1.1.1/bindbc-freetype/source"),
-            expandTilde("~/.dub/packages/bindbc-loader/1.1.5/bindbc-loader/source"),
-        ];
-        // TODO figure out the correct freetype path (or vendor)
 
         return moduleViewFile(
             .layout!"fill",
@@ -517,6 +500,13 @@ Space render(Chapter chapter)() @trusted {
                     padding = 0,
                     margin = 0,
                     gap = 4,
+                ),
+                rule!(Frame, FluidTag.warning)(
+                    warningRule,
+                    margin.sideX = 12,
+                    children!Label(
+                        margin = 0,
+                    ),
                 ),
                 rule!Button(
                     margin = 0,
