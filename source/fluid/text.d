@@ -59,6 +59,9 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
     private {
 
+        /// Cache of all measured text segments.
+        TextRulerCache _cache;
+
         /// Underlying text.
         Rope _value;
 
@@ -67,6 +70,10 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
         /// If true, text will be wrapped if it doesn't fit available space.
         bool _wrap;
+
+        /// Start and end of the update range; area of the text that was updated since the last resize and has to be
+        /// measured again.
+        size_t _updateRangeStart, _updateRangeEnd;
 
     }
 
@@ -148,6 +155,58 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
     }
 
+    /// Clear cache and reload all text.
+    void reload() {
+
+        reload(0, value.length);
+
+    }
+
+    /// Queue reloading text in range. If the range changes length, specify both oldHigh and newHigh.
+    ///
+    /// This does NOT perform the action immediately. It updates text intervals in the cache, and marks the 
+    /// area that needs to be remeasurement. Positions will update on the next resize, which is triggered as this 
+    /// function is called.
+    ///
+    /// Params:
+    ///     low     = Index at which the range starts, inclusive.
+    ///     oldHigh = Index at which the range used to end, exclusive.
+    ///     newHigh = Index at which the range now ends, exclusive.
+    void reload(size_t low, size_t high) {
+
+        reload(low, high, high);
+
+    }
+
+    /// ditto
+    void reload(size_t low, size_t oldHigh, size_t newHigh) {
+
+        auto result = TextInterval(_value[low .. newHigh]);
+
+        node.updateSize();
+        _cache.updateInterval(low, oldHigh, result);
+
+        // No update range is set, replace it
+        if (_updateRangeStart == _updateRangeEnd) {
+
+            _updateRangeStart = low;
+            _updateRangeEnd   = newHigh;
+    
+        }
+
+        // Update boundaries of the existing update range
+        else {
+
+            if (low < _updateRangeStart)
+                _updateRangeStart = low;
+
+            if (newHigh > _updateRangeEnd)
+                _updateRangeEnd = newHigh;
+
+        }
+        
+    }
+
     /// Replace value at a given range with a new value. This is the main, and fastest way to operate on TextInput text.
     ///
     /// Params:
@@ -157,7 +216,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     void replace(size_t low, size_t high, Rope value) {
 
         _value = _value.replace(low, high, value);
-        node.updateSize();
+        reload(low, high, value.length);
 
     }
 
@@ -891,12 +950,6 @@ unittest {
 
     // Add a lot more text
     io.nextFrame;
-    import std.stdio;
-    debug writefln!"%s"(root.text);
-    debug writefln!"%s"(root.text.repeat(1));
-    debug writefln!"%s"(root.text.repeat(3));
-    //debug writefln!"%s"(root.text.repeat(30));
-    //debug writefln!"%s"(root.text.repeat(30).joiner);
     root.text = root.text.repeat(30).joiner.text;
     root.draw();
 
@@ -972,6 +1025,44 @@ struct TextInterval {
     /// Number of characters since the last line break; 0-indexed column number.
     size_t column;
 
+    this(size_t length, size_t line, size_t column) {
+
+        this.length = length;
+        this.line   = line;
+        this.column = column;
+
+    }
+
+    /// Calculate the interval occupied by a range (rope or string).
+    /// Params:
+    ///     fragment = Fragment to measure.
+    this(Range)(Range fragment) 
+    if (isSomeChar!(ElementType!Range) && (hasLength!Range || isSomeString!Range))
+    do {
+
+        this.length = fragment.length;
+
+        // Count lines in the string, find the length of the last line
+        foreach (line; Typeface.lineSplitter(fragment)) {
+
+            this.line++;
+            this.column = line.length;
+
+        }
+
+        // Decrement line count
+        if (this.line) this.line--;
+
+    }
+
+    @("An empty string creates an empty interval")
+    unittest {
+
+        assert(TextInterval("")       == TextInterval.init);
+        assert(TextInterval(Rope("")) == TextInterval.init);
+
+    }
+    
     TextInterval opBinary(string op : "+")(const TextInterval other) const {
 
         // If the other point has a line break, our column does not affect it
@@ -1048,6 +1139,17 @@ private struct TextRulerCache {
     bool isLeaf() const {
 
         return left is null;
+
+    }
+
+    /// Resize a fragment of text, recalculating offsets of rulers.
+    /// Params:
+    ///     low         = First index at which text changes.
+    ///     high        = Last index of text to be replaced.
+    ///     newInterval = Size of the new text. 
+    void updateInterval(size_t low, size_t high, TextInterval newHigh) {
+
+        // TODO Not implemented
 
     }
 
