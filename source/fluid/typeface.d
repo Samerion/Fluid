@@ -429,6 +429,16 @@ struct TextRuler {
 
     }
 
+    bool opEquals(const TextRuler other) const {
+
+        return typeface      is other.typeface
+            && lineWidth     == other.lineWidth
+            && penPosition   == other.penPosition
+            && textSize      == other.textSize
+            && wordLineIndex == other.wordLineIndex;
+
+    }
+
     /// Get the caret as a 0 width rectangle.
     Rectangle caret() const {
 

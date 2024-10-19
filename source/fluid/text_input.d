@@ -353,7 +353,14 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
-    /// Value written in the input.
+    /// Value written in the input. This will be displayed by the component, and will be editable by the user.
+    /// 
+    /// To efficiently change a substring of the value, use `replace`. Reassigning via `value` is comparatively slow,
+    /// as the entire text will have to be measured again.
+    /// 
+    /// Params:
+    ///     newValue = If given, set a new value.
+    /// Returns: The value used by this input.
     inout(Rope) value() inout {
 
         return _value;
@@ -369,9 +376,9 @@ class TextInput : InputNode!Node, FluidScrollable {
     }
 
     /// ditto
-    Rope value(const(char)[] value) {
+    Rope value(const(char)[] newValue) {
 
-        return this.value(Rope(value));
+        return this.value(Rope(newValue));
 
     }
 
