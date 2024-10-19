@@ -858,7 +858,7 @@ struct Rope {
     ///
     /// Params:
     ///     low   = Low index, inclusive; First index to delete.
-    ///     high  = High index, exclusive; First index after the newly inserted fragment to keep.
+    ///     high  = High index, exclusive; First index after the newly inserted fragment.
     ///     value = Value to insert.
     Rope replace(size_t low, size_t high, Rope value) const nothrow {
 
@@ -987,8 +987,15 @@ struct Rope {
 
     }
 
-    /// Replace given substring with a new value
-    Rope replace(String)(String oldValue, Rope value) const nothrow {
+    alias replace = replaceFirst;
+
+    /// Replace the first occurence of given substring with a new value.
+    /// Params:
+    ///     oldValue = Text to search for and replace.
+    ///     value    = Value to use as a subsitute for the old text.
+    /// Returns:
+    ///     A rope with the chosen occurence replaced. If the substring was not persent, returns the rope unchanged.
+    Rope replaceFirst(String)(String oldValue, Rope value) const nothrow {
 
         const start = this[].indexOf(oldValue);
         const end = start + oldValue.length;

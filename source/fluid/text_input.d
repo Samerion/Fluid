@@ -363,6 +363,31 @@ class TextInput : InputNode!Node, FluidScrollable {
     /// ditto
     Rope value(Rope newValue) {
 
+        replace(0, value.length, newValue);
+        return value;
+
+    }
+
+    /// ditto
+    Rope value(const(char)[] value) {
+
+        return this.value(Rope(value));
+
+    }
+
+    /// Replace value at a given range with a new value. This is the main, and fastest way to operate on TextInput text.
+    ///
+    /// There are two ways to use this function: `replace(low, high, "value")` and `replace[low..high] = value`. 
+    /// In a future update, it will be possible to use `value[low..high] = value` directly.
+    /// 
+    /// Using this function will automatically update caretIndex to match.
+    ///
+    /// Params:
+    ///     low      = Low index, inclusive; First index to delete.
+    ///     high     = High index, exclusive; First index after the newly inserted fragment.
+    ///     newValue = Value to insert.
+    void replace(size_t low, size_t high, Rope newValue) {
+
         auto withoutLineFeeds = Typeface.lineSplitter(newValue).joiner;
 
         // Single line mode — filter vertical space out
@@ -372,17 +397,61 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         }
 
-        _value = newValue;
+        _value = _value.replace(low, high, newValue);
+
+        // Caret index is affected
+        if (caretIndex > low) {
+
+            if (caretIndex <= high)
+                caretIndex = low + newValue.length;
+            else 
+                caretIndex = caretIndex + newValue.length - high; 
+
+            // TODO optimize this call
+            updateCaretPosition();
+            horizontalAnchor = caretPosition.x;
+
+        }
         _bufferNode = null;
         updateSize();
-        return value;
+
+    }
+    
+    /// ditto
+    auto replace() {
+
+        static struct Replace {
+
+            private TextInput input;
+
+            Rope opIndexAssign(Rope value, size_t[2] slice) {
+                input.replace(slice[0], slice[1], value);
+                return value;
+            }
+
+            string opIndexAssign(string value, size_t[2] slice) {
+                input.replace(slice[0], slice[1], Rope(value));
+                return value;
+            }
+
+            size_t[2] opSlice(size_t dim)(size_t i, size_t j) const {
+                return [i, j];
+            }
+
+            size_t opDollar() const {
+                return input.value.length;
+            }
+
+        }
+
+        return Replace(this);
 
     }
 
-    /// ditto
-    Rope value(const(char)[] value) {
+    /// Insert text at the given position.
+    void insert(size_t position, Rope value) {
 
-        return this.value(Rope(value));
+        replace(position, position, value);
 
     }
 
@@ -467,12 +536,7 @@ class TextInput : InputNode!Node, FluidScrollable {
     Rope valueBeforeCaret(Rope newValue) {
 
         // Replace the data
-        if (valueAfterCaret.empty)
-            value = newValue;
-        else
-            value = newValue ~ valueAfterCaret;
-
-        caretIndex = newValue.length;
+        replace[0 .. caretIndex] = newValue;
         updateSize();
 
         return value[0 .. caretIndex];
@@ -496,14 +560,16 @@ class TextInput : InputNode!Node, FluidScrollable {
     /// ditto
     Rope selectedValue(Rope newValue) {
 
-        const isLow = caretIndex == selectionStart;
         const low = selectionLowIndex;
         const high = selectionHighIndex;
 
-        value = value.replace(low, high, newValue);
-        caretIndex = low + newValue.length;
-        updateSize();
+        replace(low, high, newValue);
         clearSelection();
+
+        // Put the caret at the end
+        caretIndex = low + newValue.length;
+        updateCaretPosition();
+        horizontalAnchor = caretPosition.x;
 
         return value[low .. low + newValue.length];
 
@@ -527,11 +593,7 @@ class TextInput : InputNode!Node, FluidScrollable {
     Rope valueAfterCaret(Rope newValue) {
 
         // Replace the data
-        if (valueBeforeCaret.empty)
-            value = newValue;
-        else
-            value = valueBeforeCaret ~ newValue;
-
+        replace[caretIndex .. $] = newValue;
         updateSize();
 
         return value[caretIndex .. $];
@@ -889,7 +951,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         auto result = Position(0, Vector2(float.infinity, float.infinity));
 
         // Search for a matching character on adjacent lines
-        search: foreach (index, line; typeface.lineSplitterIndex(value[])) {
+        foreach (index, line; typeface.lineSplitterIndex(value[])) {
 
             ruler.startLine();
 
@@ -967,7 +1029,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
-    protected Vector2 caretPositionImpl(float textWidth, bool preferNextLine) {
+    protected Vector2 caretPositionImpl(float, bool preferNextLine) {
 
         Rope unbreakableChars(Rope value) {
 
@@ -1042,7 +1104,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
-    protected void drawContents(Rectangle inner, Rectangle scrolledInner) {
+    protected void drawContents(Rectangle, Rectangle scrolledInner) {
 
         // Draw selection
         drawSelection(scrolledInner);
@@ -1220,6 +1282,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
+    @("TextInput.push reuses the buffer")
     unittest {
 
         auto root = textInput();
@@ -1228,13 +1291,16 @@ class TextInput : InputNode!Node, FluidScrollable {
         root.caretIndex = 1;
         root.push("e");
         assert(root.value.byNode.equal(["H", "e", "o"]));
+        assert(root.caretIndex == 2);
 
         root.push("n");
 
         assert(root.value.byNode.equal(["H", "en", "o"]));
+        assert(root.caretIndex == 3);
 
         root.push("l");
         assert(root.value.byNode.equal(["H", "enl", "o"]));
+        assert(root.caretIndex == 4);
 
         // Create enough text to fill the buffer
         // A new node should be created as a result
@@ -1364,12 +1430,13 @@ class TextInput : InputNode!Node, FluidScrollable {
         const previousState = snapshot();
         scope (success) pushSnapshot(previousState);
 
+        const newCaretIndex = caretIndex + ch.length;
+
         // Insert the text by replacing the old node, if present
-        value = value.replace(caretIndex - originalLength, caretIndex, Rope(bufferNode));
+        replace(caretIndex - originalLength, caretIndex, Rope(bufferNode));
         assert(value.isBalanced);
 
-        // Move the caret
-        caretIndex = caretIndex + ch.length;
+        caretIndex = newCaretIndex;
         updateCaretPosition();
         horizontalAnchor = caretPosition.x;
 
@@ -1387,27 +1454,19 @@ class TextInput : InputNode!Node, FluidScrollable {
 
             // Override with the character
             selectedValue = text;
-            clearSelection();
 
         }
 
         // Insert the character before caret
-        else if (valueBeforeCaret.length) {
-
-            valueBeforeCaret = valueBeforeCaret ~ text;
-            touch();
-
-        }
-
         else {
 
-            valueBeforeCaret = text;
+            const newCaretIndex = caretIndex + text.length;
+
+            insert(caretIndex, text);
             touch();
+            caretIndex = newCaretIndex;
 
         }
-
-        updateCaretPosition();
-        horizontalAnchor = caretPosition.x;
 
     }
 
@@ -1633,7 +1692,7 @@ class TextInput : InputNode!Node, FluidScrollable {
             const erasedWord = valueAfterCaret.wordFront;
 
             // Remove the word
-            valueAfterCaret = valueAfterCaret[erasedWord.length .. $];
+            replace[caretIndex .. caretIndex + erasedWord.length] = Rope.init;
 
         }
 
@@ -1644,14 +1703,9 @@ class TextInput : InputNode!Node, FluidScrollable {
             const erasedWord = valueBeforeCaret.wordBack;
 
             // Remove the word
-            valueBeforeCaret = valueBeforeCaret[0 .. $ - erasedWord.length];
+            replace[caretIndex - erasedWord.length .. caretIndex] = Rope.init;
 
         }
-
-        // Update the size of the box
-        updateSize();
-        updateCaretPosition();
-        horizontalAnchor = caretPosition.x;
 
     }
 
@@ -1829,7 +1883,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
             const length = valueAfterCaret.decodeFrontStatic.codeLength!char;
 
-            valueAfterCaret = valueAfterCaret[length..$];
+            replace[caretIndex .. caretIndex + length] = Rope.init;
 
         }
 
@@ -1840,7 +1894,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
             const length = valueBeforeCaret.decodeBackStatic.codeLength!char;
 
-            valueBeforeCaret = valueBeforeCaret[0..$-length];
+            replace[caretIndex - length .. caretIndex] = Rope.init;
 
         }
 
@@ -2223,7 +2277,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
-    Rectangle shallowScrollTo(const(Node) child, Rectangle parentBox, Rectangle childBox) {
+    Rectangle shallowScrollTo(const Node, Rectangle, Rectangle childBox) {
 
         return childBox;
 
@@ -2258,7 +2312,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         size_t[2] selection = [selectionStart, selectionEnd];
 
         // Combine everything on the same line, before and after the caret
-        value = value.replace(start, end, newValue);
+        replace(start, end, newValue);
 
         // Caret/selection needs updating
         foreach (i, ref caret; selection) {
@@ -2854,16 +2908,19 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         root.chop();
 
+        assert(value1     == "Hello, World!");
         assert(root.value == "Hello, World");
 
         auto value2 = root.value;
         root.chopWord();
 
+        assert(value2     == "Hello, World");
         assert(root.value == "Hello, ");
 
         auto value3 = root.value;
         root.clear();
 
+        assert(value3     == "Hello, ");
         assert(root.value == "");
 
     }
@@ -2882,18 +2939,21 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         root.chopWord();
 
+        assert(value1     == "Hello, World");
         assert(root.value == "Hello, ");
 
         auto value2 = root.value;
 
         root.push("Moon");
 
+        assert(value2     == "Hello, ");
         assert(root.value == "Hello, Moon");
 
         auto value3 = root.value;
 
         root.clear();
 
+        assert(value3     == "Hello, Moon");
         assert(root.value == "");
 
     }
@@ -3507,6 +3567,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         root.push("replaced");
 
+        assert(value1     == "foo bar baz");
         assert(root.value == "replaced");
 
     }
@@ -3755,7 +3816,8 @@ class TextInput : InputNode!Node, FluidScrollable {
         _redoStack.clear();
 
     }
-
+    
+    @("Undo and redo works with basic actions")
     unittest {
 
         auto root = textInput(.multiline);
