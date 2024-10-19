@@ -375,6 +375,15 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
+    /// Hook called every time a piece of text is replaced.
+    /// Params:
+    ///     start   = Index at which the change occured.
+    ///     removed = Text that was removed at this index.
+    ///     added   = Text that was added at this index.
+    protected void onReplace(size_t start, Rope removed, Rope added) {
+
+    }
+
     /// Replace value at a given range with a new value. This is the main, and fastest way to operate on TextInput text.
     ///
     /// There are two ways to use this function: `replace(low, high, "value")` and `replace[low..high] = value`. 
@@ -397,6 +406,8 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         }
 
+        const oldValue = _value[low..high];
+
         _value = _value.replace(low, high, newValue);
 
         // Caret index is affected
@@ -412,8 +423,12 @@ class TextInput : InputNode!Node, FluidScrollable {
             horizontalAnchor = caretPosition.x;
 
         }
+
         _bufferNode = null;
         updateSize();
+
+        // Fire hook
+        onReplace(low, oldValue, newValue);
 
     }
     

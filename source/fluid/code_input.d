@@ -236,7 +236,20 @@ class CodeInput : TextInput {
 
     }
 
+    protected override void onReplace(size_t start, Rope removed, Rope added) {
+
+        reparse(start, removed.length, added);
+
+    }
+
     protected void reparse() {
+
+        // Act as if the whole document was replaced with itself
+        reparse(0, value.length, value);
+
+    }
+
+    protected void reparse(size_t start, size_t end, Rope added) {
 
         const fullValue = sourceValue;
 
@@ -320,9 +333,6 @@ class CodeInput : TextInput {
     }
 
     override void resizeImpl(Vector2 vector) @trusted {
-
-        // Parse changes
-        reparse();
 
         // Reformat the line if requested
         if (_automaticFormat.pending) {
@@ -1117,7 +1127,6 @@ class CodeInput : TextInput {
             // Enable continuous input to merge the indent with the line break in the history
             _isContinuous = true;
             push(indentRope(currentIndent));
-            reparse();
 
             // Ask the autoindentor to complete the job
             reformatLine();
@@ -1224,9 +1233,6 @@ class CodeInput : TextInput {
             caretIndex = clamp(oldCaretIndex + newIndent.length - oldIndentLength,
                 lineStart + newIndent.length,
                 lineStart + newLine.length);
-
-        // Parse again
-        reparse();
 
     }
 
@@ -1488,8 +1494,6 @@ class CodeInput : TextInput {
         // Push the clipboard
         push(Rope.merge(outdentedClipboard));
 
-        reparse();
-
         const pasteEnd = caretIndex;
 
         // Reformat each line
@@ -1514,9 +1518,6 @@ class CodeInput : TextInput {
             }
 
         }
-
-        // Make sure the input is parsed completely
-        reparse();
 
     }
 
@@ -1889,6 +1890,7 @@ unittest {
     };
 
     auto root = codeInput(highlighter);
+    root.value = text;
     root.draw();
 
     assert(root.contentLabel.text.styleMap.equal([
