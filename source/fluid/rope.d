@@ -24,8 +24,13 @@ struct Rope {
     static assert(isForwardRange!Rope);
     static assert(hasSlicing!Rope);
 
-    /// Content of the rope.
+    /// Content of the rope, if it contains children.
     const(RopeNode)* node;
+
+    /// Content of the rope if it's a leaf. Not sliced; to get the text with the slice applied, use `value`.
+    ///
+    /// This must be a fully valid string. Content may not be split in the middle of a codepoint.
+    const(char)[] leafText;
 
     /// Start and length of the rope, in UTF-8 bytes.
     size_t start, length;
@@ -37,10 +42,8 @@ struct Rope {
     this(inout const(char)[] text) inout pure nothrow {
 
         // No text, stay with Rope.init
-        if (text == "")
-            this(null, 0, 0, 1);
-        else
-            this(new inout RopeNode(text));
+        this.leafText = text;
+        this.length = text.length;
 
     }
 
@@ -54,7 +57,7 @@ struct Rope {
 
             // Both empty, return .init
             if (right.length == 0)
-                this(null, 0, 0, 1);
+                this(inout(Rope).init);
 
             // Right node only, clone it
             else
@@ -110,25 +113,20 @@ struct Rope {
         this.node = node;
         this.start = 0;
         this.length = node.length;
-        this.depth = node.isLeaf
-            ? 1
-            : max(node.left.depth, node.right.depth) + 1;
+        this.depth = max(node.left.depth, node.right.depth) + 1;
 
     }
 
     /// Copy a `Rope`.
     this(inout const Rope rope) inout pure nothrow {
 
-        this(rope.node, rope.start, rope.length, rope.depth);
+        this.tupleof = rope.tupleof;
 
     }
 
-    private this(inout(RopeNode)* node, size_t start, size_t length, int depth) inout pure nothrow {
+    private this(inout typeof(this.tupleof) tuple) inout pure nothrow {
 
-        this.node = node;
-        this.start = start;
-        this.length = length;
-        this.depth = depth;
+        this.tupleof = tuple;
 
     }
 
@@ -199,16 +197,24 @@ struct Rope {
     /// Assign a new value to the rope.
     ref opAssign(const char[] str) return nothrow {
 
-        return opAssign(new RopeNode(str));
+        this.tupleof  = this.init.tupleof;  // Clear the rope
+        this.leafText = str;
+        this.length   = str.length;
+        this.depth    = 1;
+        assert(isLeaf);
+        assert(this == str);
+        return this;
 
     }
 
     /// ditto
     ref opAssign(RopeNode* node) return nothrow {
 
-        this.node = node;
-        this.start = 0;
-        this.length = node ? node.length : 0;
+        this.node     = node;
+        this.leafText = null;
+        this.start    = 0;
+        this.length   = node ? node.length : 0;
+        this.depth    = max(node.left.depth, node.right.depth) + 1;
         return this;
 
     }
@@ -237,8 +243,7 @@ struct Rope {
     /// True if the node is a leaf.
     bool isLeaf() const nothrow pure {
 
-        return node is null
-            || node.isLeaf;
+        return node is null;
 
     }
 
@@ -251,8 +256,7 @@ struct Rope {
     /// If true, the rope is empty.
     bool empty() const nothrow {
 
-        return node is null
-            || length == 0;
+        return length == 0;
 
     }
 
@@ -262,8 +266,8 @@ struct Rope {
         assert(!empty, "Cannot access `.front` in an empty rope");
 
         // Load nth character of the leaf
-        if (node.isLeaf)
-            return node.value[start];
+        if (isLeaf)
+            return leafText[start];
 
         // Accessing the left node
         else if (!left.empty)
@@ -290,9 +294,9 @@ struct Rope {
 
         assert(!empty, "Cannot access `.back` in an empty rope");
 
-        // Decode the nth character of the leaf
-        if (node.isLeaf)
-            return node.value[start + length - 1];
+        // Load the nth character of the leaf
+        if (isLeaf)
+            return leafText[start + length - 1];
 
         // Accessing the right node
         else if (!right.empty)
@@ -324,8 +328,8 @@ struct Rope {
         assert(index < length, format!"Given index [%s] exceeds rope length %s"(index, length).assumeWontThrow);
 
         // Access the nth byte of the leaf
-        if (node.isLeaf)
-            return node.value[start + index];
+        if (isLeaf)
+            return leafText[start + index];
 
         // Accessing the left node
         else if (index < left.length)
@@ -357,9 +361,6 @@ struct Rope {
             format!"Right boundary of slice [%s .. %s] is greater than left boundary"(slice[0], slice[1])
                 .assumeWontThrow);
 
-        // .init stays the same
-        if (node is null) return Rope.init;
-
         slice[] += start;
 
         // Flatten if slicing into a specific side of the slice
@@ -379,7 +380,11 @@ struct Rope {
         }
 
         // Overlap or a leaf: return both as they are
-        return Rope(node, slice[0], slice[1] - slice[0], depth);
+        Rope copy = this;
+        copy.start = slice[0];
+        copy.length = slice[1] - slice[0];
+
+        return copy;
 
     }
 
@@ -551,14 +556,15 @@ struct Rope {
         auto b = Rope("DEF");
         auto ab = Rope(a, b);
 
+        assert(a.equal("ABC"));
         assert(ab.left.equal("ABC"));
         assert(ab[1..$].left.equal("BC"));
         assert(ab[3..$].left.equal(""));
         assert(ab[4..$].left.equal(""));
         assert(ab[0..4].left.equal("ABC"));
-        assert(Rope(ab.node, 0, 3, 1).left.equal("ABC"));
-        assert(Rope(ab.node, 0, 2, 1).left.equal("AB"));
-        assert(Rope(ab.node, 0, 1, 1).left.equal("A"));
+        assert(Rope(ab.node, null, 0, 3, 3).left.equal("ABC"));
+        assert(Rope(ab.node, null, 0, 2, 3).left.equal("AB"));
+        assert(Rope(ab.node, null, 0, 1, 3).left.equal("A"));
         assert(ab[0..0].left.equal(""));
         assert(ab[1..1].left.equal(""));
         assert(ab[4..4].left.equal(""));
@@ -581,8 +587,8 @@ struct Rope {
         assert(ab[4..$].left.equal(""));
         assert(ab[0..4].left.equal("BC"));
         assert(ab[0..3].left.equal("BC"));
-        assert(Rope(ab.node, 0, 2, 1).left.equal("BC"));
-        assert(Rope(ab.node, 0, 1, 1).left.equal("B"));
+        assert(Rope(ab.node, null, 0, 2, 1).left.equal("BC"));
+        assert(Rope(ab.node, null, 0, 1, 1).left.equal("B"));
         assert(ab[0..0].left.equal(""));
         assert(ab[1..1].left.equal(""));
         assert(ab[4..4].left.equal(""));
@@ -615,10 +621,10 @@ struct Rope {
 
         assert(ab.right.equal("DEF"));
         assert(ab[1..$].right.equal("DEF"));
-        assert(Rope(ab.node, 3, 3, 1).right.equal("DEF"));
-        assert(Rope(ab.node, 4, 2, 1).right.equal("EF"));
-        assert(Rope(ab.node, 4, 1, 1).right.equal("E"));
-        assert(Rope(ab.node, 3, 2, 1).right.equal("DE"));
+        assert(Rope(ab.node, null, 3, 3, 3).right.equal("DEF"));
+        assert(Rope(ab.node, null, 4, 2, 3).right.equal("EF"));
+        assert(Rope(ab.node, null, 4, 1, 3).right.equal("E"));
+        assert(Rope(ab.node, null, 3, 2, 3).right.equal("DE"));
         assert(ab[2..$-1].right.equal("DE"));
         assert(ab[1..1].right.equal(""));
         assert(ab[4..4].right.equal(""));
@@ -638,11 +644,11 @@ struct Rope {
 
         assert(ab.right.equal("EF"));
         assert(ab[1..$].right.equal("EF"));
-        assert(Rope(ab.node, 3, 1, 1).right.equal("F"));
-        assert(Rope(ab.node, 4, 0, 1).right.equal(""));
-        assert(Rope(ab.node, 1, 2, 1).right.equal("E"));
-        assert(Rope(ab.node, 2, 1, 1).right.equal("E"));
-        assert(Rope(ab.node, 3, 0, 1).right.equal(""));
+        assert(Rope(ab.node, null, 3, 1, 1).right.equal("F"));
+        assert(Rope(ab.node, null, 4, 0, 1).right.equal(""));
+        assert(Rope(ab.node, null, 1, 2, 1).right.equal("E"));
+        assert(Rope(ab.node, null, 2, 1, 1).right.equal("E"));
+        assert(Rope(ab.node, null, 3, 0, 1).right.equal(""));
         assert(ab[1..1].right.equal(""));
         assert(ab[4..4].right.equal(""));
 
@@ -657,10 +663,7 @@ struct Rope {
     /// Get the value of this rope. Only works for leaf nodes.
     const(char)[] value() const nothrow {
 
-        // Null node → null string
-        if (node is null) return null;
-
-        return node.value[start .. start + length];
+        return leafText[start .. start + length];
 
     }
 
@@ -668,7 +671,7 @@ struct Rope {
     ///
     /// This functions never returns leaf nodes, but either side of the node may be empty.
     Rope split(size_t index) const nothrow
-    out (r; !r.node.isLeaf)
+    out (r; !r.isLeaf)
     do {
 
         assert(index <= length, format!"Split index (%s) exceeds rope length %s"(index, length).assumeWontThrow);
@@ -679,7 +682,7 @@ struct Rope {
         const(RopeNode)* result;
 
         // Leaf node, split by slicing
-        if (node.isLeaf)
+        if (isLeaf)
             result = new RopeNode(this[0..index], this[index..$]);
 
         // Already split
@@ -942,19 +945,19 @@ struct Rope {
         assert(a.byNode.equal(["Hello, ", "abc", "!"]));
 
         // Now, reuse the same node
-        auto node = new RopeNode("abcd");
+        auto node = new RopeNode(Rope("ab"), Rope("cd"));
 
         a = a.replace(7, 10, Rope(node));
-        assert(a.byNode.equal(["Hello, ", "abcd", "!"]));
+        assert(a.byNode.equal(["Hello, ", "ab", "cd", "!"]));
         assert(a == "Hello, abcd!");
 
-        // Adding the node should have no effect since slices weren't updated
-        node.value = "abcde";
+        // Adding more text to the node should have no effect since slices weren't updated
+        node.right = Rope("cde");
         assert(a == "Hello, abcd!");
 
         // Update the slices
         a = a.replace(7, 11, Rope(node));
-        assert(a.byNode.equal(["Hello, ", "abcde", "!"]));
+        assert(a.byNode.equal(["Hello, ", "ab", "cde", "!"]));
         assert(a == "Hello, abcde!");
 
     }
@@ -1548,18 +1551,6 @@ struct RopeNode {
         /// Right child of this node.
         Rope right;
 
-        /// Direct content of the node, if a leaf node.
-        ///
-        /// This must be a fully valid string. Content may not be split in the middle of a codepoint.
-        const(char)[] value;
-
-    }
-
-    /// Create a leaf node from a slice
-    this(inout const(char)[] text) inout pure nothrow {
-
-        this.value = text;
-
     }
 
     /// Create a node from two other node; Concatenate the two other nodes. Both must not be null.
@@ -1573,17 +1564,7 @@ struct RopeNode {
     /// Get length of this node.
     size_t length() const pure nothrow {
 
-        return isLeaf
-            ? value.length
-            : left.length + right.length;
-
-    }
-
-    /// True if this is a leaf node and contains text rather than child nodes.
-    bool isLeaf() const pure nothrow {
-
-        return left.node is null
-            && right.node is null;
+        return left.length + right.length;
 
     }
 
