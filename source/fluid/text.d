@@ -351,7 +351,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         }
 
         // Find the first beacon to update
-        auto ruler = _cache.query(_updateRangeStart);
+        scope ruler = query(&_cache, _updateRangeStart);
         // TODO query should return a range
         // TODO remove this
         return _sizeDots = typeface.measure!splitter(space, value, wrap);
@@ -1117,7 +1117,12 @@ struct TextInterval {
         assert(TextInterval(Rope("")) == TextInterval.init);
 
     }
-    
+
+    /// Sum the intervals. Order of operation matters — `other` should come later in text than `this`.
+    /// Params:
+    ///     other = Next interval; interval to merge with.
+    /// Returns:
+    ///     A new interval that is a sum of both intervals.
     TextInterval opBinary(string op : "+")(const TextInterval other) const {
 
         // If the other point has a line break, our column does not affect it
@@ -1130,9 +1135,44 @@ struct TextInterval {
 
     }
 
-    TextInterval opOpAssign(string op : "+")(const TextInterval other) {
+    ref TextInterval opOpAssign(string op : "+")(const TextInterval other) {
 
         return this = this + other;
+
+    }
+
+    /// Change the point of reference for this interval, as if skipping characters from the start of the string. This
+    /// is the interval equivalent of `std.range.drop` or a `[n..$]` slice. 
+    ///
+    /// This function is an inverse of interval sum (+), where `head` is the left hand side argument, and the return 
+    /// value is the right hand side argument.
+    ///
+    /// Returns:
+    ///     This interval, but set relative to `head`.
+    /// Params:
+    ///     head = Point inside this interval to use as a reference.
+    TextInterval dropHead(const TextInterval head) const
+    in (this.length >= head.length, format!"`head` cannot be longer (%s) than `this` (%s)"(head.length, this.length))
+    out (r; head + r == this)
+    do {
+
+        // If the head points to some line in the middle, the resulting column stays the same.
+        //     [Lorem ipsum dolor sit amet, consectetur adipiscing 
+        //     elit, sed do eiusmod tempor] incididunt ut labore et 
+        //     dolore magna aliqua.
+        //                        ^ this.column, return.column
+        if (head.line != this.line) {
+            return TextInterval(length - head.length, line - head.line, this.column);
+        }
+
+        // If the head points to the last line, however, the column will be a difference.
+        //     [Lorem ipsum dolor sit amet, consectetur adipiscing 
+        //     elit, sed do eiusmod tempor incididunt ut labore et 
+        //     dolore magna] aliqua.
+        //     head.column ^       ^ this.column
+        else {
+            return TextInterval(length - head.length, line - head.line, this.column - head.column);
+        }
 
     }
 
@@ -1175,11 +1215,17 @@ private struct TextRulerCache {
 
             assert(right, "Right branch is null, but the left isn't");
             assert(startRuler == left.startRuler);
-            assert(interval == left.interval + right.interval);
+            assert(interval == left.interval + right.interval, 
+                format!"Cache interval %s is not the sum of its members %s + %s"(interval, left.interval, 
+                    right.interval));
 
         }
 
-        else assert(!right, "Left branch is null, but the right isn't");
+        else {
+            
+            assert(!right, "Left branch is null, but the right isn't");
+
+        }
 
     }
 
@@ -1193,6 +1239,22 @@ private struct TextRulerCache {
     this(TextRuler ruler) {
 
         this.startRuler = ruler;
+
+    }
+
+    private this(TextRuler ruler, TextInterval interval) {
+
+        this.startRuler = ruler;
+        this.interval = interval;
+
+    }
+
+    private this(TextRulerCache* left, TextRulerCache* right) {
+
+        this.startRuler = left.startRuler;
+        this.interval = left.interval + right.interval;
+        this.left = left;
+        this.right = right;
 
     }
 
@@ -1221,134 +1283,209 @@ private struct TextRulerCache {
     void insert(TextInterval point, TextRuler ruler) {
 
         // Find a point in this cache to enter
-        foreach (item; query(point.length)) {
+        auto range = query(&this, point.length);
+        auto cache = range.stack.back;
+        auto foundPoint = range.front.point;
+
+        // Found an exact match, replace it
+        if (point == foundPoint) {
+
+            cache.startRuler = ruler;
+            return;
+
+        }
+
+        // Insert the ruler after the point we found
+        // Appending — there is no point afterwards
+        // TODO Appending is a whole separate case as it changes intervals. It needs to update all ancestors.
+        else if (cache.interval.length == 0) {
+
+            const leftInterval = point.dropHead(foundPoint);
+
+            auto left = new TextRulerCache(cache.startRuler, leftInterval);
+            auto right = new TextRulerCache(ruler, TextInterval.init);
+
+            *range.stack.back = TextRulerCache(left, right);
+
+            assert(range.stack.back.interval == cache.interval);
+
+        }
+
+        // Inserting between two points
+        else {
+
+            // We're inserting in between two points; `leftInterval` is distance from the left to our point, 
+            // `rightInterval` is the distance from our point to the next point. Total distance is `cache.interval`.
+            //
+            //   ~~~~~~~~~~~~ cache.interval ~~~~~~~~~~~~
+            //   |  leftInterval     |  rightInterval   |
+            //   ^ left.startRuler   ^ right.startRuler    (relative)
+            //   ^ foundPoint        ^ point               (absolute)
+            const leftInterval = point.dropHead(foundPoint);
+            const rightInterval = cache.interval.dropHead(leftInterval);
+
+            assert(leftInterval + rightInterval == cache.interval);
+
+            auto left = new TextRulerCache(cache.startRuler, leftInterval);
+            auto right = new TextRulerCache(ruler, rightInterval);
+
+            *range.stack.back = TextRulerCache(left, right);
+
+            assert(range.stack.back.interval == cache.interval);
 
         }
 
     }
 
-    /// Get the last `TextRuler` at the given index, or preceding it.
-    /// Params:
-    ///     index = Index to search for.
-    /// Returns:
-    ///     A `TextRuler` struct wrapper with an extra `point` field to indicate the location in text the point 
-    ///     corresponds to.
-    auto query(size_t index)
-    out (r) {
-        static assert(is(ElementType!(typeof(r)) : const CachedTextRuler), ElementType!(typeof(r)).stringof);
-    }
-    do {
+}
 
-        import std.container.dlist : DList;
+/// Get the last `TextRuler` at the given index, or preceding it.
+/// Params:
+///     index = Index to search for.
+/// Returns:
+///     A `TextRuler` struct wrapper with an extra `point` field to indicate the location in text the point 
+///     corresponds to.
+private auto query(return scope TextRulerCache* cache, size_t index)
+out (r; !r.empty)
+out (r) {
+    static assert(is(ElementType!(typeof(r)) : const CachedTextRuler), ElementType!(typeof(r)).stringof);
+}
+do {
 
-        /// This range iterates the cache tree in order while skipping all but the last element that precedes the index. 
-        /// It builds  a stack, the last item of which points to the current element of the range. Since the cache is 
-        /// a binary tree in which each node either has one or two children, the stack can only have three possible 
-        /// states:
-        ///
-        /// * It is empty, and so is this range
-        /// * It points to a leaf (which is a valid state for `front`)
-        /// * The last item has two children, so it needs to descend.
-        ///
-        /// During descend, left nodes are chosen, unless the first item — the needle — is on the right side. When 
-        /// ascending (`popFront`), right nodes are chosen as left nodes have already been tested. To make sure the 
-        /// right side is not visited again, nodes are not pushed to the stack when their right side is. For example,
-        /// when iterating through a node `A` which has children `B` and `C`, the stack is initialized to `[A]`. 
-        /// Descend is first done into `B`, resulting in `[A, B]`. First `popFront` removes `B` and descends the right
-        /// side of `A` replacing it with `C`. The stack is `[C]`.
-        static struct TextRulerCacheRange {
+    import std.container.dlist : DList;
 
-            DList!(TextRulerCache) stack;
-            size_t needle;
-            TextInterval offset;
+    /// This range iterates the cache tree in order while skipping all but the last element that precedes the index. 
+    /// It builds  a stack, the last item of which points to the current element of the range. Since the cache is 
+    /// a binary tree in which each node either has one or two children, the stack can only have three possible 
+    /// states:
+    ///
+    /// * It is empty, and so is this range
+    /// * It points to a leaf (which is a valid state for `front`)
+    /// * The last item has two children, so it needs to descend.
+    ///
+    /// During descend, left nodes are chosen, unless the first item — the needle — is on the right side. When 
+    /// ascending (`popFront`), right nodes are chosen as left nodes have already been tested. To make sure the 
+    /// right side is not visited again, nodes are not pushed to the stack when their right side is. For example,
+    /// when iterating through a node `A` which has children `B` and `C`, the stack is initialized to `[A]`. 
+    /// Descend is first done into `B`, resulting in `[A, B]`. First `popFront` removes `B` and descends the right
+    /// side of `A` replacing it with `C`. The stack is `[C]`.
+    static struct TextRulerCacheRange {
 
-            @safe:
+        DList!(TextRulerCache*) stack;
+        size_t needle;
+        TextInterval offset;
 
-            inout(CachedTextRuler) front() inout {
-                return inout CachedTextRuler(
-                    offset,
-                    stack.back.startRuler
-                );
-            }
+        @safe:
 
-            bool empty() const {
-                return stack.empty;
-            }
+        inout(CachedTextRuler) front() inout {
+            return inout CachedTextRuler(
+                offset,
+                stack.back.startRuler
+            );
+        }
 
-            void popFront() {
+        bool empty() const {
+            return stack.empty;
+        }
 
-                assert(!empty);
-                assert(stack.back.isLeaf);
+        void popFront() {
 
-                // Remove the leaf (front)
-                stack.removeBack();
+            assert(!empty);
+            assert(stack.back.isLeaf);
 
-                // Stop if emptied the stack
-                if (stack.empty) return;
+            // Remove the leaf (front)
+            stack.removeBack();
 
-                auto parent = stack.back;
+            // Stop if emptied the stack
+            if (stack.empty) return;
 
-                // Remove the next node and descend into its right side
-                stack.removeBack();
-                stack ~= *parent.right;
-                descend();
+            auto parent = stack.back;
 
-            }
+            // Remove the next node and descend into its right side
+            stack.removeBack();
+            stack ~= parent.right;
+            descend();
 
-            /// Advance the range to the next leaf
-            private void descend() {
+        }
 
-                while (!stack.back.isLeaf) {
+        /// Advance the range to the next leaf
+        private void descend() {
 
-                    auto front = stack.back;
+            while (!stack.back.isLeaf) {
 
-                    // Enter the left side, unless we know the needle is in the right side
-                    if (needle < offset.length + front.left.interval.length) {
+                auto front = stack.back;
 
-                        stack ~= *front.left;
+                // Enter the left side, unless we know the needle is in the right side
+                if (needle < offset.length + front.left.interval.length) {
 
-                    }
+                    stack ~= front.left;
 
-                    // Enter the right side
-                    else {
+                }
 
-                        stack ~= *front.right;
-                        offset += front.left.interval;
+                // Enter the right side
+                else {
 
-                    }
+                    stack ~= front.right;
+                    offset += front.left.interval;
 
                 }
 
             }
 
         }
-        
-        auto ruler = TextRulerCacheRange(
-            DList!TextRulerCache(this),
-            index
-        );
-        ruler.descend();
-
-        return ruler;
 
     }
+    
+    auto ruler = TextRulerCacheRange(
+        DList!(TextRulerCache*)(cache),
+        index
+    );
+    ruler.descend();
 
-    @("Query on a leaf cache returns the first item")
-    unittest {
+    return ruler;
 
-        auto cache = TextRulerCache();
+}
 
-        assert(cache.query(0).equal([TextRuler.init]));
-        assert(cache.query(1).equal([TextRuler.init]));
-        assert(cache.query(10).equal([TextRuler.init]));
+@("Query on a leaf cache returns the first item")
+unittest {
 
-        auto ruler = TextRuler(Typeface.defaultTypeface, 10);
-        cache = TextRulerCache(ruler);
+    auto cache = new TextRulerCache();
 
-        assert(cache.query(0).equal([ruler]));
-        assert(cache.query(1).equal([ruler]));
-        assert(cache.query(10).equal([ruler]));
+    assert(cache.query(0).equal([TextRuler.init]));
+    assert(cache.query(1).equal([TextRuler.init]));
+    assert(cache.query(10).equal([TextRuler.init]));
 
-    }
+    auto ruler = TextRuler(Typeface.defaultTypeface, 10);
+    *cache = TextRulerCache(ruler);
+
+    assert(cache.query(0).equal([ruler]));
+    assert(cache.query(1).equal([ruler]));
+    assert(cache.query(10).equal([ruler]));
+
+}
+
+@("TextRulerCache.insert works")
+unittest {
+
+    auto cache = new TextRulerCache();
+    auto typeface = Typeface.defaultTypeface;
+
+    auto points = [
+        CachedTextRuler(TextInterval( 0, 0,  0), TextRuler(typeface, 1)),
+        CachedTextRuler(TextInterval( 5, 0,  5), TextRuler(typeface, 2)),
+        CachedTextRuler(TextInterval(10, 0, 10), TextRuler(typeface, 3)),
+        CachedTextRuler(TextInterval(15, 1,  3), TextRuler(typeface, 4)),
+        CachedTextRuler(TextInterval(20, 1,  8), TextRuler(typeface, 5)),
+    ];
+
+    // 12 character long lines, snapshots every 5 characters
+    cache.insert(points[0].tupleof);
+    cache.insert(points[1].tupleof);
+    cache.insert(points[2].tupleof);
+    cache.insert(points[3].tupleof);
+    cache.insert(points[4].tupleof);
+    cache.insert(points[5].tupleof);
+
+    assert(cache.query(0).equal(points));
 
 }
