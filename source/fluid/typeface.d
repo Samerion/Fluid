@@ -316,8 +316,19 @@ interface Typeface {
 
 }
 
+/// Word breaking implementation that does not break words at all.
+/// Params:
+///     range = Text to break into words.
+auto keepWords(Range)(Range range) {
+
+    return only(range);
+
+}
+
 /// Break words on whitespace and punctuation. Splitter characters stick to the word that precedes them, e.g.
 /// `foo!! bar.` is split as `["foo!! ", "bar."]`.
+/// Params:
+///     range = Text to break into words.
 auto breakWords(Range)(Range range) {
 
     import std.uni : isAlphaNum, isWhite;
