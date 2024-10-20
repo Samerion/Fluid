@@ -264,25 +264,18 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
     alias minSize = size;
 
-    /// Set new bounding box for the text.
+    /// Measure and set the bounding box for this text.
     void resize() {
 
-        auto style = node.pickStyle;
-        auto typeface = style.getTypeface;
-        const dpi = backend.dpi;
-        const scale = backend.hidpiScale;
-
-        style.setDPI(dpi);
-        typeface.indentWidth = cast(int) (indentWidth * scale.x);
-
-        // Update the size
-        _sizeDots = typeface.measure(value);
-        _wrap = false;
-        clearTextures();
+        resize!keepWords(Vector2(), false);
 
     }
 
     /// Set new bounding box for the text; wrap the text if it doesn't fit in boundaries.
+    /// Params:
+    ///     splitter = Function to use to split the text. Currently unsupported.
+    ///     space    = Boundaries to fit the text in.
+    ///     wrap     = Wrap text, on by default.
     void resize(alias splitter = Typeface.defaultWordChunks)(Vector2 space, bool wrap = true) {
 
         auto style = node.pickStyle;
@@ -297,7 +290,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         space.y *= scale.y;
 
         // Update the size
-        _sizeDots = style.getTypeface.measure!splitter(space, value, wrap);
+        _sizeDots = typeface.measure!splitter(space, value, wrap);
         _wrap = wrap;
         clearTextures();
 
