@@ -169,39 +169,39 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     /// function is called.
     ///
     /// Params:
-    ///     low     = Index at which the range starts, inclusive.
-    ///     oldHigh = Index at which the range used to end, exclusive.
-    ///     newHigh = Index at which the range now ends, exclusive.
-    void reload(size_t low, size_t high) {
+    ///     start   = Index at which the range starts, inclusive.
+    ///     oldEnd  = Index at which the range used to end, exclusive.
+    ///     newEnd  = Index at which the range now ends, exclusive.
+    void reload(size_t start, size_t oldEnd) {
 
-        reload(low, high, high);
+        reload(start, oldEnd, oldEnd);
 
     }
 
     /// ditto
-    void reload(size_t low, size_t oldHigh, size_t newHigh) {
+    void reload(size_t start, size_t oldEnd, size_t newEnd) {
 
-        auto result = TextInterval(_value[low .. newHigh]);
+        auto result = TextInterval(_value[start .. newEnd]);
 
         node.updateSize();
-        _cache.updateInterval(low, oldHigh, result);
+        _cache.updateInterval(start, oldEnd, result);
 
         // No update range is set, replace it
         if (_updateRangeStart == _updateRangeEnd) {
 
-            _updateRangeStart = low;
-            _updateRangeEnd   = newHigh;
+            _updateRangeStart = start;
+            _updateRangeEnd   = newEnd;
     
         }
 
         // Update boundaries of the existing update range
         else {
 
-            if (low < _updateRangeStart)
-                _updateRangeStart = low;
+            if (start < _updateRangeStart)
+                _updateRangeStart = start;
 
-            if (newHigh > _updateRangeEnd)
-                _updateRangeEnd = newHigh;
+            if (newEnd > _updateRangeEnd)
+                _updateRangeEnd = newEnd;
 
         }
         
@@ -210,13 +210,13 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     /// Replace value at a given range with a new value. This is the main, and fastest way to operate on TextInput text.
     ///
     /// Params:
-    ///     low      = Low index, inclusive; First index to delete.
-    ///     high     = High index, exclusive; First index after the newly inserted fragment.
-    ///     newValue = Value to insert.
-    void replace(size_t low, size_t high, Rope value) {
+    ///     start  = Start index, inclusive; First index to delete.
+    ///     end    = End index, exclusive; First index after the newly inserted fragment.
+    ///     value  = Value to insert.
+    void replace(size_t start, size_t end, Rope value) {
 
-        _value = _value.replace(low, high, value);
-        reload(low, high, value.length);
+        _value = _value.replace(start, end, value);
+        reload(start, end, value.length);
 
     }
 
@@ -1144,10 +1144,10 @@ private struct TextRulerCache {
 
     /// Resize a fragment of text, recalculating offsets of rulers.
     /// Params:
-    ///     low         = First index at which text changes.
-    ///     high        = Last index of text to be replaced.
-    ///     newInterval = Size of the new text. 
-    void updateInterval(size_t low, size_t high, TextInterval newHigh) {
+    ///     start  = First index at which text changes.
+    ///     oldEnd = Last index of text to be replaced.
+    ///     newEnd = Size of the new text. 
+    void updateInterval(size_t start, size_t oldEnd, TextInterval newEnd) {
 
         // TODO Not implemented
 

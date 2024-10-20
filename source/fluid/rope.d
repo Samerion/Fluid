@@ -857,16 +857,16 @@ struct Rope {
     /// Replace value between two indexes with a new one.
     ///
     /// Params:
-    ///     low   = Low index, inclusive; First index to delete.
-    ///     high  = High index, exclusive; First index after the newly inserted fragment.
+    ///     start = Start index, inclusive; First index to delete.
+    ///     end   = End index, exclusive; First index after the newly inserted fragment.
     ///     value = Value to insert.
-    Rope replace(size_t low, size_t high, Rope value) const nothrow {
+    Rope replace(size_t start, size_t end, Rope value) const nothrow {
 
-        assert(low <= high,
-            format!"Low boundary of replace slice [%s .. %s] is greater than the high boundary"(low, high)
+        assert(start <= end,
+            format!"Start of replace slice [%s .. %s] is greater than the end"(start, end)
                 .assumeWontThrow);
-        assert(high <= length,
-            format!"Replace slice [%s .. %s] exceeds Rope length %s"(low, high, length)
+        assert(end <= length,
+            format!"Replace slice [%s .. %s] exceeds Rope length %s"(start, end, length)
                 .assumeWontThrow);
 
         // Return the value as-is if the node is empty
@@ -874,8 +874,8 @@ struct Rope {
             return value;
 
         // Split the rope in both points
-        const leftSplit = split(low);
-        const rightSplit = split(high);
+        const leftSplit = split(start);
+        const rightSplit = split(end);
 
         return Rope(
             leftSplit.left,
