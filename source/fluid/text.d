@@ -353,7 +353,6 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         // Find the first beacon to update
         auto ruler = _cache.query(_updateRangeStart);
         // TODO query should return a range
-
         // TODO remove this
         return _sizeDots = typeface.measure!splitter(space, value, wrap);
 
@@ -1131,6 +1130,12 @@ struct TextInterval {
 
     }
 
+    TextInterval opOpAssign(string op : "+")(const TextInterval other) {
+
+        return this = this + other;
+
+    }
+
 }
 
 /// Cache result matching a point in text to a `TextRuler`.
@@ -1209,37 +1214,140 @@ private struct TextRulerCache {
 
     }
 
+    /// Insert a ruler into the cache.
+    /// Params:
+    ///     point = Point to place the ruler at; text interval preceding the ruler.
+    ///     ruler = Ruler to insert.
+    void insert(TextInterval point, TextRuler ruler) {
+
+        // Find a point in this cache to enter
+        foreach (item; query(point.length)) {
+
+        }
+
+    }
+
     /// Get the last `TextRuler` at the given index, or preceding it.
     /// Params:
     ///     index = Index to search for.
     /// Returns:
     ///     A `TextRuler` struct wrapper with an extra `point` field to indicate the location in text the point 
     ///     corresponds to.
-    CachedTextRuler query(size_t index) {
+    auto query(size_t index)
+    out (r) {
+        static assert(is(ElementType!(typeof(r)) : const CachedTextRuler), ElementType!(typeof(r)).stringof);
+    }
+    do {
 
-        return query(index, TextInterval.init);
+        import std.container.dlist : DList;
+
+        /// This range iterates the cache tree in order while skipping all but the last element that precedes the index. 
+        /// It builds  a stack, the last item of which points to the current element of the range. Since the cache is 
+        /// a binary tree in which each node either has one or two children, the stack can only have three possible 
+        /// states:
+        ///
+        /// * It is empty, and so is this range
+        /// * It points to a leaf (which is a valid state for `front`)
+        /// * The last item has two children, so it needs to descend.
+        ///
+        /// During descend, left nodes are chosen, unless the first item — the needle — is on the right side. When 
+        /// ascending (`popFront`), right nodes are chosen as left nodes have already been tested. To make sure the 
+        /// right side is not visited again, nodes are not pushed to the stack when their right side is. For example,
+        /// when iterating through a node `A` which has children `B` and `C`, the stack is initialized to `[A]`. 
+        /// Descend is first done into `B`, resulting in `[A, B]`. First `popFront` removes `B` and descends the right
+        /// side of `A` replacing it with `C`. The stack is `[C]`.
+        static struct TextRulerCacheRange {
+
+            DList!(TextRulerCache) stack;
+            size_t needle;
+            TextInterval offset;
+
+            @safe:
+
+            inout(CachedTextRuler) front() inout {
+                return inout CachedTextRuler(
+                    offset,
+                    stack.back.startRuler
+                );
+            }
+
+            bool empty() const {
+                return stack.empty;
+            }
+
+            void popFront() {
+
+                assert(!empty);
+                assert(stack.back.isLeaf);
+
+                // Remove the leaf (front)
+                stack.removeBack();
+
+                // Stop if emptied the stack
+                if (stack.empty) return;
+
+                auto parent = stack.back;
+
+                // Remove the next node and descend into its right side
+                stack.removeBack();
+                stack ~= *parent.right;
+                descend();
+
+            }
+
+            /// Advance the range to the next leaf
+            private void descend() {
+
+                while (!stack.back.isLeaf) {
+
+                    auto front = stack.back;
+
+                    // Enter the left side, unless we know the needle is in the right side
+                    if (needle < offset.length + front.left.interval.length) {
+
+                        stack ~= *front.left;
+
+                    }
+
+                    // Enter the right side
+                    else {
+
+                        stack ~= *front.right;
+                        offset += front.left.interval;
+
+                    }
+
+                }
+
+            }
+
+        }
+        
+        auto ruler = TextRulerCacheRange(
+            DList!TextRulerCache(this),
+            index
+        );
+        ruler.descend();
+
+        return ruler;
 
     }
 
-    private CachedTextRuler query(size_t index, TextInterval offset) {
+    @("Query on a leaf cache returns the first item")
+    unittest {
 
-        // This is a leaf node, return the only ruler present
-        if (isLeaf) return CachedTextRuler(offset, startRuler);
+        auto cache = TextRulerCache();
 
-        // The subject is present on the left side
-        if (index < offset.length + left.interval.length) {
+        assert(cache.query(0).equal([TextRuler.init]));
+        assert(cache.query(1).equal([TextRuler.init]));
+        assert(cache.query(10).equal([TextRuler.init]));
 
-            return left.query(index, offset);
+        auto ruler = TextRuler(Typeface.defaultTypeface, 10);
+        cache = TextRulerCache(ruler);
 
-        }
-
-        // The subject is present on the right side
-        // Apply the left side's offset
-        else {
-
-            return right.query(index, offset + left.interval);
-
-        }
+        assert(cache.query(0).equal([ruler]));
+        assert(cache.query(1).equal([ruler]));
+        assert(cache.query(10).equal([ruler]));
 
     }
 

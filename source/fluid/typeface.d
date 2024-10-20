@@ -442,8 +442,13 @@ struct TextRuler {
 
     bool opEquals(const TextRuler other) const {
 
-        return typeface      is other.typeface
-            && lineWidth     == other.lineWidth
+        import std.math : isNaN;
+
+        const sameLineWidth = lineWidth == other.lineWidth
+            || (isNaN(lineWidth) && isNaN(other.lineWidth));
+
+        return sameLineWidth
+            && typeface      is other.typeface
             && penPosition   == other.penPosition
             && textSize      == other.textSize
             && wordLineIndex == other.wordLineIndex;
