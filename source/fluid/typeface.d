@@ -420,7 +420,7 @@ struct TextRuler {
     /// Typeface to use for the text.
     Typeface typeface;
 
-    /// Maximum width for a single line. If `NaN`, no word breaking is performed.
+    /// Maximum width for a single line in display-specific dots. If `NaN`, no word breaking is performed.
     float lineWidth;
 
     /// Current pen position.
