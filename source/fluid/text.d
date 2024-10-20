@@ -1295,10 +1295,24 @@ private struct TextRulerCache {
         auto cache = range.stack.back;
         auto foundPoint = range.front.point;
 
+        static assert(isPointer!(typeof(cache)));
+
         // Found an exact match, replace it
         if (point == foundPoint) {
 
             cache.startRuler = ruler;
+
+            // Update startRuler in all ancestors
+            foreach (ancestor; range.stack[].retro.dropOne) {
+                static assert(isPointer!(typeof(ancestor)));
+
+                // End as soon as an unaffected ancestor is reached
+                if (ancestor.startRuler is ancestor.left.startRuler) break;
+                
+                ancestor.startRuler = ancestor.left.startRuler;
+
+            }
+
             return;
 
         }
@@ -1308,16 +1322,19 @@ private struct TextRulerCache {
 
             assert(cache.interval.length != 0, "Cache data invalid, failed to detect append");
 
+            const oldInterval = cache.interval;
+
             // We're inserting in between two points; `leftInterval` is distance from the left to our point, 
             // `rightInterval` is the distance from our point to the next point. Total distance is `cache.interval`.
             //
             //   ~~~~~~~~~~~~ cache.interval ~~~~~~~~~~~~
-            //   |  leftInterval     |  rightInterval   |
-            //   ^ left.startRuler   ^ right.startRuler    (relative)
+            //   |  leftInterval     |  rightInterval   |  (relative)
+            //   ^ left.startRuler   ^ right.startRuler
             //   ^ foundPoint        ^ point               (absolute)
             const leftInterval = point.dropHead(foundPoint);
             const rightInterval = cache.interval.dropHead(leftInterval);
 
+            assert(foundPoint   + leftInterval == point);
             assert(leftInterval + rightInterval == cache.interval);
 
             auto left = new TextRulerCache(cache.startRuler, leftInterval);
@@ -1325,7 +1342,9 @@ private struct TextRulerCache {
 
             *range.stack.back = TextRulerCache(left, right);
 
-            assert(range.stack.back.interval == cache.interval);
+            assert(range.stack.back.startRuler == left.startRuler);
+            assert(range.stack.back.interval == oldInterval);
+            assert(range.stack.back.interval == leftInterval + rightInterval);
 
         }
 
@@ -1419,6 +1438,8 @@ do {
             assert(!empty);
             assert(stack.back.isLeaf);
 
+            offset += stack.back.interval;
+
             // Remove the leaf (front)
             stack.removeBack();
 
@@ -1429,7 +1450,6 @@ do {
 
             // Remove the next node and descend into its right side
             stack.removeBack();
-            offset += parent.left.interval;
             stack ~= parent.right;
             descend();
 
@@ -1452,6 +1472,7 @@ do {
                 // Enter the right side
                 else {
 
+                    stack.removeBack();
                     stack ~= front.right;
                     offset += front.left.interval;
 
@@ -1514,6 +1535,29 @@ unittest {
     cache.insert(points[4].tupleof);
     cache.insert(points[5].tupleof);
 
+    assert(cache.query( 0).equal(points));
+    assert(cache.query( 1).equal(points));
+    
+    assert(cache.query( 7).equal(points[1..$]));
+    assert(cache.query(30).equal(points[5..$]));
+    assert(cache.query(18).equal(points[3..$]));
+    assert(cache.query(15).equal(points[3..$]));
+
+    auto newPoints = [
+        CachedTextRuler(TextInterval( 0, 0,  0), TextRuler(typeface, 7)),
+        CachedTextRuler(TextInterval(12, 1,  0), TextRuler(typeface, 8)),
+        CachedTextRuler(TextInterval(24, 2,  0), TextRuler(typeface, 9)),
+    ];
+
+    points = points[1..$];
+    points ~= newPoints;
+    sort!"a.point.length < b.point.length"(points);
+
+    // Insert a few more snapshots
+    cache.insert(newPoints[2].tupleof);
+    cache.insert(newPoints[0].tupleof);
+    cache.insert(newPoints[1].tupleof);
+    
     assert(cache.query(0).equal(points));
 
 }
