@@ -393,16 +393,16 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     /// Replace value at a given range with a new value. This is the main, and fastest way to operate on TextInput text.
     ///
-    /// There are two ways to use this function: `replace(low, high, "value")` and `replace[low..high] = value`. 
-    /// In a future update, it will be possible to use `value[low..high] = value` directly.
+    /// There are two ways to use this function: `replace(start, end, "value")` and `replace[start..end] = value`. 
+    /// In a future update, it will be possible to use `value[start..end] = value` directly.
     /// 
     /// Using this function will automatically update caretIndex to match.
     ///
     /// Params:
-    ///     low      = Low index, inclusive; First index to delete.
-    ///     high     = High index, exclusive; First index after the newly inserted fragment.
+    ///     start    = Low index, inclusive; First index to delete.
+    ///     end      = High index, exclusive; First index after the newly inserted fragment.
     ///     newValue = Value to insert.
-    void replace(size_t low, size_t high, Rope newValue) {
+    void replace(size_t start, size_t end, Rope newValue) {
 
         auto withoutLineFeeds = Typeface.lineSplitter(newValue).joiner;
 
@@ -413,17 +413,17 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         }
 
-        const oldValue = _value[low..high];
+        const oldValue = _value[start..end];
 
-        _value = _value.replace(low, high, newValue);
+        _value = _value.replace(start, end, newValue);
 
         // Caret index is affected
-        if (caretIndex > low) {
+        if (caretIndex > start) {
 
-            if (caretIndex <= high)
-                caretIndex = low + newValue.length;
+            if (caretIndex <= end)
+                caretIndex = start + newValue.length;
             else 
-                caretIndex = caretIndex + newValue.length - high; 
+                caretIndex = caretIndex + newValue.length - end; 
 
             // TODO optimize this call
             updateCaretPosition();
@@ -435,7 +435,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         updateSize();
 
         // Fire hook
-        onReplace(low, oldValue, newValue);
+        onReplace(start, oldValue, newValue);
 
     }
     
