@@ -296,7 +296,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         space.y *= scale.y;
 
         /// Minimum pixel change that counts
-        _sizeDots = measure(space, wrap);
+        _sizeDots = measure!splitter(space, wrap);
         _wrap = wrap;
         clearTextures();
 
@@ -326,7 +326,9 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     /// Clear the cache.
     private void clearCache(Typeface typeface, float lineWidth) {
 
-        _cache = TextRulerCache(typeface, lineWidth);
+        auto ruler = TextRuler(typeface, lineWidth);
+        ruler.startLine();
+        _cache = TextRulerCache(ruler);
         _updateRangeStart = 0;
         _updateRangeEnd = value.length;
 
@@ -334,10 +336,11 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
     /// Measure text size in the update region.
     /// Params:
-    ///     space = Limit for the space of the region the text shouldn't cross, in dots.
-    ///     wrap  = If true, text should be limited by a bounding box.
+    ///     splitter = Function to use to split words.
+    ///     space   = Limit for the space of the region the text shouldn't cross, in dots.
+    ///     wrap    = If true, text should be limited by a bounding box.
     /// Returns: Bounding box of this text in dots.
-    private Vector2 measure(Vector2 space, bool wrap) {
+    private Vector2 measure(alias splitter = Typeface.defaultWordChunks)(Vector2 space, bool wrap) {
 
         auto style = node.pickStyle;
         auto typeface = style.getTypeface;
@@ -351,8 +354,56 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         }
 
         // Find the first beacon to update
-        scope ruler = query(&_cache, _updateRangeStart);
-        // TODO query should return a range
+        scope rulers = query(&_cache, _updateRangeStart);
+        auto ruler = rulers.front;
+        bool started;
+        rulers.popFront;
+
+        const start = ruler.point.length;
+        size_t lastCheckpoint = start;
+
+        enum checkpointDistance = 128;
+        static assert(checkpointDistance > CachedTextRuler.sizeof);
+
+        // Split on lines
+        foreach (index, line; Typeface.lineSplitterIndex(value[start .. $])) {
+
+            if (started) {
+                ruler.startLine();
+                ruler.point.line++;
+                ruler.point.column = 0;
+            }
+            else started = true;
+
+            // Split on words
+            foreach (word, penPosition; Typeface.eachWord!splitter(ruler, line, wrap)) {
+
+                index += word.length;
+
+                // Keep the ruler's location in sync
+                ruler.point.length = start + index;
+                ruler.point.column += word.length;
+
+                // Passed an older checkpoint
+                if (!rulers.empty && index >= rulers.front.point.length) {
+
+                    // TODO delete it
+
+                }
+
+                // Regularly create a checkpoint in the cache
+                if (index >= lastCheckpoint + checkpointDistance) {
+
+                    lastCheckpoint = index;
+                    _cache.insert(ruler.point, ruler);
+
+                }
+
+            }
+
+        }
+
+                
         // TODO remove this
         return _sizeDots = typeface.measure!splitter(space, value, wrap);
 
@@ -1300,19 +1351,7 @@ private struct TextRulerCache {
         // Found an exact match, replace it
         if (point == foundPoint) {
 
-            cache.startRuler = ruler;
-
-            // Update startRuler in all ancestors
-            foreach (ancestor; range.stack[].retro.dropOne) {
-                static assert(isPointer!(typeof(ancestor)));
-
-                // End as soon as an unaffected ancestor is reached
-                if (ancestor.startRuler is ancestor.left.startRuler) break;
-                
-                ancestor.startRuler = ancestor.left.startRuler;
-
-            }
-
+            range.front = ruler;
             return;
 
         }
@@ -1427,6 +1466,26 @@ do {
                 offset,
                 stack.back.startRuler
             );
+        }
+
+        /// Assign a new value to the front
+        ref TextRuler front(TextRuler ruler) {
+
+            stack.back.startRuler = ruler;
+
+            // Update startRuler in all ancestors
+            foreach (ancestor; stack[].retro.dropOne) {
+                static assert(isPointer!(typeof(ancestor)));
+
+                // End as soon as an unaffected ancestor is reached
+                if (ancestor.startRuler is ancestor.left.startRuler) break;
+                
+                ancestor.startRuler = ancestor.left.startRuler;
+
+            }
+
+            return stack.back.startRuler;
+
         }
 
         bool empty() const {
@@ -1559,5 +1618,64 @@ unittest {
     cache.insert(newPoints[1].tupleof);
     
     assert(cache.query(0).equal(points));
+
+}
+
+@("Text automatically creates TextRulerCache entries")
+unittest {
+
+    import fluid.label;
+
+    auto root = label(nullTheme, "Lorem ipsum dolor sit amet, consectetur " 
+        ~ "adipiscing elit, sed do eiusmod tempor " 
+        ~ "incididunt ut labore et dolore magna " 
+        ~ "aliqua. Ut enim ad minim veniam, quis " 
+        ~ "nostrud exercitation ullamco laboris " 
+        ~ "nisi ut aliquip ex ea commodo consequat.\n" 
+        ~ "\n" 
+        ~ "Duis aute irure dolor in reprehenderit " 
+        ~ "in voluptate velit esse cillum dolore " 
+        ~ "eu fugiat nulla pariatur. Excepteur " 
+        ~ "sint occaecat cupidatat non proident, " 
+        ~ "sunt in culpa qui officia deserunt " 
+        ~ "mollit anim id est laborum.\n");
+
+    assert(root.text._updateRangeStart == 0);
+    assert(root.text._updateRangeEnd == root.text.length);
+
+    root.draw();
+
+    auto typeface = root.style.getTypeface;
+    auto space = root.io.windowSize;
+
+    assert(root.text[232] == '\n');
+    assert(query(&root.text._cache, 0).map!"a.point".equal([
+        TextInterval(  0, 0,   0),
+        TextInterval(132, 0, 132),  // Past 128 characters, + "nim ", next checkpoint 132+128
+        TextInterval(272, 2,  39),  // Past 260 characters, + "prehenderit ", line begins at 233
+        TextInterval(402, 2, 169),  // Past 400 characters, + "i "
+    ]));
+
+    version (none) {
+        // Why isn't this equal?
+        auto ruler = TextRuler(typeface, space.x);
+        typeface.measure(ruler, "");
+        assert(query(&root.text._cache,   0).front == ruler);
+    }
+    {
+        auto ruler = TextRuler(typeface, space.x);
+        typeface.measure(ruler, root.text[0..132]);
+        assert(query(&root.text._cache, 132).front == ruler);
+    }
+    {
+        auto ruler = TextRuler(typeface, space.x);
+        typeface.measure(ruler, root.text[0..272]);
+        assert(query(&root.text._cache, 272).front == ruler);
+    }
+    {
+        auto ruler = TextRuler(typeface, space.x);
+        typeface.measure(ruler, root.text[0..402]);
+        assert(query(&root.text._cache, 402).front == ruler);
+    }
 
 }
