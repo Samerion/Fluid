@@ -1282,6 +1282,14 @@ private struct TextRulerCache {
     ///     ruler = Ruler to insert.
     void insert(TextInterval point, TextRuler ruler) {
 
+        // Detect appending
+        if (point.length > interval.length) {
+
+            append(point, ruler);
+            return;
+
+        }
+
         // Find a point in this cache to enter
         auto range = query(&this, point.length);
         auto cache = range.stack.back;
@@ -1295,24 +1303,10 @@ private struct TextRulerCache {
 
         }
 
-        // Insert the ruler after the point we found
-        // Appending — there is no point afterwards
-        // TODO Appending is a whole separate case as it changes intervals. It needs to update all ancestors.
-        else if (cache.interval.length == 0) {
-
-            const leftInterval = point.dropHead(foundPoint);
-
-            auto left = new TextRulerCache(cache.startRuler, leftInterval);
-            auto right = new TextRulerCache(ruler, TextInterval.init);
-
-            *range.stack.back = TextRulerCache(left, right);
-
-            assert(range.stack.back.interval == cache.interval);
-
-        }
-
         // Inserting between two points
         else {
+
+            assert(cache.interval.length != 0, "Cache data invalid, failed to detect append");
 
             // We're inserting in between two points; `leftInterval` is distance from the left to our point, 
             // `rightInterval` is the distance from our point to the next point. Total distance is `cache.interval`.
@@ -1334,6 +1328,38 @@ private struct TextRulerCache {
             assert(range.stack.back.interval == cache.interval);
 
         }
+
+    }
+
+    /// Append a ruler to the cache.
+    /// Params:
+    ///     point = Point to place the ruler at; text interval preceding the ruler. This must point beyond interval
+    ///         covered by the cache.
+    ///     ruler = Ruler to insert.
+    private void append(TextInterval point, TextRuler ruler)
+    in (point.length > interval.length)
+    do {
+
+        scope cache = &this;
+        auto relativePoint = point;
+
+        // Descend
+        while (!cache.isLeaf) {
+
+            // Update interval
+            cache.interval = relativePoint;
+
+            // Descend towards the right side
+            relativePoint = relativePoint.dropHead(cache.left.interval);
+            cache = cache.right;
+
+        }
+
+        // Insert the node
+        auto left  = new TextRulerCache(cache.startRuler, relativePoint);
+        auto right = new TextRulerCache(ruler, TextInterval.init);
+
+        *cache = TextRulerCache(left, right);        
 
     }
 
@@ -1403,6 +1429,7 @@ do {
 
             // Remove the next node and descend into its right side
             stack.removeBack();
+            offset += parent.left.interval;
             stack ~= parent.right;
             descend();
 
@@ -1476,6 +1503,7 @@ unittest {
         CachedTextRuler(TextInterval(10, 0, 10), TextRuler(typeface, 3)),
         CachedTextRuler(TextInterval(15, 1,  3), TextRuler(typeface, 4)),
         CachedTextRuler(TextInterval(20, 1,  8), TextRuler(typeface, 5)),
+        CachedTextRuler(TextInterval(25, 2,  1), TextRuler(typeface, 6)),
     ];
 
     // 12 character long lines, snapshots every 5 characters
