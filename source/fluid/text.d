@@ -59,6 +59,12 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
     private {
 
+        /// Last used DPI.
+        Vector2 _dpi;
+
+        /// Last used font size.
+        float _fontSize;
+
         /// Cache of all measured text segments.
         TextRulerCache _cache;
 
@@ -289,10 +295,67 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         space.x *= scale.x;
         space.y *= scale.y;
 
-        // Update the size
-        _sizeDots = typeface.measure!splitter(space, value, wrap);
+        /// Minimum pixel change that counts
+        _sizeDots = measure(space, wrap);
         _wrap = wrap;
         clearTextures();
+
+    }
+
+    /// Test for changes to text properties: typeface, DPI, font size, box width and wrapping. 
+    /// Returns: True if the cache should be purged. 
+    private bool shouldCacheReset(Vector2 space, bool wrap) {
+
+        auto style = node.pickStyle;
+        auto typeface = style.getTypeface;
+
+        const dpi = backend.dpi;
+        const epsilon = 96 / dpi / 2;
+        const firstRuler = _cache.startRuler;
+        const widthChanged = wrap && abs(space.x - firstRuler.lineWidth) < epsilon.x;
+
+        return widthChanged
+            || typeface !is firstRuler.typeface
+            || abs(dpi.x - _dpi.x) < epsilon.x
+            || abs(dpi.y - _dpi.y) < epsilon.y
+            || abs(style.fontSize - _fontSize) < epsilon.y 
+            || wrap != _wrap;
+
+    }
+
+    /// Clear the cache.
+    private void clearCache(Typeface typeface, float lineWidth) {
+
+        _cache = TextRulerCache(typeface, lineWidth);
+        _updateRangeStart = 0;
+        _updateRangeEnd = value.length;
+
+    }
+
+    /// Measure text size in the update region.
+    /// Params:
+    ///     space = Limit for the space of the region the text shouldn't cross, in dots.
+    ///     wrap  = If true, text should be limited by a bounding box.
+    /// Returns: Bounding box of this text in dots.
+    private Vector2 measure(Vector2 space, bool wrap) {
+
+        auto style = node.pickStyle;
+        auto typeface = style.getTypeface;
+
+        // Unset space if wrapping is disabled
+        if (!wrap) space = Vector2(float.nan, float.nan);
+
+        // Reset the cache if text properties changed
+        if (shouldCacheReset(space, wrap)) {
+            clearCache(typeface, space.x);
+        }
+
+        // Find the first beacon to update
+        auto ruler = _cache.query(_updateRangeStart);
+        // TODO query should return a range
+
+        // TODO remove this
+        return _sizeDots = typeface.measure!splitter(space, value, wrap);
 
     }
 
@@ -1071,7 +1134,7 @@ struct TextInterval {
 }
 
 /// Cache result matching a point in text to a `TextRuler`.
-struct CachedTextRuler {
+private struct CachedTextRuler {
 
     /// Point (interval from the start of the text) at which the measurement was made.
     TextInterval point;
