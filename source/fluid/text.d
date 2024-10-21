@@ -78,7 +78,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         bool _wrap;
 
         /// Start and end of the update range; area of the text that was updated since the last resize and has to be
-        /// measured again.
+        /// measured again. Both are inclusive.
         size_t _updateRangeStart, _updateRangeEnd;
 
     }
@@ -188,6 +188,10 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         const newEnd = start + newInterval;
 
         node.updateSize();
+
+        // Make sure each of the previously added TextRuler cache checkpoints point to the same characters, still.
+        // It is likely some of their positions have stayed the same, at least partially, which can save us a lot of
+        // time if we reuse them.
         _cache.updateInterval(start, oldInterval, newInterval);
 
         // No update range is set, replace it
@@ -363,6 +367,13 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
     }
 
+    /// Returns: Number of pixels in both directions that may make a notable visual difference.
+    private Vector2 epsilon() const {
+
+        return 96 / 4 / backend.dpi;
+
+    }
+
     /// Test for changes to text properties: typeface, DPI, font size, box width and wrapping. 
     /// Returns: True if the cache should be purged. 
     private bool shouldCacheReset(Vector2 space, bool wrap) {
@@ -371,15 +382,14 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         auto typeface = style.getTypeface;
 
         const dpi = backend.dpi;
-        const epsilon = 96 / dpi / 2;
         const firstRuler = _cache.startRuler;
-        const widthChanged = wrap && abs(space.x - firstRuler.lineWidth) < epsilon.x;
+        const widthChanged = wrap && abs(space.x - firstRuler.lineWidth) >= epsilon.x;
 
         return widthChanged
             || typeface !is firstRuler.typeface
-            || abs(dpi.x - _dpi.x) < epsilon.x
-            || abs(dpi.y - _dpi.y) < epsilon.y
-            || abs(style.fontSize - _fontSize) < epsilon.y 
+            || abs(dpi.x - _dpi.x) >= epsilon.x
+            || abs(dpi.y - _dpi.y) >= epsilon.y
+            || abs(style.fontSize - _fontSize) >= epsilon.y 
             || wrap != _wrap;
 
     }
@@ -395,7 +405,20 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
     }
 
-    /// Measure text size in the update region and update `_sizeDots` to the bounding box of this text.
+    /// Measure text size in the update region and update `_sizeDots` to the bounding box of this text. Size is 
+    /// expressed in terms of screen dots.
+    /// 
+    /// The update region is a single continuous area in the `value` that has been written since the last `measure` 
+    /// call. Any changed piece of text will be placed in the update region to be picked up and measured by this 
+    /// function. Because this function cannot distinguish between modifications made in multiple different spots, 
+    /// unmodified text between two edited spots of text will be included in the region as well. This function
+    /// resets the update region once it is finished.
+    ///
+    /// While measuring text in the update region, "checkpoints" with measurement data are created and written to 
+    /// `_cache`. This makes it possible to find the position of a character in the text afterwards without having to 
+    /// remeasure the entire text. Furthermore, it's used to make subsequent measurements faster as area before the 
+    /// update region can be skipped, and lines after can be just offset without measuring them again.
+    /// 
     /// Params:
     ///     splitter = Function to use to split words.
     ///     space   = Limit for the space of the region the text shouldn't cross, in dots.
@@ -404,6 +427,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
         auto style = node.pickStyle;
         auto typeface = style.getTypeface;
+        const epsilon = this.epsilon;
 
         // Unset space if wrapping is disabled
         if (!wrap) space = Vector2(float.nan, float.nan);
@@ -417,6 +441,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         scope rulers = query(&_cache, _updateRangeStart);
         auto ruler = rulers.front;
         bool started;
+        float yOffset = 0;
         rulers.popFront;
 
         const start = ruler.point.length;
@@ -426,6 +451,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         static assert(checkpointDistance > CachedTextRuler.sizeof);
 
         // Split on lines
+        // TODO Could this end up breaking a word?
         foreach (index, line; Typeface.lineSplitterIndex(value[start .. $])) {
 
             if (started) {
@@ -444,18 +470,45 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
                 ruler.point.length = start + index;
                 ruler.point.column += word.length;
 
-                // Delete any outdated checkpoint in the cache
-                while (!rulers.empty && index >= rulers.front.point.length) {
+                // If we're in the update range (iterating through newly added text), we need to periodically write 
+                // rulers to cache 
+                if (index <= _updateRangeEnd) {
 
-                    rulers.removeFront();
+                    // Delete any outdated checkpoint in the cache
+                    // TODO This might not even be necessary — cache should have already purged these points
+                    while (!rulers.empty && index >= rulers.front.point.length) {
+
+                        rulers.removeFront();
+
+                    }
+
+                    // Regularly create a checkpoint in the cache
+                    if (index >= lastCheckpoint + checkpointDistance) {
+
+                        lastCheckpoint = index;
+                        _cache.insert(ruler.point, ruler);
+
+                    }
 
                 }
 
-                // Regularly create a checkpoint in the cache
-                if (index >= lastCheckpoint + checkpointDistance) {
+                // We're measuring text that should already have checkpoints written to cache.
+                // We just need to compare with existing checkpoints and update them if necessary.
+                else if (!rulers.empty) {
 
-                    lastCheckpoint = index;
-                    _cache.insert(ruler.point, ruler);
+                    // X position is different, override the ruler and continue measurements
+                    if (abs(rulers.front.penPosition.x - ruler.penPosition.x) >= epsilon.x) {
+                        rulers.front = ruler;
+                        continue;
+                    }
+
+                    // Only Y position is different, stop here and save the offset 
+                    else if (abs(rulers.front.penPosition.y - ruler.penPosition.y) >= epsilon.y) {
+                        yOffset = ruler.penPosition.y - rulers.front.penPosition.y;
+                        rulers.front = ruler;
+                    }
+
+                    break;
 
                 }
 
@@ -463,7 +516,72 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
         }
 
+        // The remaining lines have not changes, so we can just apply the same offset we did on the last line
+        if (yOffset)
+        for (; !rulers.empty; rulers.popFront) {
+            ruler = rulers.front;
+            ruler.penPosition.y += yOffset;
+            rulers.front = rulers.front;
+        }
+
+        // Now that the cache is built, we can find out what the position of the last character is so we can get 
+        // the bounding box
+        ruler = requireRulerAt(value.length);
         _sizeDots = ruler.textSize;
+
+    }
+
+    /// `rulerAt` gets measurement data for the given text position. This data can be used to map characters to their 
+    /// screen position or find their size. 
+    ///
+    /// `requireRulerAt` will do the same, but it will also cache the result value for faster subsequent lookup. The
+    /// regular `rulerAt` overload is recommended for most cases.
+    ///
+    /// Returns: 
+    ///     Text ruler with text measurement data from the start of the text to the given character, not including 
+    ///     queried character.
+    /// Params:
+    ///     index = Index of the requested character.
+    CachedTextRuler rulerAt(size_t index) {
+
+        // BUG  This does not consider word breaking
+        // TODO Custom text breaking
+
+        alias splitter = Typeface.defaultWordChunks;
+
+        auto ruler = query(&_cache, index).front;
+        bool started;
+
+        const start = ruler.point.length;
+        const end   = index;
+
+        // Split on lines
+        foreach (line; Typeface.lineSplitter!(Yes.keepTerminator)(value[start .. end])) {
+
+            if (started) {
+                ruler.startLine();
+                ruler.point.line++;
+                ruler.point.column = 0;
+            }
+            else started = true;
+
+            ruler.point.length += line.length;
+            ruler.point.column += line.length;
+
+            // Split on words, but don't do anything
+            foreach (word, penPosition; Typeface.eachWord!splitter(ruler, line, _wrap)) { }
+
+        }
+
+        return ruler;
+
+    }
+
+    CachedTextRuler requireRulerAt(size_t index) {
+
+        auto ruler = rulerAt(index);
+        _cache.insert(ruler.point, ruler);
+        return ruler;
 
     }
 
@@ -1386,6 +1504,19 @@ private struct TextRulerCache {
 
         scope cache = &this;
 
+        // Delete all entries in the range
+        for (auto range = query(&this, absoluteStart.length); !range.empty; range.popFront) {
+
+            // Skip the first entry, it is not affected
+            if (range.front.point.length <= absoluteStart.length) continue;
+
+            // Skip entires after the range
+            if (range.front.point.length > absoluteEnd.length) break;
+
+            range.removeFront;
+
+        }
+
         // Find a relevant node, update intervals of all ancestors and itself
         if (start.length + oldInterval.length < cache.interval.length)
         while (true) {
@@ -1393,6 +1524,8 @@ private struct TextRulerCache {
             const oldEnd = start + oldInterval;
             const newEnd = start + newInterval;
 
+            import std.stdio;
+            debug writefln!"%s: %s -> %s: %s"(start, oldEnd, newEnd, cache.interval);
             cache.interval = newEnd + cache.interval.dropHead(oldEnd);
 
             // Found the deepest relevant node
@@ -1408,19 +1541,6 @@ private struct TextRulerCache {
                 start = start.dropHead(cache.left.interval);
                 cache = cache.right;
             }
-
-        }
-
-        // Delete all entries in the range
-        for (auto range = query(&this, absoluteStart.length); !range.empty; range.popFront) {
-
-            // Skip the first entry, it is not affected
-            if (range.front.point.length <= absoluteStart.length) continue;
-
-            // Skip entires after the range
-            if (range.front.point.length > absoluteEnd.length) break;
-
-            range.removeFront;
 
         }
 
@@ -1625,7 +1745,7 @@ do {
             assert(stack.back.isLeaf);
 
             // Can't remove the root
-            assert(offset.length == 0, "Cannot remove the first item in the cache.");
+            assert(offset.length != 0, "Cannot remove the first item in the cache.");
 
             const interval = parent.interval;
 
@@ -1647,7 +1767,7 @@ do {
                 
                 foreach (ancestor; stack[].retro.dropOne) {
 
-                    // Move the offset fromt the removed node to the last node before
+                    // Move the offset from the removed node to the last node before
                     if (ancestor.startRuler is ancestor.left.startRuler) {
                         ancestor.left.interval += offset;
                         return;
@@ -1807,6 +1927,7 @@ unittest {
         TextInterval(132, 0, 132),  // Past 128 characters, + "nim ", next checkpoint 132+128
         TextInterval(272, 2,  39),  // Past 260 characters, + "prehenderit ", line begins at 233
         TextInterval(402, 2, 169),  // Past 400 characters, + "i "
+        TextInterval(root.text.length, 3, 0),
     ]));
 
     version (none) {
@@ -1860,6 +1981,7 @@ unittest {
         TextInterval(132, 0, 132),
         TextInterval(272, 2,  39),
         TextInterval(402, 2, 169),
+        TextInterval(root.text.length, 3, 0),
     ]));
 
     // Replace enough text to destroy two intervals
@@ -1872,7 +1994,8 @@ unittest {
     assert(query(&root.text._cache, 0).map!"a.point".equal([
         TextInterval(  0, 0,   0),
         TextInterval(285, 0, 285),  // 132 and 272 are gone
-        TextInterval(419, 0, 419),
+        TextInterval(419, 0, 419),  // Line breaks were used up
+        TextInterval(root.text.length, 1, 0),
     ]));
 
     assert(root.text[284..290] == " velit");
