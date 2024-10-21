@@ -1500,15 +1500,18 @@ private struct TextRulerCache {
     void updateInterval(TextInterval start, TextInterval oldInterval, TextInterval newInterval) {
 
         const absoluteStart = start;
-        const absoluteEnd = start + newInterval;
+        const absoluteEnd = start + oldInterval;
 
         scope cache = &this;
 
         // Delete all entries in the range
-        for (auto range = query(&this, absoluteStart.length); !range.empty; range.popFront) {
+        for (auto range = query(&this, absoluteStart.length); !range.empty;) {
 
             // Skip the first entry, it is not affected
-            if (range.front.point.length <= absoluteStart.length) continue;
+            if (range.front.point.length <= absoluteStart.length) {
+                range.popFront;
+                continue;
+            }
 
             // Skip entires after the range
             if (range.front.point.length > absoluteEnd.length) break;
@@ -1524,8 +1527,6 @@ private struct TextRulerCache {
             const oldEnd = start + oldInterval;
             const newEnd = start + newInterval;
 
-            import std.stdio;
-            debug writefln!"%s: %s -> %s: %s"(start, oldEnd, newEnd, cache.interval);
             cache.interval = newEnd + cache.interval.dropHead(oldEnd);
 
             // Found the deepest relevant node
@@ -1564,8 +1565,6 @@ private struct TextRulerCache {
         auto range = query(&this, point.length);
         auto cache = range.stack.back;
         auto foundPoint = range.front.point;
-
-        static assert(isPointer!(typeof(cache)));
 
         // Found an exact match, replace it
         if (point == foundPoint) {
@@ -1657,6 +1656,17 @@ do {
 
     import std.container.dlist : DList;
 
+    static struct CacheStackFrame {
+
+        TextRulerCache* cache;
+
+        /// True if this is a parent node, and it has descended into the right side.
+        bool isRight;
+
+        alias cache this;
+
+    }
+
     /// This range iterates the cache tree in order while skipping all but the last element that precedes the index. 
     /// It builds  a stack, the last item of which points to the current element of the range. Since the cache is 
     /// a binary tree in which each node either has one or two children, the stack can only have three possible 
@@ -1674,8 +1684,7 @@ do {
     /// side of `A` replacing it with `C`. The stack is `[C]`.
     static struct TextRulerCacheRange {
 
-        DList!(TextRulerCache*) stack;
-        TextRulerCache* parent;
+        DList!CacheStackFrame stack;
         size_t needle;
         TextInterval offset;
 
@@ -1695,7 +1704,7 @@ do {
 
             // Update startRuler in all ancestors
             foreach (ancestor; stack[].retro.dropOne) {
-                static assert(isPointer!(typeof(ancestor)));
+                static assert(isPointer!(typeof(ancestor.cache)));
 
                 // End as soon as an unaffected ancestor is reached
                 if (ancestor.startRuler is ancestor.left.startRuler) break;
@@ -1722,14 +1731,18 @@ do {
             // Remove the leaf (front)
             stack.removeBack();
 
-            // Stop if emptied the stack
+            // Find any parent that has right right side unvisited
+            // `isRight` means the parents has already descended into its right side
+            while (!stack.empty && stack.back.isRight) {
+                stack.removeBack();
+            }
             if (stack.empty) return;
 
             auto ancestor = stack.back;
 
             // Remove the next node and descend into its right side
-            stack.removeBack();
-            stack ~= ancestor.right;
+            stack.back.isRight = true;
+            stack ~= CacheStackFrame(ancestor.right);
             descend();
 
         }
@@ -1747,40 +1760,69 @@ do {
             // Can't remove the root
             assert(offset.length != 0, "Cannot remove the first item in the cache.");
 
-            const interval = parent.interval;
+            const front = stack.back;
+            
+            // Ascend back to the parent
+            stack.removeBack();
+            auto parent = stack.back;
 
             // The node we're removing is on the right side, replace it with the left
-            if (stack.back is parent.right) {
+            if (front is parent.right) {
 
-                *stack.back = *parent.left;
-                stack.back.interval = interval;
+                const interval = parent.interval;
+
+                *parent = *parent.left;
+                parent.interval = interval;
+
+                popFront();
 
             }
 
             // The node we're removing is on the left side
-            else if (stack.back is parent.left) {
+            else if (front is parent.left) {
 
                 const offset = parent.left.interval;
 
+                this.offset += offset;
+
                 // Move the right side to replace it
-                *stack.back = *parent.right;
-                
+                *parent = *parent.right;
+
+                // Now to keep the right side in the correct place, the interval has to be added to whatever node 
+                // precedes it. This means we must find an adjacent branch that goes leftwards. We will search our 
+                // ancestors: one containing a preceding node will have `isRight` set to `true`, i.e. the current node
+                // is in the right branch. 
+                TextRulerCache* previous;
                 foreach (ancestor; stack[].retro.dropOne) {
 
-                    // Move the offset from the removed node to the last node before
-                    if (ancestor.startRuler is ancestor.left.startRuler) {
-                        ancestor.left.interval += offset;
-                        return;
-
+                    // Move the offset from the removed node to the previous leaf node
+                    if (ancestor.isRight) {
+                        previous = ancestor.left;
+                        break;
                     }
                 
+                    // Recalculate the start and interval
                     ancestor.startRuler = ancestor.left.startRuler;
+                    ancestor.interval = ancestor.left.interval + ancestor.right.interval;
 
                 }
 
-                assert(false);
+                assert(previous);
+
+                // Descend into the preceding branch (always going right), expanding the interval of every node until 
+                // we hit a leaf. 
+                while (previous) {
+                    previous.interval += offset;
+                    previous = previous.right;
+                }
+
+                descend();
+
+                assert(stack.back.isLeaf);
 
             }
+
+            else assert(false);
 
         }
 
@@ -1791,20 +1833,19 @@ do {
 
                 auto front = stack.back;
 
-                parent = front;
-
                 // Enter the left side, unless we know the needle is in the right side
                 if (needle < offset.length + front.left.interval.length) {
 
-                    stack ~= front.left;
+                    stack.back.isRight = false;
+                    stack ~= CacheStackFrame(front.left);
 
                 }
 
                 // Enter the right side
                 else {
 
-                    stack.removeBack();
-                    stack ~= front.right;
+                    stack.back.isRight = true;
+                    stack ~= CacheStackFrame(front.right);
                     offset += front.left.interval;
 
                 }
@@ -1816,8 +1857,9 @@ do {
     }
     
     auto ruler = TextRulerCacheRange(
-        DList!(TextRulerCache*)(cache),
-        null,
+        DList!CacheStackFrame(
+            CacheStackFrame(cache)
+        ),
         index
     );
     ruler.descend();
