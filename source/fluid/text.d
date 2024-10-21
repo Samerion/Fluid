@@ -249,6 +249,38 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
     }
 
+    string opIndexAssign(string value, size_t[2] index) {
+
+        replace(index[0], index[1], Rope(value));
+        return value;
+
+    }
+
+    Rope opIndexAssign(Rope value, size_t[2] index) {
+
+        replace(index[0], index[1], value);
+        return value;
+
+    }
+
+    char opIndex(size_t index) const nothrow {
+
+        return value[index];
+
+    }
+
+    Rope opIndex(size_t[2] index) const nothrow {
+
+        return value[index];
+        
+    }
+
+    size_t[2] opSlice(size_t dim : 0)(size_t i, size_t j) const nothrow {
+
+        return [i, j];
+
+    }
+
     void opOpAssign(string operator)(const(char)[] text) {
 
         node.updateSize;
@@ -296,7 +328,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         space.y *= scale.y;
 
         /// Minimum pixel change that counts
-        _sizeDots = measure!splitter(space, wrap);
+        measure!splitter(space, wrap);
         _wrap = wrap;
         clearTextures();
 
@@ -334,13 +366,12 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
     }
 
-    /// Measure text size in the update region.
+    /// Measure text size in the update region and update `_sizeDots` to the bounding box of this text.
     /// Params:
     ///     splitter = Function to use to split words.
     ///     space   = Limit for the space of the region the text shouldn't cross, in dots.
     ///     wrap    = If true, text should be limited by a bounding box.
-    /// Returns: Bounding box of this text in dots.
-    private Vector2 measure(alias splitter = Typeface.defaultWordChunks)(Vector2 space, bool wrap) {
+    private void measure(alias splitter = Typeface.defaultWordChunks)(Vector2 space, bool wrap) {
 
         auto style = node.pickStyle;
         auto typeface = style.getTypeface;
@@ -384,10 +415,10 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
                 ruler.point.length = start + index;
                 ruler.point.column += word.length;
 
-                // Passed an older checkpoint
-                if (!rulers.empty && index >= rulers.front.point.length) {
+                // Delete any outdated checkpoint in the cache
+                while (!rulers.empty && index >= rulers.front.point.length) {
 
-                    // TODO delete it
+                    rulers.removeFront();
 
                 }
 
@@ -403,9 +434,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
         }
 
-                
-        // TODO remove this
-        return _sizeDots = typeface.measure!splitter(space, value, wrap);
+        _sizeDots = ruler.textSize;
 
     }
 
@@ -1456,6 +1485,7 @@ do {
     static struct TextRulerCacheRange {
 
         DList!(TextRulerCache*) stack;
+        TextRulerCache* parent;
         size_t needle;
         TextInterval offset;
 
@@ -1505,12 +1535,60 @@ do {
             // Stop if emptied the stack
             if (stack.empty) return;
 
-            auto parent = stack.back;
+            auto ancestor = stack.back;
 
             // Remove the next node and descend into its right side
             stack.removeBack();
-            stack ~= parent.right;
+            stack ~= ancestor.right;
             descend();
+
+        }
+
+        /// Remove the entry at the front of the range from the cache and advance to the next item.
+        ///
+        /// This cannot be used to remove the first entry in the cache.
+        void removeFront() {
+
+            assert(!empty);
+            assert(stack.back.isLeaf);
+
+            // Can't remove the root
+            assert(offset.length == 0, "Cannot remove the first item in the cache.");
+
+            const interval = parent.interval;
+
+            // The node we're removing is on the right side, replace it with the left
+            if (stack.back is parent.right) {
+
+                *stack.back = *parent.left;
+                stack.back.interval = interval;
+
+            }
+
+            // The node we're removing is on the left side
+            else if (stack.back is parent.left) {
+
+                const offset = parent.left.interval;
+
+                // Move the right side to replace it
+                *stack.back = *parent.right;
+                
+                foreach (ancestor; stack[].retro.dropOne) {
+
+                    // Move the offset fromt the removed node to the last node before
+                    if (ancestor.startRuler is ancestor.left.startRuler) {
+                        ancestor.left.interval += offset;
+                        return;
+
+                    }
+                
+                    ancestor.startRuler = ancestor.left.startRuler;
+
+                }
+
+                assert(false);
+
+            }
 
         }
 
@@ -1520,6 +1598,8 @@ do {
             while (!stack.back.isLeaf) {
 
                 auto front = stack.back;
+
+                parent = front;
 
                 // Enter the left side, unless we know the needle is in the right side
                 if (needle < offset.length + front.left.interval.length) {
@@ -1545,6 +1625,7 @@ do {
     
     auto ruler = TextRulerCacheRange(
         DList!(TextRulerCache*)(cache),
+        null,
         index
     );
     ruler.descend();
@@ -1677,5 +1758,48 @@ unittest {
         typeface.measure(ruler, root.text[0..402]);
         assert(query(&root.text._cache, 402).front == ruler);
     }
+
+}
+
+@("Text can update entries TextRulerCache entries")
+unittest {
+
+    import fluid.label;
+
+    auto root = label(nullTheme, "Lorem ipsum dolor sit amet, consectetur " 
+        ~ "adipiscing elit, sed do eiusmod tempor " 
+        ~ "incididunt ut labore et dolore magna " 
+        ~ "aliqua. Ut enim ad minim veniam, quis " 
+        ~ "nostrud exercitation ullamco laboris " 
+        ~ "nisi ut aliquip ex ea commodo consequat.\n" 
+        ~ "\n" 
+        ~ "Duis aute irure dolor in reprehenderit " 
+        ~ "in voluptate velit esse cillum dolore " 
+        ~ "eu fugiat nulla pariatur. Excepteur " 
+        ~ "sint occaecat cupidatat non proident, " 
+        ~ "sunt in culpa qui officia deserunt " 
+        ~ "mollit anim id est laborum.\n");
+
+    root.draw();
+
+    // Same data as in the last test
+    assert(query(&root.text._cache, 0).map!"a.point".equal([
+        TextInterval(  0, 0,   0),
+        TextInterval(132, 0, 132),
+        TextInterval(272, 2,  39),
+        TextInterval(402, 2, 169),
+    ]));
+
+    // Replace enough text to destroy two intervals
+    root.text[130..280] = 'a'.repeat(150).array;
+
+    assert(root.tree.resizePending);
+    root.draw();
+
+    assert(query(&root.text._cache, 0).map!"a.point".equal([
+        TextInterval(  0, 0,   0),
+        TextInterval(285, 0, 285),  // 132 and 272 are gone
+        TextInterval(419, 0, 419),
+    ]));
 
 }
