@@ -246,7 +246,7 @@ interface Typeface {
                     }
 
                     // Split each word
-                    else foreach (word; chunkWords(text)) {
+                    else foreach (word; range) {
 
                         const penPosition = ruler.addWord(word);
                         if (const ret = yield(word, penPosition)) return ret;

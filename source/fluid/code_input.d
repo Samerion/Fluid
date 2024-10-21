@@ -9,6 +9,7 @@ import fluid.input;
 import fluid.utils;
 import fluid.style;
 import fluid.backend;
+import fluid.typeface;
 import fluid.text_input;
 
 
@@ -133,6 +134,12 @@ class CodeInput : TextInput {
 
     }
 
+    override TextRuler rulerAt(size_t index) {
+
+        return contentLabel.text.rulerAt(index);
+
+    }
+
     override bool multiline() const {
 
         return true;
@@ -152,6 +159,14 @@ class CodeInput : TextInput {
 
         }
 
+        protected override inout(Rope) value() inout {
+            return text;
+        }
+
+        protected override void replace(size_t start, size_t end, Rope value) {
+            text.replace(start, end, value);
+        }
+
         override void resizeImpl(Vector2 available) {
 
             assert(text.hasFastEdits);
@@ -160,10 +175,11 @@ class CodeInput : TextInput {
 
             typeface.setSize(io.dpi, style.fontSize);
 
-            this.text.value = super.text.value;
             text.indentWidth = indentWidth * typeface.advance(' ').x / io.hidpiScale.x;
             text.resize(available);
             minSize = text.size;
+
+            assert(this.text.isMeasured);
 
         }
 

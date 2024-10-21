@@ -394,7 +394,9 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     }
 
     /// Clear the cache.
-    private void clearCache(Typeface typeface, float lineWidth) {
+    private void clearCache(Typeface typeface, float lineWidth)
+    in (typeface)
+    do {
 
         auto ruler = TextRuler(typeface, lineWidth);
         ruler.startLine();
@@ -422,7 +424,9 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     ///     splitter = Function to use to split words.
     ///     space   = Limit for the space of the region the text shouldn't cross, in dots.
     ///     wrap    = If true, text should be limited by a bounding box.
-    private void measure(alias splitter = Typeface.defaultWordChunks)(Vector2 space, bool wrap) {
+    private void measure(alias splitter = Typeface.defaultWordChunks)(Vector2 space, bool wrap)
+    out (; isMeasured)
+    do {
 
         auto style = node.pickStyle;
         auto typeface = style.getTypeface;
@@ -530,6 +534,15 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         // the bounding box
         ruler = requireRulerAt(value.length);
         _sizeDots = ruler.textSize;
+        _updateRangeStart = 0;
+        _updateRangeEnd = 0;
+
+    }
+
+    bool isMeasured() const {
+
+        return _cache !is _cache.init
+            && _updateRangeStart == _updateRangeEnd;
 
     }
 
@@ -539,12 +552,17 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     /// `requireRulerAt` will do the same, but it will also cache the result value for faster subsequent lookup. The
     /// regular `rulerAt` overload is recommended for most cases.
     ///
+    /// For this function to work, measurement data must be available; make sure `resize` was called beforehand. This
+    /// will be checked at runtime.
+    ///
     /// Returns: 
     ///     Text ruler with text measurement data from the start of the text to the given character, not including 
     ///     queried character.
     /// Params:
     ///     index = Index of the requested character.
-    CachedTextRuler rulerAt(size_t index) {
+    CachedTextRuler rulerAt(size_t index)
+    in (_cache !is _cache.init, "Text was not measured. Call `resize()` first.")
+    do {
 
         // BUG  This may end up in the middle of a word and break
         // TODO Custom text breaking
@@ -553,6 +571,8 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
         auto ruler = query(&_cache, index).front;
         bool started;
+
+        assert(ruler.typeface !is null);
 
         const start = ruler.point.length;
         const end   = index;
