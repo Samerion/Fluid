@@ -362,7 +362,6 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
         /// Minimum pixel change that counts
         measure!splitter(space, wrap);
-        _wrap = wrap;
         clearTextures();
 
     }
@@ -435,6 +434,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         // Reset the cache if text properties changed
         if (shouldCacheReset(space, wrap)) {
             clearCache(typeface, space.x);
+            _wrap = wrap;
         }
 
         // Find the first beacon to update
@@ -444,6 +444,9 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         float yOffset = 0;
         rulers.popFront;
 
+        assert(!wrap || abs(ruler.lineWidth - space.x) < epsilon.x,
+            format!"Line width mismatch: ruler(%s), space(%s)"(ruler.lineWidth, space.x));
+
         const start = ruler.point.length;
         size_t lastCheckpoint = start;
 
@@ -451,7 +454,6 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         static assert(checkpointDistance > CachedTextRuler.sizeof);
 
         // Split on lines
-        // TODO Could this end up breaking a word?
         foreach (index, line; Typeface.lineSplitterIndex(value[start .. $])) {
 
             if (started) {
@@ -544,7 +546,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     ///     index = Index of the requested character.
     CachedTextRuler rulerAt(size_t index) {
 
-        // BUG  This does not consider word breaking
+        // BUG  This may end up in the middle of a word and break
         // TODO Custom text breaking
 
         alias splitter = Typeface.defaultWordChunks;
