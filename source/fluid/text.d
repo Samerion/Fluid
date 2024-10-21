@@ -164,7 +164,11 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     /// Clear cache and reload all text.
     void reload() {
 
-        reload(0, value.length);
+        auto style = node.pickStyle;
+        auto typeface = style.getTypeface;
+        auto width = _cache.startRuler.lineWidth;
+
+        clearCache(typeface, width);
 
     }
 
@@ -175,39 +179,33 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     /// function is called.
     ///
     /// Params:
-    ///     start   = Index at which the range starts, inclusive.
-    ///     oldEnd  = Index at which the range used to end, exclusive.
-    ///     newEnd  = Index at which the range now ends, exclusive.
-    void reload(size_t start, size_t oldEnd) {
+    ///     start       = Interval from text to start of both ranges, inclusive.
+    ///     oldInterval = Interval covering the now deleted text.
+    ///     newInterval = Interval covering the newly inserted text. If omitted, it is assumed to be the same and
+    ///         the interval size does not change.
+    void reload(TextInterval start, TextInterval oldInterval, TextInterval newInterval) {
 
-        reload(start, oldEnd, oldEnd);
-
-    }
-
-    /// ditto
-    void reload(size_t start, size_t oldEnd, size_t newEnd) {
-
-        auto result = TextInterval(_value[start .. newEnd]);
+        const newEnd = start + newInterval;
 
         node.updateSize();
-        _cache.updateInterval(start, oldEnd, result);
+        _cache.updateInterval(start, oldInterval, newInterval);
 
         // No update range is set, replace it
         if (_updateRangeStart == _updateRangeEnd) {
 
-            _updateRangeStart = start;
-            _updateRangeEnd   = newEnd;
+            _updateRangeStart = start.length;
+            _updateRangeEnd   = newEnd.length;
     
         }
 
         // Update boundaries of the existing update range
         else {
 
-            if (start < _updateRangeStart)
-                _updateRangeStart = start;
+            if (start.length < _updateRangeStart)
+                _updateRangeStart = start.length;
 
-            if (newEnd > _updateRangeEnd)
-                _updateRangeEnd = newEnd;
+            if (newEnd.length > _updateRangeEnd)
+                _updateRangeEnd = newEnd.length;
 
         }
         
@@ -221,8 +219,33 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     ///     value  = Value to insert.
     void replace(size_t start, size_t end, Rope value) {
 
+        const startInterval = positionOf(start);
+        const oldInterval   = positionOf(end)
+            .dropHead(startInterval);
+
         _value = _value.replace(start, end, value);
-        reload(start, end, value.length);
+
+        const newInterval = TextInterval(value);
+        
+        reload(startInterval, oldInterval, newInterval);
+
+    }
+
+    /// Returns: 
+    ///     Interval between the start of text and the character at given index. This can be used to determine the line
+    ///     and column number of the given character.
+    /// Params:
+    ///     index = Index to search for.
+    TextInterval positionOf(size_t index) {
+
+        // Find a suitable point to start search at
+        const range = query(&_cache, index);
+        const point = range.front.point;
+
+        const start = point.length;
+        const end   = index;
+
+        return point + TextInterval(value[start .. end]);
 
     }
 
@@ -278,6 +301,12 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     size_t[2] opSlice(size_t dim : 0)(size_t i, size_t j) const nothrow {
 
         return [i, j];
+
+    }
+
+    size_t opDollar() const nothrow {
+
+        return value.length;
 
     }
 
@@ -1289,7 +1318,7 @@ private struct TextRulerCache {
     /// Left and right branch of this cache entry.
     TextRulerCache* left, right;
 
-    invariant {
+    debug invariant {
 
         if (left) {
 
@@ -1347,12 +1376,53 @@ private struct TextRulerCache {
 
     /// Resize a fragment of text, recalculating offsets of rulers.
     /// Params:
-    ///     start  = First index at which text changes.
-    ///     oldEnd = Last index of text to be replaced.
-    ///     newEnd = Size of the new text. 
-    void updateInterval(size_t start, size_t oldEnd, TextInterval newEnd) {
+    ///     start       = Distance between start of the text and start of both intervals.
+    ///     oldInterval = Interval (size) to be replaced.
+    ///     newInterval = Interval to be inserted.
+    void updateInterval(TextInterval start, TextInterval oldInterval, TextInterval newInterval) {
 
-        // TODO Not implemented
+        const absoluteStart = start;
+        const absoluteEnd = start + newInterval;
+
+        scope cache = &this;
+
+        // Find a relevant node, update intervals of all ancestors and itself
+        if (start.length + oldInterval.length < cache.interval.length)
+        while (true) {
+
+            const oldEnd = start + oldInterval;
+            const newEnd = start + newInterval;
+
+            cache.interval = newEnd + cache.interval.dropHead(oldEnd);
+
+            // Found the deepest relevant node
+            // `isLeaf` is inlined to keep invariants from running
+            if (cache.left is null) break; 
+
+            // Search for a node that can control the start of the interval; either exactly at the start, 
+            // or shortly before it, just like `query()`
+            if (start.length < cache.left.interval.length) {
+                cache = cache.left;
+            }
+            else {
+                start = start.dropHead(cache.left.interval);
+                cache = cache.right;
+            }
+
+        }
+
+        // Delete all entries in the range
+        for (auto range = query(&this, absoluteStart.length); !range.empty; range.popFront) {
+
+            // Skip the first entry, it is not affected
+            if (range.front.point.length <= absoluteStart.length) continue;
+
+            // Skip entires after the range
+            if (range.front.point.length > absoluteEnd.length) break;
+
+            range.removeFront;
+
+        }
 
     }
 
@@ -1548,6 +1618,8 @@ do {
         ///
         /// This cannot be used to remove the first entry in the cache.
         void removeFront() {
+
+            // TODO tests for this
 
             assert(!empty);
             assert(stack.back.isLeaf);
@@ -1761,7 +1833,7 @@ unittest {
 
 }
 
-@("Text can update entries TextRulerCache entries")
+@("Text can update TextRulerCache entries")
 unittest {
 
     import fluid.label;
@@ -1794,6 +1866,7 @@ unittest {
     root.text[130..280] = 'a'.repeat(150).array;
 
     assert(root.tree.resizePending);
+    
     root.draw();
 
     assert(query(&root.text._cache, 0).map!"a.point".equal([
@@ -1802,4 +1875,46 @@ unittest {
         TextInterval(419, 0, 419),
     ]));
 
+    assert(root.text[284..290] == " velit");
+
+}
+
+@("Text updates cache intervals on write")
+unittest {
+
+    import fluid.label;
+
+    auto root = label(nullTheme, "import fluid;\n"
+        ~ "void main() {\n"
+        ~ "    run(\n"
+        ~ "        label(\"Hello, World!\")\n"
+        ~ "    );\n"
+        ~ "}\n");
+
+    auto typeface = root.pickStyle.getTypeface;
+
+    // Clear cache
+    root.text.reload();
+    root.text._cache.insert(TextInterval( 0, 0,  0), TextRuler(typeface, 0));
+    root.text._cache.insert(TextInterval(14, 1,  0), TextRuler(typeface, 1));
+    root.text._cache.insert(TextInterval(28, 2,  0), TextRuler(typeface, 2));
+    root.text._cache.insert(TextInterval(37, 3,  0), TextRuler(typeface, 3));
+    root.text._cache.insert(TextInterval(67, 3, 30), TextRuler(typeface, 4));
+    root.text._cache.insert(TextInterval(68, 4,  0), TextRuler(typeface, 5));
+    root.text._cache.insert(TextInterval(75, 5,  0), TextRuler(typeface, 6));
+
+    const start = 37 + `        label("Hello, `.length;
+
+    root.text[start .. start + "World".length] = "everyone!\nHave a nice day";
+
+    assert(query(&root.text._cache, 0).equal([
+         CachedTextRuler(TextInterval( 0, 0,  0), TextRuler(typeface, 0)),
+         CachedTextRuler(TextInterval(14, 1,  0), TextRuler(typeface, 1)),
+         CachedTextRuler(TextInterval(28, 2,  0), TextRuler(typeface, 2)),
+         CachedTextRuler(TextInterval(37, 3,  0), TextRuler(typeface, 3)),
+         CachedTextRuler(TextInterval(87, 4, 18), TextRuler(typeface, 4)),
+         CachedTextRuler(TextInterval(88, 5,  0), TextRuler(typeface, 5)),
+         CachedTextRuler(TextInterval(95, 6,  0), TextRuler(typeface, 6)),
+    ]));
+    
 }
