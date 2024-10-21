@@ -210,9 +210,6 @@ class TextInput : InputNode!Node, FluidScrollable {
         invariant(_bufferNode is null || _bufferNode.left.value.sameTail(_buffer[0 .. _usedBufferSize]),
             "_bufferNode must be in sync with _buffer");
 
-        /// Value of the text input.
-        Rope _value;
-
         /// Available horizontal space.
         float _availableWidth = float.nan;
 
@@ -282,15 +279,19 @@ class TextInput : InputNode!Node, FluidScrollable {
     static class ContentLabel : Label {
 
         this() {
-
             super("");
+        }
 
+        protected inout(Rope) value() inout {
+            return text;
+        }
+
+        protected void replace(size_t start, size_t end, Rope value) {
+            text.replace(start, end, value);
         }
 
         override bool hoveredImpl(Rectangle, Vector2) const {
-
             return false;
-
         }
 
         override void drawImpl(Rectangle outer, Rectangle inner) {
@@ -363,7 +364,7 @@ class TextInput : InputNode!Node, FluidScrollable {
     /// Returns: The value used by this input.
     inout(Rope) value() inout {
 
-        return _value;
+        return contentLabel.value;
 
     }
 
@@ -402,7 +403,9 @@ class TextInput : InputNode!Node, FluidScrollable {
     ///     start    = Low index, inclusive; First index to delete.
     ///     end      = High index, exclusive; First index after the newly inserted fragment.
     ///     newValue = Value to insert.
-    void replace(size_t start, size_t end, Rope newValue) {
+    void replace(size_t start, size_t end, Rope newValue)
+    in (start <= end, "Start must be lower than end")
+    do {
 
         auto withoutLineFeeds = Typeface.lineSplitter(newValue).joiner;
 
@@ -413,9 +416,9 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         }
 
-        const oldValue = _value[start..end];
+        const oldValue = contentLabel.value[start..end];
 
-        _value = _value.replace(start, end, newValue);
+        contentLabel.replace(start, end, newValue);
 
         // Caret index is affected
         if (caretIndex > start) {
@@ -790,6 +793,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         minSize = size;
 
         // Set the label text
+        version (none) // TODO TODO TODO
         contentLabel.text = value == "" ? placeholder : value;
 
         const isFill = layout.nodeAlign[0] == NodeAlign.fill;
@@ -1071,30 +1075,49 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         }
 
-        // Check if the caret follows unbreakable characters
-        const head = unbreakableChars(
-            valueBeforeCaret.wordBack(true)
-        );
+        // TODO move this logic to Text
+        version (none) {
 
-        // If the caret is surrounded by unbreakable characters, include them in the output to make sure the
-        // word is wrapped correctly
-        const tail = preferNextLine || !head.empty
-            ? unbreakableChars(valueAfterCaret)
-            : Rope.init;
+            // Check if the caret follows unbreakable characters
+            const head = unbreakableChars(
+                valueBeforeCaret.wordBack(true)
+            );
 
-        auto typeface = style.getTypeface;
-        auto ruler = textRuler();
-        auto slice = value[0 .. caretIndex + tail.length];
+            // If the caret is surrounded by unbreakable characters, include them in the output to make sure the
+            // word is wrapped correctly
+            const tail = preferNextLine || !head.empty
+                ? unbreakableChars(valueAfterCaret)
+                : Rope.init;
 
-        // Measure text until the caret; include the word that follows to keep proper wrapping
-        typeface.measure(ruler, slice, multiline);
+            auto typeface = style.getTypeface;
+            auto ruler = textRuler();
+            auto slice = value[0 .. caretIndex + tail.length];
 
-        auto caretPosition = ruler.caret.start;
+            // Measure text until the caret; include the word that follows to keep proper wrapping
+            typeface.measure(ruler, slice, multiline);
 
-        // Measure the word itself, and remove it
-        caretPosition.x -= typeface.measure(tail[]).x;
+            auto caretPosition = ruler.caret.start;
 
-        return caretPosition;
+            // Measure the word itself, and remove it
+            caretPosition.x -= typeface.measure(tail[]).x;
+
+            return caretPosition;
+
+        }
+        else {
+            auto ruler = rulerAt(caretIndex);
+            return ruler.caret.start;
+        }
+
+    }
+
+    /// Returns: A text ruler measuring text between the start and a chosen character.
+    /// See_Also: `Text.rulerAt`
+    /// Params:
+    ///     index = Index of the requested character. 
+    TextRuler rulerAt(size_t index) {
+
+        return contentLabel.text.rulerAt(index);
 
     }
 
