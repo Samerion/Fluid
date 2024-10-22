@@ -1424,6 +1424,16 @@ abstract class Node {
 /// This is meant to be the easiest way to launch a Fluid app. Call this in your `main()` function with the node holding
 /// your user interface, and that's it! The function will not return until the app is closed. 
 ///
+/// ---
+/// void main() {
+///     
+///     run(
+///         label("Hello, World!"),
+///     );
+/// 
+/// }
+/// ---
+///
 /// You can close the UI programmatically by calling `remove()` on the root node.
 ///
 /// The exact behavior of this function is defined by the backend in use, so some functionality may vary. Some backends
@@ -1434,11 +1444,17 @@ abstract class Node {
 ///         runtime, wrap it in a `NodeSlot`.
 void run(Node node) {
 
+    if (mockRun) {
+        mockRun()(node);
+        return;
+    }
+
     auto backend = cast(FluidEntrypointBackend) defaultFluidBackend;
 
-    assert(backend, "Chosen default backend " ~ typeid(backend).toString ~ " does not expose an event loop interface.");
+    assert(backend, "Chosen default backend does not expose an event loop interface.");
 
-    run(node, backend);
+    node.io = backend;
+    backend.run(node);
     
 }
 
@@ -1451,21 +1467,8 @@ void run(Node node, FluidEntrypointBackend backend) {
     }
 
     else {
-        node.io = cast(FluidBackend) backend;
+        node.io = backend;
         backend.run(node);
-    }
-
-}
-
-/// The Fluid "Hello, World!"
-unittest {
-
-    void main() {
-
-        run(
-            label("Hello, World!"),
-        );
-
     }
 
 }
