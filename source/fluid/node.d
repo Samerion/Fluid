@@ -548,8 +548,10 @@ abstract class Node {
 
     }
 
-    /// True if this node is pending a resize.
-    bool resizePending() const {
+    alias resizePending = isResizePending;
+
+    /// Returns: True if this node is to be resized before the next frame.
+    bool isResizePending() const {
 
         return _resizePending;
 
