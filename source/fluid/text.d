@@ -1532,21 +1532,28 @@ private struct TextRulerCache {
     /// Left and right branch of this cache entry.
     TextRulerCache* left, right;
 
-    debug invariant {
+    /// Depth of this node.
+    int depth = 1;
+
+    debug (Fluid_CacheInvariants)
+    invariant {
 
         if (left) {
 
-            assert(right !is null, "Right branch is null, but the left isn't");
+
+            assert(start, "Right branch is null, but the left isn't");
             assert(startRuler is left.startRuler);
             assert(interval == left.interval + right.interval, 
                 format!"Cache interval %s is not the sum of its members %s + %s"(interval, left.interval, 
                     right.interval));
+            assert(depth == max(left.depth, right.depth) + 1);
 
         }
 
         else {
             
             assert(right is null, "Left branch is null, but the right isn't");
+            assert(depth == 1);
 
         }
 
@@ -1578,6 +1585,17 @@ private struct TextRulerCache {
         this.interval = left.interval + right.interval;
         this.left = left;
         this.right = right;
+        this.depth = max(left.depth, right.depth) + 1;
+
+    }
+
+    private void recalculateDepth() {
+
+        // isLeaf inlined to avoid invariants
+        if (left)
+            depth = max(left.depth, right.depth) + 1;
+        else
+            depth = 1;
 
     }
 
@@ -1699,6 +1717,9 @@ private struct TextRulerCache {
             assert(range.stack.back.interval == oldInterval);
             assert(range.stack.back.interval == leftInterval + rightInterval);
 
+            range.updateDepth();
+            rebalance();
+
         }
 
     }
@@ -1718,8 +1739,9 @@ private struct TextRulerCache {
         // Descend (isLeaf inlined for debugging performance)
         while (cache.left !is null) {
 
-            // Update interval
+            // Update interval and depth
             cache.interval = relativePoint;
+            cache.depth++;
 
             // Descend towards the right side
             relativePoint = relativePoint.dropHead(cache.left.interval);
@@ -1732,9 +1754,64 @@ private struct TextRulerCache {
         auto right = new TextRulerCache(ruler, TextInterval.init);
 
         *cache = TextRulerCache(left, right);        
+        rebalance();
 
     }
 
+    /// Returns: True if this cache node is out of balance. 
+    /// See_Also: `rebalance` to rebalance a node to improve its performance.
+    bool isBalanced() const {
+
+        if (isLeaf) return true;
+
+        const diff = left.depth - right.depth;
+                
+        return -15 < diff && diff < 15;
+
+    }
+
+    /// Recreate the cache to redistribute the nodes in a more optimal way.
+    void rebalance() {
+
+        if (!isBalanced) {
+
+            auto nodes = appender!(TextRulerCache*[])();
+
+            // Collect all nodes
+            for (auto range = query(&this, 0); !range.empty; range.popFront) {
+
+                assert(range.stack.back.isLeaf);
+                nodes ~= range.stack.back;
+
+            }
+
+            this = *merge(nodes[]);
+
+        }
+
+    }
+
+    /// Returns: A new cache node compromising multiple cache nodes.
+    /// Params:
+    ///     nodes = Leaf nodes the new cache can be made up of. They must be ordered, so that their intervals will 
+    ///         specify their relations.
+    static TextRulerCache* merge(scope TextRulerCache*[] nodes) {
+
+        if (nodes.length == 0)
+            assert(false, "Given node list is empty");
+        else if (nodes.length == 1)
+            return nodes[0];
+        else if (nodes.length == 2)
+            return new TextRulerCache(nodes[0], nodes[1]);
+        else
+            return new TextRulerCache(
+                merge(nodes[0   .. $/2]),
+                merge(nodes[$/2 .. $])
+            );
+        
+        
+    }
+    
 }
 
 /// Get the last `TextRuler` at the given index, or preceding it.
@@ -1843,6 +1920,16 @@ do {
 
         }
 
+        /// Update depth of the current node. Iterates through all ancestors.
+        void updateDepth() {
+
+            // Update depth of every item in the stack
+            foreach_reverse (item; stack) {
+                item.recalculateDepth();
+            }
+
+        }
+
         /// Remove the entry at the front of the range from the cache and advance to the next item.
         ///
         /// This cannot be used to remove the first entry in the cache.
@@ -1869,7 +1956,7 @@ do {
 
                 *parent = *parent.left;
                 parent.interval = interval;
-
+                updateDepth();
                 popFront();
 
             }
@@ -1891,10 +1978,15 @@ do {
                 TextRulerCache* previous;
                 foreach (ancestor; stack[].retro.dropOne) {
 
+                    ancestor.recalculateDepth();
+
+                    // Found the previous node already, just recalculate depth
+                    if (previous) continue;
+
                     // Move the offset from the removed node to the previous leaf node
                     if (ancestor.isRight) {
                         previous = ancestor.left;
-                        break;
+                        continue;
                     }
                 
                     // Recalculate the start and interval
