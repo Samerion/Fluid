@@ -134,9 +134,9 @@ class CodeInput : TextInput {
 
     }
 
-    override TextRuler rulerAt(size_t index) {
+    override TextRuler rulerAt(size_t index, bool preferNextLine = false) {
 
-        return contentLabel.text.rulerAt(index);
+        return contentLabel.text.rulerAt(index, preferNextLine);
 
     }
 

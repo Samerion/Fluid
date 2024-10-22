@@ -23,6 +23,9 @@ import fluid.structs;
 import fluid.typeface;
 import fluid.popup_frame;
 
+alias wordFront = fluid.text.wordFront;
+alias wordBack  = fluid.text.wordBack;
+
 
 @safe:
 
@@ -464,7 +467,6 @@ class TextInput : InputNode!Node, FluidScrollable {
             else 
                 caretIndex = caretIndex + newValue.length - end; 
 
-            // TODO optimize this call
             updateCaretPosition();
             horizontalAnchor = caretPosition.x;
 
@@ -1090,57 +1092,9 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     protected Vector2 caretPositionImpl(float, bool preferNextLine) {
 
-        Rope unbreakableChars(Rope value) {
+        const ruler = rulerAt(caretIndex, preferNextLine);
 
-            // Split on lines
-            auto lines = Typeface.lineSplitter(value);
-            if (lines.empty) return value.init;
-
-            // Split on words
-            auto chunks = Typeface.defaultWordChunks(lines.front);
-            if (chunks.empty) return value.init;
-
-            // Return empty string if the result starts with whitespace
-            if (chunks.front.byDchar.front.isWhite) return value.init;
-
-            // Return first word only
-            return chunks.front;
-
-        }
-
-        // TODO move this logic to Text
-        version (none) {
-
-            // Check if the caret follows unbreakable characters
-            const head = unbreakableChars(
-                valueBeforeCaret.wordBack(true)
-            );
-
-            // If the caret is surrounded by unbreakable characters, include them in the output to make sure the
-            // word is wrapped correctly
-            const tail = preferNextLine || !head.empty
-                ? unbreakableChars(valueAfterCaret)
-                : Rope.init;
-
-            auto typeface = style.getTypeface;
-            auto ruler = textRuler();
-            auto slice = value[0 .. caretIndex + tail.length];
-
-            // Measure text until the caret; include the word that follows to keep proper wrapping
-            typeface.measure(ruler, slice, multiline);
-
-            auto caretPosition = ruler.caret.start;
-
-            // Measure the word itself, and remove it
-            caretPosition.x -= typeface.measure(tail[]).x;
-
-            return caretPosition;
-
-        }
-        else {
-            auto ruler = rulerAt(caretIndex);
-            return ruler.caret.start;
-        }
+        return ruler.caret.start;
 
     }
 
@@ -1148,9 +1102,9 @@ class TextInput : InputNode!Node, FluidScrollable {
     /// See_Also: `Text.rulerAt`
     /// Params:
     ///     index = Index of the requested character. 
-    TextRuler rulerAt(size_t index) {
+    TextRuler rulerAt(size_t index, bool preferNextLine = false) {
 
-        return contentLabel.text.rulerAt(index);
+        return contentLabel.text.rulerAt(index, preferNextLine);
 
     }
 
@@ -4061,179 +4015,6 @@ unittest {
 
     assert(root.selectedValue == "First one");
     assert(root.caretPosition.y < lineHeight);
-
-}
-
-/// `wordFront` and `wordBack` get the word at the beginning or end of given string, respectively.
-///
-/// A word is a streak of consecutive characters — non-whitespace, either all alphanumeric or all not — followed by any
-/// number of whitespace.
-///
-/// Params:
-///     text = Text to scan for the word.
-///     excludeWhite = If true, whitespace will not be included in the word.
-T wordFront(T)(T text, bool excludeWhite = false) {
-
-    size_t length;
-
-    T result() { return text[0..length]; }
-    T remaining() { return text[length..$]; }
-
-    while (remaining != "") {
-
-        // Get the first character
-        const lastChar = remaining.decodeFrontStatic;
-
-        // Exclude white characters if enabled
-        if (excludeWhite && lastChar.isWhite) break;
-
-        length += lastChar.codeLength!(typeof(text[0]));
-
-        // Stop if empty
-        if (remaining == "") break;
-
-        const nextChar = remaining.decodeFrontStatic;
-
-        // Stop if the next character is a line feed
-        if (nextChar.only.chomp.empty && !only(lastChar, nextChar).equal("\r\n")) break;
-
-        // Continue if the next character is whitespace
-        // Includes any case where the previous character is followed by whitespace
-        else if (nextChar.isWhite) continue;
-
-        // Stop if whitespace follows a non-white character
-        else if (lastChar.isWhite) break;
-
-        // Stop if the next character has different type
-        else if (lastChar.isAlphaNum != nextChar.isAlphaNum) break;
-
-    }
-
-    return result;
-
-}
-
-/// ditto
-T wordBack(T)(T text, bool excludeWhite = false) {
-
-    size_t length = text.length;
-
-    T result() { return text[length..$]; }
-    T remaining() { return text[0..length]; }
-
-    while (remaining != "") {
-
-        // Get the first character
-        const lastChar = remaining.decodeBackStatic;
-
-        // Exclude white characters if enabled
-        if (excludeWhite && lastChar.isWhite) break;
-
-        length -= lastChar.codeLength!(typeof(text[0]));
-
-        // Stop if empty
-        if (remaining == "") break;
-
-        const nextChar = remaining.decodeBackStatic;
-
-        // Stop if the character is a line feed
-        if (lastChar.only.chomp.empty && !only(nextChar, lastChar).equal("\r\n")) break;
-
-        // Continue if the current character is whitespace
-        // Inverse to `wordFront`
-        else if (lastChar.isWhite) continue;
-
-        // Stop if whitespace follows a non-white character
-        else if (nextChar.isWhite) break;
-
-        // Stop if the next character has different type
-        else if (lastChar.isAlphaNum != nextChar.isAlphaNum) break;
-
-    }
-
-    return result;
-
-}
-
-/// `decodeFront` and `decodeBack` variants that do not mutate the range
-private dchar decodeFrontStatic(T)(T range) @trusted {
-
-    return range.decodeFront;
-
-}
-
-/// ditto
-private dchar decodeBackStatic(T)(T range) @trusted {
-
-    return range.decodeBack;
-
-}
-
-unittest {
-
-    assert("hello world!".wordFront == "hello ");
-    assert("hello, world!".wordFront == "hello");
-    assert("hello world!".wordBack == "!");
-    assert("hello world".wordBack == "world");
-    assert("hello ".wordBack == "hello ");
-
-    assert("witaj świecie!".wordFront == "witaj ");
-    assert(" świecie!".wordFront == " ");
-    assert("świecie!".wordFront == "świecie");
-    assert("witaj świecie!".wordBack == "!");
-    assert("witaj świecie".wordBack == "świecie");
-    assert("witaj ".wordBack == "witaj ");
-
-    assert("Всем привет!".wordFront == "Всем ");
-    assert("привет!".wordFront == "привет");
-    assert("!".wordFront == "!");
-
-    // dstring
-    assert("Всем привет!"d.wordFront == "Всем "d);
-    assert("привет!"d.wordFront == "привет"d);
-    assert("!"d.wordFront == "!"d);
-
-    assert("Всем привет!"d.wordBack == "!"d);
-    assert("Всем привет"d.wordBack == "привет"d);
-    assert("Всем "d.wordBack == "Всем "d);
-
-    // Whitespace exclusion
-    assert("witaj świecie!".wordFront(true) == "witaj");
-    assert(" świecie!".wordFront(true) == "");
-    assert("witaj świecie".wordBack(true) == "świecie");
-    assert("witaj ".wordBack(true) == "");
-
-}
-
-unittest {
-
-    assert("\nabc\n".wordFront == "\n");
-    assert("\n  abc\n".wordFront == "\n  ");
-    assert("abc\n".wordFront == "abc");
-    assert("abc  \n".wordFront == "abc  ");
-    assert("  \n".wordFront == "  ");
-    assert("\n     abc".wordFront == "\n     ");
-
-    assert("\nabc\n".wordBack == "\n");
-    assert("\nabc".wordBack == "abc");
-    assert("abc  \n".wordBack == "\n");
-    assert("abc  ".wordFront == "abc  ");
-    assert("\nabc\n  ".wordBack == "\n  ");
-    assert("\nabc\n  a".wordBack == "a");
-
-    assert("\r\nabc\r\n".wordFront == "\r\n");
-    assert("\r\n  abc\r\n".wordFront == "\r\n  ");
-    assert("abc\r\n".wordFront == "abc");
-    assert("abc  \r\n".wordFront == "abc  ");
-    assert("  \r\n".wordFront == "  ");
-    assert("\r\n     abc".wordFront == "\r\n     ");
-
-    assert("\r\nabc\r\n".wordBack == "\r\n");
-    assert("\r\nabc".wordBack == "abc");
-    assert("abc  \r\n".wordBack == "\r\n");
-    assert("abc  ".wordFront == "abc  ");
-    assert("\r\nabc\r\n  ".wordBack == "\r\n  ");
-    assert("\r\nabc\r\n  a".wordBack == "a");
 
 }
 

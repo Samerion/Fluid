@@ -1599,9 +1599,6 @@ unittest {
 
 }
 
-/// `std.utf.codeLength` implementation for Rope.
-alias codeLength(T : Rope) = imported!"std.utf".codeLength!char;
-
 /// A wrapper over Range which disables slicing. Some algorithms assume slicing is faster than regular range access, 
 /// but it's not the case for `Rope`.
 struct BasicRopeRange {

@@ -1,5 +1,6 @@
 module fluid.text;
 
+import std.uni;
 import std.math;
 import std.range;
 import std.traits;
@@ -562,12 +563,30 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     ///     queried character.
     /// Params:
     ///     index = Index of the requested character.
-    CachedTextRuler rulerAt(size_t index)
+    CachedTextRuler rulerAt(size_t index, bool preferNextLine = false)
     in (_cache !is _cache.init, "Text was not measured. Call `resize()` first.")
     do {
 
-        // BUG  This may end up in the middle of a word and break
         // TODO Custom text breaking
+
+        /// Returns the longest unbreakable substring of the given value.
+        Rope unbreakableChars(Rope value) {
+
+            // Split on lines
+            auto lines = Typeface.lineSplitter(value);
+            if (lines.empty) return Rope.init;
+
+            // Split on words
+            auto chunks = Typeface.defaultWordChunks(lines.front);
+            if (chunks.empty) return Rope.init;
+
+            // Return empty string if the result starts with whitespace
+            if (chunks.front.byDchar.front.isWhite) return value.init;
+
+            // Return first word only
+            return chunks.front;
+
+        }
 
         alias splitter = Typeface.defaultWordChunks;
 
@@ -576,8 +595,18 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
         assert(ruler.typeface !is null);
 
+        // Check if the caret follows unbreakable characters
+        // If the caret is surrounded by unbreakable characters, include them in the output to make sure the
+        // word is wrapped correctly
+        const unbreakablePrefix = unbreakableChars(
+            value[0 .. index].wordBack(true)
+        );
+        const unbreakableSuffix = unbreakablePrefix.empty && !preferNextLine
+            ? Rope.init
+            : unbreakableChars(value[index .. $]);
+
         const start = ruler.point.length;
-        const end   = index;
+        const end   = index + unbreakableSuffix.length;
 
         // Split on lines
         foreach (line; Typeface.lineSplitter!(Yes.keepTerminator)(value[start .. end])) {
@@ -596,6 +625,10 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
             foreach (word, penPosition; Typeface.eachWord!splitter(ruler, line, _wrap)) { }
 
         }
+
+        // If the position is mid-word, we have to remove the suffix
+        // TODO textSize might be incorrect here
+        ruler.penPosition.x -= ruler.typeface.measure(unbreakableSuffix[]).x;
 
         return ruler;
 
@@ -2106,4 +2139,185 @@ unittest {
          CachedTextRuler(TextInterval(95, 6,  0), TextRuler(typeface, 6)),
     ]));
     
+}
+
+/// `wordFront` and `wordBack` get the word at the beginning or end of given string, respectively.
+///
+/// A word is a streak of consecutive characters — non-whitespace, either all alphanumeric or all not — followed by any
+/// number of whitespace.
+///
+/// Params:
+///     text = Text to scan for the word.
+///     excludeWhite = If true, whitespace will not be included in the word.
+T wordFront(T)(T text, bool excludeWhite = false) {
+
+    import std.utf : codeLength;
+
+    size_t length;
+
+    T result() { return text[0..length]; }
+    T remaining() { return text[length..$]; }
+
+    while (remaining != "") {
+
+        // Get the first character
+        const lastChar = remaining.decodeFrontStatic;
+
+        // Exclude white characters if enabled
+        if (excludeWhite && lastChar.isWhite) break;
+
+        length += lastChar.codeLength!(typeof(text[0]));
+
+        // Stop if empty
+        if (remaining == "") break;
+
+        const nextChar = remaining.decodeFrontStatic;
+
+        // Stop if the next character is a line feed
+        if (nextChar.only.chomp.empty && !only(lastChar, nextChar).equal("\r\n")) break;
+
+        // Continue if the next character is whitespace
+        // Includes any case where the previous character is followed by whitespace
+        else if (nextChar.isWhite) continue;
+
+        // Stop if whitespace follows a non-white character
+        else if (lastChar.isWhite) break;
+
+        // Stop if the next character has different type
+        else if (lastChar.isAlphaNum != nextChar.isAlphaNum) break;
+
+    }
+
+    return result;
+
+}
+
+/// ditto
+T wordBack(T)(T text, bool excludeWhite = false) {
+
+    import std.utf : codeLength;
+
+    size_t length = text.length;
+
+    T result() { return text[length..$]; }
+    T remaining() { return text[0..length]; }
+
+    while (remaining != "") {
+
+        // Get the first character
+        const lastChar = remaining.decodeBackStatic;
+
+        // Exclude white characters if enabled
+        if (excludeWhite && lastChar.isWhite) break;
+
+        length -= lastChar.codeLength!(typeof(text[0]));
+
+        // Stop if empty
+        if (remaining == "") break;
+
+        const nextChar = remaining.decodeBackStatic;
+
+        // Stop if the character is a line feed
+        if (lastChar.only.chomp.empty && !only(nextChar, lastChar).equal("\r\n")) break;
+
+        // Continue if the current character is whitespace
+        // Inverse to `wordFront`
+        else if (lastChar.isWhite) continue;
+
+        // Stop if whitespace follows a non-white character
+        else if (nextChar.isWhite) break;
+
+        // Stop if the next character has different type
+        else if (lastChar.isAlphaNum != nextChar.isAlphaNum) break;
+
+    }
+
+    return result;
+
+}
+
+/// `std.utf.decodeFront` and `std.utf.decodeBack` variants that do not mutate the range
+dchar decodeFrontStatic(T)(T range) @trusted {
+
+    import std.utf : decodeFront;
+
+    return range.decodeFront;
+
+}
+
+/// ditto
+dchar decodeBackStatic(T)(T range) @trusted {
+
+    import std.utf : decodeBack;
+
+    return range.decodeBack;
+
+}
+
+unittest {
+
+    assert("hello world!".wordFront == "hello ");
+    assert("hello, world!".wordFront == "hello");
+    assert("hello world!".wordBack == "!");
+    assert("hello world".wordBack == "world");
+    assert("hello ".wordBack == "hello ");
+
+    assert("witaj świecie!".wordFront == "witaj ");
+    assert(" świecie!".wordFront == " ");
+    assert("świecie!".wordFront == "świecie");
+    assert("witaj świecie!".wordBack == "!");
+    assert("witaj świecie".wordBack == "świecie");
+    assert("witaj ".wordBack == "witaj ");
+
+    assert("Всем привет!".wordFront == "Всем ");
+    assert("привет!".wordFront == "привет");
+    assert("!".wordFront == "!");
+
+    // dstring
+    assert("Всем привет!"d.wordFront == "Всем "d);
+    assert("привет!"d.wordFront == "привет"d);
+    assert("!"d.wordFront == "!"d);
+
+    assert("Всем привет!"d.wordBack == "!"d);
+    assert("Всем привет"d.wordBack == "привет"d);
+    assert("Всем "d.wordBack == "Всем "d);
+
+    // Whitespace exclusion
+    assert("witaj świecie!".wordFront(true) == "witaj");
+    assert(" świecie!".wordFront(true) == "");
+    assert("witaj świecie".wordBack(true) == "świecie");
+    assert("witaj ".wordBack(true) == "");
+
+}
+
+unittest {
+
+    assert("\nabc\n".wordFront == "\n");
+    assert("\n  abc\n".wordFront == "\n  ");
+    assert("abc\n".wordFront == "abc");
+    assert("abc  \n".wordFront == "abc  ");
+    assert("  \n".wordFront == "  ");
+    assert("\n     abc".wordFront == "\n     ");
+
+    assert("\nabc\n".wordBack == "\n");
+    assert("\nabc".wordBack == "abc");
+    assert("abc  \n".wordBack == "\n");
+    assert("abc  ".wordFront == "abc  ");
+    assert("\nabc\n  ".wordBack == "\n  ");
+    assert("\nabc\n  a".wordBack == "a");
+
+    assert("\r\nabc\r\n".wordFront == "\r\n");
+    assert("\r\n  abc\r\n".wordFront == "\r\n  ");
+    assert("abc\r\n".wordFront == "abc");
+    assert("abc  \r\n".wordFront == "abc  ");
+    assert("  \r\n".wordFront == "  ");
+    assert("\r\n     abc".wordFront == "\r\n     ");
+
+    assert("\r\nabc\r\n".wordBack == "\r\n");
+    assert("\r\nabc".wordBack == "abc");
+    assert("abc  \r\n".wordBack == "\r\n");
+    assert("abc  ".wordFront == "abc  ");
+    assert("\r\nabc\r\n  ".wordBack == "\r\n  ");
+    assert("\r\nabc\r\n  a".wordBack == "a");
+
 }
