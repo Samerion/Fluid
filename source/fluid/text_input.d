@@ -922,9 +922,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         root.draw();
 
         Vector2 textSize() {
-
             return root.contentLabel.minSize;
-
         }
 
         assert(textSize.x > 200);
@@ -935,6 +933,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         root.updateSize();
         root.draw();
 
+        assert(root.placeholder == "");
         assert(root.caretPosition.x < 1);
         assert(textSize.x < 1);
 

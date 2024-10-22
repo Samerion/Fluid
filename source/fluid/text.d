@@ -135,7 +135,10 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
     inout(FluidBackend) backend() inout {
 
-        return node.tree.backend;
+        if (node.tree)
+            return node.tree.backend;
+        else
+            return null;
 
     }
 
@@ -244,6 +247,13 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
     }
 
+    /// ditto
+    void replace(size_t start, size_t end, const(char)[] value) {
+
+        replace(start, end, Rope(value));
+
+    }
+
     /// Returns: 
     ///     Interval between the start of text and the character at given index. This can be used to determine the line
     ///     and column number of the given character.
@@ -322,11 +332,16 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         return value.length;
 
     }
+    
+    void opOpAssign(string operator : "~")(const(char)[] text) {
 
-    void opOpAssign(string operator)(const(char)[] text) {
+        replace(value.length, value.length, text);
 
-        node.updateSize;
-        mixin("value ", operator, "= text;");
+    }
+
+    void opOpAssign(string operator : "~")(Rope text) {
+
+        replace(value.length, value.length, text);
 
     }
 
@@ -412,7 +427,9 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         auto ruler = TextRuler(typeface, lineWidth);
         ruler.startLine();
         _cache = TextRulerCache(ruler);
-        _dpi = backend.dpi;
+        _dpi = backend 
+            ? backend.dpi
+            : Vector2();
         _updateRangeStart = 0;
         _updateRangeEnd = value.length;
 
@@ -454,7 +471,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         }
 
         // Nothing to update
-        if (_updateRangeStart == _updateRangeEnd) return;
+        if (_updateRangeStart == _updateRangeEnd && value != "") return;
 
         // Find the first beacon to update
         scope rulers = query(&_cache, _updateRangeStart);
@@ -482,6 +499,8 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
             // Split on words
             foreach (word, penPosition; Typeface.eachWord!splitter(ruler, line, wrap)) {
 
+                const startIndex = index;
+
                 index += word.length;
 
                 // Keep the ruler's location in sync
@@ -490,7 +509,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
                 // If we're in the update range (iterating through newly added text), we need to periodically write 
                 // rulers to cache 
-                if (index <= _updateRangeEnd) {
+                if (startIndex <= _updateRangeEnd) {
 
                     // Delete any outdated checkpoint in the cache
                     // TODO This might not even be necessary — cache should have already purged these points
@@ -2113,7 +2132,7 @@ unittest {
     assert(query(&root.text._cache, 0).map!"a.point".equal([
         TextInterval(  0, 0,   0),
         TextInterval(285, 0, 285),  // 132 and 272 are gone
-        TextInterval(419, 0, 419),  // Line breaks were used up
+        TextInterval(402, 0, 402),  // Line breaks were replaced
         TextInterval(root.text.length, 1, 0),
     ]));
 
