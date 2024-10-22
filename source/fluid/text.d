@@ -1500,8 +1500,8 @@ private struct TextRulerCache {
 
         if (left) {
 
-            assert(right, "Right branch is null, but the left isn't");
-            assert(startRuler == left.startRuler);
+            assert(right !is null, "Right branch is null, but the left isn't");
+            assert(startRuler is left.startRuler);
             assert(interval == left.interval + right.interval, 
                 format!"Cache interval %s is not the sum of its members %s + %s"(interval, left.interval, 
                     right.interval));
@@ -1510,7 +1510,7 @@ private struct TextRulerCache {
 
         else {
             
-            assert(!right, "Left branch is null, but the right isn't");
+            assert(right is null, "Left branch is null, but the right isn't");
 
         }
 
@@ -1679,8 +1679,8 @@ private struct TextRulerCache {
         scope cache = &this;
         auto relativePoint = point;
 
-        // Descend
-        while (!cache.isLeaf) {
+        // Descend (isLeaf inlined for debugging performance)
+        while (cache.left !is null) {
 
             // Update interval
             cache.interval = relativePoint;
