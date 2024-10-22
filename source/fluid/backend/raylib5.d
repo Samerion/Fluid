@@ -192,6 +192,7 @@ class Raylib5Backend : FluidBackend, FluidEntrypointBackend {
             draw();
 
             // Update minimum size if needed
+            min = root.getMinSize;
             auto newMinX = cast(int) min.x;
             auto newMinY = cast(int) min.y;
             if (newMinX != minX || newMinY != minY) {
