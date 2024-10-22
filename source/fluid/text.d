@@ -773,7 +773,7 @@ struct CompositeTexture {
         if (sizeMatches) {
 
             assert(chunks[i].texture.backend !is null);
-            debug assert(backend is chunks[i].texture.backend,
+            debug assert(backend == chunks[i].texture.backend,
                 .format!"Backend mismatch %s != %s"(backend, chunks[i].texture.backend));
 
             chunks[i].texture.update(chunks[i].image);
@@ -803,8 +803,9 @@ struct CompositeTexture {
         foreach (index; visibleChunks(rectangle.start, backend.windowSize)) {
 
             assert(chunks[index].texture.backend !is null);
-            debug assert(backend is chunks[index].texture.backend,
-                .format!"Backend mismatch %s != %s"(backend, chunks[index].texture.backend));
+            debug assert(backend == chunks[index].texture.backend,
+                .format!"Backend mismatch %s (%s) != %s (%s)"(backend, cast(void*) backend, 
+                    chunks[index].texture.backend, cast(void*) chunks[index].texture.backend));
 
             const start = rectangle.start + chunkPosition(index);
             const size = chunks[index].texture.viewportSize;

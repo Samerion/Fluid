@@ -12,6 +12,7 @@ import std.range;
 import std.string;
 import std.algorithm;
 
+import fluid.node;
 import fluid.backend;
 import fluid.backend : MouseButton, KeyboardKey, GamepadButton;
 
@@ -27,7 +28,7 @@ public static import raylib;
 version (OSX)
     version = Fluid_DisableScaling;
 
-class Raylib5Backend : FluidBackend {
+class Raylib5Backend : FluidBackend, FluidEntrypointBackend {
 
     private {
 
@@ -147,6 +148,65 @@ class Raylib5Backend : FluidBackend {
             _paletteTexture.destroy();
 
         }
+
+    }
+
+    bool opEquals(FluidBackend other) const {
+
+        return this is other;
+
+    }
+
+    void run(Node root) @trusted {
+
+        // Prepare the window
+        SetConfigFlags(ConfigFlags.FLAG_WINDOW_RESIZABLE | ConfigFlags.FLAG_WINDOW_HIDDEN);
+        SetTraceLogLevel(TraceLogLevel.LOG_WARNING);
+        InitWindow(0, 0, "");
+        SetTargetFPS(60);
+        scope (exit) CloseWindow();
+
+        void draw() {
+            BeginDrawing();
+            ClearBackground(color("fff"));
+            root.draw();
+            EndDrawing();
+        }
+
+        // Probe the node for information
+        draw();
+
+        // Set window size
+        auto min = root.getMinSize;
+        int minX = cast(int) min.x;
+        int minY = cast(int) min.y;
+        SetWindowMinSize(minX, minY);
+        SetWindowSize(minX, minY);
+
+        // Now draw
+        ClearWindowState(ConfigFlags.FLAG_WINDOW_HIDDEN);
+
+        // Event loop
+        while (!WindowShouldClose) {
+
+            draw();
+
+            // Update minimum size if needed
+            auto newMinX = cast(int) min.x;
+            auto newMinY = cast(int) min.y;
+            if (newMinX != minX || newMinY != minY) {
+
+                SetWindowMinSize(
+                    minX = newMinX, 
+                    minY = newMinY);
+                SetWindowSize(
+                    max(minX, GetScreenWidth), 
+                    max(minY, GetScreenHeight));
+
+            }
+
+        }
+
 
     }
 

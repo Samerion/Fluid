@@ -227,6 +227,12 @@ class HeadlessBackend : FluidBackend {
 
     }
 
+    bool opEquals(FluidBackend other) const {
+
+        return this is other;
+
+    }
+
     /// Switch to the next frame.
     void nextFrame(float deltaTime = 1f / 60f) {
 
