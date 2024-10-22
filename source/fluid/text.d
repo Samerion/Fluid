@@ -36,6 +36,11 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     static assert(is(ElementType!StyleRange : TextStyleSlice),
         "StyleRange must be a valid forward range of TextStyleSlices");
 
+    /// Minimum distance between automatically created checkpoints.
+    /// See_Also: `_cache`, `measure`
+    private enum checkpointDistance = 128;
+    static assert(checkpointDistance > CachedTextRuler.sizeof);
+
     public {
 
         /// Node owning this text struct.
@@ -407,6 +412,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         auto ruler = TextRuler(typeface, lineWidth);
         ruler.startLine();
         _cache = TextRulerCache(ruler);
+        _dpi = backend.dpi;
         _updateRangeStart = 0;
         _updateRangeEnd = value.length;
 
@@ -447,6 +453,9 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
             _wrap = wrap;
         }
 
+        // Nothing to update
+        if (_updateRangeStart == _updateRangeEnd) return;
+
         // Find the first beacon to update
         scope rulers = query(&_cache, _updateRangeStart);
         auto ruler = rulers.front;
@@ -459,9 +468,6 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
         const start = ruler.point.length;
         size_t lastCheckpoint = start;
-
-        enum checkpointDistance = 128;
-        static assert(checkpointDistance > CachedTextRuler.sizeof);
 
         // Split on lines
         foreach (index, line; Typeface.lineSplitterIndex(value[start .. $])) {
@@ -597,6 +603,17 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         bool started;
 
         assert(ruler.typeface !is null);
+
+        // Too much to calculate at once! Trigger a resize first
+        if (index - ruler.point.length >= checkpointDistance) {
+
+            // Y position does not matter at this moment
+            resize(Vector2(ruler.lineWidth, 0), _wrap);
+
+            // Query again
+            ruler = query(&_cache, index).front;
+
+        }
 
         // Check if the caret follows unbreakable characters
         // If the caret is surrounded by unbreakable characters, include them in the output to make sure the
