@@ -455,6 +455,9 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         }
 
+        // Nothing changed, ignore this request
+        if (start == end && newValue.length == 0) return;
+
         const oldValue = contentLabel.value[start..end];
 
         contentLabel.replace(start, end, newValue);
@@ -465,7 +468,7 @@ class TextInput : InputNode!Node, FluidScrollable {
             if (caretIndex <= end)
                 caretIndex = start + newValue.length;
             else 
-                caretIndex = caretIndex + newValue.length - end; 
+                caretIndex = caretIndex + start + newValue.length - end;
 
             updateCaretPosition();
             horizontalAnchor = caretPosition.x;
@@ -477,6 +480,13 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         // Fire hook
         onReplace(start, oldValue, newValue);
+
+    }
+
+    /// ditto
+    void replace(size_t start, size_t end, string newValue) {
+
+        replace(start, end, Rope(newValue));
 
     }
     
@@ -508,6 +518,45 @@ class TextInput : InputNode!Node, FluidScrollable {
         }
 
         return Replace(this);
+
+    }
+
+    @("TextInput.replace correctly sets cursor position (caret inside selection)")
+    unittest {
+
+        auto root = textInput();
+        root.value = "foo bar baz";
+        root.caretIndex = "foo ba".length;
+        root.replace("foo ".length, "foo bar".length, "bazinga");
+
+        assert(root.value == "foo bazinga baz");
+        assert(root.valueBeforeCaret == "foo bazinga");
+
+    }
+
+    @("TextInput.replace correctly sets cursor position (caret after selection)")
+    unittest {
+
+        auto root = textInput();
+        root.value = "foo bar baz";
+        root.caretIndex = "foo bar ".length;
+        root.replace("foo ".length, "foo bar".length, "bazinga");
+
+        assert(root.value == "foo bazinga baz");
+        assert(root.valueBeforeCaret == "foo bazinga ");
+
+    }
+
+    @("TextInput.replace correctly sets cursor position (caret before selection)")
+    unittest {
+
+        auto root = textInput();
+        root.value = "foo bar baz";
+        root.caretIndex = "foo ".length;
+        root.replace("foo ".length, "foo bar".length, "bazinga");
+
+        assert(root.value == "foo bazinga baz");
+        assert(root.valueBeforeCaret == "foo ");
 
     }
 
@@ -2588,7 +2637,7 @@ class TextInput : InputNode!Node, FluidScrollable {
                     auto stop = yield(lineStart, front);
 
                     // Update indices in case the line has changed
-                    if (front !is originalFront) {
+                    if (front.chomp !is originalFront) {
                         setLine(originalFront, front);
                     }
 

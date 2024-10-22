@@ -224,6 +224,9 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     ///     value  = Value to insert.
     void replace(size_t start, size_t end, Rope value) {
 
+        // Ignore if there's no change
+        if (start == end && value.length == 0) return;
+
         const startInterval = positionOf(start);
         const oldInterval   = positionOf(end)
             .dropHead(startInterval);
