@@ -1369,7 +1369,9 @@ class TextInput : InputNode!Node, FluidScrollable {
             root.draw();
 
             assert(root.value == "");
-            assert(root.contentLabel.text == "placeholder");
+            assert(root.contentLabel.text == "");
+            assert(root.contentLabel.placeholderText == "placeholder");
+            assert(root.contentLabel.showPlaceholder);
             assert(root.isEmpty);
         }
 
@@ -1381,6 +1383,11 @@ class TextInput : InputNode!Node, FluidScrollable {
             root.draw();
 
             assert(root.value == "¡Hola, mundo!");
+
+            io.nextFrame;
+            root.draw();
+
+            assert(!root.contentLabel.showPlaceholder);
         }
 
         // The text will be displayed the next frame
