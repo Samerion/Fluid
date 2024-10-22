@@ -241,6 +241,7 @@ struct Rope {
     }
 
     /// True if the node is a leaf.
+    pragma(inline, true)
     bool isLeaf() const nothrow pure {
 
         return node is null;

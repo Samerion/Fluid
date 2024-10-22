@@ -4113,3 +4113,30 @@ unittest {
     
     
 }
+
+@("Critical TextInput performance test")
+unittest {
+
+    import std.file;
+    import std.datetime.stopwatch;
+
+    auto root = multilineInput();
+    auto io = new HeadlessBackend;
+
+    // Prepare
+    root.io = io;
+    io.clipboard = readText(__FILE__);
+    root.draw();
+
+    // Paste the text
+    io.nextFrame();
+
+    auto result = benchmark!({
+        root.paste();
+        root.draw();
+    })(1);
+
+    // This should be trivial on practically any machine
+    assert(result[0] <= 10.msecs, "Too slow: " ~ result[0].toString);
+
+}

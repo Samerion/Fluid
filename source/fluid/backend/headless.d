@@ -208,10 +208,8 @@ class HeadlessBackend : FluidBackend {
         Color _tint = Color(0xff, 0xff, 0xff, 0xff);
         string _clipboard;
 
-        /// Currently allocated/used textures as URLs.
-        ///
-        /// Textures loaded from images are `null` if arsd.image isn't present.
-        string[uint] allocatedTextures;
+        /// Currently allocated/used textures as byte arrays.
+        Image[uint] allocatedTextures;
 
         /// Texture reaper.
         TextureReaper _reaper;
@@ -506,11 +504,14 @@ class HeadlessBackend : FluidBackend {
 
     Texture loadTexture(Image image) @system {
 
-        auto texture = loadTexture(null, image.width, image.height);
+        Texture texture;
+        texture.id = ++lastTextureID;
+        texture.tombstone = reaper.makeTombstone(this, texture.id);
+        texture.width = image.width;
+        texture.height = image.height;
         texture.format = image.format;
 
-        // Fill the texture with data
-        updateTexture(texture, image);
+        allocatedTextures[texture.id] = image;
 
         return texture;
 
@@ -525,30 +526,14 @@ class HeadlessBackend : FluidBackend {
             import arsd.image;
 
             // Load the image to check its size
-            auto image = loadImageFromFile(filename);
-            auto url = format!"file:///%s"(filename.absolutePath.encodeURI);
+            auto image = loadImageFromFile(filename).toFluid;
 
-            return loadTexture(url, image.width, image.height);
+            return loadTexture(image);
 
         }
 
         // Can't load the texture, pretend to load a 16px texture
-        else return loadTexture(null, 16, 16);
-
-    }
-
-    Texture loadTexture(string url, int width, int height) {
-
-        Texture texture;
-        texture.id = ++lastTextureID;
-        texture.tombstone = reaper.makeTombstone(this, texture.id);
-        texture.width = width;
-        texture.height = height;
-
-        // Allocate the texture
-        allocatedTextures[texture.id] = url;
-
-        return texture;
+        else return loadTexture(Image((ubyte[]).init, 16, 16));
 
     }
 
@@ -556,52 +541,52 @@ class HeadlessBackend : FluidBackend {
     in (false)
     do {
 
-        static if (svgTextures) {
+        allocatedTextures[texture.id] = image;
 
-            import std.base64;
-            import arsd.png;
-            import arsd.image;
+    }
 
-            ubyte[] data;
+    /// Encode a texture into a `data:` URL.
+    static if (svgTextures)
+    string urlEncodeTexture(uint id) const @trusted {
 
-            // Load the image
-            final switch (image.format) {
+        import std.base64;
+        import arsd.png;
+        import arsd.image;
 
-                case Image.Format.rgba:
-                    data = cast(ubyte[]) image.rgbaPixels;
-                    break;
+        ubyte[] data;
+        auto image = allocatedTextures[id];
 
-                // At the moment, this loads the palette available at the time of generation.
-                // Could it be possible to update the palette later?
-                case Image.Format.palettedAlpha:
-                    data = cast(ubyte[]) image.palettedAlphaPixels
-                        .map!(a => image.paletteColor(a))
-                        .array;
-                    break;
+        // Load the image
+        final switch (image.format) {
 
-                case Image.Format.alpha:
-                    data = cast(ubyte[]) image.alphaPixels
-                        .map!(a => Color(0xff, 0xff, 0xff, a))
-                        .array;
-                    break;
+            case Image.Format.rgba:
+                data = cast(ubyte[]) image.rgbaPixels;
+                break;
 
-            }
+            // At the moment, this loads the palette available at the time of generation.
+            // Could it be possible to update the palette later?
+            case Image.Format.palettedAlpha:
+                data = cast(ubyte[]) image.palettedAlphaPixels
+                    .map!(a => image.paletteColor(a))
+                    .array;
+                break;
 
-            // Load the image
-            auto arsdImage = new TrueColorImage(image.width, image.height, data);
-
-            // Encode as a PNG in a data URL
-            auto png = arsdImage.writePngToArray();
-            auto base64 = Base64.encode(png);
-            auto url = format!"data:image/png;base64,%s"(base64);
-
-            // Set the URL
-            allocatedTextures[texture.id] = url;
+            case Image.Format.alpha:
+                data = cast(ubyte[]) image.alphaPixels
+                    .map!(a => Color(0xff, 0xff, 0xff, a))
+                    .array;
+                break;
 
         }
 
-        else
-            allocatedTextures[texture.id] = null;
+        // Load the image
+        auto arsdImage = new TrueColorImage(image.width, image.height, data);
+
+        // Encode as a PNG in a data URL
+        auto png = arsdImage.writePngToArray();
+        auto base64 = Base64.encode(png);
+
+        return "data:image/png;base64," ~ cast(string) base64;
 
     }
 
@@ -904,10 +889,13 @@ class HeadlessBackend : FluidBackend {
                     (DrawnCircle circle) => elems(), // TODO
                     (DrawnTexture texture) {
 
-                        auto url = texture.id in allocatedTextures;
+                        static if (svgTextures)
+                            const url = urlEncodeTexture(texture.id);
+                        else
+                            const url = string.init;
 
                         // URL given, valid image
-                        if (url && *url)
+                        if (url)
                             return elems(
                                 useTint(texture.tint),
                                 elem!"image"(
@@ -915,7 +903,7 @@ class HeadlessBackend : FluidBackend {
                                     attr("y") = texture.rectangle.y.text,
                                     attr("width") = texture.rectangle.width.text,
                                     attr("height") = texture.rectangle.height.text,
-                                    attr("href") = *url,
+                                    attr("href") = url,
                                     attr("style") = format!"filter:url(#%s)"(texture.tint.toHex!"t"),
                                 ),
                             );
@@ -1043,4 +1031,19 @@ unittest {
     assert(!isClose(1, 2));
     assert(!isClose(1, 1.1));
 
+}
+
+static if (svgTextures)  {
+    import arsd.color : MemoryImage;
+    Image toFluid(MemoryImage image) {
+
+        auto trueColor = image.getAsTrueColorImage;
+
+        return Image(
+            cast(Color[]) trueColor.imageData.colors,
+            image.width,
+            image.height,
+        );
+
+    }
 }
