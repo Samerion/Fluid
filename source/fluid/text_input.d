@@ -62,9 +62,6 @@ class TextInput : InputNode!Node, FluidScrollable {
         /// Size of the field.
         auto size = Vector2(200, 0);
 
-        /// A placeholder text for the field, displayed when the field is empty. Style using `emptyStyle`.
-        Rope placeholder;
-
         /// Time of the last interaction with the input.
         SysTime lastTouch;
 
@@ -235,10 +232,10 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         import fluid.button;
 
-        this.placeholder = placeholder;
         this.submitted = submitted;
         this.lastTouch = Clock.currTime;
         this.contentLabel = new typeof(contentLabel);
+        this.placeholder = placeholder;
 
         // Make single line the default
         contentLabel.isWrapDisabled = true;
@@ -278,8 +275,12 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     static class ContentLabel : Label {
 
+        bool showPlaceholder;
+        Text placeholderText;
+
         this() {
             super("");
+            placeholderText = Text(this, "");
         }
 
         protected inout(Rope) value() inout {
@@ -294,11 +295,28 @@ class TextInput : InputNode!Node, FluidScrollable {
             return false;
         }
 
+        override void resizeImpl(Vector2 space) {
+
+            super.resizeImpl(space);
+            placeholderText.resize(space, !isWrapDisabled);
+
+            if (placeholderText.size.x > minSize.x)
+                minSize.x = placeholderText.size.x;
+
+            if (placeholderText.size.y > minSize.y)
+                minSize.y = placeholderText.size.y;
+
+        }
+
         override void drawImpl(Rectangle outer, Rectangle inner) {
 
             // Don't draw background
             const style = pickStyle();
-            text.draw(style, inner.start);
+
+            if (showPlaceholder)
+                placeholderText.draw(style, inner.start);
+            else 
+                text.draw(style, inner.start);
 
         }
 
@@ -381,6 +399,24 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         return this.value(Rope(newValue));
 
+    }
+
+    /// Placeholder text that is displayed when the text input is empty.
+    /// Returns: Placeholder text.
+    /// Params:
+    ///     value = If given, replace the current placeholder with new one.
+    Rope placeholder() const {
+        return contentLabel.placeholderText;
+    }
+
+    /// ditto
+    Rope placeholder(Rope value) {
+        return contentLabel.placeholderText = value;
+    }
+
+    /// ditto
+    Rope placeholder(string value) {
+        return contentLabel.placeholderText = Rope(value);
     }
 
     /// Hook called every time a piece of text is replaced.
@@ -792,10 +828,6 @@ class TextInput : InputNode!Node, FluidScrollable {
         // Set the size
         minSize = size;
 
-        // Set the label text
-        version (none) // TODO TODO TODO
-        contentLabel.text = value == "" ? placeholder : value;
-
         const isFill = layout.nodeAlign[0] == NodeAlign.fill;
 
         _availableWidth = isFill
@@ -807,6 +839,7 @@ class TextInput : InputNode!Node, FluidScrollable {
             : Vector2(0, size.y);
 
         // Resize the label, and remove the spacing
+        contentLabel.showPlaceholder = value == "";
         contentLabel.style = pickLabelStyle(style);
         contentLabel.resize(tree, theme, textArea);
 

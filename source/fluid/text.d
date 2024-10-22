@@ -347,7 +347,9 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     ///     splitter = Function to use to split the text. Currently unsupported.
     ///     space    = Boundaries to fit the text in.
     ///     wrap     = Wrap text, on by default.
-    void resize(alias splitter = Typeface.defaultWordChunks)(Vector2 space, bool wrap = true) {
+    void resize(alias splitter = Typeface.defaultWordChunks)(Vector2 space, bool wrap = true)
+    in (node, "Text was not initialized; `node` was not set.")
+    do {
 
         auto style = node.pickStyle;
         auto typeface = style.getTypeface;

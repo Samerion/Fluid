@@ -172,12 +172,14 @@ class CodeInput : TextInput {
             assert(text.hasFastEdits);
 
             auto typeface = style.getTypeface;
-
             typeface.setSize(io.dpi, style.fontSize);
-
+            
             text.indentWidth = indentWidth * typeface.advance(' ').x / io.hidpiScale.x;
             text.resize(available);
-            minSize = text.size;
+            placeholderText.resize(available);
+
+            minSize.x = max(placeholderText.size.x, text.size.x);
+            minSize.y = max(placeholderText.size.y, text.size.y);
 
             assert(this.text.isMeasured);
 
@@ -186,7 +188,10 @@ class CodeInput : TextInput {
         override void drawImpl(Rectangle outer, Rectangle inner) {
 
             const style = pickStyle();
-            text.draw(styles, inner.start);
+            if (showPlaceholder)
+                placeholderText.draw(styles, inner.start);
+            else
+                text.draw(styles, inner.start);
 
         }
 
