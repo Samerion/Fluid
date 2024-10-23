@@ -1,7 +1,6 @@
 module fluid.text.typeface;
 
 import std.range;
-import std.traits;
 import std.string;
 import std.algorithm;
 
@@ -9,6 +8,8 @@ import fluid.utils;
 import fluid.backend;
 import fluid.text.rope;
 import fluid.text.ruler;
+
+public import fluid.text.util : keepWords, breakWords;
 
 @safe:
 
@@ -19,6 +20,9 @@ import fluid.text.ruler;
 ///
 /// See: [fluid.text.Text] for an interface on a higher level.
 interface Typeface {
+
+    public import fluid.text.util : defaultWordChunks, lineSplitter, lineSplitterIndex;
+    public import fluid.text.ruler : eachWord;
 
     /// List glyphs in the typeface.
     long glyphCount() const;
@@ -76,76 +80,6 @@ interface Typeface {
     static defaultTypeface() {
         import fluid.text.freetype;
         return FreetypeTypeface.defaultTypeface;
-    }
-
-    /// Default word splitter used by measure/draw.
-    alias defaultWordChunks = .breakWords;
-
-    /// Updated version of `std.string.lineSplitter` that includes trailing empty lines.
-    ///
-    /// `lineSplitterIndex` will produce a tuple with the index into the original text as the first element.
-    static lineSplitter(KeepTerminator keepTerm = No.keepTerminator, Range)(Range text)
-    if (isSomeChar!(ElementType!Range))
-    do {
-
-        enum dchar lineSep = '\u2028';  // Line separator.
-        enum dchar paraSep = '\u2029';  // Paragraph separator.
-        enum dchar nelSep  = '\u0085';  // Next line.
-
-        import std.utf : byDchar;
-
-        const hasEmptyLine = byDchar(text).endsWith('\r', '\n', '\v', '\f', "\r\n", lineSep, paraSep, nelSep) != 0;
-        auto split = .lineSplitter!keepTerm(text);
-
-        // Include the empty line if present
-        return hasEmptyLine.choose(
-            split.chain(only(typeof(text).init)),
-            split,
-        );
-
-    }
-
-    /// ditto
-    static lineSplitterIndex(Range)(Range text) {
-
-        import std.typecons : tuple;
-
-        auto initialValue = tuple(size_t.init, Range.init, size_t.init);
-
-        return Typeface.lineSplitter!(Yes.keepTerminator)(text)
-
-            // Insert the index, remove the terminator
-            // Position [2] is line end index
-            .cumulativeFold!((a, line) => tuple(a[2], line.chomp, a[2] + line.length))(initialValue)
-
-            // Remove item [2]
-            .map!(a => tuple(a[0], a[1]));
-
-    }
-
-    unittest {
-
-        import std.typecons : tuple;
-
-        auto myLine = "One\nTwo\r\nThree\vStuff\nï\nö";
-        auto result = [
-            tuple(0, "One"),
-            tuple(4, "Two"),
-            tuple(9, "Three"),
-            tuple(15, "Stuff"),
-            tuple(21, "ï"),
-            tuple(24, "ö"),
-        ];
-
-        assert(lineSplitterIndex(myLine).equal(result));
-        assert(lineSplitterIndex(Rope(myLine)).equal(result));
-
-    }
-
-    unittest {
-
-        assert(lineSplitter(Rope("ą")).equal(lineSplitter("ą")));
-
     }
 
     /// Measure space the given text would span. Uses dots as the unit.
@@ -207,59 +141,6 @@ interface Typeface {
 
     }
 
-    /// Helper function
-    static auto eachWord(alias chunkWords = defaultWordChunks, String)
-        (ref TextRuler ruler, String text, bool wrap = true)
-    do {
-
-        struct Helper {
-
-            alias ElementType = CommonType!(String, typeof(chunkWords(text).front));
-
-            // I'd use `choose` but it's currently broken
-            int opApply(int delegate(ElementType, Vector2) @safe yield) {
-
-                // Text wrapping on
-                if (wrap) {
-
-                    auto range = chunkWords(text);
-
-                    // Empty line, yield an empty word
-                    if (range.empty) {
-
-                        const penPosition = ruler.addWord(String.init);
-                        if (const ret = yield(String.init, penPosition)) return ret;
-
-                    }
-
-                    // Split each word
-                    else foreach (word; range) {
-
-                        const penPosition = ruler.addWord(word);
-                        if (const ret = yield(word, penPosition)) return ret;
-
-                    }
-
-                    return 0;
-
-                }
-
-                // Text wrapping off
-                else {
-
-                    const penPosition = ruler.addWord(text);
-                    return yield(text, penPosition);
-
-                }
-
-            }
-
-        }
-
-        return Helper();
-
-    }
-
     /// Draw text within the given rectangle in the image.
     final void draw(alias chunkWords = defaultWordChunks, String)
         (ref Image image, Rectangle rectangle, String text, ubyte paletteIndex, bool wrap = true)
@@ -300,103 +181,5 @@ interface Typeface {
         return indentWidth - (xoffset % indentWidth);
 
     }
-
-}
-
-/// Word breaking implementation that does not break words at all.
-/// Params:
-///     range = Text to break into words.
-auto keepWords(Range)(Range range) {
-
-    return only(range);
-
-}
-
-/// Break words on whitespace and punctuation. Splitter characters stick to the word that precedes them, e.g.
-/// `foo!! bar.` is split as `["foo!! ", "bar."]`.
-/// Params:
-///     range = Text to break into words.
-auto breakWords(Range)(Range range) {
-
-    import std.uni : isAlphaNum, isWhite;
-    import std.utf : decodeFront;
-
-    /// Pick the group the character belongs to.
-    static int pickGroup(dchar a) {
-
-        return a.isAlphaNum ? 0
-            : a.isWhite ? 1
-            : 2;
-
-    }
-
-    /// Splitter function that splits in any case two
-    static bool isSplit(dchar a, dchar b) {
-
-        return !a.isAlphaNum && !b.isWhite && pickGroup(a) != pickGroup(b);
-
-    }
-
-    struct BreakWords {
-
-        Range range;
-        Range front = Range.init;
-
-        bool empty() const {
-            return front.empty;
-        }
-
-        void popFront() {
-
-            dchar lastChar = 0;
-            auto originalRange = range.save;
-
-            while (!range.empty) {
-
-                if (lastChar && isSplit(lastChar, range.front)) break;
-                lastChar = range.decodeFront;
-
-            }
-
-            front = originalRange[0 .. $ - range.length];
-
-        }
-
-    }
-
-    auto chunks = BreakWords(range);
-    chunks.popFront;
-    return chunks;
-
-}
-
-unittest {
-
-    const test = "hellö world! 123 hellö123*hello -- hello -- - &&abcde!a!!?!@!@#3";
-    const result = [
-        "hellö ",
-        "world! ",
-        "123 ",
-        "hellö123*",
-        "hello ",
-        "-- ",
-        "hello ",
-        "-- ",
-        "- ",
-        "&&",
-        "abcde!",
-        "a!!?!@!@#",
-        "3"
-    ];
-
-    assert(breakWords(test).equal(result));
-    assert(breakWords(Rope(test)).equal(result));
-
-    const test2 = "Аа Бб Вв Гг Дд Ее Ëë Жж Зз Ии "
-        ~ "Йй Кк Лл Мм Нн Оо Пп Рр Сс Тт "
-        ~ "Уу Фф Хх Цц Чч Шш Щщ Ъъ Ыы Ьь "
-        ~ "Ээ Юю Яя ";
-
-    assert(breakWords(test2).equal(breakWords(Rope(test2))));
 
 }

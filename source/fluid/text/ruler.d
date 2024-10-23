@@ -2,7 +2,10 @@
 /// between two points in text.
 module fluid.text.ruler;
 
+import std.traits;
+
 import fluid.backend;
+import fluid.text.util;
 import fluid.text.typeface;
 
 @safe:
@@ -144,5 +147,58 @@ struct TextRuler {
         return wordPosition;
 
     }
+
+}
+
+/// Helper function
+static auto eachWord(alias chunkWords = defaultWordChunks, String)
+    (ref TextRuler ruler, String text, bool wrap = true)
+do {
+
+    struct Helper {
+
+        alias ElementType = CommonType!(String, typeof(chunkWords(text).front));
+
+        // I'd use `choose` but it's currently broken
+        int opApply(int delegate(ElementType, Vector2) @safe yield) {
+
+            // Text wrapping on
+            if (wrap) {
+
+                auto range = chunkWords(text);
+
+                // Empty line, yield an empty word
+                if (range.empty) {
+
+                    const penPosition = ruler.addWord(String.init);
+                    if (const ret = yield(String.init, penPosition)) return ret;
+
+                }
+
+                // Split each word
+                else foreach (word; range) {
+
+                    const penPosition = ruler.addWord(word);
+                    if (const ret = yield(word, penPosition)) return ret;
+
+                }
+
+                return 0;
+
+            }
+
+            // Text wrapping off
+            else {
+
+                const penPosition = ruler.addWord(text);
+                return yield(text, penPosition);
+
+            }
+
+        }
+
+    }
+
+    return Helper();
 
 }
