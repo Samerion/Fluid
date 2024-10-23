@@ -30,13 +30,19 @@ struct Stack(T) {
         StackNode!T* _top;
 
         /// Bottom of the stack, used to quickly transfer all nodes to the stack with `clear`.
-        /// Warning: Bottom is never cleared, so it doesn't have to be null when empty.
+        /// Warning: Bottom isn't cleared on `pop`, so it doesn't have to be null when empty.
         StackNode!T* _bottom;
 
     }
 
     /// The stack cannot be copied. Wrap it in a reference counted stack.
     @disable this(const Stack);
+    @disable this(this);
+
+    this(T item) {
+        // Stack could support batch operations so this would take a variadic argument
+        push(item);
+    }
 
     ~this() {
         clear();
@@ -66,6 +72,9 @@ struct Stack(T) {
         return _top is null;
     }
 
+    alias back = top;
+    alias removeBack = pop;
+
     /// Returns: The item at the top of this stack.
     ref inout(T) top() inout
     in (!empty, "Nothing is at the top of the stack when it is empty")
@@ -78,10 +87,12 @@ struct Stack(T) {
     ///     item = Item to add to the top of the stack.
     void push(T item) {
         _top = getNode(_top, item);
+        assert(_top !is _top.next);
 
         // Mark this as the bottom, if it is so
         if (_top.next is null) {
             _bottom = _top;
+            assert(_bottom.next is null);
         }
     }
 
@@ -91,7 +102,6 @@ struct Stack(T) {
     in (!empty, "`pop` cannot operate on an empty stack")
     do {
 
-        // Reclaim the node
         auto node = _top;
 
         // Remove the node from the stack
@@ -109,7 +119,6 @@ struct Stack(T) {
     ///
     /// Done automatically when the stack leaves the scope.
     void clear()
-    in (empty || _bottom.next is null)
     out (; empty)
     do {
 
@@ -131,6 +140,15 @@ struct Stack(T) {
 
     }
 
+    /// Returns:
+    ///     A range that allows iterating on the range without removing any items from it. While the range functions,
+    ///     items cannot be removed from the stack, or the range may break, possibly crashing the program. 
+    StackRange!T opIndex() @system {
+
+        return StackRange!T(_top);
+
+    }
+
     private StackNode!T* getNode(StackNode!T* next, T item) {
 
         // Trash is empty, allocate
@@ -149,6 +167,39 @@ struct Stack(T) {
             return node;
         }
 
+    }
+
+}
+
+/// A StackRange can be used to iterate a stack (starting from top, going to bottom) without modifying it.
+///
+/// The stack cannot be modified while it has any range attached to it.
+struct StackRange(T) {
+
+    private StackNode!T* node;
+    @disable this();
+
+    private this(StackNode!T* node) {
+        this.node = node;
+    }
+
+    /// Returns: True if the range has been emptied.
+    bool empty() const @system {
+        return node is null;
+    }
+
+    /// Returns: The item at the top of this range.
+    ref inout(T) front() inout @system
+    in (!empty, "Cannot use `front` of an empty range")
+    do {
+        return node.item;
+    }
+
+    /// Advance to the next item of the range.
+    void popFront() @system
+    in (!empty, "Cannot use `popFront` on an empty range")
+    do {
+        node = node.next;
     }
 
 }
@@ -194,7 +245,6 @@ unittest {
     assert(*stack.getNode(null, Test(2)) == StackNode!Test(null, Test(2)));
     assert(*stack.getNode(null, Test(3)) == StackNode!Test(null, Test(3)));
     assert(stack._trash is null);
-
     assert(Stack!Test.totalNodeCount == 3);
     Stack!Test.resetNodeCount();
     
@@ -220,7 +270,6 @@ unittest {
     stack.clear();
     assert(stack.empty);
     assert(stack._trash is top);
-
     assert(stack._trash == nodes[0]);
     assert(stack._trash.next == nodes[1]);
     assert(stack._trash.next.next == nodes[2]);
@@ -290,6 +339,39 @@ unittest {
     a ~= Test(18);
     assert(Stack!Test.totalNodeCount == 9);
 
+    a.clear();
+    Stack!Test.resetNodeCount();
+    Stack!Test._trash = null;
+
+}
+
+@("Stack can be used with Range API")
+unittest {
+
+    import std.algorithm;
+
+    assert(Stack!Test.totalNodeCount == 0);
+    assert(Stack!Test._trash is null);
+
+    Stack!Test stack;
+    stack ~= Test(1);
+    stack ~= Test(2);
+    stack ~= Test(3);
+    stack ~= Test(4);
+    stack ~= Test(5);
+
+    assert(Stack!Test.totalNodeCount == 5);
+    assert(stack[].equal([5, 4, 3, 2, 1]));
+    assert(Stack!Test.totalNodeCount == 5);
+
+    assert(stack.pop() == Test(5));
+    assert(stack.pop() == Test(4));
+    assert(stack.pop() == Test(3));
+    assert(stack.pop() == Test(2));
+    assert(stack.pop() == Test(1));
+    assert(stack.empty());
+
+    assert(Stack!Test.totalNodeCount == 5);
     Stack!Test.resetNodeCount();
     Stack!Test._trash = null;
 

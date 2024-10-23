@@ -123,7 +123,7 @@ struct TextInterval {
 }
 
 /// Cache result matching a point in text to a `TextRuler`.
-struct CachedTextRuler {
+package struct CachedTextRuler {
 
     /// Point (interval from the start of the text) at which the measurement was made.
     TextInterval point;
@@ -142,7 +142,7 @@ struct CachedTextRuler {
 /// Entries into the cache are made in intervals. The cache will return the last found cache entry rather than one 
 /// directly corresponding to the queried character. To get an exact position, the text ruler can be advanced by 
 /// measuring all characters in between.
-struct TextRulerCache {
+package struct TextRulerCache {
 
     /// Ruler at the start of this range.
     TextRuler startRuler;
@@ -392,7 +392,7 @@ struct TextRulerCache {
 
         const diff = left.depth - right.depth;
                 
-        return -15 < diff && diff < 15;
+        return -10 < diff && diff < 10;
 
     }
 
@@ -446,14 +446,14 @@ struct TextRulerCache {
 /// Returns:
 ///     A `TextRuler` struct wrapper with an extra `point` field to indicate the location in text the point 
 ///     corresponds to.
-auto query(return scope TextRulerCache* cache, size_t index)
+package auto query(return scope TextRulerCache* cache, size_t index)
 out (r; !r.empty)
 out (r) {
     static assert(is(ElementType!(typeof(r)) : const CachedTextRuler), ElementType!(typeof(r)).stringof);
 }
 do {
 
-    import std.container.dlist : DList;
+    import fluid.text.stack;
 
     static struct CacheStackFrame {
 
@@ -483,9 +483,11 @@ do {
     /// side of `A` replacing it with `C`. The stack is `[C]`.
     static struct TextRulerCacheRange {
 
-        DList!CacheStackFrame stack;
+        Stack!CacheStackFrame stack;
         size_t needle;
         TextInterval offset;
+
+        invariant(stack.empty || stack.back !is null);
 
         @safe:
 
@@ -497,12 +499,13 @@ do {
         }
 
         /// Assign a new value to the front
-        ref TextRuler front(TextRuler ruler) {
+        ref TextRuler front(TextRuler ruler) @trusted {
 
             stack.back.startRuler = ruler;
 
             // Update startRuler in all ancestors
-            foreach (ancestor; stack[].retro.dropOne) {
+            // @trusted: stack is not touched through other means
+            foreach (ancestor; stack[].dropOne) {
                 static assert(isPointer!(typeof(ancestor.cache)));
 
                 // End as soon as an unaffected ancestor is reached
@@ -545,6 +548,8 @@ do {
 
             auto ancestor = stack.back;
 
+            assert(ancestor.right);
+
             // Remove the next node and descend into its right side
             stack.back.isRight = true;
             stack ~= CacheStackFrame(ancestor.right);
@@ -553,10 +558,11 @@ do {
         }
 
         /// Update depth of the current node. Iterates through all ancestors.
-        void updateDepth() {
+        void updateDepth() @trusted {
 
             // Update depth of every item in the stack
-            foreach_reverse (item; stack) {
+            // @trusted: ancestors ain't touched
+            foreach (item; stack[]) {
                 item.recalculateDepth();
             }
 
@@ -607,34 +613,39 @@ do {
                 // precedes it. This means we must find an adjacent branch that goes leftwards. We will search our 
                 // ancestors: one containing a preceding node will have `isRight` set to `true`, i.e. the current node
                 // is in the right branch. 
-                TextRulerCache* previous;
-                foreach (ancestor; stack[].retro.dropOne) {
+                // @trusted: no stack.removeBack() calls
+                () @trusted {
 
-                    ancestor.recalculateDepth();
+                    TextRulerCache* previous;
+                    foreach (ancestor; stack[].dropOne) {
 
-                    // Found the previous node already, just recalculate depth
-                    if (previous) continue;
+                        ancestor.recalculateDepth();
 
-                    // Move the offset from the removed node to the previous leaf node
-                    if (ancestor.isRight) {
-                        previous = ancestor.left;
-                        continue;
-                    }
+                        // Found the previous node already, just recalculate depth
+                        if (previous) continue;
+
+                        // Move the offset from the removed node to the previous leaf node
+                        if (ancestor.isRight) {
+                            previous = ancestor.left;
+                            continue;
+                        }
                 
-                    // Recalculate the start and interval
-                    ancestor.startRuler = ancestor.left.startRuler;
-                    ancestor.interval = ancestor.left.interval + ancestor.right.interval;
+                        // Recalculate the start and interval
+                        ancestor.startRuler = ancestor.left.startRuler;
+                        ancestor.interval = ancestor.left.interval + ancestor.right.interval;
 
-                }
+                    }
 
-                assert(previous);
+                    assert(previous);
 
-                // Descend into the preceding branch (always going right), expanding the interval of every node until 
-                // we hit a leaf. 
-                while (previous) {
-                    previous.interval += offset;
-                    previous = previous.right;
-                }
+                    // Descend into the preceding branch (always going right), expanding the interval of every node until 
+                    // we hit a leaf. 
+                    while (previous) {
+                        previous.interval += offset;
+                        previous = previous.right;
+                    }
+
+                }();
 
                 descend();
 
@@ -677,7 +688,7 @@ do {
     }
     
     auto ruler = TextRulerCacheRange(
-        DList!CacheStackFrame(
+        Stack!CacheStackFrame(
             CacheStackFrame(cache)
         ),
         index
@@ -789,7 +800,7 @@ unittest {
     auto space = root.io.windowSize;
 
     assert(root.text[232] == '\n');
-    assert(query(&root.text._cache, 0).map!"a.point".equal([
+    assert(query(&root.text._cache, 0).equal!"a.point == b"([
         TextInterval(  0, 0,   0),
         TextInterval(132, 0, 132),  // Past 128 characters, + "nim ", next checkpoint 132+128
         TextInterval(272, 2,  39),  // Past 260 characters, + "prehenderit ", line begins at 233
@@ -844,7 +855,7 @@ unittest {
     root.draw();
 
     // Same data as in the last test
-    assert(query(&root.text._cache, 0).map!"a.point".equal([
+    debug assert(query(&root.text._cache, 0).equal!"a.point == b"([
         TextInterval(  0, 0,   0),
         TextInterval(132, 0, 132),
         TextInterval(272, 2,  39),
@@ -859,7 +870,7 @@ unittest {
     
     root.draw();
 
-    assert(query(&root.text._cache, 0).map!"a.point".equal([
+    assert(query(&root.text._cache, 0).equal!"a.point == b"([
         TextInterval(  0, 0,   0),
         TextInterval(285, 0, 285),  // 132 and 272 are gone
         TextInterval(402, 0, 402),  // Line breaks were replaced

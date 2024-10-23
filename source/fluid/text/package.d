@@ -7,4 +7,4 @@ public import fluid.text.rope;
 public import fluid.text.ruler;
 public import fluid.text.typeface;
 public import fluid.text.composite_texture;
-// `cache` is not imported
+// Do not import (cache, list)
