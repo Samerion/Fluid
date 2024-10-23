@@ -10,7 +10,8 @@ import std.algorithm;
 import fluid.node;
 import fluid.utils;
 import fluid.backend;
-import fluid.typeface;
+import fluid.text.typeface;
+import fluid.text.freetype;
 
 public import fluid.theme : makeTheme, Theme, Selector, rule, Rule, when, WhenRule, children, ChildrenRule, Field, 
     Breadcrumbs;
@@ -156,7 +157,7 @@ struct Style {
 
     static Typeface defaultTypeface() {
 
-        return Typeface.defaultTypeface;
+        return FreetypeTypeface.defaultTypeface;
 
     }
 
@@ -192,13 +193,13 @@ struct Style {
     /// Get current typeface, or fallback to default.
     Typeface getTypeface() {
 
-        return either(typeface, Typeface.defaultTypeface);
+        return either(typeface, defaultTypeface);
 
     }
 
     const(Typeface) getTypeface() const {
 
-        return either(typeface, Typeface.defaultTypeface);
+        return either(typeface, defaultTypeface);
 
     }
 

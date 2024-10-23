@@ -691,13 +691,15 @@ do {
 @("Query on a leaf cache returns the first item")
 unittest {
 
+    import fluid.style;
+
     auto cache = new TextRulerCache();
 
     assert(cache.query(0).equal([TextRuler.init]));
     assert(cache.query(1).equal([TextRuler.init]));
     assert(cache.query(10).equal([TextRuler.init]));
 
-    auto ruler = TextRuler(Typeface.defaultTypeface, 10);
+    auto ruler = TextRuler(Style.defaultTypeface, 10);
     *cache = TextRulerCache(ruler);
 
     assert(cache.query(0).equal([ruler]));
@@ -709,8 +711,10 @@ unittest {
 @("TextRulerCache.insert works")
 unittest {
 
+    import fluid.style;
+
     auto cache = new TextRulerCache();
-    auto typeface = Typeface.defaultTypeface;
+    auto typeface = Style.defaultTypeface;
 
     auto points = [
         CachedTextRuler(TextInterval( 0, 0,  0), TextRuler(typeface, 1)),
@@ -911,7 +915,9 @@ unittest {
 @trusted 
 unittest {
 
-    auto typeface = Typeface.defaultTypeface;
+    import fluid.style;
+
+    auto typeface = Style.defaultTypeface;
 
     // Cache with entries at 0 and 10
     TextRulerCache make() {

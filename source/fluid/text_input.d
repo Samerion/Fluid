@@ -20,8 +20,8 @@ import fluid.scroll;
 import fluid.actions;
 import fluid.backend;
 import fluid.structs;
-import fluid.typeface;
 import fluid.popup_frame;
+import fluid.text.typeface;
 
 alias wordFront = fluid.text.wordFront;
 alias wordBack  = fluid.text.wordBack;
@@ -2390,7 +2390,7 @@ class TextInput : InputNode!Node, FluidScrollable {
     Rope lineByIndex(size_t index, Rope newValue) {
 
         import std.utf;
-        import fluid.typeface;
+        import fluid.text.typeface;
 
         const backLength = Typeface.lineSplitter(value[0..index].retro).front.byChar.walkLength;
         const frontLength = Typeface.lineSplitter(value[index..$]).front.byChar.walkLength;

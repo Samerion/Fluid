@@ -1151,7 +1151,7 @@ struct Rope {
     in (index >= 0 && index <= length, format!"Index %s is out of bounds of Rope of length %s"(index, length))
     do {
 
-        import fluid.typeface : Typeface;
+        import fluid.text.typeface : Typeface;
 
         auto back  = Typeface.lineSplitter(this[0..index].retro).front;
         auto front = Typeface.lineSplitter!keepTerminator(this[index..$]).front;
@@ -1196,7 +1196,7 @@ struct Rope {
     ptrdiff_t column(Chartype)(size_t index) const {
 
         import std.utf : byUTF;
-        import fluid.typeface : Typeface;
+        import fluid.text.typeface : Typeface;
 
         // Get last line
         return Typeface.lineSplitter(this[0..index].retro).front
