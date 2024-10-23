@@ -1621,10 +1621,6 @@ private struct TextRulerCache {
 
         scope cache = &this;
 
-        import std.stdio;
-        debug writefln!"updating interval %s..%s -> %s"(absoluteStart, absoluteEnd, start + newInterval);
-        debug writefln!"in cache: ..%s"(cache.interval);
-
         // Delete all entries in the range
         // TODO this could be far more efficient
         for (auto range = query(&this, absoluteStart.length); !range.empty;) {
@@ -1635,19 +1631,12 @@ private struct TextRulerCache {
                 continue;
             }
 
-            import std.stdio;
-            debug writefln!"  entry: %s -> %s"(range.front.point, range.front.point.length > absoluteEnd.length ? "keep" : "delete");
-
             // Skip entires after the range
             if (range.front.point.length > absoluteEnd.length) break;
 
             range.removeFront;
 
         }
-
-        import std.stdio;
-        debug writefln!"after removal:%(\n  %s%)"(query(&this, absoluteStart.length));
-        debug writefln!"moving";
 
         // Find a relevant node, update intervals of all ancestors and itself
         // thus pushing or pulling subsequent nodes 
@@ -1657,12 +1646,7 @@ private struct TextRulerCache {
             const oldEnd = start + oldInterval;
             const newEnd = start + newInterval;
 
-            import std.stdio;
-            debug writef!"  interval: %s (%s -> %s) -> "(cache.interval, oldEnd, newEnd);
-
             cache.interval = newEnd + cache.interval.dropHead(oldEnd);
-
-            debug writefln!"%s"(cache.interval);
 
             // Found the deepest relevant node
             // `isLeaf` is inlined to keep invariants from running
@@ -1924,6 +1908,12 @@ do {
 
             // Remove the leaf (front)
             stack.removeBack();
+            ascendAndDescend();
+
+        }
+
+        /// Move upwards in the stack to find any yet unvisited node.
+        private void ascendAndDescend() {
 
             // Find any parent that has right right side unvisited
             // `isRight` means the parents has already descended into its right side
@@ -1978,7 +1968,7 @@ do {
                 *parent = *parent.left;
                 parent.interval = interval;
                 updateDepth();
-                popFront();
+                ascendAndDescend();
 
             }
 
@@ -2344,37 +2334,43 @@ unittest {
 
     // Clearing it out
     {
-        TextRulerCache[5] nodes = make();
+        TextRulerCache[6] nodes = make();
         auto root = TextRulerCache(&nodes[0], 
             new TextRulerCache(
-                &nodes[1],
                 new TextRulerCache(
+                    &nodes[1],
                     &nodes[2],
+                ),
+                new TextRulerCache(
+                    &nodes[3],
                     new TextRulerCache(
-                        &nodes[3],
                         &nodes[4],
+                        &nodes[5],
                     )
                 )
             )
         );
 
         assert(query(&root, 0).equal([
-            CachedTextRuler(TextInterval( 0, 0, 0), TextRuler(typeface, 1)),
-            CachedTextRuler(TextInterval( 6, 1, 0), TextRuler(typeface, 2)),
-            CachedTextRuler(TextInterval(10, 2, 0), TextRuler(typeface, 1)),
-            CachedTextRuler(TextInterval(16, 3, 0), TextRuler(typeface, 2)),
-            CachedTextRuler(TextInterval(20, 4, 0), TextRuler(typeface, 1)),
-            CachedTextRuler(TextInterval(26, 5, 0), TextRuler(typeface, 2)),
-            CachedTextRuler(TextInterval(30, 6, 0), TextRuler(typeface, 1)),
-            CachedTextRuler(TextInterval(36, 7, 0), TextRuler(typeface, 2)),
-            CachedTextRuler(TextInterval(40, 8, 0), TextRuler(typeface, 1)),
-            CachedTextRuler(TextInterval(46, 9, 0), TextRuler(typeface, 2)),
+            CachedTextRuler(TextInterval( 0,  0, 0), TextRuler(typeface, 1)),
+            CachedTextRuler(TextInterval( 6,  1, 0), TextRuler(typeface, 2)),
+            CachedTextRuler(TextInterval(10,  2, 0), TextRuler(typeface, 1)),
+            CachedTextRuler(TextInterval(16,  3, 0), TextRuler(typeface, 2)),
+            CachedTextRuler(TextInterval(20,  4, 0), TextRuler(typeface, 1)),
+            CachedTextRuler(TextInterval(26,  5, 0), TextRuler(typeface, 2)),
+            CachedTextRuler(TextInterval(30,  6, 0), TextRuler(typeface, 1)),
+            CachedTextRuler(TextInterval(36,  7, 0), TextRuler(typeface, 2)),
+            CachedTextRuler(TextInterval(40,  8, 0), TextRuler(typeface, 1)),
+            CachedTextRuler(TextInterval(46,  9, 0), TextRuler(typeface, 2)),
+            CachedTextRuler(TextInterval(50, 10, 0), TextRuler(typeface, 1)),
+            CachedTextRuler(TextInterval(56, 11, 0), TextRuler(typeface, 2)),
         ]));
 
-        for (auto range = query(&root, 6); !range.empty; range.removeFront) { }
+        for (auto range = query(&root, 10); !range.empty; range.removeFront) { }
 
         assert(query(&root, 0).equal([
             CachedTextRuler(TextInterval( 0, 0, 0), TextRuler(typeface, 1)),
+            CachedTextRuler(TextInterval( 6, 1, 0), TextRuler(typeface, 2)),
         ]));
     }
 
