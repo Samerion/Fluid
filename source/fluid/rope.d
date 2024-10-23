@@ -288,6 +288,11 @@ struct Rope {
         start++;
         length--;
 
+        // Remove the left side once done with it
+        if (node !is null && start >= node.left.length) {
+            this = right;
+        }
+
     }
 
     /// Get the last *byte* from the rope.

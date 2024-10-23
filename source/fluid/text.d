@@ -1613,12 +1613,20 @@ private struct TextRulerCache {
     ///     newInterval = Interval to be inserted.
     void updateInterval(TextInterval start, TextInterval oldInterval, TextInterval newInterval) {
 
+        // Nothing to do
+        if (oldInterval.length == 0 && newInterval.length == 0) return;
+
         const absoluteStart = start;
         const absoluteEnd = start + oldInterval;
 
         scope cache = &this;
 
+        import std.stdio;
+        debug writefln!"updating interval %s..%s -> %s"(absoluteStart, absoluteEnd, start + newInterval);
+        debug writefln!"in cache: ..%s"(cache.interval);
+
         // Delete all entries in the range
+        // TODO this could be far more efficient
         for (auto range = query(&this, absoluteStart.length); !range.empty;) {
 
             // Skip the first entry, it is not affected
@@ -1627,6 +1635,9 @@ private struct TextRulerCache {
                 continue;
             }
 
+            import std.stdio;
+            debug writefln!"  entry: %s -> %s"(range.front.point, range.front.point.length > absoluteEnd.length ? "keep" : "delete");
+
             // Skip entires after the range
             if (range.front.point.length > absoluteEnd.length) break;
 
@@ -1634,14 +1645,24 @@ private struct TextRulerCache {
 
         }
 
+        import std.stdio;
+        debug writefln!"after removal:%(\n  %s%)"(query(&this, absoluteStart.length));
+        debug writefln!"moving";
+
         // Find a relevant node, update intervals of all ancestors and itself
-        if (start.length + oldInterval.length < cache.interval.length)
+        // thus pushing or pulling subsequent nodes 
+        if (absoluteEnd.length < cache.interval.length)
         while (true) {
 
             const oldEnd = start + oldInterval;
             const newEnd = start + newInterval;
 
+            import std.stdio;
+            debug writef!"  interval: %s (%s -> %s) -> "(cache.interval, oldEnd, newEnd);
+
             cache.interval = newEnd + cache.interval.dropHead(oldEnd);
+
+            debug writefln!"%s"(cache.interval);
 
             // Found the deepest relevant node
             // `isLeaf` is inlined to keep invariants from running
@@ -1649,7 +1670,7 @@ private struct TextRulerCache {
 
             // Search for a node that can control the start of the interval; either exactly at the start, 
             // or shortly before it, just like `query()`
-            if (start.length < cache.left.interval.length) {
+            if (start.length <= cache.left.interval.length) {
                 cache = cache.left;
             }
             else {
@@ -2270,6 +2291,117 @@ unittest {
          CachedTextRuler(TextInterval(95, 6,  0), TextRuler(typeface, 6)),
     ]));
     
+}
+
+@("Cache node removal works")
+@trusted 
+unittest {
+
+    auto typeface = Typeface.defaultTypeface;
+
+    // Cache with entries at 0 and 10
+    TextRulerCache make() {
+        auto left  = new TextRulerCache(TextRuler(typeface, 1), TextInterval( 6, 1, 0));
+        auto right = new TextRulerCache(TextRuler(typeface, 2), TextInterval( 4, 1, 0));
+        return TextRulerCache(left, right);
+    }
+
+    {
+        // Remove entry at 10
+        auto root = make();
+        query(&root, 10).removeFront;
+
+        // Only the first entry should survive
+        assert(query(&root, 0).equal([
+            CachedTextRuler(TextInterval(0, 0, 0), TextRuler(typeface, 1)),
+        ]));
+    }
+
+    // Removing a node in the middle
+    {
+        auto left = make();
+        auto right = make();
+        auto root = TextRulerCache(&left, &right);
+
+        // Remove a right side node ((0, 6), (10, 16)) -> (0, (10, 16))
+        query(&root, 6).removeFront;
+
+        assert(query(&root, 0).equal([
+            CachedTextRuler(TextInterval(0,  0, 0), TextRuler(typeface, 1)),
+            CachedTextRuler(TextInterval(10, 2, 0), TextRuler(typeface, 1)),
+            CachedTextRuler(TextInterval(16, 3, 0), TextRuler(typeface, 2)),
+        ]));
+
+        // Remove a left side node (0, (10, 16)) -> (0, 16)
+        query(&root, 10).removeFront;
+
+        assert(query(&root, 0).equal([
+            CachedTextRuler(TextInterval(0,  0, 0), TextRuler(typeface, 1)),
+            CachedTextRuler(TextInterval(16, 3, 0), TextRuler(typeface, 2)),
+        ]));
+        
+    }
+
+    // Clearing it out
+    {
+        TextRulerCache[5] nodes = make();
+        auto root = TextRulerCache(&nodes[0], 
+            new TextRulerCache(
+                &nodes[1],
+                new TextRulerCache(
+                    &nodes[2],
+                    new TextRulerCache(
+                        &nodes[3],
+                        &nodes[4],
+                    )
+                )
+            )
+        );
+
+        assert(query(&root, 0).equal([
+            CachedTextRuler(TextInterval( 0, 0, 0), TextRuler(typeface, 1)),
+            CachedTextRuler(TextInterval( 6, 1, 0), TextRuler(typeface, 2)),
+            CachedTextRuler(TextInterval(10, 2, 0), TextRuler(typeface, 1)),
+            CachedTextRuler(TextInterval(16, 3, 0), TextRuler(typeface, 2)),
+            CachedTextRuler(TextInterval(20, 4, 0), TextRuler(typeface, 1)),
+            CachedTextRuler(TextInterval(26, 5, 0), TextRuler(typeface, 2)),
+            CachedTextRuler(TextInterval(30, 6, 0), TextRuler(typeface, 1)),
+            CachedTextRuler(TextInterval(36, 7, 0), TextRuler(typeface, 2)),
+            CachedTextRuler(TextInterval(40, 8, 0), TextRuler(typeface, 1)),
+            CachedTextRuler(TextInterval(46, 9, 0), TextRuler(typeface, 2)),
+        ]));
+
+        for (auto range = query(&root, 6); !range.empty; range.removeFront) { }
+
+        assert(query(&root, 0).equal([
+            CachedTextRuler(TextInterval( 0, 0, 0), TextRuler(typeface, 1)),
+        ]));
+    }
+
+}
+
+@("Text can be filled and cleared in a loop")
+unittest {
+
+    import fluid.label;
+
+    auto word = 'a'.repeat(256);
+    const text = Rope(word.repeat(2).join(" "));
+
+    auto root = label("");
+
+    foreach (i; 0..100) {
+
+        root.text = text;
+        root.draw();
+        assert(query(&root.text._cache, 0).walkLength > 1);
+
+        root.text = "";
+        root.draw();
+        assert(query(&root.text._cache, 0).walkLength == 1);
+
+    }
+
 }
 
 /// `wordFront` and `wordBack` get the word at the beginning or end of given string, respectively.

@@ -4130,12 +4130,17 @@ unittest {
     // Paste the text
     io.nextFrame();
 
+    const runCount = 10;
+
     auto result = benchmark!({
+        root.value = "";
         root.paste();
         root.draw();
-    })(1);
+    })(runCount);
+
+    const average = result[0] / runCount;
 
     // This should be trivial on practically any machine
-    assert(result[0] <= 10.msecs, "Too slow: " ~ result[0].toString);
+    assert(average <= 10.msecs, "Too slow: average " ~ average.toString);
 
 }
