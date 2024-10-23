@@ -1613,12 +1613,16 @@ private struct TextRulerCache {
     ///     newInterval = Interval to be inserted.
     void updateInterval(TextInterval start, TextInterval oldInterval, TextInterval newInterval) {
 
+        // Nothing to do
+        if (oldInterval.length == 0 && newInterval.length == 0) return;
+
         const absoluteStart = start;
         const absoluteEnd = start + oldInterval;
 
         scope cache = &this;
 
         // Delete all entries in the range
+        // TODO this could be far more efficient
         for (auto range = query(&this, absoluteStart.length); !range.empty;) {
 
             // Skip the first entry, it is not affected
@@ -1635,7 +1639,8 @@ private struct TextRulerCache {
         }
 
         // Find a relevant node, update intervals of all ancestors and itself
-        if (start.length + oldInterval.length < cache.interval.length)
+        // thus pushing or pulling subsequent nodes 
+        if (absoluteEnd.length < cache.interval.length)
         while (true) {
 
             const oldEnd = start + oldInterval;
@@ -1649,7 +1654,7 @@ private struct TextRulerCache {
 
             // Search for a node that can control the start of the interval; either exactly at the start, 
             // or shortly before it, just like `query()`
-            if (start.length < cache.left.interval.length) {
+            if (start.length <= cache.left.interval.length) {
                 cache = cache.left;
             }
             else {
@@ -1903,6 +1908,12 @@ do {
 
             // Remove the leaf (front)
             stack.removeBack();
+            ascendAndDescend();
+
+        }
+
+        /// Move upwards in the stack to find any yet unvisited node.
+        private void ascendAndDescend() {
 
             // Find any parent that has right right side unvisited
             // `isRight` means the parents has already descended into its right side
@@ -1957,7 +1968,7 @@ do {
                 *parent = *parent.left;
                 parent.interval = interval;
                 updateDepth();
-                popFront();
+                ascendAndDescend();
 
             }
 
@@ -2270,6 +2281,123 @@ unittest {
          CachedTextRuler(TextInterval(95, 6,  0), TextRuler(typeface, 6)),
     ]));
     
+}
+
+@("Cache node removal works")
+@trusted 
+unittest {
+
+    auto typeface = Typeface.defaultTypeface;
+
+    // Cache with entries at 0 and 10
+    TextRulerCache make() {
+        auto left  = new TextRulerCache(TextRuler(typeface, 1), TextInterval( 6, 1, 0));
+        auto right = new TextRulerCache(TextRuler(typeface, 2), TextInterval( 4, 1, 0));
+        return TextRulerCache(left, right);
+    }
+
+    {
+        // Remove entry at 10
+        auto root = make();
+        query(&root, 10).removeFront;
+
+        // Only the first entry should survive
+        assert(query(&root, 0).equal([
+            CachedTextRuler(TextInterval(0, 0, 0), TextRuler(typeface, 1)),
+        ]));
+    }
+
+    // Removing a node in the middle
+    {
+        auto left = make();
+        auto right = make();
+        auto root = TextRulerCache(&left, &right);
+
+        // Remove a right side node ((0, 6), (10, 16)) -> (0, (10, 16))
+        query(&root, 6).removeFront;
+
+        assert(query(&root, 0).equal([
+            CachedTextRuler(TextInterval(0,  0, 0), TextRuler(typeface, 1)),
+            CachedTextRuler(TextInterval(10, 2, 0), TextRuler(typeface, 1)),
+            CachedTextRuler(TextInterval(16, 3, 0), TextRuler(typeface, 2)),
+        ]));
+
+        // Remove a left side node (0, (10, 16)) -> (0, 16)
+        query(&root, 10).removeFront;
+
+        assert(query(&root, 0).equal([
+            CachedTextRuler(TextInterval(0,  0, 0), TextRuler(typeface, 1)),
+            CachedTextRuler(TextInterval(16, 3, 0), TextRuler(typeface, 2)),
+        ]));
+        
+    }
+
+    // Clearing it out
+    {
+        TextRulerCache[6] nodes = make();
+        auto root = TextRulerCache(&nodes[0], 
+            new TextRulerCache(
+                new TextRulerCache(
+                    &nodes[1],
+                    &nodes[2],
+                ),
+                new TextRulerCache(
+                    &nodes[3],
+                    new TextRulerCache(
+                        &nodes[4],
+                        &nodes[5],
+                    )
+                )
+            )
+        );
+
+        assert(query(&root, 0).equal([
+            CachedTextRuler(TextInterval( 0,  0, 0), TextRuler(typeface, 1)),
+            CachedTextRuler(TextInterval( 6,  1, 0), TextRuler(typeface, 2)),
+            CachedTextRuler(TextInterval(10,  2, 0), TextRuler(typeface, 1)),
+            CachedTextRuler(TextInterval(16,  3, 0), TextRuler(typeface, 2)),
+            CachedTextRuler(TextInterval(20,  4, 0), TextRuler(typeface, 1)),
+            CachedTextRuler(TextInterval(26,  5, 0), TextRuler(typeface, 2)),
+            CachedTextRuler(TextInterval(30,  6, 0), TextRuler(typeface, 1)),
+            CachedTextRuler(TextInterval(36,  7, 0), TextRuler(typeface, 2)),
+            CachedTextRuler(TextInterval(40,  8, 0), TextRuler(typeface, 1)),
+            CachedTextRuler(TextInterval(46,  9, 0), TextRuler(typeface, 2)),
+            CachedTextRuler(TextInterval(50, 10, 0), TextRuler(typeface, 1)),
+            CachedTextRuler(TextInterval(56, 11, 0), TextRuler(typeface, 2)),
+        ]));
+
+        for (auto range = query(&root, 10); !range.empty; range.removeFront) { }
+
+        assert(query(&root, 0).equal([
+            CachedTextRuler(TextInterval( 0, 0, 0), TextRuler(typeface, 1)),
+            CachedTextRuler(TextInterval( 6, 1, 0), TextRuler(typeface, 2)),
+        ]));
+    }
+
+}
+
+@("Text can be filled and cleared in a loop")
+unittest {
+
+    import fluid.label;
+
+    auto word = 'a'.repeat(256);
+    const text = Rope(word.repeat(2).join(" "));
+
+    auto root = label("");
+
+    foreach (i; 0..100) {
+
+        root.text = text;
+        root.draw();
+        assert(query(&root.text._cache, 0).walkLength > 1);
+
+        root.text = "";
+        root.draw();
+        assert(query(&root.text._cache, 0).walkLength == 1);
+
+    }
+
 }
 
 /// `wordFront` and `wordBack` get the word at the beginning or end of given string, respectively.
