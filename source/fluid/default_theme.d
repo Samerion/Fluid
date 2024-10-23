@@ -10,7 +10,6 @@ import fluid.backend;
 import fluid.structs;
 import fluid.checkbox;
 import fluid.radiobox;
-import fluid.typeface;
 import fluid.drag_slot;
 import fluid.separator;
 import fluid.file_input;
@@ -18,6 +17,7 @@ import fluid.text_input;
 import fluid.popup_frame;
 import fluid.number_input;
 import fluid.scroll_input;
+import fluid.text.typeface;
 
 /// Theme with no properties set.
 ///
@@ -77,7 +77,7 @@ static this() {
 
         fluidDefaultTheme.add(
             rule!Node(
-                typeface = Typeface.defaultTypeface,
+                typeface = Style.defaultTypeface,
                 textColor = color("#000"),
                 selectionBackgroundColor = color("#55b9ff"),
             ),
