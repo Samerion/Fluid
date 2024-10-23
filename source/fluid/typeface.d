@@ -569,13 +569,9 @@ class FreetypeTypeface : Typeface {
 
     protected {
 
-        struct AdvanceCacheKey {
-            dchar ch;
-            float size;
-        }
-
-        /// Cache for character sizes.
-        Vector2[AdvanceCacheKey] advanceCache;
+        /// Cache for character sizes. The key is text size in dots.
+        Vector2[dchar][int] advanceCache;
+        Vector2[dchar] currentAdvanceCache;
 
     }
 
@@ -719,9 +715,16 @@ class FreetypeTypeface : Typeface {
         _dpiY = dpiY;
         _size = size;
 
+        const dotsY = cast(int) (size * dpi.y / 96);
+        const size64 = cast(int) (size.pxToPt * 64 + 1);
+
+        // Set current advance cache to matching font size
+        currentAdvanceCache = advanceCache.require(dotsY, ['\0': Vector2.init]);
+        assert(currentAdvanceCache);
+
         // dunno why, but FT_Set_Char_Size yields better results, kerning specifically, than FT_Set_Pixel_Sizes
         version (all) {
-            const error = FT_Set_Char_Size(face, 0, cast(int) (size.pxToPt * 64 + 1), dpiX, dpiY);
+            const error = FT_Set_Char_Size(face, 0, size64, dpiX, dpiY);
         }
 
         // Load size
@@ -746,10 +749,8 @@ class FreetypeTypeface : Typeface {
 
         assert(_dpiX && _dpiY, "Font DPI hasn't been set");
 
-        const key = AdvanceCacheKey(glyph, _size);
-
         // Return the stored value if the result is cached
-        if (auto result = key in advanceCache) {
+        if (auto result = glyph in currentAdvanceCache) {
 
             return *result;
 
@@ -758,13 +759,13 @@ class FreetypeTypeface : Typeface {
         // Load the glyph
         if (auto error = FT_Load_Char(cast(FT_Face) face, glyph, FT_LOAD_DEFAULT)) {
 
-            return advanceCache[key] = Vector2(0, 0);
+            return currentAdvanceCache[glyph] = Vector2(0, 0);
 
         }
 
         // Advance the cursor position
         // TODO RTL layouts
-        return advanceCache[key] = Vector2(face.glyph.advance.tupleof) / 64;
+        return currentAdvanceCache[glyph] = Vector2(face.glyph.advance.tupleof) / 64;
 
     }
 
