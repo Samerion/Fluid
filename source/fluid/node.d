@@ -1243,8 +1243,6 @@ abstract class Node {
     /// Reload style from the current theme.
     protected void reloadStyles() {
 
-        import fluid.typeface;
-
         // Reset style
         _style = Style.init;
 
