@@ -9,8 +9,8 @@ import fluid.input;
 import fluid.utils;
 import fluid.style;
 import fluid.backend;
-import fluid.typeface;
 import fluid.text_input;
+import fluid.text.typeface;
 
 
 @safe:
@@ -1474,7 +1474,7 @@ class CodeInput : TextInput {
     @(FluidInputAction.paste)
     override void paste() {
 
-        import fluid.typeface : Typeface;
+        import fluid.text.typeface : Typeface;
 
         // Write an undo/redo history entry
         auto shot = snapshot();
