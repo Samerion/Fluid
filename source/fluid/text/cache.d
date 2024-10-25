@@ -782,8 +782,18 @@ unittest {
         ~ "incididunt ut labore et dolore magna " 
         ~ "aliqua. Ut enim ad minim veniam, quis " 
         ~ "nostrud exercitation ullamco laboris " 
+        ~ "nisi ut aliquip ex ea commodo consequat." 
+        ~ "adipiscing elit, sed do eiusmod tempor " 
+        ~ "incididunt ut labore et dolore magna " 
+        ~ "aliqua. Ut enim ad minim veniam, quis " 
+        ~ "nostrud exercitation ullamco laboris " 
         ~ "nisi ut aliquip ex ea commodo consequat.\n" 
         ~ "\n" 
+        ~ "Duis aute irure dolor in reprehenderit " 
+        ~ "in voluptate velit esse cillum dolore " 
+        ~ "eu fugiat nulla pariatur. Excepteur " 
+        ~ "sint occaecat cupidatat non proident, " 
+        ~ "sunt in culpa qui officia deserunt " 
         ~ "Duis aute irure dolor in reprehenderit " 
         ~ "in voluptate velit esse cillum dolore " 
         ~ "eu fugiat nulla pariatur. Excepteur " 
@@ -799,12 +809,12 @@ unittest {
     auto typeface = root.style.getTypeface;
     auto space = root.io.windowSize;
 
-    assert(root.text[232] == '\n');
+    assert(root.text[422] == '\n');
     assert(query(&root.text._cache, 0).equal!"a.point == b"([
         TextInterval(  0, 0,   0),
-        TextInterval(132, 0, 132),  // Past 128 characters, + "nim ", next checkpoint 132+128
-        TextInterval(272, 2,  39),  // Past 260 characters, + "prehenderit ", line begins at 233
-        TextInterval(402, 2, 169),  // Past 400 characters, + "i "
+        TextInterval(263, 0, 263),
+        TextInterval(527, 2, 103),
+        TextInterval(787, 2, 363),
         TextInterval(root.text.length, 3, 0),
     ]));
 
@@ -816,18 +826,18 @@ unittest {
     }
     {
         auto ruler = TextRuler(typeface, space.x);
-        typeface.measure(ruler, root.text[0..132]);
-        assert(query(&root.text._cache, 132).front == ruler);
+        typeface.measure(ruler, root.text[0..263]);
+        assert(query(&root.text._cache, 263).front == ruler);
     }
     {
         auto ruler = TextRuler(typeface, space.x);
-        typeface.measure(ruler, root.text[0..272]);
-        assert(query(&root.text._cache, 272).front == ruler);
+        typeface.measure(ruler, root.text[0..527]);
+        assert(query(&root.text._cache, 527).front == ruler);
     }
     {
         auto ruler = TextRuler(typeface, space.x);
-        typeface.measure(ruler, root.text[0..402]);
-        assert(query(&root.text._cache, 402).front == ruler);
+        typeface.measure(ruler, root.text[0..787]);
+        assert(query(&root.text._cache, 787).front == ruler);
     }
 
 }
@@ -839,6 +849,10 @@ unittest {
     import fluid.default_theme;
 
     auto root = label(nullTheme, "Lorem ipsum dolor sit amet, consectetur " 
+        ~ "adipiscing elit, sed do eiusmod tempor " 
+        ~ "incididunt ut labore et dolore magna " 
+        ~ "aliqua. Ut enim ad minim veniam, quis " 
+        ~ "nostrud exercitation ullamco laboris " 
         ~ "adipiscing elit, sed do eiusmod tempor " 
         ~ "incididunt ut labore et dolore magna " 
         ~ "aliqua. Ut enim ad minim veniam, quis " 
@@ -857,14 +871,13 @@ unittest {
     // Same data as in the last test
     debug assert(query(&root.text._cache, 0).equal!"a.point == b"([
         TextInterval(  0, 0,   0),
-        TextInterval(132, 0, 132),
-        TextInterval(272, 2,  39),
-        TextInterval(402, 2, 169),
+        TextInterval(261, 0, 261),
+        TextInterval(521, 2, 137),
         TextInterval(root.text.length, 3, 0),
     ]));
 
     // Replace enough text to destroy two intervals
-    root.text[130..280] = 'a'.repeat(150).array;
+    root.text[260..530] = 'a'.repeat(270).array;
 
     assert(root.tree.resizePending);
     
@@ -872,12 +885,11 @@ unittest {
 
     assert(query(&root.text._cache, 0).equal!"a.point == b"([
         TextInterval(  0, 0,   0),
-        TextInterval(285, 0, 285),  // 132 and 272 are gone
-        TextInterval(402, 0, 402),  // Line breaks were replaced
+        TextInterval(535, 0, 535),  // intervals are gone, line breaks are gone
         TextInterval(root.text.length, 1, 0),
     ]));
 
-    assert(root.text[284..290] == " velit");
+    assert(root.text[534..539] == " sunt");
 
 }
 

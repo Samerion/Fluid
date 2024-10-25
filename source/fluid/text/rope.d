@@ -369,7 +369,8 @@ struct Rope {
             format!"Right boundary of slice [%s .. %s] is greater than left boundary"(slice[0], slice[1])
                 .assumeWontThrow);
 
-        slice[] += start;
+        slice[0] += start;
+        slice[1] += start;
 
         // Flatten if slicing into a specific side of the slice
         // e.g. Rope(Rope("foo"), Rope("bar"))[0..3] returns Rope("foo")
@@ -1105,12 +1106,16 @@ struct Rope {
 
             // Workaround for foreach
             int opApply(int delegate(Rope node) nothrow @safe yield) nothrow {
-
                 for (; !empty; popFront) {
                     if (auto a = yield(front)) return a;
                 }
                 return 0;
-
+            }
+            int opApply(int delegate(Rope node) @safe yield) {
+                for (; !empty; popFront) {
+                    if (auto a = yield(front)) return a;
+                }
+                return 0;
             }
 
         }
