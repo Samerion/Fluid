@@ -1058,11 +1058,11 @@ struct Rope {
     /// Perform deep-first search through leaf nodes of the rope.
     auto byNode() inout {
 
-        import std.container.dlist;
+        import fluid.text.stack;
 
-        struct ByNode {
+        static struct ByNode {
 
-            DList!Rope ancestors;
+            Stack!Rope ancestors;
             Rope front;
             bool empty;
 
@@ -1096,10 +1096,20 @@ struct Rope {
                 }
 
                 // Descend
-                ancestors.insertBack(node);
+                ancestors.push(node);
 
                 // Start from the left side
                 descend(node.left);
+
+            }
+
+            // Workaround for foreach
+            int opApply(int delegate(Rope node) nothrow @safe yield) nothrow {
+
+                for (; !empty; popFront) {
+                    if (auto a = yield(front)) return a;
+                }
+                return 0;
 
             }
 

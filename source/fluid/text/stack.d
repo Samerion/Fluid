@@ -35,14 +35,12 @@ struct Stack(T) {
 
     }
 
-    /// The stack cannot be copied. Wrap it in a reference counted stack.
-    @disable this(const Stack);
-    @disable this(this);
-
     this(T item) {
         // Stack could support batch operations so this would take a variadic argument
         push(item);
     }
+
+    @disable this(this);
 
     ~this() {
         clear();
@@ -87,7 +85,7 @@ struct Stack(T) {
     ///     item = Item to add to the top of the stack.
     void push(T item) {
         _top = getNode(_top, item);
-        assert(_top !is _top.next);
+        assert(_top !is _top.next, "A node must not be trashed while still in use");
 
         // Mark this as the bottom, if it is so
         if (_top.next is null) {
@@ -103,6 +101,8 @@ struct Stack(T) {
     do {
 
         auto node = _top;
+
+        assert(node !is _trash, "Node was already trashed. Was the Stack duplicated?");
 
         // Remove the node from the stack
         _top = node.next;
