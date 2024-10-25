@@ -41,7 +41,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
     /// Minimum distance between automatically created checkpoints.
     /// See_Also: `_cache`, `measure`
-    private enum checkpointDistance = 128;
+    private enum checkpointDistance = 256;
     static assert(checkpointDistance > CachedTextRuler.sizeof);
 
     public {
