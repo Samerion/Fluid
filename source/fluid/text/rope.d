@@ -1042,10 +1042,18 @@ struct Rope {
 
     }
 
+    /// This function provides a range-based iterator for `Rope`. Even if `Rope` exposes a range interface on its own, 
+    /// it is not as efficient as `byChar`.
+    /// Returns: A range iterating on the rope byte by byte.
+    /// See_Also: `byDchar` for Unicode-aware iteration.
+    auto byChar() const {
+        return ByChar(this);
+    }
+
     static struct ByChar {
 
         private {
-            ByNode range;
+            ByNode!false range;
             Rope rope;
             size_t index;
         }
@@ -1110,12 +1118,6 @@ struct Rope {
 
     }
 
-    /// Returns: A range iterating on the rope byte by byte.
-    /// See_Also: `byDchar` for Unicode-aware iteration.
-    auto byChar() const {
-        return ByChar(this);
-    }
-
     /// Returns: A Unicode-aware range iterating on the rope character by character.
     auto byDchar() const {
 
@@ -1125,7 +1127,8 @@ struct Rope {
 
     }
 
-    /// Count characters in the string. Iterates the whole rope.
+    /// Count characters in the rope. Iterates the whole rope.
+    /// Returns: Number of characters in the rope.
     size_t countCharacters() const {
 
         return byDchar.walkLength;
@@ -1133,15 +1136,20 @@ struct Rope {
     }
 
     /// Perform deep-first search through leaf nodes of the rope.
-    auto byNode() inout {
+    ByNode!false byNode() inout nothrow {
 
-        auto result = ByNode();
-        result.descend(this);
-        return result;
+        return ByNode!false(this);
 
     }
 
-    static struct ByNode {
+    /// Perform deep-first search through leaf nodes of the rope in reverse direction.
+    ByNode!true byNodeReverse() inout nothrow {
+
+        return ByNode!true(this);
+
+    }
+
+    static struct ByNode(bool reverse) {
 
         import fluid.text.stack;
 
@@ -1149,8 +1157,15 @@ struct Rope {
         Rope front;
         bool empty;
 
+        @safe:
+
+        /// Perform deep-first search through leaf nodes of the rope.
+        this(Rope rope) {
+            descend(rope);
+        }
+
         /// Switch to the next sibling or ascend.
-        void popFront() @safe nothrow {
+        void popFront() nothrow {
 
             assert(!empty);
 
@@ -1165,12 +1180,15 @@ struct Rope {
             ancestors.removeBack;
 
             // Switch to its right sibling
-            descend(parent.right);
+            static if (reverse)
+                descend(parent.left);
+            else 
+                descend(parent.right);
 
         }
 
-        /// Descend into given node.
-        void descend(Rope node) @safe nothrow {
+        /// Descend into given node (forward iteration).
+        void descend(Rope node) nothrow {
 
             // Leaf node, set as front
             if (node.isLeaf) {
@@ -1182,7 +1200,10 @@ struct Rope {
             ancestors.push(node);
 
             // Start from the left side
-            descend(node.left);
+            static if (reverse)
+                descend(node.right);
+            else 
+                descend(node.left);
 
         }
 
@@ -1202,6 +1223,7 @@ struct Rope {
 
     }
 
+    @("Rope.byNode yield every node in a rope, in either direction")
     unittest {
 
         auto mr = Rope(
@@ -1232,6 +1254,15 @@ struct Rope {
             Rope("e"),
             Rope("f"),
             Rope("g"),
+        ]));
+        assert(mr.byNodeReverse.equal([
+            Rope("g"),
+            Rope("f"),
+            Rope("e"),
+            Rope("d"),
+            Rope("c"),
+            Rope("b"),
+            Rope("a"),
         ]));
 
     }
