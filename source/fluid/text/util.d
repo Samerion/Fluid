@@ -17,7 +17,7 @@ package (fluid) alias lineSplitter = lineSplitterFix;
 ///
 /// `lineSplitterIndex` will produce a tuple with the index into the original text as the first element.
 static lineSplitterFix(KeepTerminator keepTerm = No.keepTerminator, Range)(Range text)
-if (isSomeChar!(ElementType!Range))
+if (isSomeChar!(ElementType!Range) && typeof(text).init.empty)
 do {
 
     enum dchar lineSep = '\u2028';  // Line separator.

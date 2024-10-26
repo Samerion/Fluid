@@ -1042,24 +1042,36 @@ struct Rope {
 
     }
 
-    /// This function provides a range-based iterator for `Rope`. Even if `Rope` exposes a range interface on its own, 
-    /// it is not as efficient as `byChar`.
-    /// Returns: A range iterating on the rope byte by byte.
-    /// See_Also: `byDchar` for Unicode-aware iteration.
-    auto byChar() const {
-        return ByChar(this);
+    /// `byChar` and `byCharReverse` provide ranges that allow iterating on characters in the `Rope` in both 
+    /// directions.
+    /// Even if `Rope` exposes a range interface on its own, it is not as efficient as `byChar`.
+    ///
+    /// These ranges are unidirectional, as a bidirectional `Rope` iterator would require extra overhead.
+    ///
+    /// Returns: 
+    ///     A range iterating on the rope byte by byte.
+    /// See_Also: 
+    ///     * `byDchar` for Unicode-aware iteration.
+    ///     * `byNode` for iteration based on nodes
+    ByChar!false byChar() const nothrow {
+        return ByChar!false(this);
     }
 
-    static struct ByChar {
+    /// ditto
+    ByChar!true byCharReverse() const nothrow {
+        return ByChar!true(this);
+    }
+
+    static struct ByChar(bool reverse) {
 
         private {
-            ByNode!false range;
+            ByNode!reverse range;
             Rope rope;
             size_t index;
         }
 
         this(Rope rope) nothrow {
-            this.range = rope.byNode();
+            this.range = ByNode!reverse(rope);
             this.rope = rope;
             skipEmpty();
         }
@@ -1070,7 +1082,7 @@ struct Rope {
 
             // Advance to set index and recreate the byNode iterator.
             rope  = rope[index .. $];
-            emplace(&range, rope.byNode());
+            emplace(&range, ByNode!reverse(rope));
             index = 0;
             skipEmpty();
 
@@ -1078,7 +1090,10 @@ struct Rope {
 
         /// Create a copy of this range.
         ByChar save() const nothrow {
-            return ByChar(rope[index .. $]);
+            static if (reverse)
+                return ByChar(rope[0 .. $ - index]);
+            else 
+                return ByChar(rope[index .. $]);
         }
 
         /// Returns: True if the range is empty.
@@ -1088,7 +1103,10 @@ struct Rope {
 
         /// Returns: First byte in the range, if the range is not empty.
         char front() const nothrow {
-            return range.front.value[0];
+            static if (reverse)
+                return range.front.value[$-1];
+            else
+                return range.front.value[0];
         }
 
         /// Advance to the next byte in the range.
@@ -1097,7 +1115,10 @@ struct Rope {
             index++;
 
             // Skip a byte in the front leaf
-            range.front.popFront();
+            static if (reverse)
+                range.front.popBack();
+            else
+                range.front.popFront();
 
             // Remove all empty leaves in the front
             // This includes the front that we just popped
@@ -1118,8 +1139,57 @@ struct Rope {
 
     }
 
+    @("Node.byChar works in both directions")
+    unittest {
+
+        auto rope = Rope(
+            Rope(
+                Rope("Hello, "),
+                Rope("colorful "),
+            ), 
+            Rope("world!"),
+        );
+
+
+        import std.stdio;
+        debug writeln(rope.byCharReverse);
+        assert(rope.byChar.equal("Hello, colorful world!"));
+        assert(rope.byCharReverse.equal("!dlrow lufroloc ,olleH"));
+
+    }
+
+    @("Node.byCharReverse is correctly saved")
+    unittest {
+
+        auto rope = Rope(
+            Rope(
+                Rope("a"),
+                Rope("bc"),
+            ),
+            Rope(
+                Rope("d"),
+                Rope("e"),
+            ),
+        );
+
+        auto range = rope.byCharReverse;
+        assert(range.front == 'e');
+
+        range.popFront();
+        auto range2 = range.save;
+        assert(range.front == 'd');
+        assert(range2.front == 'd');
+
+        range.popFront();
+        auto range3 = range.save;
+        assert(range.front == 'c');
+        assert(range2.front == 'd');
+        assert(range3.front == 'c');
+
+    }
+
     /// Returns: A Unicode-aware range iterating on the rope character by character.
-    auto byDchar() const {
+    auto byDchar() const nothrow {
 
         import std.utf : byDchar;
 
@@ -1135,14 +1205,21 @@ struct Rope {
 
     }
 
-    /// Perform deep-first search through leaf nodes of the rope.
+    /// `byNode` and `byNodeReverse` create ranges that can be used to iterate through all leaf nodes in the 
+    /// rope — nodes that only contain strings, and not other ropes. `byNode` iterates in regular order (from start
+    /// to end) and `byNodeReverse` in reverse (from end to start).
+    ///
+    /// This is the low-level iteration API, which exposes the structure of the rope, constrasting with `byChar` 
+    /// which does not.
+    /// Returns:
+    ///     A range iterating through all leaf nodes in the rope.
     ByNode!false byNode() inout nothrow {
 
         return ByNode!false(this);
 
     }
 
-    /// Perform deep-first search through leaf nodes of the rope in reverse direction.
+    /// ditto
     ByNode!true byNodeReverse() inout nothrow {
 
         return ByNode!true(this);
@@ -1223,7 +1300,7 @@ struct Rope {
 
     }
 
-    @("Rope.byNode yield every node in a rope, in either direction")
+    @("!Rope.byNode yield every node in a rope, in either direction")
     unittest {
 
         auto mr = Rope(
