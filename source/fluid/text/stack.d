@@ -40,8 +40,6 @@ struct Stack(T) {
         push(item);
     }
 
-    @disable this(this);
-
     ~this() {
         clear();
     }
@@ -156,7 +154,8 @@ struct Stack(T) {
             version (Fluid_EnableStackStatistics) {
                 _totalNodeCount++;
             }
-            return new StackNode!T(next, item);
+            auto node = new StackNode!T(next, item);
+            return node;
         }
 
         // Take an item from the trash
