@@ -491,6 +491,8 @@ do {
 
         @safe:
 
+        @disable this(this);
+
         inout(CachedTextRuler) front() inout {
             return inout CachedTextRuler(
                 offset,

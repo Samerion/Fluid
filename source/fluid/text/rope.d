@@ -670,7 +670,9 @@ struct Rope {
     }
 
     /// Get the value of this rope. Only works for leaf nodes.
-    const(char)[] value() const nothrow {
+    const(char)[] value() const nothrow
+    in (isLeaf, "Value is only present on leaf nodes")
+    do {
 
         return leafText[start .. start + length];
 
@@ -1040,12 +1042,86 @@ struct Rope {
 
     }
 
-    /// Iterate the rope by characters.
+    static struct ByChar {
+
+        private {
+            ByNode range;
+            Rope rope;
+            size_t index;
+        }
+
+        this(Rope rope) nothrow {
+            this.range = rope.byNode();
+            this.rope = rope;
+            skipEmpty();
+        }
+
+        this(this) nothrow {
+
+            import core.lifetime : emplace;
+
+            // Advance to set index and recreate the byNode iterator.
+            rope  = rope[index .. $];
+            emplace(&range, rope.byNode());
+            index = 0;
+            skipEmpty();
+
+        }
+
+        /// Create a copy of this range.
+        ByChar save() const nothrow {
+            return ByChar(rope[index .. $]);
+        }
+
+        /// Returns: True if the range is empty.
+        bool empty() const nothrow {
+            return range.empty;
+        }
+
+        /// Returns: First byte in the range, if the range is not empty.
+        char front() const nothrow {
+            return range.front.value[0];
+        }
+
+        /// Advance to the next byte in the range.
+        void popFront() nothrow {
+
+            index++;
+
+            // Skip a byte in the front leaf
+            range.front.popFront();
+
+            // Remove all empty leaves in the front
+            // This includes the front that we just popped
+            skipEmpty();
+
+            assert(range.empty || !range.front.empty);
+
+        }
+
+        /// Skip empty nodes in the front of `range`.
+        private void skipEmpty() nothrow {
+
+            while (!range.empty && range.front.empty) {
+                range.popFront();
+            }
+
+        }
+
+    }
+
+    /// Returns: A range iterating on the rope byte by byte.
+    /// See_Also: `byDchar` for Unicode-aware iteration.
+    auto byChar() const {
+        return ByChar(this);
+    }
+
+    /// Returns: A Unicode-aware range iterating on the rope character by character.
     auto byDchar() const {
 
         import std.utf : byDchar;
 
-        return byDchar(this[]);
+        return byDchar(byChar());
 
     }
 
@@ -1059,70 +1135,70 @@ struct Rope {
     /// Perform deep-first search through leaf nodes of the rope.
     auto byNode() inout {
 
-        import fluid.text.stack;
-
-        static struct ByNode {
-
-            Stack!Rope ancestors;
-            Rope front;
-            bool empty;
-
-            /// Switch to the next sibling or ascend.
-            void popFront() @safe nothrow {
-
-                assert(!empty);
-
-                // No ancestors remain, stop
-                if (ancestors.empty) {
-                    empty = true;
-                    return;
-                }
-
-                // Get the last ancestor; remove it so we don't return to it
-                auto parent = ancestors.back;
-                ancestors.removeBack;
-
-                // Switch to its right sibling
-                descend(parent.right);
-
-            }
-
-            /// Descend into given node.
-            void descend(Rope node) @safe nothrow {
-
-                // Leaf node, set as front
-                if (node.isLeaf) {
-                    front = node;
-                    return;
-                }
-
-                // Descend
-                ancestors.push(node);
-
-                // Start from the left side
-                descend(node.left);
-
-            }
-
-            // Workaround for foreach
-            int opApply(int delegate(Rope node) nothrow @safe yield) nothrow {
-                for (; !empty; popFront) {
-                    if (auto a = yield(front)) return a;
-                }
-                return 0;
-            }
-            int opApply(int delegate(Rope node) @safe yield) {
-                for (; !empty; popFront) {
-                    if (auto a = yield(front)) return a;
-                }
-                return 0;
-            }
-
-        }
-
         auto result = ByNode();
         result.descend(this);
         return result;
+
+    }
+
+    static struct ByNode {
+
+        import fluid.text.stack;
+
+        Stack!Rope ancestors;
+        Rope front;
+        bool empty;
+
+        /// Switch to the next sibling or ascend.
+        void popFront() @safe nothrow {
+
+            assert(!empty);
+
+            // No ancestors remain, stop
+            if (ancestors.empty) {
+                empty = true;
+                return;
+            }
+
+            // Get the last ancestor; remove it so we don't return to it
+            auto parent = ancestors.back;
+            ancestors.removeBack;
+
+            // Switch to its right sibling
+            descend(parent.right);
+
+        }
+
+        /// Descend into given node.
+        void descend(Rope node) @safe nothrow {
+
+            // Leaf node, set as front
+            if (node.isLeaf) {
+                front = node;
+                return;
+            }
+
+            // Descend
+            ancestors.push(node);
+
+            // Start from the left side
+            descend(node.left);
+
+        }
+
+        // Workaround for foreach
+        int opApply(int delegate(Rope node) nothrow @safe yield) nothrow {
+            for (; !empty; popFront) {
+                if (auto a = yield(front)) return a;
+            }
+            return 0;
+        }
+        int opApply(int delegate(Rope node) @safe yield) {
+            for (; !empty; popFront) {
+                if (auto a = yield(front)) return a;
+            }
+            return 0;
+        }
 
     }
 
