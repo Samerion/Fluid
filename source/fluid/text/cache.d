@@ -42,7 +42,7 @@ struct TextInterval {
         this.length = fragment.length;
 
         // Count lines in the string, find the length of the last line
-        foreach (line; Typeface.lineSplitter(fragment)) {
+        foreach (line; Rope(fragment).byLine) {
 
             this.line++;
             this.column = line.length;

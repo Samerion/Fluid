@@ -1081,7 +1081,7 @@ struct Rope {
             skipEmpty();
         }
 
-        this(this) nothrow {
+        this(this) nothrow @trusted {
 
             import core.lifetime : emplace;
 
@@ -1156,8 +1156,6 @@ struct Rope {
         );
 
 
-        import std.stdio;
-        debug writeln(rope.byCharReverse);
         assert(rope.byChar.equal("Hello, colorful world!"));
         assert(rope.byCharReverse.equal("!dlrow lufroloc ,olleH"));
 
@@ -1213,7 +1211,7 @@ struct Rope {
     /// Iterate the rope line by line, recognizing LF, CR, CRLF and Unicode line feeds. Use `byLine` to iterate
     /// from the first line to the last, and `byLineReverse` to iterate from the last to the first.
     ///
-    /// The range produces slices that do not include the line separators, but have an extra field `withSeparators`
+    /// The range produces slices that do not include the line separators, but have an extra field `withSeparator`
     /// that does. Another field, `index`, indicates the position of the slice in the original rope.
     ///
     /// Returns:
@@ -1259,7 +1257,6 @@ struct Rope {
                 this.start = rope.length;
             }
             this.front = findNextLine();
-            // popFront();
         }
 
         void popFront() {
@@ -1268,7 +1265,7 @@ struct Rope {
                 empty = byChar.empty;
             }
             else {
-                empty = front.length == front.withSeparators.length;
+                empty = front.length == front.withSeparator.length;
             }
 
             if (!empty) {
@@ -1396,33 +1393,22 @@ struct Rope {
 
     static struct RopeLine {
 
-        private Rope _fullLine;
-        size_t start;
-        size_t length;
+        /// The line as a slice of rope, without the line feed.
+        Rope line;
+
+        /// Returns: The line, including trailing line separator, if any.
+        Rope withSeparator;
+
+        /// Index within the original rope where this line starts.
+        size_t index;
 
         alias line this;
 
         this(Rope rope, size_t start, size_t length, size_t fullLength) {
 
-            this._fullLine = rope[start .. start + fullLength];
-            this.start = start;
-            this.length = length;
-
-        }
-
-        // Returns: The line as a slice of rope, without the line feed.
-        Rope line() {
-
-            auto line = _fullLine;
-            line.length = this.length;
-            return line;
-
-        }
-
-        /// Returns: The line, including trailing line separators, if any.
-        Rope withSeparators() {
-
-            return _fullLine;
+            this.line = this.withSeparator = rope[start .. start + fullLength];
+            this.line.length = length;
+            this.index = start;
 
         }
 
@@ -1533,14 +1519,14 @@ struct Rope {
         foreach (line; rope.byLine) {
 
             if (line.length == 0 && line.empty) continue;
-            assert(rope[line.start] == line[0]);
+            assert(rope[line.index] == line[0]);
 
         }
 
         foreach (line; rope.byLineReverse) {
 
             if (line.length == 0 && line.empty) continue;
-            assert(rope[line.start] == line[0]);
+            assert(rope[line.index] == line[0]);
 
         }
 
@@ -1554,7 +1540,7 @@ struct Rope {
             tuple(24, "ö"),
         ];
 
-        assert(Rope(myLine).byLine.map!("a.start", "a.line").equal(result));
+        assert(Rope(myLine).byLine.map!("a.index", "a.line").equal(result));
 
     }
 
@@ -1729,17 +1715,17 @@ struct Rope {
 
         import fluid.text.typeface : Typeface;
 
-        auto back  = Typeface.lineSplitter(this[0..index].retro).front;
-        auto front = Typeface.lineSplitter!keepTerminator(this[index..$]).front;
+        auto back  = this[0..index].byLineReverse.front;
+        static if (keepTerminator)
+            auto front = this[index..$].byLine.front.withSeparator;
+        else 
+            auto front = this[index..$].byLine.front;
 
         static assert(is(ElementType!(typeof(back)) == char));
         static assert(is(ElementType!(typeof(front)) == char));
 
-        const backLength  = back.walkLength;
-        const frontLength = front.walkLength;
-
         // Combine everything on the same line, before and after the cursor
-        return this[index - backLength .. index + frontLength];
+        return this[index - back.length .. index + front.length];
 
     }
 
@@ -1775,7 +1761,7 @@ struct Rope {
         import fluid.text.typeface : Typeface;
 
         // Get last line
-        return Typeface.lineSplitter(this[0..index].retro).front
+        return this[0..index].byLineReverse.front
 
             // Count characters
             .byUTF!Chartype.walkLength;
