@@ -1210,6 +1210,304 @@ struct Rope {
 
     }
 
+    /// Iterate the rope line by line, recognizing LF, CR, CRLF and Unicode line feeds. Use `byLine` to iterate
+    /// from the first line to the last, and `byLineReverse` to iterate from the last to the first.
+    ///
+    /// The range produces slices that do not include the line separators, but have an extra field `withSeparators`
+    /// that does. Another field, `index`, indicates the position of the slice in the original rope.
+    ///
+    /// Returns:
+    ///     A range that iterates on the rope line by line.
+    /// See_Also:
+    ///     `std.string.lineSplitter`
+    ByLine!false byLine() const {
+        return ByLine!false(this);
+    }
+
+    /// ditto
+    ByLine!true byLineReverse() const {
+        return ByLine!true(this);
+    }
+    
+    static struct ByLine(bool reverse) {
+
+        // Recognized line separators:
+        //     CRLF   0D 0A    (carriage return and line feed \r\n)
+        //     U+000A 0A       (line feed \n)
+        //     U+000B 0B       (vertical tab \v)
+        //     U+000C 0C       (form feed \f)
+        //     U+000D 0D       (carriage return \r)
+        //     U+0085 C2 85    (next line)
+        //     U+2028 E2 80 A8 (line separator)
+        //     U+2029 E2 80 A9 (paragraph separator)
+        // Each is also supported in reverse mode
+
+        RopeLine front;
+        size_t start;
+        bool empty = true;
+        private Rope rope;
+        private ByChar!reverse byChar;
+        static if (reverse) {
+            size_t previousSeparator;
+        }
+
+        this(Rope rope) {
+            this.rope = rope;
+            this.byChar = ByChar!reverse(rope);
+            this.empty = false;
+            static if (reverse) {
+                this.start = rope.length;
+            }
+            this.front = findNextLine();
+            // popFront();
+        }
+
+        void popFront() {
+
+            static if (reverse) {
+                empty = byChar.empty;
+            }
+            else {
+                empty = front.length == front.withSeparators.length;
+            }
+
+            if (!empty) {
+                this.front = findNextLine();
+            }
+            
+        }
+
+        private RopeLine findNextLine() {
+
+            size_t fullLength;
+
+            // Create a rope line suitable in the range [start..fullLength] and use given separator length.
+            RopeLine output(size_t separatorLength) {
+
+                static if (reverse) {
+
+                    // Use the previous separator for the length
+                    fullLength += previousSeparator - separatorLength;
+                    start -= fullLength;
+                    const result = RopeLine(rope, start, fullLength - previousSeparator, fullLength);
+                    previousSeparator = separatorLength;
+                }
+
+                else {
+                    const result = RopeLine(rope, start, fullLength - separatorLength, fullLength);
+                    start += fullLength;
+                }
+
+                return result;
+            }
+
+            // Fetch the next character and include it in the output.
+            char next() {
+                const head = byChar.front;
+                byChar.popFront();
+                fullLength++;
+                return head;
+            }
+
+            // Find the next delimiter
+            while (!byChar.empty) {
+
+                const head = next();
+
+                // 0A–0D range — ASCII delimiters and CRLF
+                if (0x0A <= head && head <= 0x0D) {
+
+                    // Reverse CRLF 0A 0D
+                    static if (reverse) {
+                        if (head == 0x0A && !byChar.empty && byChar.front == 0x0D) {
+                            next();
+                            return output(2);
+                        }
+                    }
+
+                    // CRLF 0D 0A
+                    else {
+                        if (head == 0x0D && !byChar.empty && byChar.front == 0x0A) {
+                            next();
+                            return output(2);
+                        }
+                    }
+
+                    // Nothing else follows
+                    return output(1);
+
+                }
+
+                // Unicode specific delimiters (reverse)
+                static if (reverse) {
+
+                    // Line or paragraph separator
+                    // A8 80 E2, A9 80 E2
+                    if (head == 0xA8 || head == 0xA9) {
+                        if (byChar.front != 0x80) continue;
+                        next();
+
+                        if (byChar.front != 0xE2) continue;
+                        next();
+                        return output(3);
+                    }
+
+                    // Next line
+                    // 85 C2
+                    if (head == 0x85) {
+                        if (byChar.front != 0xC2) continue;
+                        next();
+                        return output(2);    
+                    }
+                }
+
+                // Unicode delimiters (regular)
+                else {
+
+                    // Next line
+                    // C2 85
+                    if (head == 0xC2) {
+                        if (byChar.front != 0x85) continue;
+                        next();
+                        return output(2);
+                    }
+
+                    // Line or paragraph separator
+                    // E2 80 A8, E2 80 A9
+                    if (head == 0xE2) {
+                        if (byChar.front != 0x80) continue;
+                        next();
+
+                        if (byChar.front != 0xA8 && byChar.front != 0xA9) continue;
+                        next();
+                        return output(3);
+                    }
+
+                }
+
+            }
+
+            // Terminated early
+            return output(0);
+
+        }
+
+    }
+
+    static struct RopeLine {
+
+        private Rope _fullLine;
+        size_t start;
+        size_t length;
+
+        alias line this;
+
+        this(Rope rope, size_t start, size_t length, size_t fullLength) {
+
+            this._fullLine = rope[start .. start + fullLength];
+            this.start = start;
+            this.length = length;
+
+        }
+
+        // Returns: The line as a slice of rope, without the line feed.
+        Rope line() {
+
+            auto line = _fullLine;
+            line.length = this.length;
+            return line;
+
+        }
+
+        /// Returns: The line, including trailing line separators, if any.
+        Rope withSeparators() {
+
+            return _fullLine;
+
+        }
+
+    }
+
+    @("Rope.byLine and Rope.byLineReverse work on an LF delimited string")
+    unittest {
+
+        auto rope = Rope(
+            Rope(
+                Rope("Hello, \nWorld!\nHi, "),
+                Rope("Fluid!\nA flexible UI library for the D programming language."),
+            ),
+            Rope(
+                Rope(" Minimal setup. Declarative."),
+                Rope(" Non-intrusive.\nFluid comes with Raylib 5 support.")
+            )
+        );
+
+        const lines = [
+            "Hello, ",
+            "World!",
+            "Hi, Fluid!",
+            "A flexible UI library for the D programming language. Minimal setup. Declarative. Non-intrusive.",
+            "Fluid comes with Raylib 5 support."
+        ];
+
+        assert(rope.byLine.equal(lines));
+        assert(rope.byLineReverse.equal(lines.retro));
+
+    }
+
+    @("CRLF strings work with Rope.byLine and Rope.byLineReverse")
+    unittest {
+
+        auto rope = Rope(
+            Rope(
+                Rope("Hello,\r\n"),
+                Rope("World!\r\n"),
+            ),
+            Rope(
+                Rope("Hello, \r"),
+                Rope("\nFluid!\r\n"),
+            ),
+        );
+
+        const lines = [
+            "Hello,",
+            "World!",
+            "Hello, ",
+            "Fluid!",
+            ""
+        ];
+
+        assert(rope.byLine.equal(lines));
+        assert(rope.byLineReverse.equal(lines.retro));
+
+    }
+
+    @("Rope.byLine works with Unicode separators")
+    unittest {
+
+        // Separators of interest:
+        //     U+0085 C2 85    (next line)
+        //     U+2028 E2 80 A8 (line separator)
+        //     U+2029 E2 80 A9 (paragraph separator)
+        // Other characters with the same leading bytes are used to test if the range doesn't confuse them
+        // with the separators
+
+        const rope = Rope(
+            Rope("\u0084\u0085\u0086"),
+            Rope("\u2020\u2028\u2029\u2030"),
+        );
+        const lines = [
+            "\u0084",
+            "\u0086\u2020",
+            "",
+            "\u2030",
+        ];
+
+        assert(rope.byLine.equal(lines));
+        assert(rope.byLineReverse.equal(lines.retro));
+
+    }
+
     /// `byNode` and `byNodeReverse` create ranges that can be used to iterate through all leaf nodes in the 
     /// rope — nodes that only contain strings, and not other ropes. `byNode` iterates in regular order (from start
     /// to end) and `byNodeReverse` in reverse (from end to start).
