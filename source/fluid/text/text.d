@@ -490,7 +490,9 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         size_t lastCheckpoint = start;
 
         // Split on lines
-        foreach (index, line; Typeface.lineSplitterIndex(value[start .. $])) {
+        foreach (line; value[start .. $].byLine) {
+
+            auto index = line.index;
 
             if (started) {
                 ruler.startLine();
@@ -604,7 +606,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         Rope unbreakableChars(Rope value) {
 
             // Split on lines
-            auto lines = Typeface.lineSplitter(value);
+            auto lines = value.byLine;
             if (lines.empty) return Rope.init;
 
             // Split on words
@@ -651,7 +653,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         const end   = index + unbreakableSuffix.length;
 
         // Split on lines
-        foreach (line; Typeface.lineSplitter!(Yes.keepTerminator)(value[start .. end])) {
+        foreach (line; value[start .. end].byLine) {
 
             if (started) {
                 ruler.startLine();
@@ -660,7 +662,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
             }
             else started = true;
 
-            ruler.point.length += line.length;
+            ruler.point.length += line.withSeparator.length;
             ruler.point.column += line.length;
 
             // Split on words, but don't do anything
@@ -738,7 +740,9 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         auto styleMap = this.styleMap.save.chain(TextStyleSlice.init.repeat);
 
         // Run through the text
-        foreach (index, line; Typeface.lineSplitterIndex(value)) {
+        foreach (line; value.byLine) {
+
+            auto index = line.index;
 
             ruler.startLine();
 

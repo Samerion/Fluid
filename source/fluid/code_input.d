@@ -1481,12 +1481,12 @@ class CodeInput : TextInput {
         scope (success) forcePushSnapshot(shot);
 
         const pasteStart = selectionLowIndex;
-        const clipboard = io.clipboard;
+        const clipboard = Rope(io.clipboard);
         auto indentLevel = indentLevelByIndex(pasteStart);
 
         // Find the smallest indent in the clipboard
         // Skip the first line because it's likely to be without indent when copy-pasting
-        auto lines = Typeface.lineSplitter(clipboard).drop(1);
+        auto lines = clipboard.byLine.drop(1);
 
         // Count indents on each line, skip blank lines
         auto significantIndents = lines
@@ -1501,13 +1501,13 @@ class CodeInput : TextInput {
             : 0;
 
         // Remove the common indent
-        auto outdentedClipboard = Typeface.lineSplitter!(Yes.keepTerminator)(clipboard)
+        auto outdentedClipboard = clipboard.byLine
             .map!((a) {
                 const localIndent = a
                     .until!(a => !a.among(' ', '\t'))
                     .walkLength;
 
-                return a.drop(min(commonIndent, localIndent));
+                return a.withSeparator.drop(min(commonIndent, localIndent));
             })
             .map!(a => Rope(a))
             .array;
