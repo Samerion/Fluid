@@ -423,6 +423,7 @@ struct Rope {
 
     }
 
+    pragma(inline, true)
     size_t[2] opSlice(size_t dim : 0)(size_t left, size_t right) const nothrow {
 
         return [left, right];
@@ -547,12 +548,16 @@ struct Rope {
 
     }
 
-    /// Get the left side of the rope
+    /// Returns: The left side (left child) of this rope.
     Rope left() const nothrow {
 
+        // Leaf
         if (node is null) return Rope.init;
 
-        const start = min(node.left.length, start);
+        // Slicing into the right
+        if (start >= node.left.length) return Rope.init;
+
+        // Slicing into the left
         const end = min(node.left.length, start + length);
 
         return node.left[start .. end];
@@ -670,7 +675,9 @@ struct Rope {
     }
 
     /// Get the value of this rope. Only works for leaf nodes.
-    const(char)[] value() const nothrow {
+    const(char)[] value() const nothrow
+    in (isLeaf, "Value is only present on leaf nodes")
+    do {
 
         return leafText[start .. start + length];
 
@@ -1040,92 +1047,599 @@ struct Rope {
 
     }
 
-    /// Iterate the rope by characters.
-    auto byDchar() const {
+    /// `byChar` and `byCharReverse` provide ranges that allow iterating on characters in the `Rope` in both 
+    /// directions.
+    /// Even if `Rope` exposes a range interface on its own, it is not as efficient as `byChar`.
+    ///
+    /// These ranges are unidirectional, as a bidirectional `Rope` iterator would require extra overhead.
+    ///
+    /// Returns: 
+    ///     A range iterating on the rope byte by byte.
+    /// See_Also: 
+    ///     * `byDchar` for Unicode-aware iteration.
+    ///     * `byNode` for iteration based on nodes
+    ByChar!false byChar() const nothrow {
+        return ByChar!false(this);
+    }
 
-        import std.utf : byDchar;
+    /// ditto
+    ByChar!true byCharReverse() const nothrow {
+        return ByChar!true(this);
+    }
 
-        return byDchar(this[]);
+    static struct ByChar(bool reverse) {
+
+        private {
+            ByNode!reverse range;
+            Rope rope;
+            size_t index;
+        }
+
+        this(Rope rope) nothrow {
+            this.range = ByNode!reverse(rope);
+            this.rope = rope;
+            skipEmpty();
+        }
+
+        this(this) nothrow @trusted {
+
+            import core.lifetime : emplace;
+
+            // Advance to set index and recreate the byNode iterator.
+            rope  = rope[index .. $];
+            emplace(&range, ByNode!reverse(rope));
+            index = 0;
+            skipEmpty();
+
+        }
+
+        /// Create a copy of this range.
+        ByChar save() const nothrow {
+            static if (reverse)
+                return ByChar(rope[0 .. $ - index]);
+            else 
+                return ByChar(rope[index .. $]);
+        }
+
+        /// Returns: True if the range is empty.
+        bool empty() const nothrow {
+            return range.empty;
+        }
+
+        /// Returns: First byte in the range, if the range is not empty.
+        char front() const nothrow {
+            static if (reverse)
+                return range.front.value[$-1];
+            else
+                return range.front.value[0];
+        }
+
+        /// Advance to the next byte in the range.
+        void popFront() nothrow {
+
+            index++;
+
+            // Skip a byte in the front leaf
+            static if (reverse)
+                range.front.popBack();
+            else
+                range.front.popFront();
+
+            // Remove all empty leaves in the front
+            // This includes the front that we just popped
+            skipEmpty();
+
+            assert(range.empty || !range.front.empty);
+
+        }
+
+        /// Skip empty nodes in the front of `range`.
+        private void skipEmpty() nothrow {
+
+            while (!range.empty && range.front.empty) {
+                range.popFront();
+            }
+
+        }
 
     }
 
-    /// Count characters in the string. Iterates the whole rope.
+    @("Node.byChar works in both directions")
+    unittest {
+
+        auto rope = Rope(
+            Rope(
+                Rope("Hello, "),
+                Rope("colorful "),
+            ), 
+            Rope("world!"),
+        );
+
+
+        assert(rope.byChar.equal("Hello, colorful world!"));
+        assert(rope.byCharReverse.equal("!dlrow lufroloc ,olleH"));
+
+    }
+
+    @("Node.byCharReverse is correctly saved")
+    unittest {
+
+        auto rope = Rope(
+            Rope(
+                Rope("a"),
+                Rope("bc"),
+            ),
+            Rope(
+                Rope("d"),
+                Rope("e"),
+            ),
+        );
+
+        auto range = rope.byCharReverse;
+        assert(range.front == 'e');
+
+        range.popFront();
+        auto range2 = range.save;
+        assert(range.front == 'd');
+        assert(range2.front == 'd');
+
+        range.popFront();
+        auto range3 = range.save;
+        assert(range.front == 'c');
+        assert(range2.front == 'd');
+        assert(range3.front == 'c');
+
+    }
+
+    /// Returns: A Unicode-aware range iterating on the rope character by character.
+    auto byDchar() const nothrow {
+
+        import std.utf : byDchar;
+
+        return byDchar(byChar());
+
+    }
+
+    /// Count characters in the rope. Iterates the whole rope.
+    /// Returns: Number of characters in the rope.
     size_t countCharacters() const {
 
         return byDchar.walkLength;
 
     }
 
-    /// Perform deep-first search through leaf nodes of the rope.
-    auto byNode() inout {
+    /// Iterate the rope line by line, recognizing LF, CR, CRLF and Unicode line feeds. Use `byLine` to iterate
+    /// from the first line to the last, and `byLineReverse` to iterate from the last to the first.
+    ///
+    /// The range produces slices that do not include the line separators, but have an extra field `withSeparator`
+    /// that does. Another field, `index`, indicates the position of the slice in the original rope.
+    ///
+    /// Returns:
+    ///     A range that iterates on the rope line by line.
+    /// See_Also:
+    ///     `std.string.lineSplitter`
+    ByLine!false byLine() const {
+        return ByLine!false(this);
+    }
 
-        import fluid.text.stack;
+    /// ditto
+    ByLine!true byLineReverse() const {
+        return ByLine!true(this);
+    }
+    
+    static struct ByLine(bool reverse) {
 
-        static struct ByNode {
+        // Recognized line separators:
+        //     CRLF   0D 0A    (carriage return and line feed \r\n)
+        //     U+000A 0A       (line feed \n)
+        //     U+000B 0B       (vertical tab \v)
+        //     U+000C 0C       (form feed \f)
+        //     U+000D 0D       (carriage return \r)
+        //     U+0085 C2 85    (next line)
+        //     U+2028 E2 80 A8 (line separator)
+        //     U+2029 E2 80 A9 (paragraph separator)
+        // Each is also supported in reverse mode
 
-            Stack!Rope ancestors;
-            Rope front;
-            bool empty;
+        RopeLine front;
+        size_t start;
+        bool empty = true;
+        private Rope rope;
+        private ByChar!reverse byChar;
+        static if (reverse) {
+            size_t previousSeparator;
+        }
 
-            /// Switch to the next sibling or ascend.
-            void popFront() @safe nothrow {
+        this(Rope rope) {
+            this.rope = rope;
+            this.byChar = ByChar!reverse(rope);
+            this.empty = false;
+            static if (reverse) {
+                this.start = rope.length;
+            }
+            this.front = findNextLine();
+        }
 
-                assert(!empty);
+        void popFront() {
 
-                // No ancestors remain, stop
-                if (ancestors.empty) {
-                    empty = true;
-                    return;
+            static if (reverse) {
+                empty = byChar.empty;
+            }
+            else {
+                empty = front.length == front.withSeparator.length;
+            }
+
+            if (!empty) {
+                this.front = findNextLine();
+            }
+            
+        }
+
+        private RopeLine findNextLine() {
+
+            size_t fullLength;
+
+            // Create a rope line suitable in the range [start..fullLength] and use given separator length.
+            RopeLine output(size_t separatorLength) {
+
+                static if (reverse) {
+
+                    // Use the previous separator for the length
+                    fullLength += previousSeparator - separatorLength;
+                    start -= fullLength;
+                    const result = RopeLine(rope, start, fullLength - previousSeparator, fullLength);
+                    previousSeparator = separatorLength;
                 }
 
-                // Get the last ancestor; remove it so we don't return to it
-                auto parent = ancestors.back;
-                ancestors.removeBack;
+                else {
+                    const result = RopeLine(rope, start, fullLength - separatorLength, fullLength);
+                    start += fullLength;
+                }
 
-                // Switch to its right sibling
-                descend(parent.right);
+                return result;
+            }
+
+            // Fetch the next character and include it in the output.
+            char next() {
+                const head = byChar.front;
+                byChar.popFront();
+                fullLength++;
+                return head;
+            }
+
+            // Find the next delimiter
+            while (!byChar.empty) {
+
+                const head = next();
+
+                // 0A–0D range — ASCII delimiters and CRLF
+                if (0x0A <= head && head <= 0x0D) {
+
+                    // Reverse CRLF 0A 0D
+                    static if (reverse) {
+                        if (head == 0x0A && !byChar.empty && byChar.front == 0x0D) {
+                            next();
+                            return output(2);
+                        }
+                    }
+
+                    // CRLF 0D 0A
+                    else {
+                        if (head == 0x0D && !byChar.empty && byChar.front == 0x0A) {
+                            next();
+                            return output(2);
+                        }
+                    }
+
+                    // Nothing else follows
+                    return output(1);
+
+                }
+
+                // Unicode specific delimiters (reverse)
+                static if (reverse) {
+
+                    // Line or paragraph separator
+                    // A8 80 E2, A9 80 E2
+                    if (head == 0xA8 || head == 0xA9) {
+                        if (byChar.front != 0x80) continue;
+                        next();
+
+                        if (byChar.front != 0xE2) continue;
+                        next();
+                        return output(3);
+                    }
+
+                    // Next line
+                    // 85 C2
+                    if (head == 0x85) {
+                        if (byChar.front != 0xC2) continue;
+                        next();
+                        return output(2);    
+                    }
+                }
+
+                // Unicode delimiters (regular)
+                else {
+
+                    // Next line
+                    // C2 85
+                    if (head == 0xC2) {
+                        if (byChar.front != 0x85) continue;
+                        next();
+                        return output(2);
+                    }
+
+                    // Line or paragraph separator
+                    // E2 80 A8, E2 80 A9
+                    if (head == 0xE2) {
+                        if (byChar.front != 0x80) continue;
+                        next();
+
+                        if (byChar.front != 0xA8 && byChar.front != 0xA9) continue;
+                        next();
+                        return output(3);
+                    }
+
+                }
 
             }
 
-            /// Descend into given node.
-            void descend(Rope node) @safe nothrow {
-
-                // Leaf node, set as front
-                if (node.isLeaf) {
-                    front = node;
-                    return;
-                }
-
-                // Descend
-                ancestors.push(node);
-
-                // Start from the left side
-                descend(node.left);
-
-            }
-
-            // Workaround for foreach
-            int opApply(int delegate(Rope node) nothrow @safe yield) nothrow {
-                for (; !empty; popFront) {
-                    if (auto a = yield(front)) return a;
-                }
-                return 0;
-            }
-            int opApply(int delegate(Rope node) @safe yield) {
-                for (; !empty; popFront) {
-                    if (auto a = yield(front)) return a;
-                }
-                return 0;
-            }
+            // Terminated early
+            return output(0);
 
         }
 
-        auto result = ByNode();
-        result.descend(this);
-        return result;
+    }
+
+    static struct RopeLine {
+
+        /// The line as a slice of rope, without the line feed.
+        Rope line;
+
+        /// Returns: The line, including trailing line separator, if any.
+        Rope withSeparator;
+
+        /// Index within the original rope where this line starts.
+        size_t index;
+
+        alias line this;
+
+        this(Rope rope, size_t start, size_t length, size_t fullLength) {
+
+            this.line = this.withSeparator = rope[start .. start + fullLength];
+            this.line.length = length;
+            this.index = start;
+
+        }
 
     }
 
+    @("Rope.byLine and Rope.byLineReverse work on an LF delimited string")
+    unittest {
+
+        auto rope = Rope(
+            Rope(
+                Rope("Hello, \nWorld!\nHi, "),
+                Rope("Fluid!\nA flexible UI library for the D programming language."),
+            ),
+            Rope(
+                Rope(" Minimal setup. Declarative."),
+                Rope(" Non-intrusive.\nFluid comes with Raylib 5 support.")
+            )
+        );
+
+        const lines = [
+            "Hello, ",
+            "World!",
+            "Hi, Fluid!",
+            "A flexible UI library for the D programming language. Minimal setup. Declarative. Non-intrusive.",
+            "Fluid comes with Raylib 5 support."
+        ];
+
+        assert(rope.byLine.equal(lines));
+        assert(rope.byLineReverse.equal(lines.retro));
+
+    }
+
+    @("CRLF strings work with Rope.byLine and Rope.byLineReverse")
+    unittest {
+
+        auto rope = Rope(
+            Rope(
+                Rope("Hello,\r\n"),
+                Rope("World!\r\n"),
+            ),
+            Rope(
+                Rope("Hello, \r"),
+                Rope("\nFluid!\r\n"),
+            ),
+        );
+
+        const lines = [
+            "Hello,",
+            "World!",
+            "Hello, ",
+            "Fluid!",
+            ""
+        ];
+
+        assert(rope.byLine.equal(lines));
+        assert(rope.byLineReverse.equal(lines.retro));
+
+    }
+
+    @("Rope.byLine works with Unicode separators")
+    unittest {
+
+        // Separators of interest:
+        //     U+0085 C2 85    (next line)
+        //     U+2028 E2 80 A8 (line separator)
+        //     U+2029 E2 80 A9 (paragraph separator)
+        // Other characters with the same leading bytes are used to test if the range doesn't confuse them
+        // with the separators
+
+        const rope = Rope(
+            Rope("\u0084\u0085\u0086"),
+            Rope("\u2020\u2028\u2029\u2030"),
+        );
+        const lines = [
+            "\u0084",
+            "\u0086\u2020",
+            "",
+            "\u2030",
+        ];
+
+        assert(rope.byLine.equal(lines));
+        assert(rope.byLineReverse.equal(lines.retro));
+
+    }
+
+    @("Rope.byLine emits correct indices") 
+    unittest {
+
+        import std.typecons : tuple;
+
+        const rope = Rope(
+            Rope(
+                Rope("\u0084\u0085\u0086"),
+                Rope("\u2020\u2028\u2029\u2030"),
+            ),
+            Rope(
+                Rope(
+                    Rope("Hello,\r\n"),
+                    Rope("World!\r\n"),
+                ),
+                Rope(
+                    Rope("Hello, \r"),
+                    Rope("\nFluid!\r\n"),
+                ),
+            )
+        );
+
+        foreach (line; rope.byLine) {
+
+            if (line.length == 0 && line.empty) continue;
+            assert(rope[line.index] == line[0]);
+
+        }
+
+        foreach (line; rope.byLineReverse) {
+
+            if (line.length == 0 && line.empty) continue;
+            assert(rope[line.index] == line[0]);
+
+        }
+
+        auto myLine = "One\nTwo\r\nThree\vStuff\nï\nö";
+        auto result = [
+            tuple(0, "One"),
+            tuple(4, "Two"),
+            tuple(9, "Three"),
+            tuple(15, "Stuff"),
+            tuple(21, "ï"),
+            tuple(24, "ö"),
+        ];
+
+        assert(Rope(myLine).byLine.map!("a.index", "a.line").equal(result));
+
+    }
+
+    /// `byNode` and `byNodeReverse` create ranges that can be used to iterate through all leaf nodes in the 
+    /// rope — nodes that only contain strings, and not other ropes. `byNode` iterates in regular order (from start
+    /// to end) and `byNodeReverse` in reverse (from end to start).
+    ///
+    /// This is the low-level iteration API, which exposes the structure of the rope, constrasting with `byChar` 
+    /// which does not.
+    /// Returns:
+    ///     A range iterating through all leaf nodes in the rope.
+    ByNode!false byNode() inout nothrow {
+
+        return ByNode!false(this);
+
+    }
+
+    /// ditto
+    ByNode!true byNodeReverse() inout nothrow {
+
+        return ByNode!true(this);
+
+    }
+
+    static struct ByNode(bool reverse) {
+
+        import fluid.text.stack;
+
+        Stack!Rope ancestors;
+        Rope front;
+        bool empty;
+
+        @safe:
+
+        /// Perform deep-first search through leaf nodes of the rope.
+        this(Rope rope) {
+            descend(rope);
+        }
+
+        /// Switch to the next sibling or ascend.
+        void popFront() nothrow {
+
+            assert(!empty);
+
+            // No ancestors remain, stop
+            if (ancestors.empty) {
+                empty = true;
+                return;
+            }
+
+            // Get the last ancestor; remove it so we don't return to it
+            auto parent = ancestors.back;
+            ancestors.removeBack;
+
+            // Switch to its right sibling
+            static if (reverse)
+                descend(parent.left);
+            else 
+                descend(parent.right);
+
+        }
+
+        /// Descend into given node (forward iteration).
+        void descend(Rope node) nothrow {
+
+            // Leaf node, set as front
+            if (node.isLeaf) {
+                front = node;
+                return;
+            }
+
+            // Descend
+            ancestors.push(node);
+
+            // Start from the left side
+            static if (reverse)
+                descend(node.right);
+            else 
+                descend(node.left);
+
+        }
+
+        // Workaround for foreach
+        int opApply(int delegate(Rope node) nothrow @safe yield) nothrow {
+            for (; !empty; popFront) {
+                if (auto a = yield(front)) return a;
+            }
+            return 0;
+        }
+        int opApply(int delegate(Rope node) @safe yield) {
+            for (; !empty; popFront) {
+                if (auto a = yield(front)) return a;
+            }
+            return 0;
+        }
+
+    }
+
+    @("!Rope.byNode yield every node in a rope, in either direction")
     unittest {
 
         auto mr = Rope(
@@ -1157,6 +1671,39 @@ struct Rope {
             Rope("f"),
             Rope("g"),
         ]));
+        assert(mr.byNodeReverse.equal([
+            Rope("g"),
+            Rope("f"),
+            Rope("e"),
+            Rope("d"),
+            Rope("c"),
+            Rope("b"),
+            Rope("a"),
+        ]));
+
+    }
+
+    @("Rope.byNode respects slicing")
+    unittest {
+
+        auto rope = Rope(
+            Rope(
+                Rope("xHe")[1..3],
+                Rope("llo"),
+            ),
+            Rope(
+                Rope(", "),
+                Rope(
+                    Rope("Wor"),
+                    Rope("ld!"),
+                ),
+            )
+        );
+
+        assert(rope.byNode.equal(["He", "llo", ", ", "Wor", "ld!"]));
+        assert(rope[2..$].byNode.equal(["llo", ", ", "Wor", "ld!"]));
+        assert(rope[2..$-3].byNode.equal(["llo", ", ", "Wor"]));
+        assert(rope[6..$-3].byNode.equal([" ", "Wor"]));
 
     }
 
@@ -1168,17 +1715,17 @@ struct Rope {
 
         import fluid.text.typeface : Typeface;
 
-        auto back  = Typeface.lineSplitter(this[0..index].retro).front;
-        auto front = Typeface.lineSplitter!keepTerminator(this[index..$]).front;
+        auto back  = this[0..index].byLineReverse.front;
+        static if (keepTerminator)
+            auto front = this[index..$].byLine.front.withSeparator;
+        else 
+            auto front = this[index..$].byLine.front;
 
         static assert(is(ElementType!(typeof(back)) == char));
         static assert(is(ElementType!(typeof(front)) == char));
 
-        const backLength  = back.walkLength;
-        const frontLength = front.walkLength;
-
         // Combine everything on the same line, before and after the cursor
-        return this[index - backLength .. index + frontLength];
+        return this[index - back.length .. index + front.length];
 
     }
 
@@ -1214,7 +1761,7 @@ struct Rope {
         import fluid.text.typeface : Typeface;
 
         // Get last line
-        return Typeface.lineSplitter(this[0..index].retro).front
+        return this[0..index].byLineReverse.front
 
             // Count characters
             .byUTF!Chartype.walkLength;
