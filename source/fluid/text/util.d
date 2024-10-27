@@ -11,47 +11,51 @@ import std.algorithm;
 
 alias defaultWordChunks = breakWords;
 
-package (fluid) alias lineSplitter = lineSplitterFix;
+deprecated("Use Rope.byLine instead. lineSplitter will be removed in 0.9.0") {
 
-/// Updated version of `std.string.lineSplitter` that includes trailing empty lines.
-///
-/// `lineSplitterIndex` will produce a tuple with the index into the original text as the first element.
-static lineSplitterFix(KeepTerminator keepTerm = No.keepTerminator, Range)(Range text)
-if (isSomeChar!(ElementType!Range) && typeof(text).init.empty)
-do {
+    package (fluid) alias lineSplitter = lineSplitterFix;
 
-    enum dchar lineSep = '\u2028';  // Line separator.
-    enum dchar paraSep = '\u2029';  // Paragraph separator.
-    enum dchar nelSep  = '\u0085';  // Next line.
+    /// Updated version of `std.string.lineSplitter` that includes trailing empty lines.
+    ///
+    /// `lineSplitterIndex` will produce a tuple with the index into the original text as the first element.
+    static lineSplitterFix(KeepTerminator keepTerm = No.keepTerminator, Range)(Range text)
+    if (isSomeChar!(ElementType!Range) && typeof(text).init.empty)
+    do {
 
-    import std.utf : byDchar;
+        enum dchar lineSep = '\u2028';  // Line separator.
+        enum dchar paraSep = '\u2029';  // Paragraph separator.
+        enum dchar nelSep  = '\u0085';  // Next line.
 
-    const hasEmptyLine = byDchar(text).endsWith('\r', '\n', '\v', '\f', "\r\n", lineSep, paraSep, nelSep) != 0;
-    auto split = std.string.lineSplitter!keepTerm(text);
+        import std.utf : byDchar;
 
-    // Include the empty line if present
-    return hasEmptyLine.choose(
-        split.chain(only(typeof(text).init)),
-        split,
-    );
+        const hasEmptyLine = byDchar(text).endsWith('\r', '\n', '\v', '\f', "\r\n", lineSep, paraSep, nelSep) != 0;
+        auto split = std.string.lineSplitter!keepTerm(text);
 
-}
+        // Include the empty line if present
+        return hasEmptyLine.choose(
+            split.chain(only(typeof(text).init)),
+            split,
+        );
 
-/// ditto
-static lineSplitterIndex(Range)(Range text) {
+    }
 
-    import std.typecons : tuple;
+    /// ditto
+    static lineSplitterIndex(Range)(Range text) {
 
-    auto initialValue = tuple(size_t.init, Range.init, size_t.init);
+        import std.typecons : tuple;
 
-    return lineSplitter!(Yes.keepTerminator)(text)
+        auto initialValue = tuple(size_t.init, Range.init, size_t.init);
 
-        // Insert the index, remove the terminator
-        // Position [2] is line end index
-        .cumulativeFold!((a, line) => tuple(a[2], line.chomp, a[2] + line.length))(initialValue)
+        return lineSplitter!(Yes.keepTerminator)(text)
 
-        // Remove item [2]
-        .map!(a => tuple(a[0], a[1]));
+            // Insert the index, remove the terminator
+            // Position [2] is line end index
+            .cumulativeFold!((a, line) => tuple(a[2], line.chomp, a[2] + line.length))(initialValue)
+
+            // Remove item [2]
+            .map!(a => tuple(a[0], a[1]));
+
+    }
 
 }
 

@@ -1508,6 +1508,56 @@ struct Rope {
 
     }
 
+    @("Rope.byLine emits correct indices") 
+    unittest {
+
+        import std.typecons : tuple;
+
+        const rope = Rope(
+            Rope(
+                Rope("\u0084\u0085\u0086"),
+                Rope("\u2020\u2028\u2029\u2030"),
+            ),
+            Rope(
+                Rope(
+                    Rope("Hello,\r\n"),
+                    Rope("World!\r\n"),
+                ),
+                Rope(
+                    Rope("Hello, \r"),
+                    Rope("\nFluid!\r\n"),
+                ),
+            )
+        );
+
+        foreach (line; rope.byLine) {
+
+            if (line.length == 0 && line.empty) continue;
+            assert(rope[line.start] == line[0]);
+
+        }
+
+        foreach (line; rope.byLineReverse) {
+
+            if (line.length == 0 && line.empty) continue;
+            assert(rope[line.start] == line[0]);
+
+        }
+
+        auto myLine = "One\nTwo\r\nThree\vStuff\nï\nö";
+        auto result = [
+            tuple(0, "One"),
+            tuple(4, "Two"),
+            tuple(9, "Three"),
+            tuple(15, "Stuff"),
+            tuple(21, "ï"),
+            tuple(24, "ö"),
+        ];
+
+        assert(Rope(myLine).byLine.map!("a.start", "a.line").equal(result));
+
+    }
+
     /// `byNode` and `byNodeReverse` create ranges that can be used to iterate through all leaf nodes in the 
     /// rope — nodes that only contain strings, and not other ropes. `byNode` iterates in regular order (from start
     /// to end) and `byNodeReverse` in reverse (from end to start).
