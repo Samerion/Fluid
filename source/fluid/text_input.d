@@ -446,12 +446,14 @@ class TextInput : InputNode!Node, FluidScrollable {
     in (start <= end, "Start must be lower than end")
     do {
 
-        auto withoutLineFeeds = Typeface.lineSplitter(newValue).joiner;
-
         // Single line mode — filter vertical space out
-        if (!multiline && !newValue.equal(withoutLineFeeds)) {
+        if (!multiline) {
 
-            newValue = Typeface.lineSplitter(newValue).join(' ');
+            auto lines = newValue.byLine;
+
+            if (lines.front.length < newValue.length) {
+                newValue = lines.join(' ');
+            }
 
         }
 
@@ -1060,7 +1062,9 @@ class TextInput : InputNode!Node, FluidScrollable {
         auto result = Position(0, Vector2(float.infinity, float.infinity));
 
         // Search for a matching character on adjacent lines
-        foreach (index, line; typeface.lineSplitterIndex(value[])) {
+        foreach (line; value.byLine) {
+
+            auto index = line.index;
 
             ruler.startLine();
 
@@ -1257,7 +1261,9 @@ class TextInput : InputNode!Node, FluidScrollable {
         Vector2 lineEnd;
 
         // Run through the text
-        foreach (index, line; typeface.lineSplitterIndex(value)) {
+        foreach (line; value.byLine) {
+
+            auto index = line.index;
 
             ruler.startLine();
 
@@ -2392,8 +2398,8 @@ class TextInput : InputNode!Node, FluidScrollable {
         import std.utf;
         import fluid.text.typeface;
 
-        const backLength = Typeface.lineSplitter(value[0..index].retro).front.byChar.walkLength;
-        const frontLength = Typeface.lineSplitter(value[index..$]).front.byChar.walkLength;
+        const backLength = value[0..index].byLineReverse.front.length;
+        const frontLength = value[index..$].byLine.front.length;
         const start = index - backLength;
         const end = index + frontLength;
         size_t[2] selection = [selectionStart, selectionEnd];
@@ -3120,10 +3126,10 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         const isLow = selectionStart <= selectionEnd;
 
-        foreach (index, line; Typeface.lineSplitterIndex(value)) {
+        foreach (line; value.byLine) {
 
-            const lineStart = index;
-            const lineEnd = index + line.length;
+            const lineStart = line.index;
+            const lineEnd = lineStart + line.length;
 
             // Found selection start
             if (lineStart <= selectionStart && selectionStart <= lineEnd) {

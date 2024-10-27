@@ -151,7 +151,7 @@ struct TextRuler {
 }
 
 /// Helper function
-static auto eachWord(alias chunkWords = defaultWordChunks, String)
+auto eachWord(alias chunkWords = defaultWordChunks, String)
     (ref TextRuler ruler, String text, bool wrap = true)
 do {
 

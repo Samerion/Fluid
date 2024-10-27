@@ -57,33 +57,33 @@ deprecated("Use Rope.byLine instead. lineSplitter will be removed in 0.9.0") {
 
     }
 
-}
+    unittest {
 
-unittest {
+        import fluid.text.rope;
+        import std.typecons : tuple;
 
-    import fluid.text.rope;
-    import std.typecons : tuple;
+        auto myLine = "One\nTwo\r\nThree\vStuff\nï\nö";
+        auto result = [
+            tuple(0, "One"),
+            tuple(4, "Two"),
+            tuple(9, "Three"),
+            tuple(15, "Stuff"),
+            tuple(21, "ï"),
+            tuple(24, "ö"),
+        ];
 
-    auto myLine = "One\nTwo\r\nThree\vStuff\nï\nö";
-    auto result = [
-        tuple(0, "One"),
-        tuple(4, "Two"),
-        tuple(9, "Three"),
-        tuple(15, "Stuff"),
-        tuple(21, "ï"),
-        tuple(24, "ö"),
-    ];
+        assert(lineSplitterIndex(myLine).equal(result));
+        assert(lineSplitterIndex(Rope(myLine)).equal(result));
 
-    assert(lineSplitterIndex(myLine).equal(result));
-    assert(lineSplitterIndex(Rope(myLine)).equal(result));
+    }
 
-}
+    unittest {
 
-unittest {
+        import fluid.text.rope;
 
-    import fluid.text.rope;
+        assert(lineSplitter(Rope("ą")).equal(lineSplitter("ą")));
 
-    assert(lineSplitter(Rope("ą")).equal(lineSplitter("ą")));
+    }
 
 }
 
@@ -102,6 +102,7 @@ auto keepWords(Range)(Range range) {
 ///     range = Text to break into words.
 auto breakWords(Range)(Range range) {
 
+    import fluid.text.rope : Rope;
     import std.uni : isAlphaNum, isWhite;
     import std.utf : decodeFront;
 
