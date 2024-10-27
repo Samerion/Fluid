@@ -423,6 +423,7 @@ struct Rope {
 
     }
 
+    pragma(inline, true)
     size_t[2] opSlice(size_t dim : 0)(size_t left, size_t right) const nothrow {
 
         return [left, right];
@@ -547,12 +548,16 @@ struct Rope {
 
     }
 
-    /// Get the left side of the rope
+    /// Returns: The left side (left child) of this rope.
     Rope left() const nothrow {
 
+        // Leaf
         if (node is null) return Rope.init;
 
-        const start = min(node.left.length, start);
+        // Slicing into the right
+        if (start >= node.left.length) return Rope.init;
+
+        // Slicing into the left
         const end = min(node.left.length, start + length);
 
         return node.left[start .. end];
@@ -1341,6 +1346,30 @@ struct Rope {
             Rope("b"),
             Rope("a"),
         ]));
+
+    }
+
+    @("Rope.byNode respects slicing")
+    unittest {
+
+        auto rope = Rope(
+            Rope(
+                Rope("xHe")[1..3],
+                Rope("llo"),
+            ),
+            Rope(
+                Rope(", "),
+                Rope(
+                    Rope("Wor"),
+                    Rope("ld!"),
+                ),
+            )
+        );
+
+        assert(rope.byNode.equal(["He", "llo", ", ", "Wor", "ld!"]));
+        assert(rope[2..$].byNode.equal(["llo", ", ", "Wor", "ld!"]));
+        assert(rope[2..$-3].byNode.equal(["llo", ", ", "Wor"]));
+        assert(rope[6..$-3].byNode.equal([" ", "Wor"]));
 
     }
 
