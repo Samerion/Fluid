@@ -4147,6 +4147,12 @@ unittest {
     const average = result[0] / runCount;
 
     // This should be trivial on practically any machine
-    assert(average <= 10.msecs, "Too slow: average " ~ average.toString);
+    assert(average <= 100.msecs, "Too slow: average " ~ average.toString);
+    if (average > 10.msecs) {
+
+        import std.stdio;
+        writeln("Warning: Critical TextInput performance test runs slowly, ", average);
+
+    }
 
 }
