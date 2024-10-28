@@ -728,7 +728,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         if (newChunks.empty) return;
 
         // Clear the chunks
-        foreach (chunkIndex; newChunks) {
+        foreach (chunkIndex; newChunks.save) {
 
             texture.clearImage(chunkIndex);
 
@@ -753,13 +753,14 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
                 const wordEnd = index + word.length;
 
                 // Split the word based on the layer map
+                // Draw each fragment separately
                 while (index != wordEnd) {
 
                     const remaining = wordEnd - index;
                     auto wordFragment = word[$ - remaining .. $];
                     auto range = styleMap.front;
 
-                    // Advance the layer map if exceeded the end
+                    // Advance the layer map if the index is past the end of the current fragment
                     if (index >= range.end) {
                         styleMap.popFront;
                         continue;
@@ -767,7 +768,8 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
                     ubyte styleIndex;
 
-                    // Match found here
+                    // This fragment matches a style from the style map,
+                    // activate the style
                     if (index >= range.start) {
 
                         // Find the end of the range
@@ -777,7 +779,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
                     }
 
-                    // Match found later
+                    // There's a split later in this word, draw up to that fragment
                     else if (range.start < wordEnd) {
 
                         wordFragment = wordFragment[0 .. range.start - index];

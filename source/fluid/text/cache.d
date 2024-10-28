@@ -161,7 +161,6 @@ package struct TextRulerCache {
 
         if (left) {
 
-
             assert(start, "Right branch is null, but the left isn't");
             assert(startRuler is left.startRuler);
             assert(interval == left.interval + right.interval, 
@@ -467,20 +466,16 @@ do {
     }
 
     /// This range iterates the cache tree in order while skipping all but the last element that precedes the index. 
-    /// It builds  a stack, the last item of which points to the current element of the range. Since the cache is 
+    /// It builds a stack so that its last item points to the current element of the range. Since the cache is 
     /// a binary tree in which each node either has one or two children, the stack can only have three possible 
     /// states:
     ///
     /// * It is empty, and so is this range
     /// * It points to a leaf (which is a valid state for `front`)
-    /// * The last item has two children, so it needs to descend.
+    /// * The last item has two children, so it needs to descend into one to find a leaf.
     ///
-    /// During descend, left nodes are chosen, unless the first item — the needle — is on the right side. When 
-    /// ascending (`popFront`), right nodes are chosen as left nodes have already been tested. To make sure the 
-    /// right side is not visited again, nodes are not pushed to the stack when their right side is. For example,
-    /// when iterating through a node `A` which has children `B` and `C`, the stack is initialized to `[A]`. 
-    /// Descend is first done into `B`, resulting in `[A, B]`. First `popFront` removes `B` and descends the right
-    /// side of `A` replacing it with `C`. The stack is `[C]`.
+    /// During descend, left nodes are chosen, unless the range's first item — the needle — is on the right side. When 
+    /// ascending (`popFront`), right nodes are chosen as left nodes have already been visited.
     static struct TextRulerCacheRange {
 
         Stack!CacheStackFrame stack;
