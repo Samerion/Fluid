@@ -5,7 +5,7 @@ import std.string;
 import std.algorithm;
 
 import fluid.utils;
-import fluid.backend;
+import fluid.types;
 import fluid.text.rope;
 import fluid.text.ruler;
 
