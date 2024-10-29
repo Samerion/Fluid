@@ -142,6 +142,9 @@ package struct CachedTextRuler {
 /// Entries into the cache are made in intervals. The cache will return the last found cache entry rather than one 
 /// directly corresponding to the queried character. To get an exact position, the text ruler can be advanced by 
 /// measuring all characters in between.
+///
+/// See_Also:
+///     `query`
 package struct TextRulerCache {
 
     /// Ruler at the start of this range.
@@ -439,20 +442,93 @@ package struct TextRulerCache {
     
 }
 
-/// Get the last `TextRuler` at the given index, or preceding it.
+/// Query the cache to find the last ruler before the requested point.
+///
+/// The cache can be used to find position of a character in text, or reverse, to find a character based on its screen
+/// position. Because storing data for every character in text would be very costly, the cache instead contains
+/// "checkpoints" created every few hundred characters or so — position of each character can be found by measuring
+/// text between the checkpoint and the target, which can be done with `Text.rulerAt`.
+///
+/// `query` will find a ruler based on text index, which can be used for finding visual position of a character,
+/// and `queryPosition` will find a ruler based on screen position, effectively doing the reverse.
+///
+/// Note that `queryPosition` only accepts position on the Y axis as the argument. Position on the X axis varies 
+/// unpredictably on bidirectional layouts.
+///
 /// Params:
+///     cache = Cache to query.
 ///     index = Index to search for.
+///     y     = Position (in dots) to search for.
 /// Returns:
-///     A `TextRuler` struct wrapper with an extra `point` field to indicate the location in text the point 
+///     A range with the requested `TextRuler` — either matching the query exactly or placed before — as the first item.
+///     All subsequent saved rulers will follow, so they can be updated while the text is being measured.
+/// 
+///     The text ruler will be wrapped with an extra `point` field to indicate the location in text the point 
 ///     corresponds to.
-package auto query(return scope TextRulerCache* cache, size_t index)
+/// See_Also:
+///     `Text.rulerAt` for high level API over the cache.
+package auto query(return scope TextRulerCache* cache, size_t index) {
+
+    // The predicate is used to decide if the left branch is entered (true), or skipped (false).
+    // We must pick the last item that matches the index. If the right side cache is placed before the index,
+    // the left side must be skipped. A.K.A. We only go left if the index is before the right node's index.
+    //
+    //           ↓ target                          ↓ target               
+    // left |----o---|-------| right     left |--------|-------| right    
+    //      ^^^^^^^^^                                  ^^^^^^^^ 
+    //      selected cache                       selected cache
+    //
+    // (b.offset.length + b.front.left.interval.length) is the interval between the start of text and the beginning
+    // of the right side interval. It is the index where left ends, and right starts.
+    return queryImpl!((a, b) => a < b.offset.length + b.front.left.interval.length)(cache, index);
+
+}
+
+/// ditto
+package auto queryPosition(return scope TextRulerCache* cache, float y) {
+
+    // Just like in `cache()`, the middle point is used to determine the side the query descends into.
+    // In this case, the Y position of the middle point is the position of the right side's `startRuler`.
+    return queryImpl!((a, b) => a < b.front.right.startRuler.caret.y)(cache, y);
+
+}
+
+@("Cache can be queried by position")
+unittest {
+
+    import fluid.style : Style;
+
+    auto typeface = Style.defaultTypeface;
+    auto cache = new TextRulerCache(typeface);
+    auto ruler = TextRuler(typeface);
+
+    const lineHeight = 20;
+
+    foreach (i; 0..10) {
+        cache.insert(TextInterval(i, i, 0), ruler);
+        ruler.penPosition += lineHeight;
+    }
+
+    assert(cache.queryPosition(  0).front.point == TextInterval(0, 0, 0));
+    assert(cache.queryPosition( 20).front.point == TextInterval(1, 1, 0));
+    assert(cache.queryPosition( 25).front.point == TextInterval(1, 1, 0));
+    assert(cache.queryPosition(161).front.point == TextInterval(8, 8, 0));
+    assert(cache.queryPosition(200).front.point == TextInterval(9, 9, 0));
+
+}
+
+private auto queryImpl(alias predicate, T)(return scope TextRulerCache* cache, T needle)
 out (r; !r.empty)
 out (r) {
     static assert(is(ElementType!(typeof(r)) : const CachedTextRuler), ElementType!(typeof(r)).stringof);
 }
 do {
 
+    import std.functional;
     import fluid.text.stack;
+
+    // see query()'s contents for description of this field
+    alias pred = binaryFun!predicate;
 
     static struct CacheStackFrame {
 
@@ -479,7 +555,7 @@ do {
     static struct TextRulerCacheRange {
 
         Stack!CacheStackFrame stack;
-        size_t needle;
+        T needle;
         TextInterval offset;
 
         invariant(stack.empty || stack.back !is null);
@@ -659,13 +735,20 @@ do {
 
             while (!stack.back.isLeaf) {
 
-                auto front = stack.back;
+                struct PredicateArgs {
+
+                    TextInterval offset;
+                    TextRulerCache* front;
+
+                }
+
+                auto args = PredicateArgs(offset, stack.back);
 
                 // Enter the left side, unless we know the needle is in the right side
-                if (needle < offset.length + front.left.interval.length) {
+                if (pred(needle, args)) {
 
                     stack.back.isRight = false;
-                    stack ~= CacheStackFrame(front.left);
+                    stack ~= CacheStackFrame(args.front.left);
 
                 }
 
@@ -673,8 +756,8 @@ do {
                 else {
 
                     stack.back.isRight = true;
-                    stack ~= CacheStackFrame(front.right);
-                    offset += front.left.interval;
+                    stack ~= CacheStackFrame(args.front.right);
+                    offset += args.front.left.interval;
 
                 }
 
@@ -688,7 +771,7 @@ do {
         Stack!CacheStackFrame(
             CacheStackFrame(cache)
         ),
-        index
+        needle
     );
     ruler.descend();
 
