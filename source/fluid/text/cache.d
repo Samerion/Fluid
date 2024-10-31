@@ -491,7 +491,11 @@ package auto queryPosition(return scope TextRulerCache* cache, float y) {
 
     // Just like in `cache()`, the middle point is used to determine the side the query descends into.
     // In this case, the Y position of the middle point is the position of the right side's `startRuler`.
-    return queryImpl!((a, b) => a < b.front.right.startRuler.caret.end.y)(cache, y);
+    return queryImpl!((a, b) {
+        
+        return a < b.front.right.startRuler.caret.end.y;
+            
+    })(cache, y);
 
 }
 
@@ -499,12 +503,17 @@ package auto queryPosition(return scope TextRulerCache* cache, float y) {
 unittest {
 
     import fluid.style : Style;
+    import fluid.types : Vector2;
+
+    const lineHeight = 20;
 
     auto typeface = Style.defaultTypeface;
+    typeface.setSize(Vector2(96, 96), 0);
+
     auto cache = new TextRulerCache(typeface);
     auto ruler = TextRuler(typeface);
 
-    const lineHeight = 20;
+    ruler.penPosition.y = 0;
 
     foreach (i; 0..10) {
         cache.insert(TextInterval(i, i, 0), ruler);
@@ -512,9 +521,11 @@ unittest {
     }
 
     assert(cache.queryPosition(  0).front.point == TextInterval(0, 0, 0));
-    assert(cache.queryPosition( 20).front.point == TextInterval(1, 1, 0));
+    assert(cache.queryPosition( 20).front.point == TextInterval(0, 0, 0));
+    assert(cache.queryPosition( 21).front.point == TextInterval(1, 1, 0));
     assert(cache.queryPosition( 25).front.point == TextInterval(1, 1, 0));
     assert(cache.queryPosition(161).front.point == TextInterval(8, 8, 0));
+    assert(cache.queryPosition(180).front.point == TextInterval(8, 8, 0));
     assert(cache.queryPosition(200).front.point == TextInterval(9, 9, 0));
 
 }
