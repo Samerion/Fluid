@@ -89,8 +89,27 @@ struct TextRuler {
 
     }
 
+    /// Params:
+    ///     character = Character to measure.
+    ///     offset    = Temporary offset to apply to the pen position. Used to calculate the width of a word.
+    /// Returns:
+    ///     Width of the given character.
+    float characterWidth(dchar character, float offset = 0) {
+
+        // Tab aligns to set indent width
+        if (character == '\t')
+            return typeface._tabWidth(penPosition.x + offset);
+
+        // Other characters use their regular advance value
+        else
+            return typeface.advance(character).x;
+
+    }
+
     /// Add the given word to the text. The text must be a single line.
-    /// Returns: Pen position for the word. It might differ from the original penPosition, because the word may be
+    /// Returns: 
+    ///     Pen position for the start of the word. 
+    ///     It might differ from the original penPosition, because the word may be
     ///     moved onto the next line.
     Vector2 addWord(String)(String word) {
 
@@ -103,13 +122,7 @@ struct TextRuler {
         // Measure each glyph
         foreach (glyph; byDchar(word)) {
 
-            // Tab aligns to set indent width
-            if (glyph == '\t')
-                wordSpan += typeface._tabWidth(penPosition.x + wordSpan);
-
-            // Other characters use their regular advance value
-            else
-                wordSpan += typeface.advance(glyph).x;
+            wordSpan += characterWidth(glyph, wordSpan);
 
         }
 
