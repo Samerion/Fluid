@@ -721,7 +721,9 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         // Find the word; find a matching line
         foreach (line; value[start .. $].byLine) {
 
-            wordStartIndex = wordEndIndex = line.index;
+            const lineIndex = start + line.index;
+
+            wordStartIndex = wordEndIndex = lineIndex;
 
             if (started) {
                 ruler.startLine();
@@ -755,6 +757,8 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
                 wordRuler = ruler;
             
             }
+
+            wordEndIndex = lineIndex + line.length;
 
             // Passed the line without matching anything
             if (ruler.caret.end.y >= needle.y) break;
@@ -1154,6 +1158,29 @@ unittest {
 
 }
 
+version (unittest) {
+
+    mixin template indexAtTest() {
+
+        void test(size_t expected, Vector2 position) {
+
+            const received = root.text.indexAt(position);
+
+            if (received == expected) {
+                io.drawPointer(position, color("#0a0"));
+            }
+            else {
+                io.drawPointer(position);
+                io.saveSVG("/tmp/fluid.svg");
+                assert(false, format!"Expected %s, got %s"(expected, received));
+            }
+
+        }
+
+    }
+
+}
+
 @("Text.indexAt works with multiple lines of text")
 unittest {
 
@@ -1167,22 +1194,9 @@ unittest {
     root.io = io;
     root.draw();
 
+    mixin indexAtTest;
+
     const lineHeight = root.style.getTypeface.lineHeight;
-
-    void test(size_t expected, Vector2 position) {
-
-        const received = root.text.indexAt(position);
-
-        if (received == expected) {
-            io.drawPointer(position, color("#0a0"));
-        }
-        else {
-            io.drawPointer(position);
-            io.saveSVG("/tmp/fluid.svg");
-            assert(false, format!"Expected %s, got %s"(expected, received));
-        }
-
-    }
 
     // First line
     test( 0, Vector2(  0, 0));
@@ -1215,5 +1229,55 @@ unittest {
     test(12, Vector2(104, -90));
     test(13, Vector2(108, -25));
     test(13, Vector2(140, -12));
+
+}
+
+@("Text.indexAt works correctly with blank lines")
+unittest {
+
+    // This test depends on specific properties of the default typeface
+
+    import fluid.label;
+    import std.stdio;
+
+    auto root = label(nullTheme, "\r\nHello,\n\nWorld!\n");
+    auto io = new HeadlessBackend;
+    root.io = io;
+    root.draw();
+
+    mixin indexAtTest;
+
+    const lineHeight = root.style.getTypeface.lineHeight;
+
+    // First line — all point to zero
+    test(0, Vector2(-40, lineHeight*0.5));
+    test(0, Vector2(  0, 0));
+    test(0, Vector2( 60, lineHeight*0.3));
+    test(0, Vector2(140, lineHeight*0.8));
+
+    // Second line
+    test(2, Vector2(0,   lineHeight*1.1));
+    test(8, Vector2(50,  lineHeight*1.8));
+    test(8, Vector2(200, lineHeight*1.1));
+
+    // Third line — empty
+    test(9, Vector2(-100, lineHeight*2.4));
+    test(9, Vector2(0,    lineHeight*2.3));
+    test(9, Vector2(100,  lineHeight*2.9));
+
+    // Fourth line
+    // TODO test(10, Vector2(-100, lineHeight*3.4));
+    test(10, Vector2(0,    lineHeight*3.3));
+    test(16, Vector2(100,  lineHeight*3.9));
+
+    // Fifth line — empty
+    test(17, Vector2(-100, lineHeight*4.9));
+    test(17, Vector2(0,    lineHeight*4.5));
+    test(17, Vector2(100,  lineHeight*4.1));
+
+    // Beyond — empty
+    test(17, Vector2(-100, lineHeight*5.9));
+    test(17, Vector2(0,    lineHeight*5.5));
+    test(17, Vector2(100,  lineHeight*5.1));
 
 }
