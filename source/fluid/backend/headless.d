@@ -684,6 +684,17 @@ class HeadlessBackend : FluidBackend {
 
     }
 
+    /// Draw a to mark the specific selected position. Useful for tests.
+    void drawPointer(Vector2 position, Color color = Color(0xff, 0x00, 0x00, 0xff)) {
+
+        const axis1 = Vector2(5, +5);
+        const axis2 = Vector2(5, -5);
+
+        drawLine(position - axis1, position + axis1, color);
+        drawLine(position - axis2, position + axis2, color);
+
+    }
+
     /// Draw a texture.
     void drawTexture(Texture texture, Rectangle rectangle, Color tint)
     in (false)

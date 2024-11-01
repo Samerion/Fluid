@@ -213,8 +213,8 @@ class TextInput : InputNode!Node, FluidScrollable {
         /// Available horizontal space.
         float _availableWidth = float.nan;
 
-        /// Visual position of the caret.
-        Vector2 _caretPosition;
+        /// Visual position of the caret. See `caretRectangle`
+        Rectangle _caretRectangle;
 
         /// Index of the caret.
         ptrdiff_t _caretIndex;
@@ -472,8 +472,7 @@ class TextInput : InputNode!Node, FluidScrollable {
             else 
                 caretIndex = caretIndex + start + newValue.length - end;
 
-            updateCaretPosition();
-            horizontalAnchor = caretPosition.x;
+            updateCaretPositionAndAnchor();
 
         }
 
@@ -682,8 +681,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         // Put the caret at the end
         caretIndex = low + newValue.length;
-        updateCaretPosition();
-        horizontalAnchor = caretPosition.x;
+        updateCaretPositionAndAnchor();
 
         return value[low .. low + newValue.length];
 
@@ -757,11 +755,30 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
-    /// Visual position of the caret, relative to the top-left corner of the input.
+    /// Returns:
+    ///     Visual position of the caret's center, relative to the top-left corner of the input.
+    /// See_Also: 
+    ///     `caretRectangle`
+    deprecated("caretPosition has been replaced by caretRectangle and will be removed in Fluid 0.9.0")
     Vector2 caretPosition() const {
 
         // Calculated in caretPositionImpl
-        return _caretPosition;
+        return _caretRectangle.center;
+
+    }
+
+    /// The caret is a line used to control keyboard input. Inserted text will be placed right before the caret.
+    ///
+    /// The caret is formed from a rectangle by connecting its top-right and bottom-left corners. This rectangle will
+    /// be of zero width for regular text. For sloped text, it will be wider to reflect the slope, however this is not 
+    /// implemented at the moment.
+    ///
+    /// Returns:
+    ///     A rectangle representing both ends of the caret. The caret line connects the rectangle's top-right corner
+    ///     with its bottom-left corner.
+    Rectangle caretRectangle() const {
+
+        return _caretRectangle;
 
     }
 
@@ -902,11 +919,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         minSize.y = max(minSize.y, style.getTypeface.lineHeight * minLines, contentLabel.minSize.y);
 
         // Locate the cursor
-        updateCaretPosition();
-
-        // Horizontal anchor is not set, update it
-        if (horizontalAnchor.isNaN)
-            horizontalAnchor = caretPosition.x;
+        updateCaretPositionAndAnchor();
 
     }
 
@@ -936,7 +949,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         root.draw();
 
         assert(root.placeholder == "");
-        assert(root.caretPosition.x < 1);
+        assert(root.caretRectangle.x < 1);
         assert(textSize.x < 1);
 
         io.nextFrame;
@@ -945,7 +958,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         root.caretToEnd();
         root.draw();
 
-        assert(root.caretPosition.x > 200);
+        assert(root.caretRectangle.x > 200);
         assert(textSize.x > 200);
         assert(textSize.x > root.size.x);
 
@@ -993,13 +1006,13 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         // No available width, waiting for resize
         if (_availableWidth.isNaN) {
-            _caretPosition.x = float.nan;
+            _caretRectangle.x = float.nan;
             return;
         }
 
-        _caretPosition = caretPositionImpl(_availableWidth, preferNextLine);
+        _caretRectangle = caretRectangleImpl(_availableWidth, preferNextLine);
 
-        const scrolledCaret = caretPosition.x - scroll;
+        const scrolledCaret = _caretRectangle.x - scroll;
 
         // Scroll to make sure the caret is always in view
         const scrollOffset
@@ -1014,89 +1027,21 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
+    alias indexAt = nearestCharacter;
+
+    /// ditto
+    void updateCaretPositionAndAnchor(bool preferNextLine = false) {
+
+        updateCaretPosition(preferNextLine);
+        horizontalAnchor = caretRectangle.x;
+ 
+    }
+
     /// Find the closest index to the given position.
-    /// Returns: Index of the character. The index may be equal to character length.
+    /// Returns: Index of the character. The index may be equal to text length.
     size_t nearestCharacter(Vector2 needle) {
 
-        import std.math : abs;
-
-        auto ruler = textRuler();
-        auto typeface = ruler.typeface;
-
-        struct Position {
-            size_t index;
-            Vector2 position;
-        }
-
-        /// Returns the position (inside the word) of the character that is the closest to the needle.
-        Position closest(Vector2 startPosition, Vector2 endPosition, const Rope word) {
-
-            // Needle is before or after the word
-            if (needle.x <= startPosition.x) return Position(0, startPosition);
-            if (needle.x >= endPosition.x) return Position(word.length, endPosition);
-
-            size_t index;
-            auto match = Position(0, startPosition);
-
-            // Search inside the word
-            while (index < word.length) {
-
-                decode(word[], index);  // index by reference
-
-                auto size = typeface.measure(word[0..index]);
-                auto end = startPosition.x + size.x;
-                auto half = (match.position.x + end)/2;
-
-                // Hit left side of this character, or right side of the previous, return the previous character
-                if (needle.x < half) break;
-
-                match.index = index;
-                match.position.x = startPosition.x + size.x;
-
-            }
-
-            return match;
-
-        }
-
-        auto result = Position(0, Vector2(float.infinity, float.infinity));
-
-        // Search for a matching character on adjacent lines
-        foreach (line; value.byLine) {
-
-            auto index = line.index;
-
-            ruler.startLine();
-
-            // Each word is a single, unbreakable unit
-            foreach (word, penPosition; typeface.eachWord(ruler, line, multiline)) {
-
-                scope (exit) index += word.length;
-
-                // Find the middle of the word to use as a reference for vertical search
-                const middleY = ruler.caret.center.y;
-
-                // Skip this word if the closest match is closer vertically
-                if (abs(result.position.y - needle.y) < abs(middleY - needle.y)) continue;
-
-                // Find the words' closest horizontal position
-                const newLine = ruler.wordLineIndex == 1;
-                const startPosition = Vector2(penPosition.x, middleY);
-                const endPosition = Vector2(ruler.penPosition.x, middleY);
-                const reference = closest(startPosition, endPosition, word);
-
-                // Skip if the closest match is still closer than the chosen reference
-                if (!newLine && abs(result.position.x - needle.x) < abs(reference.position.x - needle.x)) continue;
-
-                // Save the result if it's better
-                result = reference;
-                result.index += index;
-
-            }
-
-        }
-
-        return result.index;
+        return contentLabel.text.indexAt(needle);
 
     }
 
@@ -1142,11 +1087,11 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
-    protected Vector2 caretPositionImpl(float, bool preferNextLine) {
+    protected Rectangle caretRectangleImpl(float, bool preferNextLine) {
 
         const ruler = rulerAt(caretIndex, preferNextLine);
 
-        return ruler.caret.start;
+        return ruler.caret;
 
     }
 
@@ -1210,14 +1155,14 @@ class TextInput : InputNode!Node, FluidScrollable {
         if (showCaret) {
 
             const lineHeight = style.getTypeface.lineHeight;
-            const margin = lineHeight / 10f;
-            const relativeCaretPosition = this.caretPosition();
-            const caretPosition = start(inner) + relativeCaretPosition;
+            const caretRect = this.caretRectangle();
+            const caretStart = start(inner) + Vector2(caretRect.x, caretRect.y + caretRect.height);  // bottom left
+            const caretEnd   = start(inner) + Vector2(caretRect.x + caretRect.width, caretRect.y);   // top right
 
             // Draw the caret
             io.drawLine(
-                caretPosition + Vector2(0, margin),
-                caretPosition - Vector2(0, margin - lineHeight),
+                caretStart,
+                caretEnd,
                 style.textColor,
             );
 
@@ -1227,12 +1172,12 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     override Rectangle focusBoxImpl(Rectangle inner) const {
 
-        const lineHeight = style.getTypeface.lineHeight;
-        const position = inner.start + caretPosition;
+        const position = inner.start + caretRectangle.start;
+        const size     = caretRectangle.size;
 
         return Rectangle(
             position.tupleof,
-            1, lineHeight
+            size.x + 1, size.y,
         );
 
     }
@@ -1530,8 +1475,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         assert(value.isBalanced);
 
         caretIndex = newCaretIndex;
-        updateCaretPosition();
-        horizontalAnchor = caretPosition.x;
+        updateCaretPositionAndAnchor();
 
     }
 
@@ -1996,8 +1940,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         // Update the size of the box
         updateSize();
-        updateCaretPosition();
-        horizontalAnchor = caretPosition.x;
+        updateCaretPositionAndAnchor();
 
     }
 
@@ -2211,11 +2154,14 @@ class TextInput : InputNode!Node, FluidScrollable {
         auto io = new HeadlessBackend;
         auto theme = nullTheme.derive(
             rule!TextInput(
+                Rule.fontSize = 14.pt,
                 Rule.selectionBackgroundColor = color("#02a"),
             ),
         );
         auto root = textInput(.multiline, theme);
-        auto lineHeight = root.style.getTypeface.lineHeight;
+        auto typeface = root.style.getTypeface;
+        typeface.setSize(Vector2(96, 96), 14.pt);
+        auto lineHeight = typeface.lineHeight;
 
         root.io = io;
         root.value = "Line one\nLine two\n\nLine four";
@@ -2226,7 +2172,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         root.caretIndex = "Line one\nLin".length;
         root.updateCaretPosition();
 
-        const middle = root._inner.start + root.caretPosition;
+        const middle = root._inner.start + root.caretRectangle.center;
         const top    = middle - Vector2(0, lineHeight);
         const blank  = middle + Vector2(0, lineHeight);
         const bottom = middle + Vector2(0, lineHeight * 2);
@@ -2900,7 +2846,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         tree.spawnPopup(contextMenu);
 
         // Anchor to caret position
-        contextMenu.anchor = _inner.start + caretPosition;
+        contextMenu.anchor = _inner.start + caretRectangle.end;
 
     }
 
@@ -2982,8 +2928,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         value = null;
 
         clearSelection();
-        updateCaretPosition();
-        horizontalAnchor = caretPosition.x;
+        updateCaretPositionAndAnchor();
 
     }
 
@@ -3152,8 +3097,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         }
 
-        updateCaretPosition(false);
-        horizontalAnchor = caretPosition.x;
+        updateCaretPositionAndAnchor(false);
 
     }
 
@@ -3233,8 +3177,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         }
 
-        updateCaretPosition(true);
-        horizontalAnchor = caretPosition.x;
+        updateCaretPositionAndAnchor(true);
 
     }
 
@@ -3292,9 +3235,8 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         }
 
-        updateCaretPosition(true);
+        updateCaretPositionAndAnchor(true);
         moveOrClearSelection();
-        horizontalAnchor = caretPosition.x;
 
     }
 
@@ -3303,7 +3245,7 @@ class TextInput : InputNode!Node, FluidScrollable {
     protected void previousOrNextLine(FluidInputAction action) {
 
         auto typeface = style.getTypeface;
-        auto search = Vector2(horizontalAnchor, caretPosition.y);
+        auto search = Vector2(horizontalAnchor, caretRectangle.center.y);
 
         // Next line
         if (action == FluidInputAction.nextLine) {
@@ -3434,12 +3376,12 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         // Just by the way, check if the caret position is correct
         root.updateCaretPosition(true);
-        assert(root.caretPosition.x.isClose(0));
-        assert(root.caretPosition.y.isClose(135));
+        assert(root.caretRectangle.x.isClose(0));
+        assert(root.caretRectangle.y.isClose(135));
 
         root.updateCaretPosition(false);
-        assert(root.caretPosition.x.isClose(153));
-        assert(root.caretPosition.y.isClose(108));
+        assert(root.caretRectangle.x.isClose(153));
+        assert(root.caretRectangle.y.isClose(108));
 
         // Try the same with the third line
         root.caretTo(Vector2(200, 148));
@@ -3455,8 +3397,7 @@ class TextInput : InputNode!Node, FluidScrollable {
     void caretToMouse() {
 
         caretTo(io.mousePosition - _inner.start);
-        updateCaretPosition(false);
-        horizontalAnchor = caretPosition.x;
+        updateCaretPositionAndAnchor(false);
 
     }
 
@@ -3494,12 +3435,11 @@ class TextInput : InputNode!Node, FluidScrollable {
     @(FluidInputAction.toLineStart)
     void caretToLineStart() {
 
-        const search = Vector2(0, caretPosition.y);
+        const search = Vector2(0, caretRectangle.center.y);
 
         caretTo(search);
-        updateCaretPosition(true);
+        updateCaretPositionAndAnchor(true);
         moveOrClearSelection();
-        horizontalAnchor = caretPosition.x;
 
     }
 
@@ -3507,15 +3447,15 @@ class TextInput : InputNode!Node, FluidScrollable {
     @(FluidInputAction.toLineEnd)
     void caretToLineEnd() {
 
-        const search = Vector2(float.infinity, caretPosition.y);
+        const search = Vector2(float.infinity, caretRectangle.center.y);
 
         caretTo(search);
-        updateCaretPosition(false);
+        updateCaretPositionAndAnchor(false);
         moveOrClearSelection();
-        horizontalAnchor = caretPosition.x;
 
     }
 
+    @("TextInput.toLineStart and TextInput.toLineEnd work and correctly set horizontal anchors")
     unittest {
 
         // Note: This test depends on parameters specific to the default typeface.
@@ -3523,7 +3463,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         import std.math : isClose;
 
         auto io = new HeadlessBackend;
-        auto root = textInput(.nullTheme, .multiline);
+        auto root = textInput(.testTheme, .multiline);
 
         root.io = io;
         root.size = Vector2(200, 0);
@@ -3574,28 +3514,28 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         assert(root.valueBeforeCaret.wordBack == "enough ");
         assert(root.valueAfterCaret.wordFront == "to ");
-        assert(root.caretPosition.x.isClose(0));
+        assert(root.caretRectangle.x.isClose(0));
 
         // Move to the previous line
         root.runInputAction!(FluidInputAction.previousLine);
 
         assert(root.valueBeforeCaret.wordBack == ", ");
         assert(root.valueAfterCaret.wordFront == "make ");
-        assert(root.caretPosition.x.isClose(0));
+        assert(root.caretRectangle.x.isClose(0));
 
         // Move to its end — position should be the same as earlier, but the caret should be on the same line
         root.runInputAction!(FluidInputAction.toLineEnd);
 
         assert(root.valueBeforeCaret.wordBack == "enough ");
         assert(root.valueAfterCaret.wordFront == "to ");
-        assert(root.caretPosition.x.isClose(181));
+        assert(root.caretRectangle.x.isClose(181));
 
         // Move to the previous line — again
         root.runInputAction!(FluidInputAction.previousLine);
 
         assert(root.valueBeforeCaret.wordBack == ", ");
         assert(root.valueAfterCaret.wordFront == "make ");
-        assert(root.caretPosition.x.isClose(153));
+        assert(root.caretRectangle.x.isClose(153));
 
     }
 
@@ -3604,9 +3544,8 @@ class TextInput : InputNode!Node, FluidScrollable {
     void caretToStart() {
 
         caretIndex = 0;
-        updateCaretPosition(true);
+        updateCaretPositionAndAnchor(true);
         moveOrClearSelection();
-        horizontalAnchor = caretPosition.x;
 
     }
 
@@ -3615,9 +3554,8 @@ class TextInput : InputNode!Node, FluidScrollable {
     void caretToEnd() {
 
         caretIndex = value.length;
-        updateCaretPosition(false);
+        updateCaretPositionAndAnchor(false);
         moveOrClearSelection();
-        horizontalAnchor = caretPosition.x;
 
     }
 
@@ -4075,7 +4013,7 @@ unittest {
     root.runInputAction!(FluidInputAction.selectToLineEnd);
 
     assert(root.selectedValue == "First one");
-    assert(root.caretPosition.y < lineHeight);
+    assert(root.caretRectangle.center.y < lineHeight);
 
 }
 
@@ -4113,7 +4051,7 @@ unittest {
 
     const focusBox = input.focusBoxImpl(Rectangle(0, 0, 200, 50));
 
-    assert(focusBox.start == input.caretPosition);
+    assert(focusBox.start == input.caretRectangle.start);
     assert(focusBox.end.y - viewportHeight == root.scroll);
     
     
