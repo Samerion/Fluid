@@ -1,6 +1,7 @@
 module fluid.default_theme;
 
 import fluid.node;
+import fluid.utils;
 import fluid.frame;
 import fluid.style;
 import fluid.label;
@@ -29,6 +30,13 @@ Theme nullTheme;
 /// Default theme that Fluid will use if no theme is supplied. It is a very simple theme that does the minimum to make
 /// the role of each node understandable.
 Theme fluidDefaultTheme;
+
+version (unittest) {
+
+    /// Theme for testing; defines a font and nothing else.
+    package Theme testTheme;
+
+}
 
 @NodeTag 
 enum FluidTag {
@@ -74,6 +82,16 @@ static this() {
         nullTheme.add(
             rule!Node(),
         );
+
+        version (unittest) {
+
+            testTheme.add(
+                rule!Node(
+                    fontSize = 14.pt,
+                ),
+            );
+
+        }
 
         fluidDefaultTheme.add(
             rule!Node(
