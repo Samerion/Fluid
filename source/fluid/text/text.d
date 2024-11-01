@@ -652,7 +652,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         const start = ruler.point.length;
         const end   = index + unbreakableSuffix.length;
 
-        // Split on lines
+        // Measure characters between the checkpoint and the queried word
         foreach (line; value[start .. end].byLine) {
 
             if (started) {
@@ -683,6 +683,134 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         auto ruler = rulerAt(index);
         _cache.insert(ruler.point, ruler);
         return ruler;
+
+    }
+
+    /// Find a text index corresponding to a screen position
+    ///
+    /// This function may return an index equal to text length if the position is at the end of text.
+    ///
+    /// Params:
+    ///     needle = Position of the character, starting with the top-left corner of the text.
+    ///         `indexAt` uses pixels (recommended), `indexAtDots` uses screen dots.
+    /// Returns:
+    ///     Index of a matching character, or the same index + 1 if the point is to its right.
+    ///     If pressed out of bounds, returns the closest character of the line, or the last character in the text.
+    size_t indexAt(Vector2 needle) {
+
+        return indexAtDots(backend.scale * needle);
+
+    }
+    
+    /// ditto
+    size_t indexAtDots(Vector2 needle) {
+
+        // TODO RTL support
+
+        alias splitter = Typeface.defaultWordChunks;
+
+        // Find the closest relevant ruler in the cache
+        auto ruler = queryPosition(&_cache, needle.y).front;
+        size_t wordStartIndex;
+        size_t wordEndIndex;
+        auto wordRuler = ruler;
+        bool started;
+
+        const start = ruler.point.length;
+        
+        // Find the word; find a matching line
+        foreach (line; value[start .. $].byLine) {
+
+            const lineIndex = start + line.index;
+
+            wordStartIndex = wordEndIndex = lineIndex;
+
+            if (started) {
+                ruler.startLine();
+                ruler.point.line++;
+                ruler.point.column = 0;
+            }
+            else started = true;
+
+            ruler.point.length += line.withSeparator.length;
+            ruler.point.column += line.length;
+
+            // Split on words
+            foreach (word, wordPosition; eachWord!splitter(ruler, line, _wrap)) {
+
+                const lastWordCaret = wordRuler.caret;
+
+                wordEndIndex = wordStartIndex + word.length;
+                wordRuler = ruler;
+                wordRuler.penPosition = wordPosition;
+                scope (exit) {
+                    wordStartIndex = wordEndIndex;
+                }
+
+                // If we're not on the target line, there's nothing specific to do to these words
+                if (ruler.caret.end.y < needle.y) continue;
+
+                // Passed the line without matching anything
+                if (ruler.caret.start.y > needle.y && lastWordCaret.start.y <= needle.y) return wordStartIndex;
+
+                // Detect when the caret passes the selected word; 
+                // Compare both pen position before the word (wordPosition) and after (ruler.penPosition)
+                // If they're on the opposite side of the needle, we've got a match.
+                const passed = (wordPosition.x <= needle.x && ruler.penPosition.x >= needle.x)
+                    || (wordPosition.x >= needle.x && ruler.penPosition.x <= needle.x);
+
+                // Search the word for the needle, if it's known it is inside
+                if (passed) return indexAtDotsWord(wordRuler, wordStartIndex, wordEndIndex, needle.x);
+            
+            }
+
+            wordEndIndex = lineIndex + line.length;
+            if (ruler.caret.end.y >= needle.y) break;
+
+        }
+
+        // Output the end of the sentence
+        // TODO RTL and right alignment
+        return wordEndIndex;
+
+
+    }
+
+    private size_t indexAtDotsWord(TextRuler wordRuler, size_t wordStartIndex, size_t wordEndIndex, float needle) {
+
+        import std.utf : codeLength;
+
+        // Now that the word of interest was found, it's time to search for the exact character
+        auto caretPosition = wordRuler.penPosition.x;
+        auto bestMatch = float.infinity;
+        auto bestMatchIndex = wordStartIndex;
+        auto index = wordStartIndex;
+
+        foreach (character; value[wordStartIndex .. wordEndIndex].byDchar) {
+
+            const startPosition = caretPosition;
+            const characterWidth = wordRuler.characterWidth(character, caretPosition);
+            const middlePosition = startPosition + characterWidth / 2;
+            const distance = abs(needle - middlePosition);
+            const length = character.codeLength!char;
+
+            // Match against either half of the text
+            // TODO LTR support
+            // TODO shortcircuit
+            if (distance < bestMatch) {
+                bestMatch = distance;
+                if (needle <= middlePosition)
+                    bestMatchIndex = index;
+                else
+                    bestMatchIndex = index + length;
+            }
+
+            caretPosition += characterWidth;
+            index += length;
+
+        }
+
+        return bestMatchIndex;
 
     }
 
@@ -728,7 +856,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         if (newChunks.empty) return;
 
         // Clear the chunks
-        foreach (chunkIndex; newChunks) {
+        foreach (chunkIndex; newChunks.save) {
 
             texture.clearImage(chunkIndex);
 
@@ -753,13 +881,14 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
                 const wordEnd = index + word.length;
 
                 // Split the word based on the layer map
+                // Draw each fragment separately
                 while (index != wordEnd) {
 
                     const remaining = wordEnd - index;
                     auto wordFragment = word[$ - remaining .. $];
                     auto range = styleMap.front;
 
-                    // Advance the layer map if exceeded the end
+                    // Advance the layer map if the index is past the end of the current fragment
                     if (index >= range.end) {
                         styleMap.popFront;
                         continue;
@@ -767,7 +896,8 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
                     ubyte styleIndex;
 
-                    // Match found here
+                    // This fragment matches a style from the style map,
+                    // activate the style
                     if (index >= range.start) {
 
                         // Find the end of the range
@@ -777,7 +907,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
                     }
 
-                    // Match found later
+                    // There's a split later in this word, draw up to that fragment
                     else if (range.start < wordEnd) {
 
                         wordFragment = wordFragment[0 .. range.start - index];
@@ -1030,5 +1160,129 @@ unittest {
     root.draw();
     text.resize();
     text.draw(styles, Vector2(0, 0));
+
+}
+
+version (unittest) {
+
+    mixin template indexAtTest() {
+
+        void test(size_t expected, Vector2 position) {
+
+            const received = root.text.indexAt(position);
+
+            if (received == expected) {
+                io.drawPointer(position, color("#0a0"));
+            }
+            else {
+                io.drawPointer(position);
+                io.saveSVG("/tmp/fluid.svg");
+                assert(false, format!"Expected %s, got %s"(expected, received));
+            }
+
+        }
+
+    }
+
+}
+
+@("Text.indexAt works with multiple lines of text")
+unittest {
+
+    // This test depends on specific properties of the default typeface
+
+    import fluid.label;
+    import std.stdio;
+
+    auto root = label(nullTheme, "Hello, World!\nHi, Globe!\nWelcome, Fluid user!");
+    auto io = new HeadlessBackend;
+    root.io = io;
+    root.draw();
+
+    mixin indexAtTest;
+
+    const lineHeight = root.style.getTypeface.lineHeight;
+
+    // First line
+    test( 0, Vector2(  0, 0));
+    test( 1, Vector2( 10, 0));
+    test( 3, Vector2( 30, lineHeight/2));
+    test( 7, Vector2( 60, lineHeight/3));
+    test( 8, Vector2( 70, lineHeight/3));
+    test(12, Vector2(104, lineHeight/3));
+    test(13, Vector2(108, lineHeight/3));
+    test(13, Vector2(140, lineHeight/3));
+
+    // Second line
+    test(14, Vector2(4, lineHeight * 1.5));
+    test(19, Vector2(40, lineHeight * 1.1));
+    test(24, Vector2(400, lineHeight * 1.9));
+
+    // Third line
+    test(29, Vector2( 40, lineHeight * 2.1));
+    test(32, Vector2( 80, lineHeight * 2.9));
+    test(38, Vector2(120, lineHeight * 2.5));
+    test(45, Vector2(180, lineHeight * 2.2));
+    test(45, Vector2(220, lineHeight * 2.6));
+
+    // Before it all
+    test( 0, Vector2(  0, -20));
+    test( 1, Vector2( 10, -40));
+    test( 3, Vector2( 30, -5));
+    test( 7, Vector2( 60, -60));
+    test( 8, Vector2( 70, -80));
+    test(12, Vector2(104, -90));
+    test(13, Vector2(108, -25));
+    test(13, Vector2(140, -12));
+
+}
+
+@("Text.indexAt works correctly with blank lines")
+unittest {
+
+    // This test depends on specific properties of the default typeface
+
+    import fluid.label;
+    import std.stdio;
+
+    auto root = label(nullTheme, "\r\nHello,\n\nWorld!\n");
+    auto io = new HeadlessBackend;
+    root.io = io;
+    root.draw();
+
+    mixin indexAtTest;
+
+    const lineHeight = root.style.getTypeface.lineHeight;
+
+    // First line — all point to zero
+    test(0, Vector2(-40, lineHeight*0.5));
+    test(0, Vector2(  0, 0));
+    test(0, Vector2( 60, lineHeight*0.3));
+    test(0, Vector2(140, lineHeight*0.8));
+
+    // Second line
+    test(2, Vector2(0,   lineHeight*1.1));
+    test(8, Vector2(50,  lineHeight*1.8));
+    test(8, Vector2(200, lineHeight*1.1));
+
+    // Third line — empty
+    test(9, Vector2(-100, lineHeight*2.4));
+    test(9, Vector2(0,    lineHeight*2.3));
+    test(9, Vector2(100,  lineHeight*2.9));
+
+    // Fourth line
+    // TODO test(10, Vector2(-100, lineHeight*3.4));
+    test(10, Vector2(0,    lineHeight*3.3));
+    test(16, Vector2(100,  lineHeight*3.9));
+
+    // Fifth line — empty
+    test(17, Vector2(-100, lineHeight*4.9));
+    test(17, Vector2(0,    lineHeight*4.5));
+    test(17, Vector2(100,  lineHeight*4.1));
+
+    // Beyond — empty
+    test(17, Vector2(-100, lineHeight*5.9));
+    test(17, Vector2(0,    lineHeight*5.5));
+    test(17, Vector2(100,  lineHeight*5.1));
 
 }
