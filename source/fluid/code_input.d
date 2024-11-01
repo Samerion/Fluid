@@ -134,6 +134,12 @@ class CodeInput : TextInput {
 
     }
 
+    override size_t nearestCharacter(Vector2 needle) {
+
+        return contentLabel.text.indexAt(needle);
+
+    }
+
     override TextRuler rulerAt(size_t index, bool preferNextLine = false) {
 
         return contentLabel.text.rulerAt(index, preferNextLine);

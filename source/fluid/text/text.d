@@ -738,10 +738,20 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
             // Split on words
             foreach (word, wordPosition; eachWord!splitter(ruler, line, _wrap)) {
 
+                const lastWordCaret = wordRuler.caret;
+
                 wordEndIndex = wordStartIndex + word.length;
+                wordRuler = ruler;
+                wordRuler.penPosition = wordPosition;
+                scope (exit) {
+                    wordStartIndex = wordEndIndex;
+                }
 
                 // If we're not on the target line, there's nothing specific to do to these words
                 if (ruler.caret.end.y < needle.y) continue;
+
+                // Passed the line without matching anything
+                if (ruler.caret.start.y > needle.y && lastWordCaret.start.y <= needle.y) return wordStartIndex;
 
                 // Detect when the caret passes the selected word; 
                 // Compare both pen position before the word (wordPosition) and after (ruler.penPosition)
@@ -751,16 +761,10 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
                 // Search the word for the needle, if it's known it is inside
                 if (passed) return indexAtDotsWord(wordRuler, wordStartIndex, wordEndIndex, needle.x);
-
-                // Advance the index if not
-                wordStartIndex = wordEndIndex;
-                wordRuler = ruler;
             
             }
 
             wordEndIndex = lineIndex + line.length;
-
-            // Passed the line without matching anything
             if (ruler.caret.end.y >= needle.y) break;
 
         }
@@ -788,6 +792,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
             const characterWidth = wordRuler.characterWidth(character, caretPosition);
             const middlePosition = startPosition + characterWidth / 2;
             const distance = abs(needle - middlePosition);
+            const length = character.codeLength!char;
 
             // Match against either half of the text
             // TODO LTR support
@@ -797,11 +802,11 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
                 if (needle <= middlePosition)
                     bestMatchIndex = index;
                 else
-                    bestMatchIndex = index + 1;
+                    bestMatchIndex = index + length;
             }
 
             caretPosition += characterWidth;
-            index += character.codeLength!char;
+            index += length;
 
         }
 
