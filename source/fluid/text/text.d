@@ -1,6 +1,7 @@
 module fluid.text.text;
 
 import std.uni;
+import std.conv;
 import std.math;
 import std.range;
 import std.string;
@@ -481,7 +482,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         auto ruler = rulers.front;
         bool started;
         float yOffset = 0;
-        rulers.popFront;
+        rulers.popFront();
 
         assert(!wrap || abs(ruler.lineWidth - space.x) < epsilon.x,
             format!"Line width mismatch: ruler(%s), space(%s)"(ruler.lineWidth, space.x));
@@ -492,7 +493,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         // Split on lines
         foreach (line; value[start .. $].byLine) {
 
-            auto index = line.index;
+            auto index = start + line.index;
 
             if (started) {
                 ruler.startLine();
@@ -509,12 +510,13 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
                 index += word.length;
 
                 // Keep the ruler's location in sync
-                ruler.point.length = start + index;
+                ruler.point.length = index;
                 ruler.point.column += word.length;
 
                 // If we're in the update range (iterating through newly added text), we need to periodically write 
                 // rulers to cache 
-                if (startIndex <= _updateRangeEnd) {
+                if (startIndex < _updateRangeEnd) {
+
 
                     // Delete any outdated checkpoint in the cache
                     // TODO This might not even be necessary — cache should have already purged these points
@@ -529,6 +531,9 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
                         lastCheckpoint = index;
                         _cache.insert(ruler.point, ruler);
+                        rulers = query(&_cache, index);
+                        assert(rulers.front == ruler);
+                        rulers.popFront();
 
                     }
 
@@ -536,11 +541,19 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
                 // We're measuring text that should already have checkpoints written to cache.
                 // We just need to compare with existing checkpoints and update them if necessary.
-                else if (!rulers.empty) {
+                else while (!rulers.empty && index >= rulers.front.point.length) {
+
+                    // Checkpoints are made on word breaks, so they should be remain consistent
+                    if (index != rulers.front.point.length) {
+                        // TODO this could be allowed if requireRulerAt was public
+                        assert(false, format!"Checkpoint found at %s in word(%s); word breaks are at %s and %s"(
+                            rulers.front.point.length, word, startIndex, index));
+                    }
 
                     // X position is different, override the ruler and continue measurements
                     if (abs(rulers.front.penPosition.x - ruler.penPosition.x) >= epsilon.x) {
                         rulers.front = ruler;
+                        rulers.popFront();
                         continue;
                     }
 
@@ -550,6 +563,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
                         rulers.front = ruler;
                     }
 
+                    rulers.popFront();
                     break;
 
                 }
@@ -563,7 +577,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         for (; !rulers.empty; rulers.popFront) {
             ruler = rulers.front;
             ruler.penPosition.y += yOffset;
-            rulers.front = rulers.front;
+            rulers.front = ruler;
         }
 
         // Now that the cache is built, we can find out what the position of the last character is so we can get 
@@ -678,7 +692,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
     }
 
-    CachedTextRuler requireRulerAt(size_t index) {
+    private CachedTextRuler requireRulerAt(size_t index) {
 
         auto ruler = rulerAt(index);
         _cache.insert(ruler.point, ruler);
@@ -1285,4 +1299,66 @@ unittest {
     test(17, Vector2(0,    lineHeight*5.5));
     test(17, Vector2(100,  lineHeight*5.1));
 
+}
+
+@("Text.measure correctly updates checkpoints in the same line")
+unittest {
+
+    import fluid.label;
+
+    const repeatedText = "A checkpoint will be placed after every occurence of this sentence. ";
+    const occurences = 4;
+
+    auto root = label(
+        repeatedText.repeat(occurences).join,
+    );
+    root.draw();
+
+    foreach (i; 0..occurences) {
+        root.text.requireRulerAt((i + 1) * repeatedText.length);
+    }
+
+    const endOfText = root.text.rulerAt(root.text.length);
+
+    // placed -> replaced
+    root.text.replace(21, 27, "replaced");
+    root.draw();
+
+    const newEnd = root.text.rulerAt(root.text.length);
+
+    assert(newEnd.penPosition.y >= endOfText.penPosition.y);
+    
+}
+
+@("Text.measure correctly updates checkpoints on different lines")
+unittest {
+
+    import fluid.label;
+
+    const repeatedText = "A checkpoint will be placed after every occurence of this sentence.\n";
+    const occurences = 20;
+
+    auto root = label(
+        repeatedText.repeat(occurences).join,
+    );
+    root.draw();
+
+    // Add checkpoints between every word to make sure the behavior is consistent
+    foreach (i; 0..occurences) {
+        auto index = i * repeatedText.length;
+        foreach (word; breakWords(repeatedText.chomp)) {
+            index += word.length;
+            root.text.requireRulerAt(index);
+        }
+    }
+
+    const endOfText = root.text.rulerAt(root.text.length);
+
+    root.text.replace(21, 27, "\n");
+    root.draw();
+
+    const newEnd = root.text.rulerAt(root.text.length);
+
+    assert(newEnd.penPosition.y >= endOfText.penPosition.y);
+    
 }
