@@ -4002,11 +4002,12 @@ class TextInput : InputNode!Node, FluidScrollable {
 
 unittest {
 
-    auto root = textInput(.nullTheme, .multiline);
-    auto lineHeight = root.style.getTypeface.lineHeight;
+    auto root = textInput(.testTheme, .multiline);
 
     root.value = "First one\nSecond two";
     root.draw();
+
+    auto lineHeight = root.style.getTypeface.lineHeight;
 
     // Navigate to the start and select the whole line
     root.caretToStart();
