@@ -1207,31 +1207,30 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         auto style = pickStyle();
         auto typeface = style.getTypeface;
-        auto ruler = textRuler();
+        auto ruler = rulerAt(low);
 
         Vector2 lineStart;
         Vector2 lineEnd;
 
         // Run through the text
-        foreach (line; value.byLine) {
+        foreach (line; value[low..$].byLine) {
 
-            auto index = line.index;
+            auto index = low + line.index;
 
-            ruler.startLine();
+            scope (exit) ruler.startLine();
 
             // Each word is a single, unbreakable unit
             foreach (word, penPosition; typeface.eachWord(ruler, line, multiline)) {
 
                 const caret = ruler.caret(penPosition);
                 const startIndex = index;
-                const endIndex = index = index + word.length;
-
-                const newLine = ruler.wordLineIndex == 1;
+                const wrapped = startIndex != index && !ruler.canWrap;
+                const endIndex = index = startIndex + word.length;
 
                 scope (exit) lineEnd = ruler.caret.end;
 
                 // New line started, flush the line
-                if (newLine && startIndex > low) {
+                if (wrapped && startIndex > low) {
 
                     const rect = Rectangle(
                         (inner.start + lineStart).tupleof,
@@ -4145,6 +4144,5 @@ unittest {
         import std.stdio;
         writeln("Warning: TextInput edit after paste benchmark runs slowly, ", average);
     }
-
 
 }

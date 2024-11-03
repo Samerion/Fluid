@@ -606,17 +606,16 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     /// `rulerAt` gets measurement data for the given text position. This data can be used to map characters to their 
     /// screen position or find their size. 
     ///
-    /// `requireRulerAt` will do the same, but it will also cache the result value for faster subsequent lookup. The
-    /// regular `rulerAt` overload is recommended for most cases.
-    ///
     /// For this function to work, measurement data must be available; make sure `resize` was called beforehand. This
     /// will be checked at runtime.
     ///
     /// Returns: 
     ///     Text ruler with text measurement data from the start of the text to the given character, not including 
-    ///     queried character.
+    ///     queried character. The ruler has an extra `point` field, indicating distance from the start of the text.
     /// Params:
     ///     index = Index of the requested character.
+    ///     preferNextLine = If the index is between two characters on different visual lines (and neither is a line
+    ///         break), decides which of them should be used.
     CachedTextRuler rulerAt(size_t index, bool preferNextLine = false)
     in (_cache !is _cache.init, "Text was not measured. Call `resize()` first.")
     do {
@@ -698,6 +697,88 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         // TODO textSize might be incorrect here
         ruler.penPosition.x -= ruler.typeface.measure(unbreakableSuffix[]).x;
 
+        // The ruler cannot wrap in the middle of the word
+        ruler.canWrap = false;
+
+        return ruler;
+
+    }
+
+    /// Find a text index corresponding to a screen position
+    ///
+    /// Params:
+    ///     needle = Position of the character, starting with the top-left corner of the text.
+    ///         `rulerAtPosition` uses pixels (recommended), `rulerAtPositionDots` uses screen dots.
+    /// Returns: 
+    ///     Text ruler with text measurement data from the start of the text to the given character, not including 
+    ///     queried character. The ruler has an extra `point` field, indicating distance from the start of the text.
+    CachedTextRuler rulerAtPosition(Vector2 needle) {
+
+        return rulerAtPositionDots(backend.scale * needle);
+
+    }
+    
+    /// ditto
+    CachedTextRuler rulerAtPositionDots(Vector2 needle) {
+
+        // TODO RTL support
+
+        alias splitter = Typeface.defaultWordChunks;
+
+        // Find the closest relevant ruler in the cache
+        auto ruler = queryPosition(&_cache, needle.y).front;
+
+        const start = ruler.point.length;
+        
+        // Find the word; find a matching line
+        foreach (line; value[start .. $].byLine) {
+
+            const nextLine = ruler.point.length + line.withSeparator.length;
+
+            scope (exit) {
+                ruler.startLine();
+                ruler.point = TextInterval(nextLine, ruler.point.line + 1, 0);
+            }
+
+            auto lastWord = ruler;
+
+            // Split on words
+            foreach (word, wordPosition; eachWord!splitter(ruler, line, _wrap)) {
+
+                const wordInterval = TextInterval(word.length, 0, word.length);
+
+                alias wordEnd = ruler;
+
+                // Set wordStart and wordEnd rulers
+                auto wordStart = ruler;
+                wordStart.penPosition = wordPosition;
+                wordEnd.point += wordInterval;
+                scope (exit) lastWord = wordEnd;
+
+                // If we're not on the target line, there's nothing specific to do to these words
+                if (ruler.caret.end.y < needle.y) continue;
+
+                // Passed the line without matching anything
+                if (ruler.caret.start.y > needle.y && lastWord.caret.start.y <= needle.y) return lastWord;
+
+                // Detect when the caret passes the selected word; 
+                // Compare both pen position before the word (wordPosition) and after (ruler.penPosition)
+                // If they're on the opposite side of the needle, we've got a match.
+                const passed = (wordPosition.x <= needle.x && ruler.penPosition.x >= needle.x)
+                    || (wordPosition.x >= needle.x && ruler.penPosition.x <= needle.x);
+
+                // Search the word for the needle, if it's known it is inside
+                if (passed) return indexAtDotsWord(wordStart, wordEnd.point, needle.x);
+            
+            }
+
+            if (ruler.caret.end.y >= needle.y) return ruler;
+
+        }
+
+        // Output the end of the sentence
+        // TODO RTL and right alignment
+        ruler.canWrap = false;
         return ruler;
 
     }
@@ -729,112 +810,53 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     /// ditto
     size_t indexAtDots(Vector2 needle) {
 
-        // TODO RTL support
-
-        alias splitter = Typeface.defaultWordChunks;
-
-        // Find the closest relevant ruler in the cache
-        auto ruler = queryPosition(&_cache, needle.y).front;
-        size_t wordStartIndex;
-        size_t wordEndIndex;
-        auto wordRuler = ruler;
-        bool started;
-
-        const start = ruler.point.length;
-        
-        // Find the word; find a matching line
-        foreach (line; value[start .. $].byLine) {
-
-            const lineIndex = start + line.index;
-
-            wordStartIndex = wordEndIndex = lineIndex;
-
-            if (started) {
-                ruler.startLine();
-                ruler.point.line++;
-                ruler.point.column = 0;
-            }
-            else started = true;
-
-            ruler.point.length += line.withSeparator.length;
-            ruler.point.column += line.length;
-
-            // Split on words
-            foreach (word, wordPosition; eachWord!splitter(ruler, line, _wrap)) {
-
-                const lastWordCaret = wordRuler.caret;
-
-                wordEndIndex = wordStartIndex + word.length;
-                wordRuler = ruler;
-                wordRuler.penPosition = wordPosition;
-                scope (exit) {
-                    wordStartIndex = wordEndIndex;
-                }
-
-                // If we're not on the target line, there's nothing specific to do to these words
-                if (ruler.caret.end.y < needle.y) continue;
-
-                // Passed the line without matching anything
-                if (ruler.caret.start.y > needle.y && lastWordCaret.start.y <= needle.y) return wordStartIndex;
-
-                // Detect when the caret passes the selected word; 
-                // Compare both pen position before the word (wordPosition) and after (ruler.penPosition)
-                // If they're on the opposite side of the needle, we've got a match.
-                const passed = (wordPosition.x <= needle.x && ruler.penPosition.x >= needle.x)
-                    || (wordPosition.x >= needle.x && ruler.penPosition.x <= needle.x);
-
-                // Search the word for the needle, if it's known it is inside
-                if (passed) return indexAtDotsWord(wordRuler, wordStartIndex, wordEndIndex, needle.x);
-            
-            }
-
-            wordEndIndex = lineIndex + line.length;
-            if (ruler.caret.end.y >= needle.y) break;
-
-        }
-
-        // Output the end of the sentence
-        // TODO RTL and right alignment
-        return wordEndIndex;
-
+        return rulerAtPositionDots(needle).point.length;
 
     }
 
-    private size_t indexAtDotsWord(TextRuler wordRuler, size_t wordStartIndex, size_t wordEndIndex, float needle) {
+    private CachedTextRuler indexAtDotsWord(CachedTextRuler wordStart, TextInterval wordEndPoint, float needle) {
 
         import std.utf : codeLength;
 
         // Now that the word of interest was found, it's time to search for the exact character
-        auto caretPosition = wordRuler.penPosition.x;
-        auto bestMatch = float.infinity;
-        auto bestMatchIndex = wordStartIndex;
-        auto index = wordStartIndex;
+        auto ruler = wordStart;
+        auto bestMatchDistance = float.infinity;
+        auto bestMatch = ruler;
 
-        foreach (character; value[wordStartIndex .. wordEndIndex].byDchar) {
+        const word = value[wordStart.point.length .. wordEndPoint.length];
 
-            const startPosition = caretPosition;
-            const characterWidth = wordRuler.characterWidth(character, caretPosition);
-            const middlePosition = startPosition + characterWidth / 2;
+        foreach (character; word.byDchar) {
+
+            ruler.canWrap = false;
+
+            const characterLength = character.codeLength!char;
+
+            auto start = ruler;
+            ruler.addWord(only(character));
+            ruler.point.length += characterLength;
+            ruler.point.column += characterLength;
+            auto end = ruler;
+
+            const middlePosition = start.penPosition.x + (end.penPosition.x - start.penPosition.x) / 2;
             const distance = abs(needle - middlePosition);
-            const length = character.codeLength!char;
 
             // Match against either half of the text
             // TODO LTR support
             // TODO shortcircuit
-            if (distance < bestMatch) {
-                bestMatch = distance;
-                if (needle <= middlePosition)
-                    bestMatchIndex = index;
-                else
-                    bestMatchIndex = index + length;
+            if (distance < bestMatchDistance) {
+                bestMatchDistance = distance;
+                if (needle <= middlePosition) {
+                    bestMatch = start;
+                }
+                else {
+                    bestMatch = end;
+                }
             }
-
-            caretPosition += characterWidth;
-            index += length;
 
         }
 
-        return bestMatchIndex;
+        bestMatch.canWrap = false;
+        return bestMatch;
 
     }
 
@@ -1209,15 +1231,15 @@ version (unittest) {
 
         void test(size_t expected, Vector2 position) {
 
-            const received = root.text.indexAt(position);
+            const index = root.text.indexAt(position);
 
-            if (received == expected) {
+            if (index == expected) {
                 io.drawPointer(position, color("#0a0"));
             }
             else {
                 io.drawPointer(position);
                 io.saveSVG("/tmp/fluid.svg");
-                assert(false, format!"Expected %s, got %s"(expected, received));
+                debug assert(false, format!"Expected %s, got %s"(expected, index));
             }
 
         }
@@ -1234,7 +1256,7 @@ unittest {
     import fluid.label;
     import std.stdio;
 
-    auto root = label(nullTheme, "Hello, World!\nHi, Globe!\nWelcome, Fluid user!");
+    auto root = label(testTheme, "Hello, World!\nHi, Globe!\nWelcome, Fluid user!");
     auto io = new HeadlessBackend;
     root.io = io;
     root.draw();
