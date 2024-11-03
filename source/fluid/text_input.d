@@ -4153,17 +4153,35 @@ unittest {
     const runCount = 10;
 
     // Paste the text
-    auto result = benchmark!({
-        input.insert(0, "Hello, World!");
-        root.draw();
-    })(runCount);
+    auto result = benchmark!(
 
-    const average = result[0] / runCount;
+        // At the start
+        {
+            input.insert(0, "Hello, World!");
+            root.draw();
+        },
 
-    assert(average <= 5.msecs, "Too slow: average " ~ average.toString);
-    if (average > 1.msecs) {
+        // Into the middle
+        {
+            input.insert(input.value.length / 2, "Hello, World!");
+            root.draw();
+        },
+
+        // At the end
+        {
+            input.insert(input.value.length, "Hello, World!");
+            root.draw();
+        },
+        
+    )(runCount);
+
+    auto average = result[].map!(a => a / runCount);
+    const totalAverage = average.sum / result[].length;
+
+    assert(totalAverage <= 5.msecs, format!"Too slow: average %(%s / %)"(average));
+    if (totalAverage > 1.msecs) {
         import std.stdio;
-        writeln("Warning: TextInput edit after paste benchmark runs slowly, ", average);
+        writefln!"Warning: TextInput edit after paste benchmark runs slowly, %(%s / %)"(average);
     }
 
 }
