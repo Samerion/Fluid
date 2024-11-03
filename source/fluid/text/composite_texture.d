@@ -6,9 +6,18 @@ import std.math;
 import std.range;
 import std.format;
 import std.algorithm;
+debug (Fluid_TextUpdates) {
+    import std.datetime;
+}
 
 import fluid.utils;
 import fluid.backend;
+
+debug (Fluid_BuildMessages) {
+    debug (Fluid_TextUpdates) {
+        pragma(msg, "Fluid: Highlight updated texture chunks is on");
+    }
+}
 
 @safe:
 
@@ -22,6 +31,10 @@ struct CompositeTexture {
         TextureGC texture;
         Image image;
         bool isValid;
+
+        debug (Fluid_TextUpdates) {
+            SysTime lastEdit;
+        }
 
         alias texture this;
 
@@ -203,6 +216,10 @@ struct CompositeTexture {
         const sizeMatches = chunks[i].image.width == width
             && chunks[i].image.height == height;
 
+        debug (Fluid_TextUpdates) {
+            chunks[i].lastEdit = Clock.currTime;
+        }
+
         // Size matches, reuse the image
         if (sizeMatches)
             chunks[i].image.clear(PalettedColor.init);
@@ -257,6 +274,10 @@ struct CompositeTexture {
         // Mark as valid
         chunks[i].isValid = true;
 
+        debug (Fluid_TextUpdates) {
+            chunks[i].lastEdit = Clock.currTime;
+        }
+
     }
 
     /// Draw onscreen parts of the texture.
@@ -275,6 +296,22 @@ struct CompositeTexture {
 
             // Assign palette
             chunks[index].palette = palette;
+
+            debug (Fluid_TextUpdates) {
+
+                const timeSinceLastUpdate = Clock.currTime - chunks[index].lastEdit;
+                const secondsSinceLastUpdate = timeSinceLastUpdate.total!"msecs" / 1000f;
+
+                if (0 <= secondsSinceLastUpdate && secondsSinceLastUpdate <= 1) {
+
+                    const opacity = 1 - secondsSinceLastUpdate;
+
+                    backend.drawRectangle(rect, color("#ffc307").setAlpha(opacity));
+
+                }
+                
+                
+            }
 
             backend.drawTextureAlign(chunks[index], rect, tint);
 
