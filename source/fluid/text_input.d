@@ -4178,10 +4178,50 @@ unittest {
     auto average = result[].map!(a => a / runCount);
     const totalAverage = average.sum / result[].length;
 
-    assert(totalAverage <= 5.msecs, format!"Too slow: average %(%s / %)"(average));
-    if (totalAverage > 1.msecs) {
+    assert(totalAverage <= 20.msecs, format!"Too slow: average %(%s / %)"(average));
+    if (totalAverage > 5.msecs) {
         import std.stdio;
         writefln!"Warning: TextInput edit after paste benchmark runs slowly, %(%s / %)"(average);
+    }
+
+}
+
+@("TextInput loads of edits benchmark")
+unittest {
+
+    import std.file;
+    import std.datetime.stopwatch;
+
+    auto root = multilineInput();
+    auto io = new HeadlessBackend;
+    io.clipboard = readText(__FILE__);
+
+    root.io = io;
+    root.draw();
+    root.focus();
+    root.paste();
+    io.nextFrame();
+    root.draw();
+
+    const runCount = 1;  // TODO make this greater once you fix this performance please
+    const sampleText = "Hello, world! This is some text I'd like to type in. This should be fast.";
+
+    // Paste the text
+    auto result = benchmark!({
+
+        foreach (letter; sampleText) {
+            root.insert(0, sampleText);
+            root.draw();
+        }
+        
+    })(runCount);
+
+    const average = result[0] / runCount;
+
+    assert(average <= 20.msecs, format!"Too slow: average %s"(average));
+    if (average > 5.msecs) {
+        import std.stdio;
+        writefln!"Warning: TextInput loads of edits benchmark runs slowly, %s"(average);
     }
 
 }

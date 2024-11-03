@@ -24,7 +24,7 @@ debug (Fluid_BuildMessages) {
 /// A composite texture splits a larger area onto smaller chunks, making rendering large pieces of text more efficient.
 struct CompositeTexture {
 
-    enum maxChunkSize = 1024;
+    enum maxChunkSize = 512;
 
     struct Chunk {
 
