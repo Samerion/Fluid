@@ -123,7 +123,7 @@ struct TextInterval {
 }
 
 /// Cache result matching a point in text to a `TextRuler`.
-package struct CachedTextRuler {
+struct CachedTextRuler {
 
     /// Point (interval from the start of the text) at which the measurement was made.
     TextInterval point;

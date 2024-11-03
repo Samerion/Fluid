@@ -146,6 +146,12 @@ class CodeInput : TextInput {
 
     }
 
+    override CachedTextRuler rulerAtPosition(Vector2 position) {
+
+        return contentLabel.text.rulerAtPosition(position);
+
+    }
+
     override bool multiline() const {
 
         return true;
