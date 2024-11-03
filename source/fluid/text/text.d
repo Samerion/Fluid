@@ -517,7 +517,6 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
                 // rulers to cache 
                 if (startIndex < _updateRangeEnd) {
 
-
                     // Delete any outdated checkpoint in the cache
                     // TODO This might not even be necessary — cache should have already purged these points
                     while (!rulers.empty && index >= rulers.front.point.length) {
@@ -641,6 +640,9 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         bool started;
 
         assert(ruler.typeface !is null);
+
+        // Found an exact match
+        if (index == ruler.point.length) return ruler;
 
         // Too much to calculate at once! Trigger a resize first
         if (index - ruler.point.length >= checkpointDistance) {
@@ -1361,4 +1363,20 @@ unittest {
 
     assert(newEnd.penPosition.y >= endOfText.penPosition.y);
     
+}
+
+@("Overflowing text does not break layout")
+unittest {
+
+    import fluid.label;
+
+    auto root = label("helloworld".repeat(50).join);
+
+    root.draw();
+
+    const startRuler = root.text.rulerAt(0);
+    const endRuler = root.text.rulerAt(root.text.length);
+
+    assert(startRuler.penPosition.y == endRuler.penPosition.y);
+
 }
