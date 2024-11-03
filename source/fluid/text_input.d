@@ -568,6 +568,13 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
+    /// ditto
+    void insert(size_t position, string value) {
+
+        replace(position, position, value);
+
+    }
+
     /// If true, this input is currently empty.
     bool isEmpty() const {
 
@@ -4058,7 +4065,7 @@ unittest {
     
 }
 
-@("Critical TextInput performance test")
+@("TextInput paste benchmark")
 unittest {
 
     import std.file;
@@ -4094,10 +4101,50 @@ unittest {
     // This should be trivial on practically any machine
     assert(average <= 100.msecs, "Too slow: average " ~ average.toString);
     if (average > 10.msecs) {
-
         import std.stdio;
-        writeln("Warning: Critical TextInput performance test runs slowly, ", average);
-
+        writeln("Warning: TextInput paste benchmark runs slowly, ", average);
     }
+
+}
+
+@("TextInput edit after paste benchmark")
+unittest {
+
+    import std.file;
+    import std.datetime.stopwatch;
+
+    auto input = multilineInput(
+        .layout!"fill",
+    );
+    auto root = vscrollFrame(
+        .layout!"fill", 
+        input
+    );
+    auto io = new HeadlessBackend;
+    io.clipboard = readText(__FILE__);
+
+    root.io = io;
+    root.draw();
+    input.focus();
+    input.paste();
+    io.nextFrame();
+    root.draw();
+
+    const runCount = 10;
+
+    // Paste the text
+    auto result = benchmark!({
+        input.insert(0, "Hello, World!");
+        root.draw();
+    })(runCount);
+
+    const average = result[0] / runCount;
+
+    assert(average <= 5.msecs, "Too slow: average " ~ average.toString);
+    if (average > 1.msecs) {
+        import std.stdio;
+        writeln("Warning: TextInput edit after paste benchmark runs slowly, ", average);
+    }
+
 
 }

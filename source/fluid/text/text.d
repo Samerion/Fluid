@@ -491,7 +491,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         size_t lastCheckpoint = start;
 
         // Split on lines
-        foreach (line; value[start .. $].byLine) {
+        lines: foreach (line; value[start .. $].byLine) {
 
             auto index = start + line.index;
 
@@ -503,7 +503,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
             else started = true;
 
             // Split on words
-            words: foreach (word, penPosition; Typeface.eachWord!splitter(ruler, line, wrap)) {
+            foreach (word, penPosition; Typeface.eachWord!splitter(ruler, line, wrap)) {
 
                 const startIndex = index;
 
@@ -548,8 +548,9 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
                     // Checkpoints are made on word breaks, so they should be remain consistent
                     if (index != rulers.front.point.length) {
                         // TODO This should be relaxed in the future for nonbreaking text or used-inserted checkpoints
-                        assert(false, format!"Checkpoint found at %s in word(%s); word breaks are at %s and %s"(
-                            rulers.front.point.length, word, startIndex, index));
+                        assert(false, format!"Checkpoint found at %s (%s...) in word(%s); word breaks are at %s and %s"(
+                            rulers.front.point.length, value[rulers.front.point.length..$].take(10), 
+                            word, startIndex, index));
                     }
 
                     // X position is different, override the ruler and continue measurements
@@ -568,7 +569,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
                     }
 
                     // No difference, stop
-                    else break words;
+                    else break lines;
 
                 }
 
