@@ -724,7 +724,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         return indexAtDots(backend.scale * needle);
 
     }
-    
+
     /// ditto
     size_t indexAtDots(Vector2 needle) {
 
@@ -878,24 +878,40 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         // No chunks to render, stop here
         if (newChunks.empty) return;
 
+        auto startY = +float.infinity;
+        auto endY   = -float.infinity;
+
         // Clear the chunks
         foreach (chunkIndex; newChunks.save) {
 
             texture.clearImage(chunkIndex);
 
+            // Find the topmost and bottommost chunk
+            auto rect = texture.chunkRectangle(chunkIndex);
+            if (rect.y < startY) startY = rect.y;
+            if (rect.end.y > endY) endY = rect.end.y;
+
         }
 
-        auto ruler = TextRuler(typeface, _sizeDots.x);
+        auto start = indexAtDots(Vector2(0, startY));
+        auto ruler = rulerAt(start);
+        bool started;
 
         // Copy the layer range, make it infinite
         auto styleMap = this.styleMap.save.chain(TextStyleSlice.init.repeat);
 
         // Run through the text
-        foreach (line; value.byLine) {
+        foreach (line; value[start .. $].byLine) {
 
-            auto index = line.index;
+            auto index = start + line.index;
 
-            ruler.startLine();
+            if (started) {
+                ruler.startLine();
+            }
+            else started = true;
+
+            // Stop when reached the end of the drawable area
+            if (ruler.caret.y > endY) break;
 
             // Split on words
             // TODO use the splitter provided when resizing
