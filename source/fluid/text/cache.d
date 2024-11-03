@@ -248,14 +248,17 @@ package struct TextRulerCache {
         // TODO this could be far more efficient
         for (auto range = query(&this, absoluteStart.length); !range.empty;) {
 
-            // Skip the first entry, it is not affected
-            if (range.front.point.length <= absoluteStart.length) {
+            const index = range.front.point.length;
+
+            // Skip preceding entires, they're not affected
+            // However, an equal entry can affect word breaking, so it should be deleted
+            if (index < absoluteStart.length || index == 0) {
                 range.popFront;
                 continue;
             }
 
-            // Skip entires after the range
-            if (range.front.point.length > absoluteEnd.length) break;
+            // Skip entries after the range
+            if (index > absoluteEnd.length) break;
 
             range.removeFront;
 
@@ -277,7 +280,7 @@ package struct TextRulerCache {
 
             // Search for a node that can control the start of the interval; either exactly at the start, 
             // or shortly before it, just like `query()`
-            if (start.length <= cache.left.interval.length) {
+            if (start.length < cache.left.interval.length) {
                 cache = cache.left;
             }
             else {
@@ -319,7 +322,18 @@ package struct TextRulerCache {
         // Inserting between two points
         else {
 
-            assert(cache.interval.length != 0, "Cache data invalid, failed to detect append");
+            debug scope (failure) {
+                import std.stdio;
+                stderr.writeln("Insert failure detected, dumping cache:");
+                stderr.writeln(toRope);
+            }
+
+            assert(cache.interval.length != 0, 
+                "Failed to detect append; Cache data is inconsistent");
+            assert(point.length > foundPoint.length, 
+                "Failed to detect append; Last item in the cache must be of length 0");
+            assert(point.length < foundPoint.length + cache.interval.length, 
+                "Cache data is inconsistent; missed an insert point.");
 
             const oldInterval = cache.interval;
 
@@ -440,6 +454,33 @@ package struct TextRulerCache {
         
     }
     
+    /// Dump data in the cache into a rope.
+    /// 
+    /// This functionis @system because stringifying a Typeface is.
+    ///
+    /// Returns: A rope representation of the cache.
+    Rope toRope(int indentLevel = 0) @system {
+
+        import std.conv : to;
+
+        const indent = Rope(repeat(". ", indentLevel).join);
+        const here = indent ~ "TextRulerCache(" ~ Rope(interval.to!string) ~ ", " ~ Rope(startRuler.to!string) ~ ")\n";
+
+        if (isLeaf) {
+            return here;
+        }
+
+        else {
+            return here 
+                ~ Rope(left.interval + right.interval != this.interval 
+                    ? repeat("# ", indentLevel).join ~ "! Mismatched interval\n" 
+                    : "")
+                ~ left.toRope(indentLevel + 1) 
+                ~ right.toRope(indentLevel + 1);
+        }
+
+    }
+
 }
 
 /// Query the cache to find the last ruler before the requested point.
@@ -654,12 +695,20 @@ do {
 
         }
 
+        /// Similar to `updateDepth` but also adjusts the intervals of all ancestors.
+        void updateDepthAndInterval() @trusted {
+
+            foreach (item; stack[]) {
+                item.recalculateDepth();
+                item.interval = item.left.interval + item.right.interval;
+            }
+
+        }
+
         /// Remove the entry at the front of the range from the cache and advance to the next item.
         ///
         /// This cannot be used to remove the first entry in the cache.
         void removeFront() {
-
-            // TODO tests for this
 
             assert(!empty);
             assert(stack.back.isLeaf);
@@ -673,8 +722,22 @@ do {
             stack.removeBack();
             auto parent = stack.back;
 
+            // Apply offset to skip the current node
+            offset += front.interval;
+
+            // Removing the last node, merge with the left, remove the interval in between
+            if (front is parent.right && front.interval.length == 0) {
+
+                *parent = *parent.left;
+
+                // The node that replaced us was either the previous leaf, or a branch containing the previous leaf.
+                // The interval of the last node must be set to 0.
+                collapse();
+
+            }
+
             // The node we're removing is on the right side, replace it with the left
-            if (front is parent.right) {
+            else if (front is parent.right) {
 
                 const interval = parent.interval;
 
@@ -689,8 +752,6 @@ do {
             else if (front is parent.left) {
 
                 const offset = parent.left.interval;
-
-                this.offset += offset;
 
                 // Move the right side to replace it
                 *parent = *parent.right;
@@ -724,8 +785,8 @@ do {
 
                     assert(previous);
 
-                    // Descend into the preceding branch (always going right), expanding the interval of every node until 
-                    // we hit a leaf. 
+                    // Descend into the preceding branch (always going right), expanding the interval of every node 
+                    // until we hit a leaf. 
                     while (previous) {
                         previous.interval += offset;
                         previous = previous.right;
@@ -740,6 +801,31 @@ do {
             }
 
             else assert(false);
+
+        }
+
+        /// Zero the interval of the rightmost node in the current branch. This is used to reset the length of the last
+        /// node when it is removed. Clears the stack when done.
+        private void collapse() 
+        out (; empty)
+        do {
+
+            // Descend into the rightmost node first
+            while (!stack.back.isLeaf) {
+
+                stack.back.isRight = true;
+                stack ~= CacheStackFrame(stack.back.right);
+
+            }
+
+            // Found a leaf, nullify its interval
+            stack.back.interval = TextInterval();
+            stack.pop();
+
+            // Update intervals in the parent
+            updateDepthAndInterval();
+
+            stack.clear();
 
         }
 
@@ -1120,6 +1206,41 @@ unittest {
         ]));
     }
 
+    // Removing the last node
+    {
+        TextRulerCache[4] nodes;
+        foreach (ref node; nodes) node = make();
+        auto root = new TextRulerCache( 
+            new TextRulerCache(
+                &nodes[0],
+                &nodes[1],
+            ),
+            new TextRulerCache(
+                &nodes[2],
+                new TextRulerCache(
+                    &nodes[3],
+                    new TextRulerCache(TextRuler(typeface, 10), TextInterval(0, 0, 0))
+                ),
+            ),
+        );
+
+        assert(root.interval.length == 40);
+
+        root.query(50).removeFront;
+
+        assert(root.interval.length == 36);
+        assert(root.query(0).equal([
+            CachedTextRuler(TextInterval( 0,  0, 0), TextRuler(typeface, 1)),
+            CachedTextRuler(TextInterval( 6,  1, 0), TextRuler(typeface, 2)),
+            CachedTextRuler(TextInterval(10,  2, 0), TextRuler(typeface, 1)),
+            CachedTextRuler(TextInterval(16,  3, 0), TextRuler(typeface, 2)),
+            CachedTextRuler(TextInterval(20,  4, 0), TextRuler(typeface, 1)),
+            CachedTextRuler(TextInterval(26,  5, 0), TextRuler(typeface, 2)),
+            CachedTextRuler(TextInterval(30,  6, 0), TextRuler(typeface, 1)),
+            CachedTextRuler(TextInterval(36,  7, 0), TextRuler(typeface, 2)),
+        ]));
+    }
+
 }
 
 @("Text can be filled and cleared in a loop")
@@ -1143,5 +1264,32 @@ unittest {
         assert(query(&root.text._cache, 0).walkLength == 1);
 
     }
+
+}
+
+@("Removing the last cache node collapses the its interval — merging with leaf")
+unittest {
+
+    import fluid.style;
+
+    auto typeface = Style.defaultTypeface;
+    auto cache = new TextRulerCache(
+        new TextRulerCache(
+            new TextRulerCache(TextRuler(typeface, 1), TextInterval( 6, 0, 6)),
+            new TextRulerCache(TextRuler(typeface, 2), TextInterval( 4, 1, 0)),
+        ),
+        new TextRulerCache(
+            new TextRulerCache(TextRuler(typeface, 1), TextInterval( 6, 0, 6)),
+            new TextRulerCache(TextRuler(typeface, 2), TextInterval( 0, 0, 0)),
+        ),
+    );
+
+    assert(cache.interval == TextInterval(16, 1, 6));
+    assert(cache.right.interval == TextInterval(6, 0, 6));
+    
+    cache.query(20).removeFront;
+
+    assert(cache.interval == TextInterval(10, 1, 0));
+    assert(cache.right.interval == TextInterval(0, 0, 0));
 
 }
