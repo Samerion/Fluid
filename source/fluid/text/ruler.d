@@ -25,8 +25,12 @@ struct TextRuler {
     /// Total size of the text.
     Vector2 textSize;
 
-    /// Index of the word within the line.
-    size_t wordLineIndex;
+    /// If true, the ruler can wrap the next added word onto the next line. False for the first word in the line,
+    /// true for any subsequent word. 
+    ///
+    /// In some cases `TextRuler` can also be in the middle of the word. When this is the case, this will also be set 
+    /// to true.
+    bool canWrap;
 
     this(Typeface typeface, float lineWidth = float.nan) {
 
@@ -47,7 +51,7 @@ struct TextRuler {
             && typeface      is other.typeface
             && penPosition   == other.penPosition
             && textSize      == other.textSize
-            && wordLineIndex == other.wordLineIndex;
+            && canWrap       == other.canWrap;
 
     }
 
@@ -85,7 +89,7 @@ struct TextRuler {
 
         // Allocate space for the line
         textSize.y += lineHeight;
-        wordLineIndex = 0;
+        canWrap = false;
 
     }
 
@@ -115,6 +119,9 @@ struct TextRuler {
 
         import std.utf : byDchar;
 
+        // Empty word?
+        if (word.empty) return penPosition;
+
         const maxWordWidth = lineWidth - penPosition.x;
 
         float wordSpan = 0;
@@ -126,22 +133,17 @@ struct TextRuler {
 
         }
 
-        // Exceeded line width
+        // Exceeded line width, start a new line
         // Automatically false if lineWidth is NaN
-        if (maxWordWidth < wordSpan && wordLineIndex != 0) {
-
-            // Start a new line
+        if (maxWordWidth < wordSpan && canWrap) {
             startLine();
-
         }
 
         const wordPosition = penPosition;
 
-        // Increment word index
-        wordLineIndex++;
-
         // Update pen position
         penPosition.x += wordSpan;
+        canWrap = true;
 
         // Allocate space
         if (penPosition.x > textSize.x) {
