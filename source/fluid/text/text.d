@@ -503,7 +503,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
             else started = true;
 
             // Split on words
-            foreach (word, penPosition; Typeface.eachWord!splitter(ruler, line, wrap)) {
+            words: foreach (word, penPosition; Typeface.eachWord!splitter(ruler, line, wrap)) {
 
                 const startIndex = index;
 
@@ -560,10 +560,12 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
                     else if (abs(rulers.front.penPosition.y - ruler.penPosition.y) >= epsilon.y) {
                         yOffset = ruler.penPosition.y - rulers.front.penPosition.y;
                         rulers.front = ruler;
+                        rulers.popFront();
+                        break;
                     }
 
-                    rulers.popFront();
-                    break;
+                    // No difference, stop
+                    else break words;
 
                 }
 
@@ -571,12 +573,14 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
         }
 
-        // The remaining lines have not changes, so we can just apply the same offset we did on the last line
-        if (yOffset)
+        // The remaining lines have no changes, so we can just apply the same offset we did on the last line
+        // TODO Should textSize be tracked by TextRuler? It could be faster.
         for (; !rulers.empty; rulers.popFront) {
-            ruler = rulers.front;
-            ruler.penPosition.y += yOffset;
-            rulers.front = ruler;
+            auto thisRuler = rulers.front;
+            thisRuler.penPosition.y += yOffset;
+            thisRuler.textSize.y += yOffset;
+            thisRuler.textSize.x = max(thisRuler.textSize.x, ruler.textSize.x);
+            rulers.front = thisRuler;
         }
 
         // Now that the cache is built, we can find out what the position of the last character is so we can get 
@@ -1401,5 +1405,33 @@ unittest {
 
     assert(startRuler.penPosition.y == endRuler.penPosition.y);
     assert(query(&root.text._cache, 0).walkLength == 2);
+
+}
+
+@("Text updates its size when editing")
+unittest {
+
+    import fluid.label;
+
+    auto root = label(
+        `return vframe(\n` ~
+        `    label("First line"),\n` ~
+        `    label("Second line"),\n` ~
+        `    label("Third line"),\n` ~
+        `);`
+    );
+
+    root.draw();
+
+    const index = root.text.byChar.indexOf(`\n    label("Third line")`);
+    const firstTextSize = root.text.size;
+
+    root.text.replace(index, index, "asdfg");
+    root.draw();
+
+    const secondTextSize = root.text.size;
+
+    assert(firstTextSize.x < secondTextSize.x);
+    assert(firstTextSize.y == secondTextSize.y);
 
 }
