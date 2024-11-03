@@ -248,14 +248,17 @@ package struct TextRulerCache {
         // TODO this could be far more efficient
         for (auto range = query(&this, absoluteStart.length); !range.empty;) {
 
-            // Skip the first entry, it is not affected
-            if (range.front.point.length <= absoluteStart.length) {
+            const index = range.front.point.length;
+
+            // Skip preceding entires, they're not affected
+            // However, an equal entry can affect word breaking, so it should be deleted
+            if (index < absoluteStart.length || index == 0) {
                 range.popFront;
                 continue;
             }
 
             // Skip entries after the range
-            if (range.front.point.length > absoluteEnd.length) break;
+            if (index > absoluteEnd.length) break;
 
             range.removeFront;
 
