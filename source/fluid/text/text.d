@@ -530,7 +530,10 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
                         lastCheckpoint = index;
                         _cache.insert(ruler.point, ruler);
-                        rulers = query(&_cache, index);
+                        () @trusted {
+                            // Inferred @safe on newer compilers, but @system on LDC 1.28
+                            rulers = query(&_cache, index);
+                        }();
                         assert(rulers.front == ruler);
                         rulers.popFront();
 
