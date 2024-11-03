@@ -1111,6 +1111,12 @@ class TextInput : InputNode!Node, FluidScrollable {
         return contentLabel.text.rulerAt(index, preferNextLine);
 
     }
+    
+    CachedTextRuler rulerAtPosition(Vector2 position) {
+
+        return contentLabel.text.rulerAtPosition(position);
+
+    }
 
     protected override void drawImpl(Rectangle outer, Rectangle inner) @trusted {
 
@@ -1202,14 +1208,28 @@ class TextInput : InputNode!Node, FluidScrollable {
         // Ignore if selection is empty
         if (selectionStart == selectionEnd) return;
 
-        const low = selectionLowIndex;
+        const windowSize = io.windowSize;
+
+        auto low = selectionLowIndex;
         const high = selectionHighIndex;
 
         auto style = pickStyle();
         auto typeface = style.getTypeface;
         auto ruler = rulerAt(low);
 
-        Vector2 lineStart;
+        // Some text is overflowing
+        if (inner.y < 0) {
+
+            auto topRuler = rulerAtPosition(Vector2(0, -inner.y));
+
+            if (topRuler.point.length > low) {
+                ruler = topRuler;
+                low = topRuler.point.length;
+            }
+
+        }
+        
+        Vector2 lineStart = Vector2(float.nan, float.nan);
         Vector2 lineEnd;
 
         // Run through the text
@@ -1224,30 +1244,28 @@ class TextInput : InputNode!Node, FluidScrollable {
 
                 const caret = ruler.caret(penPosition);
                 const startIndex = index;
-                const wrapped = startIndex != index && !ruler.canWrap;
                 const endIndex = index = startIndex + word.length;
 
                 scope (exit) lineEnd = ruler.caret.end;
 
-                // New line started, flush the line
-                if (wrapped && startIndex > low) {
+                // Started a new line, draw the last one
+                if (caret.y != lineStart.y) {
 
-                    const rect = Rectangle(
-                        (inner.start + lineStart).tupleof,
-                        (lineEnd - lineStart).tupleof
-                    );
+                    // Don't draw if selection starts here
+                    if (startIndex != low) {
 
-                    lineStart = caret.start;
-                    io.drawRectangle(rect, style.selectionBackgroundColor);
+                        const rect = Rectangle(
+                            (inner.start + lineStart).tupleof,
+                            (lineEnd - lineStart).tupleof
+                        );
+                    
+                        io.drawRectangle(rect, style.selectionBackgroundColor);
+                    }
 
-                }
-
-                // Selection starts here
-                if (startIndex <= low && low <= endIndex) {
-
-                    const dent = typeface.measure(word[0 .. low - startIndex]);
-
-                    lineStart = caret.start + Vector2(dent.x, 0);
+                    // Restart the line
+                    auto startRuler = ruler;
+                    startRuler.penPosition = penPosition;
+                    lineStart = startRuler.caret.start;
 
                 }
 
@@ -1265,6 +1283,9 @@ class TextInput : InputNode!Node, FluidScrollable {
                     return;
 
                 }
+
+                // Stop drawing when selection is offscreen
+                if (inner.start.y + ruler.caret.y > windowSize.y) return;
 
             }
 
