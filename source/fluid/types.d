@@ -403,18 +403,17 @@ struct Image {
         if (x >= width || y >= height) return;
 
         const index = y * width + x;
-        const color = paletteColor(entry);
 
         final switch (format) {
 
             case Format.rgba:
-                rgbaPixels[index] = color;
+                rgbaPixels[index] = paletteColor(entry);
                 return;
             case Format.palettedAlpha:
                 palettedAlphaPixels[index] = entry;
                 return;
             case Format.alpha:
-                alphaPixels[index] = color.a;
+                alphaPixels[index] = paletteColor(entry).a;
                 return;
 
         }
