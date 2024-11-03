@@ -544,7 +544,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
                     // Checkpoints are made on word breaks, so they should be remain consistent
                     if (index != rulers.front.point.length) {
-                        // TODO this could be allowed if requireRulerAt was public
+                        // TODO This should be relaxed in the future for nonbreaking text or used-inserted checkpoints
                         assert(false, format!"Checkpoint found at %s in word(%s); word breaks are at %s and %s"(
                             rulers.front.point.length, word, startIndex, index));
                     }
@@ -1370,13 +1370,36 @@ unittest {
 
     import fluid.label;
 
-    auto root = label("helloworld".repeat(50).join);
+    const longText = "helloworld".repeat(100).join;
 
+    auto root = label(.testTheme, longText);
     root.draw();
+
+    const startRuler = root.text.rulerAt(0);
+    const endRuler = root.text.rulerAt(longText.length);
+
+    assert(startRuler.penPosition.y == endRuler.penPosition.y);
+
+}
+
+@("Rulers cannot appear in the middle of a long word")
+unittest {
+
+    import fluid.label;
+
+    auto root = label(.testTheme, "");
+
+    foreach (i; 0..50) {
+
+        root.text ~= "helloworld";
+        root.draw();
+
+    }
 
     const startRuler = root.text.rulerAt(0);
     const endRuler = root.text.rulerAt(root.text.length);
 
     assert(startRuler.penPosition.y == endRuler.penPosition.y);
+    assert(query(&root.text._cache, 0).walkLength == 2);
 
 }
