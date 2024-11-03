@@ -4064,22 +4064,28 @@ unittest {
     import std.file;
     import std.datetime.stopwatch;
 
-    auto root = multilineInput();
+    auto input = multilineInput(
+        .layout!"fill",
+    );
+    auto root = vscrollFrame(
+        .layout!"fill", 
+        input
+    );
     auto io = new HeadlessBackend;
 
     // Prepare
     root.io = io;
     io.clipboard = readText(__FILE__);
     root.draw();
-
-    // Paste the text
+    input.focus();
     io.nextFrame();
 
     const runCount = 10;
 
+    // Paste the text
     auto result = benchmark!({
-        root.value = "";
-        root.paste();
+        input.value = "";
+        input.paste();
         root.draw();
     })(runCount);
 
