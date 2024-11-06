@@ -98,9 +98,13 @@ class TextInput : InputNode!Node, FluidScrollable {
             size_t selectionStart;
             size_t selectionEnd;
 
-            /// If true, the entry results from an action that was executed immediately after the last action, without
-            /// changing caret position in the meantime.
-            bool isContinuous;
+            /// If true, the entry was created as a result of a small change, like inserting a character or removing
+            /// a word, and can be merged with another, similar change.
+            bool isMinor;
+
+            deprecated("isContinuous has been renamed to isMinor and will be removed in Fluid 0.9.0.") {
+                alias isContinuous = isMinor;
+            }
 
             /// Change made by this entry.
             ///
@@ -113,24 +117,54 @@ class TextInput : InputNode!Node, FluidScrollable {
             /// subtractive.
             ///
             /// See_Also: `setPreviousEntry`, `canMergeWith`
-            bool isAdditive;
-
-            /// ditto.
-            bool isSubtractive;
-
-            /// Set `isAdditive` and `isSubtractive` based on the given text representing the last input.
-            void setPreviousEntry(HistoryEntry entry) {
-
-                setPreviousEntry(entry.value);
-
+            bool isAdditive() const { 
+                return !diff.second.empty;
             }
 
             /// ditto
-            void setPreviousEntry(Rope previousValue) {
+            bool isSubtractive() const {
+                return !diff.first.empty;
+            }
 
-                this.diff = previousValue.diff(value);
-                this.isAdditive = diff.second.length != 0;
-                this.isSubtractive = diff.first.length != 0;
+            deprecated("isAdditive and isSubtractive are now property functions and cannot be set."
+                ~ " To be removed in Fluid 0.8.0") {
+
+                bool isAdditive(bool) {
+                    return isAdditive;
+                }
+
+                bool isSubtractive(bool) {
+                    return isSubtractive;
+                }
+
+            }
+
+            /// Set `isAdditive` and `isSubtractive` based on the given text representing the last input.
+            deprecated("setPreviousEntry and canMergeWith(Rope) have been deprecated. "
+                ~ " Please refer to TextInput.replace for future usage. To be removed in Fluid 0.8.0.") {
+
+                void setPreviousEntry(HistoryEntry entry) {
+
+                    setPreviousEntry(entry.value);
+
+                }
+
+                /// ditto
+                void setPreviousEntry(Rope previousValue) {
+
+                    this.diff = previousValue.diff(value);
+
+                }
+
+                bool canMergeWith(Rope nextValue) const {
+
+                    // Create a dummy entry based on the text
+                    auto nextEntry = HistoryEntry(nextValue, 0, 0);
+                    nextEntry.setPreviousEntry(value);
+
+                    return canMergeWith(nextEntry);
+
+                }
 
             }
 
@@ -138,25 +172,17 @@ class TextInput : InputNode!Node, FluidScrollable {
             /// runs of similar actions together, for example when typing a word, the whole word will form a single
             /// entry, instead of creating separate entries per character.
             ///
-            /// Two entries can be combined if they are:
+            /// Entries will not be merged together unless they are marked as minor. Two such entries can be combined 
+            /// if they are:
             ///
             /// 1. Both additive, and the latter is not subtractive. This combines runs input, including if the first
             ///    item in the run replaces some text. However, replacing text will break an existing chain of actions.
             /// 2. Both subtractive, and neither is additive.
             ///
             /// See_Also: `isAdditive`
-            bool canMergeWith(Rope nextValue) const {
-
-                // Create a dummy entry based on the text
-                auto nextEntry = HistoryEntry(nextValue, 0, 0);
-                nextEntry.setPreviousEntry(value);
-
-                return canMergeWith(nextEntry);
-
-            }
-
-            /// ditto
             bool canMergeWith(HistoryEntry nextEntry) const {
+
+                if (!isMinor || !nextEntry.isMinor) return false;
 
                 const mergeAdditive = this.isAdditive
                     && nextEntry.isAdditive
@@ -185,11 +211,14 @@ class TextInput : InputNode!Node, FluidScrollable {
         bool _isContinuous;
 
         /// Current action history, expressed as two stacks, indicating undoable and redoable actions, controllable via
-        /// `snapshot`, `pushSnapshot`, `undo` and `redo`.
+        /// `undo` and `redo`. History entries are added when calling `replace` or `replaceAmend`.
         DList!HistoryEntry _undoStack;
 
         /// ditto
         DList!HistoryEntry _redoStack;
+
+        /// Current history entry, if relevant.
+        HistoryEntry _snapshot;
 
     }
 
@@ -422,27 +451,24 @@ class TextInput : InputNode!Node, FluidScrollable {
         return contentLabel.placeholderText = Rope(value);
     }
 
-    /// Hook called every time a piece of text is replaced.
-    /// Params:
-    ///     start   = Index at which the change occured.
-    ///     removed = Text that was removed at this index.
-    ///     added   = Text that was added at this index.
-    protected void onReplace(size_t start, Rope removed, Rope added) {
-
-    }
-
     /// Replace value at a given range with a new value. This is the main, and fastest way to operate on TextInput text.
     ///
     /// There are two ways to use this function: `replace(start, end, "value")` and `replace[start..end] = value`. 
     /// In a future update, it will be possible to use `value[start..end] = value` directly.
     /// 
-    /// Using this function will automatically update caretIndex to match.
+    /// This function will automatically update caretIndex: if inside the replaced area, it will be moved to the 
+    /// end, otherwise it will be adjusted to stay in the same spot in the text.
+    ///
+    /// All changes to the value will be noted in the edit history so they can be undone with `undo`. Many small, 
+    /// consecutive changes will be merged together they're marked as `minor`.
     ///
     /// Params:
     ///     start    = Low index, inclusive; First index to delete.
     ///     end      = High index, exclusive; First index after the newly inserted fragment.
     ///     newValue = Value to insert.
-    void replace(size_t start, size_t end, Rope newValue)
+    ///     minor    = True if this is a minor change, like inserting a character or deleting a word. Similar minor 
+    ///         changes will be merged together in the edit history.
+    void replace(size_t start, size_t end, Rope newValue, bool minor = false)
     in (start <= end, "Start must be lower than end")
     do {
 
@@ -462,9 +488,10 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         const oldValue = contentLabel.value[start..end];
 
+        // Perform the replace
         contentLabel.replace(start, end, newValue);
 
-        // Caret index is affected
+        // Update caret index
         if (caretIndex > start) {
 
             if (caretIndex <= end)
@@ -476,11 +503,27 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         }
 
+        // Update history
+        auto snapshot = HistoryEntry(value, selectionStart, selectionEnd, minor);
+
+        if (_snapshot.canMergeWith(snapshot)) {
+
+            // Try to merge changes with the current revision
+            // TODO This isn't really a merge
+            _snapshot = snapshot;
+
+        }
+        else {
+
+            // Push a new snapshot
+            _undoStack.insertBack(_snapshot);
+            _snapshot = snapshot;
+
+        }
+
+        // Trigger a resize
         _bufferNode = null;
         updateSize();
-
-        // Fire hook
-        onReplace(start, oldValue, newValue);
 
     }
 
@@ -3838,40 +3881,16 @@ class TextInput : InputNode!Node, FluidScrollable {
     ///
     /// A snapshot pushed through `forcePushSnapshot` will break continuity — it will not be merged with any other
     /// snapshot.
-    void pushSnapshot(HistoryEntry entry) {
-
-        // Compare against current state, so it can be dismissed if it's too similar
-        auto currentState = snapshot();
-        currentState.setPreviousEntry(entry);
-
-        // Mark as continuous, so runs of similar characters can be merged together
-        scope (success) _isContinuous = true;
-
-        // No change was made, ignore
-        if (currentState.diff.isSame()) return;
-
-        // Current state is compatible, ignore
-        if (entry.isContinuous && entry.canMergeWith(currentState)) return;
-
-        // Push state
-        forcePushSnapshot(entry);
+    deprecated("pushSnapshot has been integrated into replace and is now NOOP. Update your usage "
+        ~ "by Fluid 0.8.0.")
+    void pushSnapshot(HistoryEntry) {
 
     }
 
     /// ditto
-    void forcePushSnapshot(HistoryEntry entry) {
-
-        // Break continuity
-        _isContinuous = false;
-
-        // Ignore if the last entry is identical
-        if (!_undoStack.empty && _undoStack.back == entry) return;
-
-        // Truncate the history to match the index, insert the current value.
-        _undoStack.insertBack(entry);
-
-        // Clear the redo stack
-        _redoStack.clear();
+    deprecated("forcePushSnapshot has been integrated into replace and is now NOOP. Update your usage "
+        ~ "by Fluid 0.8.0.")
+    void forcePushSnapshot(HistoryEntry) {
 
     }
     
@@ -3970,20 +3989,14 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
-    /// Produce a snapshot for the current state. Returns the snapshot.
+    /// Returns: History entry for the current state.
     protected HistoryEntry snapshot() const {
+        return _snapshot;
 
-        auto entry = HistoryEntry(value, selectionStart, selectionEnd, _isContinuous);
-
-        // Get previous entry in the history
-        if (!_undoStack.empty)
-            entry.setPreviousEntry(_undoStack.back.value);
-
-        return entry;
 
     }
 
-    /// Restore state from snapshot
+    /// Restore state from snapshot.
     protected HistoryEntry snapshot(HistoryEntry entry) {
 
         value = entry.value;
