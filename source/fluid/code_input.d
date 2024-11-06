@@ -269,9 +269,9 @@ class CodeInput : TextInput {
 
     }
 
-    protected override void onReplace(size_t start, Rope removed, Rope added) {
+    protected override void replace(size_t start, size_t end, Rope added, bool) {
 
-        reparse(start, removed.length, added);
+        reparse(start, end, added);
 
     }
 
