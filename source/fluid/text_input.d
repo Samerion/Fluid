@@ -102,7 +102,7 @@ class TextInput : InputNode!Node, FluidScrollable {
             /// a word, and can be merged with another, similar change.
             bool isMinor;
 
-            deprecated("isContinuous has been renamed to isMinor and will be removed in Fluid 0.9.0.") {
+            deprecated("isContinuous has been renamed to isMinor and will be removed in Fluid 0.8.0.") {
                 alias isContinuous = isMinor;
             }
 
@@ -218,8 +218,8 @@ class TextInput : InputNode!Node, FluidScrollable {
         /// Current history entry, if relevant.
         HistoryEntry _snapshot;
 
-        deprecated("_isContinuous is deprecated and will be removed in Fluid 0.8.0. `replaceNoHistory` is a likely"
-            ~ " replacement") {
+        deprecated("`_isContinuous` is deprecated in favor of `snapshot.isMinor` and will be removed in Fluid 0.8.0."
+            ~ " `replaceNoHistory` or `setCaretIndexNoHistory` are also likely replacements.") {
 
             ref inout(bool) _isContinuous() inout {
                 return _snapshot.isMinor;
@@ -415,7 +415,10 @@ class TextInput : InputNode!Node, FluidScrollable {
     /// 
     /// To efficiently change a substring of the value, use `replace`. Reassigning via `value` is comparatively slow,
     /// as the entire text will have to be measured again.
-    /// 
+    ///
+    /// Note: 
+    ///     At the moment, setting `value` will not affect the undo/redo history, but this is due to change in 
+    ///     a future update. Use `replaceNoHistory` to keep old behavior.
     /// Params:
     ///     newValue = If given, set a new value.
     /// Returns: The value used by this input.
@@ -428,8 +431,7 @@ class TextInput : InputNode!Node, FluidScrollable {
     /// ditto
     Rope value(Rope newValue) {
 
-        replace(0, value.length, newValue);
-        clearHistory();
+        replaceNoHistory(0, value.length, newValue);
         return value;
 
     }
@@ -485,21 +487,8 @@ class TextInput : InputNode!Node, FluidScrollable {
         // Perform the replace
         if (!replaceNoHistory(start, end, newValue, minor)) return;
 
-        const currentSnapshot = snapshot;
-
-        debug (X) {
-            import std.stdio;
-            debug writefln!"pushing:";
-            debug writefln!"  <-- %s"(_undoStack[]);
-            debug writefln!"  <== %s"(previousSnapshot);
-            debug writefln!"  ==> %s"(currentSnapshot);
-            debug writefln!"  --> %s"(_redoStack[]);
-        }
-
         // If the two snapshots are not compatible, insert the previous one into history
-        if (!previousSnapshot.canMergeWith(currentSnapshot)) {
-            _undoStack.insertBack(cast() previousSnapshot);
-        }
+        pushHistory(previousSnapshot);
 
     }
 
@@ -589,6 +578,13 @@ class TextInput : InputNode!Node, FluidScrollable {
         updateSize();
 
         return true;
+
+    }
+
+    /// ditto
+    protected bool replaceNoHistory(size_t start, size_t end, string newValue, bool isMinor = false) {
+
+        return replaceNoHistory(start, end, Rope(newValue), isMinor);
 
     }
 
@@ -1543,6 +1539,9 @@ class TextInput : InputNode!Node, FluidScrollable {
         // TODO `push` should *not* have isMinor = true as default for API consistency
         //      it does for backwards compatibility
 
+        // Nothing to do 
+        if (ch.length == 0) return;
+
         // Move the buffer node into here; move it back when done
         auto bufferNode = _bufferNode;
         _bufferNode = null;
@@ -1575,6 +1574,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         // From here, appending can be optimized by memorizing the node we create to add the text, and reusing it
         // afterwards. This way, we avoid creating many one character nodes.
 
+        const oldCaretIndex = caretIndex;
         const newCaretIndex = caretIndex + ch.length;
 
         // Create a node to write to
@@ -1596,6 +1596,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         else {
 
             const originalLength = bufferNode.length;
+            const past = snapshot;
 
             // Append the character to its value
             // The bufferNode will always share tail with the buffer
@@ -1607,14 +1608,17 @@ class TextInput : InputNode!Node, FluidScrollable {
             }
 
             // Update the node
-            if (isMinor && snapshot.isMinor) {
+            replaceNoHistory(caretIndex - originalLength, caretIndex, Rope(bufferNode), isMinor);
 
-                // Since we're replacing the whole node, `replace` won't see it as an additive, 
-                // but as a subsitute change, and create a history entry. Gotta override this.
-                replaceNoHistory(caretIndex - originalLength, caretIndex, Rope(bufferNode), isMinor);
+            // Change the history for this change so only the new characters are seen
+            snapshot.diff.start = oldCaretIndex;
+            snapshot.diff.first = Rope.init;
+            snapshot.diff.second = Rope(bufferNode)[$ - ch.length .. $];
 
-            }
-            else replace(caretIndex - originalLength, caretIndex, Rope(bufferNode), isMinor);
+            assert(!snapshot.isSubtractive);
+            assert( snapshot.isAdditive);
+
+            pushHistory(past);
 
         }
 
@@ -1856,10 +1860,6 @@ class TextInput : InputNode!Node, FluidScrollable {
         import std.uni;
         import std.range;
 
-        // Save previous value in undo stack
-        const previousState = snapshot();
-        scope (success) pushSnapshot(previousState);
-
         // Selection active, delete it
         if (isSelecting) {
 
@@ -2047,9 +2047,7 @@ class TextInput : InputNode!Node, FluidScrollable {
     ///     forward = If true, removes character after the caret, otherwise removes the one before.
     void chop(bool forward = false) {
 
-        // Save previous value in undo stack
-        const previousState = snapshot();
-        scope (success) pushSnapshot(previousState);
+        const isMinor = true;
 
         // Selection active
         if (isSelecting) {
@@ -2065,7 +2063,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
             const length = valueAfterCaret.decodeFrontStatic.codeLength!char;
 
-            replace[caretIndex .. caretIndex + length] = Rope.init;
+            replace(isMinor)[caretIndex .. caretIndex + length] = Rope.init;
 
         }
 
@@ -2076,16 +2074,12 @@ class TextInput : InputNode!Node, FluidScrollable {
 
             const length = valueBeforeCaret.decodeBackStatic.codeLength!char;
 
-            replace[caretIndex - length .. caretIndex] = Rope.init;
+            replace(isMinor)[caretIndex - length .. caretIndex] = Rope.init;
 
         }
 
         // Trigger the callback
         touchText();
-
-        // Update the size of the box
-        updateSize();
-        updateCaretPositionAndAnchor();
 
     }
 
@@ -3813,9 +3807,7 @@ class TextInput : InputNode!Node, FluidScrollable {
     @(FluidInputAction.cut)
     void cut() {
 
-        auto snap = snapshot();
         copy();
-        pushSnapshot(snap);
         selectedValue = null;
 
     }
@@ -3909,9 +3901,7 @@ class TextInput : InputNode!Node, FluidScrollable {
     @(FluidInputAction.paste)
     void paste() {
 
-        auto snap = snapshot();
         push(io.clipboard);
-        forcePushSnapshot(snap);
 
     }
 
@@ -3951,25 +3941,69 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
+    deprecated("`pushSnapshot` and `forcePushSnapshot` are now NOOP and will be removed in Fluid 0.8.0."
+        ~ " Snapshots are now created automatically."
+        ~ " If manual control is still desired, use `replaceNoHistory` and `pushHistory`/`forcePushHistory`.") {
+
+        void pushSnapshot(HistoryEntry) { }
+        void forcePushSnapshot(HistoryEntry) { }
+
+    }
+
     /// Push the given state snapshot (value, caret & selection) into the undo stack. Refuses to push if the current
     /// state can be merged with it, unless `forcePushSnapshot` is used.
     ///
     /// A snapshot pushed through `forcePushSnapshot` will break continuity — it will not be merged with any other
     /// snapshot.
-    deprecated("pushSnapshot has been integrated into replace and is now NOOP. Update your usage "
-        ~ "by Fluid 0.8.0.")
-    void pushSnapshot(HistoryEntry) {
+    ///
+    /// History:
+    ///     As of Fluid 0.7.1, this function does not have to be called explicitly. `replace` will automatically call
+    ///     this whenever needed. It can still be useful when used together with `replaceNoHistory`
+    /// Params:
+    ///     newSnapshot = Entry to insert into the `undo` history. This entry should be a revision *preceding* 
+    ///         the current state.
+    void pushHistory(HistoryEntry newSnapshot) {
+
+        debug (X) {
+            import std.stdio;
+            debug writefln!"[!] attempting push:";
+            debug writefln!"  <== %s"(newSnapshot);
+            debug writefln!"  ==> %s"(snapshot);
+            debug writefln!"canMerge: %s"(newSnapshot.canMergeWith(snapshot));
+        }
+
+        if (!newSnapshot.canMergeWith(snapshot)) {
+            forcePushHistory(newSnapshot);
+        }
 
     }
 
     /// ditto
-    deprecated("forcePushSnapshot has been integrated into replace and is now NOOP. Update your usage "
-        ~ "by Fluid 0.8.0.")
-    void forcePushSnapshot(HistoryEntry) {
+    void forcePushHistory(HistoryEntry newSnapshot) {
+
+        _undoStack.insertBack(newSnapshot);
+
+    }
+
+    /// Implementing `replace` using `replaceNoHistory`.
+    unittest {
+
+        auto root = textInput();
+        auto past = root.snapshot;
+
+        if (root.replaceNoHistory(0, 0, "Hello, World!")) {
+
+            root.pushHistory(past);
+
+        }
+
+        assert(root.value == "Hello, World!");
+        root.undo();
+        assert(root.value == "");
 
     }
     
-    @("Undo and redo works with basic actions")
+    @("Undo and redo work with basic actions")
     unittest {
 
         auto root = textInput(.multiline);
@@ -3996,6 +4030,8 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         // Move back through isnerts
         root.undo();
+        assert(root.value == "Hello, \nnew\nlin");
+        root.undo();
         assert(root.value == "Hello, \nnew\nline");
         root.undo();
         assert(root.value == "Hello, \nnew\n");
@@ -4017,6 +4053,8 @@ class TextInput : InputNode!Node, FluidScrollable {
         assert(root.value == "Hello, \nnew\n");
         root.redo();
         assert(root.value == "Hello, \nnew\nline");
+        root.redo();
+        assert(root.value == "Hello, \nnew\nlin");
         root.redo();
         assert(root.value == "Hello, \nnew\n");
         root.redo();
@@ -4066,7 +4104,7 @@ class TextInput : InputNode!Node, FluidScrollable {
     }
 
     /// Returns: History entry for the current state.
-    protected HistoryEntry snapshot() const {
+    protected const(HistoryEntry) snapshot() const {
 
         HistoryEntry snap = _snapshot;
         snap.selectionStart = selectionStart;
@@ -4075,14 +4113,32 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
+    /// ditto
+    protected ref HistoryEntry snapshot() {
+
+        const that = this;
+
+        return _snapshot = that.snapshot;
+
+    }
+
     /// Restore state from snapshot.
+    deprecated("`snapshot(HistoryEntry)` is deprecated and will be removed in Fluid 0.8.0."
+        ~ " Please use `restoreSnapshot` instead.")
     protected HistoryEntry snapshot(HistoryEntry entry) {
+
+        restoreSnapshot(entry);
+        return entry;
+
+    }
+
+    /// Restore state from snapshot.
+    protected void restoreSnapshot(HistoryEntry entry) {
 
         // TODO this could be faster
         replaceNoHistory(0, value.length, entry.value);
         selectSlice(entry.selectionStart, entry.selectionEnd);
-
-        return _snapshot = entry;
+        _snapshot = entry;
 
     }
 
@@ -4096,16 +4152,16 @@ class TextInput : InputNode!Node, FluidScrollable {
         debug (X) {
             import std.stdio;
             debug writefln!"about to undo:";
-            debug writefln!"  <- %s"(_undoStack[]);
+            debug writefln!"  <- %(%s\n%|     %)"(_undoStack[]);
             debug writefln!"  == %s"(snapshot);
-            debug writefln!"  -> %s"(_redoStack[]);
+            debug writefln!"  -> %(%s\n%|     %)"(_redoStack[]);
         }
 
         // Push the current state to redo stack
         _redoStack.insertBack(snapshot);
 
         // Restore the value
-        this.snapshot = _undoStack.back;
+        restoreSnapshot(_undoStack.back);
         _undoStack.removeBack;
 
     }
@@ -4121,7 +4177,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         _undoStack.insertBack(snapshot);
 
         // Restore the value
-        this.snapshot = _redoStack.back;
+        restoreSnapshot(_redoStack.back);
         _redoStack.removeBack;
 
     }
