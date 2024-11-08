@@ -208,9 +208,6 @@ class TextInput : InputNode!Node, FluidScrollable {
         /// Last padding box assigned to this node, with scroll applied.
         Rectangle _inner = Rectangle(0, 0, 0, 0);
 
-        /// If true, the caret index has not changed since last `pushSnapshot`.
-        bool _isContinuous;
-
         /// Current action history, expressed as two stacks, indicating undoable and redoable actions, controllable via
         /// `undo` and `redo`. History entries are added when calling `replace` or `replaceAmend`.
         DList!HistoryEntry _undoStack;
@@ -220,6 +217,15 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         /// Current history entry, if relevant.
         HistoryEntry _snapshot;
+
+        deprecated("_isContinuous is deprecated and will be removed in Fluid 0.8.0. `replaceNoHistory` is a likely"
+            ~ " replacement") {
+
+            ref inout(bool) _isContinuous() inout {
+                return _snapshot.isMinor;
+            }
+
+        }
 
     }
 
@@ -423,6 +429,7 @@ class TextInput : InputNode!Node, FluidScrollable {
     Rope value(Rope newValue) {
 
         replace(0, value.length, newValue);
+        clearHistory();
         return value;
 
     }
@@ -480,12 +487,14 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         const currentSnapshot = snapshot;
 
-        import std.stdio;
-        debug writefln!"pushing:";
-        debug writefln!"  <-- %s"(_undoStack[]);
-        debug writefln!"  <== %s"(previousSnapshot);
-        debug writefln!"  ==> %s"(currentSnapshot);
-        debug writefln!"  --> %s"(_redoStack[]);
+        debug (X) {
+            import std.stdio;
+            debug writefln!"pushing:";
+            debug writefln!"  <-- %s"(_undoStack[]);
+            debug writefln!"  <== %s"(previousSnapshot);
+            debug writefln!"  ==> %s"(currentSnapshot);
+            debug writefln!"  --> %s"(_redoStack[]);
+        }
 
         // If the two snapshots are not compatible, insert the previous one into history
         if (!previousSnapshot.canMergeWith(currentSnapshot)) {
@@ -851,7 +860,18 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
-    /// Index of the character, byte-wise.
+    /// The position of the caret in the text as an index. Since the caret is placed between characters, 
+    /// when the caret is at the end of the text, the index is equal to the text's length.
+    ///
+    /// Changing the `caretIndex` will mark the last change made to the text as a major change, if it was set to minor.
+    /// This means that moving the caret between two changes to the text will separate them in the undo/redo history.
+    /// If this is not desired, use `setCaretIndexNoHistory`. 
+    ///
+    /// Returns: Index of the character, byte-wise.
+    /// Params:
+    ///     index = If set, move the caret to a different index.
+    ///         As the text is in UTF-8, this index must be on a character boundary; it cannot be in the middle
+    ///         of a multibyte sequence.
     ptrdiff_t caretIndex() const {
 
         return _caretIndex.clamp(0, value.length);
@@ -861,14 +881,28 @@ class TextInput : InputNode!Node, FluidScrollable {
     /// ditto
     ptrdiff_t caretIndex(ptrdiff_t index) {
 
+        _snapshot.isMinor = false;
+        setCaretIndexNoHistory(index);
+        return index;
+
+    }
+
+    /// Update the caret index without affecting the history.
+    ///
+    /// Multiple minor edits will be merged together in edit history unless the caret index changes in the meantime. 
+    /// This function will move the caret without preventing the edits from merging. 
+    ///
+    /// Params:
+    ///     index = Index to move the caret to.
+    protected void setCaretIndexNoHistory(ptrdiff_t index) {
+
         if (!isSelecting) {
             _selectionStart = index;
         }
 
         touch();
         _bufferNode = null;
-        _isContinuous = false;
-        return _caretIndex = index;
+        _caretIndex = index;
 
     }
 
@@ -1548,6 +1582,11 @@ class TextInput : InputNode!Node, FluidScrollable {
 
             bufferNode = new RopeNode(Rope(slice), Rope.init);
 
+            debug (X) {
+                import std.stdio;
+                writefln!"insert %s"(isMinor);
+            }
+
             // Insert the node
             insert(caretIndex, Rope(bufferNode), isMinor);
 
@@ -1562,8 +1601,13 @@ class TextInput : InputNode!Node, FluidScrollable {
             // The bufferNode will always share tail with the buffer
             bufferNode.left = usedBuffer[$ - originalLength - ch.length .. $];
 
+            debug (X) {
+                import std.stdio;
+                writefln!"replace %s"(isMinor);
+            }
+
             // Update the node
-            if (isMinor) {
+            if (isMinor && snapshot.isMinor) {
 
                 // Since we're replacing the whole node, `replace` won't see it as an additive, 
                 // but as a subsitute change, and create a history entry. Gotta override this.
@@ -1576,8 +1620,8 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         // Insert the text by replacing the old node, if present
         assert(value.isBalanced);
-
-        caretIndex = newCaretIndex;
+        
+        setCaretIndexNoHistory(newCaretIndex);
         updateCaretPositionAndAnchor();
 
     }
@@ -1641,8 +1685,6 @@ class TextInput : InputNode!Node, FluidScrollable {
         assert(root.value == "hello\n");
 
         root.undo();
-        import std.stdio;
-        debug writeln(root.value);
         assert(root.value == "hello");
         root.redo();
         assert(root.value == "hello\n");
@@ -1676,6 +1718,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
+    @("TextInput.breakLine creates its own history entry")
     unittest {
 
         auto root = textInput(.multiline);
@@ -3996,25 +4039,26 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
+    @("History entries do not merge if the caret has moved")
     unittest {
 
         auto root = textInput();
 
-        foreach (i; 0..4) {
+        foreach (i; "dcba") {
             root.caretToStart();
-            root.push("a");
+            root.push(i);
         }
 
-        assert(root.value == "aaaa");
+        assert(root.value == "abcd");
         assert(root.valueBeforeCaret == "a");
         root.undo();
-        assert(root.value == "aaa");
+        assert(root.value == "bcd");
         assert(root.valueBeforeCaret == "");
         root.undo();
-        assert(root.value == "aa");
+        assert(root.value == "cd");
         assert(root.valueBeforeCaret == "");
         root.undo();
-        assert(root.value == "a");
+        assert(root.value == "d");
         assert(root.valueBeforeCaret == "");
         root.undo();
         assert(root.value == "");
@@ -4049,11 +4093,13 @@ class TextInput : InputNode!Node, FluidScrollable {
         // Nothing to undo
         if (_undoStack.empty) return;
 
-        import std.stdio;
-        debug writefln!"about to undo:";
-        debug writefln!"  <- %s"(_undoStack[]);
-        debug writefln!"  == %s"(snapshot);
-        debug writefln!"  -> %s"(_redoStack[]);
+        debug (X) {
+            import std.stdio;
+            debug writefln!"about to undo:";
+            debug writefln!"  <- %s"(_undoStack[]);
+            debug writefln!"  == %s"(snapshot);
+            debug writefln!"  -> %s"(_redoStack[]);
+        }
 
         // Push the current state to redo stack
         _redoStack.insertBack(snapshot);
