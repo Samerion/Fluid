@@ -1595,11 +1595,6 @@ class TextInput : InputNode!Node, FluidScrollable {
 
             bufferNode = new RopeNode(Rope(slice), Rope.init);
 
-            debug (X) {
-                import std.stdio;
-                writefln!"insert %s"(isMinor);
-            }
-
             // Insert the node
             insert(caretIndex, Rope(bufferNode), isMinor);
 
@@ -1614,11 +1609,6 @@ class TextInput : InputNode!Node, FluidScrollable {
             // Append the character to its value
             // The bufferNode will always share tail with the buffer
             bufferNode.left = usedBuffer[$ - originalLength - ch.length .. $];
-
-            debug (X) {
-                import std.stdio;
-                writefln!"replace %s"(isMinor);
-            }
 
             // Update the node
             replaceNoHistory(caretIndex - originalLength, caretIndex, Rope(bufferNode), isMinor);
@@ -3977,14 +3967,6 @@ class TextInput : InputNode!Node, FluidScrollable {
     ///         the current state.
     void pushHistory(HistoryEntry newSnapshot) {
 
-        debug (X) {
-            import std.stdio;
-            debug writefln!"[!] attempting push:";
-            debug writefln!"  <== %s"(newSnapshot);
-            debug writefln!"  ==> %s"(snapshot);
-            debug writefln!"canMerge: %s"(newSnapshot.canMergeWith(snapshot));
-        }
-
         if (!newSnapshot.canMergeWith(snapshot)) {
             forcePushHistory(newSnapshot);
         }
@@ -4161,14 +4143,6 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         // Nothing to undo
         if (_undoStack.empty) return;
-
-        debug (X) {
-            import std.stdio;
-            debug writefln!"about to undo:";
-            debug writefln!"  <- %(%s\n%|     %)"(_undoStack[]);
-            debug writefln!"  == %s"(snapshot);
-            debug writefln!"  -> %(%s\n%|     %)"(_redoStack[]);
-        }
 
         // Push the current state to redo stack
         _redoStack.insertBack(snapshot);
