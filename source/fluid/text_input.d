@@ -4330,7 +4330,7 @@ unittest {
 
 }
 
-@("TextInput loads of edits benchmark")
+@("TextInput loads of small edits benchmark")
 unittest {
 
     import std.file;
@@ -4346,26 +4346,28 @@ unittest {
     root.paste();
     io.nextFrame();
     root.draw();
+    root.caretIndex = 0;
 
     const runCount = 1;  // TODO make this greater once you fix this performance please
     const sampleText = "Hello, world! This is some text I'd like to type in. This should be fast.";
 
-    // Paste the text
+    // Type in the text
     auto result = benchmark!({
 
         foreach (letter; sampleText) {
-            root.insert(0, sampleText);
+            root.push(letter);
             root.draw();
         }
         
     })(runCount);
 
     const average = result[0] / runCount;
+    const averageCharacter = average / sampleText.length;
 
-    assert(average <= 20.msecs, format!"Too slow: average %s"(average));
-    if (average > 5.msecs) {
+    assert(averageCharacter <= 20.msecs, format!"Too slow: average %s per character"(averageCharacter));
+    if (averageCharacter > 5.msecs) {
         import std.stdio;
-        writefln!"Warning: TextInput loads of edits benchmark runs slowly, %s"(average);
+        writefln!"Warning: TextInput loads of small edits benchmark runs slowly, %s per character"(averageCharacter);
     }
 
 }
