@@ -861,8 +861,8 @@ class CodeInput : TextInput {
     
     void outdent(int i) {
 
-        // TODO should this actually be minor?
         const isMinor = true;
+        const past = snapshot();
 
         // Outdent every selected line
         foreach (start, line; eachSelectedLine) {
@@ -875,14 +875,17 @@ class CodeInput : TextInput {
                     .until("\t", No.openRight)
                     .walkLength;
 
-                replace(start, start + leadingWidth, Rope.init, isMinor);
+                replaceNoHistory(start, start + leadingWidth, Rope.init, isMinor);
 
             }
 
         }
 
+        pushHistory(past);
+
     }
 
+    @("CodeInput.outdent reduces the indent of currently selecetd lines")
     unittest {
 
         auto root = codeInput();
@@ -902,10 +905,13 @@ class CodeInput : TextInput {
         assert(root.value == "");
 
         root.push("     ");
+        assert(root.valueBeforeCaret == "     ");
         root.outdent();
         assert(root.value == " ");
+        assert(root.valueBeforeCaret == " ");
 
         root.push("foobarbaz  ");
+        assert(root.valueBeforeCaret == " foobarbaz  ");
         root.insertTab();
         root.outdent();
         assert(root.value == "foobarbaz      ");
