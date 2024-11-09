@@ -332,7 +332,7 @@ unittest {
 
     enum chunkSize = CompositeTexture.maxChunkSize;
 
-    auto io = new HeadlessBackend;
+    auto io = new HeadlessBackend(Vector2(600, 400));
     auto root = vscrollable!label(
         nullTheme.derive(
             rule!Label(
