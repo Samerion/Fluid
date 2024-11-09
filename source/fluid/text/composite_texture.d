@@ -17,6 +17,9 @@ debug (Fluid_BuildMessages) {
     debug (Fluid_TextUpdates) {
         pragma(msg, "Fluid: Highlight updated texture chunks is on");
     }
+    debug (Fluid_TextChunks) {
+        pragma(msg, "Fluid: Displaying text chunk grid is on");
+    }
 }
 
 @safe:
@@ -296,6 +299,17 @@ struct CompositeTexture {
 
             // Assign palette
             chunks[index].palette = palette;
+
+            debug (Fluid_TextChunks) {
+
+                if (index % 2) {
+                    backend.drawRectangle(rect, color("#0002"));
+                }
+                else {
+                    backend.drawRectangle(rect, color("#fff2"));
+                }
+
+            }
 
             debug (Fluid_TextUpdates) {
 
