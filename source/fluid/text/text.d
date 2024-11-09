@@ -984,9 +984,14 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
                         const chunkRect = texture.chunkRectangle(chunkIndex);
 
                         // Ignore chunks this word is not in the bounds of
-                        const relevant = chunkRect.contains(ruler.caret(currentPenPosition).start)
-                            || chunkRect.contains(ruler.caret.end);
-
+                        const startCaret = ruler.caret(currentPenPosition);
+                        const endCaret = ruler.caret();
+                        const relevant = 
+                               chunkRect.contains(startCaret.start)
+                            || chunkRect.contains(startCaret.end)
+                            || chunkRect.contains(endCaret.start)
+                            || chunkRect.contains(endCaret.end);
+                            
                         if (!relevant) continue;
 
                         // Get pen position relative to this chunk
