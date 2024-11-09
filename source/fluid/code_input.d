@@ -861,12 +861,11 @@ class CodeInput : TextInput {
     
     void outdent(int i) {
 
-        // Write an undo/redo history entry
-        auto shot = snapshot();
-        scope (success) pushSnapshot(shot);
+        // TODO should this actually be minor?
+        const isMinor = true;
 
         // Outdent every selected line
-        foreach (ref line; eachSelectedLine) {
+        foreach (start, line; eachSelectedLine) {
 
             // Do it for each indent
             foreach (j; 0..i) {
@@ -876,8 +875,7 @@ class CodeInput : TextInput {
                     .until("\t", No.openRight)
                     .walkLength;
 
-                // Remove the tab
-                line = line[leadingWidth .. $];
+                replace(start, start + leadingWidth, Rope.init, isMinor);
 
             }
 
@@ -1148,27 +1146,29 @@ class CodeInput : TextInput {
     protected override bool breakLine() {
 
         const currentIndent = indentLevelByIndex(caretIndex);
+        const isMinor = false;
 
-        // Break the line
-        if (super.breakLine()) {
+        // Create the new line
+        push('\n', isMinor);
 
-            // Copy indent from the previous line
-            // Enable continuous input to merge the indent with the line break in the history
-            _isContinuous = true;
-            push(indentRope(currentIndent));
+        const oldCaretIndex = caretIndex;
+        const indent = indentRope(currentIndent);
+        
+        // Add indent
+        insertNoHistory(caretIndex, indent, isMinor);
 
-            // Ask the autoindentor to complete the job
-            reformatLine();
-            _isContinuous = false;
+        // Update the caret index
+        caretIndex = oldCaretIndex + indent.length;
 
-            return true;
+        // Let the autoformatter finish the job
+        reformatLine();
+        updateCaretPositionAndAnchor();
 
-        }
-
-        return false;
+        return true;
 
     }
 
+    @("CodeInput.breakLine continues the indent")
     unittest {
 
         auto root = codeInput();

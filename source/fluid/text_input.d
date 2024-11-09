@@ -641,6 +641,18 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
+    void insertNoHistory(size_t position, Rope value, bool minor = false) {
+
+        replaceNoHistory(position, position, value, minor);
+
+    }
+
+    void insertNoHistory(size_t position, string value, bool minor = false) {
+
+        replaceNoHistory(position, position, value, minor);
+
+    }
+
     /// If true, this input is currently empty.
     bool isEmpty() const {
 
