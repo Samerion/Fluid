@@ -269,9 +269,12 @@ class CodeInput : TextInput {
 
     }
 
-    protected override void onReplace(size_t start, Rope removed, Rope added) {
+    protected override bool replaceNoHistory(size_t start, size_t end, Rope added, bool isMinor) {
 
-        reparse(start, removed.length, added);
+        const replaced = super.replaceNoHistory(start, end, added, isMinor);
+        reparse(start, end, added);
+
+        return replaced;
 
     }
 
@@ -860,12 +863,11 @@ class CodeInput : TextInput {
     
     void outdent(int i) {
 
-        // Write an undo/redo history entry
-        auto shot = snapshot();
-        scope (success) pushSnapshot(shot);
+        const isMinor = true;
+        const past = snapshot();
 
         // Outdent every selected line
-        foreach (ref line; eachSelectedLine) {
+        foreach (start, line; eachSelectedLine) {
 
             // Do it for each indent
             foreach (j; 0..i) {
@@ -875,15 +877,17 @@ class CodeInput : TextInput {
                     .until("\t", No.openRight)
                     .walkLength;
 
-                // Remove the tab
-                line = line[leadingWidth .. $];
+                replaceNoHistory(start, start + leadingWidth, Rope.init, isMinor);
 
             }
 
         }
 
+        pushHistory(past);
+
     }
 
+    @("CodeInput.outdent reduces the indent of currently selecetd lines")
     unittest {
 
         auto root = codeInput();
@@ -903,10 +907,13 @@ class CodeInput : TextInput {
         assert(root.value == "");
 
         root.push("     ");
+        assert(root.valueBeforeCaret == "     ");
         root.outdent();
         assert(root.value == " ");
+        assert(root.valueBeforeCaret == " ");
 
         root.push("foobarbaz  ");
+        assert(root.valueBeforeCaret == " foobarbaz  ");
         root.insertTab();
         root.outdent();
         assert(root.value == "foobarbaz      ");
@@ -1013,14 +1020,9 @@ class CodeInput : TextInput {
                 if (allSpaces) {
 
                     const oldCaretIndex = caretIndex;
+                    const isMinor = true;
 
-                    // Write an undo/redo history entry
-                    auto shot = snapshot();
-                    scope (success) pushSnapshot(shot);
-
-                    caretLine = line[0 .. tabStart] ~ line[col .. $];
-                    caretIndex = oldCaretIndex - tabWidth;
-
+                    replace(lineStart + tabStart, caretIndex, Rope.init, isMinor);
                     return;
 
                 }
@@ -1152,27 +1154,29 @@ class CodeInput : TextInput {
     protected override bool breakLine() {
 
         const currentIndent = indentLevelByIndex(caretIndex);
+        const isMinor = false;
 
-        // Break the line
-        if (super.breakLine()) {
+        // Create the new line
+        push('\n', isMinor);
 
-            // Copy indent from the previous line
-            // Enable continuous input to merge the indent with the line break in the history
-            _isContinuous = true;
-            push(indentRope(currentIndent));
+        const oldCaretIndex = caretIndex;
+        const indent = indentRope(currentIndent);
+        
+        // Add indent
+        insertNoHistory(caretIndex, indent, isMinor);
 
-            // Ask the autoindentor to complete the job
-            reformatLine();
-            _isContinuous = false;
+        // Update the caret index
+        caretIndex = oldCaretIndex + indent.length;
 
-            return true;
+        // Let the autoformatter finish the job
+        reformatLine();
+        updateCaretPositionAndAnchor();
 
-        }
-
-        return false;
+        return true;
 
     }
 
+    @("CodeInput.breakLine continues the indent")
     unittest {
 
         auto root = codeInput();
@@ -1256,16 +1260,18 @@ class CodeInput : TextInput {
         if (newIndent.length == oldIndentLength) return;
 
         const oldCaretIndex = caretIndex;
-        const newLine = newIndent ~ line[oldIndentLength .. $];
+        const newLineLength = newIndent.length + line.length - oldIndentLength;
+        const isMinor = true;
 
         // Write the new indent, replacing the old one
-        lineByIndex(index, newLine);
+        replaceNoHistory(lineStart, lineStart + oldIndentLength, newIndent, isMinor);
 
         // Update caret index
         if (oldCaretIndex >= lineStart && oldCaretIndex <= lineEnd)
-            caretIndex = clamp(oldCaretIndex + newIndent.length - oldIndentLength,
-                lineStart + newIndent.length,
-                lineStart + newLine.length);
+            setCaretIndexNoHistory(
+                clamp(oldCaretIndex + newIndent.length - oldIndentLength,
+                    lineStart + newIndent.length,
+                    lineStart + newLineLength));
 
     }
 
@@ -1902,6 +1908,7 @@ interface CodeHighlighter {
 
 }
 
+@("CodeInput invokes the syntax highlighter")
 unittest {
 
     import std.typecons : BlackHole;
@@ -2079,6 +2086,7 @@ unittest {
 
 }
 
+@("CodeInput can use a formatter for indenting")
 unittest {
 
     import std.typecons : BlackHole;
@@ -2155,6 +2163,8 @@ unittest {
     assert(root.value == "Hello\n    \n    bar");
 
     root.runInputAction!(FluidInputAction.undo);
+    import std.stdio;
+    debug writeln(root.value);
     assert(root.value == "Hello\n    bar");
 
     root.indent();
