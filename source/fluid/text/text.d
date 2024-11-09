@@ -916,9 +916,10 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
         }
 
-        auto start = indexAtDots(Vector2(0, startY));
-        auto ruler = rulerAt(start);
+        auto ruler = rulerAtPositionDots(Vector2(0, startY));
         bool started;
+
+        const start = ruler.point.length;
 
         // Copy the layer range, make it infinite
         auto styleMap = this.styleMap.save.chain(TextStyleSlice.init.repeat);
@@ -1480,5 +1481,77 @@ unittest {
 
     assert(firstTextSize.x < secondTextSize.x);
     assert(firstTextSize.y == secondTextSize.y);
+
+}
+
+@("Text rendering is consistent for large text")
+unittest {
+
+    import std.file;
+    import fluid.label;
+
+    const source = Rope.merge(Rope("the quick brown fox jumps over the lazy dog. ").repeat(100).array);
+    const fontSize = 10;
+    
+    auto theme = .testTheme.derive(
+        rule!Node(
+            Rule.fontSize = fontSize,
+        ),
+    );
+    auto io = new HeadlessBackend(Vector2(200, 1000));
+    auto root = label(theme, source);
+    auto text = root.text;
+
+    const space = io.windowSize;
+
+    root.io = io;
+    theme.apply(root, root.style);
+    text.hasFastEdits = true;
+    text.resize(space);
+
+    assert(text.node.pickStyle.fontSize == fontSize);
+
+    Image[2] backImages;
+    Image[2] frontImages;
+    
+    // Draw the first two textures separately
+    foreach_reverse (i, ref chunk; text.texture.chunks[0..2]) {
+
+        const position = text.texture.chunkPosition(i);
+
+        text.generate(only(i));        
+        text.texture.upload(io, i, io.dpi);
+        chunk.texture.draw(position);
+
+        // Move the image to the list
+        backImages[i] = chunk.image;
+        chunk = chunk.init;
+
+    }
+
+    io.saveSVG("/tmp/fluid-1.svg");
+    io.nextFrame;
+    text.resize(space);
+    text.clearTextures();
+
+    // Now render both at once
+    text.generate(only(0, 1));        
+
+    foreach (i, ref chunk; text.texture.chunks[0..2]) {
+
+        const position = text.texture.chunkPosition(i);
+
+        text.texture.upload(io, i, io.dpi);
+        chunk.texture.draw(position);
+
+        // Move the image to the list
+        frontImages[i] = chunk.image;
+        chunk = chunk.init;
+
+    }
+
+    io.saveSVG("/tmp/fluid.svg");
+
+    assert(frontImages[] == backImages[], "Two separately rendered pieces of text should look identical");
 
 }
