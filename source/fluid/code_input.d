@@ -269,10 +269,12 @@ class CodeInput : TextInput {
 
     }
 
-    protected override void replace(size_t start, size_t end, Rope added, bool isMinor) {
+    protected override bool replaceNoHistory(size_t start, size_t end, Rope added, bool isMinor) {
 
-        super.replace(start, end, added, isMinor);
+        const replaced = super.replaceNoHistory(start, end, added, isMinor);
         reparse(start, end, added);
+
+        return replaced;
 
     }
 
@@ -1904,6 +1906,7 @@ interface CodeHighlighter {
 
 }
 
+@("CodeInput invokes the syntax highlighter")
 unittest {
 
     import std.typecons : BlackHole;
