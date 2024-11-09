@@ -1014,14 +1014,9 @@ class CodeInput : TextInput {
                 if (allSpaces) {
 
                     const oldCaretIndex = caretIndex;
+                    const isMinor = true;
 
-                    // Write an undo/redo history entry
-                    auto shot = snapshot();
-                    scope (success) pushSnapshot(shot);
-
-                    caretLine = line[0 .. tabStart] ~ line[col .. $];
-                    caretIndex = oldCaretIndex - tabWidth;
-
+                    replace(lineStart + tabStart, caretIndex, Rope.init, isMinor);
                     return;
 
                 }
