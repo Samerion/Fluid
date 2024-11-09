@@ -1260,16 +1260,18 @@ class CodeInput : TextInput {
         if (newIndent.length == oldIndentLength) return;
 
         const oldCaretIndex = caretIndex;
-        const newLine = newIndent ~ line[oldIndentLength .. $];
+        const newLineLength = newIndent.length + line.length - oldIndentLength;
+        const isMinor = true;
 
         // Write the new indent, replacing the old one
-        lineByIndex(index, newLine);
+        replaceNoHistory(lineStart, lineStart + oldIndentLength, newIndent, isMinor);
 
         // Update caret index
         if (oldCaretIndex >= lineStart && oldCaretIndex <= lineEnd)
-            caretIndex = clamp(oldCaretIndex + newIndent.length - oldIndentLength,
-                lineStart + newIndent.length,
-                lineStart + newLine.length);
+            setCaretIndexNoHistory(
+                clamp(oldCaretIndex + newIndent.length - oldIndentLength,
+                    lineStart + newIndent.length,
+                    lineStart + newLineLength));
 
     }
 
@@ -2084,6 +2086,7 @@ unittest {
 
 }
 
+@("CodeInput can use a formatter for indenting")
 unittest {
 
     import std.typecons : BlackHole;
@@ -2160,6 +2163,8 @@ unittest {
     assert(root.value == "Hello\n    \n    bar");
 
     root.runInputAction!(FluidInputAction.undo);
+    import std.stdio;
+    debug writeln(root.value);
     assert(root.value == "Hello\n    bar");
 
     root.indent();
