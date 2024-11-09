@@ -553,17 +553,18 @@ class TextInput : InputNode!Node, FluidScrollable {
         if (start == end && newValue.length == 0) return false;
 
         const oldValue = contentLabel.value[start..end];
+        const oldCaretIndex = caretIndex;
 
         // Perform the replace
         contentLabel.replace(start, end, newValue);
 
         // Update caret index
-        if (caretIndex > start) {
+        if (oldCaretIndex > start) {
 
-            if (caretIndex <= end)
+            if (oldCaretIndex <= end)
                 caretIndex = start + newValue.length;
             else 
-                caretIndex = caretIndex + start + newValue.length - end;
+                caretIndex = oldCaretIndex + start + newValue.length - end;
 
             updateCaretPositionAndAnchor();
 
