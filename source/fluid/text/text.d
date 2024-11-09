@@ -547,7 +547,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
                     // Checkpoints are made on word breaks, so they should be remain consistent
                     if (index != rulers.front.point.length) {
-                        // TODO This should be relaxed in the future for nonbreaking text or used-inserted checkpoints
+                        // TODO This should be relaxed in the future for nonbreaking text or user-inserted checkpoints
                         assert(false, format!"Checkpoint found at %s (%s...) in word(%s); word breaks are at %s and %s"(
                             rulers.front.point.length, value[rulers.front.point.length..$].take(10), 
                             word, startIndex, index));
@@ -565,7 +565,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
                         yOffset = ruler.penPosition.y - rulers.front.penPosition.y;
                         rulers.front = ruler;
                         rulers.popFront();
-                        break;
+                        break lines;
                     }
 
                     // No difference, stop
