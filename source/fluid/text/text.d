@@ -1529,7 +1529,6 @@ unittest {
 
     }
 
-    io.saveSVG("/tmp/fluid-1.svg");
     io.nextFrame;
     text.resize(space);
     text.clearTextures();
@@ -1549,8 +1548,6 @@ unittest {
         chunk = chunk.init;
 
     }
-
-    io.saveSVG("/tmp/fluid.svg");
 
     assert(frontImages[] == backImages[], "Two separately rendered pieces of text should look identical");
 
