@@ -1259,6 +1259,10 @@ struct Rope {
             this.front = findNextLine();
         }
 
+        ByLine save() {
+            return this;
+        }
+
         void popFront() {
 
             static if (reverse) {
@@ -1541,6 +1545,24 @@ struct Rope {
         ];
 
         assert(Rope(myLine).byLine.map!("a.index", "a.line").equal(result));
+
+    }
+
+    @(`Rope("\n").byLine splits into two empty ropes`)
+    unittest {
+
+        assert(Rope("\n").byLine.equal(["", ""]));
+        assert(Rope("\n").byLine.map!"a.withSeparator".equal(["\n", ""]));
+
+        int i;
+
+        foreach (source; Rope("\n").byLine) {
+
+            if (i == 0) assert(source.withSeparator == "\n");
+            else if (i == 1) assert(source.withSeparator == "");
+            else assert(false);
+
+        }
 
     }
 

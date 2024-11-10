@@ -1535,7 +1535,7 @@ class TextInput : InputNode!Node, FluidScrollable {
     }
 
     /// Push a character or string to the input.
-    void push(dchar character, bool isMinor = true) {
+    final void push(dchar character, bool isMinor = true) {
 
         char[4] buffer;
 
