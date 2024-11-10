@@ -266,13 +266,39 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     TextInterval positionOf(size_t index) {
 
         // Find a suitable point to start search at
-        const range = query(&_cache, index);
+        const range = freshCacheQuery(index);
         const point = range.front.point;
 
         const start = point.length;
         const end   = index;
 
         return point + TextInterval(value[start .. end]);
+
+    }
+
+    /// Query the cache by index, ensuring the cache is fresh.
+    ///
+    /// If the cache was not generated recently, checkpoints may be absent or very rare, making it very slow to perform
+    /// multiple cache queries. This function will detect this situation and refresh the cache as needed.
+    ///
+    /// Params:
+    ///     index = Index to query.
+    /// Returns:
+    ///     The `query` result as-is, using recent data.
+    private auto freshCacheQuery(size_t index) {
+
+        auto range = query(&_cache, index);
+
+        assert(index >= range.front.point.length);
+
+        // The result is good enough, return it
+        if (index - range.front.point.length <= checkpointDistance) {
+            return range.move;
+        }
+
+        // Cache is stale, measure again
+        resize(Vector2(range.front.lineWidth, 0), _wrap);
+        return query(&_cache, index);
 
     }
 
@@ -643,24 +669,13 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
         alias splitter = Typeface.defaultWordChunks;
 
-        auto ruler = query(&_cache, index).front;
+        auto ruler = freshCacheQuery(index).front;
         bool started;
 
         assert(ruler.typeface !is null);
 
         // Found an exact match
         if (index == ruler.point.length) return ruler;
-
-        // Too much to calculate at once! Trigger a resize first
-        if (index - ruler.point.length >= checkpointDistance) {
-
-            // Y position does not matter at this moment
-            resize(Vector2(ruler.lineWidth, 0), _wrap);
-
-            // Query again
-            ruler = query(&_cache, index).front;
-
-        }
 
         // Check if the caret follows unbreakable characters
         // If the caret is surrounded by unbreakable characters, include them in the output to make sure the

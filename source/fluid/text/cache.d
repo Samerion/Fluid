@@ -1441,13 +1441,15 @@ unittest {
 
 }
 
-@("TextCache integrity test")
+@("TextCache integrity test & benchmark")
 unittest {
 
-    // This test may appear pretty stupid but it was used to diagnose a dumb bug.
+    // This test may appear pretty stupid but it was used to diagnose a dumb bug
+    // and a performance problem.
     // It should work in any case so it should stay anyway.
 
     import std.file;
+    import std.datetime.stopwatch;
     import fluid.code_input;
     import fluid.backend.headless;
 
@@ -1465,10 +1467,20 @@ unittest {
     root.paste();
     root.draw();
 
-    const target1 = root.value.length - root.value.byCharReverse.countUntil(";");
-    const target = target1 - 1 - root.value[0..target1 - 1].byCharReverse.countUntil(";");
+    const results = benchmark!({
 
-    root.caretIndex = target;
-    root.paste();
+        const target1 = root.value.length - root.value.byCharReverse.countUntil(";");
+        const target = target1 - 1 - root.value[0..target1 - 1].byCharReverse.countUntil(";");
+
+        root.caretIndex = target;
+        root.paste();
+
+    })(1);
+
+    assert(results[0] <= 500.msecs, format!"Too slow: average %s"(results[0]));
+    if (results[0] > 100.msecs) {
+        import std.stdio;
+        writefln!"Warning: TextCache integrity test & benchmark runs slowly, %s"(results[0]);
+    }
 
 }
