@@ -272,6 +272,10 @@ package struct TextRulerCache {
             const oldEnd = start + oldInterval;
             const newEnd = start + newInterval;
 
+            debug assert (cache.interval.length >= oldEnd.length, 
+                format!"`head` cannot be longer (%s) than `this` (%s)\n%s"(
+                    oldEnd.length, cache.interval.length, diagnose));
+
             cache.interval = newEnd + cache.interval.dropHead(oldEnd);
 
             // Found the deepest relevant node
@@ -453,11 +457,109 @@ package struct TextRulerCache {
         
         
     }
+
+    /// Find and report issues in the cache's storage.
+    ///
+    /// This function is intended for debugging crashes caused by issues in the `TextCache` data 
+    /// and isn't normally needed during program flow.
+    ///
+    /// The way the cache is structured is prone to bugs that may be difficult to locate. These will usually
+    /// manifest in the form of a broken state. This function will walk the cache, searching for inconsistencies
+    /// in its data, and reporting them in the form of a rope.
+    ///
+    /// Returns:
+    ///     An empty rope if no flaws were found, or a rope presenting the tree, highlighting flawed nodes.
+    Rope diagnose() const @system {
+
+        import fluid.text.stack;
+        import std.conv : to;
+
+        struct StackFrame {
+            const(TextRulerCache)* cache;
+            bool isLeftVisited;
+            bool isRightVisited;
+        }
+
+        auto stack = Stack!StackFrame(StackFrame(&this));
+        auto info = Rope("Cache fault: ");
+
+        // Navigate the stack
+        while (!stack.empty) {
+
+            const node = stack.top.cache;
+
+            // Leaf node, nothing to do
+            if (node.isLeaf) {
+                stack.pop();
+            }
+
+            // Flawed node, quit
+            else if (node.left.interval + node.right.interval != node.interval) {
+                info ~= Rope("Children intervals ") ~ node.left.interval.length.to!string
+                    ~ Rope(" + ") ~ node.right.interval.length.to!string
+                    ~ Rope(" don't match parent interval ") ~ node.interval.length.to!string
+                    ~ Rope("\n");
+                break;
+            }
+
+            // A parent node that has already been visited, ascend
+            else if (stack.top.isRightVisited) {
+                stack.pop();
+            }
+
+            // Descend into the first unvisited side
+            else if (stack.top.isLeftVisited) {
+                stack.top.isRightVisited = true;
+                stack ~= StackFrame(node.right);
+            }
+            else {
+                stack.top.isLeftVisited = true;
+                stack ~= StackFrame(node.left);
+            }
+
+        }
+
+        // Stack empty, no issues were found
+        if (stack.empty) return Rope.init;
+
+        info ~= "--- Ruler cache trace ---\n";
+
+        auto result = Rope.init;
+        auto stackArray = stack[].array;
+        TextInterval offset;
+
+        // Output the stack trace
+        foreach_reverse (frame; stackArray) {
+
+            const node = frame.cache;
+
+            result = Rope(offset.to!string) ~ ": TextRulerCache(" 
+                ~ Rope(node.interval.to!string) ~ ", " 
+                ~ Rope(node.startRuler.to!string) 
+                ~ Rope(frame.isRightVisited ? " -> right"
+                    : frame.isLeftVisited ? " -> left"
+                    : "") ~ ")\n"
+                ~ result;
+
+            if (node.isLeaf) continue;
+
+            if (frame.isRightVisited) {
+                offset += node.left.interval;
+            }
+
+        }
+
+        return info ~ result;
+
+    }
     
     /// Dump data in the cache into a rope.
     /// 
-    /// This functionis @system because stringifying a Typeface is.
+    /// This function is @system because stringifying a Typeface is.
     ///
+    /// Params:
+    ///     indentLevel = Indent to use for each line of the rope. At the moment indent is created using four spaces 
+    ///         per level.
     /// Returns: A rope representation of the cache.
     Rope toRope(int indentLevel = 0) @system {
 
@@ -739,10 +841,29 @@ do {
             // The node we're removing is on the right side, replace it with the left
             else if (front is parent.right) {
 
-                const interval = parent.interval;
+                assert(front.isLeaf);
+
+                auto interval = parent.interval;
 
                 *parent = *parent.left;
-                parent.interval = interval;
+
+                auto successor = parent.cache;
+
+                // The node that replaced us (successor) takes over the parent's interval
+                //     parent.interval == parent.left.interval + parent.right.interval
+                //     parent.right.interval = parent.interval
+                // This must happen recursively
+                while (successor) {
+
+                    successor.interval = interval;
+
+                    if (successor.left) {
+                        interval = interval.dropHead(successor.left.interval);
+                    }
+                    successor = successor.right;
+
+                }
+                
                 updateDepth();
                 ascendAndDescend();
 
@@ -1128,6 +1249,10 @@ unittest {
         return TextRulerCache(left, right);
     }
 
+    TextRulerCache* makeOne() {
+        return new TextRulerCache(TextRuler(typeface, 3), TextInterval(10, 1, 0));
+    }
+
     {
         // Remove entry at 10
         auto root = make();
@@ -1241,6 +1366,28 @@ unittest {
         ]));
     }
 
+    // Remove a right node with a branch on its left
+    {
+        auto root = new TextRulerCache(
+            makeOne(),
+            new TextRulerCache(
+                new TextRulerCache(
+                    new TextRulerCache(
+                        makeOne(),
+                        makeOne(),
+                    ),
+                    makeOne(),
+                ),
+                makeOne(),
+            ),
+        );
+        auto range = root.query(0);
+        range.popFrontN(3);
+        range.removeFront();
+        assert(root.diagnose == Rope.init, root.diagnose.toString);
+        
+    }
+
 }
 
 @("Text can be filled and cleared in a loop")
@@ -1291,5 +1438,37 @@ unittest {
 
     assert(cache.interval == TextInterval(10, 1, 0));
     assert(cache.right.interval == TextInterval(0, 0, 0));
+
+}
+
+@("TextCache integrity test")
+unittest {
+
+    // This test may appear pretty stupid but it was used to diagnose a dumb bug.
+    // It should work in any case so it should stay anyway.
+
+    import std.file;
+    import fluid.code_input;
+    import fluid.backend.headless;
+
+    const source = readText("source/fluid/text_input.d");
+
+    auto io = new HeadlessBackend;
+    auto root = codeInput();
+    root.io = io;
+    io.clipboard = source;
+
+    import std.stdio;
+    root.draw();
+    root.focus();
+
+    root.paste();
+    root.draw();
+
+    const target1 = root.value.length - root.value.byCharReverse.countUntil(";");
+    const target = target1 - 1 - root.value[0..target1 - 1].byCharReverse.countUntil(";");
+
+    root.caretIndex = target;
+    root.paste();
 
 }
