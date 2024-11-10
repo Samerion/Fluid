@@ -217,7 +217,7 @@ class CodeInput : TextInput {
 
     }
 
-    /// Get a rope representing given indent level.
+    /// Returns: A rope representing given indent level.
     Rope indentRope(int indentLevel = 1) const {
 
         static tabRope = const Rope("\t");
@@ -232,16 +232,12 @@ class CodeInput : TextInput {
         // Insert a tab
         if (useTabs)
             foreach (i; 0 .. indentLevel) {
-
                 result ~= tabRope;
-
             }
 
         // Insert a space
         else foreach (i; 0 .. indentLevel) {
-
             result ~= spaceRope[0 .. indentWidth];
-
         }
 
         return result;
@@ -1150,6 +1146,7 @@ class CodeInput : TextInput {
 
     }
 
+    version (none)
     @(FluidInputAction.breakLine)
     protected override bool breakLine() {
 
@@ -1489,77 +1486,120 @@ class CodeInput : TextInput {
 
     }
 
-    @(FluidInputAction.paste)
-    override void paste() {
+    alias push = typeof(super).push;
 
-        import fluid.text.typeface : Typeface;
-
-        // Write an undo/redo history entry
-        auto shot = snapshot();
-        scope (success) forcePushSnapshot(shot);
+    /// Insert text into the input. Reformat if necessary.
+    ///
+    /// This function handles pasting and typing input directly into the input. `push` is also used by `breakLine`,
+    /// and thus, is called to insert line breaks into the input.
+    ///
+    /// `CodeInput` will automatically reformat the text while it is inserted. It will add line feeds to match the
+    /// last line, or use the `indentor` to set the right indent.
+    ///
+    /// Params:
+    ///     text    = Text to insert.
+    ///     isMinor = True if this is a minor (insignificant) change.
+    override void push(scope const(char)[] text, bool isMinor = true) {
 
         const pasteStart = selectionLowIndex;
-        const clipboard = Rope(io.clipboard);
-        auto indentLevel = indentLevelByIndex(pasteStart);
 
-        // Find the smallest indent in the clipboard
+        // If there's a selection, remove it
+        replace(selectionLowIndex, selectionHighIndex, Rope.init, isMinor);
+        caretIndex = selectionLowIndex;
+
+        const source = Rope(text);
+
+        // Step 1: Find the common indent of all lines in the inserted text
+        // This data will be needed for subsequent steps
+        
         // Skip the first line because it's likely to be without indent when copy-pasting
-        auto lines = clipboard.byLine.drop(1);
+        auto indentLines = source.byLine.drop(1);
 
-        // Count indents on each line, skip blank lines
-        auto significantIndents = lines
+        // Count indents on each line
+        auto significantIndents = indentLines.save 
+
+            // Use the character count, assuming the indent is uniform
             .map!(a => a
                 .countUntil!(a => !a.among(' ', '\t')))
+
+            // Ignore blank lines (no characters other than spaces)
             .filter!(a => a != -1);
 
-        // Test blank lines only if all lines are blank
-        const commonIndent
-            = !significantIndents.empty ? significantIndents.minElement()
-            : !lines.empty ? lines.front.length
-            : 0;
+        // Determine the common indent
+        // It should be equivalent to the smallest indent of any blank line
+        const commonIndent = !significantIndents.empty ? significantIndents.minElement() : 0;
 
-        // Remove the common indent
-        auto outdentedClipboard = clipboard.byLine
-            .map!((a) {
-                const localIndent = a
-                    .until!(a => !a.among(' ', '\t'))
-                    .walkLength;
+        bool started;
+        int indentLevel;
+        foreach (line; source.byLine) {
 
-                return a.withSeparator.drop(min(commonIndent, localIndent));
-            })
-            .map!(a => Rope(a))
-            .array;
+            // Step 2: Remove the common indent
+            // This way the indent in the inserted text will be uniform. It can then be replaced by indent 
+            // matching the text editor or indentor settings
 
-        // Push the clipboard
-        push(Rope.merge(outdentedClipboard));
+            const localIndent = line
+                .until!(a => !a.among(' ', '\t'))
+                .walkLength;
+            const removedIndent = min(commonIndent, localIndent);
 
-        const pasteEnd = caretIndex;
+            assert(line.isLeaf);
+            assert(line.withSeparator.isLeaf);
 
-        // Reformat each line
-        foreach (index, ref line; eachLineByIndex(pasteStart, pasteEnd)) {
+            const isThisMinor = true;
 
-            // Save indent of the first line, but don't reformat
-            // `min` is used in case text is pasted inside the indent
-            if (index <= pasteStart) {
-                indentLevel = min(indentLevel, indentLevelByIndex(pasteStart));
-                continue;
+            // Step 3: Apply the correct indent
+
+            const lineStart = caretIndex;
+
+            // Copy the original indent
+            // Only add new indents after line breaks
+            if (started && !indentor) {
+                pushIndent(indentLevel);
+            }
+
+            // Write the line
+            super.push(line.withSeparator.value[removedIndent .. $], isThisMinor);
+
+            // Get the original indent level for reference
+            // Since the insert could have affected the line's indent level, it's important 
+            // to only take the indent level after.
+            if (!started) {
+                started = true;
+                indentLevel = indentLevelByIndex(lineStart);
             }
 
             // Use the reformatter if available
             if (indentor) {
-                reformatLineByIndex(index);
-                line = lineByIndex(index);
-            }
-
-            // If not, prepend the indent
-            else {
-                line = indentRope(indentLevel) ~ line;
+                reformatLineByIndex(lineStart);
             }
 
         }
 
     }
 
+    /// Insert indent at the caret's position.
+    void pushIndent(int indentLevel = 1, bool isMinor = true) {
+
+        // TODO actually match against the column please
+        static const spaceString = "                ";
+
+        static assert(spaceString.length == maxIndentWidth);
+
+        foreach (level; 0 .. indentLevel) {
+
+            if (useTabs) {
+                super.push("\t", isMinor);
+            }
+
+            else {
+                super.push(spaceString[0 .. indentWidth], isMinor);
+            }
+
+        }
+
+    }
+
+    @("Text pasted into CodeInput is reformatted")
     unittest {
 
         auto io = new HeadlessBackend;

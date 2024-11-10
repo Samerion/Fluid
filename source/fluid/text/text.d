@@ -146,6 +146,26 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
     }
 
+    /// Returns: DPI currently used by this struct.
+    private Vector2 dpi() const {
+
+        if (auto b = backend)
+            return b.dpi;
+        else
+            return Vector2(96, 96);
+
+    }
+
+    /// Returns: Scale currently used by this struct.
+    private Vector2 hidpiScale() const {
+
+        if (auto b = backend)
+            return b.hidpiScale;
+        else
+            return Vector2(1, 1);
+
+    }
+
     /// Get or the value rendered by this text.
     /// 
     /// If more text is rendered, partial changes should be done through `replace`.
@@ -378,7 +398,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     /// Get the size of the text.
     Vector2 size() const {
 
-        const scale = backend.hidpiScale;
+        const scale = hidpiScale;
 
         return Vector2(
             _sizeDots.x / scale.x,
@@ -407,8 +427,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
         auto style = node.pickStyle;
         auto typeface = style.getTypeface;
-        const dpi = backend.dpi;
-        const scale = backend.hidpiScale;
+        const scale = this.hidpiScale;
 
         // Apply DPI
         style.setDPI(dpi);
@@ -425,7 +444,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     /// Returns: Number of pixels in both directions that may make a notable visual difference.
     private Vector2 epsilon() const {
 
-        return 96 / 4 / backend.dpi;
+        return 96 / 4 / dpi;
 
     }
 
@@ -436,7 +455,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         auto style = node.pickStyle;
         auto typeface = style.getTypeface;
 
-        const dpi = backend.dpi;
+        const dpi = this.dpi;
         const firstRuler = _cache.startRuler;
         const widthChanged = wrap && abs(space.x - firstRuler.lineWidth) >= epsilon.x;
 
@@ -902,8 +921,8 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
         auto style = node.pickStyle;
         auto typeface = style.getTypeface;
-        const dpi = backend.dpi;
-        const scale = backend.hidpiScale;
+        const dpi = this.dpi;
+        const scale = this.hidpiScale;
 
         // Apply sizing settings
         style.setDPI(dpi);
@@ -1058,7 +1077,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         import fluid.utils;
 
         const rectangle = Rectangle(position.tupleof, size.tupleof);
-        const screen = Rectangle(0, 0, node.io.windowSize.tupleof);
+        const screen = Rectangle(0, 0, backend.windowSize.tupleof);
 
         // Ignore if offscreen
         if (!overlap(rectangle, screen)) return;
