@@ -3902,7 +3902,9 @@ class TextInput : InputNode!Node, FluidScrollable {
     @(FluidInputAction.paste)
     void paste() {
 
-        push(io.clipboard);
+        const isMinor = false;
+
+        push(io.clipboard, isMinor);
 
     }
 
