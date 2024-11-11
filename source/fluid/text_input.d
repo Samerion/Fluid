@@ -1545,15 +1545,13 @@ class TextInput : InputNode!Node, FluidScrollable {
     }
 
     /// ditto
-    void push(scope const(char)[] ch, bool isMinor = true)
-    out (; _bufferNode, "_bufferNode must exist after pushing to buffer")
-    do {
+    void push(scope const(char)[] ch, bool isMinor = true) {
 
         // TODO `push` should *not* have isMinor = true as default for API consistency
         //      it does for backwards compatibility
 
         // Nothing to do 
-        if (ch.length == 0) return;
+        if (ch == "") return;
 
         // Move the buffer node into here; move it back when done
         auto bufferNode = _bufferNode;
