@@ -2700,6 +2700,8 @@ class TextInput : InputNode!Node, FluidScrollable {
     }
 
     /// Iterate on each line in an interval.
+    ///
+    /// Warning: Iterating on the line by reference is now deprecated. 
     auto eachLineByIndex(ptrdiff_t start, ptrdiff_t end) {
 
         struct LineIterator {
@@ -2730,6 +2732,11 @@ class TextInput : InputNode!Node, FluidScrollable {
                     // Update indices in case the line has changed
                     if (front.chomp !is originalFront) {
                         setLine(originalFront, front);
+                    }
+                    else {
+                        const newNextLine = input.value.nextLineByIndex(lineStart);
+                        end += newNextLine - nextLine;
+                        nextLine = newNextLine;
                     }
 
                     // Stop if requested

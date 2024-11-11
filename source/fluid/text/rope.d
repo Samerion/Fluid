@@ -1554,9 +1554,7 @@ struct Rope {
         assert(Rope("\n").byLine.equal(["", ""]));
         assert(Rope("\n").byLine.map!"a.withSeparator".equal(["\n", ""]));
 
-        int i;
-
-        foreach (source; Rope("\n").byLine) {
+        foreach (i, source; Rope("\n").byLine.enumerate) {
 
             if (i == 0) assert(source.withSeparator == "\n");
             else if (i == 1) assert(source.withSeparator == "");
@@ -1835,6 +1833,30 @@ struct Rope {
         assert(rope.lineEndByIndex(5) == 13);
         assert(rope.lineStartByIndex(18) == 14);
         assert(rope.lineEndByIndex(18) == rope.length);
+
+    }
+
+    /// Returns:
+    ///     Start index of the line that follows the chosen line.
+    ///     Length of the string is returned if the line is already the last one.
+    /// Params:
+    ///     index = Index of any character on this line.
+    size_t nextLineByIndex(size_t index) {
+
+        return lineStartByIndex(index) + lineByIndex!(Yes.keepTerminator)(index).length;
+
+    }
+
+    /// ditto
+    unittest {
+
+        auto rope = Rope("Hello, World!\nHello, Fluid!");
+
+        assert(rope.nextLineByIndex(0) == 14);
+        assert(rope.nextLineByIndex(5) == 14);
+        assert(rope.nextLineByIndex(13) == 14);
+        assert(rope.nextLineByIndex(14) == rope.length);
+        assert(rope.nextLineByIndex(rope.length - 1) == rope.length);
 
     }
 
