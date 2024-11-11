@@ -1510,6 +1510,7 @@ class CodeInput : TextInput {
         // Determine the common indent
         // It should be equivalent to the smallest indent of any blank line
         const commonIndent = !significantIndents.empty ? significantIndents.minElement() : 0;
+        const originalIndentLevel = indentLevelByIndex(caretIndex);
 
         bool started;
         int indentLevel;
@@ -1542,15 +1543,20 @@ class CodeInput : TextInput {
             // Write the line
             super.push(line.withSeparator.value[removedIndent .. $], isThisMinor);
 
-            // Get the original indent level for reference
-            // Since the insert could have affected the line's indent level, it's important 
-            // to only take the indent level after.
+            // Every line after the first should be indented relative to the first line. `indentLevel`
+            // will be used as a reference. It is the lesser of indent level before and after the insert.
+            // * The push may end up reducing the indent (based on caret position), so indent should be 
+            //   checked after the insert;
+            // * Relative indent of each line in the clipboard should be preserved — an *increase* in indent should
+            //   be ignored, so `originalIndentLevel` is still used as a reference.
             if (!started) {
                 started = true;
-                indentLevel = indentLevelByIndex(lineStart);
+                indentLevel = min(
+                    originalIndentLevel, 
+                    indentLevelByIndex(lineStart));
             }
 
-            // Use the reformatter if available
+            // Use the reformatter if available (OR DON'T AND REFORMAT THE FRAGMENT)
             if (indentor) {
                 reformatLineByIndex(lineStart);
             }
