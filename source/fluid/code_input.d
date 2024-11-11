@@ -608,33 +608,44 @@ class CodeInput : TextInput {
         else return indentLevelByIndex(i);
 
     }
-
+    
+    /// Action handler for the tab key.
     @(FluidInputAction.insertTab)
     void insertTab() {
 
+        const isMinor = true;
+
+        insertTab(1, isMinor);
+
+    }
+
+    void insertTab(int indentLevel, bool isMinor = true) {
+
         // Indent selection
-        if (isSelecting) indent();
+        if (isSelecting) indent(indentLevel);
 
         // Insert a tab character
-        else if (useTabs) {
+        else foreach (i; 0 .. indentLevel) {
 
-            push('\t');
+            const spaces = "                ";
 
-        }
+            static assert(spaces.length == maxIndentWidth);
 
-        // Align to tab
-        else {
+            if (useTabs) {
+                super.push('\t', isMinor);
+            }
 
-            char[maxIndentWidth] insertTab = ' ';
-
-            const newSpace = indentWidth - (column!dchar % indentWidth);
-
-            push(insertTab[0 .. newSpace]);
+            // If inserting spaces make sure they're exactly aligned to the column
+            else {
+                const newSpace = indentWidth - (column!dchar % indentWidth);
+                super.push(spaces[0 .. newSpace], isMinor);
+            }
 
         }
 
     }
 
+    @("CodeInput.insertTab creates aligned spaces/simulates tab behavior")
     unittest {
 
         auto root = codeInput();
@@ -645,7 +656,7 @@ class CodeInput : TextInput {
         assert(root.value == "    aa  ");
         root.insertTab();
         assert(root.value == "    aa      ");
-        root.push("\n");
+        root.rawPush("\n");
         root.insertTab();
         assert(root.value == "    aa      \n    ");
         root.insertTab();
@@ -666,7 +677,7 @@ class CodeInput : TextInput {
         assert(root.value == "  aa  ");
         root.insertTab();
         assert(root.value == "  aa    ");
-        root.push("\n");
+        root.rawPush("\n");
         root.insertTab();
         assert(root.value == "  aa    \n  ");
         root.insertTab();
@@ -690,7 +701,7 @@ class CodeInput : TextInput {
         assert(root.value == "\taa\t");
         root.insertTab();
         assert(root.value == "\taa\t\t");
-        root.push("\n");
+        root.rawPush("\n");
         root.insertTab();
         assert(root.value == "\taa\t\t\n\t");
         root.insertTab();
@@ -1146,33 +1157,6 @@ class CodeInput : TextInput {
 
     }
 
-    version (none)
-    @(FluidInputAction.breakLine)
-    protected override bool breakLine() {
-
-        const currentIndent = indentLevelByIndex(caretIndex);
-        const isMinor = false;
-
-        // Create the new line
-        push('\n', isMinor);
-
-        const oldCaretIndex = caretIndex;
-        const indent = indentRope(currentIndent);
-        
-        // Add indent
-        insertNoHistory(caretIndex, indent, isMinor);
-
-        // Update the caret index
-        caretIndex = oldCaretIndex + indent.length;
-
-        // Let the autoformatter finish the job
-        reformatLine();
-        updateCaretPositionAndAnchor();
-
-        return true;
-
-    }
-
     @("CodeInput.breakLine continues the indent")
     unittest {
 
@@ -1501,8 +1485,6 @@ class CodeInput : TextInput {
     ///     isMinor = True if this is a minor (insignificant) change.
     override void push(scope const(char)[] text, bool isMinor = true) {
 
-        const pasteStart = selectionLowIndex;
-
         // If there's a selection, remove it
         replace(selectionLowIndex, selectionHighIndex, Rope.init, isMinor);
         caretIndex = selectionLowIndex;
@@ -1545,16 +1527,16 @@ class CodeInput : TextInput {
             assert(line.isLeaf);
             assert(line.withSeparator.isLeaf);
 
-            const isThisMinor = true;
-
             // Step 3: Apply the correct indent
 
+            // Use minor status for these changes so they are merged together
+            const isThisMinor = true;
             const lineStart = caretIndex;
 
             // Copy the original indent
             // Only add new indents after line breaks
             if (started && !indentor) {
-                pushIndent(indentLevel);
+                insertTab(indentLevel);
             }
 
             // Write the line
@@ -1575,27 +1557,14 @@ class CodeInput : TextInput {
 
         }
 
+        // Assign appropriate minor status for the action
+        snapshot.isMinor = isMinor;
+
     }
 
-    /// Insert indent at the caret's position.
-    void pushIndent(int indentLevel = 1, bool isMinor = true) {
+    void rawPush(scope const(char)[] text, bool isMinor = true) {
 
-        // TODO actually match against the column please
-        static const spaceString = "                ";
-
-        static assert(spaceString.length == maxIndentWidth);
-
-        foreach (level; 0 .. indentLevel) {
-
-            if (useTabs) {
-                super.push("\t", isMinor);
-            }
-
-            else {
-                super.push(spaceString[0 .. indentWidth], isMinor);
-            }
-
-        }
+        super.push(text, isMinor);
 
     }
 
@@ -2203,8 +2172,6 @@ unittest {
     assert(root.value == "Hello\n    \n    bar");
 
     root.runInputAction!(FluidInputAction.undo);
-    import std.stdio;
-    debug writeln(root.value);
     assert(root.value == "Hello\n    bar");
 
     root.indent();
