@@ -789,22 +789,25 @@ class CodeInput : TextInput {
 
     }
 
+    /// Indent all selected lines or the one the caret is on.
     void indent(int indentCount, bool includeEmptyLines = false) {
 
-        // Write an undo/redo history entry
-        auto shot = snapshot();
-        scope (success) pushSnapshot(shot);
+        if (indentCount == 0) return;
+
+        const isMinor = true;
+        const past = snapshot();
 
         // Indent every selected line
-        foreach (ref line; eachSelectedLine) {
+        foreach (start, line; eachSelectedLine) {
 
             // Skip empty lines
             if (!includeEmptyLines && line == "") continue;
 
-            // Prepend the indent
-            line = indentRope(indentCount) ~ line;
+            insertNoHistory(start, indentRope(indentCount), isMinor);
 
         }
+
+        pushHistory(past);
 
     }
 
@@ -868,7 +871,7 @@ class CodeInput : TextInput {
 
     }
     
-    void outdent(int i) {
+    void outdent(int level) {
 
         const isMinor = true;
         const past = snapshot();
@@ -877,7 +880,7 @@ class CodeInput : TextInput {
         foreach (start, line; eachSelectedLine) {
 
             // Do it for each indent
-            foreach (j; 0..i) {
+            foreach (j; 0 .. level) {
 
                 const leadingWidth = line.take(indentWidth)
                     .until!(a => !a.among(' ', '\t'))
