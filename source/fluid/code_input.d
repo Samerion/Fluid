@@ -1556,8 +1556,9 @@ class CodeInput : TextInput {
                     indentLevelByIndex(lineStart));
             }
 
-            // Use the reformatter if available (OR DON'T AND REFORMAT THE FRAGMENT)
-            if (indentor) {
+            // Use the reformatter if available
+            // TODO wouldn't it be better to reformat the fragment in a separate pass?
+            else if (indentor) {
                 reformatLineByIndex(lineStart);
             }
 
@@ -1671,7 +1672,7 @@ class CodeInput : TextInput {
         root.push("  Hello,");
         root.runInputAction!(FluidInputAction.breakLine);
         root.paste();
-        assert(!root._isContinuous);
+        assert(!root.snapshot.isMinor);
         root.push("!");
         assert(root.value == "  Hello,\n  World!");
 
