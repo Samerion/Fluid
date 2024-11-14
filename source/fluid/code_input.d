@@ -68,7 +68,15 @@ class CodeInput : TextInput {
 
     mixin enableInputActions;
 
-    enum maxIndentWidth = 16;
+    // 64 spaces of indent ought to be more than anyone should ever need
+    static protected const maxIndentTabs = "\t\t\t\t\t\t\t\t";
+    static protected const maxIndentSpaces 
+        = "                                                                ";
+    enum maxIndentWidth = maxIndentSpaces.length;
+
+    static assert((maxIndentWidth  & (maxIndentWidth  - 1)) == 0,
+        "maxIndentSpaces must be a power of two.");
+    static assert(maxIndentTabs.length * 8 == maxIndentSpaces.length);
 
     public {
 
@@ -220,27 +228,10 @@ class CodeInput : TextInput {
     /// Returns: A rope representing given indent level.
     Rope indentRope(int indentLevel = 1) const {
 
-        static tabRope = const Rope("\t");
-        static spaceRope = const Rope("                ");
-
-        static assert(spaceRope.length == maxIndentWidth);
-
-        Rope result;
-
-        // TODO this could be more performant by using as much of a single rope as possible
-
-        // Insert a tab
-        if (useTabs)
-            foreach (i; 0 .. indentLevel) {
-                result ~= tabRope;
-            }
-
-        // Insert a space
-        else foreach (i; 0 .. indentLevel) {
-            result ~= spaceRope[0 .. indentWidth];
-        }
-
-        return result;
+        // TODO this could be smarter by precalculating the rope's size
+        return indentRange(indentLevel)
+            .map!(a => Rope(a))
+            .fold!((a, b) => a ~ b)(Rope.init);
 
     }
 
@@ -262,6 +253,61 @@ class CodeInput : TextInput {
         assert(root.indentRope == "    ");
         assert(root.indentRope(2) == "        ");
         assert(root.indentRope(3) == "            ");
+
+    }
+
+    /// Returns: 
+    ///     A range of strings, which if concatenated, would create the requested indent with the current 
+    ///     indent settings.
+    /// Params:
+    ///     indentLevel = Number of indent
+    ///     column = Current column in the text. If spaces are used, the number of spaces will complement the column
+    ///         so that it is a multiple of `indentWidth`.
+    auto indentRange(ptrdiff_t indentLevel = 1, ptrdiff_t column = 0) const {
+
+        const characterCount = useTabs
+            ? indentLevel
+            : indentLevel * indentWidth - column % indentWidth;
+        const maxCharacterCount = useTabs
+            ? maxIndentTabs.length
+            : maxIndentSpaces.length;
+
+        // Indents are created by slicing either `maxIndentTabs` or `maxIndentSpaces`, which are limited in size.
+        // In case an indent is larger than the size of either, it has to be split into multiple parts, which is
+        // why this function returns a range of strings, rather than characters.
+        // The `iota` range will count down the number of characters remaining to print, including the count, 
+        // excluding the zero.
+        return iota(characterCount, 0, -cast(ptrdiff_t) maxCharacterCount)
+
+            // Map each item to a slice with the needed number of characters.
+            .map!(a => useTabs
+                ? maxIndentTabs[0 .. min(a, maxIndentTabs.length)]
+                : maxIndentSpaces[0 .. min(a, maxIndentSpaces.length)]);
+        
+    }
+
+    ///
+    unittest {
+
+        auto root = codeInput();
+
+        assert(root.indentRange()    .equal(["    "]));      // 4 spaces
+        assert(root.indentRange(2)   .equal(["        "]));  // 8 spaces
+        assert(root.indentRange(2, 3).equal(["     "]));     // 5 spaces (8-3)
+        assert(root.indentRange(2, 6).equal(["      "]));    // 6 spaces (8-2)
+        assert(root.indentRange(100).joiner.walkLength == 100 * 4);
+        assert(root.indentRange(100, 1).joiner.walkLength == 100 * 4 - 1);
+        assert(root.indentRange(100, 3).joiner.walkLength == 100 * 4 - 3);
+        assert(root.indentRange(100, 4).joiner.walkLength == 100 * 4);
+
+        root.useTabs = true;
+
+        assert(root.indentRange()    .equal(["\t"]));
+        assert(root.indentRange(2)   .equal(["\t\t"]));
+        assert(root.indentRange(2, 3).equal(["\t\t"]));
+        assert(root.indentRange(2, 6).equal(["\t\t"]));
+        assert(root.indentRange(100)   .joiner.walkLength == 100);
+        assert(root.indentRange(100, 5).joiner.walkLength == 100);
 
     }
 
@@ -625,21 +671,9 @@ class CodeInput : TextInput {
         if (isSelecting) indent(indentLevel);
 
         // Insert a tab character
-        else foreach (i; 0 .. indentLevel) {
+        else foreach (fragment; indentRange(indentLevel, column!dchar)) {
 
-            const spaces = "                ";
-
-            static assert(spaces.length == maxIndentWidth);
-
-            if (useTabs) {
-                super.push('\t', isMinor);
-            }
-
-            // If inserting spaces make sure they're exactly aligned to the column
-            else {
-                const newSpace = indentWidth - (column!dchar % indentWidth);
-                super.push(spaces[0 .. newSpace], isMinor);
-            }
+            super.push(fragment, isMinor);
 
         }
 
@@ -664,6 +698,22 @@ class CodeInput : TextInput {
         root.push("||");
         root.insertTab();
         assert(root.value == "    aa      \n        ||  ");
+
+    }
+
+    @("CodeInput: Tabs are aligned also when inserting multiples of them")
+    unittest {
+
+        auto root = codeInput(
+            .useSpaces(4),
+        );
+        root.push("  ");
+        root.insertTab(2);
+        assert(root.value.length == 8);
+
+        root.insertTab(60);
+        assert(root.value.length == 8 + 60*4);
+        assert(root.value.all!(a => a == ' '));
 
     }
 
