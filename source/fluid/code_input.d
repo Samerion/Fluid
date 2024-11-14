@@ -430,7 +430,7 @@ class CodeInput : TextInput {
         if (active)
             _automaticFormat = AutomaticFormat(targetIndentLevelByIndex(caretIndex));
 
-        return false;
+        return super.inputActionImpl(id, active);
 
     }
 
@@ -744,13 +744,14 @@ class CodeInput : TextInput {
 
     }
 
+    @("CodeInput.insertTab/indent/outdent correctly interact with the history")
     unittest {
 
         auto root = codeInput(.useTabs);
 
-        root.push("Hello, World!");
-        root.caretToStart();
-        root.insertTab();
+        root.savePush("Hello, World!");
+        root.runInputAction!(FluidInputAction.toStart);
+        root.runInputAction!(FluidInputAction.insertTab);
         assert(root.value == "\tHello, World!");
         assert(root.valueBeforeCaret == "\t");
 
@@ -762,8 +763,8 @@ class CodeInput : TextInput {
         assert(root.value == "\tHello, World!");
         assert(root.valueBeforeCaret == "\t");
 
-        root.caretToEnd();
-        root.outdent();
+        root.runInputAction!(FluidInputAction.toEnd);
+        root.runInputAction!(FluidInputAction.outdent);
         assert(root.value == "Hello, World!");
         assert(root.valueBeforeCaret == root.value);
         assert(root.valueAfterCaret == "");
@@ -795,7 +796,6 @@ class CodeInput : TextInput {
         if (indentCount == 0) return;
 
         const isMinor = true;
-        const past = snapshot();
 
         // Indent every selected line
         foreach (start, line; eachSelectedLine) {
@@ -806,8 +806,6 @@ class CodeInput : TextInput {
             insert(start, indentRope(indentCount), isMinor);
 
         }
-
-        pushHistory(past);
 
     }
 
@@ -874,7 +872,6 @@ class CodeInput : TextInput {
     void outdent(int level) {
 
         const isMinor = true;
-        const past = snapshot();
 
         // Outdent every selected line
         foreach (start, line; eachSelectedLine) {
@@ -892,8 +889,6 @@ class CodeInput : TextInput {
             }
 
         }
-
-        pushHistory(past);
 
     }
 
@@ -1139,18 +1134,19 @@ class CodeInput : TextInput {
 
     }
 
+    @("CodeInput: Backspace can be works and can be undone")
     unittest {
 
         auto root = codeInput(.useSpaces(2));
         root.value = "      abc";
         root.caretIndex = 6;
-        root.chop();
+        root.runInputAction!(FluidInputAction.backspace);
         assert(root.value == "    abc");
-        root.chop();
+        root.runInputAction!(FluidInputAction.backspace);
         assert(root.value == "  abc");
-        root.chop();
+        root.runInputAction!(FluidInputAction.backspace);
         assert(root.value == "abc");
-        root.chop();
+        root.runInputAction!(FluidInputAction.backspace);
         assert(root.value == "abc");
 
         root.undo();
@@ -1165,20 +1161,20 @@ class CodeInput : TextInput {
 
         auto root = codeInput();
 
-        root.push("abcdef");
+        root.savePush("abcdef");
         root.runInputAction!(FluidInputAction.breakLine);
         assert(root.value == "abcdef\n");
 
-        root.insertTab();
+        root.runInputAction!(FluidInputAction.insertTab);
         root.runInputAction!(FluidInputAction.breakLine);
         assert(root.value == "abcdef\n    \n    ");
 
-        root.insertTab();
+        root.runInputAction!(FluidInputAction.insertTab);
         root.runInputAction!(FluidInputAction.breakLine);
         assert(root.value == "abcdef\n    \n        \n        ");
 
-        root.outdent();
-        root.outdent();
+        root.runInputAction!(FluidInputAction.outdent);
+        root.runInputAction!(FluidInputAction.outdent);
         assert(root.value == "abcdef\n    \n        \n");
 
         root.runInputAction!(FluidInputAction.breakLine);
@@ -1666,6 +1662,7 @@ class CodeInput : TextInput {
 
     }
 
+    @("CodeInput: breakLine and paste can be undone")
     unittest {
 
         auto io = new HeadlessBackend;
@@ -1673,16 +1670,18 @@ class CodeInput : TextInput {
         root.io = io;
 
         io.clipboard = "World";
-        root.push("  Hello,");
+        root.savePush("  Hello,");
         root.runInputAction!(FluidInputAction.breakLine);
-        root.paste();
+        root.runInputAction!(FluidInputAction.paste);
         assert(!root.snapshot.isMinor);
-        root.push("!");
+        root.savePush("!");
         assert(root.value == "  Hello,\n  World!");
+        assert(root.valueBeforeCaret == root.value);
 
         // Undo the exclamation mark
         root.undo();
         assert(root.value == "  Hello,\n  World");
+        assert(root.valueBeforeCaret == root.value);
 
         // Undo moves before pasting
         root.undo();
@@ -1729,10 +1728,14 @@ class CodeInput : TextInput {
         root.io = io;
 
         io.clipboard = "World";
-        root.push("  Hello,");
-        root.push(" ");
-        root.paste();
-        root.push("!");
+        root.savePush("  Hello,");
+        assert( root.snapshot.isMinor);
+        root.savePush(" ");
+        assert( root.snapshot.isMinor);
+        root.runInputAction!(FluidInputAction.paste);
+        assert(!root.snapshot.isMinor);
+        root.savePush("!");
+        assert( root.snapshot.isMinor);
         assert(root.value == "  Hello, World!");
 
         // Undo the exclamation mark
