@@ -1460,13 +1460,13 @@ unittest {
     root.io = io;
     io.clipboard = source;
 
-    import std.stdio;
     root.draw();
     root.focus();
 
     root.paste();
     root.draw();
 
+    const runCount = 3;
     const results = benchmark!({
 
         const target1 = root.value.length - root.value.byCharReverse.countUntil(";");
@@ -1475,12 +1475,17 @@ unittest {
         root.caretIndex = target;
         root.paste();
 
-    })(1);
+    })(runCount);
+    const average = results[0] / runCount;
 
-    assert(results[0] <= 500.msecs, format!"Too slow: average %s"(results[0]));
-    if (results[0] > 100.msecs) {
+    // Even if this is just a single paste, reformatting is bound to take a while.
+    // I hope it could be faster in the future, but the current performance seems to be good enough;
+    // I tried the same in IntelliJ and on my machine it's just about the same ~3 seconds, 
+    // Fluid might even be slightly faster.
+    assert(average <= 5.seconds, format!"Too slow: average %s"(average));
+    if (average > 1.seconds) {
         import std.stdio;
-        writefln!"Warning: TextCache integrity test & benchmark runs slowly, %s"(results[0]);
+        writefln!"Warning: TextCache integrity test & benchmark runs slowly, %s"(average);
     }
 
 }

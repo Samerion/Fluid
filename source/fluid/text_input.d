@@ -60,6 +60,8 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     mixin enableInputActions;
 
+    enum defaultBufferSize = 512;
+
     public {
 
         /// Size of the field.
@@ -1160,10 +1162,10 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     /// Request a new or a larger buffer.
     /// Params:
-    ///     minimumSize = Minimum size to allocate for the buffer.
-    protected void newBuffer(size_t minimumSize = 64) {
+    ///     minimumSize = Minimum size to allocate for the buffer. More may be allocated to allow for future input.
+    protected void newBuffer(size_t minimumSize = defaultBufferSize) {
 
-        const newSize = max(minimumSize, 64);
+        const newSize = max(minimumSize, defaultBufferSize);
 
         _buffer = new char[newSize];
         usedBufferSize = 0;
