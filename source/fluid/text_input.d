@@ -172,14 +172,13 @@ class TextInput : InputNode!Node, FluidScrollable {
             /// runs of similar actions together, for example when typing a word, the whole word will form a single
             /// entry, instead of creating separate entries per character.
             ///
-            /// Entries will only merge if they are minor, or the text didn't change. Two such entries can be combined 
+            /// Entries will only merge if they are minor, or the text didn't change. Two minor entries can be combined 
             /// if they are:
             ///
             /// 1. Both additive, and the latter is not subtractive. This combines runs of inserts, including if 
             ///    the first item in the run replaces some text. However, replacing text will break an existing 
             ///    chain of actions.
             /// 2. Both subtractive, and neither is additive.
-            /// 3. The text is identical (comparison by memory address).
             ///
             /// See_Also: `isAdditive`
             bool canMergeWith(HistoryEntry nextEntry) const {
@@ -1548,6 +1547,8 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         const past = snapshot();
 
+        _snapshot.diff = Rope.DiffRegion.init;
+
         // Run the input action and compare changes to send to history
         const handled = runInputActionImpl(id, active);
 
@@ -1663,6 +1664,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         _usedBufferSize += ch.length;
 
         // Selection is active, overwrite it
+        // This should be done even if given text is empty, effectively removing the selection
         if (isSelecting) {
 
             bufferNode = new RopeNode(Rope(slice), Rope.init);
@@ -1670,6 +1672,9 @@ class TextInput : InputNode!Node, FluidScrollable {
             return;
 
         }
+
+        // Nothing to insert, so nothing will change
+        if (ch == "") return;
 
         // The above `if` handles the one case where `push` doesn't just add new characters to the text.
         // From here, appending can be optimized by memorizing the node we create to add the text, and reusing it
@@ -4039,8 +4044,12 @@ class TextInput : InputNode!Node, FluidScrollable {
     deprecated("`pushSnapshot` and `forcePushSnapshot` have been replaced by `pushHistory`/`forcePushHistory`"
         ~ " and will be removed in Fluid 0.8.0.") {
 
-        alias pushSnapshot = pushHistory;
-        alias forcePushSnapshot = forcePushHistory;
+        void pushSnapshot(HistoryEntry entry) {
+            pushHistory(entry);
+        }
+        void forcePushSnapshot(HistoryEntry entry) {
+            forcePushHistory(entry);
+        }
 
     }
 
@@ -4073,8 +4082,6 @@ class TextInput : InputNode!Node, FluidScrollable {
     /// ditto
     void forcePushHistory(HistoryEntry newSnapshot) {
 
-        import std.stdio;
-        debug writeln("inserting snapshot: ", newSnapshot);
         _undoStack.insertBack(newSnapshot);
 
     }
