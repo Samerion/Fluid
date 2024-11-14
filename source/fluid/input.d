@@ -754,7 +754,8 @@ interface FluidHoverable {
     ///
     ///     if (active && id == InputActionID.from!(FluidInputAction.press)) {
     ///
-    ///         return runInputAction!(FluidInputAction.press);
+    ///         // use `Impl` to prevent recursion
+    ///         return runInputActionImpl!(FluidInputAction.submit);
     ///
     ///     }
     ///
@@ -780,7 +781,16 @@ interface FluidHoverable {
     /// Manual implementation is discouraged; override `inputActionImpl` instead.
     bool runInputActionImpl(immutable InputActionID action, bool active = true);
 
+    final bool runInputActionImpl(alias action)(bool active = true) {
+
+        return runInputActionImpl(InputActionID.from!action, active);
+
+    }
+
     final bool runInputAction(immutable InputActionID action, bool active = true) {
+
+        // The programmer may override the action
+        if (inputActionImpl(action, active)) return true;
 
         return runInputActionImpl(action, active);
 
@@ -788,7 +798,7 @@ interface FluidHoverable {
 
     final bool runInputAction(alias action)(bool active = true) {
 
-        return runInputActionImpl(InputActionID.from!action, active);
+        return runInputAction(InputActionID.from!action, active);
 
     }
 
@@ -840,9 +850,6 @@ interface FluidHoverable {
             import std.meta : Filter;
 
             alias This = typeof(this);
-
-            // The programmer may override the action
-            if (inputActionImpl(action, active)) return true;
 
             bool handled;
 

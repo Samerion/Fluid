@@ -265,9 +265,9 @@ class CodeInput : TextInput {
 
     }
 
-    protected override bool replaceNoHistory(size_t start, size_t end, Rope added, bool isMinor) {
+    protected override bool replace(size_t start, size_t end, Rope added, bool isMinor) {
 
-        const replaced = super.replaceNoHistory(start, end, added, isMinor);
+        const replaced = super.replace(start, end, added, isMinor);
         reparse(start, end, added);
 
         return replaced;
@@ -803,7 +803,7 @@ class CodeInput : TextInput {
             // Skip empty lines
             if (!includeEmptyLines && line == "") continue;
 
-            insertNoHistory(start, indentRope(indentCount), isMinor);
+            insert(start, indentRope(indentCount), isMinor);
 
         }
 
@@ -887,7 +887,7 @@ class CodeInput : TextInput {
                     .until("\t", No.openRight)
                     .walkLength;
 
-                replaceNoHistory(start, start + leadingWidth, Rope.init, isMinor);
+                replace(start, start + leadingWidth, Rope.init, isMinor);
 
             }
 
@@ -1248,7 +1248,7 @@ class CodeInput : TextInput {
         const isMinor = true;
 
         // Write the new indent, replacing the old one
-        replaceNoHistory(lineStart, lineStart + oldIndentLength, newIndent, isMinor);
+        replace(lineStart, lineStart + oldIndentLength, newIndent, isMinor);
 
         // Update caret index
         if (oldCaretIndex >= lineStart && oldCaretIndex <= lineEnd)
@@ -1488,9 +1488,12 @@ class CodeInput : TextInput {
     ///     isMinor = True if this is a minor (insignificant) change.
     override void push(scope const(char)[] text, bool isMinor = true) {
 
+        // Use minor status for these changes so they are merged together
+        const isThisMinor = true;
+
         // If there's a selection, remove it
-        replace(selectionLowIndex, selectionHighIndex, Rope.init, isMinor);
-        caretIndex = selectionLowIndex;
+        replace(selectionLowIndex, selectionHighIndex, Rope.init, isThisMinor);
+        setCaretIndexNoHistory(selectionLowIndex);
 
         const source = Rope(text);
 
@@ -1533,8 +1536,6 @@ class CodeInput : TextInput {
 
             // Step 3: Apply the correct indent
 
-            // Use minor status for these changes so they are merged together
-            const isThisMinor = true;
             const lineStart = caretIndex;
 
             // Copy the original indent
@@ -1718,6 +1719,7 @@ class CodeInput : TextInput {
 
     }
 
+    @("CodeInput: Undo and redo works")
     unittest {
 
         // Same test as above, but insert a space instead of line break
