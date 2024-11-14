@@ -1384,9 +1384,8 @@ class CodeInput : TextInput {
     void caretToLineHome() {
 
         caretIndex = lineHomeByIndex(caretIndex);
-        updateCaretPosition(true);
+        updateCaretPositionAndAnchor(true);
         moveOrClearSelection();
-        horizontalAnchor = caretPosition.x;
 
     }
 
