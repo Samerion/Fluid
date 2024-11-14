@@ -1500,18 +1500,21 @@ class CodeInput : TextInput {
         auto indentLines = source.byLine.drop(1);
 
         // Count indents on each line
-        auto significantIndents = indentLines.save 
-
-            // Use the character count, assuming the indent is uniform
+        // Use the character count, assuming the indent is uniform
+        auto allIndents = indentLines.save
             .map!(a => a
-                .countUntil!(a => !a.among(' ', '\t')))
-
-            // Ignore blank lines (no characters other than spaces)
+                .countUntil!(a => !a.among(' ', '\t')));
+        
+        // Ignore blank lines (no characters other than spaces)
+        auto significantIndents = allIndents.save 
             .filter!(a => a != -1);
 
         // Determine the common indent
         // It should be equivalent to the smallest indent of any blank line
-        const commonIndent = !significantIndents.empty ? significantIndents.minElement() : 0;
+        const commonIndent 
+            = !significantIndents.empty ? significantIndents.minElement()
+            : !allIndents.empty         ? indentLines.map!"a.length".minElement()
+            : 0;
         const originalIndentLevel = indentLevelByIndex(caretIndex);
 
         bool started;
