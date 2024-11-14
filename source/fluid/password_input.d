@@ -122,10 +122,12 @@ class PasswordInput : TextInput {
 
     unittest {
 
+        import fluid.input : FluidInputAction;
+
         auto root = passwordInput();
-        root.push("Hello, x");
-        root.chop();
-        root.push("World!");
+        root.savePush("Hello, x");
+        root.runInputAction!(FluidInputAction.backspace);
+        root.savePush("World!");
 
         assert(root.value == "Hello, World!");
 
