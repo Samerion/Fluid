@@ -154,6 +154,12 @@ class CodeInput : TextInput {
 
     }
 
+    override TextInterval intervalAt(size_t index) {
+
+        return contentLabel.text.intervalAt(index);
+
+    }
+
     override CachedTextRuler rulerAtPosition(Vector2 position) {
 
         return contentLabel.text.rulerAtPosition(position);
@@ -313,8 +319,12 @@ class CodeInput : TextInput {
 
     protected override bool replace(size_t start, size_t end, Rope added, bool isMinor) {
 
-        const replaced = super.replace(start, end, added, isMinor);
-        reparse(start, end, added);
+        const startInterval  = intervalAt(start);
+        const oldEndInterval = intervalAt(end);
+        const replaced       = super.replace(start, end, added, isMinor);
+        const newEndInterval = intervalAt(start + added.length);
+
+        reparse(startInterval, oldEndInterval, newEndInterval, added);
 
         return replaced;
 
@@ -322,19 +332,32 @@ class CodeInput : TextInput {
 
     protected void reparse() {
 
+        const start = TextInterval.init;
+        const end = intervalAt(value.length);
+
         // Act as if the whole document was replaced with itself
-        reparse(0, value.length, value);
+        reparse(start, end, end, value);
 
     }
 
-    protected void reparse(size_t start, size_t end, Rope added) {
+    protected final void reparse(TextInterval start, TextInterval oldEnd, Rope added) {
+
+        const newEnd = start + TextInterval(added);
+
+        reparse(start, oldEnd, newEnd, added);
+
+    }
+
+    protected void reparse(TextInterval start, TextInterval oldEnd, TextInterval newEnd, Rope added) {
+
+        if (!highlighter && !indentor) return;
 
         const fullValue = sourceValue;
 
         // Parse the file
         if (highlighter) {
 
-            highlighter.parse(fullValue);
+            highlighter.parse(fullValue, start, oldEnd, newEnd);
 
             // Apply highlighting to the label
             contentLabel.text.styleMap = highlighter.save(cast(int) prefix.length);
@@ -344,7 +367,7 @@ class CodeInput : TextInput {
         // Pass the file to the indentor
         if (indentor && cast(Object) indentor !is cast(Object) highlighter) {
 
-            indentor.parse(fullValue);
+            indentor.parse(fullValue, start, oldEnd, newEnd);
 
         }
 
@@ -358,7 +381,7 @@ class CodeInput : TextInput {
 
             int highlightCount;
 
-            void parse(Rope) {
+            void parse(Rope, TextInterval, TextInterval, TextInterval) {
                 highlightCount++;
             }
 
@@ -368,7 +391,7 @@ class CodeInput : TextInput {
 
             int indentCount;
 
-            void parse(Rope) {
+            void parse(Rope, TextInterval, TextInterval, TextInterval) {
                 indentCount++;
             }
 
@@ -393,7 +416,7 @@ class CodeInput : TextInput {
             int highlightCount;
             int indentCount;
 
-            void parse(Rope) {
+            void parse(Rope, TextInterval, TextInterval, TextInterval) {
                 highlightCount++;
                 indentCount++;
             }
@@ -1074,7 +1097,6 @@ class CodeInput : TextInput {
                 // Remove spaces as if they were tabs
                 if (allSpaces) {
 
-                    const oldCaretIndex = caretIndex;
                     const isMinor = true;
 
                     replace(lineStart + tabStart, caretIndex, Rope.init, isMinor);
@@ -1818,7 +1840,7 @@ class CodeInput : TextInput {
 
             Rope text;
 
-            void parse(Rope text) {
+            void parse(Rope text, TextInterval, TextInterval, TextInterval) {
 
                 this.text = text;
 
@@ -1929,7 +1951,13 @@ interface CodeHighlighter {
     const(char)[] nextTokenName(CodeToken index);
 
     /// Parse the given text to use with other functions in the highlighter.
-    void parse(Rope text);
+    /// Params:
+    ///     text    = New text to highlight.
+    ///     start   = Index of the first character that has changed since last parse. 
+    ///         This begins both removed (start .. oldEnd) and inserted (start .. newEnd) fragments.
+    ///     oldEnd  = Last index of the fragment that has been replaced.
+    ///     newEnd  = Last index of newly inserted fragment.
+    void parse(Rope text, TextInterval start, TextInterval oldEnd, TextInterval newEnd);
 
     /// Find the next important range starting with the byte at given index.
     ///
@@ -2018,8 +2046,14 @@ unittest {
 
 interface CodeIndentor {
 
-    /// Parse the given text.
-    void parse(Rope text);
+    /// Parse the given text to use with other functions in the indentor.
+    /// Params:
+    ///     text    = New text to highlight.
+    ///     start   = Index of the first character that has changed since last parse. 
+    ///         This begins both removed (start .. oldEnd) and inserted (start .. newEnd) fragments.
+    ///     oldEnd  = Last index of the fragment that has been replaced.
+    ///     newEnd  = Last index of newly inserted fragment.
+    void parse(Rope text, TextInterval start, TextInterval oldEnd, TextInterval newEnd);
 
     /// Get indent level for the given offset, relative to the previous line.
     ///
@@ -2056,7 +2090,7 @@ unittest {
 
         Indent[] indents;
 
-        override void parse(Rope rope) {
+        override void parse(Rope rope, TextInterval, TextInterval, TextInterval) {
 
             bool lineStart;
 
@@ -2102,8 +2136,8 @@ unittest {
             return CodeSlice.init;
         }
 
-        override void parse(Rope value) {
-            super.parse(value);
+        override void parse(Rope value, TextInterval a, TextInterval b, TextInterval c) {
+            super.parse(value, a, b, c);
         }
 
     };
@@ -2171,7 +2205,7 @@ unittest {
 
         bool outdent;
 
-        override void parse(Rope rope) {
+        override void parse(Rope rope, TextInterval, TextInterval, TextInterval) {
 
             outdent = rope.canFind("end");
 
