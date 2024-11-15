@@ -1560,7 +1560,7 @@ class CodeInput : TextInput {
 
         // If there's a selection, remove it
         replace(selectionLowIndex, selectionHighIndex, Rope.init, isThisMinor);
-        setCaretIndexNoHistory(selectionLowIndex);
+        clearSelection();
 
         const source = Rope(text);
 
@@ -2408,5 +2408,27 @@ unittest {
         import std.stdio;
         writefln!"Warning: CodeInput formatting benchmark runs slowly, %s"(average);
     }
+
+}
+
+@("CodeInput.push correctly replaces selected text")
+unittest {
+
+    auto root = codeInput();
+    root.value = `run(`
+        ~ `    label("Hello, Fluid!")`
+        ~ `);`;
+
+    root.caretIndex = root.value.indexOf("!");
+    root.draw();
+
+    root.runInputAction!(FluidInputAction.selectPreviousWord);
+    assert(root.selectedValue == "Fluid");
+    root.savePush("W");
+
+    assert(root.value == `run(`
+        ~ `    label("Hello, W!")`
+        ~ `);`);
+    
 
 }
