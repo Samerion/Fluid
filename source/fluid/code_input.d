@@ -83,13 +83,6 @@ class CodeInput : TextInput {
         CodeHighlighter highlighter;
         CodeIndentor indentor;
 
-        /// Additional context to pass to the highlighter. Will not be displayed, but can be used to improve syntax
-        /// highlighting and code analysis.
-        Rope prefix;
-
-        /// ditto
-        Rope suffix;
-
         /// Character width of a single indent level.
         int indentWidth = 4;
         invariant(indentWidth <= maxIndentWidth);
@@ -119,6 +112,10 @@ class CodeInput : TextInput {
             }
 
         }
+
+        Rope _prefix;
+        Rope _suffix;
+        TextInterval _prefixInterval;
 
         /// If automatic reformatting is to take place, `pending` is set to true, with `oldTargetIndent` set to the
         /// previous value of the indent. This value is compared against the current target, and the reformatter will
@@ -223,6 +220,26 @@ class CodeInput : TextInput {
 
     }
 
+    /// Additional context to pass to the highlighter. Will not be displayed, but can be used to improve syntax
+    /// highlighting and code analysis.
+    Rope prefix() const {
+        return _prefix;
+    }
+
+    Rope prefix(Rope newValue) {
+        _prefixInterval = TextInterval(newValue);
+        return _prefix = newValue;
+    }
+
+    /// ditto
+    Rope suffix() const {
+        return _suffix;
+    }
+
+    Rope suffix(Rope newValue) {
+        return _suffix = newValue;
+    }
+
     /// Get the full value of the text, including context provided via `prefix` and `suffix`.
     Rope sourceValue() const {
 
@@ -324,6 +341,8 @@ class CodeInput : TextInput {
         const replaced       = super.replace(start, end, added, isMinor);
         const newEndInterval = intervalAt(start + added.length);
 
+        // TODO there should be no need to call reparse after every tiny replace!
+        //      rather, expose Text's update range and use it for 
         reparse(startInterval, oldEndInterval, newEndInterval, added);
 
         return replaced;
@@ -353,21 +372,22 @@ class CodeInput : TextInput {
         if (!highlighter && !indentor) return;
 
         const fullValue = sourceValue;
+        const offset = _prefixInterval;
+        const startInterval  = offset + start;
+        const oldEndInterval = offset + oldEnd;
+        const newEndInterval = offset + newEnd;
 
         // Parse the file
         if (highlighter) {
 
-            highlighter.parse(fullValue, start, oldEnd, newEnd);
-
-            // Apply highlighting to the label
-            contentLabel.text.styleMap = highlighter.save(cast(int) prefix.length);
+            highlighter.parse(fullValue, startInterval, oldEndInterval, newEndInterval);
 
         }
 
         // Pass the file to the indentor
         if (indentor && cast(Object) indentor !is cast(Object) highlighter) {
 
-            indentor.parse(fullValue, start, oldEnd, newEnd);
+            indentor.parse(fullValue, startInterval, oldEndInterval, newEndInterval);
 
         }
 
@@ -435,7 +455,12 @@ class CodeInput : TextInput {
 
     override void resizeImpl(Vector2 vector) @trusted {
 
+        // Apply highlighting to the label
+        contentLabel.text.styleMap = highlighter.save(cast(int) prefix.length);
+
+        // TODO What the heck is this stuff?
         // Reformat the line if requested
+        version (none)
         if (_automaticFormat.pending) {
 
             const oldTarget = _automaticFormat.oldTargetIndent;
@@ -1632,7 +1657,7 @@ class CodeInput : TextInput {
 
             // Use the reformatter if available
             // TODO wouldn't it be better to reformat the fragment in a separate pass?
-            else if (indentor) {
+            else version (none) if (indentor) {
                 reformatLineByIndex(lineStart);
             }
 
@@ -2430,5 +2455,4 @@ unittest {
         ~ `    label("Hello, W!")`
         ~ `);`);
     
-
 }
