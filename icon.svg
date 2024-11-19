@@ -1,0 +1,286 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created using Krita: https://krita.org -->
+
+<svg
+   width="72.936996pt"
+   height="72.837585pt"
+   viewBox="0 0 72.936995 72.837579"
+   version="1.1"
+   id="svg1"
+   sodipodi:docname="icon.svg"
+   inkscape:version="1.4 (e7c3feb100, 2024-10-09)"
+   inkscape:export-xdpi="300"
+   inkscape:export-ydpi="300"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <title
+     id="title8">fluid logo</title>
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="pt"
+     showgrid="false"
+     showguides="false"
+     inkscape:zoom="5.6568543"
+     inkscape:cx="30.140426"
+     inkscape:cy="51.707183"
+     inkscape:window-width="1920"
+     inkscape:window-height="1008"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg1">
+    <sodipodi:guide
+       position="90.664107,6.8649588"
+       orientation="0,-1"
+       id="guide1"
+       inkscape:locked="false" />
+    <sodipodi:guide
+       position="30.400292,84.138723"
+       orientation="1,0"
+       id="guide2"
+       inkscape:locked="false" />
+    <sodipodi:guide
+       position="126.618,5.7107909"
+       orientation="0.20451859,-0.97886268"
+       id="guide4"
+       inkscape:locked="false" />
+    <sodipodi:guide
+       position="130.54138,0.017730453"
+       orientation="0.20450176,-0.9788662"
+       id="guide5"
+       inkscape:locked="false" />
+    <sodipodi:guide
+       position="131.82428,6.7985608"
+       orientation="1,0"
+       id="guide6"
+       inkscape:locked="false" />
+    <sodipodi:guide
+       position="58.601471,85.035172"
+       orientation="0,-1"
+       id="guide7"
+       inkscape:locked="false" />
+    <sodipodi:guide
+       position="78.999637,64.21024"
+       orientation="0.0062496164,-0.99998047"
+       id="guide11"
+       inkscape:locked="false" />
+    <sodipodi:guide
+       position="14.806555,91.500322"
+       orientation="-0.4269067,-0.90429567"
+       id="guide18"
+       inkscape:locked="false" />
+    <sodipodi:guide
+       position="31.384233,88.549207"
+       orientation="0.42694032,0.9042798"
+       id="guide19"
+       inkscape:locked="false" />
+    <sodipodi:guide
+       position="43.364062,83.874787"
+       orientation="1,0"
+       id="guide20"
+       inkscape:locked="false" />
+    <sodipodi:guide
+       position="43.364062,73.14368"
+       orientation="-0.42690901,-0.90429458"
+       id="guide21"
+       inkscape:locked="false" />
+    <sodipodi:guide
+       position="56.279357,68.034682"
+       orientation="0,-1"
+       id="guide22"
+       inkscape:locked="false" />
+  </sodipodi:namedview>
+  <defs
+     id="defs1">
+    <linearGradient
+       id="linearGradient2489">
+      <stop
+         style="stop-color:#0079f1;stop-opacity:1;"
+         offset="0"
+         id="stop2493" />
+      <stop
+         style="stop-color:#0044f1;stop-opacity:1;"
+         offset="1"
+         id="stop2494" />
+    </linearGradient>
+    <linearGradient
+       id="linearGradient2491"
+       inkscape:collect="always">
+      <stop
+         style="stop-color:#66bfff;stop-opacity:1;"
+         offset="0"
+         id="stop2491" />
+      <stop
+         style="stop-color:#26a7ff;stop-opacity:1;"
+         offset="1"
+         id="stop2492" />
+    </linearGradient>
+    <linearGradient
+       id="linearGradient2489-1">
+      <stop
+         style="stop-color:#0079f1;stop-opacity:1;"
+         offset="0"
+         id="stop2489" />
+      <stop
+         style="stop-color:#9e00ac;stop-opacity:1;"
+         offset="1"
+         id="stop2490" />
+    </linearGradient>
+    <filter
+       id="mask-powermask-path-effect2486_inverse"
+       inkscape:label="filtermask-powermask-path-effect2486"
+       style="color-interpolation-filters:sRGB"
+       height="100"
+       width="100"
+       x="-50"
+       y="-50">
+      <feColorMatrix
+         id="mask-powermask-path-effect2486_primitive1"
+         values="1"
+         type="saturate"
+         result="fbSourceGraphic" />
+      <feColorMatrix
+         id="mask-powermask-path-effect2486_primitive2"
+         values="-1 0 0 0 1 0 -1 0 0 1 0 0 -1 0 1 0 0 0 1 0 "
+         in="fbSourceGraphic" />
+    </filter>
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient2489"
+       id="linearGradient2490"
+       x1="46.934212"
+       y1="57.57082"
+       x2="114.2941"
+       y2="65.790939"
+       gradientUnits="userSpaceOnUse" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient2491"
+       id="linearGradient2492"
+       x1="68.545166"
+       y1="59.273975"
+       x2="99.710022"
+       y2="79.161354"
+       gradientUnits="userSpaceOnUse" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient2489-1"
+       id="linearGradient2494"
+       gradientUnits="userSpaceOnUse"
+       x1="63.869568"
+       y1="70.53019"
+       x2="117.47607"
+       y2="65.044533" />
+    <mask
+       id="mask1">
+      <g
+         id="g10"
+         style="display:inline"
+         transform="translate(15.09375)">
+        <path
+           d="M 78.77988,41.384 H 69.05988 V 75.08 H 62.72388 V 34.04 C 62.72388,29.048 63.82788,25.472 66.03588,23.312 68.24388,21.104 71.31588,20 75.25188,20 76.78788,20 78.17988,20.144 79.42788,20.432 80.72388,20.672 81.82788,20.96 82.73988,21.296 L 81.08388,26.264 C 80.31588,26.024 79.42788,25.784 78.41988,25.544 77.41188,25.304 76.37988,25.184 75.32388,25.184 73.21188,25.184 71.62788,25.904 70.57188,27.344 69.56388,28.736 69.05988,30.944 69.05988,33.968 V 36.488 H 78.77988 Z"
+           id="path1"
+           style="font-size:72px;font-family:'Noto Sans';letter-spacing:0;word-spacing:0;fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0;stroke-linecap:square;stroke-linejoin:bevel;stroke-opacity:0"
+           aria-label="fluid"
+           sodipodi:nodetypes="ccccscscccsscsccc" />
+        <path
+           style="color:#000000;display:none;fill:#ffffff;fill-opacity:1;stroke-linecap:square;stroke-miterlimit:1000;-inkscape-stroke:none"
+           d="M 12.289594,68.771422 86.588413,84.294852 94.929879,75.080002 75.158387,75.08 H 71.970887 V 68.70501 H 75.158387 L 110.2277,68.67459 89.62016,91.439833 12.289594,75.284222 Z"
+           id="path7"
+           sodipodi:nodetypes="ccccccccccc" />
+        <path
+           style="color:#000000;display:inline;fill:#ffffff;fill-opacity:1;stroke-linecap:square;stroke-miterlimit:1000;-inkscape-stroke:none"
+           d="M 28.626737,28.70763 55.124841,41.216745 59.409839,43.239633 59.409998,38.364673 56.113493,36.808542 49.281405,33.58263 H 53.151446 55.588946 V 28.70763 H 53.151446 Z M 58.108014,33.582629 V 28.70763"
+           id="path8"
+           sodipodi:nodetypes="ccccccccccccc" />
+        <path
+           style="color:#000000;fill:#ffffff;fill-opacity:1;stroke-linecap:square;stroke-miterlimit:1000;-inkscape-stroke:none"
+           d="M 72.373769,50.63831 101.70695,50.821635 77.486908,62.255608 75.082076,63.390905 75.081917,58.515962 77.551946,57.350781 83.195839,54.685465 H 72.373769 Z"
+           id="path9"
+           sodipodi:nodetypes="ccccccccc" />
+        <path
+           d="M 59.409998,57.5415 H 30.244395 V 62.4165 H 59.409998 Z"
+           style="color:#000000;display:none;fill:#ffffff;fill-opacity:1;stroke-linecap:square;stroke-miterlimit:1000;-inkscape-stroke:none"
+           id="path10" />
+      </g>
+    </mask>
+  </defs>
+  <g
+     id="g2484"
+     mask="url(#mask1)"
+     style="display:inline"
+     transform="translate(-44.103455,-12.295435)">
+    <rect
+       style="display:inline;fill:#000000;fill-opacity:1;stroke:none;stroke-width:2.25;stroke-linecap:square;stroke-linejoin:miter;stroke-miterlimit:1000"
+       id="rect13"
+       width="72.936996"
+       height="72.837585"
+       x="44.103455"
+       y="12.295435"
+       mask="none" />
+    <path
+       style="display:inline;fill:url(#linearGradient2494);stroke:none;stroke-width:0.75px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="M 44.103455,55.42018 C 70.523748,59.617947 81.914272,64.241858 90.056539,61.862831 106.9263,56.933784 110.02431,42.625602 117.04045,45.598538 L 117.04019,85.133018 H 44.103455 Z"
+       id="path2493"
+       sodipodi:nodetypes="cscccc"
+       inkscape:label="purple" />
+    <path
+       style="display:inline;fill:url(#linearGradient2490);stroke:none;stroke-width:0.75px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="M 44.103455,32.386887 C 72.799022,43.538006 72.632471,49.713721 82.333144,58.576711 92.647336,68.00024 113.79778,49.495631 117.04041,52.158169 117.77866,54.572097 116.8007,85.133018 116.8007,85.133018 H 44.103455 Z"
+       id="path2477"
+       sodipodi:nodetypes="cscccc"
+       inkscape:label="dark blue" />
+    <path
+       style="display:inline;fill:url(#linearGradient2492);fill-opacity:1;stroke:none;stroke-width:0.75px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="M 44.89895,32.585761 C 76.448208,41.89811 72.364842,52.067838 89.806135,69.087481 96.067699,75.19767 110.86227,68.441662 117.04019,74.790211 V 85.133018 H 44.103455 Z"
+       id="path2489"
+       sodipodi:nodetypes="cscccc"
+       inkscape:label="light blue" />
+  </g>
+  <metadata
+     id="metadata8">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <cc:license
+           rdf:resource="http://scripts.sil.org/OFL" />
+        <dc:title>fluid logo</dc:title>
+        <dc:description>Typeface based on the Ruda font family</dc:description>
+      </cc:Work>
+      <cc:License
+         rdf:about="http://scripts.sil.org/OFL">
+        <cc:permits
+           rdf:resource="http://scripts.sil.org/pub/OFL/Reproduction" />
+        <cc:permits
+           rdf:resource="http://scripts.sil.org/pub/OFL/Distribution" />
+        <cc:permits
+           rdf:resource="http://scripts.sil.org/pub/OFL/Embedding" />
+        <cc:permits
+           rdf:resource="http://scripts.sil.org/pub/OFL/DerivativeWorks" />
+        <cc:requires
+           rdf:resource="http://scripts.sil.org/pub/OFL/Notice" />
+        <cc:requires
+           rdf:resource="http://scripts.sil.org/pub/OFL/Attribution" />
+        <cc:requires
+           rdf:resource="http://scripts.sil.org/pub/OFL/ShareAlike" />
+        <cc:requires
+           rdf:resource="http://scripts.sil.org/pub/OFL/DerivativeRenaming" />
+        <cc:requires
+           rdf:resource="http://scripts.sil.org/pub/OFL/BundlingWhenSelling" />
+      </cc:License>
+    </rdf:RDF>
+  </metadata>
+</svg>
