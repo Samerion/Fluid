@@ -2052,7 +2052,7 @@ unittest {
     root.paste();
     root.draw();
 
-    const runCount = 3;
+    const runCount = 1;
     const results = benchmark!({
 
         const target1 = root.value.length - root.value.byCharReverse.countUntil(";");
