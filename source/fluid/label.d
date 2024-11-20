@@ -68,6 +68,8 @@ class Label : Node {
         text.resize(available, !isWrapDisabled);
         minSize = text.size;
 
+        assert(text.isMeasured);
+
     }
 
     protected override void drawImpl(Rectangle outer, Rectangle inner) {
@@ -78,6 +80,7 @@ class Label : Node {
 
     }
 
+    @("Labels draw and resize correctly")
     unittest {
 
         auto io = new HeadlessBackend;
@@ -91,13 +94,12 @@ class Label : Node {
         root.draw();
 
         const initialTextArea = root.text.size.x * root.text.size.y;
-
         io.assertTexture(root.text.texture.chunks[0], Vector2(0, 0), color!"fff");
+
         io.nextFrame;
-
         root.text ~= " It's a nice day today!";
+        assert(root.isResizePending);
         root.draw();
-
         io.assertTexture(root.text.texture.chunks[0], Vector2(0, 0), color!"fff");
 
         const newTextArea = root.text.size.x * root.text.size.y;

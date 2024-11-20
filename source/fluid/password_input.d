@@ -122,10 +122,12 @@ class PasswordInput : TextInput {
 
     unittest {
 
+        import fluid.input : FluidInputAction;
+
         auto root = passwordInput();
-        root.push("Hello, x");
-        root.chop();
-        root.push("World!");
+        root.savePush("Hello, x");
+        root.runInputAction!(FluidInputAction.backspace);
+        root.savePush("World!");
 
         assert(root.value == "Hello, World!");
 
@@ -193,11 +195,14 @@ class PasswordInput : TextInput {
 
     }
 
-    protected override Vector2 caretPositionImpl(float availableWidth, bool preferNextLine) {
+    protected override Rectangle caretRectangleImpl(float availableWidth, bool preferNextLine) {
 
-        return Vector2(
+        auto superRect = super.caretRectangleImpl(availableWidth, preferNextLine);
+        return Rectangle(
             advance * valueBeforeCaret.countCharacters,
-            super.caretPositionImpl(availableWidth, preferNextLine).y,
+            superRect.y,
+            0,
+            superRect.height,
         );
 
     }

@@ -1,6 +1,7 @@
 module fluid.default_theme;
 
 import fluid.node;
+import fluid.utils;
 import fluid.frame;
 import fluid.style;
 import fluid.label;
@@ -10,7 +11,6 @@ import fluid.backend;
 import fluid.structs;
 import fluid.checkbox;
 import fluid.radiobox;
-import fluid.typeface;
 import fluid.drag_slot;
 import fluid.separator;
 import fluid.file_input;
@@ -18,6 +18,7 @@ import fluid.text_input;
 import fluid.popup_frame;
 import fluid.number_input;
 import fluid.scroll_input;
+import fluid.text.typeface;
 
 /// Theme with no properties set.
 ///
@@ -29,6 +30,13 @@ Theme nullTheme;
 /// Default theme that Fluid will use if no theme is supplied. It is a very simple theme that does the minimum to make
 /// the role of each node understandable.
 Theme fluidDefaultTheme;
+
+version (unittest) {
+
+    /// Theme for testing; defines a font and nothing else.
+    package Theme testTheme;
+
+}
 
 @NodeTag 
 enum FluidTag {
@@ -75,9 +83,19 @@ static this() {
             rule!Node(),
         );
 
+        version (unittest) {
+
+            testTheme.add(
+                rule!Node(
+                    fontSize = 14.pt,
+                ),
+            );
+
+        }
+
         fluidDefaultTheme.add(
             rule!Node(
-                typeface = Typeface.defaultTypeface,
+                typeface = Style.defaultTypeface,
                 textColor = color("#000"),
                 selectionBackgroundColor = color("#55b9ff"),
             ),
