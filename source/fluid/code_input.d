@@ -80,8 +80,6 @@ class CodeInput : TextInput {
 
     public {
 
-        CodeIndentor indentor;
-
         /// Character width of a single indent level.
         int indentWidth = 4;
         invariant(indentWidth <= maxIndentWidth);
@@ -116,11 +114,6 @@ class CodeInput : TextInput {
         Rope _suffix;
         TextInterval _prefixInterval;
 
-        /// If automatic reformatting is to take place, `pending` is set to true, with `oldTargetIndent` set to the
-        /// previous value of the indent. This value is compared against the current target, and the reformatter will
-        /// only activate if there was a change.
-        AutomaticFormat _automaticFormat;
-
         /// Boundaries of the range that was edited single the last call to `reparse`.
         TextInterval _reparseRangeStart, _reparseRangeOldEnd, _reparseRangeNewEnd;
 
@@ -133,7 +126,6 @@ class CodeInput : TextInput {
         super.contentLabel = new ContentLabel;
         this.submitted = submitted;
         this.highlighter = highlighter;
-        this.indentor = cast(CodeIndentor) highlighter;
 
     }
 
@@ -374,7 +366,7 @@ class CodeInput : TextInput {
     /// Reparse changes made to the text immediately.
     protected void reparse() {
 
-        if (!highlighter && !indentor) return;
+        if (!highlighter) return;
 
         const offset = _prefixInterval;
         const start  = offset + _reparseRangeStart;
@@ -388,13 +380,6 @@ class CodeInput : TextInput {
         if (highlighter) {
 
             highlighter.parse(fullValue, start, oldEnd, newEnd);
-
-        }
-
-        // Pass the file to the indentor
-        if (indentor && cast(Object) indentor !is cast(Object) highlighter) {
-
-            indentor.parse(fullValue, start, oldEnd, newEnd);
 
         }
 
@@ -458,67 +443,15 @@ class CodeInput : TextInput {
 
         }
 
-        static abstract class Indentor : CodeIndentor {
-
-            int indentCount;
-
-            void parse(Rope, TextInterval, TextInterval, TextInterval) {
-                indentCount++;
-            }
-
-        }
-
         auto highlighter = new BlackHole!Highlighter;
         auto root = codeInput(highlighter);
         root.reparse();
 
         assert(highlighter.highlightCount == 1);
 
-        auto indentor = new BlackHole!Indentor;
-        root.indentor = indentor;
-        root.reparse();
-
-        // Parse called once for each
-        assert(highlighter.highlightCount == 2);
-        assert(indentor.indentCount == 1);
-
-        static abstract class FullHighlighter : CodeHighlighter, CodeIndentor {
-
-            int highlightCount;
-            int indentCount;
-
-            void parse(Rope, TextInterval, TextInterval, TextInterval) {
-                highlightCount++;
-                indentCount++;
-            }
-
-        }
-
-        auto fullHighlighter = new BlackHole!FullHighlighter;
-        root = codeInput(fullHighlighter);
-        root.reparse();
-
-        // Parse should be called once for the whole class
-        assert(fullHighlighter.highlightCount == 1);
-        assert(fullHighlighter.indentCount == 1);
-
     }
 
     override void resizeImpl(Vector2 vector) @trusted {
-
-        // Reformat the line if requested
-        if (_automaticFormat.pending) {
-
-            const oldTarget = _automaticFormat.oldTargetIndent;
-            const newTarget = targetIndentLevelByIndex(caretIndex);
-
-            // Reformat only if the target indent changed; don't force "correct" indents on the programmer
-            if (oldTarget != newTarget)
-                reformatLine();
-
-            _automaticFormat.pending = false;
-
-        }
 
         // Resize the field
         super.resizeImpl(vector);
@@ -556,31 +489,6 @@ class CodeInput : TextInput {
         }
 
         super.drawImpl(outer, inner);
-
-    }
-
-    protected override bool keyboardImpl() {
-
-        auto oldValue = this.value;
-        auto format = AutomaticFormat(targetIndentLevelByIndex(caretIndex));
-
-        auto keyboardHandled = super.keyboardImpl();
-
-        // If the value has changed, trigger automatic reformatting
-        if (oldValue !is this.value)
-            _automaticFormat = format;
-
-        return keyboardHandled;
-
-    }
-
-    protected override bool inputActionImpl(InputActionID id, bool active) {
-
-        // Request format
-        if (active)
-            _automaticFormat = AutomaticFormat(targetIndentLevelByIndex(caretIndex));
-
-        return super.inputActionImpl(id, active);
 
     }
 
@@ -674,19 +582,34 @@ class CodeInput : TextInput {
 
     }
 
-    /// Get indent count for offset at given index.
-    int indentLevelByIndex(size_t i) {
+    /// Params:
+    ///     index = Index of any character on the target line.
+    /// Returns:
+    ///     Rope containing the indent on that line.
+    Rope indentByIndex(size_t index) const {
 
         // Select indents on the given line
-        auto indents = lineByIndex(i).byDchar
-            .until!(a => !a.among(' ', '\t'));
+        const line = lineByIndex(index);
+        const length = line.byChar
+            .until!(a => !a.among(' ', '\t'))
+            .walkLength;
+
+        return line[0 .. length];
+
+    }
+
+    /// Get indent count for offset at given index.
+    int indentLevelByIndex(size_t i) const {
+
+        // Select indents on that line
+        auto indents = indentByIndex(i).byChar;
 
         return cast(int) foldIndents(indents) / indentWidth;
 
     }
 
     /// Count width of the given text, counting tabs using their visual size, while other characters are of width of 1
-    private auto foldIndents(T)(T input) {
+    private size_t foldIndents(T)(T input) const {
 
         return input.fold!(
             (a, c) => c == '\t'
@@ -730,32 +653,6 @@ class CodeInput : TextInput {
         assert(root.indentLevelByIndex(20) == 1);
         assert(root.indentLevelByIndex(25) == 1);
         assert(root.indentLevelByIndex(36) == 2);
-
-    }
-
-    /// Get suitable indent size for the line at given index, according to information from `indentor`.
-    int targetIndentLevelByIndex(size_t i) {
-
-        const lineStart = lineStartByIndex(i);
-
-        // Find the previous line so it can be used as reference.
-        // For the first line, `0` is used.
-        const untilPreviousLine = value[0..lineStart].chomp;
-        const previousLineIndent = lineStart == 0
-            ? 0
-            : indentLevelByIndex(untilPreviousLine.length);
-
-        // Use the indentor if available
-        if (indentor) {
-
-            const indentEnd = lineHomeByIndex(i);
-
-            return max(0, previousLineIndent + indentor.indentDifference(indentEnd + prefix.length));
-
-        }
-
-        // Perform basic autoindenting if indentor is not available; keep the same indent at all time
-        else return indentLevelByIndex(i);
 
     }
     
@@ -1372,7 +1269,7 @@ class CodeInput : TextInput {
 
     }
 
-    /// Reformat a line by index of any character it contains.
+    /// Convert indent on a line to use tabs or spaces depending on settings. 
     void reformatLineByIndex(size_t index) {
 
         import std.math;
@@ -1380,35 +1277,30 @@ class CodeInput : TextInput {
         // TODO Implement reformatLine for selections
         if (isSelecting) return;
 
-        const newIndentLevel = targetIndentLevelByIndex(index);
-
-        const line = lineByIndex(index);
         const lineStart = lineStartByIndex(index);
-        const lineHome = lineHomeByIndex(index);
-        const lineEnd = lineEndByIndex(index);
-        const newIndent = indentRope(newIndentLevel);
-        const oldIndentLength = lineHome - lineStart;
+        const indent = indentByIndex(index);
+        const indentLevel = indentLevelByIndex(index);
 
-        // Ignore if indent is the same
-        if (newIndent.length == oldIndentLength) return;
+        const newIndent = indentRope(indentLevel);
 
-        const oldCaretIndex = caretIndex;
-        const newLineLength = newIndent.length + line.length - oldIndentLength;
+        // No change
+        if (indent == newIndent) return;
+
         const isMinor = true;
+        const oldCaretIndex = caretIndex;
+        const start = lineStart;
+        const oldEnd = start + indent.length;
+        const newEnd = start + newIndent.length;
 
-        // Write the new indent, replacing the old one
-        replace(lineStart, lineStart + oldIndentLength, newIndent, isMinor);
+        replace(start, oldEnd, newIndent, isMinor);
 
         // Update caret index
-        if (oldCaretIndex >= lineStart && oldCaretIndex <= lineEnd)
-            setCaretIndexNoHistory(
-                clamp(oldCaretIndex + newIndent.length - oldIndentLength,
-                    lineStart + newIndent.length,
-                    lineStart + newLineLength));
+        if (oldCaretIndex > start && oldCaretIndex <= oldEnd) {
+            setCaretIndexNoHistory(newEnd);
+        }
 
     }
 
-    /// Reformat the current line.
     void reformatLine() {
 
         reformatLineByIndex(caretIndex);
@@ -1466,6 +1358,7 @@ class CodeInput : TextInput {
 
         // mixed tabs (8 width total) -> 2 indents
         root.value = "  \t  \t";
+        root.caretToEnd;
         root.breakLine();
         assert(root.value == "  \t  \t\n        ");
 
@@ -1561,6 +1454,7 @@ class CodeInput : TextInput {
 
         // Move to line below
         root.runInputAction!(FluidInputAction.nextLine);
+        root.toggleHome();
         root.reformatLine();
         assert(root.value == "int main() {\n\treturn 0;\n}");
         assert(root.valueBeforeCaret == "int main() {\n\t");
@@ -1691,7 +1585,7 @@ class CodeInput : TextInput {
 
             // Copy the original indent
             // Only add new indents after line breaks
-            if (started && !indentor) {
+            if (started) {
                 insertTab(indentLevel);
             }
 
@@ -1709,12 +1603,6 @@ class CodeInput : TextInput {
                 indentLevel = min(
                     originalIndentLevel, 
                     indentLevelByIndex(lineStart));
-            }
-
-            // Use the reformatter if available
-            // TODO wouldn't it be better to reformat the fragment in a separate pass?
-            else version (none) if (indentor) {
-                reformatLineByIndex(lineStart);
             }
 
         }
@@ -1917,67 +1805,6 @@ class CodeInput : TextInput {
 
     unittest {
 
-        auto indentor = new class CodeIndentor {
-
-            Rope text;
-
-            void parse(Rope text, TextInterval, TextInterval, TextInterval) {
-
-                this.text = text;
-
-            }
-
-            int indentDifference(ptrdiff_t offset) {
-
-                int lastLine;
-                int current;
-                int nextLine;
-
-                foreach (ch; text[0 .. offset+1].byDchar) {
-
-                    if (ch == '{')
-                        nextLine++;
-                    else if (ch == '}')
-                        current--;
-                    else if (ch == '\n') {
-                        lastLine = current;
-                        current = nextLine;
-                    }
-
-                }
-
-                return current - lastLine;
-
-            }
-
-        };
-        auto io = new HeadlessBackend;
-        auto root = codeInput(.useTabs);
-
-        // In this test, the indentor does nothing but preserve last indent
-        io.clipboard = "text\ntext";
-        root.io = io;
-        root.indentor = indentor;
-        root.insertTab;
-        root.paste();
-        assert(root.value == "\ttext\n\ttext");
-
-        io.clipboard = "let foo() {\n\tbar\n}";
-        root.value = "";
-        root.paste();
-        assert(root.value == "let foo() {\n\tbar\n}");
-
-        root.caretIndex = root.value.indexOf("bar");
-        root.runInputAction!(FluidInputAction.selectNextWord);
-        assert(root.selectedValue == "bar");
-
-        root.paste();
-        assert(root.value == "let foo() {\n\tlet foo() {\n\t\tbar\n\t}\n}");
-
-    }
-
-    unittest {
-
         auto io = new HeadlessBackend;
         auto root = codeInput(.useTabs);
 
@@ -2122,249 +1949,6 @@ unittest {
         TextStyleSlice(0, 5, tokenFunction),
         TextStyleSlice(6, 21, tokenString),
     ]));
-
-}
-
-interface CodeIndentor {
-
-    /// Parse the given text to use with other functions in the indentor.
-    /// Params:
-    ///     text    = New text to highlight.
-    ///     start   = Index of the first character that has changed since last parse. 
-    ///         This begins both removed (start .. oldEnd) and inserted (start .. newEnd) fragments.
-    ///     oldEnd  = Last index of the fragment that has been replaced.
-    ///     newEnd  = Last index of newly inserted fragment.
-    void parse(Rope text, TextInterval start, TextInterval oldEnd, TextInterval newEnd);
-
-    /// Get indent level for the given offset, relative to the previous line.
-    ///
-    /// `CodeInput` will use the first non-white character on a line as a reference for reformatting.
-    int indentDifference(ptrdiff_t offset);
-
-}
-
-unittest {
-
-    import std.typecons : BlackHole;
-
-    auto originalText
-       = "void foo() {\n"
-       ~ "fun();\n"
-       ~ "functionCall(\n"
-       ~ "stuff()\n"
-       ~ ");\n"
-       ~ "    }\n";
-    auto formattedText
-       = "void foo() {\n"
-       ~ "    fun();\n"
-       ~ "    functionCall(\n"
-       ~ "        stuff()\n"
-       ~ "    );\n"
-       ~ "}\n";
-
-    class Indentor : BlackHole!CodeIndentor {
-
-        struct Indent {
-            ptrdiff_t offset;
-            int indent;
-        }
-
-        Indent[] indents;
-
-        override void parse(Rope rope, TextInterval, TextInterval, TextInterval) {
-
-            bool lineStart;
-
-            indents = [Indent(0, 0)];
-
-            foreach (i, ch; rope.enumerate) {
-
-                if (ch.among('{', '(')) {
-                    indents ~= Indent(i + 1, 1);
-                }
-
-                else if (ch.among('}', ')')) {
-                    indents ~= Indent(i, lineStart ? -1 : 0);
-                }
-
-                else if (ch == '\n') lineStart = true;
-                else if (ch != ' ') lineStart = false;
-
-            }
-
-        }
-
-        override int indentDifference(ptrdiff_t offset) {
-
-            return indents
-                .filter!(a => a.offset <= offset)
-                .tail(1)
-                .front
-                .indent;
-
-        }
-
-    }
-
-    auto indentor = new Indentor;
-    auto highlighter = new class Indentor, CodeHighlighter {
-
-        const(char)[] nextTokenName(ubyte) {
-            return null;
-        }
-
-        CodeSlice query(size_t) {
-            return CodeSlice.init;
-        }
-
-        override void parse(Rope value, TextInterval a, TextInterval b, TextInterval c) {
-            super.parse(value, a, b, c);
-        }
-
-    };
-
-    auto indentorOnlyInput = codeInput();
-    indentorOnlyInput.indentor = indentor;
-    auto highlighterInput = codeInput(highlighter);
-
-    foreach (root; [indentorOnlyInput, highlighterInput]) {
-
-        root.value = originalText;
-        root.draw();
-
-        // Reformat first line
-        root.caretIndex = 0;
-        assert(root.targetIndentLevelByIndex(0) == 0);
-        root.reformatLine();
-        assert(root.value == originalText);
-
-        // Reformat second line
-        root.caretIndex = 13;
-        assert(root.indentor.indentDifference(13) == 1);
-        assert(root.targetIndentLevelByIndex(13) == 1);
-        root.reformatLine();
-        assert(root.value == formattedText[0..23] ~ originalText[19..$]);
-
-        // Reformat third line
-        root.caretIndex = 24;
-        assert(root.indentor.indentDifference(24) == 0);
-        assert(root.targetIndentLevelByIndex(24) == 1);
-        root.reformatLine();
-        assert(root.value == formattedText[0..42] ~ originalText[34..$]);
-
-        // Reformat fourth line
-        root.caretIndex = 42;
-        assert(root.indentor.indentDifference(42) == 1);
-        assert(root.targetIndentLevelByIndex(42) == 2);
-        root.reformatLine();
-        assert(root.value == formattedText[0..58] ~ originalText[42..$]);
-
-        // Reformat fifth line
-        root.caretIndex = 58;
-        assert(root.indentor.indentDifference(58) == -1);
-        assert(root.targetIndentLevelByIndex(58) == 1);
-        root.reformatLine();
-        assert(root.value == formattedText[0..65] ~ originalText[45..$]);
-
-        // And the last line, finally
-        root.caretIndex = 65;
-        assert(root.indentor.indentDifference(65) == -1);
-        assert(root.targetIndentLevelByIndex(65) == 0);
-        root.reformatLine();
-        assert(root.value == formattedText);
-
-    }
-
-}
-
-@("CodeInput can use a formatter for indenting")
-unittest {
-
-    import std.typecons : BlackHole;
-
-    class Indentor : BlackHole!CodeIndentor {
-
-        bool outdent;
-
-        override void parse(Rope rope, TextInterval, TextInterval, TextInterval) {
-
-            outdent = rope.canFind("end");
-
-        }
-
-        override int indentDifference(ptrdiff_t offset) {
-
-            if (outdent)
-                return -1;
-            else
-                return 1;
-
-        }
-
-    }
-
-    // Every new line indents. If "end" is found in the text, every new line *outdents*, effectively making the text
-    // flat.
-    auto io = new HeadlessBackend;
-    auto root = codeInput();
-    root.io = io;
-    root.indentor = new Indentor;
-    root.value = "begin";
-    root.focus();
-    root.draw();
-    assert(root.value == "begin");
-
-    // The difference defaults to 1 in this case, so the line should be indented
-    root.reformatLine();
-    assert(root.value == "    begin");
-
-    // But, if the "end" keyword is added, it should outdent automatically
-    io.nextFrame;
-    io.inputCharacter = " end";
-    root.caretToEnd();
-    root.draw();
-    io.nextFrame;
-    root.draw();
-    assert(root.value == "begin end");
-
-    // Backspace also triggers updates
-    io.nextFrame;
-    io.press(KeyboardKey.backspace);
-    root.draw();
-    io.nextFrame;
-    io.release(KeyboardKey.backspace);
-    root.draw();
-    assert(root.value == "    begin en");
-
-    // However, no change should be made if the keyword was in place before
-    io.nextFrame;
-    io.inputCharacter = " ";
-    root.value = "    begin end";
-    root.caretToEnd();
-    root.draw();
-    io.nextFrame;
-    root.draw();
-    assert(root.value == "    begin end ");
-
-    io.nextFrame;
-    root.value = "Hello\n    bar";
-    root.clearHistory();
-    root.caretIndex = 5;
-    root.runInputAction!(FluidInputAction.breakLine);
-    assert(root.value == "Hello\n    \n    bar");
-
-    root.runInputAction!(FluidInputAction.undo);
-    assert(root.value == "Hello\n    bar");
-
-    root.indent();
-    assert(root.value == "    Hello\n    bar");
-
-    root.caretIndex = 9;
-    root.runInputAction!(FluidInputAction.breakLine);
-    assert(root.value == "    Hello\n        \n    bar");
-
-    root.runInputAction!(FluidInputAction.undo);
-    assert(root.value == "    Hello\n    bar");
 
 }
 
