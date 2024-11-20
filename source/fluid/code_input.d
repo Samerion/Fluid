@@ -122,7 +122,7 @@ class CodeInput : TextInput {
         AutomaticFormat _automaticFormat;
 
         /// Boundaries of the range that was edited single the last call to `reparse`.
-        size_t _reparseRangeStart, _reparseRangeOldEnd, _reparseRangeNewEnd;
+        TextInterval _reparseRangeStart, _reparseRangeOldEnd, _reparseRangeNewEnd;
 
         CodeHighlighter _highlighter;
 
@@ -130,10 +130,10 @@ class CodeInput : TextInput {
 
     this(CodeHighlighter highlighter = null, void delegate() @safe submitted = null) {
 
+        super.contentLabel = new ContentLabel;
         this.submitted = submitted;
         this.highlighter = highlighter;
         this.indentor = cast(CodeIndentor) highlighter;
-        super.contentLabel = new ContentLabel;
 
     }
 
@@ -259,16 +259,13 @@ class CodeInput : TextInput {
 
     /// ditto
     CodeHighlighter highlighter(CodeHighlighter highlighter) {
-        resetReparseRange();
+
+        // Set the reparse range
+        _reparseRangeStart = TextInterval.init;
+        _reparseRangeOldEnd = intervalAt(value.length);
+        _reparseRangeNewEnd = intervalAt(value.length);
+
         return _highlighter = highlighter;
-    }
-
-    private void resetReparseRange() {
-
-        _reparseRangeStart  = 0;
-        _reparseRangeOldEnd = 0;
-        _reparseRangeNewEnd = 0;
-
     }
 
     /// Returns: A rope representing given indent level.
@@ -359,13 +356,18 @@ class CodeInput : TextInput {
 
     protected override bool replace(size_t start, size_t end, Rope added, bool isMinor) {
 
-        const newEnd = start + added.length;
+        const startInterval  = intervalAt(start);
+        const oldEndInterval = intervalAt(end);
+
+        const hasReplaced = super.replace(start, end, added, isMinor);
+        
+        const newEndInterval = intervalAt(start + added.length);
 
         // Mark the range for reparsing
-        queueReparse(start, end, newEnd);
+        queueReparse(startInterval, oldEndInterval, newEndInterval);
 
         // Perform the replace
-        return super.replace(start, end, added, isMinor);
+        return hasReplaced;
 
     }
 
@@ -375,9 +377,9 @@ class CodeInput : TextInput {
         if (!highlighter && !indentor) return;
 
         const offset = _prefixInterval;
-        const start  = offset + intervalAt(_reparseRangeStart);
-        const oldEnd = offset + intervalAt(_reparseRangeOldEnd);
-        const newEnd = offset + intervalAt(_reparseRangeNewEnd);
+        const start  = offset + _reparseRangeStart;
+        const oldEnd = offset + _reparseRangeOldEnd;
+        const newEnd = offset + _reparseRangeNewEnd;
         const fullValue = sourceValue;
 
         resetReparseRange();
@@ -400,13 +402,17 @@ class CodeInput : TextInput {
 
     /// Add a range to update when calling `reparse` or before resize.
     /// Params:
-    ///     start  = Index denoting start of the range to be reparsed.
-    ///     oldEnd = Index denoting end of the range before changes (removed text).
-    ///     newEnd = Index denoting end of the range after changes (added text).
-    protected void queueReparse(size_t start, size_t oldEnd, size_t newEnd) {
+    ///     start  = Interval from start of text to start of the range to be reparsed.
+    ///     oldEnd = Interval from start of text to the end of the range before changes (removed text).
+    ///     newEnd = Interval from start of text to end of the range after changes (added text).
+    protected void queueReparse(TextInterval start, TextInterval oldEnd, TextInterval newEnd) {
+
+        const isInit = _reparseRangeStart is _reparseRangeStart.init
+            && _reparseRangeOldEnd is _reparseRangeOldEnd.init
+            && _reparseRangeNewEnd is _reparseRangeNewEnd.init;
 
         // If the current reparse range is empty, it should be replaced
-        if (_reparseRangeStart == 0 && _reparseRangeOldEnd == 0 && _reparseRangeNewEnd == 0) {
+        if (isInit) {
 
             _reparseRangeStart = start;
             _reparseRangeOldEnd = oldEnd;
@@ -421,12 +427,20 @@ class CodeInput : TextInput {
         // The range resulting from the reparse is the union of the previously known range, and the new range.
         // * min(_reparseRangeStart, start) .. max(_reparseRangeOldEnd, oldEnd)
         // * min(_reparseRangeStart, start) .. max(_reparseRangeNewEnd, oldEnd)
-        if (start < _reparseRangeStart)
+        if (start.length < _reparseRangeStart.length)
             _reparseRangeStart = start;
-        if (oldEnd > _reparseRangeOldEnd)
+        if (oldEnd.length > _reparseRangeOldEnd.length)
             _reparseRangeOldEnd = oldEnd;
-        if (newEnd > _reparseRangeNewEnd)
+        if (newEnd.length > _reparseRangeNewEnd.length)
             _reparseRangeNewEnd = newEnd;
+
+    }
+
+    private void resetReparseRange() {
+
+        _reparseRangeStart  = TextInterval.init;
+        _reparseRangeOldEnd = TextInterval.init;
+        _reparseRangeNewEnd = TextInterval.init;
 
     }
 
@@ -492,16 +506,6 @@ class CodeInput : TextInput {
 
     override void resizeImpl(Vector2 vector) @trusted {
 
-        // Update syntax highlighting:
-        if (highlighter) {
-
-            reparse();
-
-            // Apply highlighting to the label
-            contentLabel.text.styleMap = highlighter.save(cast(int) prefix.length);
-
-        }
-
         // Reformat the line if requested
         if (_automaticFormat.pending) {
 
@@ -518,6 +522,16 @@ class CodeInput : TextInput {
 
         // Resize the field
         super.resizeImpl(vector);
+
+        // Update syntax highlighting:
+        if (highlighter) {
+
+            reparse();
+
+            // Apply highlighting to the label
+            contentLabel.text.styleMap = highlighter.save(cast(int) prefix.length);
+
+        }
 
     }
 
