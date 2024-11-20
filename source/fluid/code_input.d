@@ -80,7 +80,6 @@ class CodeInput : TextInput {
 
     public {
 
-        CodeHighlighter highlighter;
         CodeIndentor indentor;
 
         /// Character width of a single indent level.
@@ -121,6 +120,11 @@ class CodeInput : TextInput {
         /// previous value of the indent. This value is compared against the current target, and the reformatter will
         /// only activate if there was a change.
         AutomaticFormat _automaticFormat;
+
+        /// Boundaries of the range that was edited single the last call to `reparse`.
+        size_t _reparseRangeStart, _reparseRangeOldEnd, _reparseRangeNewEnd;
+
+        CodeHighlighter _highlighter;
 
     }
 
@@ -248,6 +252,25 @@ class CodeInput : TextInput {
 
     }
 
+    /// Get or set the current code highlighter.
+    inout(CodeHighlighter) highlighter() inout {
+        return _highlighter;
+    }
+
+    /// ditto
+    CodeHighlighter highlighter(CodeHighlighter highlighter) {
+        resetReparseRange();
+        return _highlighter = highlighter;
+    }
+
+    private void resetReparseRange() {
+
+        _reparseRangeStart  = 0;
+        _reparseRangeOldEnd = 0;
+        _reparseRangeNewEnd = 0;
+
+    }
+
     /// Returns: A rope representing given indent level.
     Rope indentRope(int indentLevel = 1) const {
 
@@ -336,60 +359,74 @@ class CodeInput : TextInput {
 
     protected override bool replace(size_t start, size_t end, Rope added, bool isMinor) {
 
-        const startInterval  = intervalAt(start);
-        const oldEndInterval = intervalAt(end);
-        const replaced       = super.replace(start, end, added, isMinor);
-        const newEndInterval = intervalAt(start + added.length);
+        const newEnd = start + added.length;
 
-        // TODO there should be no need to call reparse after every tiny replace!
-        //      rather, expose Text's update range and use it for 
-        reparse(startInterval, oldEndInterval, newEndInterval, added);
+        // Mark the range for reparsing
+        queueReparse(start, end, newEnd);
 
-        return replaced;
+        // Perform the replace
+        return super.replace(start, end, added, isMinor);
 
     }
 
+    /// Reparse changes made to the text immediately.
     protected void reparse() {
-
-        const start = TextInterval.init;
-        const end = intervalAt(value.length);
-
-        // Act as if the whole document was replaced with itself
-        reparse(start, end, end, value);
-
-    }
-
-    protected final void reparse(TextInterval start, TextInterval oldEnd, Rope added) {
-
-        const newEnd = start + TextInterval(added);
-
-        reparse(start, oldEnd, newEnd, added);
-
-    }
-
-    protected void reparse(TextInterval start, TextInterval oldEnd, TextInterval newEnd, Rope added) {
 
         if (!highlighter && !indentor) return;
 
-        const fullValue = sourceValue;
         const offset = _prefixInterval;
-        const startInterval  = offset + start;
-        const oldEndInterval = offset + oldEnd;
-        const newEndInterval = offset + newEnd;
+        const start  = offset + intervalAt(_reparseRangeStart);
+        const oldEnd = offset + intervalAt(_reparseRangeOldEnd);
+        const newEnd = offset + intervalAt(_reparseRangeNewEnd);
+        const fullValue = sourceValue;
+
+        resetReparseRange();
 
         // Parse the file
         if (highlighter) {
 
-            highlighter.parse(fullValue, startInterval, oldEndInterval, newEndInterval);
+            highlighter.parse(fullValue, start, oldEnd, newEnd);
 
         }
 
         // Pass the file to the indentor
         if (indentor && cast(Object) indentor !is cast(Object) highlighter) {
 
-            indentor.parse(fullValue, startInterval, oldEndInterval, newEndInterval);
+            indentor.parse(fullValue, start, oldEnd, newEnd);
 
         }
+
+    }
+
+    /// Add a range to update when calling `reparse` or before resize.
+    /// Params:
+    ///     start  = Index denoting start of the range to be reparsed.
+    ///     oldEnd = Index denoting end of the range before changes (removed text).
+    ///     newEnd = Index denoting end of the range after changes (added text).
+    protected void queueReparse(size_t start, size_t oldEnd, size_t newEnd) {
+
+        // If the current reparse range is empty, it should be replaced
+        if (_reparseRangeStart == 0 && _reparseRangeOldEnd == 0 && _reparseRangeNewEnd == 0) {
+
+            _reparseRangeStart = start;
+            _reparseRangeOldEnd = oldEnd;
+            _reparseRangeNewEnd = newEnd;
+            return;
+
+        }
+
+        // There are two ranges that result from the three values:
+        // * start .. oldEnd
+        // * start .. newEnd
+        // The range resulting from the reparse is the union of the previously known range, and the new range.
+        // * min(_reparseRangeStart, start) .. max(_reparseRangeOldEnd, oldEnd)
+        // * min(_reparseRangeStart, start) .. max(_reparseRangeNewEnd, oldEnd)
+        if (start < _reparseRangeStart)
+            _reparseRangeStart = start;
+        if (oldEnd > _reparseRangeOldEnd)
+            _reparseRangeOldEnd = oldEnd;
+        if (newEnd > _reparseRangeNewEnd)
+            _reparseRangeNewEnd = newEnd;
 
     }
 
@@ -455,12 +492,17 @@ class CodeInput : TextInput {
 
     override void resizeImpl(Vector2 vector) @trusted {
 
-        // Apply highlighting to the label
-        contentLabel.text.styleMap = highlighter.save(cast(int) prefix.length);
+        // Update syntax highlighting:
+        if (highlighter) {
 
-        // TODO What the heck is this stuff?
+            reparse();
+
+            // Apply highlighting to the label
+            contentLabel.text.styleMap = highlighter.save(cast(int) prefix.length);
+
+        }
+
         // Reformat the line if requested
-        version (none)
         if (_automaticFormat.pending) {
 
             const oldTarget = _automaticFormat.oldTargetIndent;
