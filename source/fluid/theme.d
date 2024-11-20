@@ -1377,7 +1377,7 @@ struct Field(string fieldName, T) {
 
 unittest {
 
-    import fluid.typeface;
+    import fluid.text.freetype;
 
     auto typeface = new FreetypeTypeface;
     auto sample = Rule.typeface = typeface;

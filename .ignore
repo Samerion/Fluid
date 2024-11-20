@@ -1,0 +1,13 @@
+# Ignore list for Helix' file picker
+
+# Binary files
+*.a
+*.dll
+*.lib
+*.png
+*.ttf
+resources/*-alpha
+
+# Aliased modules
+source/fluid/rope.d
+source/fluid/typeface.d
