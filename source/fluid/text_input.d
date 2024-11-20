@@ -1196,6 +1196,15 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
+    /// Returns: `TextInterval` measuing all characters between the start of text, and the given index.
+    /// Params:
+    ///     index = Index of character to find the interval for.
+    TextInterval intervalAt(size_t index) {
+
+        return contentLabel.text.intervalAt(index);
+
+    }
+
     protected override void drawImpl(Rectangle outer, Rectangle inner) @trusted {
 
         auto style = pickStyle();

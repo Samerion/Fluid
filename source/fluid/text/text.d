@@ -648,6 +648,20 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
     }
 
+    /// `intervalAt` gets the position of a character in the text in terms of lines and columns.
+    ///
+    /// Params:
+    ///     index = Index of the character in the text.
+    /// Returns:
+    ///     Text interval between the start of text and the given index. This is effectively the 0-indexed 
+    ///     line and column numbers of the character.
+    TextInterval intervalAt(size_t index) {
+
+        auto ruler = freshCacheQuery(index).front;
+        return ruler.point + TextInterval(value[ruler.point.length .. index]);
+
+    }
+
     /// `rulerAt` gets measurement data for the given text position. This data can be used to map characters to their 
     /// screen position or find their size. 
     ///

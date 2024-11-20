@@ -852,7 +852,7 @@ private bindbc.SharedLib runSharedLibrary(string path) @system {
 CodeInput dlangInput(void delegate() @safe submitted = null) @trusted {
 
     auto language = treeSitterLanguage!"d";
-    auto highlighter = null;//new TreeSitterHighlighter(language, dlangQuery);
+    auto highlighter = new TreeSitterHighlighter(language, dlangQuery);
 
     return codeInput(
         .layout!(1, "fill"),
