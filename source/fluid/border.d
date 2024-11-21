@@ -123,7 +123,7 @@ ColorBorder colorBorder(size_t n)(Color[n] color) {
 
 class ColorBorder : FluidBorder {
 
-    Color[4] color;
+    Color[4] color = Color(0, 0, 0, 0);
 
     void apply(FluidBackend io, Rectangle borderBox, float[4] size) const @trusted {
 
