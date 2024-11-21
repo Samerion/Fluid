@@ -49,7 +49,7 @@ struct Style {
         float fontSize = 14.pt;
 
         /// Text color.
-        Color textColor;
+        auto textColor = Color(0, 0, 0, 0);
 
     }
 
@@ -57,13 +57,13 @@ struct Style {
     @Themable {
 
         /// Color of lines belonging to the node, especially important to separators and sliders.
-        Color lineColor;
+        auto lineColor = Color(0, 0, 0, 0);
 
         /// Background color of the node.
-        Color backgroundColor;
+        auto backgroundColor = Color(0, 0, 0, 0);
 
         /// Background color for selected text.
-        Color selectionBackgroundColor;
+        auto selectionBackgroundColor = Color(0, 0, 0, 0);
 
     }
 
