@@ -19,6 +19,9 @@ import fluid.backend : MouseButton, KeyboardKey, GamepadButton;
 public import raylib : Vector2, Rectangle, Color;
 public static import raylib;
 
+static if (!__traits(compiles, IsShaderReady))
+    private alias IsShaderReady = IsShaderValid;
+
 @safe:
 
 
