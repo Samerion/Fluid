@@ -24,10 +24,10 @@ class Radiobox : Checkbox {
         int outlineWidth;
 
         /// Color of the outline.
-        Color outlineColor;
+        auto outlineColor = Color(0, 0, 0, 0);
 
         /// Fill color for the checkbox.
-        Color fillColor;
+        auto fillColor = Color(0, 0, 0, 0);
 
         this(int outlineWidth, Color outlineColor, Color fillColor) {
 
