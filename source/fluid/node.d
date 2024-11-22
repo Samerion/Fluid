@@ -732,7 +732,7 @@ abstract class Node {
             // TODO BUG: also fires for removed nodes
 
             // Let it handle input
-            tree.keyboardHandled = either(
+            tree.wasKeyboardHandled = either(
                 tree.focus.runFocusInputActions,
                 tree.focus.focusImpl,
             );
@@ -741,7 +741,7 @@ abstract class Node {
 
         // Nothing has focus
         else with (FluidInputAction)
-        tree.keyboardHandled = {
+        tree.wasKeyboardHandled = {
 
             // Check the first focusable node
             if (auto first = tree.focusDirection.first) {
@@ -785,7 +785,7 @@ abstract class Node {
 
         foreach (action; tree.filterActions) {
 
-            action.afterInput(tree.keyboardHandled);
+            action.afterInput(tree.wasKeyboardHandled);
 
         }
 
