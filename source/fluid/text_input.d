@@ -1547,7 +1547,7 @@ class TextInput : InputNode!Node, FluidScrollable {
     /// ---
     ///
     /// See_Also: `savePush`, `snapshot`, `pushHistory`
-    override bool inputActionImpl(InputActionID id, bool active) {
+    override bool inputActionImpl(immutable InputActionID id, bool active) {
 
         // Do not override inactive events
         if (!active) return false;
