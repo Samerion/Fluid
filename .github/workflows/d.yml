@@ -35,7 +35,9 @@ jobs:
 
       - name: Test moduleView
         shell: bash
-        run: $DUB test :module-view -d Fluid_BuildMessages
+        run: |
+          git tag v0.8.0  # Workaround future release, dependency of fluid-tree-sitter
+          $DUB test :module-view -d Fluid_BuildMessages
         if: matrix.dc != 'ldc-1.28.1'
 
       - name: Compile tour
