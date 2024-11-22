@@ -385,7 +385,9 @@ struct LayoutTree {
         /// Root node of the tree.
         Node root;
 
-        /// Top-most hovered node in the tree.
+        /// Node the mouse is hovering over if any. 
+        ///
+        /// This is the last — topmost — node in the tree with `isHovered` set to true.
         Node hover;
 
         /// Currently focused node.
@@ -482,6 +484,13 @@ struct LayoutTree {
     bool resizePending() const {
 
         return root.resizePending;
+
+    }
+
+    /// Returns: True if the mouse is currently hovering a node in the tree.
+    bool isHovered() const {
+
+        return hover !is null;
 
     }
 
@@ -997,5 +1006,44 @@ struct LayoutTree {
         }
 
     }
+
+}
+
+@("LayoutTree.isHovered is true when a node is hovered, false when not")
+unittest {
+
+    import fluid.space;
+    import fluid.label;
+    import fluid.structs;
+    import fluid.default_theme;
+
+    auto io = new HeadlessBackend;
+    auto text = label("Hello, World!");
+    auto root = vspace(
+        layout!"fill",
+        nullTheme,
+        text
+    );
+
+    io.mousePosition = Vector2(5, 5);
+    root.io = io;
+    root.draw();
+
+    assert(root.tree.hover is text);
+    assert(root.tree.isHovered);
+
+    io.nextFrame;
+    io.mousePosition = Vector2(-1, -1);
+    root.draw();
+    
+    assert(root.tree.hover !is text);
+    assert(!root.tree.isHovered);
+
+    io.nextFrame;
+    io.mousePosition = Vector2(5, 50);
+    root.draw();
+
+    assert(root.tree.hover !is text);
+    assert(!root.tree.isHovered);
 
 }
