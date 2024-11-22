@@ -119,13 +119,6 @@ class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable {
 
     }
 
-    deprecated("shallowScrollTo with a Vector2 argument has been deprecated and will be removed in Fluid 0.8.0.")
-    Rectangle shallowScrollTo(const Node child, Vector2, Rectangle parentBox, Rectangle childBox) {
-
-        return shallowScrollTo(child, parentBox, childBox);
-
-    }
-
     /// Scroll to the given node.
     Rectangle shallowScrollTo(const Node, Rectangle parentBox, Rectangle childBox) {
 

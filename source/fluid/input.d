@@ -19,9 +19,6 @@ import fluid.backend;
 /// key held down, etc.).
 enum WhileDown;
 
-deprecated ("`whileDown` has been deprecated and will be removed in Fluid 0.8.0. Use `WhileDown` instead.")
-alias whileDown = WhileDown;
-
 /// Default input actions one can listen to.
 @InputAction
 enum FluidInputAction {

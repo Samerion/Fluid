@@ -15,13 +15,6 @@ import fluid.structs;
 @safe:
 
 
-deprecated("`Grid` and `grid` were renamed to `GridFrame` and `gridFrame` respectively. To be removed in 0.8.0.") {
-
-    alias grid = simpleConstructor!GridFrame;
-    alias Grid = GridFrame;
-
-}
-
 alias gridFrame = simpleConstructor!GridFrame;
 alias gridRow = simpleConstructor!GridRow;
 
