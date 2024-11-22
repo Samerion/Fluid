@@ -19,18 +19,6 @@ import fluid.structs;
 @safe:
 
 
-deprecated("Styles have been reworked and defineStyles is now a no-op. To be removed in 0.8.0.") {
-    mixin template defineStyles(args...) { }
-    mixin template DefineStyles(args...) { }
-}
-
-deprecated("makeTheme is now a no-op. Use `Theme()` and refer to the changelog for updates. To be removed in 0.8.0.")
-Theme makeTheme(string s, Ts...)(Ts) {
-
-    return Theme.init;
-
-}
-
 /// Node theme.
 struct Theme {
 

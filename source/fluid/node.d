@@ -1226,23 +1226,6 @@ abstract class Node {
 
     }
 
-    alias ImplHoveredRect = implHoveredRect;
-
-    deprecated("implHoveredRect is now the default behavior; implHoveredRect is to be removed in 0.8.0")
-    protected mixin template implHoveredRect() {
-
-        private import fluid.backend : Rectangle, Vector2;
-
-        protected override bool hoveredImpl(Rectangle rect, Vector2 mousePosition) const {
-
-            import fluid.utils : contains;
-
-            return rect.contains(mousePosition);
-
-        }
-
-    }
-
     /// The focus box defines the *focused* part of the node. This is relevant in nodes which may have a selectable 
     /// subset, such as a dropdown box, which may be more important at present moment (selected). Scrolling actions 
     /// like `scrollIntoView` will use the focus box to make sure the selected area is presented to the user.
