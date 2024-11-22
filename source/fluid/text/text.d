@@ -312,7 +312,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         assert(index >= range.front.point.length);
 
         // The result is good enough, return it
-        if (index - range.front.point.length <= checkpointDistance) {
+        if (isMeasured || index - range.front.point.length <= checkpointDistance) {
             return range.move;
         }
 
@@ -634,10 +634,11 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
         // Now that the cache is built, we can find out what the position of the last character is so we can get 
         // the bounding box
-        ruler = requireRulerAt(value.length);
-        _sizeDots = ruler.textSize;
         _updateRangeStart = 0;
         _updateRangeEnd = 0;
+        assert(isMeasured);
+        ruler = requireRulerAt(value.length);
+        _sizeDots = ruler.textSize;
 
     }
 
