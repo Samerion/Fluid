@@ -512,7 +512,7 @@ struct LayoutTree {
         /// Get the ID of an input action.
         auto bind(alias a, T)(T arg) {
 
-            return InputBinding(InputAction!a.id, InputStroke.Item(arg));
+            return InputBinding(inputActionID!a, InputStroke.Item(arg));
 
         }
 
