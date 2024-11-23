@@ -15,9 +15,19 @@ import fluid.backend;
 @safe:
 
 
-/// Make a InputAction handler react to every frame as long as the action is being held (mouse button held down,
-/// key held down, etc.).
+/// Make a InputAction handler react to every frame as long as the action 
+/// is being held (mouse button held down, key held down, etc.).
 enum WhileDown;
+
+/// This meta-UDA can be attached to an enum definition, so Fluid would recognize its members 
+/// as input action definitions. These members can then be attached as attributes to functions
+/// to turn them into input action handlers.
+///
+/// You can get the ID of an input action by passing it to `inputActionID`, for example 
+/// `inputActionID!(FluidInputAction.press)`. 
+///
+/// All built-in input actions are defined in `FluidInputAction`.
+enum InputAction;
 
 /// Default input actions one can listen to.
 @InputAction
@@ -94,8 +104,39 @@ enum FluidInputAction {
 
 }
 
+/// Get the ID of the given input action.
+///
+/// See_Also: 
+///     `InputActionID`, `InputAction`
+/// Params:
+///     inputAction = Input action to analyze.
+/// Returns:
+///     ID of the given input action.
+InputActionID inputActionID(alias inputAction)()
+if (isInputAction!inputAction) {
+
+    return InputActionID(
+        cast(size_t) &InputActionID._id!inputAction,
+        fullyQualifiedName!inputAction,
+    );
+
+}
+
 /// ID of an input action.
+///
+/// Each input action has a unique ID based on its position in the executable binary. You can get the ID
+/// using `inputActionID`.
+///
+/// See_Also: 
+///     `InputAction`
 immutable struct InputActionID {
+
+    private template _id(alias symbol) {
+
+        align(1)
+        static immutable bool _id;
+
+    }
 
     /// Unique ID of the action.
     size_t id;
@@ -104,16 +145,17 @@ immutable struct InputActionID {
     debug string name;
 
     /// Get ID of an input action.
-    this(IA : InputAction!actionType, alias actionType)(IA) immutable {
+    private this(size_t id, string name) immutable {
 
-        this.id = cast(size_t) &IA._id;
-        debug this.name = fullyQualifiedName!(IA.type);
+        this.id = id;
+        debug this.name = name;
 
     }
 
+    deprecated("InputActionID.from has been replaced by inputActionID and will be removed in Fluid 0.9.0")
     static InputActionID from(alias item)() {
 
-        return InputAction!item.id;
+        return inputActionID!item;
 
     }
 
@@ -125,11 +167,15 @@ immutable struct InputActionID {
 
 }
 
+deprecated("isInputActionType has been renamed to isInputAction and will be removed in Fluid 0.9.0.") {
+    alias isInputActionType(alias actionType) = isInputAction!actionType;
+}
+
 /// Check if the given symbol is an input action type.
 ///
 /// The symbol symbol must be a member of an enum marked with `@InputAction`. The enum $(B must not) be a manifest
 /// constant (eg. `enum foo = 123;`).
-template isInputActionType(alias actionType) {
+template isInputAction(alias actionType) {
 
     // Require the action type to be an enum
     static if (is(typeof(actionType) == enum)) {
@@ -138,12 +184,12 @@ template isInputActionType(alias actionType) {
         static foreach (attribute; __traits(getAttributes, typeof(actionType))) {
 
             // Not yet found
-            static if (!is(typeof(isInputActionType) == bool)) {
+            static if (!is(typeof(isInputAction) == bool)) {
 
                 // Check if this is the attribute we're looking for
                 static if (__traits(isSame, attribute, InputAction)) {
 
-                    enum isInputActionType = true;
+                    enum isInputAction = true;
 
                 }
 
@@ -154,10 +200,10 @@ template isInputActionType(alias actionType) {
     }
 
     // Not found
-    static if (!is(typeof(isInputActionType) == bool)) {
+    static if (!is(typeof(isInputAction) == bool)) {
 
         // Respond as false
-        enum isInputActionType = false;
+        enum isInputAction = false;
 
     }
 
@@ -179,7 +225,7 @@ unittest {
 
     static assert(!isInputActionType!InputNode);
     static assert(!isInputActionType!InputAction);
-    static assert(!isInputActionType!(InputAction!(FluidInputAction.entryUp)));
+    static assert(!isInputActionType!(inputActionID!(FluidInputAction.entryUp)));
     static assert(!isInputActionType!FluidInputAction);
     static assert(!isInputActionType!MyEnum);
     static assert(!isInputActionType!(MyEnum.foo));
@@ -439,47 +485,10 @@ struct InputLayer {
 
 }
 
-/// This meta-UDA can be attached to an enum, so Fluid would recognize members of said enum as an UDA defining input
-/// actions. As an UDA, this template should be used without instantiating.
-///
-/// This template also serves to provide unique identifiers for each action type, generated on startup. For example,
-/// `InputAction!(FluidInputAction.press).id` will have the same value anywhere in the program.
-///
-/// Action types are resolved at compile-time using symbols, so you can supply any `@InputAction`-marked enum defining
-/// input actions. All built-in enums are defined in `FluidInputAction`.
-///
-/// If the method returns `true`, it is understood that the action has been processed and no more actions will be
-/// emitted during the frame. If it returns `false`, other actions and keyboardImpl will be tried until any call returns
-/// `true` or no handlers are left.
-struct InputAction(alias actionType)
-if (isInputActionType!actionType) {
-
-    alias type = actionType;
-
-    alias id this;
-
-    /// **The pointer** to `_id` serves as ID of the input actions.
-    ///
-    /// Note: we could be directly getting the address of the ID function itself (`&id`), but it's possible some linkers
-    /// would merge declarations, so we're using `&_id` for safety. Example of such behavior can be achieved using
-    /// `ld.gold` with `--icf=all`. It's possible the linker could be aware we're checking the function address
-    // (`--icf=safe` works correctly), but again, we prefer to play it safe. Alternatively, we could test for this
-    /// behavior when the program starts, but it probably isn't worth it.
-    align(1)
-    private static immutable bool _id;
-
-    static InputActionID id() {
-
-        return InputActionID(typeof(this)());
-
-    }
-
-}
-
 unittest {
 
-    assert(InputAction!(FluidInputAction.press).id == InputAction!(FluidInputAction.press).id);
-    assert(InputAction!(FluidInputAction.press).id != InputAction!(FluidInputAction.entryUp).id);
+    assert(inputActionID!(FluidInputAction.press) == inputActionID!(FluidInputAction.press));
+    assert(inputActionID!(FluidInputAction.press) != inputActionID!(FluidInputAction.entryUp));
 
     // IDs should have the same equality as the enum members, within the same enum
     // This will not be the case for enum values with explicitly assigned values (but probably should be!)
@@ -488,9 +497,9 @@ unittest {
         foreach (right; EnumMembers!FluidInputAction) {
 
             if (left == right)
-                assert(InputAction!left.id == InputAction!right.id);
+                assert(inputActionID!left == inputActionID!right);
             else
-                assert(InputAction!left.id != InputAction!right.id);
+                assert(inputActionID!left != inputActionID!right);
 
         }
 
@@ -507,10 +516,10 @@ unittest {
         action = 0,
     }
 
-    assert(InputAction!(FooActions.action).id == InputAction!(FooActions.action).id);
-    assert(InputAction!(FooActions.action).id != InputAction!(BarActions.action).id);
-    assert(InputAction!(FooActions.action).id != InputAction!(FluidInputAction.press).id);
-    assert(InputAction!(BarActions.action).id != InputAction!(FluidInputAction.press).id);
+    assert(inputActionID!(FooActions.action) == inputActionID!(FooActions.action));
+    assert(inputActionID!(FooActions.action) != inputActionID!(BarActions.action));
+    assert(inputActionID!(FooActions.action) != inputActionID!(FluidInputAction.press));
+    assert(inputActionID!(BarActions.action) != inputActionID!(FluidInputAction.press));
 
 }
 
@@ -520,28 +529,28 @@ unittest {
     import std.concurrency;
 
     // IDs are global across threads
-    auto t0 = InputAction!(FluidInputAction.press).id;
+    auto t0 = inputActionID!(FluidInputAction.press);
 
     spawn({
 
-        ownerTid.send(InputAction!(FluidInputAction.press).id);
+        ownerTid.send(inputActionID!(FluidInputAction.press));
 
         spawn({
 
-            ownerTid.send(InputAction!(FluidInputAction.press).id);
+            ownerTid.send(inputActionID!(FluidInputAction.press));
 
         });
 
         ownerTid.send(receiveOnly!InputActionID);
 
-        ownerTid.send(InputAction!(FluidInputAction.cancel).id);
+        ownerTid.send(inputActionID!(FluidInputAction.cancel));
 
     });
 
     auto t1 = receiveOnly!InputActionID;
     auto t2 = receiveOnly!InputActionID;
 
-    auto c0 = InputAction!(FluidInputAction.cancel).id;
+    auto c0 = inputActionID!(FluidInputAction.cancel);
     auto c1 = receiveOnly!InputActionID;
 
     assert(t0 == t1);
@@ -751,7 +760,7 @@ interface FluidHoverable {
     ///
     ///     if (active && id == InputActionID.from!(FluidInputAction.press)) {
     ///
-    ///         // use `Impl` to prevent recursion
+    ///         // use `run...Impl` to prevent recursion
     ///         return runInputActionImpl!(FluidInputAction.submit);
     ///
     ///     }
