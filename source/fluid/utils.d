@@ -73,12 +73,8 @@ struct NodeBuilder(T, alias fun = "a") {
         // Run the initializer
         initializer(result);
 
-        // Pass the parameters
-        foreach (param; args[0..paramCount]) {
-
-            param.apply(result);
-
-        }
+        // Apply the parameters
+        result.applyAll(args[0..paramCount]);
 
         return result;
 
@@ -156,6 +152,28 @@ unittest {
     const barC = xbar!yfoo(3);
     assert(barC.value == "foo");
     assert(barC.foo == 3);
+
+}
+
+/// Modify the subject by passing it to the `apply` method of each of the parameters.
+///
+/// This is made for `nodeBuilder` to apply node parameters on a node. The subject doesn't have to be a node.
+///
+/// Params:
+///     subject    = Subject to modify.
+///     parameters = Parameters to apply onto the subject;
+/// Returns:
+///     The subject after applying the modifications. 
+///     If subject is a class, this is the same object as passed.
+Subject applyAll(Subject, Parameters...)(Subject subject, Parameters parameters) {
+
+    foreach (param; parameters) {
+
+        param.apply(subject);
+
+    }
+
+    return subject;
 
 }
 
