@@ -476,6 +476,44 @@ abstract class Node {
     /// Checks if the node is disabled, either by self, or by any of its ancestors. Updated when drawn.
     bool isDisabledInherited() const { return _isDisabledInherited; }
 
+    /// Apply all of the given node parameters on this node.
+    ///
+    /// This can be used to activate node parameters after the node has been constructed,
+    /// or inside of a node constructor.
+    ///
+    /// Note: 
+    ///     Due to language limitations, this function has to be called with the dot operator, like `this.applyAll()`.
+    /// Params:
+    ///     params = Node parameters to activate.
+    void applyAll(this This, Parameters...)(Parameters params) {
+
+        cast(void) .applyAll(cast(This) this, params);
+
+    }
+
+    /// Applying parameters from inside of a node constructor.
+    @("Node parameters can be applied with `applyAll` during construction")
+    unittest {
+
+        class MyNode : Node {
+
+            this() {
+                this.applyAll(
+                    .layout!"fill",
+                );
+            }
+
+            override void resizeImpl(Vector2) { }
+            override void drawImpl(Rectangle, Rectangle) { }
+
+        }
+
+        auto myNode = new MyNode;
+
+        assert(myNode.layout == .layout!"fill");
+        
+    }
+
     /// Queue an action to perform within this node's branch.
     ///
     /// This is recommended to use over `LayoutTree.queueAction`, as it can be used to limit the action to a specific
@@ -734,7 +772,7 @@ abstract class Node {
             // TODO BUG: also fires for removed nodes
 
             // Let it handle input
-            tree.keyboardHandled = either(
+            tree.wasKeyboardHandled = either(
                 tree.focus.runFocusInputActions,
                 tree.focus.focusImpl,
             );
@@ -743,7 +781,7 @@ abstract class Node {
 
         // Nothing has focus
         else with (FluidInputAction)
-        tree.keyboardHandled = {
+        tree.wasKeyboardHandled = {
 
             // Check the first focusable node
             if (auto first = tree.focusDirection.first) {
@@ -787,7 +825,7 @@ abstract class Node {
 
         foreach (action; tree.filterActions) {
 
-            action.afterInput(tree.keyboardHandled);
+            action.afterInput(tree.wasKeyboardHandled);
 
         }
 

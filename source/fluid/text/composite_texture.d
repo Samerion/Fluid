@@ -284,7 +284,7 @@ struct CompositeTexture {
     }
 
     /// Draw onscreen parts of the texture.
-    void drawAlign(FluidBackend backend, Rectangle rectangle, Color tint = color("#fff")) {
+    void drawAlign(FluidBackend backend, Rectangle rectangle, Color tint = Color(0xff, 0xff, 0xff, 0xff)) {
 
         // Draw each visible chunk
         foreach (index; visibleChunks(rectangle.start, backend.windowSize)) {
