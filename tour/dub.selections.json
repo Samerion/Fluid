@@ -5,7 +5,7 @@
 		"bindbc-loader": "1.1.5",
 		"fluid-tree-sitter": "0.2.0",
 		"libdparse": "0.23.2",
-		"raylib-d": "5.0.1",
+		"raylib-d": "5.5.0",
 		"silly": "1.1.1"
 	}
 }
