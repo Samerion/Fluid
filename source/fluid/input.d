@@ -220,16 +220,16 @@ unittest {
         foo,
     }
 
-    static assert(isInputActionType!(FluidInputAction.entryUp));
-    static assert(isInputActionType!(MyAction.foo));
+    static assert(isInputAction!(FluidInputAction.entryUp));
+    static assert(isInputAction!(MyAction.foo));
 
-    static assert(!isInputActionType!InputNode);
-    static assert(!isInputActionType!InputAction);
-    static assert(!isInputActionType!(inputActionID!(FluidInputAction.entryUp)));
-    static assert(!isInputActionType!FluidInputAction);
-    static assert(!isInputActionType!MyEnum);
-    static assert(!isInputActionType!(MyEnum.foo));
-    static assert(!isInputActionType!MyAction);
+    static assert(!isInputAction!InputNode);
+    static assert(!isInputAction!InputAction);
+    static assert(!isInputAction!(inputActionID!(FluidInputAction.entryUp)));
+    static assert(!isInputAction!FluidInputAction);
+    static assert(!isInputAction!MyEnum);
+    static assert(!isInputAction!(MyEnum.foo));
+    static assert(!isInputAction!MyAction);
 
 
 }
@@ -569,7 +569,7 @@ unittest {
 bool isDown(alias type)(LayoutTree* tree)
 if (isInputActionType!type) {
 
-    return tree.downActions[].canFind!"a.action == b"(InputActionID.from!type);
+    return tree.downActions[].canFind!"a.action == b"(inputActionID!type);
 
 }
 
@@ -617,7 +617,7 @@ bool isMouseDown(alias type)(LayoutTree* tree)
 if (isInputActionType!type) {
 
     return tree.downActions[].canFind!(a
-        => a.action == InputActionID.from!type
+        => a.action == inputActionID!type
         && InputStroke.isMouseItem(a.trigger));
 
 }
@@ -671,7 +671,7 @@ bool isFocusDown(alias type)(LayoutTree* tree)
 if (isInputActionType!type) {
 
     return tree.downActions[].canFind!(a
-        => a.action == InputActionID.from!type
+        => a.action == inputActionID!type
         && !InputStroke.isMouseItem(a.trigger));
 
 }
@@ -707,7 +707,7 @@ bool isActive(alias type)(LayoutTree* tree)
 if (isInputActionType!type) {
 
     return tree.activeActions[].canFind!(a
-        => a.action == InputActionID.from!type);
+        => a.action == inputActionID!type);
 
 }
 
@@ -716,7 +716,7 @@ bool isMouseActive(alias type)(LayoutTree* tree)
 if (isInputActionType!type) {
 
     return tree.activeActions[].canFind!(a
-        => a.action == InputActionID.from!type
+        => a.action == inputActionID!type
         && InputStroke.isMouseItem(a.trigger));
 
 }
@@ -726,7 +726,7 @@ bool isFocusActive(alias type)(LayoutTree* tree)
 if (isInputActionType!type) {
 
     return tree.activeActions[].canFind!(a
-        => a.action == InputActionID.from!type
+        => a.action == inputActionID!type
         && !InputStroke.isMouseItem(a.trigger));
 
 }
@@ -758,7 +758,7 @@ interface FluidHoverable {
     /// ---
     /// override bool inputActionImpl(InputActionID id, bool active) {
     ///
-    ///     if (active && id == InputActionID.from!(FluidInputAction.press)) {
+    ///     if (active && id == inputActionID!(FluidInputAction.press)) {
     ///
     ///         // use `run...Impl` to prevent recursion
     ///         return runInputActionImpl!(FluidInputAction.submit);
@@ -789,7 +789,7 @@ interface FluidHoverable {
 
     final bool runInputActionImpl(alias action)(bool active = true) {
 
-        return runInputActionImpl(InputActionID.from!action, active);
+        return runInputActionImpl(inputActionID!action, active);
 
     }
 
@@ -804,7 +804,7 @@ interface FluidHoverable {
 
     final bool runInputAction(alias action)(bool active = true) {
 
-        return runInputAction(InputActionID.from!action, active);
+        return runInputAction(inputActionID!action, active);
 
     }
 
@@ -869,8 +869,8 @@ interface FluidHoverable {
                     static foreach (actionType; __traits(getAttributes, overload)) {
 
                         // Input action
-                        static if (isInputActionType!actionType) {
-                            if (InputActionID.from!actionType == action) {
+                        static if (isInputAction!actionType) {
+                            if (inputActionID!actionType == action) {
 
                                 // Run the action if the stroke was performed
                                 if (shouldActivateWhileDown!overload || active) {

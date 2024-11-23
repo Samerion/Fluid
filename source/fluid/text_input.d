@@ -1507,8 +1507,8 @@ class TextInput : InputNode!Node, FluidScrollable {
         if (!active) return false;
 
         // Do not override undo/redo actions
-        if (id == InputActionID.from!(FluidInputAction.undo)) return false;
-        if (id == InputActionID.from!(FluidInputAction.redo)) return false;
+        if (id == inputActionID!(FluidInputAction.undo)) return false;
+        if (id == inputActionID!(FluidInputAction.redo)) return false;
 
         const past = snapshot();
 
