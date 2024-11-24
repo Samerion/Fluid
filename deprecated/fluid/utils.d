@@ -6,3 +6,4 @@ module fluid.utils;
 public import fluid.tree.types;
 public import fluid.node : nodeBuilder, isNodeBuilder, NodeBuilder, 
     simpleConstructor, SimpleConstructor, isSimpleConstructor;
+public import fluid.hyperlink : openURL;
