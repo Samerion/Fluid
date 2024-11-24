@@ -40,6 +40,7 @@ public import
     fluid.frame,
     fluid.grid,
     fluid.hover_button,
+    fluid.hyperlink,
     fluid.image_view,
     fluid.input,
     fluid.label,
@@ -117,3 +118,5 @@ unittest {
     assert(textTexture.rectangle.end.y.isClose(imageView.rectangle.end.y));
 
 }
+
+static assert(__traits(compiles, openURL("https://samerion.com")));

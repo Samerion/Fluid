@@ -205,9 +205,8 @@ unittest {
 
 }
 
+@("Copying rules interacts correctly with dynamic rules")
 unittest {
-
-    // Copying rules & dynamic rules
 
     import fluid.label;
     import fluid.button;
@@ -220,7 +219,7 @@ unittest {
             : rule()
     );
 
-    auto myTheme = Theme(
+    auto myTheme = nullTheme.derive(
         rule!Label(
             myRule,
         ),
