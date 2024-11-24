@@ -7,11 +7,11 @@ import std.algorithm;
 
 import fluid.node;
 import fluid.frame;
-import fluid.input;
 import fluid.style;
 import fluid.utils;
 import fluid.actions;
 import fluid.backend;
+import fluid.input_node;
 
 
 @safe:

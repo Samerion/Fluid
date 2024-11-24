@@ -10,10 +10,13 @@ import fluid.backend;
 import fluid.tree;
 import fluid.style;
 import fluid.utils;
-import fluid.input;
 import fluid.actions;
 import fluid.structs;
 import fluid.theme : Breadcrumbs;
+
+import fluid.io.hover;
+import fluid.io.focus;
+import fluid.io.scroll;
 
 public import fluid.backend : run, mockRun, RunCallback;
 

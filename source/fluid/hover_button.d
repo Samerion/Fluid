@@ -3,7 +3,6 @@ module fluid.hover_button;
 
 import fluid.node;
 import fluid.frame;
-import fluid.input;
 import fluid.label;
 import fluid.style;
 import fluid.utils;

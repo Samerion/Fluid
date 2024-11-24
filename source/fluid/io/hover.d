@@ -113,7 +113,8 @@ interface FluidHoverable {
         import std.string;
         import std.traits;
         import fluid.node;
-        import fluid.input;
+        import fluid.io.hover;
+        import fluid.tree.input_action;
 
         static assert(is(typeof(this) : Node),
             format!"%s : FluidHoverable must inherit from Node"(typeid(this)));

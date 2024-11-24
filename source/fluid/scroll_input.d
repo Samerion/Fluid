@@ -5,9 +5,11 @@ import std.algorithm;
 
 import fluid.node;
 import fluid.utils;
-import fluid.input;
 import fluid.style;
 import fluid.backend;
+import fluid.input_node;
+
+import fluid.io.hover;
 
 
 @safe:
@@ -377,7 +379,7 @@ class ScrollInputHandle : Node, FluidHoverable {
 
     }
 
-    @(FluidInputAction.press, fluid.input.WhileDown)
+    @(FluidInputAction.press, WhileDown)
     protected void whileDown() @trusted {
 
         const mousePosition = io.mousePosition;

@@ -3,11 +3,13 @@ module fluid.drag_slot;
 import fluid.tree;
 import fluid.node;
 import fluid.slot;
-import fluid.input;
 import fluid.utils;
 import fluid.style;
 import fluid.backend;
 import fluid.structs;
+
+import fluid.io.drag;
+import fluid.io.hover;
 
 
 @safe:

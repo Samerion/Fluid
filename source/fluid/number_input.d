@@ -7,12 +7,14 @@ import std.traits;
 import std.algorithm;
 
 import fluid.node;
-import fluid.input;
 import fluid.utils;
 import fluid.style;
 import fluid.backend;
 import fluid.structs;
 import fluid.text_input;
+import fluid.input_node;
+
+import fluid.io.hover;
 
 alias numberInput(T) = simpleConstructor!(NumberInput!T);
 alias intInput = simpleConstructor!IntInput;

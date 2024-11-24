@@ -3,8 +3,8 @@ module fluid.hyperlink;
 
 import fluid.label;
 import fluid.utils;
-import fluid.input;
 import fluid.text.rope;
+import fluid.input_node;
 
 // This symbol should be moved into this module
 public import fluid.utils : openURL;

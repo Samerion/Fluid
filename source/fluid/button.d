@@ -3,11 +3,11 @@ module fluid.button;
 
 import fluid.node;
 import fluid.frame;
-import fluid.input;
 import fluid.label;
 import fluid.utils;
 import fluid.style;
 import fluid.backend;
+import fluid.input_node;
 
 alias button = simpleConstructor!Button;
 deprecated("Use vframeButton instead")

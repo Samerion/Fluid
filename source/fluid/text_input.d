@@ -12,7 +12,6 @@ import std.container.dlist;
 
 import fluid.node;
 import fluid.text;
-import fluid.input;
 import fluid.label;
 import fluid.style;
 import fluid.utils;
@@ -20,8 +19,11 @@ import fluid.scroll;
 import fluid.actions;
 import fluid.backend;
 import fluid.structs;
+import fluid.input_node;
 import fluid.popup_frame;
 import fluid.text.typeface;
+
+import fluid.io.scroll;
 
 alias wordFront = fluid.text.wordFront;
 alias wordBack  = fluid.text.wordBack;

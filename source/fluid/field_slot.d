@@ -3,9 +3,10 @@ module fluid.field_slot;
 
 import fluid.node;
 import fluid.utils;
-import fluid.input;
 import fluid.actions;
 import fluid.backend;
+
+import fluid.io.hover;
 
 
 @safe:

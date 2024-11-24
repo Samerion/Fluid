@@ -7,9 +7,10 @@ import fluid.node;
 import fluid.space;
 import fluid.style;
 import fluid.utils;
-import fluid.input;
 import fluid.structs;
 import fluid.backend;
+
+import fluid.io.drag;
 
 
 @safe:

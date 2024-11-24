@@ -11,7 +11,7 @@ import fluid.tree.input_mapping;  // TODO remove
 @safe:
 
 /// Check for `@WhileDown`
-enum shouldActivateWhileDown(alias overload) = hasUDA!(overload, fluid.input.WhileDown);
+enum shouldActivateWhileDown(alias overload) = hasUDA!(overload, WhileDown);
 
 /// Make a InputAction handler react to every frame as long as the action 
 /// is being held (mouse button held down, key held down, etc.).

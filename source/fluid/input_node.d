@@ -3,8 +3,12 @@ module fluid.input_node;
 
 import fluid.node;
 import fluid.style;
-import fluid.input;
 import fluid.backend;
+
+import fluid.io.hover;
+import fluid.io.focus;
+
+public import fluid.tree.input_action;
 
 @safe:
 

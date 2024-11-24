@@ -1,5 +1,7 @@
 ///
-deprecated("fluid.input has been split into fluid.io and fluid.tree. It will be removed in Fluid 0.9.0.")
+deprecated("`fluid.input` has been split into `fluid.input_node`, `fluid.io` and `fluid.tree`. "
+    ~ "If you use `InputNode`, update the reference to `fluid.input_node`. "
+    ~ "`fluid.input` will be removed in Fluid 0.9.0.")
 module fluid.input;
 
 public import fluid.io;
