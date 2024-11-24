@@ -1,7 +1,7 @@
 module fluid.tree.action;
 
 import fluid.node;
-import fluid.types;
+import fluid.tree.types;
 
 @safe:
 

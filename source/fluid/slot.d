@@ -3,7 +3,6 @@ module fluid.slot;
 import std.traits;
 
 import fluid.node;
-import fluid.utils;
 import fluid.style;
 import fluid.backend;
 

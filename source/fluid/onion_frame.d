@@ -3,13 +3,10 @@ module fluid.onion_frame;
 
 import fluid.node;
 import fluid.frame;
-import fluid.utils;
 import fluid.style;
 import fluid.backend;
 
-
 @safe:
-
 
 /// An onion frame places its children as layers, drawing one on top of the other, instead of on the side.
 ///

@@ -3,7 +3,6 @@ module fluid.size_lock;
 import std.algorithm;
 
 import fluid.node;
-import fluid.utils;
 import fluid.style;
 import fluid.backend;
 

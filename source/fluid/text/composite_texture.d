@@ -10,7 +10,6 @@ debug (Fluid_TextUpdates) {
     import std.datetime;
 }
 
-import fluid.utils;
 import fluid.backend;
 
 debug (Fluid_BuildMessages) {

@@ -2,13 +2,10 @@
 module fluid.switch_slot;
 
 import fluid.node;
-import fluid.utils;
 import fluid.style;
 import fluid.backend;
 
-
 @safe:
-
 
 /// A switch slot will try each of its children and pick the first one that fits the available space. If the a node
 /// is too large to fit, it will try the next one in the list until it finds one that matches, or the last node in the

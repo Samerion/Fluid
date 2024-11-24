@@ -1,7 +1,6 @@
 module fluid.default_theme;
 
 import fluid.node;
-import fluid.utils;
 import fluid.frame;
 import fluid.style;
 import fluid.label;

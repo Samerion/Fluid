@@ -2,7 +2,6 @@
 module fluid.popup_button;
 
 import fluid.node;
-import fluid.utils;
 import fluid.label;
 import fluid.style;
 import fluid.button;

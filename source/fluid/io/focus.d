@@ -3,10 +3,10 @@ module fluid.io.focus;
 import std.math;
 
 import fluid.node;
-import fluid.types;
 
 import fluid.io.hover;
 
+import fluid.tree.types;
 import fluid.tree.action;
 
 @safe:

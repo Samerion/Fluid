@@ -9,7 +9,6 @@ import std.algorithm;
 
 import fluid.tree;
 import fluid.style;
-import fluid.utils;
 import fluid.backend;
 import fluid.theme : Breadcrumbs;
 

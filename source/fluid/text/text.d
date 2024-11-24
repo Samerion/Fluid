@@ -9,7 +9,6 @@ import std.algorithm;
 
 import fluid.node;
 import fluid.style;
-import fluid.utils;
 import fluid.backend;
 
 import fluid.text.util;
@@ -19,9 +18,7 @@ import fluid.text.cache;
 import fluid.text.typeface;
 import fluid.text.composite_texture;
 
-
 @safe:
-
 
 /// Create a Text struct with given range as a text layer map.
 StyledText!StyleRange mapText(StyleRange)(Node node, const char[] text, StyleRange range) {
@@ -1089,7 +1086,6 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     do {
 
         import std.math;
-        import fluid.utils;
 
         const rectangle = Rectangle(position.tupleof, size.tupleof);
         const screen = Rectangle(0, 0, backend.windowSize.tupleof);

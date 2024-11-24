@@ -8,7 +8,6 @@ import std.typecons;
 import std.algorithm;
 
 import fluid.node;
-import fluid.utils;
 import fluid.backend;
 import fluid.text.typeface;
 import fluid.text.freetype;
@@ -18,9 +17,7 @@ public import fluid.border;
 public import fluid.default_theme;
 public import fluid.backend : color;
 
-
 @safe:
-
 
 /// Contains the style for a node.
 struct Style {

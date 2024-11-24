@@ -2,7 +2,6 @@
 module fluid.separator;
 
 import fluid.node;
-import fluid.utils;
 import fluid.backend;
 
 @safe:

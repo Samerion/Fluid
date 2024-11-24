@@ -2,7 +2,6 @@
 module fluid.checkbox;
 
 import fluid.node;
-import fluid.utils;
 import fluid.style;
 import fluid.backend;
 import fluid.input_node;

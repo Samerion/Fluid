@@ -630,7 +630,7 @@ package auto query(return scope TextRulerCache* cache, size_t index) {
 /// ditto
 package auto queryPosition(return scope TextRulerCache* cache, float y) {
 
-    import fluid.utils : end;
+    import fluid.tree.types : end;
 
     // Just like in `cache()`, the middle point is used to determine the side the query descends into.
     // In this case, the Y position of the middle point is the position of the right side's `startRuler`.
@@ -646,7 +646,7 @@ package auto queryPosition(return scope TextRulerCache* cache, float y) {
 unittest {
 
     import fluid.style : Style;
-    import fluid.types : Vector2;
+    import fluid.tree.types : Vector2;
 
     const lineHeight = 20;
 

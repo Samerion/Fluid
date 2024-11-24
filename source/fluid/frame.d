@@ -6,7 +6,6 @@ import std.meta;
 import fluid.node;
 import fluid.space;
 import fluid.style;
-import fluid.utils;
 import fluid.backend;
 
 import fluid.io.drag;

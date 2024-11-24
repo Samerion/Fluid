@@ -10,7 +10,6 @@ import std.traits;
 import std.exception;
 
 import fluid.node;
-import fluid.utils;
 import fluid.style;
 import fluid.backend;
 

@@ -4,16 +4,13 @@ import std.math;
 import std.algorithm;
 
 import fluid.node;
-import fluid.utils;
 import fluid.style;
 import fluid.backend;
 import fluid.input_node;
 
 import fluid.io.hover;
 
-
 @safe:
-
 
 /// Create a new vertical scroll bar.
 alias vscrollInput = simpleConstructor!ScrollInput;

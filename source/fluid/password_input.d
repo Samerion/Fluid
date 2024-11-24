@@ -1,15 +1,13 @@
 module fluid.password_input;
 
-import fluid.utils;
+import fluid.node;
 import fluid.backend;
 import fluid.text_input;
 
-
 @safe:
 
-
 /// A password input box.
-alias passwordInput = simpleConstructor!PasswordInput;
+alias passwordInput = nodeBuilder!PasswordInput;
 
 /// ditto
 class PasswordInput : TextInput {

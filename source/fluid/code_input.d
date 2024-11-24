@@ -4,17 +4,15 @@ import std.range;
 import std.string;
 import std.algorithm;
 
+import fluid.node;
 import fluid.text;
-import fluid.utils;
 import fluid.style;
 import fluid.backend;
 import fluid.text_input;
 import fluid.text.typeface;
 import fluid.tree.input_action;
 
-
 @safe:
-
 
 /// Node parameter for `CodeInput` enabling tabs as the character used for indents.
 /// Params:
@@ -61,7 +59,7 @@ auto useSpaces(int width) {
 
 /// A CodeInput is a special variant of `TextInput` that provides syntax highlighting and a gutter (column with line
 /// numbers).
-alias codeInput = simpleConstructor!CodeInput;
+alias codeInput = nodeBuilder!CodeInput;
 
 /// ditto
 class CodeInput : TextInput {

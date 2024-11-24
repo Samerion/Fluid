@@ -2,8 +2,8 @@
 module fluid.io.scroll;
 
 import fluid.node;
-import fluid.types;
 
+import fluid.tree.types;
 import fluid.tree.action;
 
 @safe:

@@ -12,7 +12,7 @@ import std.algorithm;
 
 import fluid.node : Node;
 
-public import fluid.types;
+public import fluid.tree.types;
 public import fluid.backend.raylib5;
 public import fluid.backend.headless;
 

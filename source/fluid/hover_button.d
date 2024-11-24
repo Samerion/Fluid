@@ -5,7 +5,6 @@ import fluid.node;
 import fluid.frame;
 import fluid.label;
 import fluid.style;
-import fluid.utils;
 import fluid.button;
 
 alias hoverButton = simpleConstructor!HoverButton;

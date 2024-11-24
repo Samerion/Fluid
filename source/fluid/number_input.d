@@ -7,7 +7,6 @@ import std.traits;
 import std.algorithm;
 
 import fluid.node;
-import fluid.utils;
 import fluid.style;
 import fluid.backend;
 import fluid.text_input;
@@ -403,8 +402,6 @@ class NumberInputSpinner : Node, FluidHoverable {
     }
 
     protected override bool hoveredImpl(Rectangle rect, Vector2 mousePosition) {
-
-        import fluid.utils : contains;
 
         return buttonsRectangle(style, rect).contains(mousePosition);
 

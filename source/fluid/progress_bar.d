@@ -3,7 +3,6 @@ module fluid.progress_bar;
 
 import fluid.text;
 import fluid.node;
-import fluid.utils;
 import fluid.backend;
 
 @safe:

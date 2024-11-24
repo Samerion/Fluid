@@ -4,7 +4,7 @@ module fluid.text.ruler;
 
 import std.traits;
 
-import fluid.types;
+import fluid.tree.types;
 import fluid.text.util;
 import fluid.text.typeface;
 

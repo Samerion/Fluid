@@ -2,7 +2,7 @@
 module fluid.io.drag;
 
 import fluid.node;
-import fluid.types;
+import fluid.tree.types;
 
 @safe:
 
