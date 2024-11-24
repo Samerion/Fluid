@@ -7,7 +7,6 @@ import std.format;
 import std.typecons;
 import std.algorithm;
 
-import fluid.node;
 import fluid.backend;
 import fluid.text.typeface;
 import fluid.text.freetype;
@@ -113,7 +112,7 @@ struct Style {
         ///
         /// Ignored if mismatched.
         @Themable
-        Node.Extra extra;
+        Extra extra;
 
         /// Get or set node opacity. Value in range [0, 1] — 0 is fully transparent, 1 is fully opaque.
         float opacity() const {
@@ -278,6 +277,7 @@ struct Style {
 
 unittest {
 
+    import fluid.node;
     import fluid.frame;
 
     auto io = new HeadlessBackend;
@@ -317,6 +317,7 @@ unittest {
 
 unittest {
 
+    import fluid.node;
     import fluid.frame;
 
     auto io = new HeadlessBackend;
@@ -362,3 +363,31 @@ unittest {
     io.assertRectangle(Rectangle(796, 0, 1, 600), border = multiply(border, color!"aaaa"));
 
 }
+
+class Extra {
+
+    private struct CacheKey {
+
+        size_t dataPtr;
+        FluidBackend backend;
+
+    }
+
+    /// Styling texture cache, by image pointer.
+    private TextureGC[CacheKey] cache;
+
+    /// Load a texture from the image. May return null if there's no valid image.
+    TextureGC* getTexture(FluidBackend backend, Image image) @trusted {
+
+        // No image
+        if (image.area == 0) return null;
+
+        const key = CacheKey(cast(size_t) image.data.ptr, backend);
+
+        // Find or create the entry
+        return &cache.require(key, TextureGC(backend, image));
+
+    }
+
+}
+

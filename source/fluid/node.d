@@ -134,32 +134,7 @@ unittest {
 /// Represents a Fluid node.
 abstract class Node {
 
-    static class Extra {
-
-        private struct CacheKey {
-
-            size_t dataPtr;
-            FluidBackend backend;
-
-        }
-
-        /// Styling texture cache, by image pointer.
-        private TextureGC[CacheKey] cache;
-
-        /// Load a texture from the image. May return null if there's no valid image.
-        TextureGC* getTexture(FluidBackend backend, Image image) @trusted {
-
-            // No image
-            if (image.area == 0) return null;
-
-            const key = CacheKey(cast(size_t) image.data.ptr, backend);
-
-            // Find or create the entry
-            return &cache.require(key, TextureGC(backend, image));
-
-        }
-
-    }
+    alias Extra = .Extra;
 
     public {
 

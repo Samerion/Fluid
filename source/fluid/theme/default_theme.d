@@ -42,6 +42,8 @@ enum FluidTag {
     warning,
 }
 
+Rule warningRule;
+
 static this() {
 
     const warningColor = color("#ffe186");
@@ -67,7 +69,7 @@ static this() {
 
     with (Rule) {
 
-        auto warningRule = rule(
+        warningRule = rule(
             Rule.padding.sideX = 16,
             Rule.padding.sideY = 6,
             Rule.border = 1,

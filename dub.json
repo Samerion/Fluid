@@ -89,6 +89,14 @@
 	"stringImportPaths": [
 		"resources"
 	],
+	"importPaths": [
+		"deprecated",
+		"source"
+	],
+	"sourcePaths": [
+		"deprecated",
+		"source"
+	],
 	"subConfigurations": {
 		"bindbc-freetype": "staticBC"
 	},
