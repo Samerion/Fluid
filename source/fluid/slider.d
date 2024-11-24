@@ -6,12 +6,9 @@ import fluid.node;
 import fluid.utils;
 import fluid.style;
 import fluid.backend;
-import fluid.structs;
 import fluid.input_node;
 
-
 @safe:
-
 
 ///
 alias slider(T) = simpleConstructor!(Slider!T);

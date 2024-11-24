@@ -6,14 +6,11 @@ import fluid.slot;
 import fluid.utils;
 import fluid.style;
 import fluid.backend;
-import fluid.structs;
 
 import fluid.io.drag;
 import fluid.io.hover;
 
-
 @safe:
-
 
 /// A drag slot is a node slot providing drag & drop functionality.
 alias dragSlot = simpleConstructor!DragSlot;

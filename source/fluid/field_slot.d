@@ -4,6 +4,7 @@ module fluid.field_slot;
 import fluid.node;
 import fluid.utils;
 import fluid.backend;
+import fluid.tree.input_action;
 
 import fluid.io.hover;
 import fluid.io.focus;
@@ -89,7 +90,6 @@ unittest {
 
     import fluid.frame;
     import fluid.label;
-    import fluid.structs;
     import fluid.text_input;
 
     TextInput input;
@@ -131,7 +131,6 @@ unittest {
 
     import fluid.space;
     import fluid.label;
-    import fluid.structs;
     import fluid.text_input;
     import fluid.default_theme;
 

@@ -486,7 +486,6 @@ unittest {
 unittest {
 
     import fluid.frame;
-    import fluid.structs;
 
     auto io = new HeadlessBackend;
     auto root = hspace(
@@ -544,7 +543,6 @@ unittest {
 unittest {
 
     import fluid.frame;
-    import fluid.structs;
 
     auto io = new HeadlessBackend(Vector2(270, 270));
     auto root = hframe(
@@ -587,7 +585,6 @@ unittest {
 
     import fluid.frame;
     import fluid.label;
-    import fluid.structs;
 
     auto fill = layout!(1, "fill");
     auto io = new HeadlessBackend;
@@ -634,7 +631,6 @@ unittest {
 
     import fluid.frame;
     import fluid.theme;
-    import fluid.structs : layout;
 
     auto io = new HeadlessBackend;
     auto theme = nullTheme.derive(

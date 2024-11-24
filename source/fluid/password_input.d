@@ -84,7 +84,7 @@ class PasswordInput : TextInput {
 
     unittest {
 
-        import fluid.input;
+        import fluid.tree.input_action;
 
         auto root = passwordInput();
         root.value = "Hello, ";
@@ -122,7 +122,7 @@ class PasswordInput : TextInput {
 
     unittest {
 
-        import fluid.input : FluidInputAction;
+        import fluid.tree.input_action : FluidInputAction;
 
         auto root = passwordInput();
         root.savePush("Hello, x");

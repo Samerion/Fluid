@@ -17,7 +17,6 @@ import fluid.style;
 import fluid.utils;
 import fluid.scroll;
 import fluid.backend;
-import fluid.structs;
 import fluid.input_node;
 import fluid.popup_frame;
 import fluid.text.typeface;
@@ -27,9 +26,7 @@ import fluid.io.scroll;
 alias wordFront = fluid.text.wordFront;
 alias wordBack  = fluid.text.wordBack;
 
-
 @safe:
-
 
 /// Constructor parameter, enables multiline input in `TextInput`.
 auto multiline(bool value = true) {

@@ -663,7 +663,6 @@ unittest {
 
     import fluid.space;
     import fluid.label;
-    import fluid.structs;
     import fluid.default_theme;
 
     auto io = new HeadlessBackend;

@@ -559,7 +559,6 @@ unittest {
 unittest {
 
     import fluid.frame;
-    import fluid.structs;
 
     auto io = new HeadlessBackend;
     auto myTheme = nullTheme.derive(
@@ -599,7 +598,6 @@ unittest {
 unittest {
 
     import fluid.frame;
-    import fluid.structs;
 
     auto io = new HeadlessBackend;
     auto myTheme = nullTheme.derive(

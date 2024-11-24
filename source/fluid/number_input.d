@@ -10,7 +10,6 @@ import fluid.node;
 import fluid.utils;
 import fluid.style;
 import fluid.backend;
-import fluid.structs;
 import fluid.text_input;
 import fluid.input_node;
 
@@ -24,7 +23,6 @@ alias IntInput = NumberInput!int;
 alias FloatInput = NumberInput!float;
 
 alias numberInputSpinner = simpleConstructor!NumberInputSpinner;
-
 
 @safe:
 

@@ -10,16 +10,13 @@ import fluid.space;
 import fluid.utils;
 import fluid.style;
 import fluid.backend;
-import fluid.structs;
 import fluid.input_node;
 
 import fluid.io.scroll;
 
 public import fluid.scroll_input;
 
-
 @safe:
-
 
 alias ScrollFrame = Scrollable!Frame;
 alias Scrollable(T : Space) = Scrollable!(T, "directionHorizontal");

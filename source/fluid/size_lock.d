@@ -100,7 +100,6 @@ unittest {
     import fluid.space;
     import fluid.label;
     import fluid.frame;
-    import fluid.structs;
 
     auto io = new HeadlessBackend;
     auto root = sizeLock!vframe(

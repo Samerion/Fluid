@@ -242,7 +242,6 @@ unittest {
     import fluid.label;
     import fluid.button;
     import fluid.scroll;
-    import fluid.structs;
 
     Button btn;
 
@@ -333,9 +332,7 @@ class ScrollInputHandle : Node, FluidHoverable {
 
     this(ScrollInput parent) {
 
-        import fluid.structs : layout;
-
-        this.layout = layout!"fill";
+        this.layout = .layout!"fill";
         this.parent = parent;
 
     }

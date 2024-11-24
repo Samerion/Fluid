@@ -6,11 +6,8 @@ import fluid.node;
 import fluid.utils;
 import fluid.style;
 import fluid.backend;
-import fluid.structs;
-
 
 @safe:
-
 
 /// A "node slot" node, which displays the node given to it. Allows safely swapping nodes in the layout by reference,
 /// even during drawing. Useful for creating tabs and menus.

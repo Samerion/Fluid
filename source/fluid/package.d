@@ -58,7 +58,6 @@ public import
     fluid.slider,
     fluid.slot,
     fluid.space,
-    fluid.structs,
     fluid.style,
     fluid.switch_slot,
     fluid.text,

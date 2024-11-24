@@ -291,6 +291,7 @@ unittest {
     import fluid.space;
     import fluid.label;
     import fluid.button;
+    import fluid.backend;
 
     auto io = new HeadlessBackend;
     auto root = vspace(
@@ -339,6 +340,7 @@ unittest {
 
     import fluid.space;
     import fluid.button;
+    import fluid.backend;
 
     auto io = new HeadlessBackend;
     auto root = vframeButton(

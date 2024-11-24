@@ -1121,6 +1121,8 @@ enum nodeBuilder(T, alias fun = "a") = NodeBuilder!(T, fun).init;
 /// T must be a template accepting a single parameter — Parent type will be passed to it.
 template nodeBuilder(alias T, alias Parent, alias fun = "a") {
 
+    import std.functional;
+
     alias nodeBuilder = nodeBuilder!(T!(Parent.Type), (a) {
 
         alias initializer = unaryFun!fun;

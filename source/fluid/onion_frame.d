@@ -1,6 +1,7 @@
 ///
 module fluid.onion_frame;
 
+import fluid.node;
 import fluid.frame;
 import fluid.utils;
 import fluid.style;
@@ -82,7 +83,6 @@ unittest {
 unittest {
 
     import fluid.label;
-    import fluid.structs;
     import fluid.image_view;
 
     ImageView view;

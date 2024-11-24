@@ -382,7 +382,6 @@ class MapFrame : Frame {
     unittest {
 
         import fluid.space;
-        import fluid.structs : layout;
 
         class RectangleSpace : Space {
 
@@ -404,7 +403,7 @@ class MapFrame : Frame {
 
         auto io = new HeadlessBackend;
         auto root = mapFrame(
-            layout!"fill",
+            .layout!"fill",
 
             // Rectangles with same X and Y
 

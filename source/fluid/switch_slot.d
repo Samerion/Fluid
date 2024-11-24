@@ -217,7 +217,6 @@ unittest {
 unittest {
 
     import fluid.frame;
-    import fluid.structs;
 
     int principalDrawn, deputyDrawn;
 
@@ -283,9 +282,6 @@ unittest {
     import std.algorithm;
 
     import fluid.space;
-    import fluid.structs;
-
-    SwitchSlot slot;
 
     auto checker = new class Node {
 

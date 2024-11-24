@@ -5,11 +5,8 @@ import fluid.text;
 import fluid.node;
 import fluid.utils;
 import fluid.backend;
-import fluid.structs;
-
 
 @safe:
-
 
 /// Progress bar node for communicating the program is actively working on something, and needs time to process. The
 /// progress bar draws a styleable `ProgressBarFill` node inside, spanning a fraction of its content, usually starting
