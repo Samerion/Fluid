@@ -35,7 +35,6 @@ public import
     fluid.field_slot,
     fluid.frame,
     fluid.grid,
-    fluid.hover_button,
     fluid.hyperlink,
     fluid.image_view,
     fluid.io,
@@ -63,6 +62,12 @@ public import
     fluid.theme.default_theme,
     // Note: fluid.theme is not included
     fluid.tree;
+
+deprecated("`fluid.hover_button` is deprecated, because it is legacy code and has no known usecase. "
+    ~ "Please create your own `Button` node subclass and override `mouseImpl`. "
+    ~ "`hover_button` will be removed in Fluid 0.9.0.")
+public import 
+    fluid.hover_button;
 
 unittest {
 

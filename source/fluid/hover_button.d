@@ -1,4 +1,7 @@
 ///
+deprecated("`fluid.hover_button` is deprecated, because it is legacy code and has no known usecase. "
+    ~ "Please create your own `Button` node subclass and override `mouseImpl`. "
+    ~ "`hover_button` will be removed in Fluid 0.9.0.")
 module fluid.hover_button;
 
 import fluid.node;
