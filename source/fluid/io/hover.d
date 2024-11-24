@@ -189,11 +189,11 @@ bool runInputActionsImpl(FluidHoverable hoverable, bool mouse) {
 
     // Run all active actions
     if (!mouse || hoverable.isHovered)
-    foreach_reverse (binding; tree.activeActions[]) {
+    foreach_reverse (event; tree.activeActions[]) {
 
-        if (InputStroke.isMouseItem(binding.trigger) != mouse) continue;
+        if (event.isMouse != mouse) continue;
 
-        handled = hoverable.runInputAction(binding.action, true) || handled;
+        handled = hoverable.runInputAction(event.action, true) || handled;
 
         // Stop once handled
         if (handled) break;
@@ -201,11 +201,11 @@ bool runInputActionsImpl(FluidHoverable hoverable, bool mouse) {
     }
 
     // Run all "while down" actions
-    foreach (binding; tree.downActions[]) {
+    foreach (event; tree.downActions[]) {
 
-        if (InputStroke.isMouseItem(binding.trigger) != mouse) continue;
+        if (event.isMouse != mouse) continue;
 
-        handled = hoverable.runInputAction(binding.action, false) || handled;
+        handled = hoverable.runInputAction(event.action, false) || handled;
 
     }
 

@@ -6,7 +6,6 @@ import std.traits;
 import std.algorithm;
 
 import fluid.tree;
-import fluid.tree.input_mapping;  // TODO remove
 
 @safe:
 
@@ -207,6 +206,17 @@ template isInputAction(alias actionType) {
 
 }
 
+/// Event indicating the activation of an input action.
+struct InputActionEvent {
+
+    /// Action triggered by this event.
+    InputActionID action;
+
+    /// If true, the action was performed with a mouse.
+    bool isMouse;
+
+}
+
 unittest {
 
     import fluid.input_node;
@@ -398,7 +408,7 @@ if (isInputActionType!type) {
 
     return tree.downActions[].canFind!(a
         => a.action == inputActionID!type
-        && InputStroke.isMouseItem(a.trigger));
+        && a.isMouse);
 
 }
 
@@ -453,7 +463,7 @@ if (isInputActionType!type) {
 
     return tree.downActions[].canFind!(a
         => a.action == inputActionID!type
-        && !InputStroke.isMouseItem(a.trigger));
+        && !a.isMouse);
 
 }
 
@@ -499,7 +509,7 @@ if (isInputActionType!type) {
 
     return tree.activeActions[].canFind!(a
         => a.action == inputActionID!type
-        && InputStroke.isMouseItem(a.trigger));
+        && a.isMouse);
 
 }
 
@@ -509,6 +519,6 @@ if (isInputActionType!type) {
 
     return tree.activeActions[].canFind!(a
         => a.action == inputActionID!type
-        && !InputStroke.isMouseItem(a.trigger));
+        && !a.isMouse);
 
 }

@@ -71,10 +71,10 @@ struct LayoutTree {
         invariant(boundInputs.isSorted);
 
         /// Actions that are currently held down.
-        DList!InputBinding downActions;
+        DList!InputActionEvent downActions;
 
         /// Actions that have just triggered.
-        DList!InputBinding activeActions;
+        DList!InputActionEvent activeActions;
 
         /// Access to core input and output facilities.
         FluidBackend backend;
@@ -632,18 +632,16 @@ struct LayoutTree {
             // Found an active layer, test all bound strokes
             foreach (binding; layer.bindings) {
 
+                const isMouse = InputStroke.isMouseItem(binding.trigger);
+
                 // Register held-down actions
                 if (InputStroke.isItemDown(backend, binding.trigger)) {
-
-                    downActions ~= binding;
-
+                    downActions ~= InputActionEvent(binding.action, isMouse);
                 }
 
                 // Register triggered actions
                 if (InputStroke.isItemActive(backend, binding.trigger)) {
-
-                    activeActions ~= binding;
-
+                    activeActions ~= InputActionEvent(binding.action, isMouse);
                 }
 
             }
