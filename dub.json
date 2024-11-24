@@ -126,7 +126,7 @@
 		{
 			"name": "init-exec",
 			"sourceFiles": [
-				"source/fluid/dub_template.d"
+				"dub_template.d"
 			],
 			"sourcePaths": [],
 			"targetPath": "build",
