@@ -116,23 +116,6 @@ abstract class Node {
 
     }
 
-    @property {
-
-        /// Check if the node is hidden.
-        bool isHidden() const return { return _isHidden; }
-
-        /// Set the visibility
-        bool isHidden(bool value) return {
-
-            // If changed, trigger resize
-            if (_isHidden != value) updateSize();
-
-            return _isHidden = value;
-
-        }
-
-    }
-
     /// Construct a new node.
     ///
     /// The typical approach to constructing new nodes is via `fluid.utils.simpleConstructor`. A node component would
@@ -152,35 +135,65 @@ abstract class Node {
     ///     `fluid.utils.simpleConstructor`
     this() { }
 
-    /// Get the current theme.
-    inout(Theme) theme() inout { return _theme; }
+    /// Returns: True if both nodes are the same node.
+    override bool opEquals(const Object other) const @safe {
 
-    /// Set the theme.
-    Theme theme(Theme value) {
-
-        isThemeExplicit = true;
-        updateSize();
-        return _theme = value;
+        return this is other;
 
     }
 
-    /// Nodes automatically inherit theme from their parent, and the root node implictly inherits the default theme.
-    /// An explicitly-set theme will override any inherited themes recursively, stopping at nodes that also have themes 
-    /// set explicitly.
+    /// ditto
+    bool opEquals(const Node otherNode) const {
+
+        return this is otherNode;
+
+    }
+
+    /// The theme defines how the node will appear to the user.
+    ///
+    /// Themes affect the node and its children, and can respond to changes in state,
+    /// like values changing or user interaction.
+    /// 
+    /// If no theme has been set, a default one will be provided and used automatically.
+    ///
+    /// See `Theme` for more information.
+    ///
+    /// Returns: Currently active theme.
     /// Params:
-    ///     value = Theme to inherit.
+    ///     newValue = Change the current theme.
+    inout(Theme) theme() inout { return _theme; }
+
+    /// Set the theme.
+    Theme theme(Theme newValue) {
+
+        isThemeExplicit = true;
+        updateSize();
+        return _theme = newValue;
+
+    }
+
+    /// Nodes automatically inherit theme from their parent, and the root node implictly inherits 
+    /// the default theme. An explicitly-set theme will override any inherited themes recursively, 
+    /// stopping at nodes that also have themes set explicitly.
+    ///
+    /// This function can be used to set the currently *inferred* theme, which can be overriden 
+    /// by a regular theme set on this node or any of its ancestors.
+    ///
+    /// Params:
+    ///     newValue = Theme to inherit.
     /// See_Also: `theme`
-    void inheritTheme(Theme value) {
+    void inheritTheme(Theme newValue) {
 
         // Do not override explicitly-set themes
         if (isThemeExplicit) return;
 
-        _theme = value;
+        _theme = newValue;
         updateSize();
 
     }
 
-    /// Clear the currently assigned theme
+    /// Clear the currently assigned theme. The node will instead inherit theme from its parent, 
+    /// or use the default theme if the parent doesn't have one assigned.
     void resetTheme() {
 
         _theme = Theme.init;
@@ -189,63 +202,83 @@ abstract class Node {
 
     }
 
-    /// Current style, used for sizing. Does not include any changes made by `when` clauses or callbacks.
+    /// Cached value for the node's style, used for sizing. Does not include any changes made by `when` 
+    /// clauses or callbacks.
     ///
-    /// Direct changes are discouraged, and are likely to be discarded when reloading themes. Use themes instead.
-    ref inout(Style) style() inout { return _style; }
+    /// Direct changes are discouraged, and will be discarded when reloading themes. Use `theme` instead.
+    ref inout(Style) style() inout { 
+        return _style; 
+    }
 
-    override bool opEquals(const Object other) const @safe {
+    /// A hidden node will not display, and it will not affect the layout, as if it wasn't there.
+    /// Returns: True if the node is hidden.
+    /// Params:
+    ///     newValue = Change the node's visibility by passing a value.
+    bool isHidden() const return { 
+        return _isHidden; 
+    }
 
-        return this is other;
+    /// ditto
+    bool isHidden(bool value) return {
+
+        // If changed, trigger resize
+        if (_isHidden != value) updateSize();
+
+        return _isHidden = value;
 
     }
 
-    bool opEquals(const Node otherNode) const {
-
-        return this is otherNode;
-
-    }
-
-    /// Show the node.
-    This show(this This = Node)() return {
-
-        // Note: The default value for This is necessary, otherwise virtual calls don't work
-        isHidden = false;
-        return cast(This) this;
-
-    }
-
-    /// Hide the node.
-    This hide(this This = Node)() return {
-
+    /// Hide the node, preventing it from displaying. A hidden node will not affect the layout.
+    /// See_Also: `isHidden`, `show`.
+    final void hide() {
         isHidden = true;
-        return cast(This) this;
-
     }
 
-    /// Disable this node.
-    This disable(this This = Node)() {
+    /// Make the node visible, reversing previously set "hidden" status.
+    /// See_Also: `isHidden`, `hide`.
+    final void show() {
+        isHidden = false;
+    }
 
-        // `scope return` attribute on disable() and enable() is broken, `isDisabled` just can't get return for reasons
-        // unknown
+    alias toggleShow = toggleHidden;
 
+    /// Toggle the node's visibility.
+    /// See_Also: `isHidden`, `hide`, `show`.
+    final void toggleHidden() {
+        isHidden = !isHidden;
+    }
+
+    /// Returns: True if this node is disabled.
+    ref inout(bool) isDisabled() inout { 
+        return _isDisabled; 
+    }
+
+    /// Returns: True if the node is disabled, either by self, or by any of its ancestors. Updated when drawn.
+    bool isDisabledInherited() const { 
+        return _isDisabledInherited; 
+    }
+
+    /// Disable this node. A disabled node will not accept any user interaction through input actions. 
+    /// This status is recursive, and so will affect every child node as well.
+    /// See_Also: `isDisabled`, `enable`.
+    void disable() {
         isDisabled = true;
-        return cast(This) this;
-
     }
 
-    /// Enable this node.
-    This enable(this This = Node)() {
-
+    /// Enable this node, reversing previously set "disabled" status.
+    /// See_Also: `isDisabled`, `disable`.
+    void enable() {
         isDisabled = false;
-        return cast(This) this;
+    }
 
+    /// Toggle the node's disabled status.
+    /// See_Also: `isDisabled`, `disable`, `enable`.
+    final void toggleDisabled() {
+        isDisabled = !isDisabled;
     }
 
     inout(FluidBackend) backend() inout {
-
         return tree.backend;
-
     }
 
     FluidBackend backend(FluidBackend backend) {
@@ -264,19 +297,10 @@ abstract class Node {
 
     alias io = backend;
 
-    /// Toggle the node's visibility.
-    final void toggleShow() {
-
-        isHidden = !isHidden;
-
-    }
-
     /// Remove this node from the tree before the next draw.
     final void remove() {
-
         isHidden = true;
         toRemove = true;
-
     }
 
     /// Get the minimum size of this node.
@@ -286,17 +310,18 @@ abstract class Node {
 
     }
 
-    /// Check if this node is hovered.
+    /// Expresses the minimum size the node needs to display correctly. Container nodes like `Frame`
+    /// will try to fit nodes in a way that respects this property.
     ///
-    /// Returns false if the node or, while the node is being drawn, some of its ancestors are disabled.
+
+    /// Returns: 
+    ///     True if the user is currently hovering over this node with a mouse.
+    ///     The return value will be false if the node is disabled.
     @property
-    bool isHovered() const { return _isHovered && !_isDisabled && !tree.isBranchDisabled; }
-
-    /// Check if this node is disabled.
-    ref inout(bool) isDisabled() inout { return _isDisabled; }
-
-    /// Checks if the node is disabled, either by self, or by any of its ancestors. Updated when drawn.
-    bool isDisabledInherited() const { return _isDisabledInherited; }
+    bool isHovered() const { 
+        // TODO shouldn't isHovered correspond directly to tree.hover?
+        return _isHovered && !_isDisabled && !tree.isBranchDisabled; 
+    }
 
     /// Apply all of the given node parameters on this node.
     ///
@@ -336,12 +361,15 @@ abstract class Node {
         
     }
 
-    /// Queue an action to perform within this node's branch.
+    /// Queue an action to perform on this node and its children.
     ///
     /// This is recommended to use over `LayoutTree.queueAction`, as it can be used to limit the action to a specific
     /// branch, and can also work before the first draw.
     ///
     /// This function is not safe to use while the tree is being drawn.
+    ///
+    /// Params:
+    ///     action = Action to queue to run during the next draw.
     final void queueAction(TreeAction action)
     in (action, "Invalid action queued (null)")
     do {
@@ -364,12 +392,12 @@ abstract class Node {
 
     /// Returns: True if this node is to be resized before the next frame.
     bool isResizePending() const {
-
         return _resizePending;
-
     }
 
-    /// Recalculate the window size before next draw.
+    /// Update the size of the node before the next draw.
+    ///
+    /// This will not take effect immediately; the node will only be resized during the next `draw()` call.
     final void updateSize() scope {
 
         if (tree) tree.root._resizePending = true;
@@ -378,6 +406,8 @@ abstract class Node {
     }
 
     /// Draw this node as a root node.
+    ///
+    /// This should not be used to draw child nodes. Use the other overload instead.
     final void draw() @trusted {
 
         // No tree set, create one
@@ -549,51 +579,6 @@ abstract class Node {
         foreach (action; tree.filterActions) {
 
             action.afterInput(tree.wasKeyboardHandled);
-
-        }
-
-    }
-
-    /// Switch to the previous or next focused item
-    @(FluidInputAction.focusPrevious,FluidInputAction.focusNext)
-    protected void focusPreviousOrNext(FluidInputAction actionType) {
-
-        auto direction = tree.focusDirection;
-
-        // Get the node to switch to
-        auto node = actionType == FluidInputAction.focusPrevious
-
-            // Requesting previous item
-            ? either(direction.previous, direction.last)
-
-            // Requesting next
-            : either(direction.next, direction.first);
-
-        // Switch focus
-        if (node) node.focus();
-
-    }
-
-    /// Switch focus towards a specified direction.
-    @(FluidInputAction.focusLeft, FluidInputAction.focusRight)
-    @(FluidInputAction.focusUp, FluidInputAction.focusDown)
-    protected void focusInDirection(FluidInputAction action) {
-
-        with (FluidInputAction) {
-
-            // Check which side we're going
-            const side = action.predSwitch(
-                focusLeft,  Style.Side.left,
-                focusRight, Style.Side.right,
-                focusUp,    Style.Side.top,
-                focusDown,  Style.Side.bottom,
-            );
-
-            // Get the node
-            auto node = tree.focusDirection.positional[side];
-
-            // Switch focus to the node
-            if (node !is null) node.focus();
 
         }
 
@@ -843,8 +828,51 @@ abstract class Node {
 
     }
 
-    /// Ditto
-    ///
+    /// Switch to the previous or next focused item
+    @(FluidInputAction.focusPrevious,FluidInputAction.focusNext)
+    protected void focusPreviousOrNext(FluidInputAction actionType) {
+
+        auto direction = tree.focusDirection;
+
+        // Get the node to switch to
+        auto node = actionType == FluidInputAction.focusPrevious
+
+            // Requesting previous item
+            ? either(direction.previous, direction.last)
+
+            // Requesting next
+            : either(direction.next, direction.first);
+
+        // Switch focus
+        if (node) node.focus();
+
+    }
+
+    /// Switch focus towards a specified direction.
+    @(FluidInputAction.focusLeft, FluidInputAction.focusRight)
+    @(FluidInputAction.focusUp, FluidInputAction.focusDown)
+    protected void focusInDirection(FluidInputAction action) {
+
+        with (FluidInputAction) {
+
+            // Check which side we're going
+            const side = action.predSwitch(
+                focusLeft,  Style.Side.left,
+                focusRight, Style.Side.right,
+                focusUp,    Style.Side.top,
+                focusDown,  Style.Side.bottom,
+            );
+
+            // Get the node
+            auto node = tree.focusDirection.positional[side];
+
+            // Switch focus to the node
+            if (node !is null) node.focus();
+
+        }
+
+    }
+
     /// This is the implementation of resizing to be provided by children.
     ///
     /// If style margins/paddings are non-zero, they are automatically subtracted from space, so they are handled
@@ -873,9 +901,7 @@ abstract class Node {
     ///     rect          = Area the node should be drawn in, as provided by drawImpl.
     ///     mousePosition = Current mouse position within the window.
     protected bool hoveredImpl(Rectangle rect, Vector2 mousePosition) {
-
         return rect.contains(mousePosition);
-
     }
 
     /// The focus box defines the *focused* part of the node. This is relevant in nodes which may have a selectable 
@@ -883,12 +909,11 @@ abstract class Node {
     /// like `scrollIntoView` will use the focus box to make sure the selected area is presented to the user.
     /// Returns: The focus box of the node. 
     Rectangle focusBoxImpl(Rectangle inner) const {
-
         return inner;
-
     }
 
-    /// Get the current style.
+    /// Returns: Current active style, as picked by the active theme.
+    /// See_Also: `theme`.
     Style pickStyle() {
 
         // Pick the current style
@@ -913,7 +938,7 @@ abstract class Node {
 
     }
 
-    /// Reload style from the current theme.
+    /// Reload styles from the current theme.
     protected void reloadStyles() {
 
         // Reset style
@@ -930,7 +955,7 @@ abstract class Node {
 
     }
 
-    /// Get the node's position in its  box.
+    /// Returns: The node's position in its box.
     private Vector2 position(Rectangle space, Vector2 usedSpace) const {
 
         float positionImpl(NodeAlign align_, lazy float spaceLeft) {
@@ -1248,9 +1273,9 @@ unittest {
     // Queue the action before creating the tree
     root.queueAction(action);
 
-    assert(root.io is null);
+    assert(root.tree is null);
 
-    // Assign the backend; note this would create a tree
+    // Assign the backend; note this will create a tree
     root.io = io;
 
     root.draw();
