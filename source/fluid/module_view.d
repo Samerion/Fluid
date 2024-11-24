@@ -752,10 +752,13 @@ Frame exampleView(DlangCompiler compiler, CodeInput input, Theme contentTheme) {
     }
 
     // Disable edits if there's no compiler available
-    else return hframe(
-        .layout!"fill",
-        input.disable(),
-    );
+    else {
+        input.disable();
+        return hframe(
+            .layout!"fill",
+            input,
+        );
+    }
 
 }
 
@@ -849,18 +852,15 @@ private bindbc.SharedLib runSharedLibrary(string path) @system {
 }
 
 /// Creates a `CodeInput` with D syntax highlighting.
-CodeInput dlangInput(void delegate() @safe submitted = null) @trusted {
+alias dlangInput = nodeBuilder!(CodeInput, (node) @trusted {
 
     auto language = treeSitterLanguage!"d";
     auto highlighter = new TreeSitterHighlighter(language, dlangQuery);
 
-    return codeInput(
-        .layout!(1, "fill"),
-        highlighter,
-        submitted
-    );
+    node.layout = .layout!(1, "fill");
+    node.highlighter = highlighter;
 
-}
+});
 
 private Rope readDocs(string source, TSQueryCapture[] captures) @trusted {
 
@@ -934,7 +934,7 @@ private Space interpretDocs(Rope rope) {
             // TODO common space (prefix)
             else if (line == "---") {
                 preformattedDelimiter = "---";
-                result ~= lastCode = dlangInput().disable();
+                result ~= lastCode = dlangInput(.disabled);
             }
 
             // Append text to previous line

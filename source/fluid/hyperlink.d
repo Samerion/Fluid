@@ -1,13 +1,10 @@
 ///
 module fluid.hyperlink;
 
+import fluid.node;
 import fluid.label;
-import fluid.utils;
 import fluid.text.rope;
 import fluid.input_node;
-
-// This symbol should be moved into this module
-public import fluid.utils : openURL;
 
 @safe:
 
@@ -64,5 +61,25 @@ class Hyperlink : InputNode!Label {
         openURL(url);
 
     }
+
+}
+
+/// Open given URL in a web browser.
+///
+/// Supports all major desktop operating systems. Does nothing if not supported on the given platform.
+///
+/// At the moment this simply wraps `std.process.browse`.
+void openURL(scope const(char)[] url) nothrow {
+
+    version (Posix) {
+        import std.process;
+        browse(url);
+    }
+    else version (Windows) {
+        import std.process;
+        browse(url);
+    }
+
+    // Do nothing on remaining platforms
 
 }
