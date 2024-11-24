@@ -300,7 +300,7 @@ abstract class TreeAction {
     void beforeDraw(Node node, Rectangle space) { }
 
     /// internal
-    final package void beforeDrawImpl(Node node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) {
+    final void beforeDrawImpl(Node node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) {
 
         // There is a start node set
         if (startNode !is null) {
@@ -334,7 +334,7 @@ abstract class TreeAction {
     void afterDraw(Node node, Rectangle space) { }
 
     /// internal
-    final package void afterDrawImpl(Node node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) {
+    final void afterDrawImpl(Node node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) {
 
         // There is a start node set
         if (startNode !is null) {
@@ -966,7 +966,7 @@ struct LayoutTree {
     }
 
     /// Fetch tree events (e.g. actions)
-    package void poll() {
+    void poll() {
 
         // Run texture reaper
         io.reaper.check();

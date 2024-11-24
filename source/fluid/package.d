@@ -42,7 +42,6 @@ public import
     fluid.hover_button,
     fluid.hyperlink,
     fluid.image_view,
-    fluid.input,
     fluid.label,
     fluid.map_frame,
     fluid.node,
