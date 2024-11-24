@@ -73,7 +73,7 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable {
     /// Change the focus to this node.
     void focus() {
 
-        import fluid.actions;
+        import fluid.io.scroll : scrollIntoView;
 
         // Ignore if disabled
         if (isDisabled) return;

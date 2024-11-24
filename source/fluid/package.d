@@ -28,7 +28,6 @@ else {
 
 public import
     fluid.backend,
-    fluid.actions,
     fluid.button,
     fluid.checkbox,
     fluid.children,
@@ -41,6 +40,7 @@ public import
     fluid.hover_button,
     fluid.hyperlink,
     fluid.image_view,
+    fluid.io,
     fluid.label,
     fluid.map_frame,
     fluid.node,
