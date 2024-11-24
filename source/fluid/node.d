@@ -1104,6 +1104,163 @@ abstract class Node {
 
 }
 
+alias simpleConstructor = nodeBuilder;
+alias SimpleConstructor = NodeBuilder;
+alias isSimpleConstructor = isNodeBuilder;
+
+/// Create a node builder for declarative usage.
+///
+/// Initial properties can be provided in the function provided in the second argument.
+enum nodeBuilder(T, alias fun = "a") = NodeBuilder!(T, fun).init;
+
+/// Create a node builder for declarative usage.
+///
+/// If the parent is a simple constructor, its initializer will be ran *after* this one. This is because the user
+/// usually specifies the parent in templates, so it has more importance.
+///
+/// T must be a template accepting a single parameter — Parent type will be passed to it.
+template nodeBuilder(alias T, alias Parent, alias fun = "a") {
+
+    alias nodeBuilder = nodeBuilder!(T!(Parent.Type), (a) {
+
+        alias initializer = unaryFun!fun;
+
+        initializer(a);
+        Parent.initializer(a);
+
+    });
+
+}
+
+/// ditto
+alias nodeBuilder(alias T, Parent, alias fun = "a") = nodeBuilder!(T!Parent, fun);
+
+enum isNodeBuilder(T) = is(T : NodeBuilder!(A, a), A, alias a);
+
+struct NodeBuilder(T, alias fun = "a") {
+
+    import std.functional;
+
+    import fluid.style;
+
+    alias Type = T;
+    alias initializer = unaryFun!fun;
+
+    Type opCall(Args...)(Args args) {
+
+        // Collect parameters
+        enum paramCount = leadingParams!Args;
+
+        // Construct the node
+        auto result = new Type(args[paramCount..$]);
+
+        // Run the initializer
+        initializer(result);
+
+        // Apply the parameters
+        result.applyAll(args[0..paramCount]);
+
+        return result;
+
+    }
+
+    /// Count node parameters present at the beginning of the given type list. This function is only available at
+    /// compile-time.
+    ///
+    /// If a node parameter is passed *after* a non-parameter, it will not be included in the count, and will not be
+    /// treated as one by ComponentBuilder.
+    static int leadingParams(Args...)() {
+
+        assert(__ctfe, "leadingParams is not available at runtime");
+
+        if (__ctfe)
+        foreach (i, Arg; Args) {
+
+            // Found a non-parameter, return the index
+            if (!isNodeParam!(Arg, T))
+                return i;
+
+        }
+
+        // All arguments are parameters
+        return Args.length;
+
+    }
+
+}
+
+unittest {
+
+    static class Foo {
+
+        string value;
+
+        this() { }
+
+    }
+
+    alias xfoo = nodeBuilder!Foo;
+    assert(xfoo().value == "");
+
+    alias yfoo = nodeBuilder!(Foo, (a) {
+        a.value = "foo";
+    });
+    assert(yfoo().value == "foo");
+
+    auto myFoo = new Foo;
+    yfoo.initializer(myFoo);
+    assert(myFoo.value == "foo");
+
+    static class Bar(T) : T {
+
+        int foo;
+
+        this(int foo) {
+
+            this.foo = foo;
+
+        }
+
+    }
+
+    alias xbar(alias T) = nodeBuilder!(Bar, T);
+
+    const barA = xbar!Foo(1);
+    assert(barA.value == "");
+    assert(barA.foo == 1);
+
+    const barB = xbar!xfoo(2);
+    assert(barB.value == "");
+    assert(barB.foo == 2);
+
+    const barC = xbar!yfoo(3);
+    assert(barC.value == "foo");
+    assert(barC.foo == 3);
+
+}
+
+/// Modify the subject by passing it to the `apply` method of each of the parameters.
+///
+/// This is made for `nodeBuilder` to apply node parameters on a node. The subject doesn't have to be a node.
+///
+/// Params:
+///     subject    = Subject to modify.
+///     parameters = Parameters to apply onto the subject;
+/// Returns:
+///     The subject after applying the modifications. 
+///     If subject is a class, this is the same object as passed.
+Subject applyAll(Subject, Parameters...)(Subject subject, Parameters parameters) {
+
+    foreach (param; parameters) {
+
+        param.apply(subject);
+
+    }
+
+    return subject;
+
+}
+
 /// Check if the given type implements the node parameter interface.
 ///
 /// Node parameters passed at the beginning of a simpleConstructor will not be passed to the node constructor. Instead,
