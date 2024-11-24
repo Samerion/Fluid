@@ -3,7 +3,6 @@ module fluid.slider;
 import std.range;
 
 import fluid.node;
-import fluid.style;
 import fluid.backend;
 import fluid.input_node;
 

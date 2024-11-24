@@ -45,8 +45,6 @@ interface FluidFocusable : FluidHoverable {
 /// This struct is used to track nodes in relation to each other to pass focus using the tab or arrow keys.
 struct FocusDirection {
 
-    import fluid.style;
-
     struct WithPriority {
 
         /// Pick priority based on tree distance from the focused node.

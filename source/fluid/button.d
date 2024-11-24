@@ -4,7 +4,6 @@ module fluid.button;
 import fluid.node;
 import fluid.frame;
 import fluid.label;
-import fluid.style;
 import fluid.backend;
 import fluid.input_node;
 

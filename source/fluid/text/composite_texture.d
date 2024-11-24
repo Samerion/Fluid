@@ -339,9 +339,8 @@ unittest {
 
     import std.conv;
     import fluid.label;
-    import fluid.scroll;
     import fluid.theme;
-    import fluid.default_theme;
+    import fluid.scroll;
 
     enum chunkSize = CompositeTexture.maxChunkSize;
 

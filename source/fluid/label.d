@@ -3,7 +3,6 @@ module fluid.label;
 
 import fluid.node;
 import fluid.text;
-import fluid.style;
 import fluid.backend;
 
 @safe:

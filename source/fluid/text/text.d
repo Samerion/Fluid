@@ -8,8 +8,8 @@ import std.string;
 import std.algorithm;
 
 import fluid.node;
-import fluid.style;
 import fluid.backend;
+import fluid.theme.style;
 
 import fluid.text.util;
 import fluid.text.rope;

@@ -2,7 +2,6 @@
 module fluid.radiobox;
 
 import fluid.node;
-import fluid.style;
 import fluid.backend;
 import fluid.checkbox;
 import fluid.input_node;

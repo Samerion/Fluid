@@ -164,7 +164,6 @@ unittest {
 unittest {
 
     import fluid.theme;
-    import fluid.default_theme;
 
     const steps = 24;
 
@@ -212,7 +211,6 @@ unittest {
 
 unittest {
 
-    import fluid.style;
     import fluid.theme;
 
     auto io = new HeadlessBackend;

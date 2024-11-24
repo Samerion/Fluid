@@ -3,7 +3,6 @@ module fluid.onion_frame;
 
 import fluid.node;
 import fluid.frame;
-import fluid.style;
 import fluid.backend;
 
 @safe:

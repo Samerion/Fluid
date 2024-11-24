@@ -6,7 +6,6 @@ import std.container;
 import std.algorithm;
 
 import fluid.node;
-import fluid.style;
 import fluid.backend;
 
 import fluid.io.focus;
@@ -663,7 +662,6 @@ unittest {
 
     import fluid.space;
     import fluid.label;
-    import fluid.default_theme;
 
     auto io = new HeadlessBackend;
     auto text = label("Hello, World!");

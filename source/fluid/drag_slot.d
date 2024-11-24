@@ -3,7 +3,6 @@ module fluid.drag_slot;
 import fluid.tree;
 import fluid.node;
 import fluid.slot;
-import fluid.style;
 import fluid.backend;
 
 import fluid.io.drag;

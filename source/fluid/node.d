@@ -8,14 +8,13 @@ import std.string;
 import std.algorithm;
 
 import fluid.tree;
-import fluid.style;
 import fluid.backend;
-import fluid.theme : Breadcrumbs;
 
 import fluid.io.hover;
 import fluid.io.focus;
 import fluid.io.scroll;
 
+public import fluid.theme.style;
 public import fluid.backend : run, mockRun, RunCallback;
 
 @safe:
@@ -530,7 +529,6 @@ abstract class Node {
         // No theme set, set the default
         if (!theme) {
 
-            import fluid.default_theme;
             inheritTheme(fluidDefaultTheme);
 
         }
@@ -1141,8 +1139,6 @@ enum isNodeBuilder(T) = is(T : NodeBuilder!(A, a), A, alias a);
 struct NodeBuilder(T, alias fun = "a") {
 
     import std.functional;
-
-    import fluid.style;
 
     alias Type = T;
     alias initializer = unaryFun!fun;

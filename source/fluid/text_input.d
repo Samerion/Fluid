@@ -13,7 +13,6 @@ import std.container.dlist;
 import fluid.node;
 import fluid.text;
 import fluid.label;
-import fluid.style;
 import fluid.scroll;
 import fluid.backend;
 import fluid.input_node;

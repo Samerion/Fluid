@@ -2,7 +2,6 @@
 module fluid.image_view;
 
 import fluid.node;
-import fluid.style;
 import fluid.backend;
 
 @safe:

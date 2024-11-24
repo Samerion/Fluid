@@ -68,7 +68,6 @@ class Separator : Node {
 unittest {
 
     import fluid.theme;
-    import fluid.default_theme;
 
     auto io = new HeadlessBackend(Vector2(100, 100));
     auto theme = nullTheme.derive(

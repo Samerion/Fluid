@@ -129,7 +129,6 @@ unittest {
     import fluid.space;
     import fluid.label;
     import fluid.text_input;
-    import fluid.default_theme;
 
     Label theLabel;
     TextInput input;

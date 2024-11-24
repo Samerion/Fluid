@@ -4,7 +4,6 @@ import std.math;
 import std.algorithm;
 
 import fluid.node;
-import fluid.style;
 import fluid.backend;
 import fluid.input_node;
 

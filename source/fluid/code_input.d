@@ -6,7 +6,6 @@ import std.algorithm;
 
 import fluid.node;
 import fluid.text;
-import fluid.style;
 import fluid.backend;
 import fluid.text_input;
 import fluid.text.typeface;

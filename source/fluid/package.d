@@ -32,7 +32,6 @@ public import
     fluid.checkbox,
     fluid.children,
     fluid.code_input,
-    fluid.default_theme,
     fluid.drag_slot,
     fluid.field_slot,
     fluid.frame,
@@ -58,10 +57,11 @@ public import
     fluid.slider,
     fluid.slot,
     fluid.space,
-    fluid.style,
     fluid.switch_slot,
     fluid.text,
     fluid.text_input,
+    fluid.theme.style,
+    fluid.theme.default_theme,
     // Note: fluid.theme is not included
     fluid.tree;
 

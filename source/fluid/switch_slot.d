@@ -2,7 +2,6 @@
 module fluid.switch_slot;
 
 import fluid.node;
-import fluid.style;
 import fluid.backend;
 
 @safe:
