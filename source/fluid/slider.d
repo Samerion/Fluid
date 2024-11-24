@@ -3,15 +3,10 @@ module fluid.slider;
 import std.range;
 
 import fluid.node;
-import fluid.utils;
-import fluid.input;
-import fluid.style;
 import fluid.backend;
-import fluid.structs;
-
+import fluid.input_node;
 
 @safe:
-
 
 ///
 alias slider(T) = simpleConstructor!(Slider!T);
@@ -241,7 +236,7 @@ abstract class AbstractSlider : InputNode!Node {
 
     }
 
-    @(FluidInputAction.press, whileDown)
+    @(FluidInputAction.press, WhileDown)
     protected void press() {
 
         // Get mouse position relative to the first step

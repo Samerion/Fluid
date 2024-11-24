@@ -1,6 +1,4 @@
 /// This module provides a DUB template for `dub init -t fluid`
-module fluid.dub_template;
-
 import std.file;
 import std.string;
 import std.process;

@@ -4,14 +4,12 @@ import std.math;
 import std.algorithm;
 
 import fluid.node;
-import fluid.utils;
-import fluid.input;
-import fluid.style;
 import fluid.backend;
+import fluid.input_node;
 
+import fluid.io.hover;
 
 @safe:
-
 
 /// Create a new vertical scroll bar.
 alias vscrollInput = simpleConstructor!ScrollInput;
@@ -240,7 +238,6 @@ unittest {
     import fluid.label;
     import fluid.button;
     import fluid.scroll;
-    import fluid.structs;
 
     Button btn;
 
@@ -331,9 +328,7 @@ class ScrollInputHandle : Node, FluidHoverable {
 
     this(ScrollInput parent) {
 
-        import fluid.structs : layout;
-
-        this.layout = layout!"fill";
+        this.layout = .layout!"fill";
         this.parent = parent;
 
     }
@@ -377,7 +372,7 @@ class ScrollInputHandle : Node, FluidHoverable {
 
     }
 
-    @(FluidInputAction.press, fluid.input.WhileDown)
+    @(FluidInputAction.press, WhileDown)
     protected void whileDown() @trusted {
 
         const mousePosition = io.mousePosition;

@@ -6,21 +6,9 @@ import std.algorithm;
 import fluid.node;
 import fluid.tree;
 import fluid.frame;
-import fluid.style;
-import fluid.utils;
 import fluid.backend;
-import fluid.structs;
-
 
 @safe:
-
-
-deprecated("`Grid` and `grid` were renamed to `GridFrame` and `gridFrame` respectively. To be removed in 0.8.0.") {
-
-    alias grid = simpleConstructor!GridFrame;
-    alias Grid = GridFrame;
-
-}
 
 alias gridFrame = simpleConstructor!GridFrame;
 alias gridRow = simpleConstructor!GridRow;

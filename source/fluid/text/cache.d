@@ -630,7 +630,7 @@ package auto query(return scope TextRulerCache* cache, size_t index) {
 /// ditto
 package auto queryPosition(return scope TextRulerCache* cache, float y) {
 
-    import fluid.utils : end;
+    import fluid.tree.types : end;
 
     // Just like in `cache()`, the middle point is used to determine the side the query descends into.
     // In this case, the Y position of the middle point is the position of the right side's `startRuler`.
@@ -645,8 +645,8 @@ package auto queryPosition(return scope TextRulerCache* cache, float y) {
 @("Cache can be queried by position")
 unittest {
 
-    import fluid.style : Style;
-    import fluid.types : Vector2;
+    import fluid.theme.style : Style;
+    import fluid.tree.types : Vector2;
 
     const lineHeight = 20;
 
@@ -1002,7 +1002,7 @@ do {
 @("Query on a leaf cache returns the first item")
 unittest {
 
-    import fluid.style;
+    import fluid.theme.style;
 
     auto cache = new TextRulerCache();
 
@@ -1022,7 +1022,7 @@ unittest {
 @("TextRulerCache.insert works")
 unittest {
 
-    import fluid.style;
+    import fluid.theme.style;
 
     auto cache = new TextRulerCache();
     auto typeface = Style.defaultTypeface;
@@ -1075,7 +1075,7 @@ unittest {
 unittest {
 
     import fluid.label;
-    import fluid.default_theme;
+    import fluid.theme.default_theme;
 
     auto root = label(nullTheme, "Lorem ipsum dolor sit amet, consectetur " 
         ~ "adipiscing elit, sed do eiusmod tempor " 
@@ -1146,7 +1146,7 @@ unittest {
 unittest {
 
     import fluid.label;
-    import fluid.default_theme;
+    import fluid.theme.default_theme;
 
     auto root = label(nullTheme, "Lorem ipsum dolor sit amet, consectetur " 
         ~ "adipiscing elit, sed do eiusmod tempor " 
@@ -1197,7 +1197,7 @@ unittest {
 unittest {
 
     import fluid.label;
-    import fluid.default_theme;
+    import fluid.theme.default_theme;
 
     auto root = label(nullTheme, "import fluid;\n"
         ~ "void main() {\n"
@@ -1238,7 +1238,7 @@ unittest {
 @trusted 
 unittest {
 
-    import fluid.style;
+    import fluid.theme.style;
 
     auto typeface = Style.defaultTypeface;
 
@@ -1417,7 +1417,7 @@ unittest {
 @("Removing the last cache node collapses the its interval — merging with leaf")
 unittest {
 
-    import fluid.style;
+    import fluid.theme.style;
 
     auto typeface = Style.defaultTypeface;
     auto cache = new TextRulerCache(

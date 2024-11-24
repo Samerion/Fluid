@@ -4,8 +4,7 @@ import std.range;
 import std.string;
 import std.algorithm;
 
-import fluid.utils;
-import fluid.types;
+import fluid.tree.types;
 import fluid.text.rope;
 import fluid.text.ruler;
 

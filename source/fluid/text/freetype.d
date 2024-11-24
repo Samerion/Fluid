@@ -5,8 +5,7 @@ import bindbc.freetype;
 
 import std.string;
 
-import fluid.utils;
-import fluid.types;
+import fluid.tree.types;
 import fluid.text.rope;
 import fluid.text.typeface;
 

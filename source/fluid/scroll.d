@@ -7,17 +7,14 @@ import std.algorithm;
 import fluid.node;
 import fluid.frame;
 import fluid.space;
-import fluid.utils;
-import fluid.input;
-import fluid.style;
 import fluid.backend;
-import fluid.structs;
+import fluid.input_node;
+
+import fluid.io.scroll;
 
 public import fluid.scroll_input;
 
-
 @safe:
-
 
 alias ScrollFrame = Scrollable!Frame;
 alias Scrollable(T : Space) = Scrollable!(T, "directionHorizontal");
@@ -116,13 +113,6 @@ class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable {
     float scrollMax() const {
 
         return scrollBar.scrollMax();
-
-    }
-
-    deprecated("shallowScrollTo with a Vector2 argument has been deprecated and will be removed in Fluid 0.8.0.")
-    Rectangle shallowScrollTo(const Node child, Vector2, Rectangle parentBox, Rectangle childBox) {
-
-        return shallowScrollTo(child, parentBox, childBox);
 
     }
 

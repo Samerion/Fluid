@@ -7,12 +7,11 @@ import std.traits;
 import std.algorithm;
 
 import fluid.node;
-import fluid.input;
-import fluid.utils;
-import fluid.style;
 import fluid.backend;
-import fluid.structs;
 import fluid.text_input;
+import fluid.input_node;
+
+import fluid.io.hover;
 
 alias numberInput(T) = simpleConstructor!(NumberInput!T);
 alias intInput = simpleConstructor!IntInput;
@@ -22,7 +21,6 @@ alias IntInput = NumberInput!int;
 alias FloatInput = NumberInput!float;
 
 alias numberInputSpinner = simpleConstructor!NumberInputSpinner;
-
 
 @safe:
 
@@ -403,8 +401,6 @@ class NumberInputSpinner : Node, FluidHoverable {
     }
 
     protected override bool hoveredImpl(Rectangle rect, Vector2 mousePosition) {
-
-        import fluid.utils : contains;
 
         return buttonsRectangle(style, rect).contains(mousePosition);
 

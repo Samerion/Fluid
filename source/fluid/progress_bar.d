@@ -3,13 +3,9 @@ module fluid.progress_bar;
 
 import fluid.text;
 import fluid.node;
-import fluid.utils;
 import fluid.backend;
-import fluid.structs;
-
 
 @safe:
-
 
 /// Progress bar node for communicating the program is actively working on something, and needs time to process. The
 /// progress bar draws a styleable `ProgressBarFill` node inside, spanning a fraction of its content, usually starting
@@ -168,7 +164,6 @@ unittest {
 unittest {
 
     import fluid.theme;
-    import fluid.default_theme;
 
     const steps = 24;
 
@@ -216,7 +211,6 @@ unittest {
 
 unittest {
 
-    import fluid.style;
     import fluid.theme;
 
     auto io = new HeadlessBackend;

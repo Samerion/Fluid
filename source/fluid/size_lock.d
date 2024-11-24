@@ -3,8 +3,6 @@ module fluid.size_lock;
 import std.algorithm;
 
 import fluid.node;
-import fluid.utils;
-import fluid.style;
 import fluid.backend;
 
 
@@ -100,7 +98,6 @@ unittest {
     import fluid.space;
     import fluid.label;
     import fluid.frame;
-    import fluid.structs;
 
     auto io = new HeadlessBackend;
     auto root = sizeLock!vframe(

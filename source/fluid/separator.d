@@ -2,13 +2,9 @@
 module fluid.separator;
 
 import fluid.node;
-import fluid.utils;
 import fluid.backend;
-import fluid.structs;
-
 
 @safe:
-
 
 /// A separator node creates a line, used to separate unrelated parts of content.
 alias vseparator = simpleConstructor!(Separator, (a) {
@@ -72,7 +68,6 @@ class Separator : Node {
 unittest {
 
     import fluid.theme;
-    import fluid.default_theme;
 
     auto io = new HeadlessBackend(Vector2(100, 100));
     auto theme = nullTheme.derive(

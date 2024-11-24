@@ -1,142 +1,39 @@
-/// Definitions for common tree actions; This is the Fluid tree equivalent to std.algorithm.
-module fluid.actions;
+/// This module provides basic functionality for scrolling with a mouse wheel.
+module fluid.io.scroll;
 
 import fluid.node;
-import fluid.tree;
-import fluid.input;
-import fluid.scroll;
-import fluid.backend;
 
+import fluid.tree.types;
+import fluid.tree.action;
 
 @safe:
 
+/// An interface to be implemented by nodes that accept scroll input.
+interface FluidScrollable {
 
-/// Set focus on the given node, if focusable, or the first of its focusable children. This will be done lazily during
-/// the next draw. If calling `focusRecurseChildren`, the subject of the call will be excluded from taking focus.
-/// Params:
-///     parent = Container node to search in.
-FocusRecurseAction focusRecurse(Node parent) {
+    /// Returns true if the node can react to given scroll.
+    ///
+    /// Should return false if the given scroll has no effect, either because it scroll on an unsupported axis, or
+    /// because the axis is currently maxed out.
+    bool canScroll(Vector2 value) const;
 
-    auto action = new FocusRecurseAction;
+    /// React to scroll wheel input.
+    void scrollImpl(Vector2 value);
 
-    // Perform a tree action to find the child
-    parent.queueAction(action);
+    /// Scroll to given child node.
+    /// Params:
+    ///     child     = Child to scroll to.
+    ///     parentBox = Outer box of this node (the scrollable).
+    ///     childBox  = Outer box of the child node (the target).
+    /// Returns:
+    ///     New rectangle for the childBox.
+    Rectangle shallowScrollTo(const Node child, Rectangle parentBox, Rectangle childBox);
 
-    return action;
+    /// Get current scroll value.
+    float scroll() const;
 
-}
-
-unittest {
-
-    import fluid.space;
-    import fluid.label;
-    import fluid.button;
-
-    auto io = new HeadlessBackend;
-    auto root = vspace(
-        label(""),
-        button("", delegate { }),
-        button("", delegate { }),
-        button("", delegate { }),
-    );
-
-    // First paint: no node focused
-    root.io = io;
-    root.draw();
-
-    assert(root.tree.focus is null, "No focus assigned on the first frame");
-
-    io.nextFrame;
-
-    // Recurse into the tree to focus on the first node
-    root.focusRecurse();
-    root.draw();
-
-    assert(root.tree.focus.asNode is root.children[1], "First child is now focused");
-    assert((cast(FluidFocusable) root.children[1]).isFocused);
-
-}
-
-/// ditto
-FocusRecurseAction focusRecurseChildren(Node parent) {
-
-    auto action = new FocusRecurseAction;
-    action.excludeStartNode = true;
-    parent.queueAction(action);
-
-    return action;
-
-}
-
-/// ditto
-FocusRecurseAction focusChild(Node parent) {
-
-    return focusRecurseChildren(parent);
-
-}
-
-unittest {
-
-    import fluid.space;
-    import fluid.button;
-
-    auto io = new HeadlessBackend;
-    auto root = vframeButton(
-        button("", delegate { }),
-        button("", delegate { }),
-        delegate { }
-    );
-
-    root.io = io;
-
-    // Typical focusRecurse call will focus the button
-    root.focusRecurse;
-    root.draw();
-
-    assert(root.tree.focus is root);
-
-    io.nextFrame;
-
-    // If we want to make sure the action descends below the root, we must
-    root.focusRecurseChildren;
-    root.draw();
-
-    assert(root.tree.focus.asNode is root.children[0]);
-
-}
-
-class FocusRecurseAction : TreeAction {
-
-    public {
-
-        bool excludeStartNode;
-        void delegate(FluidFocusable) @safe finished;
-
-    }
-
-    override void beforeDraw(Node node, Rectangle) {
-
-        // Ignore if the branch is disabled
-        if (node.isDisabledInherited) return;
-
-        // Ignore the start node if excluded
-        if (excludeStartNode && node is startNode) return;
-
-        // Check if the node is focusable
-        if (auto focusable = cast(FluidFocusable) node) {
-
-            // Give it focus
-            focusable.focus();
-
-            // Submit the result
-            if (finished) finished(focusable);
-
-            // We're done here
-            stop;
-
-        }
-
-    }
+    /// Set scroll value.
+    float scroll(float value);
 
 }
 

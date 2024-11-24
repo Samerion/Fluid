@@ -10,26 +10,12 @@ import std.traits;
 import std.exception;
 
 import fluid.node;
-import fluid.utils;
-import fluid.style;
 import fluid.backend;
-import fluid.structs;
 
+public import fluid.theme.style;
+public import fluid.theme.default_theme;
 
 @safe:
-
-
-deprecated("Styles have been reworked and defineStyles is now a no-op. To be removed in 0.8.0.") {
-    mixin template defineStyles(args...) { }
-    mixin template DefineStyles(args...) { }
-}
-
-deprecated("makeTheme is now a no-op. Use `Theme()` and refer to the changelog for updates. To be removed in 0.8.0.")
-Theme makeTheme(string s, Ts...)(Ts) {
-
-    return Theme.init;
-
-}
 
 /// Node theme.
 struct Theme {
@@ -217,9 +203,8 @@ unittest {
 
 }
 
+@("Copying rules interacts correctly with dynamic rules")
 unittest {
-
-    // Copying rules & dynamic rules
 
     import fluid.label;
     import fluid.button;
@@ -232,7 +217,7 @@ unittest {
             : rule()
     );
 
-    auto myTheme = Theme(
+    auto myTheme = nullTheme.derive(
         rule!Label(
             myRule,
         ),
@@ -385,7 +370,6 @@ struct Selector {
 
     unittest {
 
-        import fluid.input;
         import fluid.label;
         import fluid.button;
 
@@ -1337,6 +1321,8 @@ struct Field(string fieldName, T) {
 
         private size_t[2] slice;
 
+        enum length = T.length;
+        
         Field opAssign(Input, size_t n)(Input[n] input) return {
 
             value[slice] = input;

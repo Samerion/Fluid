@@ -1,15 +1,13 @@
 module fluid.password_input;
 
-import fluid.utils;
+import fluid.node;
 import fluid.backend;
 import fluid.text_input;
 
-
 @safe:
 
-
 /// A password input box.
-alias passwordInput = simpleConstructor!PasswordInput;
+alias passwordInput = nodeBuilder!PasswordInput;
 
 /// ditto
 class PasswordInput : TextInput {
@@ -84,7 +82,7 @@ class PasswordInput : TextInput {
 
     unittest {
 
-        import fluid.input;
+        import fluid.tree.input_action;
 
         auto root = passwordInput();
         root.value = "Hello, ";
@@ -122,7 +120,7 @@ class PasswordInput : TextInput {
 
     unittest {
 
-        import fluid.input : FluidInputAction;
+        import fluid.tree.input_action : FluidInputAction;
 
         auto root = passwordInput();
         root.savePush("Hello, x");

@@ -268,6 +268,7 @@ Space createUI(string initialChapter = null) @safe {
                 navigationBar = sizeLock!hspace(
                     .layout!"center",
                     .contentSize,
+                    .hidden,
 
                     // Back button
                     button("← Back to navigation", delegate {
@@ -281,7 +282,7 @@ Space createUI(string initialChapter = null) @safe {
                         popupButton("Outline", outline),
                     ),
                     titleLabel = label(""),
-                ).hide(),
+                ),
 
                 // Content
                 content = exampleList(&changeChapter),
@@ -291,14 +292,23 @@ Space createUI(string initialChapter = null) @safe {
                     .contentSize,
 
                     // Left button
-                    leftButton = button("Previous chapter", delegate {
-                        changeChapter(to!Chapter(currentChapter-1));
-                    }).hide(),
+                    leftButton = button(
+                        .hidden,
+                        "Previous chapter", 
+                        delegate {
+                            changeChapter(to!Chapter(currentChapter-1));
+                        }
+                    ),
 
                     // Right button
-                    rightButton = button(.layout!(1, "end"), "Next chapter", delegate {
-                        changeChapter(to!Chapter(currentChapter+1));
-                    }).hide(),
+                    rightButton = button(
+                        .layout!(1, "end"),
+                        .hidden, 
+                        "Next chapter", 
+                        delegate {
+                            changeChapter(to!Chapter(currentChapter+1));
+                        }
+                    ),
                 ),
             ),
         ),

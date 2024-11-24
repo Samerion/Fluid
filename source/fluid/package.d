@@ -28,20 +28,16 @@ else {
 
 public import
     fluid.backend,
-    fluid.actions,
     fluid.button,
     fluid.checkbox,
-    fluid.children,
     fluid.code_input,
-    fluid.default_theme,
     fluid.drag_slot,
-    fluid.file_input,
     fluid.field_slot,
     fluid.frame,
     fluid.grid,
-    fluid.hover_button,
+    fluid.hyperlink,
     fluid.image_view,
-    fluid.input,
+    fluid.io,
     fluid.label,
     fluid.map_frame,
     fluid.node,
@@ -59,14 +55,19 @@ public import
     fluid.slider,
     fluid.slot,
     fluid.space,
-    fluid.structs,
-    fluid.style,
     fluid.switch_slot,
     fluid.text,
     fluid.text_input,
+    fluid.theme.style,
+    fluid.theme.default_theme,
     // Note: fluid.theme is not included
-    fluid.tree,
-    fluid.utils;
+    fluid.tree;
+
+deprecated("`fluid.hover_button` is deprecated, because it is legacy code and has no known usecase. "
+    ~ "Please create your own `Button` node subclass and override `mouseImpl`. "
+    ~ "`hover_button` will be removed in Fluid 0.9.0.")
+public import 
+    fluid.hover_button;
 
 unittest {
 
@@ -117,3 +118,5 @@ unittest {
     assert(textTexture.rectangle.end.y.isClose(imageView.rectangle.end.y));
 
 }
+
+static assert(__traits(compiles, openURL("https://samerion.com")));

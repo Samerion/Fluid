@@ -30,15 +30,13 @@ import fluid.node;
 import fluid.slot;
 import fluid.label;
 import fluid.space;
-import fluid.style;
 import fluid.frame;
 import fluid.button;
-import fluid.structs;
 import fluid.text.rope;
+import fluid.hyperlink;
 import fluid.code_input;
 import fluid.tree_sitter;
 import fluid.popup_button;
-import fluid.default_theme;
 
 // Disable playground functionality under Windows & macOS
 // Hopefully this can be resolved soon
@@ -485,10 +483,10 @@ do {
         version (Fluid_DisablePlayground) {
             auto message = [
                 label("Warning: Interactive playground is disabled on this platform. See issue #182 for more details."),
-                button("Open #182 in browser", delegate {
-                    import fluid.utils;
-                    openURL("https://git.samerion.com/Samerion/Fluid/issues/182");
-                }),
+                hyperlink(
+                    "https://git.samerion.com/Samerion/Fluid/issues/182",
+                    "Issue #182"
+                ),
             ];
         }
         else {
@@ -752,10 +750,13 @@ Frame exampleView(DlangCompiler compiler, CodeInput input, Theme contentTheme) {
     }
 
     // Disable edits if there's no compiler available
-    else return hframe(
-        .layout!"fill",
-        input.disable(),
-    );
+    else {
+        input.disable();
+        return hframe(
+            .layout!"fill",
+            input,
+        );
+    }
 
 }
 
@@ -849,18 +850,15 @@ private bindbc.SharedLib runSharedLibrary(string path) @system {
 }
 
 /// Creates a `CodeInput` with D syntax highlighting.
-CodeInput dlangInput(void delegate() @safe submitted = null) @trusted {
+alias dlangInput = nodeBuilder!(CodeInput, (node) @trusted {
 
     auto language = treeSitterLanguage!"d";
     auto highlighter = new TreeSitterHighlighter(language, dlangQuery);
 
-    return codeInput(
-        .layout!(1, "fill"),
-        highlighter,
-        submitted
-    );
+    node.layout = .layout!(1, "fill");
+    node.highlighter = highlighter;
 
-}
+});
 
 private Rope readDocs(string source, TSQueryCapture[] captures) @trusted {
 
@@ -934,7 +932,7 @@ private Space interpretDocs(Rope rope) {
             // TODO common space (prefix)
             else if (line == "---") {
                 preformattedDelimiter = "---";
-                result ~= lastCode = dlangInput().disable();
+                result ~= lastCode = dlangInput(.disabled);
             }
 
             // Append text to previous line

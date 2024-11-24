@@ -12,23 +12,19 @@ import std.container.dlist;
 
 import fluid.node;
 import fluid.text;
-import fluid.input;
 import fluid.label;
-import fluid.style;
-import fluid.utils;
 import fluid.scroll;
-import fluid.actions;
 import fluid.backend;
-import fluid.structs;
+import fluid.input_node;
 import fluid.popup_frame;
 import fluid.text.typeface;
+
+import fluid.io.scroll;
 
 alias wordFront = fluid.text.wordFront;
 alias wordBack  = fluid.text.wordBack;
 
-
 @safe:
-
 
 /// Constructor parameter, enables multiline input in `TextInput`.
 auto multiline(bool value = true) {
@@ -104,10 +100,6 @@ class TextInput : InputNode!Node, FluidScrollable {
             /// a word, and can be merged with another, similar change.
             bool isMinor;
 
-            deprecated("isContinuous has been renamed to isMinor and will be removed in Fluid 0.8.0.") {
-                alias isContinuous = isMinor;
-            }
-
             /// Change made by this entry.
             ///
             /// `first` and `second` should represent the old and new value respectively; `second` is effectively a
@@ -126,48 +118,6 @@ class TextInput : InputNode!Node, FluidScrollable {
             /// ditto
             bool isSubtractive() const {
                 return !diff.first.empty;
-            }
-
-            deprecated("isAdditive and isSubtractive are now property functions and cannot be set."
-                ~ " To be removed in Fluid 0.8.0") {
-
-                bool isAdditive(bool) {
-                    return isAdditive;
-                }
-
-                bool isSubtractive(bool) {
-                    return isSubtractive;
-                }
-
-            }
-
-            /// Set `isAdditive` and `isSubtractive` based on the given text representing the last input.
-            deprecated("setPreviousEntry and canMergeWith(Rope) have been deprecated. "
-                ~ " Please refer to TextInput.replace for future usage. To be removed in Fluid 0.8.0.") {
-
-                void setPreviousEntry(HistoryEntry entry) {
-
-                    setPreviousEntry(entry.value);
-
-                }
-
-                /// ditto
-                void setPreviousEntry(Rope previousValue) {
-
-                    this.diff = previousValue.diff(value);
-
-                }
-
-                bool canMergeWith(Rope nextValue) const {
-
-                    // Create a dummy entry based on the text
-                    auto nextEntry = HistoryEntry(nextValue, 0, 0);
-                    nextEntry.setPreviousEntry(value);
-
-                    return canMergeWith(nextEntry);
-
-                }
-
             }
 
             /// Check if this entry can be merged with (newer) entry given its text content. This is used to combine
@@ -223,7 +173,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         /// Current history entry, if relevant.
         HistoryEntry _snapshot;
 
-        deprecated("`_isContinuous` is deprecated in favor of `snapshot.isMinor` and will be removed in Fluid 0.8.0."
+        deprecated("`_isContinuous` is deprecated in favor of `snapshot.isMinor` and will be removed in Fluid 0.9.0."
             ~ " `replaceNoHistory` or `setCaretIndexNoHistory` are also likely replacements.") {
 
             ref inout(bool) _isContinuous() inout {
@@ -1553,8 +1503,8 @@ class TextInput : InputNode!Node, FluidScrollable {
         if (!active) return false;
 
         // Do not override undo/redo actions
-        if (id == InputActionID.from!(FluidInputAction.undo)) return false;
-        if (id == InputActionID.from!(FluidInputAction.redo)) return false;
+        if (id == inputActionID!(FluidInputAction.undo)) return false;
+        if (id == inputActionID!(FluidInputAction.redo)) return false;
 
         const past = snapshot();
 
@@ -4053,7 +4003,7 @@ class TextInput : InputNode!Node, FluidScrollable {
     }
 
     deprecated("`pushSnapshot` and `forcePushSnapshot` have been replaced by `pushHistory`/`forcePushHistory`"
-        ~ " and will be removed in Fluid 0.8.0.") {
+        ~ " and will be removed in Fluid 0.9.0.") {
 
         void pushSnapshot(HistoryEntry entry) {
             pushHistory(entry);
@@ -4239,7 +4189,7 @@ class TextInput : InputNode!Node, FluidScrollable {
     }
 
     /// Restore state from snapshot.
-    deprecated("`snapshot(HistoryEntry)` is deprecated and will be removed in Fluid 0.8.0."
+    deprecated("`snapshot(HistoryEntry)` is deprecated and will be removed in Fluid 0.9.0."
         ~ " Please use `restoreSnapshot` instead.")
     protected HistoryEntry snapshot(HistoryEntry entry) {
 

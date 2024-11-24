@@ -2,14 +2,13 @@
 module fluid.field_slot;
 
 import fluid.node;
-import fluid.utils;
-import fluid.input;
-import fluid.actions;
 import fluid.backend;
+import fluid.tree.input_action;
 
+import fluid.io.hover;
+import fluid.io.focus;
 
 @safe:
-
 
 /// A field slot is a node meant to hold an input node along with associated nodes, like labels. It's functionally
 /// equivalent to the [`<label>` element in HTML](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/label).
@@ -88,7 +87,6 @@ unittest {
 
     import fluid.frame;
     import fluid.label;
-    import fluid.structs;
     import fluid.text_input;
 
     TextInput input;
@@ -130,9 +128,7 @@ unittest {
 
     import fluid.space;
     import fluid.label;
-    import fluid.structs;
     import fluid.text_input;
-    import fluid.default_theme;
 
     Label theLabel;
     TextInput input;

@@ -7,11 +7,10 @@ import std.algorithm;
 
 import fluid.node;
 import fluid.frame;
-import fluid.input;
-import fluid.style;
-import fluid.utils;
-import fluid.actions;
 import fluid.backend;
+import fluid.input_node;
+
+import fluid.io.focus;
 
 
 @safe:
@@ -381,7 +380,6 @@ class MapFrame : Frame {
     unittest {
 
         import fluid.space;
-        import fluid.structs : layout;
 
         class RectangleSpace : Space {
 
@@ -403,7 +401,7 @@ class MapFrame : Frame {
 
         auto io = new HeadlessBackend;
         auto root = mapFrame(
-            layout!"fill",
+            .layout!"fill",
 
             // Rectangles with same X and Y
 

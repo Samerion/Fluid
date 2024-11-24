@@ -89,6 +89,14 @@
 	"stringImportPaths": [
 		"resources"
 	],
+	"importPaths": [
+		"deprecated",
+		"source"
+	],
+	"sourcePaths": [
+		"deprecated",
+		"source"
+	],
 	"subConfigurations": {
 		"bindbc-freetype": "staticBC"
 	},
@@ -118,7 +126,7 @@
 		{
 			"name": "init-exec",
 			"sourceFiles": [
-				"source/fluid/dub_template.d"
+				"dub_template.d"
 			],
 			"sourcePaths": [],
 			"targetPath": "build",
