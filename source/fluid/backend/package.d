@@ -10,6 +10,8 @@ import std.traits;
 import std.datetime;
 import std.algorithm;
 
+import fluid.node : Node;
+
 public import fluid.types;
 public import fluid.backend.raylib5;
 public import fluid.backend.headless;
@@ -191,8 +193,6 @@ interface FluidBackend {
 /// function.
 interface FluidEntrypointBackend : FluidBackend {
 
-    import fluid.node : Node;
-
     /// Start a Fluid GUI app using this backend.
     ///
     /// This will draw the user interface and respond to input events in a loop, until the root node is marked for 
@@ -202,6 +202,78 @@ interface FluidEntrypointBackend : FluidBackend {
     /// Params:
     ///     root = Node to function as the root of the user interface.
     void run(Node root);
+
+}
+
+/// Start a Fluid GUI app.
+/// 
+/// This is meant to be the easiest way to launch a Fluid app. Call this in your `main()` function with the node holding
+/// your user interface, and that's it! The function will not return until the app is closed. 
+///
+/// ---
+/// void main() {
+///     
+///     run(
+///         label("Hello, World!"),
+///     );
+/// 
+/// }
+/// ---
+///
+/// You can close the UI programmatically by calling `remove()` on the root node.
+///
+/// The exact behavior of this function is defined by the backend in use, so some functionality may vary. Some backends
+/// might not support this.
+/// 
+/// Params:
+///     node = This node will serve as the root of your user interface until closed. If you wish to change it at 
+///         runtime, wrap it in a `NodeSlot`.
+void run(Node node) {
+
+    if (mockRun) {
+        mockRun()(node);
+        return;
+    }
+
+    auto backend = cast(FluidEntrypointBackend) defaultFluidBackend;
+
+    assert(backend, "Chosen default backend does not expose an event loop interface.");
+
+    node.io = backend;
+    backend.run(node);
+    
+}
+
+/// ditto
+void run(Node node, FluidEntrypointBackend backend) {
+
+    // Mock run callback is available
+    if (mockRun) {
+        mockRun()(node);
+    }
+
+    else {
+        node.io = backend;
+        backend.run(node);
+    }
+
+}
+
+alias RunCallback = void delegate(Node node) @safe;
+
+/// Set a new function to use instead of `run`.
+RunCallback mockRun(RunCallback callback) {
+
+    // Assign the callback
+    mockRun() = callback;
+    return mockRun();
+
+}
+
+ref RunCallback mockRun() {
+
+    static RunCallback callback;
+    return callback;
 
 }
 
