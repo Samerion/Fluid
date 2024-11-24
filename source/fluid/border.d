@@ -1,6 +1,5 @@
 module fluid.border;
 
-import fluid.style;
 import fluid.backend;
 
 
@@ -17,12 +16,12 @@ interface FluidBorder {
     bool opEquals(const Object object) @safe const;
 
     /// Get the rectangle for the given side of the border.
-    final Rectangle sideRect(Rectangle source, float[4] size, Style.Side side) const {
+    final Rectangle sideRect(Rectangle source, float[4] size, Side side) const {
 
         final switch (side) {
 
             // Left side
-            case Style.Side.left:
+            case Side.left:
                 return Rectangle(
                     source.x,
                     source.y + size.sideTop,
@@ -31,7 +30,7 @@ interface FluidBorder {
                 );
 
             // Right side
-            case Style.Side.right:
+            case Side.right:
                 return Rectangle(
                     source.x + source.width - size.sideRight,
                     source.y + size.sideTop,
@@ -40,7 +39,7 @@ interface FluidBorder {
                 );
 
             // Top side
-            case Style.Side.top:
+            case Side.top:
                 return Rectangle(
                     source.x + size.sideLeft,
                     source.y,
@@ -49,7 +48,7 @@ interface FluidBorder {
                 );
 
             // Bottom side
-            case Style.Side.bottom:
+            case Side.bottom:
                 return Rectangle(
                     source.x + size.sideLeft,
                     source.y + source.height - size.sideBottom,
@@ -63,11 +62,11 @@ interface FluidBorder {
 
     /// Get square for corner next counter-clockwise to the given side.
     /// Note: returned rectangles may have negative size; rect start position will always point to the corner itself.
-    final Rectangle cornerRect(Rectangle source, float[4] size, Style.Side side) const {
+    final Rectangle cornerRect(Rectangle source, float[4] size, Side side) const {
 
         final switch (side) {
 
-            case Style.Side.left:
+            case Side.left:
                 return Rectangle(
                     source.x,
                     source.y + source.height,
@@ -75,7 +74,7 @@ interface FluidBorder {
                     -cast(float) size.sideBottom,
                 );
 
-            case Style.Side.right:
+            case Side.right:
                 return Rectangle(
                     source.x + source.width,
                     source.y,
@@ -83,7 +82,7 @@ interface FluidBorder {
                     size.sideTop,
                 );
 
-            case Style.Side.top:
+            case Side.top:
                 return Rectangle(
                     source.x,
                     source.y,
@@ -91,7 +90,7 @@ interface FluidBorder {
                     size.sideTop,
                 );
 
-            case Style.Side.bottom:
+            case Side.bottom:
                 return Rectangle(
                     source.x + source.width,
                     source.y + source.height,
@@ -130,8 +129,8 @@ class ColorBorder : FluidBorder {
         // For each side
         foreach (sideIndex; 0..4) {
 
-            const side = cast(Style.Side) sideIndex;
-            const nextSide = cast(Style.Side) ((sideIndex + 1) % 4);
+            const side = cast(Side) sideIndex;
+            const nextSide = cast(Side) ((sideIndex + 1) % 4);
 
             // Draw all the fragments
             io.drawRectangle(sideRect(borderBox, size, side), color[side]);

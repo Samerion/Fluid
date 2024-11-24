@@ -10,8 +10,10 @@ import std.traits;
 import std.exception;
 
 import fluid.node;
-import fluid.style;
 import fluid.backend;
+
+public import fluid.theme.style;
+public import fluid.theme.default_theme;
 
 @safe:
 
@@ -1319,6 +1321,8 @@ struct Field(string fieldName, T) {
 
         private size_t[2] slice;
 
+        enum length = T.length;
+        
         Field opAssign(Input, size_t n)(Input[n] input) return {
 
             value[slice] = input;

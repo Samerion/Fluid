@@ -1,6 +1,289 @@
 module fluid.tree.types;
 
+import std.range : ElementType;
+
 @safe:
+
+/// Side array is a static array defining a property separately for each side of a box, for example margin and border
+/// size. Order is as follows: `[left, right, top, bottom]`. You can use `Side` to index this array with an enum.
+///
+/// Because of the default behavior of static arrays, one can set the value for all sides to be equal with a simple
+/// assignment: `array = 8`. Additionally, to make it easier to manipulate the box, one may use the `sideX` and `sideY`
+/// functions to get a `float[2]` array of the values corresponding to the given axis (which can also be assigned like
+/// `array.sideX = 8`) or the `sideLeft`, `sideRight`, `sideTop` and `sideBottom` functions corresponding to the given
+/// sides.
+enum isSideArray(T) = is(T == X[4], X) && T.length == 4;
+
+/// ditto
+enum isSomeSideArray(T) = T.length == 4
+    && is(typeof(T.init[0]) == typeof(T.init[1]))
+    && is(typeof(T.init[1]) == typeof(T.init[2]))
+    && is(typeof(T.init[2]) == typeof(T.init[3]));
+
+///
+unittest {
+
+    float[4] sides;
+    static assert(isSideArray!(float[4]));
+
+    sides.sideX = 4;
+
+    assert(sides.sideLeft == sides.sideRight);
+    assert(sides.sideLeft == 4);
+
+    sides = 8;
+    assert(sides == [8, 8, 8, 8]);
+    assert(sides.sideX == sides.sideY);
+
+}
+
+/// An axis array is similar to a size array, but does not distinguish between invididual directions on a single axis.
+/// Thus, it contains only two values, one for the X axis, and one for the Y axis.
+///
+/// `sideX` and `sideY` can be used to access individual items of an axis array by name.
+enum isAxisArray(T) = is(T == X[2], X) && T.length == 2;
+
+static assert(!isSideArray!(float[2]));
+static assert( isSideArray!(float[4]));
+
+static assert( isAxisArray!(float[2]));
+static assert(!isAxisArray!(float[4]));
+
+/// Get a reference to the left, right, top or bottom side of the given side array.
+auto ref sideLeft(T)(return auto ref inout T sides)
+if (isSomeSideArray!T) {
+
+    return sides[Side.left];
+
+}
+
+/// ditto
+auto ref sideRight(T)(return auto ref inout T sides)
+if (isSomeSideArray!T) {
+
+    return sides[Side.right];
+
+}
+
+/// ditto
+auto ref sideTop(T)(return auto ref inout T sides)
+if (isSomeSideArray!T) {
+
+    return sides[Side.top];
+
+}
+
+/// ditto
+auto ref sideBottom(T)(return auto ref inout T sides)
+if (isSomeSideArray!T) {
+
+    return sides[Side.bottom];
+
+}
+
+///
+unittest {
+
+    float[4] sides = [8, 0, 4, 2];
+
+    assert(sides.sideRight == 0);
+
+    sides.sideRight = 8;
+    sides.sideBottom = 4;
+
+    assert(sides == [8, 8, 4, 4]);
+
+}
+
+/// Get a reference to the X axis for the given side or axis array.
+ref inout(ElementType!T[2]) sideX(T)(return ref inout T sides)
+if (isSideArray!T) {
+
+    const start = Side.left;
+    return sides[start .. start + 2];
+
+}
+
+/// ditto
+auto ref sideX(T)(return auto ref inout T sides)
+if (isSomeSideArray!T && !isSideArray!T) {
+
+    const start = Side.left;
+    return sides[start .. start + 2];
+
+}
+
+/// ditto
+ref inout(ElementType!T) sideX(T)(return ref inout T sides)
+if (isAxisArray!T) {
+
+    return sides[0];
+
+}
+
+/// Get a reference to the Y axis for the given side or axis array.
+ref inout(ElementType!T[2]) sideY(T)(return ref inout T sides)
+if (isSideArray!T) {
+
+    const start = Side.top;
+    return sides[start .. start + 2];
+
+}
+
+/// ditto
+auto ref sideY(T)(return auto ref inout T sides)
+if (isSomeSideArray!T && !isSideArray!T) {
+
+    const start = Side.top;
+    return sides[start .. start + 2];
+
+}
+
+/// ditto
+ref inout(ElementType!T) sideY(T)(return ref inout T sides)
+if (isAxisArray!T) {
+
+    return sides[1];
+
+}
+
+/// Assigning values to an axis of a side array.
+unittest {
+
+    float[4] sides = [1, 2, 3, 4];
+
+    assert(sides.sideX == [sides.sideLeft, sides.sideRight]);
+    assert(sides.sideY == [sides.sideTop, sides.sideBottom]);
+
+    sides.sideX = 8;
+
+    assert(sides == [8, 8, 3, 4]);
+
+    sides.sideY = sides.sideBottom;
+
+    assert(sides == [8, 8, 4, 4]);
+
+}
+
+/// Operating on an axis array.
+@("sideX/sideY work on axis arrays")
+unittest {
+
+    float[2] sides;
+
+    sides.sideX = 1;
+    sides.sideY = 2;
+
+    assert(sides == [1, 2]);
+
+    assert(sides.sideX == 1);
+    assert(sides.sideY == 2);
+    
+}
+
+/// Returns a side array created from either: another side array like it, a two item array with each representing an
+/// axis like `[x, y]`, or a single item array or the element type to fill all values with it.
+T[4] normalizeSideArray(T, size_t n)(T[n] values) {
+
+    // Already a valid side array
+    static if (n == 4) return values;
+
+    // Axis array
+    else static if (n == 2) return [values[0], values[0], values[1], values[1]];
+
+    // Single item array
+    else static if (n == 1) return [values[0], values[0], values[0], values[0]];
+
+    else static assert(false, format!"Unsupported static array size %s, expected 1, 2 or 4 elements."(n));
+
+
+}
+
+/// ditto
+T[4] normalizeSideArray(T)(T value) {
+
+    return [value, value, value, value];
+
+}
+
+enum Side {
+    left, 
+    right, 
+    top, 
+    bottom,
+}
+
+/// Make a style point the other way around
+Side reverse(Side side) {
+
+    final switch (side) {
+        case Side.left: return Side.right;
+        case Side.right: return Side.left;
+        case Side.top: return Side.bottom;
+        case Side.bottom: return Side.top;
+    }
+
+}
+
+/// Get position of a rectangle's side, on the X axis if `left` or `right`, or on the Y axis if `top` or `bottom`.
+float getSide(Rectangle rectangle, Side side) {
+
+    final switch (side) {
+        case Side.left:   return rectangle.x;
+        case Side.right:  return rectangle.x + rectangle.width;
+        case Side.top:    return rectangle.y;
+        case Side.bottom: return rectangle.y + rectangle.height;
+    }
+
+}
+
+unittest {
+
+    const rect = Rectangle(0, 5, 10, 15);
+
+    assert(rect.x == rect.getSide(Side.left));
+    assert(rect.y == rect.getSide(Side.top));
+    assert(rect.end.x == rect.getSide(Side.right));
+    assert(rect.end.y == rect.getSide(Side.bottom));
+
+}
+
+/// Shift the side clockwise (if positive) or counter-clockwise (if negative).
+Side shiftSide(Side side, int shift) {
+
+    import std.algorithm : predSwitch;
+
+    // Convert the side to an "angle" — 0 is the top, 1 is right and so on...
+    const angle = side.predSwitch(
+        Side.top, 0,
+        Side.right, 1,
+        Side.bottom, 2,
+        Side.left, 3,
+    );
+
+    // Perform the shift
+    const shifted = (angle + shift) % 4;
+
+    // And convert it back
+    return shifted.predSwitch(
+        0, Side.top,
+        1, Side.right,
+        2, Side.bottom,
+        3, Side.left,
+    );
+
+}
+
+unittest {
+
+    assert(shiftSide(Side.left, 0) == Side.left);
+    assert(shiftSide(Side.left, 1) == Side.top);
+    assert(shiftSide(Side.left, 2) == Side.right);
+    assert(shiftSide(Side.left, 4) == Side.left);
+
+    assert(shiftSide(Side.top, 1) == Side.right);
+
+}
 
 /// Get distance between two vectors.
 float distance(Vector2 a, Vector2 b) {
