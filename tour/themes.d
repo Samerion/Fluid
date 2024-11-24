@@ -54,7 +54,7 @@ void importExample() {
         ~ "so on. 'textColor' is probably self-explanatory, it changes the color of the text drawn by the node."),
     () => label("color() creates a color given its hex code. If you're not familiar with hex codes, you can read "
         ~ "on it on MDN:"),
-    () => button("<hex-color>", delegate { openURL("https://developer.mozilla.org/en-US/docs/Web/CSS/hex-color"); }),
+    () => hyperlink("https://developer.mozilla.org/en-US/docs/Web/CSS/hex-color", "<hex-color>"),
 )
 Frame rulesExample() {
 

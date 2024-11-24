@@ -91,9 +91,7 @@ void unsafeFunction() { }
     () => label("Tip: Memory safety is controlled with three attributes, @system, @trusted and @safe. The first two "
         ~ "disable memory safety checks, while @safe enables them. Use @trusted to mark code which you 'trust' to be "
         ~ "safe, so you can call it from @safe code."),
-    () => button("More information on D memory safety", delegate {
-        openURL("https://dlang.org/spec/memory-safe-d.html");
-    }),
+    () => hyperlink("https://dlang.org/spec/memory-safe-d.html", "More information on D memory safety"),
 )
 void safetyCheckerExample() @system {
 
