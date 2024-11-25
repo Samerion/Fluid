@@ -80,7 +80,7 @@ class NumberInput(T) : AbstractNumberInput {
         auto style = pickStyle();
 
         super.drawImpl(outer, inner);
-        spinner.draw(inner);
+        drawChild(spinner, inner);
 
         // Re-evaluate the expression if focus was lost
         if (!isFocused) evaluate();
@@ -336,7 +336,7 @@ abstract class AbstractNumberInput : TextInput {
     override void resizeImpl(Vector2 space) {
 
         super.resizeImpl(space);
-        spinner.resize(tree, theme, space);
+        resizeChild(spinner, space);
 
     }
 

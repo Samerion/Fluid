@@ -95,6 +95,7 @@ class PopupFrame : InputNode!Frame {
     }
 
     /// Draw the popup using the assigned anchor position.
+    deprecated("`drawAnchored()` should now be called with a parent parameter. Please update before Fluid 0.8.0.")
     void drawAnchored() {
 
         const rect = Rectangle(
@@ -107,9 +108,22 @@ class PopupFrame : InputNode!Frame {
 
     }
 
-    private void resizeInternal(LayoutTree* tree, Theme theme, Vector2 space) {
+    /// ditto
+    void drawAnchored(Node parent) {
 
-        resize(tree, theme, space);
+        const rect = Rectangle(
+            anchoredStartCorner.tupleof,
+            minSize.tupleof
+        );
+
+        // Draw the node within the defined rectangle
+        parent.drawChild(this, rect);
+
+    }
+
+    private void resizeInternal(Node parent, Vector2 space) {
+
+        parent.resizeChild(this, space);
 
     }
 
@@ -270,7 +284,7 @@ class PopupNodeAction : TreeAction {
         if (node !is node.tree.root) return;
 
         // Perform the resize
-        popup.resizeInternal(node.tree, node.theme, viewportSize);
+        popup.resizeInternal(node, viewportSize);
 
         // First resize
         if (!hasResized) {
@@ -295,7 +309,7 @@ class PopupNodeAction : TreeAction {
 
         // Draw the popup
         popup.childHasFocus = false;
-        popup.drawAnchored();
+        popup.drawAnchored(popup.tree.root);
 
         // Remove the popup if it has no focus
         if (!popup.isFocused) {

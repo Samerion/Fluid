@@ -696,7 +696,7 @@ abstract class Node {
         // Resize if required
         if (resizePending) {
 
-            resize(tree, theme, space);
+            resizeInternalImpl(tree, theme, space);
             _resizePending = false;
 
         }
@@ -713,7 +713,7 @@ abstract class Node {
         }
 
         // Draw this node
-        draw(viewport);
+        drawInternalImpl(viewport);
 
         // Run afterTree actions
         foreach (action; tree.filterActions) {
@@ -944,6 +944,21 @@ abstract class Node {
         }
 
     }
+    
+    /// Draw a child node at the specified location inside of this node.
+    ///
+    /// Before drawing a node, it must first be resized. This should be done ahead of time in `resizeImpl`.
+    /// Use `updateSize()` to cause it to be called before the next draw call.
+    ///
+    /// Params:
+    ///     child = Child to draw.
+    ///     space = Space to place the node in.
+    ///         The drawn node will be aligned inside the given box according to its `layout` field.
+    protected void drawChild(Node child, Rectangle space) {
+
+        child.drawInternalImpl(space);
+
+    }
 
     /// Draw this node at the specified location from within of another (parent) node.
     ///
@@ -952,7 +967,14 @@ abstract class Node {
     /// Params:
     ///     space = Space the node should be drawn in. It should be limited to space within the parent node.
     ///             If the node can't fit, it will be cropped.
-    final protected void draw(Rectangle space) @trusted {
+    deprecated("`Node.draw` has been replaced with `drawChild(Node, Rectangle)` and will be removed in Fluid 0.8.0.")
+    final protected void draw(Rectangle space) {
+
+        drawInternalImpl(space);
+
+    }
+
+    final private void drawInternalImpl(Rectangle space) @trusted {
 
         import std.range;
 
@@ -1110,12 +1132,36 @@ abstract class Node {
 
     }
 
+    /// Resize a child of this node.
+    /// Params:
+    ///     child = Child node to resize.
+    ///     space = Maximum space available for the child to use.
+    /// Returns:
+    ///     Space allocated by the child node.
+    protected Vector2 resizeChild(Node child, Vector2 space) {
+
+        child.resizeInternalImpl(tree, theme, space);
+
+        return child.minSize;
+
+    }
+
     /// Recalculate the minimum node size and update the `minSize` property.
     /// Params:
     ///     tree  = The parent's tree to pass down to this node.
     ///     theme = Theme to inherit from the parent.
     ///     space = Available space.
+    deprecated("`Node.resize` has been replaced with `resizeChild(Node, Vector2)` and will be removed in Fluid 0.8.0.")
     protected final void resize(LayoutTree* tree, Theme theme, Vector2 space)
+    in(tree, "Tree for Node.resize() must not be null.")
+    in(theme, "Theme for Node.resize() must not be null.")
+    do {
+
+        resizeInternalImpl(tree, theme, space);
+
+    }
+
+    private final void resizeInternalImpl(LayoutTree* tree, Theme theme, Vector2 space)
     in(tree, "Tree for Node.resize() must not be null.")
     in(theme, "Theme for Node.resize() must not be null.")
     do {

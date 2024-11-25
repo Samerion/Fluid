@@ -234,7 +234,7 @@ class MapFrame : Frame {
 
             const position = positions.require(child, MapPosition.init);
 
-            child.resize(tree, theme, space);
+            resizeChild(child, space);
 
             // Get the child's end corner
             const endCorner = getEndCorner(space, child, position);
@@ -311,7 +311,7 @@ class MapFrame : Frame {
             );
 
             // Draw the child
-            child.draw(childRect);
+            drawChild(child, childRect);
 
         }
 

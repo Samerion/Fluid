@@ -720,7 +720,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         // Resize the label, and remove the spacing
         contentLabel.style = pickLabelStyle(style);
-        contentLabel.resize(tree, theme, textArea);
+        resizeChild(contentLabel, textArea);
 
         const minLines = multiline ? 3 : 1;
 
@@ -1048,7 +1048,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         drawSelection(scrolledInner);
 
         // Draw the text
-        contentLabel.draw(scrolledInner);
+        drawChild(contentLabel, scrolledInner);
 
         // Draw the caret
         drawCaret(scrolledInner);

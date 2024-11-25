@@ -95,7 +95,7 @@ class SwitchSlot : Node {
             auto previousTheme = node.theme;
             auto previousSize = node.minSize;
 
-            node.resize(tree, theme, availableSpace);
+            resizeChild(node, availableSpace);
 
             // Stop if it fits within available space
             if (node.minSize.x <= availableSpace.x && node.minSize.y <= availableSpace.y) break;
@@ -106,7 +106,7 @@ class SwitchSlot : Node {
                 // Resize the node again to recursively restore old parameters
                 node.tree = null;
                 node.inheritTheme(Theme.init);
-                node.resize(previousTree, previousTheme, previousSize);
+                resizeChild(node, previousSize);
 
             }
 
@@ -123,7 +123,7 @@ class SwitchSlot : Node {
         if (node is null) return;
 
         // Draw the node
-        node.draw(inner);
+        drawChild(node, inner);
 
     }
 

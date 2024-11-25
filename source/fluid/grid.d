@@ -349,7 +349,7 @@ class GridFrame : Frame {
             expand(child);
 
             // Draw the child
-            child.draw(rect);
+            drawChild(child, rect);
 
             // Offset position
             position += child.minSize.y + style.gap.sideY;
@@ -443,7 +443,7 @@ class GridRow : Frame {
             scope (exit) segment += segments;
 
             // Resize the child
-            child.resize(tree, theme, childSpace);
+            resizeChild(child, childSpace);
 
             auto range = parent.segmentSizes[segment..segment+segments];
 
@@ -480,7 +480,7 @@ class GridRow : Frame {
             const width = parent.segmentSizes[segment..segment+segments].sum;
 
             // Draw the child
-            child.draw(Rectangle(
+            drawChild(child, Rectangle(
                 position.x + gap, position.y,
                 width - gap, inner.height,
             ));
