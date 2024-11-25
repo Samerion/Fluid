@@ -128,7 +128,7 @@ class ScrollInput : InputNode!Node {
             : space.y + style.padding.sideY[].sum + style.margin.sideY[].sum;
 
         // Resize the handle
-        handle.resize(tree, theme, minSize);
+        resizeChild(handle, minSize);
 
     }
 
@@ -172,7 +172,7 @@ class ScrollInput : InputNode!Node {
 
         }
 
-        handle.draw(handleRect);
+        drawChild(handle, handleRect);
 
     }
 

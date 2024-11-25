@@ -90,7 +90,7 @@ class DragSlot : NodeSlot!Node, FluidHoverable {
 
     }
 
-    private void drawDragged(Vector2 offset) {
+    private void drawDragged(Node parent, Vector2 offset) {
 
         const rect = dragRectangle(offset);
 
@@ -99,7 +99,7 @@ class DragSlot : NodeSlot!Node, FluidHoverable {
         scope (exit) _drawDragged = false;
         scope (exit) minSize = Vector2(0, 0);
 
-        draw(rect);
+        parent.drawChild(this, rect);
 
     }
 
@@ -123,7 +123,7 @@ class DragSlot : NodeSlot!Node, FluidHoverable {
         super.resizeImpl(available);
 
         // Resize the handle
-        handle.resize(tree, theme, available);
+        resizeChild(handle, available);
 
         // Add space for the handle
         if (!handle.isHidden) {
@@ -138,12 +138,12 @@ class DragSlot : NodeSlot!Node, FluidHoverable {
 
     }
 
-    private void resizeInternal(LayoutTree* tree, Theme theme, Vector2 space) {
+    private void resizeInternal(Node parent, Vector2 space) {
 
         _drawDragged = true;
         scope (exit) _drawDragged = false;
 
-        resize(tree, theme, space);
+        parent.resizeChild(this, space);
 
         // Save the size
         _size = minSize;
@@ -180,7 +180,7 @@ class DragSlot : NodeSlot!Node, FluidHoverable {
         if (disable) tree.isBranchDisabled = false;
 
         // Draw the handle
-        handle.draw(handleRect);
+        drawChild(handle, handleRect);
 
     }
 
@@ -344,7 +344,7 @@ class DragAction : TreeAction {
         if (node is node.tree.root) {
 
             // Resize the slot too
-            slot.resizeInternal(node.tree, node.theme, space);
+            slot.resizeInternal(node, space);
 
         }
 
@@ -372,7 +372,7 @@ class DragAction : TreeAction {
     override void afterTree() {
 
         // Draw the slot
-        slot.drawDragged(offset);
+        slot.drawDragged(slot.tree.root, offset);
         _stopDragging = true;
 
     }

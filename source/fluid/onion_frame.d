@@ -34,7 +34,7 @@ class OnionFrame : Frame {
         foreach (child; children) {
 
             // Resize the child
-            child.resize(tree, theme, available);
+            resizeChild(child, available);
 
             // Update minSize
             minSize.x = max(minSize.x, child.minSize.x);
@@ -51,7 +51,7 @@ class OnionFrame : Frame {
 
         foreach (child; filterChildren) {
 
-            child.draw(inner);
+            drawChild(child, inner);
 
         }
 

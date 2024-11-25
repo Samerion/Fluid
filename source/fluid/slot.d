@@ -71,7 +71,7 @@ class NodeSlot(T : Node) : Node {
             return;
         }
 
-        value.resize(tree, theme, space);
+        resizeChild(value, space);
         minSize = value.minSize;
 
     }
@@ -82,7 +82,7 @@ class NodeSlot(T : Node) : Node {
 
         if (!value) return;
 
-        value.draw(inner);
+        drawChild(value, inner);
 
     }
 

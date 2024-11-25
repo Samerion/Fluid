@@ -696,7 +696,7 @@ abstract class Node {
         // Resize if required
         if (resizePending) {
 
-            resize(tree, theme, space);
+            resizeInternalImpl(tree, theme, space);
             _resizePending = false;
 
         }
@@ -713,7 +713,7 @@ abstract class Node {
         }
 
         // Draw this node
-        draw(viewport);
+        drawInternalImpl(viewport);
 
         // Run afterTree actions
         foreach (action; tree.filterActions) {
