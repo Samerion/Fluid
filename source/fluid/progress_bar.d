@@ -111,7 +111,7 @@ class ProgressBar : Node {
 
         text = buildText();
         text.resize();
-        fill.resize(tree, theme, space);
+        resizeChild(fill, space);
         minSize = text.size;
 
     }
@@ -122,7 +122,7 @@ class ProgressBar : Node {
         style.drawBackground(io, paddingBox);
 
         // Draw the filling
-        fill.draw(contentBox);
+        drawChild(fill, contentBox);
 
         // Draw the text
         const textPosition = center(contentBox) - text.size / 2;

@@ -191,7 +191,7 @@ abstract class AbstractSlider : InputNode!Node {
 
     override void resizeImpl(Vector2 space) {
 
-        handle.resize(tree, theme, space);
+        resizeChild(handle, space);
         minSize = handle.minSize;
 
     }
@@ -237,7 +237,7 @@ abstract class AbstractSlider : InputNode!Node {
         }
 
         // Draw the handle
-        handle.draw(handleRect);
+        drawChild(handle, handleRect);
 
     }
 

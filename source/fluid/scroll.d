@@ -190,7 +190,7 @@ class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable {
 
         // Resize the scrollbar
         scrollBar.isHorizontal = this.isHorizontal;
-        scrollBar.resize(this.tree, this.theme, paddingSpace);
+        resizeChild(scrollBar, paddingSpace);
 
         /// Space without the scrollbar
         const contentSpace = isHorizontal
@@ -274,7 +274,7 @@ class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable {
         }
 
         // Draw the scrollbar
-        scrollBar.draw(scrollBarRect);
+        drawChild(scrollBar, scrollBarRect);
 
         // Draw the frame
         super.drawImpl(mainOuter, inner);

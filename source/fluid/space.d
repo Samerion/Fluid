@@ -122,7 +122,7 @@ class Space : Node {
             // Check non-expand nodes now
             else {
 
-                child.resize(tree, theme, childSpace(child, available, false));
+                resizeChild(child, childSpace(child, available, false));
                 minSize = addSize(child.minSize, minSize);
 
                 // Reserve space for this node
@@ -151,7 +151,7 @@ class Space : Node {
         foreach (child; expandChildren) {
 
             // Resize the child
-            child.resize(tree, theme, childSpace(child, available, false));
+            resizeChild(child, childSpace(child, available, false));
 
             const childSize = child.minSize;
             const childExpand = child.layout.expand;
@@ -224,7 +224,7 @@ class Space : Node {
             );
 
             // Draw the child
-            child.draw(rect);
+            drawChild(child, rect);
 
             // Offset position
             position = childOffset(position, size);
