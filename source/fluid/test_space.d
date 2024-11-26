@@ -8,6 +8,7 @@ debug (Fluid_BuildMessages) {
 
 import core.exception;
 
+import std.conv : toText = text;
 import std.range;
 import std.string;
 import std.typecons;
@@ -42,9 +43,6 @@ class TestSpace : Space, CanvasIO {
     this(Node[] nodes...) {
 
         super(nodes);
-
-        import std.stdio;
-        debug writeln(nodes);
 
         // Create a probe for testing.
         this.probe = new TestProbe();
@@ -151,27 +149,78 @@ auto drawsRectangle(Node subject, typeof(Rectangle.tupleof) rectangle) {
 
 /// ditto
 auto drawsRectangle(Node subject, Rectangle rectangle) {
+    auto result = drawsRectangle(subject);
+    result.isTestingArea = true;
+    result.targetArea = rectangle;
+    return result;
+}
+
+auto drawsRectangle(Node subject) {
 
     return new class BlackHole!Assert {
+
+        bool isTestingArea;
+        Rectangle targetArea;
+        bool isTestingColor;
+        Color targetColor;
 
         override bool drawRectangle(Node node, Rectangle rect, Color color) nothrow {
 
             if (node != subject) return false;
 
-            assert(equal(rectangle.x, rect.x));
-            assert(equal(rectangle.y, rect.y));
-            assert(equal(rectangle.width, rect.width));
-            assert(equal(rectangle.height, rect.height));
+            if (isTestingArea) {
+                assert(equal(targetArea.x, rect.x));
+                assert(equal(targetArea.y, rect.y));
+                assert(equal(targetArea.width, rect.width));
+                assert(equal(targetArea.height, rect.height));
+            }
+
+            if (isTestingColor) {
+                assert(color == targetColor);
+            }
 
             return true;
 
         }
 
+        typeof(this) ofColor(string color) {
+            return ofColor(.color(color));
+        }
+
+        typeof(this) ofColor(Color color) {
+            isTestingColor = true;
+            targetColor = color;
+            return this;
+        }
+
         override string toString() const {
-            return format!"%s draws rectangle %s"(subject, rectangle);
+            return toText(
+                subject, " should draw a rectangle",
+                isTestingArea  ? toText(" ", targetArea)                 : "",
+                isTestingColor ? toText(" of color ", targetColor.toHex) : "",
+            );
         }
 
     };
+
+}
+
+/// Make sure the selected node draws, but doesn't matter what.
+auto draws(Node subject) {
+
+    return drawsWildcard!((node) {
+        return node == subject;
+    })(format!"%s should draw"(subject));
+
+}
+
+/// Make sure the selected node doesn't draw anything until another node does.
+auto doesNotDraw(Node subject) {
+
+    return drawsWildcard!((node) {
+        assert(node != subject);
+        return true;
+    })(format!"%s shouldn't draw"(subject));
 
 }
 
@@ -204,25 +253,6 @@ auto drawsWildcard(alias dg)(lazy string message) {
         }
         
     };
-
-}
-
-/// Make sure the selected node draws, but doesn't matter what.
-auto draws(Node subject) {
-
-    return drawsWildcard!((node) {
-        return node == subject;
-    })(format!"%s draws"(subject));
-
-}
-
-/// Make sure the selected node doesn't draw anything until another node does.
-auto doesNotDraw(Node subject) {
-
-    return drawsWildcard!((node) {
-        assert(node != subject);
-        return true;
-    })(format!"%s doesn't draw"(subject));
 
 }
 
@@ -267,7 +297,7 @@ unittest {
     );
     space.drawAndAssert(
         space.doesNotDraw(),
-        myNode.drawsRectangle(2, 0, 10, 10),
+        myNode.drawsRectangle(2, 0, 10, 10).ofColor("#f00"),
     );
     space.drawAndAssert(
         space.doesNotDraw(),
@@ -281,6 +311,22 @@ unittest {
     assertThrown!AssertError(
         space.drawAndAssert(
             myNode.doesNotDraw()
+        ),
+    );
+    space.drawAndAssert(
+        myNode.drawsRectangle(),
+    );
+    space.drawAndAssert(
+        myNode.drawsRectangle().ofColor("#f00"),
+    );
+    assertThrown!AssertError(
+        space.drawAndAssert(
+            myNode.drawsRectangle().ofColor("#500"),
+        ),
+    );
+    assertThrown!AssertError(
+        space.drawAndAssert(
+            space.drawsRectangle().ofColor("#500"),
         ),
     );
 
