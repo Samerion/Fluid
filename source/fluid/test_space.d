@@ -32,9 +32,6 @@ class TestSpace : Space, CanvasIO {
 
     private {
 
-        /// Asserts that need to be fulfilled during the next frame.
-        Assert[] asserts;
-
         /// Probe the space will use to analyze the tree.
         TestProbe probe;
 
@@ -57,6 +54,68 @@ class TestSpace : Space, CanvasIO {
 
     }
 
+    override void cropArea(Rectangle area) nothrow {
+
+        probe.runAssert(a => a.cropArea(probe.subject, area));
+
+    }
+
+    override void resetCropArea() nothrow {
+
+        probe.runAssert(a => a.resetCropArea(probe.subject));
+
+    }
+
+    override void drawTriangle(Vector2 x, Vector2 y, Vector2 z, Color color) nothrow {
+
+        probe.runAssert(a => a.drawTriangle(probe.subject, x, y, z, color));
+
+    }
+
+    override void drawCircle(Vector2 center, float radius, Color color) nothrow {
+
+        probe.runAssert(a => a.drawCircle(probe.subject, center, radius, color));
+
+    }
+
+    override void drawRectangle(Rectangle rectangle, Color color) nothrow {
+
+        probe.runAssert(a => a.drawRectangle(probe.subject, rectangle, color));
+
+    }
+
+    /// Draw a single frame and test if the asserts can be fulfilled.
+    void drawAndAssert(Assert[] asserts...) {
+
+        probe.asserts = asserts.dup;
+        queueAction(probe);
+        draw();
+
+    }
+
+}
+
+private class TestProbe : TreeAction {
+
+    import fluid.text.stack;
+
+    public {
+
+        /// Subject that is currently tested.
+        Node subject;
+
+        /// Asserts that need to pass before the end of iteration/
+        Assert[] asserts;
+
+    }
+
+    private {
+
+        /// Node draw stack
+        Stack!Node stack;
+
+    }
+
     void runAssert(bool delegate(Assert a) @safe nothrow dg) nothrow {
 
         while (!asserts.empty) {
@@ -73,55 +132,38 @@ class TestSpace : Space, CanvasIO {
 
     }
 
-    override void cropArea(Rectangle area) nothrow {
+    override void beforeDraw(Node node, Rectangle space, Rectangle outer, Rectangle inner) {
 
-        runAssert(a => a.cropArea(probe.subject, area));
-
-    }
-
-    override void resetCropArea() nothrow {
-
-        runAssert(a => a.resetCropArea(probe.subject));
+        stack ~= node;
+        this.subject = node;
+        runAssert(a => a.beforeDraw(node, space, outer, inner));
 
     }
 
-    override void drawTriangle(Vector2 x, Vector2 y, Vector2 z, Color color) nothrow {
+    override void afterDraw(Node node, Rectangle space, Rectangle outer, Rectangle inner) {
 
-        runAssert(a => a.drawTriangle(probe.subject, x, y, z, color));
+        stack.pop();
+        runAssert(a => a.afterDraw(node, space, outer, inner));
 
-    }
-
-    override void drawCircle(Vector2 center, float radius, Color color) nothrow {
-
-        runAssert(a => a.drawCircle(probe.subject, center, radius, color));
-
-    }
-
-    override void drawRectangle(Rectangle rectangle, Color color) nothrow {
-
-        runAssert(a => a.drawRectangle(probe.subject, rectangle, color));
+        // Restore previous subject from the stack
+        if (!stack.empty) {
+            this.subject = stack.top;
+        }
+        else {
+            this.subject = null;
+        }
 
     }
 
-    /// Draw a single frame and test if the asserts can be fulfilled.
-    void drawAndAssert(Assert[] asserts...) {
+    override void afterTree() {
 
-        this.asserts = asserts.dup;
-        this.queueAction(probe);
-        draw();
+        // Make sure the asserts pass
         assert(this.asserts.empty, format!"Assert[%s] failure: %s"(
             asserts.length - this.asserts.length, this.asserts.front.toString));
 
-    }
+        // Don't iterate again
+        stop();
 
-}
-
-private class TestProbe : TreeAction {
-
-    Node subject;
-
-    override void beforeDraw(Node node, Rectangle) {
-        this.subject = node;
     }
 
 }
@@ -133,6 +175,8 @@ private class TestProbe : TreeAction {
 /// or a matching test is found.
 interface Assert {
 
+    bool beforeDraw(Node node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) nothrow;
+    bool afterDraw(Node node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) nothrow;
     bool cropArea(Node node, Rectangle area) nothrow;
     bool resetCropArea(Node node) nothrow;
     bool drawTriangle(Node node, Vector2 a, Vector2 b, Vector2 c, Color color) nothrow;
@@ -227,6 +271,14 @@ auto doesNotDraw(Node subject) {
 auto drawsWildcard(alias dg)(lazy string message) {
 
     return new class Assert {
+
+        bool beforeDraw(Node, Rectangle, Rectangle, Rectangle) nothrow{
+            return false;
+        }
+
+        bool afterDraw(Node, Rectangle, Rectangle, Rectangle) nothrow {
+            return false;
+        }
 
         override bool cropArea(Node node, Rectangle) nothrow {
             return dg(node);
