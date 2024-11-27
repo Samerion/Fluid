@@ -116,28 +116,36 @@ private class TestProbe : TreeAction {
 
     }
 
-    void runAssert(bool delegate(Assert a) @safe nothrow dg) nothrow {
+    /// Check an assertion in the `asserts` queue.
+    /// Params:
+    ///     dg      = Function to run the assert. Returns true if the assert succeeds.
+    protected void runAssert(bool delegate(Assert a) @safe nothrow dg) nothrow {
 
-        while (!asserts.empty) {
+        // No tests remain
+        if (asserts.empty) return;
 
-            const result = dg(asserts.front);
-
-            // Test passed, try next one
-            if (result) asserts.popFront;
-
-            // Failed, try next node
-            else break;
-
+        // Test passed, continue to the next one
+        if (dg(asserts.front)) {
+            nextAssert();
         }
 
     }
 
-    override void beforeDraw(Node node, Rectangle space, Rectangle outer, Rectangle inner) {
+    /// Move to the next test.
+    protected void nextAssert() nothrow {
 
+        // Move to the next assert in the list
+        do asserts.popFront;
+
+        // Call `resume` on the next item. Continue while tests pass
+        while (!asserts.empty && asserts.front.resume(subject));
+
+    }
+
+    override void beforeDraw(Node node, Rectangle space, Rectangle outer, Rectangle inner) {
         stack ~= node;
         this.subject = node;
         runAssert(a => a.beforeDraw(node, space, outer, inner));
-
     }
 
     override void afterDraw(Node node, Rectangle space, Rectangle outer, Rectangle inner) {
@@ -170,18 +178,30 @@ private class TestProbe : TreeAction {
 
 /// Class to test I/O calls performed by Fluid nodes. Any I/O method of `TestSpace` will call this.
 /// 
-/// If a tester method returns `true`, the assert passes, and the next one is loaded.
+/// If a tester method returns `pass` or `passNext`, the assert passes, and the next one is loaded.
 /// It it returns `false`, the frame continues until all nodes are exhausted (and fails), 
-/// or a matching test is found.
+/// or a matching test is found. 
+///
+/// `beforeDraw` or `resume` is expected to be called before any of the I/O calls.
 interface Assert {
 
+    /// After another test passes and this test is chosen, `resume` will be called to let the test
+    /// know the current position in the tree. This is important in situations where `resume` is immediately
+    /// followed by `beforeDraw`; the node passed to `resume` will be the parent of the one passed to `beforeDraw`.
+    bool resume(Node node) nothrow;
+
+    // Tree
     bool beforeDraw(Node node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) nothrow;
     bool afterDraw(Node node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) nothrow;
+
+    // CanvasIO
     bool cropArea(Node node, Rectangle area) nothrow;
     bool resetCropArea(Node node) nothrow;
     bool drawTriangle(Node node, Vector2 a, Vector2 b, Vector2 c, Color color) nothrow;
     bool drawCircle(Node node, Vector2 center, float radius, Color color) nothrow;
     bool drawRectangle(Node node, Rectangle rectangle, Color color) nothrow;
+
+    // Meta
     string toString() const;
 
 }
@@ -249,11 +269,36 @@ auto drawsRectangle(Node subject) {
 
 }
 
+/// Assert true if the parent requests drawing the node, 
+/// but the node does not need to draw anything for the assert to succeed.
+auto isDrawn(Node subject) {
+
+    return new class BlackHole!Assert {
+
+        override bool resume(Node node) {
+            return node == subject;
+        }
+
+        override bool beforeDraw(Node node, Rectangle, Rectangle, Rectangle) {
+            return node == subject;
+        }
+
+        override string toString() const {
+            return format!"%s must be reached"(subject);
+        }
+
+    };
+
+}
+
 /// Make sure the selected node draws, but doesn't matter what.
 auto draws(Node subject) {
 
-    return drawsWildcard!((node) {
-        return node == subject;
+    return drawsWildcard!((node, methodName) {
+
+        return node == subject
+            && methodName.startsWith("draw");
+
     })(format!"%s should draw"(subject));
 
 }
@@ -261,10 +306,41 @@ auto draws(Node subject) {
 /// Make sure the selected node doesn't draw anything until another node does.
 auto doesNotDraw(Node subject) {
 
-    return drawsWildcard!((node) {
-        assert(node != subject);
-        return true;
-    })(format!"%s shouldn't draw"(subject));
+    bool matched;
+    bool failed;
+
+    return drawsWildcard!((node, methodName) {
+
+        // Test failed, skip checks
+        if (failed) return false;
+
+        // Make sure the node is reached
+        if (!matched) {
+            if (node != subject) {
+                return false;
+            } 
+            matched = true;
+        }
+
+        // Switching to another node
+        if (methodName == "beforeDraw" && node != subject) {
+            return true;
+        }
+
+        // Ending this node
+        if (methodName == "afterDraw" && node == subject) {
+            return true;
+        }
+
+        if (node == subject && methodName.startsWith("draw")) {
+            failed = true;
+            return false;
+        }
+
+        return false;
+
+    })(matched ? format!"%s shouldn't draw"(subject)
+               : format!"%s should be reached"(subject));
 
 }
 
@@ -272,32 +348,36 @@ auto drawsWildcard(alias dg)(lazy string message) {
 
     return new class Assert {
 
-        bool beforeDraw(Node, Rectangle, Rectangle, Rectangle) nothrow{
-            return false;
+        override bool resume(Node node) nothrow {
+            return dg(node, "resume");
         }
 
-        bool afterDraw(Node, Rectangle, Rectangle, Rectangle) nothrow {
-            return false;
+        override bool beforeDraw(Node node, Rectangle, Rectangle, Rectangle) nothrow {
+            return dg(node, "beforeDraw");
+        }
+
+        override bool afterDraw(Node node, Rectangle, Rectangle, Rectangle) nothrow {
+            return dg(node, "afterDraw");
         }
 
         override bool cropArea(Node node, Rectangle) nothrow {
-            return dg(node);
+            return dg(node, "cropArea");
         }
         
         override bool resetCropArea(Node node) nothrow {
-            return dg(node);
+            return dg(node, "resetCropArea");
         }
         
         override bool drawTriangle(Node node, Vector2, Vector2, Vector2, Color) nothrow {
-            return dg(node);
+            return dg(node, "drawTriangle");
         }
         
         override bool drawCircle(Node node, Vector2, float, Color) nothrow {
-            return dg(node);
+            return dg(node, "drawCircle");
         }
         
         override bool drawRectangle(Node node, Rectangle, Color) nothrow {
-            return dg(node);
+            return dg(node, "drawRectangle");
         }
 
         override string toString() const {
@@ -318,7 +398,7 @@ bool equal(float a, float b) nothrow {
 }
 
 @system
-@("`TestSpace` can perform basic tests with `draws`, `drawsRectangle` and `doesNotDraw`")
+@("TestSpace can perform basic tests with draws, drawsRectangle and doesNotDraw")
 unittest {
 
     class MyNode : Node {
@@ -381,5 +461,99 @@ unittest {
             space.drawsRectangle().ofColor("#500"),
         ),
     );
+
+}
+
+@system
+@("TestProbe correctly handles node exits")
+unittest {
+
+    import fluid.label;
+
+    static class Surround : Space {
+
+        CanvasIO canvasIO;
+
+        this(Node[] nodes...) @safe {
+            super(nodes);
+        }
+
+        override void resizeImpl(Vector2 space) {
+            super.resizeImpl(space);
+            use(canvasIO);
+        }
+
+        override void drawImpl(Rectangle outer, Rectangle inner) {
+            canvasIO.drawRectangle(outer, color("#a00"));
+            super.drawImpl(outer, inner);
+            canvasIO.drawRectangle(outer, color("#0a0"));
+        }
+
+    }
+
+    alias surround = nodeBuilder!Surround;
+
+    {
+        auto myLabel = label("!");
+        auto root = surround(
+            myLabel,
+        );
+        auto test = testSpace(root);
+
+        test.drawAndAssert(
+            root.drawsRectangle(),
+            myLabel.isDrawn(),
+            root.drawsRectangle(),
+        );
+        assertThrown!AssertError(
+            test.drawAndAssert(
+                root.drawsRectangle(),
+                myLabel.isDrawn(),
+                root.doesNotDraw(),
+            ),
+        );
+        assertThrown!AssertError(
+            test.drawAndAssert(
+                root.doesNotDraw(),
+                myLabel.isDrawn(),
+                root.drawsRectangle(),
+            ),
+        );
+    }
+    {
+        auto myLabel = label("!");
+        auto wrapper = vspace(myLabel);
+        auto root = surround(
+            wrapper,
+        );
+        auto test = testSpace(root);
+
+        test.drawAndAssert(
+            root.drawsRectangle(),
+                wrapper.isDrawn(),
+                wrapper.doesNotDraw(),
+                    myLabel.isDrawn(),
+                wrapper.doesNotDraw(),
+            root.drawsRectangle(),
+        );
+        test.drawAndAssert(
+            root.drawsRectangle(),
+                wrapper.isDrawn(),
+                wrapper.doesNotDraw(),
+            root.drawsRectangle(),
+        );
+        test.drawAndAssert(
+            root.drawsRectangle(),
+            root.drawsRectangle(),
+            root.doesNotDraw(),
+        );
+        test.drawAndAssert(
+            root.drawsRectangle(),
+            root.doesNotDraw(),
+                wrapper.isDrawn(),
+            root.drawsRectangle(),
+            root.doesNotDraw(),
+        );
+    }
 
 }
