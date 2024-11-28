@@ -10,6 +10,8 @@ import fluid.input;
 import fluid.style;
 import fluid.backend;
 
+import fluid.future.context;
+
 
 @safe:
 
@@ -456,6 +458,9 @@ struct LayoutTree {
         ///
         /// Any node that introduces its own breadcrumbs will push onto this stack, and pop once finished.
         Breadcrumbs breadcrumbs;
+    
+        /// Context for the new I/O system. https://git.samerion.com/Samerion/Fluid/issues/148
+        TreeContextData context;
 
     }
 

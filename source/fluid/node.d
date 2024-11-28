@@ -15,6 +15,9 @@ import fluid.actions;
 import fluid.structs;
 import fluid.theme : Breadcrumbs;
 
+import fluid.io;
+import fluid.future.context;
+
 
 @safe:
 
@@ -152,7 +155,32 @@ abstract class Node {
     ///     `fluid.utils.simpleConstructor`
     this() { }
 
-    /// Get the current theme.
+    /// Returns: True if both nodes are the same node.
+    override bool opEquals(const Object other) const @safe {
+
+        return this is other;
+
+    }
+
+    /// ditto
+    bool opEquals(const Node otherNode) const nothrow {
+
+        return this is otherNode;
+
+    }
+
+    /// The theme defines how the node will appear to the user.
+    ///
+    /// Themes affect the node and its children, and can respond to changes in state,
+    /// like values changing or user interaction.
+    /// 
+    /// If no theme has been set, a default one will be provided and used automatically.
+    ///
+    /// See `Theme` for more information.
+    ///
+    /// Returns: Currently active theme.
+    /// Params:
+    ///     newValue = Change the current theme.
     inout(Theme) theme() inout { return _theme; }
 
     /// Set the theme.
@@ -229,18 +257,6 @@ abstract class Node {
     ///
     /// Direct changes are discouraged, and are likely to be discarded when reloading themes. Use themes instead.
     ref inout(Style) style() inout { return _style; }
-
-    override bool opEquals(const Object other) const @safe {
-
-        return this is other;
-
-    }
-
-    bool opEquals(const Node otherNode) const {
-
-        return this is otherNode;
-
-    }
 
     /// Show the node.
     This show(this This = Node)() return {
@@ -900,51 +916,6 @@ abstract class Node {
 
     }
 
-    /// Switch to the previous or next focused item
-    @(FluidInputAction.focusPrevious,FluidInputAction.focusNext)
-    protected void focusPreviousOrNext(FluidInputAction actionType) {
-
-        auto direction = tree.focusDirection;
-
-        // Get the node to switch to
-        auto node = actionType == FluidInputAction.focusPrevious
-
-            // Requesting previous item
-            ? either(direction.previous, direction.last)
-
-            // Requesting next
-            : either(direction.next, direction.first);
-
-        // Switch focus
-        if (node) node.focus();
-
-    }
-
-    /// Switch focus towards a specified direction.
-    @(FluidInputAction.focusLeft, FluidInputAction.focusRight)
-    @(FluidInputAction.focusUp, FluidInputAction.focusDown)
-    protected void focusInDirection(FluidInputAction action) {
-
-        with (FluidInputAction) {
-
-            // Check which side we're going
-            const side = action.predSwitch(
-                focusLeft,  Style.Side.left,
-                focusRight, Style.Side.right,
-                focusUp,    Style.Side.top,
-                focusDown,  Style.Side.bottom,
-            );
-
-            // Get the node
-            auto node = tree.focusDirection.positional[side];
-
-            // Switch focus to the node
-            if (node !is null) node.focus();
-
-        }
-
-    }
-    
     /// Draw a child node at the specified location inside of this node.
     ///
     /// Before drawing a node, it must first be resized. This should be done ahead of time in `resizeImpl`.
@@ -1235,8 +1206,120 @@ abstract class Node {
 
     }
 
-    /// Ditto
-    ///
+    /// Switch to the previous or next focused item
+    @(FluidInputAction.focusPrevious,FluidInputAction.focusNext)
+    protected void focusPreviousOrNext(FluidInputAction actionType) {
+
+        auto direction = tree.focusDirection;
+
+        // Get the node to switch to
+        auto node = actionType == FluidInputAction.focusPrevious
+
+            // Requesting previous item
+            ? either(direction.previous, direction.last)
+
+            // Requesting next
+            : either(direction.next, direction.first);
+
+        // Switch focus
+        if (node) node.focus();
+
+    }
+
+    /// Switch focus towards a specified direction.
+    @(FluidInputAction.focusLeft, FluidInputAction.focusRight)
+    @(FluidInputAction.focusUp, FluidInputAction.focusDown)
+    protected void focusInDirection(FluidInputAction action) {
+
+        with (FluidInputAction) {
+
+            // Check which side we're going
+            const side = action.predSwitch(
+                focusLeft,  Style.Side.left,
+                focusRight, Style.Side.right,
+                focusUp,    Style.Side.top,
+                focusDown,  Style.Side.bottom,
+            );
+
+            // Get the node
+            auto node = tree.focusDirection.positional[side];
+
+            // Switch focus to the node
+            if (node !is null) node.focus();
+
+        }
+
+    }
+
+    /// Connect to an I/O system
+    protected T use(T : IO)()
+    in (tree, "`use()` should only be used inside `resizeImpl`")
+    do {
+        return tree.context.io.get!T();
+    }
+
+    /// ditto
+    protected T use(T : IO)(out T io)
+    in (tree, "`use()` should only be used inside `resizeImpl`")
+    do {
+        return io = use!T();
+    }
+
+    /// Require
+    protected T require(T : IO)()
+    in (tree, "`require()` should only be used inside `resizeImpl`")
+    do {
+        auto io = use!T();
+        assert(io, "require: Requested I/O " ~ T.stringof ~ " is not active");
+        return io;
+    }
+
+    /// ditto
+    protected T require(T : IO)(out T io)
+    in (tree, "`require()` should only be used inside `resizeImpl`")
+    do {
+        return io = require!T();
+    }
+
+    /// Enable I/O interfaces implemented by this node.
+    // TODO elaborate
+    /// Returns:
+    ///     A [RAII](https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization) struct that disables
+    ///     these interfaces on destruction.
+    protected auto implementIO(this This)() {
+
+        import std.meta : Filter;
+
+        // mustuse is not available in LDC 1.28
+        static if (__traits(compiles, { import core.attribute : mustuse; }))
+            import core.attribute : mustuse;
+        else
+            alias mustuse = Alias!();
+
+        alias IOs = Filter!(isIO, InterfacesTuple!This);
+        alias IOArray = IO[IOs.length];
+
+        IOArray ios;
+
+        static foreach (i, IO; IOs) {
+            ios[i] = tree.context.io.replace(ioID!IO, cast(This) this);
+        }
+
+        @mustuse
+        static struct Close {
+            private LayoutTree* tree;
+            IOArray ios;
+            ~this() {
+                static foreach (i, IO; IOs) {
+                    tree.context.io.replace(ioID!IO, ios[i]);
+                }
+            }
+        }
+
+        return Close(tree, ios);
+
+    }
+
     /// This is the implementation of resizing to be provided by children.
     ///
     /// If style margins/paddings are non-zero, they are automatically subtracted from space, so they are handled
@@ -1574,4 +1657,3 @@ ref RunCallback mockRun() {
     return callback;
 
 }
-
