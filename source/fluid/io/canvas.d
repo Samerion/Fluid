@@ -165,6 +165,14 @@ struct DrawableImage {
 
     alias image this;
 
+    /// Compare two images
+    bool opEquals(const DrawableImage other) const {
+
+        // Do not compare I/O metadata
+        return image == other.image;
+
+    }
+
     /// Returns: The ID/index assigned by `CanvasIO` when this image was loaded.
     int id() const nothrow {
         return this._id;
