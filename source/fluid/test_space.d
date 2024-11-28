@@ -12,6 +12,7 @@ import std.conv : toText = text;
 import std.range;
 import std.string;
 import std.typecons;
+import std.algorithm;
 import std.exception;
 
 import fluid.node;
@@ -32,8 +33,20 @@ class TestSpace : Space, CanvasIO {
 
     private {
 
+        struct LoadedImage {
+            Image image;
+            int lastResize;
+        }
+
         /// Probe the space will use to analyze the tree.
-        TestProbe probe;
+        TestProbe _probe;
+
+        /// Number of calls made to `resize`.
+        int _resizeNumber;
+
+        /// All presently loaded images.
+        LoadedImage[] _loadedImages;
+        int[size_t] _imageIndices;
 
     }
 
@@ -42,7 +55,23 @@ class TestSpace : Space, CanvasIO {
         super(nodes);
 
         // Create a probe for testing.
-        this.probe = new TestProbe();
+        this._probe = new TestProbe();
+
+    }
+
+    /// Returns: True if the given image is loaded.
+    bool isImageLoaded(DrawableImage image) nothrow {
+
+        const ptr = cast(size_t) image.data.ptr;
+
+        // Image is registered, OK
+        if (auto index = ptr in _imageIndices) {
+            assert(*index == image.id, "Image index doesn't match assigned ID.");
+            return true;
+        }
+
+        // Not loaded
+        return false;
 
     }
 
@@ -50,45 +79,100 @@ class TestSpace : Space, CanvasIO {
 
         auto frame = this.implementIO();
 
+        _resizeNumber++;
         super.resizeImpl(space);
+
+        // Garbage-collect images
+        foreach_reverse (i, ref image; _loadedImages) {
+
+            // Still valid, continue
+            if (image.lastResize >= _resizeNumber) continue;
+
+            // Remove the image
+            _loadedImages = _loadedImages.remove(i);
+            _imageIndices.remove(cast(size_t) image.image.data.ptr);
+
+        }
 
     }
 
     override void cropArea(Rectangle area) nothrow {
 
-        probe.runAssert(a => a.cropArea(probe.subject, area));
+        _probe.runAssert(a => a.cropArea(_probe.subject, area));
 
     }
 
     override void resetCropArea() nothrow {
 
-        probe.runAssert(a => a.resetCropArea(probe.subject));
+        _probe.runAssert(a => a.resetCropArea(_probe.subject));
 
     }
 
     override void drawTriangle(Vector2 x, Vector2 y, Vector2 z, Color color) nothrow {
 
-        probe.runAssert(a => a.drawTriangle(probe.subject, x, y, z, color));
+        _probe.runAssert(a => a.drawTriangle(_probe.subject, x, y, z, color));
 
     }
 
     override void drawCircle(Vector2 center, float radius, Color color) nothrow {
 
-        probe.runAssert(a => a.drawCircle(probe.subject, center, radius, color));
+        _probe.runAssert(a => a.drawCircle(_probe.subject, center, radius, color));
 
     }
 
     override void drawRectangle(Rectangle rectangle, Color color) nothrow {
 
-        probe.runAssert(a => a.drawRectangle(probe.subject, rectangle, color));
+        _probe.runAssert(a => a.drawRectangle(_probe.subject, rectangle, color));
+
+    }
+
+    override void drawImage(DrawableImage image, Rectangle destination, Color tint) nothrow {
+
+        assert(
+            isImageLoaded(image), 
+            "Trying to draw an image without loading");
+
+        _probe.runAssert(a => a.drawImage(_probe.subject, image, destination, tint));
+
+    }
+
+    override void drawHintedImage(DrawableImage image, Rectangle destination, Color tint) nothrow {
+
+        assert(
+            isImageLoaded(image), 
+            "Trying to draw an image without loading");
+
+        _probe.runAssert(a => a.drawHintedImage(_probe.subject, image, destination, tint));
+
+    }
+
+    override int load(Image image) nothrow {
+
+        const ptr = cast(size_t) image.data.ptr;
+
+        // If the image is already loaded, mark it as so
+        if (auto index = ptr in _imageIndices) {
+            _loadedImages[*index].lastResize = _resizeNumber;
+            return *index;
+        }
+
+        // If not, add it
+        else {
+            const index = cast(int) _loadedImages.length;
+
+            _loadedImages ~= LoadedImage(image, _resizeNumber);
+            _imageIndices[ptr] = index;
+
+            return index;
+        }
 
     }
 
     /// Draw a single frame and test if the asserts can be fulfilled.
     void drawAndAssert(Assert[] asserts...) {
 
-        probe.asserts = asserts.dup;
-        queueAction(probe);
+        _probe.asserts = asserts.dup;
+        queueAction(_probe);
         draw();
 
     }
@@ -200,6 +284,8 @@ interface Assert {
     bool drawTriangle(Node node, Vector2 a, Vector2 b, Vector2 c, Color color) nothrow;
     bool drawCircle(Node node, Vector2 center, float radius, Color color) nothrow;
     bool drawRectangle(Node node, Rectangle rectangle, Color color) nothrow;
+    bool drawImage(Node node, DrawableImage image, Rectangle destination, Color tint) nothrow;
+    bool drawHintedImage(Node node, DrawableImage image, Rectangle destination, Color tint) nothrow;
 
     // Meta
     string toString() const;
@@ -378,6 +464,14 @@ auto drawsWildcard(alias dg)(lazy string message) {
         
         override bool drawRectangle(Node node, Rectangle, Color) nothrow {
             return dg(node, "drawRectangle");
+        }
+
+        override bool drawImage(Node node, DrawableImage, Rectangle, Color) nothrow {
+            return dg(node, "drawImage");
+        }
+
+        override bool drawHintedImage(Node node, DrawableImage, Rectangle, Color) nothrow {
+            return dg(node, "drawHintedImage");
         }
 
         override string toString() const {
