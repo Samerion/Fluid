@@ -97,7 +97,7 @@ class TestSpace : Space, CanvasIO {
 
 private class TestProbe : TreeAction {
 
-    import fluid.text.stack;
+    import fluid.future.stack;
 
     public {
 
