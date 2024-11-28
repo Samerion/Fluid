@@ -1281,6 +1281,36 @@ abstract class Node {
         return io = require!T();
     }
 
+    /// Load a resource associated with the given I/O. 
+    ///
+    /// The resource should be continuously loaded during `resizeImpl`. Even if a resource has already been loaded,
+    /// it has to be declared with `load` so the I/O system knows it is still in use.
+    ///
+    /// ---
+    /// CanvasIO canvasIO;
+    /// DrawableImage image;
+    /// void resizeImpl(Vector2 space) {
+    ///     require(canvasIO);
+    ///     load(canvasIO, image);
+    /// }
+    /// ---
+    /// 
+    /// Params:
+    ///   io = 
+    ///   resource = 
+    /// Returns: 
+    protected T load(T, I : IO)(I io, ref T resource) {
+
+        // Load the resource
+        const id = io.load(resource);
+
+        // Pass data into the resource
+        resource.load(io, id);
+
+        return resource;
+
+    }
+
     /// Enable I/O interfaces implemented by this node.
     // TODO elaborate
     /// Returns:
