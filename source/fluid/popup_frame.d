@@ -94,20 +94,6 @@ class PopupFrame : InputNode!Frame {
 
     }
 
-    /// Draw the popup using the assigned anchor position.
-    deprecated("`drawAnchored()` should now be called with a parent parameter. Please update before Fluid 0.8.0.")
-    void drawAnchored() {
-
-        const rect = Rectangle(
-            anchoredStartCorner.tupleof,
-            minSize.tupleof
-        );
-
-        // Draw the node within the defined rectangle
-        draw(rect);
-
-    }
-
     /// ditto
     void drawAnchored(Node parent) {
 
