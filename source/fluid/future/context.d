@@ -9,6 +9,8 @@ struct TreeContext {
 
     TreeContextData* ptr;
 
+    alias ptr this;
+
     /// Create the context if it doesn't already exist.
     void prepare() {
 
@@ -83,7 +85,7 @@ struct TreeIOContext {
 
 }
 
-enum isIO = is(T == interface) 
+enum isIO(T) = is(T == interface) 
     && is(T : IO)
     && !is(T == IO);
 
@@ -94,7 +96,7 @@ interface IO {
 IOID ioID(T)()
 if (isIO!T) {
 
-    return IOID(staticID!T.tupleof);
+    return IOID(staticID!T);
 
 }
 
