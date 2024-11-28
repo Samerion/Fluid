@@ -31,7 +31,8 @@
 			"name": "unittest",
 			"targetType": "library",
 			"versions": [
-				"Fluid_HeadlessOutput"
+				"Fluid_HeadlessOutput",
+				"Fluid_TestSpace"
 			],
 			"dependencies": {
 				"silly": "~>1.1.1"

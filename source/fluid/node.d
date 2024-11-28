@@ -155,7 +155,32 @@ abstract class Node {
     ///     `fluid.utils.simpleConstructor`
     this() { }
 
-    /// Get the current theme.
+    /// Returns: True if both nodes are the same node.
+    override bool opEquals(const Object other) const @safe {
+
+        return this is other;
+
+    }
+
+    /// ditto
+    bool opEquals(const Node otherNode) const nothrow {
+
+        return this is otherNode;
+
+    }
+
+    /// The theme defines how the node will appear to the user.
+    ///
+    /// Themes affect the node and its children, and can respond to changes in state,
+    /// like values changing or user interaction.
+    /// 
+    /// If no theme has been set, a default one will be provided and used automatically.
+    ///
+    /// See `Theme` for more information.
+    ///
+    /// Returns: Currently active theme.
+    /// Params:
+    ///     newValue = Change the current theme.
     inout(Theme) theme() inout { return _theme; }
 
     /// Set the theme.
@@ -232,18 +257,6 @@ abstract class Node {
     ///
     /// Direct changes are discouraged, and are likely to be discarded when reloading themes. Use themes instead.
     ref inout(Style) style() inout { return _style; }
-
-    override bool opEquals(const Object other) const @safe {
-
-        return this is other;
-
-    }
-
-    bool opEquals(const Node otherNode) const {
-
-        return this is otherNode;
-
-    }
 
     /// Show the node.
     This show(this This = Node)() return {
@@ -1240,30 +1253,30 @@ abstract class Node {
 
     /// Connect to an I/O system
     protected T use(T : IO)()
-    in (_context, "`use()` should only be used inside `resizeImpl`")
+    in (tree, "`use()` should only be used inside `resizeImpl`")
     do {
-        return context.io.get!T();
+        return tree.context.io.get!T();
     }
 
     /// ditto
     protected T use(T : IO)(out T io)
-    in (_context, "`use()` should only be used inside `resizeImpl`")
+    in (tree, "`use()` should only be used inside `resizeImpl`")
     do {
         return io = use!T();
     }
 
     /// Require
     protected T require(T : IO)()
-    in (_context, "`require()` should only be used inside `resizeImpl`")
+    in (tree, "`require()` should only be used inside `resizeImpl`")
     do {
         auto io = use!T();
-        assert(io, "require: Requested I/O " ~ io.toString ~ " is not active");
+        assert(io, "require: Requested I/O " ~ T.stringof ~ " is not active");
         return io;
     }
 
     /// ditto
     protected T require(T : IO)(out T io)
-    in (_context, "`require()` should only be used inside `resizeImpl`")
+    in (tree, "`require()` should only be used inside `resizeImpl`")
     do {
         return io = require!T();
     }
@@ -1275,25 +1288,35 @@ abstract class Node {
     ///     these interfaces on destruction.
     protected auto implementIO(this This)() {
 
-        import core.attribute : mustuse;
+        import std.meta : Filter;
 
-        static foreach (I; InterfacesTuple!This) {
-            static if (isIO!I)
-                tree.context.io.push(ioID!I, cast(This) this);
+        // mustuse is not available in LDC 1.28
+        static if (__traits(compiles, { import core.attribute : mustuse; }))
+            import core.attribute : mustuse;
+        else
+            alias mustuse = Alias!();
+
+        alias IOs = Filter!(isIO, InterfacesTuple!This);
+        alias IOArray = IO[IOs.length];
+
+        IOArray ios;
+
+        static foreach (i, IO; IOs) {
+            ios[i] = tree.context.io.replace(ioID!IO, cast(This) this);
         }
 
         @mustuse
         static struct Close {
             private LayoutTree* tree;
+            IOArray ios;
             ~this() {
-                static foreach (I; InterfacesTuple!This) {
-                    static if (isIO!I)
-                        tree.context.io.pop(ioID!I);
+                static foreach (i, IO; IOs) {
+                    tree.context.io.replace(ioID!IO, ios[i]);
                 }
             }
         }
 
-        return Close(tree);
+        return Close(tree, ios);
 
     }
 

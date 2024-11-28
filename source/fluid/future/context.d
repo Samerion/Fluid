@@ -1,5 +1,8 @@
 module fluid.future.context;
 
+import std.meta;
+import std.traits;
+
 import fluid.future.stack;
 import fluid.future.static_id;
 
@@ -38,21 +41,14 @@ struct TreeContextData {
 struct TreeIOContext {
 
     /// Map of I/O interface IDs to an index in the IO array.
-    private Stack!IO[IOID] stacks;
+    private IO[IOID] activeIOs;
 
     /// Returns: The active instance of the given IO interface.
     /// Params:
     ///     id = ID of the IO interface to load.
     IO get(IOID id) {
 
-        auto stack = stacks.get(id, Stack!IO.init);
-
-        if (stack.empty) {
-            return null;
-        }
-        else {
-            return stack.top;
-        }
+        return activeIOs.get(id, null);
 
     }
 
@@ -64,22 +60,26 @@ struct TreeIOContext {
 
     }
 
-    /// Push an IO instance onto the stack.
+    /// Set currently active I/O instance for a set interface.
     /// Params:
     ///     id       = ID of the IO interface the instance implements.
-    ///     instance = Instance to push.
-    void push(IOID id, IO instance) {
+    ///     instance = Instance to activate.
+    /// Returns:
+    ///     Returns *previously set* I/O instance.
+    IO replace(IOID id, IO instance) {
 
-        stacks.require(id, Stack!IO.init) ~= instance;
+        // Override the previous result
+        if (auto result = id in activeIOs) {
+            auto previous = *result;
+            *result = instance;
+            return previous;
+        }
 
-    }
-
-    /// Remove the last entry on the stack.
-    /// Params:
-    ///     id = ID of the instance to remove.
-    void pop(IOID id) {
-
-        stacks[id].pop();
+        // Nothing set, create a new value
+        else {
+            activeIOs[id] = instance;
+            return null;
+        }
 
     }
 
@@ -88,6 +88,9 @@ struct TreeIOContext {
 enum isIO(T) = is(T == interface) 
     && is(T : IO)
     && !is(T == IO);
+
+/// Get all IOs implemented by the given type
+alias allIOs(T) = Filter!(isIO, InterfacesTuple!T);
 
 interface IO {
 
