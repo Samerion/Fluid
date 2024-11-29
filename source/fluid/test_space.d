@@ -12,6 +12,7 @@ import std.conv : toText = text;
 import std.range;
 import std.string;
 import std.typecons;
+import std.algorithm;
 import std.exception;
 
 import fluid.node;
@@ -30,10 +31,24 @@ alias testSpace = nodeBuilder!TestSpace;
 /// This node allows automatically testing if other nodes draw their contents as expected.
 class TestSpace : Space, CanvasIO {
 
+    // TODO DPI tests
+
     private {
 
+        struct LoadedImage {
+            Image image;
+            int lastResize;
+        }
+
         /// Probe the space will use to analyze the tree.
-        TestProbe probe;
+        TestProbe _probe;
+
+        /// Number of calls made to `resize`.
+        int _resizeNumber;
+
+        /// All presently loaded images.
+        LoadedImage[] _loadedImages;
+        int[size_t] _imageIndices;
 
     }
 
@@ -42,7 +57,30 @@ class TestSpace : Space, CanvasIO {
         super(nodes);
 
         // Create a probe for testing.
-        this.probe = new TestProbe();
+        this._probe = new TestProbe();
+
+    }
+
+    /// Returns: True if the given image is loaded.
+    bool isImageLoaded(DrawableImage image) nothrow {
+
+        const ptr = cast(size_t) image.data.ptr;
+
+        // Image is registered, OK
+        if (auto index = ptr in _imageIndices) {
+            assert(*index == image.id, "Image index doesn't match assigned ID.");
+            return true;
+        }
+
+        // Not loaded
+        return false;
+
+    }
+
+    /// Returns: The number of images registered by the test runner.
+    int countLoadedImages() nothrow const {
+
+        return cast(int) _loadedImages.length;
 
     }
 
@@ -50,46 +88,110 @@ class TestSpace : Space, CanvasIO {
 
         auto frame = this.implementIO();
 
+        _resizeNumber++;
         super.resizeImpl(space);
+
+        // Garbage-collect images
+        foreach_reverse (i, ref image; _loadedImages) {
+
+            // Still valid, continue
+            if (image.lastResize >= _resizeNumber) continue;
+
+            // Remove the image
+            _loadedImages = _loadedImages.remove(i);
+            _imageIndices.remove(cast(size_t) image.image.data.ptr);
+
+        }
 
     }
 
     override void cropArea(Rectangle area) nothrow {
 
-        probe.runAssert(a => a.cropArea(probe.subject, area));
+        _probe.runAssert(a => a.cropArea(_probe.subject, area));
 
     }
 
     override void resetCropArea() nothrow {
 
-        probe.runAssert(a => a.resetCropArea(probe.subject));
+        _probe.runAssert(a => a.resetCropArea(_probe.subject));
 
     }
 
     override void drawTriangle(Vector2 x, Vector2 y, Vector2 z, Color color) nothrow {
 
-        probe.runAssert(a => a.drawTriangle(probe.subject, x, y, z, color));
+        _probe.runAssert(a => a.drawTriangle(_probe.subject, x, y, z, color));
 
     }
 
     override void drawCircle(Vector2 center, float radius, Color color) nothrow {
 
-        probe.runAssert(a => a.drawCircle(probe.subject, center, radius, color));
+        _probe.runAssert(a => a.drawCircle(_probe.subject, center, radius, color));
 
     }
 
     override void drawRectangle(Rectangle rectangle, Color color) nothrow {
 
-        probe.runAssert(a => a.drawRectangle(probe.subject, rectangle, color));
+        _probe.runAssert(a => a.drawRectangle(_probe.subject, rectangle, color));
+
+    }
+
+    override void drawImage(DrawableImage image, Rectangle destination, Color tint) nothrow {
+
+        assert(
+            isImageLoaded(image), 
+            "Trying to draw an image without loading");
+
+        _probe.runAssert(a => a.drawImage(_probe.subject, image, destination, tint));
+
+    }
+
+    override void drawHintedImage(DrawableImage image, Rectangle destination, Color tint) nothrow {
+
+        assert(
+            isImageLoaded(image), 
+            "Trying to draw an image without loading");
+
+        _probe.runAssert(a => a.drawHintedImage(_probe.subject, image, destination, tint));
+
+    }
+
+    override int load(Image image) nothrow {
+
+        const ptr = cast(size_t) image.data.ptr;
+
+        // If the image is already loaded, mark it as so
+        if (auto index = ptr in _imageIndices) {
+            _loadedImages[*index].lastResize = _resizeNumber;
+            return *index;
+        }
+
+        // If not, add it
+        else {
+            const index = cast(int) _loadedImages.length;
+
+            _loadedImages ~= LoadedImage(image, _resizeNumber);
+            _imageIndices[ptr] = index;
+
+            return index;
+        }
 
     }
 
     /// Draw a single frame and test if the asserts can be fulfilled.
     void drawAndAssert(Assert[] asserts...) {
 
-        probe.asserts = asserts.dup;
-        queueAction(probe);
+        _probe.asserts = asserts.dup;
+        queueAction(_probe);
         draw();
+
+    }
+
+    /// Draw a single frame and make sure the asserts are NOT fulfilled.
+    void drawAndAssertFailure(Assert[] asserts...) @trusted {
+
+        assertThrown!AssertError(
+            drawAndAssert(asserts)
+        );
 
     }
 
@@ -200,6 +302,8 @@ interface Assert {
     bool drawTriangle(Node node, Vector2 a, Vector2 b, Vector2 c, Color color) nothrow;
     bool drawCircle(Node node, Vector2 center, float radius, Color color) nothrow;
     bool drawRectangle(Node node, Rectangle rectangle, Color color) nothrow;
+    bool drawImage(Node node, DrawableImage image, Rectangle destination, Color tint) nothrow;
+    bool drawHintedImage(Node node, DrawableImage image, Rectangle destination, Color tint) nothrow;
 
     // Meta
     string toString() const;
@@ -247,11 +351,11 @@ auto drawsRectangle(Node subject) {
 
         }
 
-        typeof(this) ofColor(string color) {
+        typeof(this) ofColor(string color) @safe {
             return ofColor(.color(color));
         }
 
-        typeof(this) ofColor(Color color) {
+        typeof(this) ofColor(Color color) @safe {
             isTestingColor = true;
             targetColor = color;
             return this;
@@ -261,6 +365,84 @@ auto drawsRectangle(Node subject) {
             return toText(
                 subject, " should draw a rectangle",
                 isTestingArea  ? toText(" ", targetArea)                 : "",
+                isTestingColor ? toText(" of color ", targetColor.toHex) : "",
+            );
+        }
+
+    };
+
+}
+
+/// Params:
+///     subject = Test if this subject draws an image.
+/// Returns:
+///     An `Assert` that can be passed to `TestSpace.drawAndAssert` to test if a node draws an image.
+auto drawsImage(Node subject, Image image) {
+
+    auto test = drawsImage(subject);
+    test.isTestingImage = true;
+    test.targetImage = image;
+    return test;
+
+}
+
+/// ditto
+auto drawsImage(Node subject) {
+
+    return new class BlackHole!Assert {
+
+        bool isTestingImage;
+        Image targetImage;
+        bool isTestingArea;
+        Rectangle targetArea;
+        bool isTestingColor;
+        Color targetColor;
+
+        override bool drawImage(Node node, DrawableImage image, Rectangle rect, Color color) nothrow {
+
+            if (node != subject) return false;
+
+            if (isTestingImage) {
+                assert(image.data is image.data);
+            }
+
+            if (isTestingArea) {
+                assert(equal(targetArea.x, rect.x));
+                assert(equal(targetArea.y, rect.y));
+                assert(equal(targetArea.width, rect.width));
+                assert(equal(targetArea.height, rect.height));
+            }
+
+            if (isTestingColor) {
+                assert(color == targetColor);
+            }
+
+            return true;
+
+        }
+
+        typeof(this) at(Vector2 position) @safe {
+            isTestingArea = true;
+            targetArea = Rectangle(position.tupleof, targetImage.size.tupleof);
+            // TODO DPI
+            return this;
+        }
+
+        typeof(this) ofColor(string color) @safe {
+            return ofColor(.color(color));
+        }
+
+        typeof(this) ofColor(Color color) @safe {
+            isTestingColor = true;
+            targetColor = color;
+            return this;
+        }
+
+        override string toString() const {
+            return toText(
+                subject, " should draw an image",
+                isTestingImage ? toText(" image ", targetImage)          : "",
+                isTestingArea  ? toText(" rectangle ", targetArea)       : "",
                 isTestingColor ? toText(" of color ", targetColor.toHex) : "",
             );
         }
@@ -288,6 +470,7 @@ auto isDrawn(Node subject) {
         }
 
     };
+
 
 }
 
@@ -380,6 +563,14 @@ auto drawsWildcard(alias dg)(lazy string message) {
             return dg(node, "drawRectangle");
         }
 
+        override bool drawImage(Node node, DrawableImage, Rectangle, Color) nothrow {
+            return dg(node, "drawImage");
+        }
+
+        override bool drawHintedImage(Node node, DrawableImage, Rectangle, Color) nothrow {
+            return dg(node, "drawHintedImage");
+        }
+
         override string toString() const {
             return message;
         }
@@ -397,7 +588,6 @@ bool equal(float a, float b) nothrow {
 
 }
 
-@system
 @("TestSpace can perform basic tests with draws, drawsRectangle and doesNotDraw")
 unittest {
 
@@ -435,15 +625,11 @@ unittest {
         space.doesNotDraw(),
         myNode.draws(),
     );
-    assertThrown!AssertError(
-        space.drawAndAssert(
-            space.draws(),
-        ),
+    space.drawAndAssertFailure(
+        space.draws(),
     );
-    assertThrown!AssertError(
-        space.drawAndAssert(
-            myNode.doesNotDraw()
-        ),
+    space.drawAndAssertFailure(
+        myNode.doesNotDraw()
     );
     space.drawAndAssert(
         myNode.drawsRectangle(),
@@ -451,20 +637,15 @@ unittest {
     space.drawAndAssert(
         myNode.drawsRectangle().ofColor("#f00"),
     );
-    assertThrown!AssertError(
-        space.drawAndAssert(
-            myNode.drawsRectangle().ofColor("#500"),
-        ),
+    space.drawAndAssertFailure(
+        myNode.drawsRectangle().ofColor("#500"),
     );
-    assertThrown!AssertError(
-        space.drawAndAssert(
-            space.drawsRectangle().ofColor("#500"),
-        ),
+    space.drawAndAssertFailure(
+        space.drawsRectangle().ofColor("#500"),
     );
 
 }
 
-@system
 @("TestProbe correctly handles node exits")
 unittest {
 
@@ -505,19 +686,15 @@ unittest {
             myLabel.isDrawn(),
             root.drawsRectangle(),
         );
-        assertThrown!AssertError(
-            test.drawAndAssert(
-                root.drawsRectangle(),
-                myLabel.isDrawn(),
-                root.doesNotDraw(),
-            ),
+        test.drawAndAssertFailure(
+            root.drawsRectangle(),
+            myLabel.isDrawn(),
+            root.doesNotDraw(),
         );
-        assertThrown!AssertError(
-            test.drawAndAssert(
-                root.doesNotDraw(),
-                myLabel.isDrawn(),
-                root.drawsRectangle(),
-            ),
+        test.drawAndAssertFailure(
+            root.doesNotDraw(),
+            myLabel.isDrawn(),
+            root.drawsRectangle(),
         );
     }
     {
@@ -554,6 +731,111 @@ unittest {
             root.drawsRectangle(),
             root.doesNotDraw(),
         );
+    }
+
+}
+
+@("TestSpace can handle images")
+unittest {
+
+    static class MyImage : Space {
+
+        CanvasIO canvasIO;
+        DrawableImage image;
+
+        override void resizeImpl(Vector2 space) {
+            use(canvasIO);
+            load(canvasIO, image);
+            super.resizeImpl(space);
+        }
+
+        override void drawImpl(Rectangle outer, Rectangle inner) {
+            image.draw(inner);
+        }
+
+    }
+    alias myImage = nodeBuilder!MyImage;
+
+    {
+        auto root = myImage();
+        auto test = testSpace(root);
+
+        // The image will be loaded and drawn
+        test.drawAndAssert(
+            root.drawsImage(root.image),
+        );
+        assert(test.countLoadedImages == 1);
+
+        // The image will not be loaded, but it will be kept alive
+        test.drawAndAssert(
+            root.drawsImage(root.image),
+        );
+        assert(test.countLoadedImages == 1);
+
+        // Request a resize — same situation
+        test.updateSize();
+        test.drawAndAssert(
+            root.drawsImage(root.image),
+        );
+        assert(test.countLoadedImages == 1);
+
+        // Hide the node: the node won't resize and the image will be freed
+        root.hide();
+        test.drawAndAssertFailure(
+            root.isDrawn(),
+        );
+        assert(test.countLoadedImages == 0);
+
+        // Show the node now and try again
+        root.show();
+        test.drawAndAssert(
+            root.drawsImage(root.image),
+        );
+        assert(test.countLoadedImages == 1);
+    }
+    {
+        auto image1 = myImage();
+        auto image2 = myImage();
+        auto test = testSpace(image1, image2);
+
+        assert(image1.image == image2.image);
+
+        // Two nodes draw the same image — counts as one
+        test.drawAndAssert(
+            image1.drawsImage(image1.image),
+            image2.drawsImage(image2.image),
+        );
+        assert(test.countLoadedImages == 1);
+
+        // Hide one image
+        image1.hide();
+        test.drawAndAssert(
+            image2.drawsImage(image2.image),
+        );
+        test.drawAndAssertFailure(
+            image1.drawsImage(image1.image),
+        );
+        assert(test.countLoadedImages == 1);
+
+        // Hide both — the images should unload
+        image2.hide();
+        test.drawAndAssertFailure(
+            image1.drawsImage(image1.image),
+        );
+        test.drawAndAssertFailure(
+            image2.drawsImage(image2.image),
+        );
+        assert(test.countLoadedImages == 0);
+
+        // Show one again
+        image2.show();
+        test.drawAndAssert(
+            image2.drawsImage(image2.image),
+        );
+        test.drawAndAssertFailure(
+            image1.drawsImage(image1.image),
+        );
+        assert(test.countLoadedImages == 1);
     }
 
 }
