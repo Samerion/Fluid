@@ -334,7 +334,8 @@ auto drawsRectangle(Node subject) {
 
         override bool drawRectangle(Node node, Rectangle rect, Color color) nothrow {
 
-            if (node != subject) return false;
+            // node != subject MAY throw
+            if (!node.opEquals(subject).assertNotThrown) return false;
 
             if (isTestingArea) {
                 assert(equal(targetArea.x, rect.x));
@@ -400,7 +401,7 @@ auto drawsImage(Node subject) {
 
         override bool drawImage(Node node, DrawableImage image, Rectangle rect, Color color) nothrow {
 
-            if (node != subject) return false;
+            if (!node.opEquals(subject).assertNotThrown) return false;
 
             if (isTestingImage) {
                 assert(image.data is image.data);
@@ -458,11 +459,11 @@ auto isDrawn(Node subject) {
     return new class BlackHole!Assert {
 
         override bool resume(Node node) {
-            return node == subject;
+            return node.opEquals(subject).assertNotThrown;
         }
 
         override bool beforeDraw(Node node, Rectangle, Rectangle, Rectangle) {
-            return node == subject;
+            return node.opEquals(subject).assertNotThrown;
         }
 
         override string toString() const {
@@ -479,7 +480,7 @@ auto draws(Node subject) {
 
     return drawsWildcard!((node, methodName) {
 
-        return node == subject
+        return node.opEquals(subject).assertNotThrown
             && methodName.startsWith("draw");
 
     })(format!"%s should draw"(subject));
@@ -497,25 +498,27 @@ auto doesNotDraw(Node subject) {
         // Test failed, skip checks
         if (failed) return false;
 
+        const isSubject = node.opEquals(subject).assertNotThrown;
+
         // Make sure the node is reached
         if (!matched) {
-            if (node != subject) {
+            if (!isSubject) {
                 return false;
             } 
             matched = true;
         }
 
         // Switching to another node
-        if (methodName == "beforeDraw" && node != subject) {
+        if (methodName == "beforeDraw" && !isSubject) {
             return true;
         }
 
         // Ending this node
-        if (methodName == "afterDraw" && node == subject) {
+        if (methodName == "afterDraw" && isSubject) {
             return true;
         }
 
-        if (node == subject && methodName.startsWith("draw")) {
+        if (isSubject && methodName.startsWith("draw")) {
             failed = true;
             return false;
         }
