@@ -436,6 +436,12 @@ abstract class Node {
 
     }
 
+    final inout(TreeContext) treeContext() inout nothrow {
+
+        return inout TreeContext(&tree.context);
+
+    }
+
     inout(FluidBackend) backend() inout {
 
         return tree.backend;

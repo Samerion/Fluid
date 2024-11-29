@@ -140,6 +140,7 @@ Color setAlpha(Color color, ubyte alpha) {
 /// alpha is zero, returns `bottom`.
 ///
 /// BUG: This function is currently broken and returns incorrect results.
+deprecated("alphaBlend is bugged and unused, it will be removed in Fluid 0.8.0")
 Color alphaBlend(Color bottom, Color top) {
 
     auto topA = cast(float) top.a / ubyte.max;
@@ -155,7 +156,7 @@ Color alphaBlend(Color bottom, Color top) {
 }
 
 /// Multiple color values.
-Color multiply(Color a, Color b) {
+Color multiply(Color a, Color b) nothrow {
 
     return Color(
         cast(ubyte) (a.r * b.r / 255.0),
