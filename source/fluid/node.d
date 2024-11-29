@@ -163,7 +163,7 @@ abstract class Node {
     }
 
     /// ditto
-    bool opEquals(const Node otherNode) const nothrow {
+    bool opEquals(const Node otherNode) const {
 
         return this is otherNode;
 
@@ -1318,13 +1318,13 @@ abstract class Node {
     ///     these interfaces on destruction.
     protected auto implementIO(this This)() {
 
-        import std.meta : Filter;
+        import std.meta : AliasSeq, Filter;
 
         // mustuse is not available in LDC 1.28
         static if (__traits(compiles, { import core.attribute : mustuse; }))
             import core.attribute : mustuse;
         else
-            alias mustuse = Alias!();
+            alias mustuse = AliasSeq!();
 
         alias IOs = Filter!(isIO, InterfacesTuple!This);
         alias IOArray = IO[IOs.length];
