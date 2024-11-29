@@ -996,7 +996,9 @@ abstract class Node {
         // Set tint
         auto previousTint = io.tint;
         io.tint = multiply(previousTint, currentStyle.tint);
+        tree.context.tint = io.tint;
         scope (exit) io.tint = previousTint;
+        scope (exit) tree.context.tint = previousTint;
 
         // If there's a border active, draw it
         if (currentStyle.borderStyle) {
