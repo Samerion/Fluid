@@ -117,25 +117,25 @@ class TestSpace : Space, CanvasIO {
 
     }
 
-    override void drawTriangle(Vector2 x, Vector2 y, Vector2 z, Color color) nothrow {
+    override void drawTriangleImpl(Vector2 x, Vector2 y, Vector2 z, Color color) nothrow {
 
         _probe.runAssert(a => a.drawTriangle(_probe.subject, x, y, z, color));
 
     }
 
-    override void drawCircle(Vector2 center, float radius, Color color) nothrow {
+    override void drawCircleImpl(Vector2 center, float radius, Color color) nothrow {
 
         _probe.runAssert(a => a.drawCircle(_probe.subject, center, radius, color));
 
     }
 
-    override void drawRectangle(Rectangle rectangle, Color color) nothrow {
+    override void drawRectangleImpl(Rectangle rectangle, Color color) nothrow {
 
         _probe.runAssert(a => a.drawRectangle(_probe.subject, rectangle, color));
 
     }
 
-    override void drawImage(DrawableImage image, Rectangle destination, Color tint) nothrow {
+    override void drawImageImpl(DrawableImage image, Rectangle destination, Color tint) nothrow {
 
         assert(
             isImageLoaded(image), 
@@ -145,7 +145,7 @@ class TestSpace : Space, CanvasIO {
 
     }
 
-    override void drawHintedImage(DrawableImage image, Rectangle destination, Color tint) nothrow {
+    override void drawHintedImageImpl(DrawableImage image, Rectangle destination, Color tint) nothrow {
 
         assert(
             isImageLoaded(image), 

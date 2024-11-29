@@ -35,20 +35,42 @@ interface CanvasIO : IO {
     ///     b = Second of the three points to connect.
     ///     c = Third of the three points to connect.
     ///     color = Color to fill the triangle with.
-    void drawTriangle(Vector2 a, Vector2 b, Vector2 c, Color color) nothrow;
+    protected void drawTriangleImpl(Vector2 a, Vector2 b, Vector2 c, Color color) nothrow;
+
+    /// ditto
+    final void drawTriangle(Vector2 a, Vector2 b, Vector2 c, Color color) nothrow {
+
+        drawTriangleImpl(a, b, c, 
+            multiply(treeContext.tint, color));
+
+    }
 
     /// Draw a circle.
     /// Params:
     ///     center = Position of the circle's center.
     ///     radius = Radius of the circle.
     ///     color  = Color to fill the circle with.
-    void drawCircle(Vector2 center, float radius, Color color) nothrow;
+    protected void drawCircleImpl(Vector2 center, float radius, Color color) nothrow;
+
+    final void drawCircle(Vector2 center, float radius, Color color) nothrow {
+
+        drawCircleImpl(center, radius, 
+            multiply(treeContext.tint, color));
+
+    }
 
     /// Draw a rectangle.
     /// Params:
     ///     rectangle = Rectangle to draw.
     ///     color     = Color to fill the rectangle with.
-    void drawRectangle(Rectangle rectangle, Color color) nothrow;
+    protected void drawRectangleImpl(Rectangle rectangle, Color color) nothrow;
+
+    final void drawRectangle(Rectangle rectangle, Color color) nothrow {
+
+        drawRectangleImpl(rectangle,
+            multiply(treeContext.tint, color));
+
+    }
 
     /// Prepare an image for drawing. For hardware accelerated backends, this may involve uploading the texture
     /// to the GPU.
@@ -109,24 +131,41 @@ interface CanvasIO : IO {
     ///         The image should be stretched to fit this box.
     ///     tint        = Color to modulate the image against. Every pixel in the image should be multiplied 
     ///         channel-wise by this color; values `0...255` should be mapped to `0...1`.
-    void drawImage(DrawableImage image, Rectangle destination, Color tint) nothrow;
+    protected void drawImageImpl(DrawableImage image, Rectangle destination, Color tint) nothrow;
+
+    /// ditto
+    final void drawImage(DrawableImage image, Rectangle destination, Color tint) nothrow {
+
+        drawImageImpl(image, destination, 
+            multiply(treeContext.tint, tint));
+
+    }
 
     /// ditto
     final void drawImage(DrawableImage image, Vector2 destination, Color tint) nothrow {
 
         const rect = Rectangle(destination.tupleof, image.width, image.height);
-        drawImage(image, rect, tint);
+        drawImageImpl(image, rect, 
+            multiply(treeContext.tint, tint));
 
     }
 
     /// ditto
-    void drawHintedImage(DrawableImage image, Rectangle destination, Color tint) nothrow;
+    protected void drawHintedImageImpl(DrawableImage image, Rectangle destination, Color tint) nothrow;
+
+    final void drawHintedImage(DrawableImage image, Rectangle destination, Color tint) nothrow {
+
+        drawHintedImageImpl(image, destination, 
+            multiply(treeContext.tint, tint));
+
+    }
 
     /// ditto
     final void drawHintedImage(DrawableImage image, Vector2 destination, Color tint) nothrow {
 
         const rect = Rectangle(destination.tupleof, image.width, image.height);
-        drawHintedImage(image, rect, tint);
+        drawHintedImageImpl(image, rect, 
+            multiply(treeContext.tint, tint));
 
     }
 
