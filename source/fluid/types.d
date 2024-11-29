@@ -256,6 +256,11 @@ struct Image {
 
     int width, height;
 
+    /// This number should be incremented after editing the image to signal `CanvasIO` that a change has been made.
+    ///
+    /// Edits made using `Image`'s methods will *not* bump this number. It has to be incremented manually.
+    int revisionNumber;
+
     /// Create an RGBA image.
     this(Color[] rgbaPixels, int width, int height) {
 
@@ -312,7 +317,7 @@ struct Image {
     }
 
     /// Get data of the image in raw form.
-    inout(void)[] data() inout {
+    inout(void)[] data() inout nothrow {
 
         final switch (format) {
 

@@ -1,6 +1,7 @@
 /// This module contains interfaces for drawing geometry on a canvas.
 module fluid.io.canvas;
 
+import fluid.types;
 import fluid.backend;
 import fluid.future.context;
 
@@ -48,5 +49,173 @@ interface CanvasIO : IO {
     ///     rectangle = Rectangle to draw.
     ///     color     = Color to fill the rectangle with.
     void drawRectangle(Rectangle rectangle, Color color) nothrow;
+
+    /// Prepare an image for drawing. For hardware accelerated backends, this may involve uploading the texture
+    /// to the GPU.
+    ///
+    /// An image may be passed to this function even if it was already loaded. The field `image.data.ptr` can be used
+    /// to uniquely identify an image, so the canvas can use it to reuse previously prepared images. Additionally,
+    /// the `image.revisionNumber` field will increase if the image was updated, so the change should be reflected
+    /// in the canvas.
+    ///
+    /// There is no corresponding `unload` call. The canvas can instead unload images based on whether they 
+    /// were loaded during a resize. This may look similar to this:
+    ///
+    /// ---
+    /// int resizeNumber;
+    /// void load(Image image) {
+    ///     // ... load the resource ...
+    ///     resource.lastResize = resizeNumber;
+    /// }
+    /// void resizeImpl(Vector2 space) {
+    ///     auto frame = this.implementIO();
+    ///     resizeNumber++;
+    ///     super.resizeImpl();
+    ///     foreach_reverse (ref resource; resources) {
+    ///         if (resource.lastResize < resizeNumber) {
+    ///             resources = resources.remove(resource);
+    ///         }
+    ///     }    
+    ///     return size;
+    /// }
+    /// ---
+    ///
+    /// Important:
+    ///     To make [partial resizing](https://git.samerion.com/Samerion/Fluid/issues/118) possible, 
+    ///     `load` can also be called outside of `resizeImpl`.
+    /// Params:
+    ///     image = Image to prepare. 
+    ///         The image may be uninitialized, in which case the image should still be valid, but simply empty.
+    ///         Attention should be paid to the `revisionNumber` field.
+    /// Returns:
+    ///     A number to be associated with the image. Interpretation of this number is up to the backend, but usually
+    ///     it will be an index in an array, since it is faster to look up than an associative array.
+    int load(Image image) nothrow;
+
+    /// Draw an image on the canvas. 
+    ///
+    /// `drawImage` is the usual method, which enables scaling and filtering, likely making it preferable 
+    /// for most images. However, this may harm images that have been generated (like text) or adjusted to display 
+    /// on the user's screen (like icons), so `drawHintedImage` may be preferrable. For similar reasons, 
+    /// `drawHintedImage` may also be better for pixel art images.
+    /// 
+    /// While specifics of `drawImage` are left to the implementation, `drawHintedImage` should directly blit 
+    /// the image or use nearest-neighbor to scale, if needed. Image boundaries should be adjusted to align exactly
+    /// with the screen's pixel grid.
+    ///
+    /// Params:
+    ///     image       = Image to draw. The image must be prepared with `Node.load` before.
+    ///     destination = Position to place the image's top-left corner at or rectangle to fit the image in. 
+    ///         The image should be stretched to fit this box.
+    ///     tint        = Color to modulate the image against. Every pixel in the image should be multiplied 
+    ///         channel-wise by this color; values `0...255` should be mapped to `0...1`.
+    void drawImage(DrawableImage image, Rectangle destination, Color tint) nothrow;
+
+    /// ditto
+    final void drawImage(DrawableImage image, Vector2 destination, Color tint) nothrow {
+
+        const rect = Rectangle(destination.tupleof, image.width, image.height);
+        drawImage(image, rect, tint);
+
+    }
+
+    /// ditto
+    void drawHintedImage(DrawableImage image, Rectangle destination, Color tint) nothrow;
+
+    /// ditto
+    final void drawHintedImage(DrawableImage image, Vector2 destination, Color tint) nothrow {
+
+        const rect = Rectangle(destination.tupleof, image.width, image.height);
+        drawHintedImage(image, rect, tint);
+
+    }
+
+}
+
+/// A `DrawableImage` is a variant of `Image` that can be associated with a `CanvasIO` in order to be drawn.
+/// 
+/// Prepare images for drawing using `load()` in `resizeImpl`:
+///
+/// ---
+/// CanvasIO canvasIO;
+/// DrawableImage image;
+/// void resizeImpl(Vector2 space) {
+///     require(canvasIO);
+///     load(canvasIO, image);
+/// }
+/// ---
+///
+/// Draw images in `drawImpl`:
+///
+/// ---
+/// void drawImpl(Rectangle outer, Rectangle inner) {
+///     image.draw(inner.start);
+/// }
+/// ---
+struct DrawableImage {
+
+    /// Image to be drawn.
+    Image image;
+
+    /// Canvas IO responsible for drawing the image.
+    private CanvasIO _canvasIO;
+
+    /// ID for the image assigned by the canvas.
+    private int _id;
+
+    alias image this;
+
+    /// Compare two images
+    bool opEquals(const DrawableImage other) const {
+
+        // Do not compare I/O metadata
+        return image == other.image;
+
+    }
+
+    /// Returns: The ID/index assigned by `CanvasIO` when this image was loaded.
+    int id() const nothrow {
+        return this._id;
+    }
+
+    void load(CanvasIO canvasIO, int id) nothrow {
+
+        this._canvasIO = canvasIO;
+        this._id = id;
+
+    }
+
+    /// Draw the image.
+    ///
+    /// `draw` is the usual method, which enables scaling and filtering, likely making it preferable 
+    /// for most images. However, for images that have been generated (like text) or adjusted to display 
+    /// on the user's screen (like icons), `drawHinted` may be preferrable. 
+    ///
+    /// See_Also: 
+    ///     `CanvasIO.drawImage`,
+    ///     `CanvasIO.drawHintedImage`
+    /// Params:
+    ///     destination = Place in the canvas to draw the texture to. 
+    ///         If a rectangle is given, the image will stretch to fix this box.
+    ///     tint        = Color to multiply the image by. Can be used to reduce opacity, darken or change color. 
+    ///         Defaults to white (no change).
+    void draw(Rectangle destination, Color tint = Color(0xff, 0xff, 0xff, 0xff)) nothrow {
+        _canvasIO.drawImage(this, destination, tint);
+    }
+
+    /// ditto
+    void draw(Vector2 destination, Color tint = Color(0xff, 0xff, 0xff, 0xff)) nothrow {
+        _canvasIO.drawImage(this, destination, tint);
+    }
+
+    /// ditto
+    void drawHinted(Rectangle destination, Color tint = Color(0xff, 0xff, 0xff, 0xff)) nothrow {
+        _canvasIO.drawHintedImage(this, destination, tint);
+    }
+
+    /// ditto
+    void drawHinted(Vector2 destination, Color tint = Color(0xff, 0xff, 0xff, 0xff)) nothrow {
+        _canvasIO.drawHintedImage(this, destination, tint);
+    }
 
 }
