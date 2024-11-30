@@ -3,6 +3,8 @@ module fluid.border;
 import fluid.style;
 import fluid.backend;
 
+import fluid.io.canvas;
+
 
 @safe:
 
@@ -105,7 +107,12 @@ interface FluidBorder {
 
 }
 
+interface FluidIOBorder : FluidBorder {
 
+    /// Apply the border, drawing it in the given box.
+    void apply(CanvasIO io, Rectangle borderBox, float[4] size) const;
+
+}
 
 ColorBorder colorBorder(Color color) {
 
@@ -121,11 +128,60 @@ ColorBorder colorBorder(size_t n)(Color[n] color) {
 
 }
 
-class ColorBorder : FluidBorder {
+class ColorBorder : FluidIOBorder {
 
     Color[4] color = Color(0, 0, 0, 0);
 
     void apply(FluidBackend io, Rectangle borderBox, float[4] size) const @trusted {
+
+        // For each side
+        foreach (sideIndex; 0..4) {
+
+            const side = cast(Style.Side) sideIndex;
+            const nextSide = cast(Style.Side) ((sideIndex + 1) % 4);
+
+            // Draw all the fragments
+            io.drawRectangle(sideRect(borderBox, size, side), color[side]);
+
+            // Draw triangles in the corner
+            foreach (shift; 0..2) {
+
+                // Get the corner
+                const cornerSide = shiftSide(side, shift);
+
+                // Get corner parameters
+                const corner = cornerRect(borderBox, size, cornerSide);
+                const cornerStart = Vector2(corner.x, corner.y);
+                const cornerSize = Vector2(corner.w, corner.h);
+                const cornerEnd = side < 2
+                    ? Vector2(0, corner.h)
+                    : Vector2(corner.w, 0);
+
+                // Draw the first triangle
+                if (!shift)
+                io.drawTriangle(
+                    cornerStart,
+                    cornerStart + cornerSize,
+                    cornerStart + cornerEnd,
+                    color[side],
+                );
+
+                // Draw the second one
+                else
+                io.drawTriangle(
+                    cornerStart,
+                    cornerStart + cornerEnd,
+                    cornerStart + cornerSize,
+                    color[side],
+                );
+
+            }
+
+        }
+
+    }
+
+    void apply(CanvasIO io, Rectangle borderBox, float[4] size) const {
 
         // For each side
         foreach (sideIndex; 0..4) {

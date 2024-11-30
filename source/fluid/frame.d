@@ -11,6 +11,8 @@ import fluid.input;
 import fluid.structs;
 import fluid.backend;
 
+import fluid.io.canvas;
+
 
 @safe:
 
@@ -68,6 +70,8 @@ alias hframe = simpleConstructor!(Frame, (a) {
 /// Frame supports drag & drop via `acceptDrop`.
 class Frame : Space, FluidDroppable {
 
+    CanvasIO canvasIO;
+
     public {
 
         /// If true, a drag & drop node hovers this frame.
@@ -104,6 +108,8 @@ class Frame : Space, FluidDroppable {
 
     protected override void resizeImpl(Vector2 availableSpace) {
 
+        use(canvasIO);
+
         super.resizeImpl(availableSpace);
 
         // Hovered by a dragged node
@@ -128,7 +134,7 @@ class Frame : Space, FluidDroppable {
     protected override void drawImpl(Rectangle outer, Rectangle inner) {
 
         const style = pickStyle();
-        style.drawBackground(tree.io, outer);
+        style.drawBackground(tree.io, canvasIO, outer);
 
         // Clear dropSize if dropping stopped
         if (!isDropHovered && dropSize != Vector2()) {
@@ -240,5 +246,46 @@ class Frame : Space, FluidDroppable {
         this.children.insertInPlace(_dropIndex, node);
 
     }
+
+}
+
+@("Frame works with the new I/O system")
+unittest {
+
+    import fluid.theme;
+    import fluid.test_space;
+
+    @NodeTag
+    enum WithBorder;
+
+    auto theme = nullTheme.derive(
+        rule!(Frame)(
+            backgroundColor = color("#f00"),
+        ),
+        rule!(Frame, WithBorder)(
+            border = 1,
+            borderStyle = colorBorder(color("#0f0")),
+        ),
+    );
+
+    auto plainFrame = vframe();
+    auto frameWithBorder = vframe(.tags!WithBorder);
+    auto test = testSpace(
+        theme,
+        plainFrame,
+        frameWithBorder,
+    );
+
+    test.drawAndAssert(
+        // No border on plainFrame
+        plainFrame.drawsRectangle().ofColor("#f00"),
+        plainFrame.doesNotDraw(),
+        // frameWithBorders draws background and border
+        frameWithBorder.drawsRectangle().ofColor("#f00"),
+        frameWithBorder.drawsRectangle().ofColor("#0f0"),
+        frameWithBorder.drawsRectangle().ofColor("#0f0"),
+        frameWithBorder.drawsRectangle().ofColor("#0f0"),
+        frameWithBorder.drawsRectangle().ofColor("#0f0"),
+    );
 
 }
