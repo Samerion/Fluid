@@ -266,7 +266,10 @@ unittest {
 
     root.draw();
 
-    assert(visitedNodes[].equal(allNodes[1..3]));
+    // @system on LDC 1.28
+    () @trusted {
+        assert(visitedNodes[].equal(allNodes[1..3]));
+    }();
 
 }
 
