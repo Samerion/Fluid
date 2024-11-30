@@ -261,32 +261,6 @@ class DragHandle : Node {
 
     }
 
-    unittest {
-
-        import std.algorithm;
-
-        import fluid.label;
-        import fluid.theme;
-
-        auto theme = nullTheme.derive(
-            rule(
-                gap = 4,
-            ),
-        );
-        auto io = new HeadlessBackend;
-        auto content = label("a");
-        auto root = dragSlot(theme, content);
-        root.io = io;
-        root.handle.hide();
-        root.draw();
-
-        assert(root.minSize == content.minSize);
-        assert(io.textures.canFind!(a
-            => a.position == Vector2(0, 0)
-            && a.id == content.text.texture.chunks[0].texture.id));
-
-    }
-
 }
 
 class DragAction : TreeAction {

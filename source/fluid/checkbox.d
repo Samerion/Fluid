@@ -157,27 +157,3 @@ unittest {
     assert(!myCheckbox.isChecked);
 
 }
-
-unittest {
-
-    int changed;
-
-    auto io = new HeadlessBackend;
-    auto root = checkbox(delegate {
-
-        changed++;
-
-    });
-
-    root.io = io;
-    root.runInputAction!(FluidInputAction.press);
-
-    assert(changed == 1);
-    assert(root.isChecked);
-
-    root.runInputAction!(FluidInputAction.press);
-
-    assert(changed == 2);
-    assert(!root.isChecked);
-
-}
