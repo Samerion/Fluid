@@ -9,13 +9,17 @@ import fluid.style;
 import fluid.utils;
 import fluid.button;
 
+@safe:
+deprecated("`fluid.hover_button` is deprecated, because it is legacy code and has no known usecase. "
+    ~ "Please create your own `Button` node subclass and override `mouseImpl`. "
+    ~ "`hover_button` will be removed in Fluid 0.9.0."):
+
+
 alias hoverButton = simpleConstructor!HoverButton;
 alias frameHoverButton = simpleConstructor!FrameHoverButton;
 
 alias HoverButton = HoverButtonImpl!Label;
 alias FrameHoverButton = HoverButtonImpl!Frame;
-
-@safe:
 
 /// An button that triggers every frame as long as the button is hovered. Useful for advanced buttons which react to
 /// more than just left button click.
