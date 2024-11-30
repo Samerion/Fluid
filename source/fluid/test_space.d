@@ -117,25 +117,25 @@ class TestSpace : Space, CanvasIO {
 
     }
 
-    override void drawTriangle(Vector2 x, Vector2 y, Vector2 z, Color color) nothrow {
+    override void drawTriangleImpl(Vector2 x, Vector2 y, Vector2 z, Color color) nothrow {
 
         _probe.runAssert(a => a.drawTriangle(_probe.subject, x, y, z, color));
 
     }
 
-    override void drawCircle(Vector2 center, float radius, Color color) nothrow {
+    override void drawCircleImpl(Vector2 center, float radius, Color color) nothrow {
 
         _probe.runAssert(a => a.drawCircle(_probe.subject, center, radius, color));
 
     }
 
-    override void drawRectangle(Rectangle rectangle, Color color) nothrow {
+    override void drawRectangleImpl(Rectangle rectangle, Color color) nothrow {
 
         _probe.runAssert(a => a.drawRectangle(_probe.subject, rectangle, color));
 
     }
 
-    override void drawImage(DrawableImage image, Rectangle destination, Color tint) nothrow {
+    override void drawImageImpl(DrawableImage image, Rectangle destination, Color tint) nothrow {
 
         assert(
             isImageLoaded(image), 
@@ -145,7 +145,7 @@ class TestSpace : Space, CanvasIO {
 
     }
 
-    override void drawHintedImage(DrawableImage image, Rectangle destination, Color tint) nothrow {
+    override void drawHintedImageImpl(DrawableImage image, Rectangle destination, Color tint) nothrow {
 
         assert(
             isImageLoaded(image), 
@@ -359,7 +359,8 @@ auto drawsRectangle(Node subject) {
             }
 
             if (isTestingColor) {
-                assert(color == targetColor, format!"Expected color %s, got %s"(targetColor, color).assertNotThrown);
+                assert(color == targetColor, 
+                    format!"Expected color %s, got %s"(targetColor.toHex, color.toHex).assertNotThrown);
             }
 
             return true;
@@ -855,4 +856,105 @@ unittest {
         assert(test.countLoadedImages == 1);
     }
 
+}
+
+@("TestSpace / CanvasIO recognizes tint")
+unittest {
+
+    import fluid.frame;
+    import fluid.style;
+
+    auto theme = nullTheme.derive(
+        rule!Frame(
+            Rule.backgroundColor = color("#aaa"),
+            Rule.tint = color("#aaaa"),
+        )
+    );
+
+    Frame[6] frames;
+
+    auto root = testSpace(
+        theme,
+        frames[0] = vframe(
+            frames[1] = vframe(
+                frames[2] = vframe(
+                    frames[3] = vframe(),
+                    frames[4] = vframe(),
+                ),
+                frames[5] = vframe(),
+            ),
+        ),
+    );
+
+    root.drawAndAssert(
+        frames[0].drawsRectangle().ofColor("#717171aa"),
+        frames[1].drawsRectangle().ofColor("#4b4b4b71"),
+        frames[2].drawsRectangle().ofColor("#3232324b"),
+        frames[3].drawsRectangle().ofColor("#21212132"),
+        frames[4].drawsRectangle().ofColor("#21212132"),
+        frames[5].drawsRectangle().ofColor("#3232324b"),
+    );
+    
+}
+
+@("Tint can be locked to prevent changes")
+unittest {
+
+    import fluid.frame;
+    import fluid.style;
+
+    static class LockTint : Space {
+
+        this(Ts...)(Ts args) {
+            super(args);
+        }
+
+        override void drawImpl(Rectangle outer, Rectangle inner) {
+
+            treeContext.lockTint();
+            scope (exit) treeContext.unlockTint();
+
+            super.drawImpl(outer, inner);
+            
+        }
+
+    }
+
+    alias lockTint = nodeBuilder!LockTint;
+
+    auto theme = nullTheme.derive(
+        rule!Frame(
+            Rule.backgroundColor = color("#aaa"),
+            Rule.tint = color("#aaaa"),
+        )
+    );
+
+    Frame[7] frames;
+
+    auto root = testSpace(
+        theme,
+        frames[0] = vframe(
+            frames[1] = vframe(
+                lockTint(
+                    frames[2] = vframe(
+                        frames[3] = vframe(),
+                        frames[4] = vframe(),
+                    ),
+                    frames[5] = vframe(),
+                ),
+                frames[6] = vframe(),
+            ),
+        ),
+    );
+
+    root.drawAndAssert(
+        frames[0].drawsRectangle().ofColor("#717171aa"),
+        frames[1].drawsRectangle().ofColor("#4b4b4b71"),
+        frames[2].drawsRectangle().ofColor("#4b4b4b71"),
+        frames[3].drawsRectangle().ofColor("#4b4b4b71"),
+        frames[4].drawsRectangle().ofColor("#4b4b4b71"),
+        frames[5].drawsRectangle().ofColor("#4b4b4b71"),
+        frames[6].drawsRectangle().ofColor("#3232324b"),
+    );
+    
 }

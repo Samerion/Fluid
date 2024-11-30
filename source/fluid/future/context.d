@@ -3,6 +3,7 @@ module fluid.future.context;
 import std.meta;
 import std.traits;
 
+import fluid.types;
 import fluid.future.stack;
 import fluid.future.static_id;
 
@@ -34,6 +35,53 @@ struct TreeContext {
 struct TreeContextData {
 
     TreeIOContext io;
+
+    private {
+        int _lockTint;
+        auto _tint = Color(0xff, 0xff, 0xff, 0xff);
+    }
+
+    /// Tint is a transitive styling property that can be used to reduce color intensity of everything 
+    /// that a node draws. Tint applies per channel, which means it can be used to reduce opacity (by changing
+    /// the alpha channel) and any of the three RGB colors.
+    ///
+    /// A tint of value `0` sets intensity to 0% (disable). A tint of value `255` sets intensity to 100% (no change).
+    ///
+    /// See_Also: 
+    ///     `Style.tint`
+    /// Returns: The current tint.
+    Color tint() const nothrow {
+        return _tint;
+    }
+
+    package (fluid)
+    Color tint(Color newValue) nothrow {
+        if (_lockTint > 0) {
+            return _tint;
+        }
+        else {
+            return _tint = newValue;
+        }
+    }
+
+    /// Lock tint in place, preventing it from changing, or cancel a lock, making changes possible again.
+    ///
+    /// This function is needed for compatibility with the legacy `FluidBackend` system.
+    /// Locks can be stacked, so if `lockTint()` is called twice, `unlockTint()` also has to be called twice 
+    /// to unlock tinting.
+    ///
+    /// It is expected that this function will be deprecated as soon as `FluidBackend` is no longer a part
+    /// of Fluid. It will then be deleted in the next minor release.
+    void lockTint() {
+        _lockTint++;
+    }
+
+    /// ditto
+    void unlockTint() {
+        if (_lockTint > 0) {
+            _lockTint--;
+        }
+    }
 
 } 
 
@@ -92,7 +140,14 @@ enum isIO(T) = is(T == interface)
 /// Get all IOs implemented by the given type
 alias allIOs(T) = Filter!(isIO, InterfacesTuple!T);
 
-interface IO {
+interface HasContext {
+
+    /// Returns: The current tree context.
+    inout(TreeContext) treeContext() inout nothrow;
+
+}
+
+interface IO : HasContext {
 
 }
 
