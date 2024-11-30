@@ -206,8 +206,11 @@ private class TestProbe : TreeAction {
         /// Subject that is currently tested.
         Node subject;
 
-        /// Asserts that need to pass before the end of iteration/
+        /// Asserts that need to pass before the end of iteration. Asserts that pass are popped off this array.
         Assert[] asserts;
+
+        /// Number of asserts that passed since start of iteration.
+        int assertsPassed;
 
     }
 
@@ -237,10 +240,20 @@ private class TestProbe : TreeAction {
     protected void nextAssert() nothrow {
 
         // Move to the next assert in the list
-        do asserts.popFront;
+        do {
+            asserts.popFront;
+            assertsPassed++;
+        }
 
         // Call `resume` on the next item. Continue while tests pass
         while (!asserts.empty && asserts.front.resume(subject));
+
+    }
+
+    override void beforeTree(Node, Rectangle) {
+
+        // Reset pass count
+        assertsPassed = 0;
 
     }
 
@@ -269,7 +282,7 @@ private class TestProbe : TreeAction {
 
         // Make sure the asserts pass
         assert(this.asserts.empty, format!"Assert[%s] failure: %s"(
-            asserts.length - this.asserts.length, this.asserts.front.toString));
+            assertsPassed, this.asserts.front.toString));
 
         // Don't iterate again
         stop();
@@ -338,14 +351,15 @@ auto drawsRectangle(Node subject) {
             if (!node.opEquals(subject).assertNotThrown) return false;
 
             if (isTestingArea) {
-                assert(equal(targetArea.x, rect.x));
-                assert(equal(targetArea.y, rect.y));
-                assert(equal(targetArea.width, rect.width));
-                assert(equal(targetArea.height, rect.height));
+                assert(equal(targetArea.x, rect.x)
+                    && equal(targetArea.y, rect.y)
+                    && equal(targetArea.width, rect.width)
+                    && equal(targetArea.height, rect.height),
+                    format!"Expected rectangle %s, got %s"(targetArea, rect).assertNotThrown);
             }
 
             if (isTestingColor) {
-                assert(color == targetColor);
+                assert(color == targetColor, format!"Expected color %s, got %s"(targetColor, color).assertNotThrown);
             }
 
             return true;
@@ -491,12 +505,12 @@ auto draws(Node subject) {
 auto doesNotDraw(Node subject) {
 
     bool matched;
-    bool failed;
+    string failedName;
 
     return drawsWildcard!((node, methodName) {
 
         // Test failed, skip checks
-        if (failed) return false;
+        if (failedName) return false;
 
         const isSubject = node.opEquals(subject).assertNotThrown;
 
@@ -519,13 +533,13 @@ auto doesNotDraw(Node subject) {
         }
 
         if (isSubject && methodName.startsWith("draw")) {
-            failed = true;
+            failedName = methodName;
             return false;
         }
 
         return false;
 
-    })(matched ? format!"%s shouldn't draw"(subject)
+    })(matched ? format!"%s shouldn't draw, but calls %s"(subject, failedName)
                : format!"%s should be reached"(subject));
 
 }
