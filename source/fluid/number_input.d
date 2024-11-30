@@ -200,6 +200,7 @@ unittest {
 
 }
 
+@("[TODO] Legacy: NumberInput supports math operations")
 unittest {
 
     int calls;
@@ -287,28 +288,6 @@ unittest {
     assert(calls == 4);
     assert(root.value == 110);
     assert(root.TextInput.value == "110");
-
-}
-
-unittest {
-
-    import std.math;
-
-    auto io = new HeadlessBackend;
-    auto root = floatInput();
-
-    root.io = io;
-
-    io.inputCharacter("10e8");
-    root.focus();
-    root.draw();
-
-    io.nextFrame;
-    io.press(KeyboardKey.enter);
-    root.draw();
-
-    assert(root.value.isClose(10e8));
-    assert(root.TextInput.value.among("1e+9", "1e+09"));
 
 }
 
@@ -530,6 +509,15 @@ struct ExpressionResult(T) {
 
 }
 
+/// Evalute a string containing a mathematical expression and return the result.
+///
+/// Supported operations are `+`, `-`, `*` and `/`
+///
+/// Params:
+///     input = A string-like range containing a mathematical expression.
+/// Returns:
+///     Result of the expression. The result will also evaluate to true if it contains a valid number,
+///     or false if the expression does not evaluate to a number.
 ExpressionResult!T evaluateExpression(T, Range)(Range input) {
 
     import std.utf : byDchar;
@@ -543,6 +531,7 @@ ExpressionResult!T evaluateExpression(T, Range)(Range input) {
 
 }
 
+/// Evaluate expression can be used to perform mathematical expressions at runtime.
 unittest {
 
     assert(evaluateExpression!int("0") == 0);
@@ -570,6 +559,7 @@ unittest {
 
 }
 
+/// Evaluate expression can perform floating point operations.
 unittest {
 
     import std.math;

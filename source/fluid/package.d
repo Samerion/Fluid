@@ -42,6 +42,7 @@ public import
     fluid.hover_button,
     fluid.image_view,
     fluid.input,
+    fluid.io,
     fluid.label,
     fluid.map_frame,
     fluid.node,
@@ -62,6 +63,7 @@ public import
     fluid.structs,
     fluid.style,
     fluid.switch_slot,
+    fluid.test_space,
     fluid.text,
     fluid.text_input,
     // Note: fluid.theme is not included
