@@ -12,6 +12,8 @@ import fluid.utils;
 import fluid.backend;
 import fluid.typeface;
 
+import fluid.io.canvas;
+
 public import fluid.theme : makeTheme, Theme, Selector, rule, Rule, when, WhenRule, children, ChildrenRule, Field, 
     Breadcrumbs;
 public import fluid.border;
@@ -213,6 +215,28 @@ struct Style {
             borderStyle.apply(backend, rect, border);
 
         }
+
+    }
+    
+    /// ditto
+    void drawBackground(FluidBackend backend, CanvasIO io, Rectangle rect) const {
+
+        // New I/O system used
+        if (io) {
+
+            const ioBorder = cast(const FluidIOBorder) borderStyle;
+
+            io.drawRectangle(rect, backgroundColor);
+
+            // Draw border if present and compatible
+            if (ioBorder) {
+                ioBorder.apply(io, rect, border);
+            }
+
+        }
+
+        // Old Backend system
+        else drawBackground(backend, rect);
 
     }
 
