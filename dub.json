@@ -30,6 +30,14 @@
 			],
 			"name": "unittest",
 			"targetType": "library",
+			"importPaths": [
+				"tests",
+				"source"
+			],
+			"sourcePaths": [
+				"tests",
+				"source"
+			],
 			"versions": [
 				"Fluid_HeadlessOutput",
 				"Fluid_TestSpace"
