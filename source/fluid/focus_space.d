@@ -120,25 +120,3 @@ class FocusSpace : Space, FocusIO {
     }
 
 }
-
-/// Simulating keyboard input using an automaton node.
-version (TODO)
-unittest {
-
-    KeyboardAutomaton keyboard;
-    TextInput username;
-
-    auto root = focusSpace(
-        username = textInput(),
-
-        // Place a keyboard node 
-        keyboard = keyboardAutomaton(),
-    );
-
-    root.draw();
-
-    // Type a word into the input using the keyboard automaton
-    keyboard.type("Lei");
-    assert(username.value == "Lei");
-
-}

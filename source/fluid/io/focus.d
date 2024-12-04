@@ -5,6 +5,8 @@ import fluid.future.context;
 
 import fluid.io.action;
 
+public import fluid.io.action : InputEvent, InputEventCode;
+
 @safe:
 
 /// `FocusIO` is an input handler system that reads events off devices like keyboards or gamepads, which do not

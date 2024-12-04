@@ -5,6 +5,8 @@ import fluid.future.context;
 
 import fluid.io.action;
 
+public import fluid.io.action : InputEvent, InputEventCode;
+
 @safe:
 
 /// `HoverIO` is an input handler system that reads events off devices with the ability to point at the screen,
