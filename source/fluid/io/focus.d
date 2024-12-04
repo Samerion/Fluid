@@ -1,6 +1,8 @@
 /// This module implements interfaces for handling focus and connecting focusable nodes with input devices.
 module fluid.io.focus;
 
+import fluid.future.context;
+
 import fluid.io.action;
 
 @safe:
@@ -15,7 +17,7 @@ import fluid.io.action;
 /// to be focused at the same time, as long as they belong in different branches of the node tree. That means
 /// two different nodes can be focused by two different `FocusIO` systems, but a single `FocusIO` system can only
 /// focus a single node.
-interface FocusIO {
+interface FocusIO : IO {
 
     /// Read an input event from an input device. Input devices will call this function every frame 
     /// if an input event occurs.

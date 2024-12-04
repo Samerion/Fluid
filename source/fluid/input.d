@@ -11,6 +11,8 @@ import fluid.tree;
 import fluid.style;
 import fluid.backend;
 
+import fluid.io.focus;
+
 
 @safe:
 
@@ -1038,10 +1040,12 @@ interface FluidScrollable {
 }
 
 /// Represents a general input node.
-abstract class InputNode(Parent : Node) : Parent, FluidFocusable {
+abstract class InputNode(Parent : Node) : Parent, FluidFocusable, Focusable {
 
     mixin makeHoverable;
     mixin enableInputActions;
+
+    FocusIO focusIO;
 
     /// Callback to run when the input value is altered.
     void delegate() changed;
@@ -1084,6 +1088,16 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable {
 
     }
 
+    /// Respond to an input action by its ID. 
+    ///
+    /// This endpoint is used by the new I/O system. `InputNode` implements this by redirecting the input
+    /// to `runInputAction`.
+    override bool actionImpl(InputActionID id) {
+
+        return runInputAction(id);
+
+    }
+
     /// Check if the node is being pressed. Performs action lookup.
     ///
     /// This is a helper for nodes that might do something when pressed, for example, buttons.
@@ -1091,6 +1105,16 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable {
 
         return (isHovered && tree.isMouseDown!(FluidInputAction.press))
             || (isFocused && tree.isFocusDown!(FluidInputAction.press));
+
+    }
+
+    override void resizeImpl(Vector2 space) {
+
+        use(focusIO);
+
+        static if (!isAbstractFunction!(typeof(super).resizeImpl)) {
+            super.resizeImpl(space);
+        }
 
     }
 
@@ -1102,10 +1126,15 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable {
         // Ignore if disabled
         if (isDisabled) return;
 
-        // Switch the scroll
-        tree.focus = this;
+        // Switch focus using the active I/O technique
+        if (focusIO) {
+            focusIO.focus(this);
+        }
+        else {
+            tree.focus = this;
+        }
 
-        // Ensure this node gets focus
+        // Ensure this node is in view
         this.scrollIntoView();
 
     }

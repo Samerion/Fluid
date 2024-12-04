@@ -38,6 +38,7 @@ public import
     fluid.file_input,
     fluid.field_slot,
     fluid.frame,
+    fluid.focus_space,
     fluid.grid,
     fluid.hover_button,
     fluid.image_view,
