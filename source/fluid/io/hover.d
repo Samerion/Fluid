@@ -1,6 +1,8 @@
 /// This module implements interfaces for handling hover and connecting hoverable nodes with input devices.
 module fluid.io.hover;
 
+import fluid.future.context;
+
 import fluid.io.action;
 
 @safe:
@@ -15,7 +17,7 @@ import fluid.io.action;
 /// to be hovered at the same time, as long as they belong in different branches of the node tree. That means
 /// two different nodes can be hovered by two different `HoverIO` systems, but a single `HoverIO` system can only
 /// hover a single node.
-interface HoverIO {
+interface HoverIO : IO {
 
     /// Read an input event from an input device. Input devices will call this function every frame 
     /// if an input event occurs.

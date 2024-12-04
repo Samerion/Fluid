@@ -86,3 +86,14 @@ interface Actionable {
     bool actionImpl(InputActionID action);
 
 }
+
+/// Get the ID of an input action.
+/// Params:
+///     action = Action to get the ID of.
+/// Returns:
+///     `InputActionID` struct with the action encoded.
+InputActionID inputActionID(alias action)() {
+
+    return InputActionID.from!action;
+
+}

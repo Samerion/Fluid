@@ -50,6 +50,15 @@ class FocusSpace : Space, FocusIO {
 
     }
 
+    override inout(Focusable) focus() inout {
+        return _focus;
+    }
+
+    override Focusable focus(Focusable newFocus) {
+        return _focus = newFocus;
+    }
+
+
     override void resizeImpl(Vector2 space) {
 
         auto frame = implementIO!FocusSpace();
@@ -67,36 +76,49 @@ class FocusSpace : Space, FocusIO {
 
     }
 
-    void runInputAction(InputActionID id) {
+    /// Handle an input action using the currently focused node.
+    ///
+    /// Does nothing if no node has focus.
+    ///
+    /// Params:
+    ///     action = Input action for the node to handle.
+    /// Returns:
+    ///     True if the action was handled.
+    ///     Consequently, `wasInputAction` will be set to true.
+    bool runInputAction(InputActionID action) {
 
         // Do nothing if there is no focus
-        if (_focus is null) return;
+        if (_focus is null) return false;
 
         // Run the action, and mark input as handled
-        if (_focus.actionImpl(id)) {
+        if (_focus.actionImpl(action)) {
             _wasInputHandled = true;
+            return true;
         }
+
+        return false;
+
+    }
+
+    /// ditto
+    bool runInputAction(alias action)() {
+
+        const id = inputActionID!action;
+
+        return runInputAction(id);
 
     }
 
     override void emitEvent(InputEvent event) {
 
         if (actionIO) {
-            actionIO.emitEvent(event, &runInputAction);
+            actionIO.emitEvent(event, &handleAction);
         }
 
     }
 
-    override inout(Focusable) focus() inout {
-
-        return _focus;
-
-    }
-
-    override Focusable focus(Focusable newFocus) {
-
-        return _focus = newFocus;
-
+    private void handleAction(InputActionID id) {
+        runInputAction(id);
     }
 
 }
