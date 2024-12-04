@@ -32,7 +32,7 @@ interface FocusIO : IO {
 
     /// Returns:
     ///     The currently focused node, or `null` if no node has focus at the moment.
-    inout(Focusable) focus() inout;
+    inout(Focusable) currentFocus() inout;
 
     /// Change the currently focused node to another.
     ///
@@ -42,7 +42,7 @@ interface FocusIO : IO {
     ///     newValue = Node to assign focus to.
     /// Returns:
     ///     Node that was focused, to allow chaining assignments.
-    Focusable focus(Focusable newValue);
+    Focusable currentFocus(Focusable newValue);
 
 }
 

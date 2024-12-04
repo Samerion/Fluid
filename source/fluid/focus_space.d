@@ -50,11 +50,11 @@ class FocusSpace : Space, FocusIO {
 
     }
 
-    override inout(Focusable) focus() inout {
+    override inout(Focusable) currentFocus() inout {
         return _focus;
     }
 
-    override Focusable focus(Focusable newFocus) {
+    override Focusable currentFocus(Focusable newFocus) {
         return _focus = newFocus;
     }
 

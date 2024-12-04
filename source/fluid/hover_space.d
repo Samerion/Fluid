@@ -50,11 +50,11 @@ class HoverSpace : Space, HoverIO {
 
     }
 
-    override inout(Hoverable) hover() inout {
+    override inout(Hoverable) currentHover() inout {
         return _hover;
     }
 
-    override Hoverable hover(Hoverable newHover) {
+    override Hoverable currentHover(Hoverable newHover) {
         return _hover = newHover;
     }
 
