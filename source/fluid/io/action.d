@@ -35,18 +35,19 @@ interface ActionIO : IO {
     /// Params:
     ///     event    = Input event the system should save.
     ///     callback = Function to call if the event has triggered an input action. 
-    ///         The ID of the action will be passed as an argument.
-    void emitEvent(InputEvent event, void delegate(InputActionID) @safe callback);
+    ///         The ID of the action will be passed as an argument, along with a boolean indicating if it was
+    ///         triggered by an inactive, or active event.
+    ///         The return value of the callback should indicate if the action was handled or not.
+    void emitEvent(InputEvent event, bool delegate(InputActionID, bool isActive) @safe callback);
     
 }
 
-/// Represents an event coming from an input device, like a pressed key, button or a gesture.
-///
-/// This only covers events with binary outcomes: the source of event is active, or it is not.
-/// Analog sources like joysticks may be translated into input events but they won't be precise.
-struct InputEvent {
+/// Uniquely codes a pressed key, button or a gesture, by using an I/O ID and event code map.
+/// Each I/O interface can define its own keys and buttons it needs to map. The way it maps
+/// codes to buttons is left up to the interface to define, but it usually is with an enum. 
+struct InputEventCode {
 
-    /// ID for the I/O interface representing the input deice. The I/O interface defines a code
+    /// ID for the I/O interface representing the input device. The I/O interface defines a code
     /// for each event it may send. This means the I/O ID along with the event code should uniquely identify events.
     ///
     /// An I/O system can create and emit events that belong to another system in order to simulate events
@@ -60,6 +61,17 @@ struct InputEvent {
     ///     For keyboard codes, see `KeyboardIO`.
     ///     For mouse codes, see `MouseIO`.
     int event;
+
+}
+
+/// Represents an event coming from an input device, like a pressed key, button or a gesture.
+///
+/// This only covers events with binary outcomes: the source of event is active, or it is not.
+/// Analog sources like joysticks may be translated into input events but they won't be precise.
+struct InputEvent {
+
+    /// Code uniquely identifying the source of the event, such as a key, button or gesture.
+    InputEventCode code;
 
     /// Set to true if the event should trigger an input action.
     ///
@@ -80,10 +92,14 @@ interface Actionable {
 
     /// Handle an input action.
     /// Params:
-    ///     action = ID of the action to handle.
+    ///     action   = ID of the action to handle.
+    ///     isActive = If true, this is an active action.
+    ///         Most event handlers is only interested in active handlers; 
+    ///         they indicate the event has changed state (just pressed, or just released), 
+    ///         whereas an inactive action merely means the button or key is down.
     /// Returns:
     ///     True if the action was handled, false if not.
-    bool actionImpl(InputActionID action);
+    bool actionImpl(InputActionID action, bool isActive);
 
 }
 

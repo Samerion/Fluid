@@ -23,7 +23,8 @@ interface KeyboardIO : IO {
     ///     The created input event.
     static InputEvent createEvent(Key key, bool isActive) {
 
-        return InputEvent(ioID!KeyboardIO, key, isActive);
+        const code = InputEventCode(ioID!KeyboardIO, key);
+        return InputEvent(code, isActive);
 
     }
 
