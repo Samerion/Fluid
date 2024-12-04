@@ -16,6 +16,40 @@ import fluid.io.action;
 /// A `MouseIO` system will usually pass events to a `HoverIO` system it is child of.
 interface MouseIO : IO {
 
+    /// Get the input event code for a mouse button.
+    /// Params:
+    ///     button = Button to fetch the code for.
+    /// Returns:
+    ///     Input event code that can be used for input event routines.
+    static InputEventCode getCode(Button button) {
+
+        return InputEventCode(ioID!MouseIO, button);
+
+    }
+
+    /// A shortcut for getting input event codes that are known at compile time. Handy for tests.
+    /// Returns: A struct with event code for each member, corresponding to members of `Button`.
+    static codes() {
+
+        static struct Codes {
+            static InputEventCode opDispatch(string name)() {
+                return getCode(__traits(getMember, MouseIO.Button, name));
+            }
+        }
+
+        return Codes();
+
+    }
+
+    ///
+    @("MouseIO.codes resolves into input event codes")
+    unittest {
+
+        assert(MouseIO.codes.left == MouseIO.getCode(MouseIO.Button.left));
+        assert(MouseIO.codes.right == MouseIO.getCode(MouseIO.Button.right));
+
+    }
+
     /// Create a mouse input event that can be passed to a `HoverIO` or `ActionIO` handler.
     ///
     /// Params:
@@ -25,7 +59,7 @@ interface MouseIO : IO {
     ///     The created input event.
     static InputEvent createEvent(Button button, bool isActive) {
 
-        const code = InputEventCode(ioID!MouseIO, button);
+        const code = getCode(button);
         return InputEvent(code, isActive);
 
     }

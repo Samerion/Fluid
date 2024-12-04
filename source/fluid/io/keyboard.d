@@ -15,6 +15,40 @@ import fluid.io.action;
 /// A `KeyboardIO` system will usually pass events to a `FocusIO` system it is child of.
 interface KeyboardIO : IO {
 
+    /// Get a keyboard input event code.
+    /// Params:
+    ///     key = Key to get the code for.
+    /// Returns:
+    ///     The created input event code.
+    static InputEventCode getCode(Key key) {
+
+        return InputEventCode(ioID!KeyboardIO, key);
+
+    }
+
+    /// A shortcut for getting input event codes that are known at compile time. Handy for tests.
+    /// Returns: A struct with event code for each member, corresponding to members of `Key`.
+    static codes() {
+
+        static struct Codes {
+            static InputEventCode opDispatch(string name)() {
+                return getCode(__traits(getMember, KeyboardIO.Key, name));
+            }
+        }
+
+        return Codes();
+
+    }
+
+    ///
+    @("KeyboardIO.codes resolves into input event codes")
+    unittest {
+
+        assert(KeyboardIO.codes.comma == KeyboardIO.getCode(KeyboardIO.Key.comma));
+        assert(KeyboardIO.codes.a == KeyboardIO.getCode(KeyboardIO.Key.a));
+
+    }
+
     /// Create a keyboard input event that can be passed to a `FocusIO` or `ActionIO` handler.
     /// Params:
     ///     key      = Key that is held down.
@@ -23,7 +57,7 @@ interface KeyboardIO : IO {
     ///     The created input event.
     static InputEvent createEvent(Key key, bool isActive) {
 
-        const code = InputEventCode(ioID!KeyboardIO, key);
+        const code = getCode(key);
         return InputEvent(code, isActive);
 
     }
