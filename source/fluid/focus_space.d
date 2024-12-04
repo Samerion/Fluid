@@ -50,6 +50,14 @@ class FocusSpace : Space, FocusIO {
 
     }
 
+    /// Params:
+    ///     node = Node to check.
+    /// Returns:
+    ///     True if the node is currently focused by this space.
+    bool isFocused(Node node) {
+        return cast(Node) currentFocus == node;
+    }
+
     override inout(Focusable) currentFocus() inout {
         return _focus;
     }
@@ -57,7 +65,6 @@ class FocusSpace : Space, FocusIO {
     override Focusable currentFocus(Focusable newFocus) {
         return _focus = newFocus;
     }
-
 
     override void resizeImpl(Vector2 space) {
 

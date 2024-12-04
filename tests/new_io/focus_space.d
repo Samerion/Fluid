@@ -97,3 +97,28 @@ unittest {
     assert(cast(Node) focus2.currentFocus == button2);
 
 }
+
+@("FocusSpace supports tabbing")
+unittest {
+
+    Button[3] buttons;
+
+    auto root = focusSpace(
+        buttons[0] = button("One", delegate { }),
+        buttons[1] = button("Two", delegate { }),
+        buttons[2] = button("Three", delegate { }),
+    );
+    root.draw();
+    buttons[0].focus();
+    assert(root.isFocused(buttons[0]));
+
+    root.runInputAction!(FluidInputAction.focusNext);
+    assert(root.isFocused(buttons[1]));
+
+    root.runInputAction!(FluidInputAction.focusNext);
+    assert(root.isFocused(buttons[2]));
+
+    root.runInputAction!(FluidInputAction.focusNext);
+    assert(root.isFocused(buttons[0]));
+
+}
