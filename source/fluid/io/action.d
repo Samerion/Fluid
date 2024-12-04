@@ -70,3 +70,17 @@ struct InputEvent {
     bool isActive;
 
 }
+
+/// This is a base interface for nodes that respond to input actions. While `ActionIO` shouldn't interact 
+/// with nodes directly, input handling systems like `FocusIO` or `HoverIO` will expect nodes to implement 
+/// this interface if they support input actions.
+interface Actionable {
+
+    /// Handle an input action.
+    /// Params:
+    ///     action = ID of the action to handle.
+    /// Returns:
+    ///     True if the action was handled, false if not.
+    bool actionImpl(InputActionID action);
+
+}
