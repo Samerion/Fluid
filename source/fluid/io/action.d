@@ -4,6 +4,8 @@ module fluid.io.action;
 import fluid.input;
 import fluid.future.context;
 
+public import fluid.input : InputActionID;
+
 @safe:
 
 /// I/O interface for mapping input events to input actions.
