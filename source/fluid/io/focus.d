@@ -46,6 +46,11 @@ interface FocusIO : IO {
     ///     Node that was focused, to allow chaining assignments.
     Focusable currentFocus(Focusable newValue);
 
+    /// Clear current focus (set it to null).
+    final void clearFocus() {
+        currentFocus = null;
+    }
+
 }
 
 /// Nodes implementing this interface can be focused by a `FocusIO` system.

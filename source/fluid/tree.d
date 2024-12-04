@@ -57,7 +57,7 @@ struct FocusDirection {
 
     private {
 
-        /// Value `prioerity` is summed with on each step. `1` before finding the focused node, `-1` after.
+        /// Value `priority` is summed with on each step. `1` before finding the focused node, `-1` after.
         int priorityDirection = 1;
 
         /// Current tree depth.
