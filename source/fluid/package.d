@@ -41,6 +41,7 @@ public import
     fluid.focus_space,
     fluid.grid,
     fluid.hover_button,
+    fluid.hover_space,
     fluid.image_view,
     fluid.input,
     fluid.io,

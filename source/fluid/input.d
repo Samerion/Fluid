@@ -12,6 +12,7 @@ import fluid.style;
 import fluid.backend;
 
 import fluid.io.focus;
+import fluid.io.hover;
 
 
 @safe:
@@ -1040,7 +1041,7 @@ interface FluidScrollable {
 }
 
 /// Represents a general input node.
-abstract class InputNode(Parent : Node) : Parent, FluidFocusable, Focusable {
+abstract class InputNode(Parent : Node) : Parent, FluidFocusable, Focusable, Hoverable {
 
     mixin makeHoverable;
     mixin enableInputActions;
@@ -1136,6 +1137,12 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable, Focusable {
 
         // Ensure this node is in view
         this.scrollIntoView();
+
+    }
+
+    override bool isHovered() const {
+
+        return super.isHovered();
 
     }
 
