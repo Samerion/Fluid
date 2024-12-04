@@ -25,7 +25,8 @@ interface MouseIO : IO {
     ///     The created input event.
     static InputEvent createEvent(Button button, bool isActive) {
 
-        return InputEvent(ioID!MouseIO, button, isActive);
+        const code = InputEventCode(ioID!MouseIO, button);
+        return InputEvent(code, isActive);
 
     }
 

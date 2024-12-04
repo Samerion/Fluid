@@ -1093,9 +1093,9 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable, Focusable, Hov
     ///
     /// This endpoint is used by the new I/O system. `InputNode` implements this by redirecting the input
     /// to `runInputAction`.
-    override bool actionImpl(InputActionID id) {
+    override bool actionImpl(InputActionID id, bool isActive) {
 
-        return runInputAction(id);
+        return runInputAction(id, isActive);
 
     }
 

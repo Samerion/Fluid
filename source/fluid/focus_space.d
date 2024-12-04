@@ -81,17 +81,19 @@ class FocusSpace : Space, FocusIO {
     /// Does nothing if no node has focus.
     ///
     /// Params:
-    ///     action = Input action for the node to handle.
+    ///     action   = Input action for the node to handle.
+    ///     isActive = If true (default) the action is active, on top of being simply emitted. 
+    ///         Most handlers only react to active actions.
     /// Returns:
     ///     True if the action was handled.
     ///     Consequently, `wasInputAction` will be set to true.
-    bool runInputAction(InputActionID action) {
+    bool runInputAction(InputActionID action, bool isActive = true) {
 
         // Do nothing if there is no focus
         if (_focus is null) return false;
 
         // Run the action, and mark input as handled
-        if (_focus.actionImpl(action)) {
+        if (_focus.actionImpl(action, isActive)) {
             _wasInputHandled = true;
             return true;
         }
@@ -101,24 +103,20 @@ class FocusSpace : Space, FocusIO {
     }
 
     /// ditto
-    bool runInputAction(alias action)() {
+    bool runInputAction(alias action)(bool isActive = true) {
 
         const id = inputActionID!action;
 
-        return runInputAction(id);
+        return runInputAction(id, isActive);
 
     }
 
     override void emitEvent(InputEvent event) {
 
         if (actionIO) {
-            actionIO.emitEvent(event, &handleAction);
+            actionIO.emitEvent(event, &runInputAction);
         }
 
-    }
-
-    private void handleAction(InputActionID id) {
-        runInputAction(id);
     }
 
 }

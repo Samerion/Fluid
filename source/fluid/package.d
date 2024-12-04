@@ -28,6 +28,7 @@ else {
 
 public import
     fluid.backend,
+    fluid.input_map_space,
     fluid.actions,
     fluid.button,
     fluid.checkbox,
