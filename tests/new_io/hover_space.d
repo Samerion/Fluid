@@ -18,7 +18,7 @@ unittest {
     );
 
     root.draw();
-    root.hover(incrementOne);
+    root.currentHover = incrementOne;
     assert(!root.wasInputHandled);
     assert(one == 0);
     assert(two == 0);
@@ -30,7 +30,7 @@ unittest {
     assert(one == 2);
     assert(two == 0);
 
-    root.hover(incrementTwo);
+    root.currentHover = incrementTwo;
     assert(one == 2);
     assert(two == 0);
     assert(root.runInputAction!(FluidInputAction.press));

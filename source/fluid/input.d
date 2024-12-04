@@ -1129,7 +1129,7 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable, Focusable, Hov
 
         // Switch focus using the active I/O technique
         if (focusIO) {
-            focusIO.focus(this);
+            focusIO.currentFocus = this;
         }
         else {
             tree.focus = this;
@@ -1152,7 +1152,7 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable, Focusable, Hov
         bool isFocused() const {
 
             if (focusIO) {
-                return cast(const Node) focusIO.focus == this;
+                return cast(const Node) focusIO.currentFocus == this;
             } 
             else {
                 return tree.focus is this;
@@ -1167,7 +1167,7 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable, Focusable, Hov
             else if (isFocused) {
 
                 if (focusIO) {
-                    focusIO.focus = null;
+                    focusIO.currentFocus = null;
                 } 
                 else {
                     tree.focus = null;

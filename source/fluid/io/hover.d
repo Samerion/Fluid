@@ -32,7 +32,7 @@ interface HoverIO : IO {
 
     /// Returns:
     ///     The currently hovered node, or `null` if no hoverable node is at the moment.
-    inout(Hoverable) hover() inout;
+    inout(Hoverable) currentHover() inout;
 
     /// Change the currently hovered node to another.
     ///
@@ -42,7 +42,7 @@ interface HoverIO : IO {
     ///     newValue = Node to assign hover to.
     /// Returns:
     ///     Node that was focused, to allow chaining assignments.
-    Hoverable hover(Hoverable newValue);
+    Hoverable currentHover(Hoverable newValue);
 
 }
 
