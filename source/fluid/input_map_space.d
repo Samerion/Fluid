@@ -37,8 +37,9 @@ class InputMapSpace : Space, ActionIO {
 
     }
 
-    this(Node[] nodes...) {
+    this(InputMapping map, Node[] nodes...) {
         super(nodes);
+        this.map = map;
     }
 
     override void drawImpl(Rectangle outer, Rectangle inner) {
@@ -164,5 +165,87 @@ struct InputMapping {
     Layer[] layers;
 
     invariant(layers.isSorted);
+
+    /// Bind an input stroke to an input action.
+    ///
+    /// Does not replace any existing mappings, even in case of collision. Previously created mappings will 
+    /// have higher higher priority than this mapping.
+    ///
+    /// Params:
+    ///     action = Input action the stroke should trigger
+    ///     codes  = Sequence of event codes that triggers the event.
+    void bindNew(InputActionID action, InputEventCode[] codes...)
+    in (codes.length >= 1)
+    do {
+
+        auto  modifiers = codes[0 .. $-1].dup;
+        const trigger   = codes[$-1];
+        const binding   = Trigger(action, trigger);
+
+        // Find a matching layer for this mapping
+        foreach (i, ref layer; layers) {
+
+            if (layer.modifiers.length > modifiers.length) continue;
+
+            // No layer has this set of modifiers
+            if (layer.modifiers.length < modifiers.length) {
+
+                // Create one
+                auto newLayer = Layer(modifiers, [binding]);
+
+                // Insert
+                layers = layers[0..i] ~ newLayer ~ layers[i..$];
+                return;
+
+            }
+
+            // Found a matching layer
+            if (layer.modifiers == modifiers) {
+
+                // Insert the binding
+                layer.bindings ~= binding;
+                return;
+
+            }
+
+        }
+
+        // This has less modifiers than any existing layer
+        layers ~= Layer(modifiers, [binding]);
+
+    }
+
+    /// ditto
+    void bindNew(alias action)(InputEventCode[] codes...) {
+
+        const actionID = inputActionID!action;
+        bindNew(actionID, codes);
+
+    }
+
+    /// Add a number of bindings to an empty map.
+    unittest {
+
+        import fluid.io.keyboard;
+
+        auto map = InputMapping();
+        map.bindNew!(FluidInputAction.press)    (KeyboardIO.codes.enter);
+        map.bindNew!(FluidInputAction.focusNext)(KeyboardIO.codes.tab);
+        map.bindNew!(FluidInputAction.submit)   (KeyboardIO.codes.leftControl, KeyboardIO.codes.enter);
+        map.bindNew!(FluidInputAction.copy)     (KeyboardIO.codes.leftControl, KeyboardIO.codes.c);
+
+        // The above creates equivalent layers
+        assert(map.layers == [
+            Layer([KeyboardIO.codes.leftControl], [
+                Trigger(inputActionID!(FluidInputAction.submit), KeyboardIO.codes.enter),
+                Trigger(inputActionID!(FluidInputAction.copy),   KeyboardIO.codes.c),
+            ]),
+            Layer([], [
+                Trigger(inputActionID!(FluidInputAction.press),     KeyboardIO.codes.enter),
+                Trigger(inputActionID!(FluidInputAction.focusNext), KeyboardIO.codes.tab),
+            ]),
+        ]);
+
+    }
 
 }
