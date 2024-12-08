@@ -276,6 +276,8 @@ abstract class TreeAction {
     /// of running actions. Overloads of the same hook that called `stop` may still be called.
     final void stop() {
 
+        if (toStop) return;
+
         toStop = true;
         stopped();
 

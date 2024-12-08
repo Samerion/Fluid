@@ -17,6 +17,13 @@ import fluid.theme : Breadcrumbs;
 
 import fluid.io;
 import fluid.future.context;
+import fluid.future.branch_action;
+
+// mustuse is not available in LDC 1.28
+static if (__traits(compiles, { import core.attribute : mustuse; }))
+    import core.attribute : mustuse;
+else
+    private alias mustuse = AliasSeq!();
 
 
 @safe:
@@ -424,6 +431,39 @@ abstract class Node {
         else {
             _queuedActionsNew ~= action;
         }
+
+    }
+
+    /// Start a branch action to run on children of this node.
+    ///
+    /// This should only be used inside `drawImpl`. The action will stop as soon as the return value goes 
+    /// out of scope.
+    ///
+    /// Params:
+    ///     action = Branch action to run. A branch action implements a subset of tree action's functionality,
+    ///         guaraneeing correct behavior when combined with this.
+    /// Returns:
+    ///     A [RAII](https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization) struct
+    ///     that stops the action as soon as the struct leaves the scope.
+    protected final auto startBranchAction(BranchAction action)
+    in (action, "Node.runAction(TreeAction) called with a `null` argument")
+    do {
+
+        // Start the action
+        startAction(action);
+
+        // Clear start nodes — bind it to the scope instead
+        action.startNode = null;
+
+        @mustuse
+        static struct AutoStop {
+            BranchAction action;
+            ~this() {
+                action.stop;
+            }
+        }
+
+        return AutoStop(action);
 
     }
 
@@ -1029,12 +1069,6 @@ abstract class Node {
     protected auto implementIO(this This)() {
 
         import std.meta : AliasSeq, Filter;
-
-        // mustuse is not available in LDC 1.28
-        static if (__traits(compiles, { import core.attribute : mustuse; }))
-            import core.attribute : mustuse;
-        else
-            alias mustuse = AliasSeq!();
 
         alias IOs = Filter!(isIO, InterfacesTuple!This);
         alias IOArray = IO[IOs.length];
