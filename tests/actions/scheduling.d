@@ -87,13 +87,13 @@ unittest {
 
     root.runUntil(
         root.focusChild()
-            .then((Node a) => assert(a == scrollFrame.scrollBar))
+            .then((Node a) @trusted => assert(a == scrollFrame.scrollBar))
             .then(() => root.nextFrame)
             .then(() => scrollFrame.focusChild())
-            .then((Node a) => assert(a == scrollFrame.scrollBar))
+            .then((Node a) @trusted => assert(a == scrollFrame.scrollBar))
             .then(() => root.nextFrame)
             .then(() => innerSpace.focusChild())
-            .then((Node a) => assert(a == input))
+            .then((Node a) @trusted => assert(a == input))
     );
 
 }

@@ -262,7 +262,10 @@ unittest {
 class MultiPublisherImpl(IPipes...) : staticMap!(PublisherSubscriberPair, IPipes)
 if (IPipes.length != 0) {
 
-    private staticMap!(SubscriberOf, IPipes) subscribers;
+    import std.typecons : Tuple;
+
+    // Tuple isn't strictly necessary here, but it fixes LDC builds
+    private Tuple!(staticMap!(SubscriberOf, IPipes)) subscribers;
 
     static foreach (i, IPipe; IPipes) {
 
@@ -275,6 +278,8 @@ if (IPipes.length != 0) {
         }
 
         void opCall(PipeContent!IPipe content) {
+            import std.stdio;
+            debug writeln(subscribers[i]);
             if (subscribers[i]) {
                 subscribers[i](content);
             }
