@@ -369,8 +369,7 @@ abstract class Node {
 
     /// Queue an action to perform within this node's branch.
     ///
-    /// This is recommended to use over `LayoutTree.queueAction`, as it can be used to limit the action to a specific
-    /// branch, and can also work before the first draw.
+    /// This function is legacy but is kept for backwards compatibility. Use `startAction` instead.
     ///
     /// This function is not safe to use while the tree is being drawn.
     final void queueAction(TreeAction action)
@@ -391,6 +390,23 @@ abstract class Node {
 
     }
 
+    /// Perform a tree action the next time this node is drawn.
+    ///
+    /// Tree actions can be used to analyze the node tree and modify its behavior while it runs. Actions can listen 
+    /// and respond to hooks like `beforeDraw` and `afterDraw`. They can interact with existing nodes or inject nodes
+    /// in any place of the tree.
+    ///
+    /// Most usually, a tree action will provide its own function for creating and starting tree actions, so this
+    /// method will not be called directly.
+    ///
+    /// The action will only act on this branch of the tree: `beforeDraw` and `afterDraw` hooks will only 
+    /// fire for this node and its children.
+    ///
+    /// Tree actions are responsible for their own lifetime. After a tree action starts, it will decide for itself
+    /// when it should end. This can be overriden by explicitly calling the `TreeAction.stop` method.
+    ///
+    /// Params:
+    ///     action = Action to start.
     final void startAction(TreeAction action)
     in (action, "Node.runAction(TreeAction) called with a `null` argument")
     do {
@@ -842,6 +858,9 @@ abstract class Node {
 
         // Queue actions into the tree
         tree.actions ~= _queuedActions;
+        foreach (action; _queuedActions) {
+            action.started();
+        }
         treeContext.actions.spawn(_queuedActionsNew);
         _queuedActions = null;
         _queuedActionsNew = null;
