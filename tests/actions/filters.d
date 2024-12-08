@@ -57,12 +57,12 @@ unittest {
     auto root = vspace(subject);
     auto action = new NoBeforeDraw;
 
-    root.runAction(action);
+    root.startAction(action);
     root.draw();
 
     assert(action.afterDrawCalled == 2);
 
-    subject.runAction(action);
+    subject.startAction(action);
     root.draw();
 
     assert(action.afterDrawCalled == 1);
@@ -76,12 +76,12 @@ unittest {
     auto root = vspace(subject);
     auto action = new NoAfterDraw;
 
-    root.runAction(action);
+    root.startAction(action);
     root.draw();
 
     assert(action.beforeDrawCalled == 2);
 
-    subject.runAction(action);
+    subject.startAction(action);
     root.draw();
 
     assert(action.beforeDrawCalled == 1);
