@@ -265,7 +265,12 @@ abstract class Node {
 
     final inout(TreeContext) treeContext() inout nothrow {
 
-        return inout TreeContext(&tree.context);
+        if (tree is null) {
+            return inout TreeContext(null);
+        }
+        else {
+            return inout TreeContext(&tree.context);
+        }
 
     }
 
