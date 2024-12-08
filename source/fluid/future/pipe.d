@@ -2,6 +2,7 @@
 module fluid.future.pipe;
 
 import std.meta;
+import std.traits;
 
 @safe:
 
@@ -17,6 +18,7 @@ auto pipe(Ret, Args...)(Ret delegate(Args) @safe dg) {
 }
 
 /// Pass plain data between pipes.
+@("`then() can accept plain data")
 unittest {
 
     import std.conv;
@@ -37,6 +39,7 @@ unittest {
 }
 
 /// `then` will resolve pipes it returns.
+@("`then` will resolve pipes it returns")
 unittest {
 
     auto pipe1 = pipe({ });
@@ -56,6 +59,7 @@ unittest {
 }
 
 /// Pipes can accept multiple arguments.
+@("Pipes can accept multiple arguments")
 unittest {
 
     int a, b, c;
@@ -142,8 +146,10 @@ final class Pipe(Return, Args...) : Subscriber!Args, Publisher!Return {
 
 }
 
+/// A publisher sends emits events that other objects can listen to.
 alias Publisher(Output : void) = Publisher!();
 
+/// ditto
 interface Publisher(Outputs...)
 if (!is(Output == void)) {
 
@@ -174,7 +180,7 @@ if (!is(Output == void)) {
             //   this: Input  => Output
             //   next: Output => T : Pipe!(NextOutput, NextInput...)
             // return: Output => NextOutput
-            auto result = new ProxyPipe!(Subscriber!NextOutput);
+            auto result = new MultiPublisher!(Publisher!NextOutput);
             subscribe(
                 pipe((Output output) { 
                     next(output)
@@ -195,18 +201,45 @@ if (!is(Output == void)) {
 
 }
 
+/// A subscriber is an object that receives data from a `Publisher`.
 interface Subscriber(Ts...) {
 
     void opCall(Ts args); 
 
 }
 
-/// 
-class ProxyPipe(IPipes...) : PublisherSubscriberPair!IPipes {
+/// A basic publisher (and subscriber) implementation that will pipe data to subscribers of the matching type.
+alias MultiPublisher(IPipes...) = MultiPublisherImpl!(staticMap!(AllPublishers, IPipes));
+
+/// Setting up a publisher that separately produces two different types.
+@("Setting up a publisher that separately produces two different types.")
+unittest {
+
+    auto multi = new MultiPublisher!(Publisher!int, Publisher!string);
+
+    int resultInt;
+    string resultString;
+    multi.then((int a) => resultInt = a);
+    multi.then((string a) => resultString = a);
+
+    multi(1);
+    assert(resultInt == 1);
+    assert(resultString == "");
+
+    multi("Hello!");
+    assert(resultInt == 1);
+    assert(resultString == "Hello!");
+
+}
+
+class MultiPublisherImpl(IPipes...) : staticMap!(PublisherSubscriberPair, IPipes)
+if (IPipes.length != 0) {
 
     private staticMap!(SubscriberOf, IPipes) subscribers;
 
     static foreach (i, IPipe; IPipes) {
+
+        alias then = Publisher!(PipeContent!IPipe).then;
 
         void subscribe(Subscriber!(PipeContent!IPipe) subscriber)
         in (subscribers[i] is null, "A subscriber for " ~ PipeContent!IPipe.stringof ~ " was already registered.")
@@ -226,7 +259,21 @@ class ProxyPipe(IPipes...) : PublisherSubscriberPair!IPipes {
 
 private alias SubscriberOf(T) = Subscriber!(PipeContent!T);
 
-private template PipeContent(T) {
+/// List all publishers implemented by the given type (including, if the given type is a publisher).
+alias AllPublishers(T) = Filter!(isPublisher, InterfacesTuple!T, T);
+
+/// List all subscribers implemented by the given type (including, if the given type is a publisher).
+alias AllSubscribers(T) = Filter!(isSubscriber, InterfacesTuple!T, T);
+
+/// Check if the given type is a subscriber.
+enum isSubscriber(T) = is(T : Subscriber!Ts, Ts...);
+
+/// Check if the given type is a publisher.
+enum isPublisher(T) = is(T : Publisher!Ts, Ts...);
+
+/// For an instance of either `Publisher` or `Subscriber`, get the type trasmitted by the interface. This function
+/// only operates on the two interfaces directly, and will not work with subclasses.
+template PipeContent(T) {
 
     // Publisher
     static if (is(T == Publisher!Ts, Ts...)) {
@@ -260,6 +307,7 @@ private template PublisherSubscriberPair(T) {
 
 }
 
+/// Converts `void` to `()` (an empty tuple), leaves remaining types unchanged.
 template ToParameter(T) {
     static if (is(T == void)) {
         alias ToParameter = AliasSeq!();
