@@ -93,21 +93,16 @@ unittest {
 ///
 /// [pipeline]: https://en.wikipedia.org/wiki/Pipeline_(Unix)#Pipelines_in_command_line_interfaces
 /// [Promise]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise
-final class Pipe(Return, Args...) : EventCallback!Args {
+final class Pipe(Return, Args...) : Subscriber!Args, Publisher!Return {
     
-    static if (is(Return == void)) {
-        alias Output = AliasSeq!();
-    }
-    else {
-        alias Output = Return;
-    }
+    alias Output = ToParameter!Return;
     alias Input = Args;
     alias Delegate = Return delegate(Input) @safe;
 
     private {
 
         Delegate callback;
-        EventCallback!Output next;
+        Subscriber!Output next;
 
     }
 
@@ -116,42 +111,22 @@ final class Pipe(Return, Args...) : EventCallback!Args {
         this.callback = callback;
     }
 
-    /// Connect a listener to the pipe.
+    /// Subscribe to the data sent by this publisher. Only one subscriber can be assigned to a pipe at once.
+    ///
+    /// For high-level API, use `then`.
+    ///
     /// Params:
-    ///     listener = A function to execute when the pipe receives data. The listener can return another pipe
-    ///         which can then be accessed by proxy from the return value.
-    /// Returns:
-    ///     A pipe that is loaded with the same data that is returned by the `listener`.
-    auto then(T)(T delegate(Output) @safe next)
-    in (this.next is null, "The pipe has already been connected with then()")
+    ///     subscriber = Subscriber to register.
+    override void subscribe(Subscriber!Output subscriber)
+    in (this.next is null, "Pipe already has a subscriber. Cannot subscribe (then).")
     do {
-
-        // Pipe as a return value
-        static if (is(T : Pipe!(NextOutput, NextInput), NextOutput, NextInput...)) {
-            //   this: Input  => Output
-            //   next: Output => T : Pipe!(NextOutput, NextInput...)
-            // return: Output => NextOutput
-            auto result = new Pipe!(NextOutput, NextOutput)(a => a);
-            this.next = pipe((Output output) { 
-                next(output)
-                    .then(nextOutput => result(nextOutput));
-            });
-            return result;
-            
-        }
-
-        // Plain return value
-        else {
-            auto pipe = new Pipe!(T, Output)(next);
-            this.next = pipe;
-            return pipe;
-        }
+        this.next = subscriber;
     }
 
     /// Push data down the pipe.
     /// Params:
     ///     input = Data to load into the pipe.
-    void opCall(Input input) {
+    override void opCall(Input input) {
 
         static if (is(Return == void)) {
             callback(input);
@@ -167,8 +142,70 @@ final class Pipe(Return, Args...) : EventCallback!Args {
 
 }
 
-interface EventCallback(Ts...) {
+alias Publisher(Output : void) = Publisher!();
+
+interface Publisher(Outputs...)
+if (!is(Output == void)) {
+
+    // Bug workaround: manually unwrap Outputs
+    static if (Outputs.length == 1)
+        alias Output = Outputs[0];
+    else 
+        alias Output = Outputs;
+    
+    /// Low-level API to directly subscribe to the data sent by this publisher.
+    ///
+    /// Calling this multiple times is undefined behavior.
+    ///
+    /// Params:
+    ///     subscriber = Subscriber to register.
+    void subscribe(Subscriber!Output subscriber);
+
+    /// Connect a listener to the publisher.
+    /// Params:
+    ///     listener = A function to execute when the publisher sends data. The listener can return another publisher
+    ///         which can then be accessed by proxy from the return value.
+    /// Returns:
+    ///     A pipe that is loaded with the same data that is returned by the `listener`.
+    auto then(T)(T delegate(Output) @safe next) {
+
+        // Listenable as a return value
+        static if (is(T : Pipe!(NextOutput, NextInput), NextOutput, NextInput...)) {
+            //   this: Input  => Output
+            //   next: Output => T : Pipe!(NextOutput, NextInput...)
+            // return: Output => NextOutput
+            auto result = new Pipe!(NextOutput, NextOutput)(a => a);
+            subscribe(
+                pipe((Output output) { 
+                    next(output)
+                        .then(nextOutput => result(nextOutput));
+                })
+            );
+            return result;
+            
+        }
+
+        // Plain return value
+        else {
+            auto pipe = new Pipe!(T, Output)(next);
+            subscribe(pipe);
+            return pipe;
+        }
+    }
+
+}
+
+interface Subscriber(Ts...) {
 
     void opCall(Ts args); 
 
+}
+
+template ToParameter(T) {
+    static if (is(T == void)) {
+        alias ToParameter = AliasSeq!();
+    }
+    else {
+        alias ToParameter = T;
+    }
 }
