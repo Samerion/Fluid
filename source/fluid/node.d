@@ -115,7 +115,12 @@ abstract class Node {
 
         /// Actions queued for this node; only used for queueing actions before the first `resize`; afterwards, all
         /// actions are queued directly into the tree.
+        ///
+        /// `_queuedAction` queues into `LayoutTree` (legacy), whereas `_queuedActionsNew` queues into `TreeContext`.
         TreeAction[] _queuedActions;
+
+        /// ditto
+        TreeAction[] _queuedActionsNew;
 
     }
 
@@ -378,6 +383,26 @@ abstract class Node {
 
         // If there isn't a tree, wait for a resize
         else _queuedActions ~= action;
+
+    }
+
+    final void runAction(TreeAction action)
+    in (action, "Node.runAction(TreeAction) called with a `null` argument")
+    do {
+
+        // Set up the action to run in this branch
+        action.startNode = this;
+        action.toStop = false;
+
+        // Insert the action into the context
+        if (treeContext) {
+            treeContext.actions.spawn(action);
+        }
+
+        // Hold the action until a resize
+        else {
+            _queuedActionsNew ~= action;
+        }
 
     }
 
@@ -812,7 +837,9 @@ abstract class Node {
 
         // Queue actions into the tree
         tree.actions ~= _queuedActions;
+        treeContext.actions.spawn(_queuedActionsNew);
         _queuedActions = null;
+        _queuedActionsNew = null;
 
 
         // The node is hidden, reset size

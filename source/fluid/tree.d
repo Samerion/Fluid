@@ -905,6 +905,15 @@ struct LayoutTree {
 
                 }
 
+                // Run new actions too
+                foreach (action; tree.context.actions) {
+
+                    if (auto result = fun(action)) {
+                        return result;
+                    }
+
+                }
+
                 return 0;
 
             }
