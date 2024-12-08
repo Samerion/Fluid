@@ -391,7 +391,7 @@ abstract class Node {
 
     }
 
-    final void runAction(TreeAction action)
+    final void startAction(TreeAction action)
     in (action, "Node.runAction(TreeAction) called with a `null` argument")
     do {
 
