@@ -29,7 +29,7 @@ unittest {
     );
     auto action = new CountNodesAction;
 
-    root.runAction(action);
+    root.startAction(action);
     root.draw();
     assert(action.nodesDrawn == 3);
 
@@ -41,7 +41,7 @@ unittest {
     auto action = new CountNodesAction;
     auto root = vspace();
 
-    root.runAction(action);
+    root.startAction(action);
     root.draw();
     assert(action.runs == 1);
     root.draw();
@@ -55,15 +55,15 @@ unittest {
     auto action = new CountNodesAction;
     auto root = vspace();
 
-    root.runAction(action);
+    root.startAction(action);
     root.draw();
     assert(action.runs == 1);
 
-    root.runAction(action);
+    root.startAction(action);
     root.draw();
     assert(action.runs == 2);
 
-    root.runAction(action);
+    root.startAction(action);
     root.draw();
     assert(action.runs == 3);
 
