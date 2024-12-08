@@ -7,6 +7,8 @@ import fluid.input;
 import fluid.scroll;
 import fluid.backend;
 
+import fluid.future.pipe;
+
 
 @safe:
 
@@ -105,13 +107,34 @@ unittest {
 
 }
 
-class FocusRecurseAction : TreeAction {
+class FocusRecurseAction : TreeAction, Publisher!FluidFocusable, Publisher!Node {
 
     public {
 
         bool excludeStartNode;
         void delegate(FluidFocusable) @safe finished;
 
+    }
+
+    private {
+        FluidFocusable _result;
+        Subscriber!FluidFocusable _onFinishFluidFocusable;
+        Subscriber!Node _onFinishNode;
+    }
+
+    /// `FocusRecurseAction` will produce the node when done. If one wasn't found, it will yield `null`.
+    alias then = typeof(super).then;
+    alias then = Publisher!FluidFocusable.then;
+    alias then = Publisher!Node.then;
+
+    alias subscribe = typeof(super).subscribe;
+
+    override void subscribe(Subscriber!FluidFocusable onFinish) {
+        _onFinishFluidFocusable = onFinish;
+    }
+
+    override void subscribe(Subscriber!Node onFinish) {
+        _onFinishNode = onFinish;
     }
 
     override void beforeDraw(Node node, Rectangle) {
@@ -125,17 +148,27 @@ class FocusRecurseAction : TreeAction {
         // Check if the node is focusable
         if (auto focusable = cast(FluidFocusable) node) {
 
+            _result = focusable;
+
             // Give it focus
             focusable.focus();
-
-            // Submit the result
-            if (finished) finished(focusable);
 
             // We're done here
             stop;
 
         }
 
+    }
+
+    override void started() {
+        _result = null;
+    }
+
+    override void stopped() {
+        super.stopped();
+        if (finished) finished(_result);
+        if (_onFinishFluidFocusable) _onFinishFluidFocusable(_result);
+        if (_onFinishNode) _onFinishNode(_result.asNode);
     }
 
 }
@@ -287,6 +320,24 @@ class ScrollIntoViewAction : TreeAction {
 
         }
 
+    }
+
+}
+
+/// Wait for the next frame. This action is a polyfill that can be used in tree action chains to make sure they're
+/// added during `beforeTree`.
+NextFrameAction nextFrame(Node node) {
+
+    auto action = new NextFrameAction;
+    node.startAction(action);
+    return action;
+
+}
+
+class NextFrameAction : TreeAction {
+
+    override void afterTree() {
+        stop;
     }
 
 }

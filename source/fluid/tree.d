@@ -10,6 +10,7 @@ import fluid.input;
 import fluid.style;
 import fluid.backend;
 
+import fluid.future.pipe;
 import fluid.future.context;
 
 
@@ -247,7 +248,7 @@ struct FocusDirection {
 }
 
 /// A class for iterating over the node tree.
-abstract class TreeAction {
+abstract class TreeAction : Publisher!() {
 
     public {
 
@@ -268,6 +269,15 @@ abstract class TreeAction {
         /// Set to true once the action has descended into `startNode`.
         bool startNodeFound;
 
+        /// Subscriber for events, i.e. `then`
+        Subscriber!() _onFinish;
+
+    }
+
+    override final void subscribe(Subscriber!() subscriber)
+    in (_onFinish is null, "A subscriber is already attached to this tree action.")
+    do {
+        _onFinish = subscriber;
     }
 
     /// Stop the action.
@@ -297,7 +307,9 @@ abstract class TreeAction {
     /// This can be used to trigger user-assigned callbacks. Call `super.stopped()` when overriding to make sure all
     /// finish hooks are called.
     void stopped() {
-
+        if (_onFinish) {
+            _onFinish();
+        }
     }
 
     /// Determine whether `beforeDraw` and `afterDraw` should be called for the given node.
