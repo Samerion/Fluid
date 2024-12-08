@@ -259,7 +259,7 @@ abstract class TreeAction {
         /// If true, this action is complete and no callbacks should be ran.
         ///
         /// Overloads of the same callbacks will still be called for the event that prompted stopping.
-        bool toStop;
+        bool toStop;  // this should be private
 
     }
 
@@ -270,11 +270,80 @@ abstract class TreeAction {
 
     }
 
-    /// Stop the action
+    /// Stop the action.
+    /// 
+    /// No further hooks will be triggered after calling this, and the action will soon be removed from the list 
+    /// of running actions. Overloads of the same hook that called `stop` may still be called.
     final void stop() {
 
-        toStop = true;
+        if (toStop) return;
 
+        toStop = true;
+        stopped();
+
+    }
+
+    /// Called whenever this action is started — added to the list of running actions in the `LayoutTree` 
+    /// or `TreeContext`.
+    ///
+    /// This hook may not be called immediately when added through `node.queueAction` or `node.startAction`;
+    /// it will wait until the node's first resize so it can connect to the tree.
+    void started() {
+
+    }
+
+    /// Called whenever this action is stopped by calling `stop`.
+    ///
+    /// This can be used to trigger user-assigned callbacks. Call `super.stopped()` when overriding to make sure all
+    /// finish hooks are called.
+    void stopped() {
+
+    }
+
+    /// Determine whether `beforeDraw` and `afterDraw` should be called for the given node.
+    ///
+    /// By default, this is used to filter out all nodes except for `startNode` and its children.
+    /// Subclasses may change this to adjust this behavior.
+    ///
+    /// Params:
+    ///     node = Node that is subject to the hook call.
+    /// Returns:
+    ///     For `filterBeforeDraw`, true if `beforeDraw` is to be called for this node.
+    ///     For `filterAfterDraw`, true if `afterDraw` is to be called for this node.
+    bool filterBeforeDraw(Node node) {
+
+        // There is a start node set
+        if (startNode !is null) {
+
+            // Check if we're descending into its branch
+            if (node is startNode) startNodeFound = true;
+
+            // Continue only if it was found
+            else if (!startNodeFound) return false;
+
+        }
+
+        return true;
+    
+    }
+
+    /// ditto
+    bool filterAfterDraw(Node node) { 
+
+        // There is a start node set
+        if (startNode !is null) {
+
+            // Check if we're leaving the node
+            if (node is startNode) startNodeFound = false;
+
+            // Continue only if it was found
+            else if (!startNodeFound) return false;
+            // Note: We still emit afterDraw for that node, hence `else if`
+
+        }
+
+        return true;
+    
     }
 
     /// Called before the tree is drawn. Keep in mind this might not be called if the action is started when tree
@@ -304,15 +373,9 @@ abstract class TreeAction {
     /// internal
     final package void beforeDrawImpl(Node node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) {
 
-        // There is a start node set
-        if (startNode !is null) {
-
-            // Check if we're descending into its branch
-            if (node is startNode) startNodeFound = true;
-
-            // Continue only if it was found
-            else if (!startNodeFound) return;
-
+        // Run the filter
+        if (!filterBeforeDraw(node)) {
+            return;
         }
 
         // Call the hooks
@@ -338,20 +401,14 @@ abstract class TreeAction {
     /// internal
     final package void afterDrawImpl(Node node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) {
 
-        // There is a start node set
-        if (startNode !is null) {
-
-            // Check if we're leaving the node
-            if (node is startNode) startNodeFound = false;
-
-            // Continue only if it was found
-            else if (!startNodeFound) return;
-            // Note: We still emit afterDraw for that node, hence `else if`
-
+        // Run the filter
+        if (!filterAfterDraw(node)) {
+            return;
         }
 
         afterDraw(node, space, paddingBox, contentBox);
         afterDraw(node, space);
+
     }
 
     /// Called after the tree is drawn. Called before input events, so they can assume actions have completed.
@@ -508,6 +565,9 @@ struct LayoutTree {
     do {
 
         actions ~= action;
+
+        // Run the first hook
+        action.started();
 
     }
 

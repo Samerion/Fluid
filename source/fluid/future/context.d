@@ -208,6 +208,11 @@ struct TreeActionContext {
 
         _actions ~= actions;
 
+        // Run the start hook
+        foreach (action; actions) {
+            action.started();
+        }
+
     }
 
     /// List all currently active actions in a loop.
