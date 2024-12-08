@@ -174,7 +174,7 @@ if (!is(Output == void)) {
             //   this: Input  => Output
             //   next: Output => T : Pipe!(NextOutput, NextInput...)
             // return: Output => NextOutput
-            auto result = new Pipe!(NextOutput, NextOutput)(a => a);
+            auto result = new ProxyPipe!(Subscriber!NextOutput);
             subscribe(
                 pipe((Output output) { 
                     next(output)
@@ -198,6 +198,65 @@ if (!is(Output == void)) {
 interface Subscriber(Ts...) {
 
     void opCall(Ts args); 
+
+}
+
+/// 
+class ProxyPipe(IPipes...) : PublisherSubscriberPair!IPipes {
+
+    private staticMap!(SubscriberOf, IPipes) subscribers;
+
+    static foreach (i, IPipe; IPipes) {
+
+        void subscribe(Subscriber!(PipeContent!IPipe) subscriber)
+        in (subscribers[i] is null, "A subscriber for " ~ PipeContent!IPipe.stringof ~ " was already registered.")
+        do {
+            subscribers[i] = subscriber;
+        }
+
+        void opCall(PipeContent!IPipe content) {
+            if (subscribers[i]) {
+                subscribers[i](content);
+            }
+        }
+
+    }
+
+}
+
+private alias SubscriberOf(T) = Subscriber!(PipeContent!T);
+
+private template PipeContent(T) {
+
+    // Publisher
+    static if (is(T == Publisher!Ts, Ts...)) {
+        alias PipeContent = Ts;
+    }
+
+    // Subscriber
+    else static if (is(T == Subscriber!Ts, Ts...)) {
+        alias PipeContent = Ts;
+    }
+
+    // Neither
+    else static assert(false, T.stringof ~ " is not a subscriber nor a publisher");
+
+}
+
+private template PublisherSubscriberPair(T) {
+
+    // Publisher
+    static if (is(T == Publisher!Ts, Ts...)) {
+        alias PublisherSubscriberPair = AliasSeq!(Publisher!Ts, Subscriber!Ts);
+    }
+
+    // Subscriber
+    else static if (is(T == Subscriber!Ts, Ts...)) {
+        alias PublisherSubscriberPair = AliasSeq!(Publisher!Ts, Subscriber!Ts);
+    }
+
+    // Neither
+    else static assert(false, T.stringof ~ " is not a subscriber nor a publisher");
 
 }
 
