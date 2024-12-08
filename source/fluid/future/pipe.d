@@ -175,16 +175,20 @@ if (!is(Output == void)) {
     ///     A pipe that is loaded with the same data that is returned by the `listener`.
     auto then(T)(T delegate(Output) @safe next) {
 
-        // Listenable as a return value
-        static if (is(T : Pipe!(NextOutput, NextInput), NextOutput, NextInput...)) {
+        alias Publishers = AllPublishers!T;
+
+        // Return value is a publisher
+        static if (Publishers.length != 0) {
             //   this: Input  => Output
             //   next: Output => T : Pipe!(NextOutput, NextInput...)
             // return: Output => NextOutput
-            auto result = new MultiPublisher!(Publisher!NextOutput);
+            auto result = new MultiPublisher!Publishers;
             subscribe(
                 pipe((Output output) { 
-                    next(output)
-                        .then(nextOutput => result(nextOutput));
+                    static foreach (Publisher; Publishers) {
+                        next(output)
+                            .subscribe(cast(SubscriberOf!Publisher) result);
+                    }
                 })
             );
             return result;
@@ -232,6 +236,29 @@ unittest {
 
 }
 
+@("MultiPublisher can be returned from then()")
+unittest {
+
+    import std.stdio;
+
+    auto multi = new MultiPublisher!(Publisher!int, Publisher!string);
+    auto start = pipe(() => 1);
+    auto chain = start.then(a => multi);
+
+    int myInt;
+    string myString;
+
+    chain.then((int a) => myInt = a);
+    chain.then((string a) => myString = a);
+
+    start();
+    multi(1);
+    assert(myInt == 1);
+    multi("Hi!");
+    assert(myString == "Hi!");
+
+}
+
 class MultiPublisherImpl(IPipes...) : staticMap!(PublisherSubscriberPair, IPipes)
 if (IPipes.length != 0) {
 
@@ -260,16 +287,18 @@ if (IPipes.length != 0) {
 private alias SubscriberOf(T) = Subscriber!(PipeContent!T);
 
 /// List all publishers implemented by the given type (including, if the given type is a publisher).
-alias AllPublishers(T) = Filter!(isPublisher, InterfacesTuple!T, T);
+alias AllPublishers(T) = Filter!(isPublisher, InterfacesTuple!T, Filter!(isInterface, T));
 
 /// List all subscribers implemented by the given type (including, if the given type is a publisher).
-alias AllSubscribers(T) = Filter!(isSubscriber, InterfacesTuple!T, T);
+alias AllSubscribers(T) = Filter!(isSubscriber, InterfacesTuple!T, Filter!(isInterface, T));
 
 /// Check if the given type is a subscriber.
 enum isSubscriber(T) = is(T : Subscriber!Ts, Ts...);
 
 /// Check if the given type is a publisher.
 enum isPublisher(T) = is(T : Publisher!Ts, Ts...);
+
+private enum isInterface(T) = is(T == interface);
 
 /// For an instance of either `Publisher` or `Subscriber`, get the type trasmitted by the interface. This function
 /// only operates on the two interfaces directly, and will not work with subclasses.
