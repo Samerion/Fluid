@@ -68,3 +68,32 @@ unittest {
     assert(action.runs == 3);
 
 }
+
+@("TreeActions can be chained")
+unittest {
+
+    IntInput input;
+    ScrollFrame scrollFrame;
+    Space innerSpace;
+
+    auto root = testSpace(
+        scrollFrame = vscrollFrame(
+            vspace(),
+            innerSpace = vspace(
+                input = intInput(),
+            ),
+        ),
+    );
+
+    root.runUntil(
+        root.focusChild()
+            .then((Node a) => assert(a == scrollFrame.scrollBar))
+            .then(() => root.nextFrame)
+            .then(() => scrollFrame.focusChild())
+            .then((Node a) => assert(a == scrollFrame.scrollBar))
+            .then(() => root.nextFrame)
+            .then(() => innerSpace.focusChild())
+            .then((Node a) => assert(a == input))
+    );
+
+}

@@ -24,6 +24,8 @@ import fluid.backend;
 
 import fluid.io.canvas;
 
+import fluid.future.pipe;
+
 @safe:
 
 alias testSpace = nodeBuilder!TestSpace;
@@ -192,6 +194,30 @@ class TestSpace : Space, CanvasIO {
         assertThrown!AssertError(
             drawAndAssert(asserts)
         );
+
+    }
+
+    /// Repeatedly draw the space until the condition is satisfied. Useful for testing tree actions.
+    /// Params:
+    ///     endCondition = This can be a delegate, in which case the loop will stop once the return value is `true`.
+    ///         It can also be a `Publisher`, in which case the moment it emits en event, the event loop will finish.
+    void runUntil(bool delegate() @safe endCondition) {
+
+        while (!endCondition()) {
+            draw();
+        }
+
+    }
+
+    /// ditto
+    void runUntil(Publisher!() endCondition) {
+
+        bool finished;
+        endCondition.then(() => finished = true);
+
+        while (!finished) {
+            draw();
+        }
 
     }
 
