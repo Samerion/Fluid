@@ -277,6 +277,52 @@ abstract class TreeAction {
 
     }
 
+    /// Determine whether `beforeDraw` and `afterDraw` should be called for the given node.
+    ///
+    /// By default, this is used to filter out all nodes except for `startNode` and its children.
+    /// Subclasses may change this to adjust this behavior.
+    ///
+    /// Params:
+    ///     node = Node that is subject to the hook call.
+    /// Returns:
+    ///     For `filterBeforeDraw`, true if `beforeDraw` is to be called for this node.
+    ///     For `filterAfterDraw`, true if `afterDraw` is to be called for this node.
+    bool filterBeforeDraw(Node node) {
+
+        // There is a start node set
+        if (startNode !is null) {
+
+            // Check if we're descending into its branch
+            if (node is startNode) startNodeFound = true;
+
+            // Continue only if it was found
+            else if (!startNodeFound) return false;
+
+        }
+
+        return true;
+    
+    }
+
+    /// ditto
+    bool filterAfterDraw(Node node) { 
+
+        // There is a start node set
+        if (startNode !is null) {
+
+            // Check if we're leaving the node
+            if (node is startNode) startNodeFound = false;
+
+            // Continue only if it was found
+            else if (!startNodeFound) return false;
+            // Note: We still emit afterDraw for that node, hence `else if`
+
+        }
+
+        return true;
+    
+    }
+
     /// Called before the tree is drawn. Keep in mind this might not be called if the action is started when tree
     /// iteration has already begun.
     /// Params:
@@ -304,15 +350,9 @@ abstract class TreeAction {
     /// internal
     final package void beforeDrawImpl(Node node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) {
 
-        // There is a start node set
-        if (startNode !is null) {
-
-            // Check if we're descending into its branch
-            if (node is startNode) startNodeFound = true;
-
-            // Continue only if it was found
-            else if (!startNodeFound) return;
-
+        // Run the filter
+        if (!filterBeforeDraw(node)) {
+            return;
         }
 
         // Call the hooks
@@ -338,20 +378,14 @@ abstract class TreeAction {
     /// internal
     final package void afterDrawImpl(Node node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) {
 
-        // There is a start node set
-        if (startNode !is null) {
-
-            // Check if we're leaving the node
-            if (node is startNode) startNodeFound = false;
-
-            // Continue only if it was found
-            else if (!startNodeFound) return;
-            // Note: We still emit afterDraw for that node, hence `else if`
-
+        // Run the filter
+        if (!filterAfterDraw(node)) {
+            return;
         }
 
         afterDraw(node, space, paddingBox, contentBox);
         afterDraw(node, space);
+
     }
 
     /// Called after the tree is drawn. Called before input events, so they can assume actions have completed.
