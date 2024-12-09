@@ -2,6 +2,7 @@
 module actions.ordered_focus_action;
 
 import fluid;
+import fluid.future.action;
 
 @safe:
 
