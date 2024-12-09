@@ -87,10 +87,8 @@ unittest {
 
     const frames = root.focusChild()
         .then((Node a) @trusted => assert(a == scrollFrame.scrollBar))
-        .then(() => root.nextFrame)
         .then(() => scrollFrame.focusChild())
         .then((Node a) @trusted => assert(a == scrollFrame.scrollBar))
-        .then(() => root.nextFrame)
         .then(() => innerSpace.focusChild())
         .then((Node a) @trusted => assert(a == input))
         .runWhileDrawing(root);
