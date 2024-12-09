@@ -135,17 +135,18 @@ unittest {
         buttons[1] = button("Two", delegate { }),
         buttons[2] = button("Three", delegate { }),
     );
-    auto test = testSpace(root);
-    test.draw();
+    root.draw();
     buttons[0].focus();
     assert(root.isFocused(buttons[0]));
-    test.runUntil(
-        root.focusNext.front
-            .then((Node a) => assert(a == buttons[1]))
-            .then(() => root.focusNext.front)
-            .then((Node a) => assert(a == buttons[2]))
-            .then(() => root.focusNext.front)
-            .then((Node a) => assert(a == buttons[0]))
-    );
+
+    const frames = root.focusNext.front
+        .then((Node a) => assert(a == buttons[1]))
+        .then(() => root.focusNext.front)
+        .then((Node a) => assert(a == buttons[2]))
+        .then(() => root.focusNext.front)
+        .then((Node a) => assert(a == buttons[0]))
+        .runWhileDrawing(root);
+
+    assert(frames == 3);
 
 }

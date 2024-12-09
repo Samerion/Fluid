@@ -79,29 +79,25 @@ unittest {
         box[0] = presetFocusBox(Rectangle(2, 2, 2, 2)),
         box[1] = presetFocusBox(Rectangle(4, 4, 6, 6)),
     );
-    auto test = testSpace(root);
 
     // Frame 0: no focus
-    test.runUntil(
-        root.findFocusBox()
-            .then(rect => assert(rect.empty)),
-    );
+    root.findFocusBox()
+        .then(rect => assert(rect.empty))
+        .runWhileDrawing(root);
 
     // Frame 1: first box has focus
     box[0].focus();
     assert(root.isFocused(box[0]));
-    test.runUntil(
-        root.findFocusBox()
-            .then(rect => assert(rect == box[0].focusBox))
-    );
+    root.findFocusBox()
+        .then(rect => assert(rect == box[0].focusBox))
+        .runWhileDrawing(root);
 
     // Frame 2: second box has focus
     box[1].focus();
     assert(root.isFocused(box[1]));
-    test.runUntil(
-        root.findFocusBox()
-            .then(rect => assert(rect == box[1].focusBox))
-    );
+    root.findFocusBox()
+        .then(rect => assert(rect == box[1].focusBox))
+        .runWhileDrawing(root);
 
 }
 
