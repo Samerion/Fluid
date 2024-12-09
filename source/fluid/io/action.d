@@ -187,6 +187,40 @@ bool runInputActionHandler(T)(T, void delegate() @safe handler) {
     return true;
 }
 
+/// Run a handler for an input action.
+/// Params:
+///     aggregate = Struct or class with input action handlers.
+///     actionID  = ID of the action to run.
+///     isActive  = True, if the action has fired, false if it is held.
+/// Returns:
+///     True if there exists a matching input handler, and if it responded
+///     to the input action.
+bool runInputActionHandler(T)(auto ref T aggregate, immutable InputActionID actionID, bool isActive = true) {
+
+    bool handled;
+
+    // Check every action
+    static foreach (handler; InputActionHandlers!T) {
+
+        // Run handlers that handle this action
+        if (handler.inputActionID == actionID) {
+
+            // Run the action if the stroke was performed
+            if (shouldActivateWhileDown!(handler.method) || isActive) {
+
+                handled = runInputActionHandler(handler.inputAction,
+                    &__traits(child, aggregate, handler.method)) || handled;
+
+            }
+
+        }
+
+    }
+
+    return handled;
+
+}
+
 /// Wraps an input action handler.
 struct InputActionHandler(alias action, alias actionHandler) {
 
