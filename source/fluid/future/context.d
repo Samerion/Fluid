@@ -34,7 +34,15 @@ struct TreeContext {
 
 struct TreeContextData {
 
-    TreeIOContext io;
+    public {
+
+        /// Keeps track of currently active I/O systems.
+        TreeIOContext io;
+
+        /// Manages and runs tree actions.
+        TreeActionContext actions;
+
+    }
 
     private {
         int _lockTint;
@@ -85,7 +93,7 @@ struct TreeContextData {
 
 } 
 
-/// Active context for I/O operations. 
+/// Active context for I/O operations. Keeps track of currently active systems for each I/O interface.
 struct TreeIOContext {
 
     /// Map of I/O interface IDs to an index in the IO array.
@@ -162,5 +170,92 @@ if (isIO!T) {
 struct IOID {
 
     StaticID id;
+
+}
+
+/// Keeps track of currently active actions.
+struct TreeActionContext {
+
+    import std.array;
+    import fluid.tree : TreeAction;
+
+    private {
+
+        /// Currently running actions.
+        Appender!(TreeAction[]) _actions;
+
+        /// Number of running iterators. Removing tree actions will only happen if there is exactly one
+        /// running iterator, as to not break the other ones.
+        ///
+        /// Multiple iterators may run in case a tree action draws nodes on its own: one iterator triggers
+        /// the action, and the drawn node activates another iterator.
+        int _runningIterators;
+
+    }
+
+    /// Start a number of tree actions. As the node tree is drawn, the action's hook will be called whenever 
+    /// a relevant place is reached in the tree.
+    ///
+    /// To stop a running action, call the action's `stop` method. Most tree actions will do it automatically
+    /// as soon as their job is finished.
+    ///
+    /// Warning:
+    ///     If the action is already running, `spawn` will duplicate it, possibly causing bugs.
+    ///     Don't spawn actions if you're not sure if they're running; implement a check if necessary.
+    /// Params:
+    ///     actions = Actions to spawn.
+    void spawn(TreeAction[] actions...) {
+
+        _actions ~= actions;
+
+        // Run the start hook
+        foreach (action; actions) {
+            action.started();
+        }
+
+    }
+
+    /// List all currently active actions in a loop.
+    int opApply(int delegate(TreeAction) @safe yield) {
+
+        // Update the iterator counter
+        _runningIterators++;
+        scope (exit) _runningIterators--;
+
+        // If an action is removed, all subsequent items will be shifted to a new index
+        size_t newIndex;
+
+        // Iterate on active actions
+        foreach (i, action; _actions[]) {
+
+            // If there's one running iterator, shift the index to remove it from the array
+            // Don't pass stopped actions to the iterator
+            if (action.toStop) {
+
+                if (_runningIterators != 1) newIndex++;
+                continue;
+
+            }
+
+            // Run the hook
+            if (auto result = yield(action)) return result;
+
+            // Shift the action into the new index
+            if (i != newIndex) {
+                _actions[][newIndex] = action;
+            }
+
+            newIndex++;
+
+        }
+
+        // Shrink the arrays if actions were removed
+        if (newIndex != _actions[].length) {
+            _actions.shrinkTo(newIndex);
+        }
+
+        return 0;
+
+    }
 
 }

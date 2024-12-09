@@ -327,7 +327,7 @@ class Space : Node {
         )
     )
     out(
-        r; [r.tupleof].all!isFinite,
+        r; only(r.tupleof).all!isFinite,
         format!"space: child %s given invalid size %s. available = %s, expand = %s, denominator = %s, reserved = %s"(
             typeid(child), r, available, child.layout.expand, denominator, reservedSpace
         )
