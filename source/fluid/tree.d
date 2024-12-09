@@ -267,7 +267,7 @@ abstract class TreeAction : Publisher!() {
     protected {
 
         /// Subscriber for events, i.e. `then`
-        Subscriber!() onFinish;
+        Event!() finished;
 
     }
 
@@ -280,13 +280,11 @@ abstract class TreeAction : Publisher!() {
 
     /// Remove all event handlers attached to this tree.
     void clearSubscribers() {
-        onFinish = null;
+        finished.clearSubscribers();
     }
 
-    override final void subscribe(Subscriber!() subscriber)
-    in (onFinish is null, "A subscriber is already attached to this tree action.")
-    do {
-        onFinish = subscriber;
+    override final void subscribe(Subscriber!() subscriber) {
+        finished.subscribe(subscriber);
     }
 
     /// Stop the action.
@@ -316,9 +314,7 @@ abstract class TreeAction : Publisher!() {
     /// This can be used to trigger user-assigned callbacks. Call `super.stopped()` when overriding to make sure all
     /// finish hooks are called.
     void stopped() {
-        if (onFinish) {
-            onFinish();
-        }
+        finished();
     }
 
     /// Determine whether `beforeDraw` and `afterDraw` should be called for the given node.

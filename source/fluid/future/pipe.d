@@ -348,3 +348,33 @@ template ToParameter(T) {
         alias ToParameter = T;
     }
 }
+
+struct Event(T...) {
+
+    import std.array;
+
+    private Appender!(Subscriber!T[]) subscribers;
+
+    void clearSubscribers() {
+        subscribers.clear();
+    }
+
+    void subscribe(Subscriber!T subscriber) {
+        this.subscribers ~= subscriber;
+    }
+
+    void opOpAssign(string op : "~")(Subscriber!T subscriber) {
+        this.subscribers ~= subscriber;
+    }
+
+    void opOpAssign(string op : "~")(Subscriber!T[] subscribers) {
+        this.subscribers ~= subscribers;
+    }
+
+    void opCall(T arguments) {
+        foreach (subscriber; subscribers[]) {
+            subscriber(arguments);
+        }
+    }
+
+}
