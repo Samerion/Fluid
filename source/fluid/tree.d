@@ -264,14 +264,10 @@ abstract class TreeAction : Publisher!() {
 
     }
 
-    protected {
+    private {
 
         /// Subscriber for events, i.e. `then`
         Event!() finished;
-
-    }
-
-    private {
 
         /// Set to true once the action has descended into `startNode`.
         bool startNodeFound;

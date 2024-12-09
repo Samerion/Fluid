@@ -145,7 +145,7 @@ unittest {
         .then((Node a) => assert(a == buttons[2]))
         .then(() => root.focusNext.front)
         .then((Node a) => assert(a == buttons[0]))
-        .runWhileDrawing(root);
+        .runWhileDrawing(root, 5);
 
     assert(frames == 3);
 

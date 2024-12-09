@@ -222,17 +222,19 @@ struct TreeActionContext {
         _runningIterators++;
         scope (exit) _runningIterators--;
 
-        // If an action is removed, all subsequent items will be shifted to a new index
-        size_t newIndex;
-
         // Iterate on active actions
-        foreach (i, action; _actions[]) {
+        for (size_t i = 0; i < _actions[].length; i++) {
 
-            // If there's one running iterator, shift the index to remove it from the array
+            auto action = _actions[][i];
+
+            // If there's one running iterator, remove it from the array
             // Don't pass stopped actions to the iterator
             if (action.toStop) {
 
-                if (_runningIterators != 1) newIndex++;
+                if (_runningIterators == 1) {
+                    _actions[][i] = _actions[][$-1];
+                    _actions.shrinkTo(_actions[].length - 1);
+                }
                 continue;
 
             }
@@ -240,18 +242,6 @@ struct TreeActionContext {
             // Run the hook
             if (auto result = yield(action)) return result;
 
-            // Shift the action into the new index
-            if (i != newIndex) {
-                _actions[][newIndex] = action;
-            }
-
-            newIndex++;
-
-        }
-
-        // Shrink the arrays if actions were removed
-        if (newIndex != _actions[].length) {
-            _actions.shrinkTo(newIndex);
         }
 
         return 0;

@@ -18,13 +18,20 @@ abstract class NodeSearchAction : TreeAction, Publisher!Node {
 
     protected {
 
-        /// Event that runs when the tree action finishes.
-        Event!Node finished;
-
         /// Node this action has found.
         Node result;
 
     }
+
+    private {
+
+        /// Event that runs when the tree action finishes.
+        Event!Node finished;
+
+    }
+
+    alias then = typeof(super).then;
+    alias then = Publisher!Node.then;
 
     override void clearSubscribers() {
         super.clearSubscribers();
@@ -33,6 +40,11 @@ abstract class NodeSearchAction : TreeAction, Publisher!Node {
 
     override void subscribe(Subscriber!Node subscriber) {
         finished.subscribe(subscriber);
+    }
+
+    override void beforeTree(Node node, Rectangle rect) {
+        super.beforeTree(node, rect);
+        result = null;
     }
 
     override void stopped() {

@@ -15,12 +15,15 @@ import fluid.future.pipe;
 
 abstract class FocusSearchAction : NodeSearchAction, Publisher!Focusable {
 
-    protected {
+    private {
 
         /// Event that runs when the tree action finishes.
         Event!Focusable finished;
 
     }
+
+    alias then = typeof(super).then;
+    alias then = Publisher!Focusable.then;
 
     override void clearSubscribers() {
         super.clearSubscribers();
@@ -73,7 +76,7 @@ OrderedFocusAction focusPrevious(Node node, Node branch, bool wrap = true) {
     return action;
 }
 
-final class OrderedFocusAction : TreeAction, Publisher!Focusable, Publisher!Node {
+final class OrderedFocusAction : FocusSearchAction {
 
     public {
 
@@ -89,48 +92,18 @@ final class OrderedFocusAction : TreeAction, Publisher!Focusable, Publisher!Node
 
     }
 
-    protected {
-
-        Subscriber!Focusable onFinishFocusable;
-        Subscriber!Node onFinishNode;
-
-    }
-
     private {
 
         /// Last focusable node in the branch, first focusable node in the branch. Updates as the node iterates.
-        Focusable _lastFocusable, _firstFocusable;
+        Node _last, _first;
 
         /// Previous and next focusable relative to the target.
-        Focusable _previousFocusable, _nextFocusable;
+        Node _previous, _next;
 
     }
-
-    alias then = typeof(super).then;
-    alias then = Publisher!Node.then;
-    alias then = Publisher!Focusable.then;
 
     this(Node target, bool isReverse = false, bool wrap = true) {
         reset(target, isReverse, wrap);
-    }
-
-    override void clearSubscribers() {
-
-        super.clearSubscribers();
-        this.onFinishFocusable = null;
-
-    }
-
-    override void subscribe(Subscriber!Focusable subscriber)
-    in (onFinishFocusable is null, "Subscriber!Focusable is already connected")
-    do {
-        onFinishFocusable = subscriber;
-    }
-
-    override void subscribe(Subscriber!Node subscriber)
-    in (onFinishNode is null, "Subscriber!Node is already connected")
-    do {
-        onFinishNode = subscriber;
     }
 
     /// Re-arm the action.
@@ -138,11 +111,17 @@ final class OrderedFocusAction : TreeAction, Publisher!Focusable, Publisher!Node
         this.target = target;
         this.isReverse = isReverse;
         this.isWrapDisabled = !wrap;
-        this._lastFocusable = null;
-        this._firstFocusable = null;
-        this._previousFocusable = null;
-        this._nextFocusable = null;
         clearSubscribers();
+    }
+
+    override void beforeTree(Node node, Rectangle rect) {
+
+        super.beforeTree(node, rect);
+        this._last = null;
+        this._first = null;
+        this._previous = null;
+        this._next = null;
+
     }
 
     override void beforeDraw(Node node, Rectangle) {
@@ -152,12 +131,12 @@ final class OrderedFocusAction : TreeAction, Publisher!Focusable, Publisher!Node
 
             // Going backwards: Mark the last focusable as the previous node
             if (isReverse) {
-                _previousFocusable = _lastFocusable;
+                _previous = _last;
             }
 
             // Going forwards: Clear the next focusable so it can be overriden by a correct value
             else {
-                _nextFocusable = null;
+                _next = null;
             }
 
             return;
@@ -165,57 +144,41 @@ final class OrderedFocusAction : TreeAction, Publisher!Focusable, Publisher!Node
         }
 
         // Ignore nodes that are not focusable
-        auto focusable = cast(Focusable) node;
-        if (!focusable) return;
+        if (!cast(Focusable) node) return;
 
         // Set first and next node to this node
-        if (_firstFocusable is null) {
-            _firstFocusable = focusable;
+        if (_first is null) {
+            _first = node;
         }
-        if (_nextFocusable is null) {
-            _nextFocusable = focusable;
+        if (_next is null) {
+            _next = node;
         }
 
         // Mark as the last found focusable
-        _lastFocusable = focusable;
-
-    }
-
-    /// Returns: If the action finished, the focusable that was found and focused.
-    Focusable result() {
-
-        // Selecting previous or next node
-        auto result = isReverse
-            ? _previousFocusable
-            : _nextFocusable;
-
-        // No such node, try first/last
-        if (!isWrapDisabled && result is null) {
-            result = isReverse
-                ? _lastFocusable
-                : _firstFocusable;
-        }
-
-        return result;
+        _last = node;
 
     }
 
     override void afterTree() {
 
+        // Selecting previous or next node
+        result = isReverse
+            ? _previous
+            : _next;
+
+        // No such node, try first/last
+        if (!isWrapDisabled && result is null) {
+            result = isReverse
+                ? _last
+                : _first;
+        }
+
         // Found a result!
-        if (auto result = this.result) {
-            result.focus();
+        if (auto focusable = cast(Focusable) result) {
+            focusable.focus();
         }
 
         stop;
-
-    }
-
-    override void stopped() {
-
-        super.stopped();
-        if (onFinishFocusable) onFinishFocusable(this.result);
-        if (onFinishNode) onFinishNode(cast(Node) this.result);
 
     }
 
