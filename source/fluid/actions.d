@@ -7,6 +7,8 @@ import fluid.input;
 import fluid.scroll;
 import fluid.backend;
 
+import fluid.io.focus;
+
 import fluid.future.pipe;
 
 
@@ -50,6 +52,34 @@ abstract class NodeSearchAction : TreeAction, Publisher!Node {
     override void stopped() {
         super.stopped();
         finished(result);
+    }
+
+}
+
+abstract class FocusSearchAction : NodeSearchAction, Publisher!Focusable {
+
+    private {
+
+        /// Event that runs when the tree action finishes.
+        Event!Focusable finished;
+
+    }
+
+    alias then = typeof(super).then;
+    alias then = Publisher!Focusable.then;
+
+    override void clearSubscribers() {
+        super.clearSubscribers();
+        finished.clearSubscribers();
+    }
+
+    override void subscribe(Subscriber!Focusable subscriber) {
+        finished.subscribe(subscriber);
+    }
+
+    override void stopped() {
+        super.stopped();
+        finished(cast(Focusable) result);
     }
 
 }
@@ -148,34 +178,13 @@ unittest {
 
 }
 
-class FocusRecurseAction : TreeAction, Publisher!FluidFocusable, Publisher!Node {
+class FocusRecurseAction : FocusSearchAction {
 
     public {
 
         bool excludeStartNode;
         void delegate(FluidFocusable) @safe finished;
 
-    }
-
-    private {
-        FluidFocusable _result;
-        Subscriber!FluidFocusable _onFinishFluidFocusable;
-        Subscriber!Node _onFinishNode;
-    }
-
-    /// `FocusRecurseAction` will produce the node when done. If one wasn't found, it will yield `null`.
-    alias then = typeof(super).then;
-    alias then = Publisher!FluidFocusable.then;
-    alias then = Publisher!Node.then;
-
-    alias subscribe = typeof(super).subscribe;
-
-    override void subscribe(Subscriber!FluidFocusable onFinish) {
-        _onFinishFluidFocusable = onFinish;
-    }
-
-    override void subscribe(Subscriber!Node onFinish) {
-        _onFinishNode = onFinish;
     }
 
     override void beforeDraw(Node node, Rectangle) {
@@ -189,27 +198,18 @@ class FocusRecurseAction : TreeAction, Publisher!FluidFocusable, Publisher!Node 
         // Check if the node is focusable
         if (auto focusable = cast(FluidFocusable) node) {
 
-            _result = focusable;
-
-            // Give it focus
+            // Mark the node, focus, and stop
+            result = node;
             focusable.focus();
-
-            // We're done here
             stop;
 
         }
 
     }
 
-    override void started() {
-        _result = null;
-    }
-
     override void stopped() {
         super.stopped();
-        if (finished) finished(_result);
-        if (_onFinishFluidFocusable) _onFinishFluidFocusable(_result);
-        if (_onFinishNode) _onFinishNode(_result.asNode);
+        if (finished) finished(cast(FluidFocusable) result);
     }
 
 }
@@ -377,8 +377,6 @@ NextFrameAction nextFrame(Node node) {
 
 class NextFrameAction : TreeAction {
 
-    override void afterTree() {
-        stop;
-    }
+    // Yes! It's that simple!
 
 }

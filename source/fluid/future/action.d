@@ -13,34 +13,6 @@ import fluid.future.pipe;
 @safe:
 
 
-abstract class FocusSearchAction : NodeSearchAction, Publisher!Focusable {
-
-    private {
-
-        /// Event that runs when the tree action finishes.
-        Event!Focusable finished;
-
-    }
-
-    alias then = typeof(super).then;
-    alias then = Publisher!Focusable.then;
-
-    override void clearSubscribers() {
-        super.clearSubscribers();
-        finished.clearSubscribers();
-    }
-
-    override void subscribe(Subscriber!Focusable subscriber) {
-        finished.subscribe(subscriber);
-    }
-
-    override void stopped() {
-        super.stopped();
-        finished(cast(Focusable) result);
-    }
-
-}
-
 /// Focus next or previous focusable node relative to the point of reference. 
 /// This function only works with nodes compatible with the new I/O system introduced in Fluid 0.7.2.
 ///
