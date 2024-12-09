@@ -7,6 +7,7 @@ import fluid.node;
 import fluid.space;
 import fluid.types;
 import fluid.utils;
+import fluid.actions;
 
 import fluid.io.focus;
 import fluid.io.action;
@@ -108,11 +109,8 @@ class FocusSpace : Space, FocusIO {
     ///     Consequently, `wasInputAction` will be set to true.
     bool runInputAction(InputActionID actionID, bool isActive = true) {
 
-        // Do nothing if there is no focus
-        if (_focus is null) return false;
-
         // Run the action, and mark input as handled
-        if (_focus.actionImpl(actionID, isActive)) {
+        if (_focus && _focus.actionImpl(actionID, isActive)) {
             _wasInputHandled = true;
             return true;
         }
@@ -150,39 +148,69 @@ class FocusSpace : Space, FocusIO {
     ///     isReverse = Reverse direction; if true, focuses the previous node.
     /// Returns:
     ///     Tree action that switches focus to the previous, or next node.
-    ///     If no node is currently focused, returns nothing.
-    Optional!OrderedFocusAction focusNext(bool isReverse = false) {
+    ///     If no node is currently focused, returns a tree action to focus the first or the last node, equivalent
+    ///     to `focusFirst` or `focusLast`.
+    ///
+    ///     You can use `.then` on the returned action to run a callback the moment the focus switches.
+    FocusSearchAction focusNext(bool isReverse = false) {
 
         auto focus = cast(Node) currentFocus;
 
-        if (focus is null) return Optional!OrderedFocusAction();
+        if (focus is null) {
+            if (isReverse)
+                return focusLast();
+            else
+                return focusFirst();
+        }
 
         // Switch focus
         orderedFocusAction.reset(focus, isReverse);
         startAction(orderedFocusAction);
 
-        return some(orderedFocusAction);
+        return orderedFocusAction;
 
     }
 
     /// ditto
-    Optional!OrderedFocusAction focusPrevious() {
+    FocusSearchAction focusPrevious() {
 
         return focusNext(true);
+
+    }
+
+    /// Focus the first (`focusFirst`), or the last node (`focusLast`) that exists inside the focus space.
+    /// Returns:
+    ///     Tree action that switches focus to the first, or the last node.
+    ///     You can use `.then` on the returned action to run a callback the moment the focus switches.
+    FocusSearchAction focusFirst() {
+
+        // TODO cache this, or integrate into OrderedFocusAction?
+        return focusRecurseChildren(this);
+
+    }
+
+    /// ditto
+    FocusSearchAction focusLast() {
+
+        auto action = focusRecurseChildren(this);
+        action.isReverse = true;
+        return action; 
 
     }
 
     @(FluidInputAction.focusNext)
     bool focusNext(FluidInputAction) {
 
-        return !focusNext().empty;
+        focusNext();
+        return true;
 
     }
 
     @(FluidInputAction.focusPrevious)
     bool focusPrevious(FluidInputAction) {
 
-        return !focusPrevious().empty;
+        focusPrevious();
+        return true;
 
     }
 
