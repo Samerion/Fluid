@@ -4,7 +4,7 @@ module fluid.io.action;
 import fluid.input;
 import fluid.future.context;
 
-public import fluid.input : InputActionID;
+public import fluid.input;
 
 @safe:
 
@@ -38,7 +38,7 @@ interface ActionIO : IO {
     ///         The ID of the action will be passed as an argument, along with a boolean indicating if it was
     ///         triggered by an inactive, or active event.
     ///         The return value of the callback should indicate if the action was handled or not.
-    void emitEvent(InputEvent event, bool delegate(InputActionID, bool isActive) @safe callback);
+    void emitEvent(InputEvent event, bool delegate(immutable InputActionID, bool isActive) @safe callback);
     
 }
 
@@ -111,5 +111,141 @@ interface Actionable {
 InputActionID inputActionID(alias action)() {
 
     return InputActionID.from!action;
+
+}
+
+/// Check if the given symbol defines an input action.
+///
+/// The symbol symbol must be a member of an enum marked with `@InputAction`. The enum $(B must not) be a manifest
+/// constant (eg. `enum foo = 123;`).
+template isInputAction(alias action) {
+
+    // Require the action type to be an enum
+    static if (is(typeof(action) == enum)) {
+
+        // Search through the enum's attributes
+        static foreach (attribute; __traits(getAttributes, typeof(action))) {
+
+            // Not yet found
+            static if (!is(typeof(isInputAction) == bool)) {
+
+                // Check if this is the attribute we're looking for
+                static if (__traits(isSame, attribute, InputAction)) {
+
+                    enum isInputAction = true;
+
+                }
+
+            }
+
+        }
+
+    }
+
+    // Not found
+    static if (!is(typeof(isInputAction) == bool)) {
+
+        // Respond as false
+        enum isInputAction = false;
+
+    }
+
+}
+
+/// Helper function to run an input action handler through one of the possible overloads.
+///
+/// Params:
+///     action  = Evaluated input action type.
+///         Presently, this is an enum member of the input action it comes from.
+///         `InputActionID` cannot be used here.
+///     handler = Handler for the action.
+///         The handler may choose to return a boolean, 
+///         indicating if it handled (true) or ignored the action (false).
+///
+///         It may also optionally accept the input action enum, for example `FluidInputAction`,
+///         if all of its events are bound to its members (like `FluidInputAction.press`).
+/// Returns:
+///     True if the handler responded to this action, false if not.
+bool runInputActionHandler(T)(T action, bool delegate(T action) @safe handler) {
+    return handler(action);
+}
+
+/// ditto
+bool runInputActionHandler(T)(T action, void delegate(T action) @safe handler) {
+    handler(action);
+    return true;
+}
+
+/// ditto
+bool runInputActionHandler(T)(T, bool delegate() @safe handler) {
+    return handler();
+}
+
+/// ditto
+bool runInputActionHandler(T)(T, void delegate() @safe handler) {
+    handler();
+    return true;
+}
+
+/// Wraps an input action handler.
+struct InputActionHandler(alias action, alias actionHandler) {
+
+    /// Symbol handling the action.
+    alias method = actionHandler;
+
+    /// Type of the handler.
+    alias inputAction = action;
+
+    static InputActionID inputActionID() {
+
+        return .inputActionID!action;
+
+    }
+
+}
+
+/// Find every input action handler in the given type, and check which input actions it handles.
+///
+/// For every such input handler, this will create an `InputActionHandler` struct.
+template InputActionHandlers(T) {
+
+    import std.meta;
+
+    alias Result = AliasSeq!();
+
+    // Check each member
+    static foreach (memberName; __traits(allMembers, T)) {
+
+        static if (!__traits(isDeprecated, __traits(getMember, T, memberName)))
+        static foreach (overload; __traits(getOverloads, T, memberName)) {
+
+            // Find the matching action
+            static foreach (i, actionType; __traits(getAttributes, overload)) {
+
+                // Input action — add to the result
+                static if (isInputActionType!actionType) {
+
+                    Result = AliasSeq!(
+                        Result, 
+                        InputActionHandler!(__traits(getAttributes, overload)[i], overload)
+                    );
+
+                }
+
+                // Prevent usage via @InputAction
+                else static if (is(typeof(actionType)) && isInstanceOf!(typeof(actionType), InputAction)) {
+
+                    static assert(false,
+                        format!"Please use @(%s) instead of @InputAction!(%1$s)"(actionType.type));
+
+                }
+
+            }
+
+        }
+
+    }
+
+    alias InputActionHandlers = Result;
 
 }
