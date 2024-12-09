@@ -13,6 +13,7 @@ import fluid.backend;
 
 import fluid.io.focus;
 import fluid.io.hover;
+import fluid.io.action;
 
 
 @safe:
@@ -131,43 +132,7 @@ immutable struct InputActionID {
 
 }
 
-/// Check if the given symbol is an input action type.
-///
-/// The symbol symbol must be a member of an enum marked with `@InputAction`. The enum $(B must not) be a manifest
-/// constant (eg. `enum foo = 123;`).
-template isInputActionType(alias actionType) {
-
-    // Require the action type to be an enum
-    static if (is(typeof(actionType) == enum)) {
-
-        // Search through the enum attributes
-        static foreach (attribute; __traits(getAttributes, typeof(actionType))) {
-
-            // Not yet found
-            static if (!is(typeof(isInputActionType) == bool)) {
-
-                // Check if this is the attribute we're looking for
-                static if (__traits(isSame, attribute, InputAction)) {
-
-                    enum isInputActionType = true;
-
-                }
-
-            }
-
-        }
-
-    }
-
-    // Not found
-    static if (!is(typeof(isInputActionType) == bool)) {
-
-        // Respond as false
-        enum isInputActionType = false;
-
-    }
-
-}
+enum isInputActionType(alias actionType) = isInputAction!actionType;
 
 unittest {
 
@@ -841,6 +806,7 @@ interface FluidHoverable {
         override bool runInputActionImpl(immutable InputActionID action, bool active) {
 
             import std.meta : Filter;
+            import fluid.io.action : InputActionHandlers, runInputActionHandler;
 
             alias This = typeof(this);
 
@@ -849,36 +815,17 @@ interface FluidHoverable {
 
             bool handled;
 
-            // Check each member
-            static foreach (memberName; __traits(allMembers, This)) {
+            // Check every action
+            static foreach (handler; InputActionHandlers!This) {
 
-                static if (!__traits(isDeprecated, __traits(getMember, This, memberName)))
-                static foreach (overload; __traits(getOverloads, This, memberName)) {
+                // Run handlers that handle this action
+                if (handler.inputActionID == action) {
 
-                    // Find the matching action
-                    static foreach (actionType; __traits(getAttributes, overload)) {
+                    // Run the action if the stroke was performed
+                    if (shouldActivateWhileDown!(handler.method) || active) {
 
-                        // Input action
-                        static if (isInputActionType!actionType) {
-                            if (InputActionID.from!actionType == action) {
-
-                                // Run the action if the stroke was performed
-                                if (shouldActivateWhileDown!overload || active) {
-
-                                    handled = runInputActionHandler(actionType, &__traits(child, this, overload));
-
-                                }
-
-                            }
-                        }
-
-                        // Prevent usage via @InputAction
-                        else static if (is(typeof(actionType)) && isInstanceOf!(typeof(actionType), InputAction)) {
-
-                            static assert(false,
-                                format!"Please use @(%s) instead of @InputAction!(%1$s)"(actionType.type));
-
-                        }
+                        handled = runInputActionHandler(handler.inputAction, 
+                            &__traits(child, this, handler.method)) || handled;
 
                     }
 
@@ -897,35 +844,7 @@ interface FluidHoverable {
 /// Check for `@WhileDown`
 enum shouldActivateWhileDown(alias overload) = hasUDA!(overload, fluid.input.WhileDown);
 
-/// Helper function to run an input action handler through one of the possible overloads.
-bool runInputActionHandler(T)(T action, bool delegate(T action) @safe handler) {
-
-    return handler(action);
-
-}
-
-/// ditto
-bool runInputActionHandler(T)(T action, void delegate(T action) @safe handler) {
-
-    handler(action);
-    return true;
-
-}
-
-/// ditto
-bool runInputActionHandler(T)(T, bool delegate() @safe handler) {
-
-    return handler();
-
-}
-
-/// ditto
-bool runInputActionHandler(T)(T, void delegate() @safe handler) {
-
-    handler();
-    return true;
-
-}
+alias runInputActionHandler = fluid.io.action.runInputActionHandler;
 
 private bool runInputActionsImpl(FluidHoverable hoverable, bool mouse) {
 
