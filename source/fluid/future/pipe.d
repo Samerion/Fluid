@@ -184,9 +184,16 @@ if (!is(Output == void)) {
             // return: Output => NextOutput
             auto result = new MultiPublisher!Publishers;
             subscribe(
+
+                // When this publisher receives data
                 pipe((Output output) { 
+
+                    // Pass it to the listener
+                    auto publisher = next(output);
+
+                    // And connect the returned publisher to the multipublisher
                     static foreach (Publisher; Publishers) {
-                        (cast(Publisher) next(output))
+                        (cast(Publisher) publisher)
                             .subscribe(cast(SubscriberOf!Publisher) result);
                     }
                 })
@@ -285,6 +292,13 @@ if (IPipes.length != 0) {
 
     }
 
+    override string toString() const {
+
+        import std.conv;
+        return text("MultiPublisher!", IPipes.stringof);
+
+    }
+
 }
 
 private alias SubscriberOf(T) = Subscriber!(PipeContent!T);
@@ -355,6 +369,10 @@ struct Event(T...) {
 
     private Appender!(Subscriber!T[]) subscribers;
 
+    size_t length() const {
+        return subscribers[].length;
+    }
+
     void clearSubscribers() {
         subscribers.clear();
     }
@@ -375,6 +393,13 @@ struct Event(T...) {
         foreach (subscriber; subscribers[]) {
             subscriber(arguments);
         }
+    }
+
+    string toString() const {
+
+        import std.conv;
+        return text("Event!", T.stringof, "(", length, " events)");
+
     }
 
 }

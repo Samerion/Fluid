@@ -1317,12 +1317,13 @@ ref RunCallback mockRun() {
 /// to ensure it will finish after a frame or few.
 ///
 /// Params:
-///     publisher = Publisher to subscribe to. If the publisher emits an event, drawing will stop and this
+///     publisher  = Publisher to subscribe to. If the publisher emits an event, drawing will stop and this
 ///         function will return.
-///     node      = Node to draw in loop.
+///     node       = Node to draw in loop.
+///     frameLimit = Maximum number of frames that may be drawn. Errors if reached.
 /// Returns:
 ///     Number of frames that were drawn as a consequence.
-int runWhileDrawing(Publisher!() publisher, Node node) {
+int runWhileDrawing(Publisher!() publisher, Node node, int frameLimit = int.max) {
 
     int i;
     bool finished;
@@ -1331,6 +1332,7 @@ int runWhileDrawing(Publisher!() publisher, Node node) {
     while (!finished) {
         node.draw();
         i++;
+        assert(i < frameLimit || finished, "Frame limit reached");
     }
     return i;
 
