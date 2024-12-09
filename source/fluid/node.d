@@ -17,6 +17,13 @@ import fluid.theme : Breadcrumbs;
 
 import fluid.io;
 import fluid.future.context;
+import fluid.future.branch_action;
+
+// mustuse is not available in LDC 1.28
+static if (__traits(compiles, { import core.attribute : mustuse; }))
+    import core.attribute : mustuse;
+else
+    private alias mustuse = AliasSeq!();
 
 
 @safe:
@@ -115,7 +122,12 @@ abstract class Node {
 
         /// Actions queued for this node; only used for queueing actions before the first `resize`; afterwards, all
         /// actions are queued directly into the tree.
+        ///
+        /// `_queuedAction` queues into `LayoutTree` (legacy), whereas `_queuedActionsNew` queues into `TreeContext`.
         TreeAction[] _queuedActions;
+
+        /// ditto
+        TreeAction[] _queuedActionsNew;
 
     }
 
@@ -260,7 +272,12 @@ abstract class Node {
 
     final inout(TreeContext) treeContext() inout nothrow {
 
-        return inout TreeContext(&tree.context);
+        if (tree is null) {
+            return inout TreeContext(null);
+        }
+        else {
+            return inout TreeContext(&tree.context);
+        }
 
     }
 
@@ -359,8 +376,7 @@ abstract class Node {
 
     /// Queue an action to perform within this node's branch.
     ///
-    /// This is recommended to use over `LayoutTree.queueAction`, as it can be used to limit the action to a specific
-    /// branch, and can also work before the first draw.
+    /// This function is legacy but is kept for backwards compatibility. Use `startAction` instead.
     ///
     /// This function is not safe to use while the tree is being drawn.
     final void queueAction(TreeAction action)
@@ -378,6 +394,76 @@ abstract class Node {
 
         // If there isn't a tree, wait for a resize
         else _queuedActions ~= action;
+
+    }
+
+    /// Perform a tree action the next time this node is drawn.
+    ///
+    /// Tree actions can be used to analyze the node tree and modify its behavior while it runs. Actions can listen 
+    /// and respond to hooks like `beforeDraw` and `afterDraw`. They can interact with existing nodes or inject nodes
+    /// in any place of the tree.
+    ///
+    /// Most usually, a tree action will provide its own function for creating and starting tree actions, so this
+    /// method will not be called directly.
+    ///
+    /// The action will only act on this branch of the tree: `beforeDraw` and `afterDraw` hooks will only 
+    /// fire for this node and its children.
+    ///
+    /// Tree actions are responsible for their own lifetime. After a tree action starts, it will decide for itself
+    /// when it should end. This can be overriden by explicitly calling the `TreeAction.stop` method.
+    ///
+    /// Params:
+    ///     action = Action to start.
+    final void startAction(TreeAction action)
+    in (action, "Node.runAction(TreeAction) called with a `null` argument")
+    do {
+
+        // Set up the action to run in this branch
+        action.startNode = this;
+        action.toStop = false;
+
+        // Insert the action into the context
+        if (treeContext) {
+            treeContext.actions.spawn(action);
+        }
+
+        // Hold the action until a resize
+        else {
+            _queuedActionsNew ~= action;
+        }
+
+    }
+
+    /// Start a branch action to run on children of this node.
+    ///
+    /// This should only be used inside `drawImpl`. The action will stop as soon as the return value goes 
+    /// out of scope.
+    ///
+    /// Params:
+    ///     action = Branch action to run. A branch action implements a subset of tree action's functionality,
+    ///         guaraneeing correct behavior when combined with this.
+    /// Returns:
+    ///     A [RAII](https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization) struct
+    ///     that stops the action as soon as the struct leaves the scope.
+    protected final auto startBranchAction(BranchAction action)
+    in (action, "Node.runAction(TreeAction) called with a `null` argument")
+    do {
+
+        // Start the action
+        startAction(action);
+
+        // Clear start nodes — bind it to the scope instead
+        action.startNode = null;
+
+        @mustuse
+        static struct AutoStop {
+            BranchAction action;
+            ~this() {
+                action.stop;
+            }
+        }
+
+        return AutoStop(action);
 
     }
 
@@ -812,7 +898,12 @@ abstract class Node {
 
         // Queue actions into the tree
         tree.actions ~= _queuedActions;
+        foreach (action; _queuedActions) {
+            action.started();
+        }
+        treeContext.actions.spawn(_queuedActionsNew);
         _queuedActions = null;
+        _queuedActionsNew = null;
 
 
         // The node is hidden, reset size
@@ -978,12 +1069,6 @@ abstract class Node {
     protected auto implementIO(this This)() {
 
         import std.meta : AliasSeq, Filter;
-
-        // mustuse is not available in LDC 1.28
-        static if (__traits(compiles, { import core.attribute : mustuse; }))
-            import core.attribute : mustuse;
-        else
-            alias mustuse = AliasSeq!();
 
         alias IOs = Filter!(isIO, InterfacesTuple!This);
         alias IOArray = IO[IOs.length];
