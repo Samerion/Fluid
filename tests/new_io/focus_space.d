@@ -139,14 +139,69 @@ unittest {
     buttons[0].focus();
     assert(root.isFocused(buttons[0]));
 
-    const frames = root.focusNext.front
+    const frames = root.focusNext
         .then((Node a) => assert(a == buttons[1]))
-        .then(() => root.focusNext.front)
+        .then(()       => root.focusNext)
         .then((Node a) => assert(a == buttons[2]))
-        .then(() => root.focusNext.front)
+        .then(()       => root.focusNext)
         .then((Node a) => assert(a == buttons[0]))
         .runWhileDrawing(root, 5);
 
     assert(frames == 3);
 
 }
+
+@("FocusSpace automatically focuses first item on tab")
+unittest {
+
+    Button[3] buttons;
+    auto root = focusSpace(
+        buttons[0] = button("One", delegate { }),
+        buttons[1] = button("Two", delegate { }),
+        buttons[2] = button("Three", delegate { }),
+    );
+
+    assert(root.currentFocus is null);
+
+    // Via chains
+    root.focusNext()
+        .then((Node n) => assert(n == buttons[0]))
+        .then(()       => assert(root.isFocused(buttons[0])))
+        .runWhileDrawing(root, 1);
+
+    // Via input actions
+    root.clearFocus();
+    assert(!root.isFocused(buttons[0]));
+    root.runInputAction!(FluidInputAction.focusNext);
+    root.draw();
+    assert(root.isFocused(buttons[0]));
+
+}
+
+@("FocusSpace focuses the last item on shift tab")
+unittest {
+
+    Button[3] buttons;
+    auto root = focusSpace(
+        buttons[0] = button("One", delegate { }),
+        buttons[1] = button("Two", delegate { }),
+        buttons[2] = button("Three", delegate { }),
+    );
+
+    assert(root.currentFocus is null);
+
+    // Via chains
+    root.focusPrevious()
+        .then((Node n) => assert(n == buttons[2]))
+        .then(()       => assert(root.isFocused(buttons[2])))
+        .runWhileDrawing(root, 1);
+
+    // Via input actions
+    root.clearFocus();
+    assert(!root.isFocused(buttons[2]));
+    root.runInputAction!(FluidInputAction.focusPrevious);
+    root.draw();
+    assert(root.isFocused(buttons[2]));
+
+}
+

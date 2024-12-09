@@ -85,7 +85,10 @@ abstract class FocusSearchAction : NodeSearchAction, Publisher!Focusable {
 }
 
 /// Set focus on the given node, if focusable, or the first of its focusable children. This will be done lazily during
-/// the next draw. If calling `focusRecurseChildren`, the subject of the call will be excluded from taking focus.
+/// the next draw. 
+///
+/// If focusing the given node is not desired, use `focusRecurseChildren`.
+///
 /// Params:
 ///     parent = Container node to search in.
 FocusRecurseAction focusRecurse(Node parent) {
@@ -130,7 +133,10 @@ unittest {
 
 }
 
-/// ditto
+/// Set focus on the first of the node's focusable children. This will be done lazily during the next draw. 
+///
+/// Params:
+///     parent = Container node to search in.
 FocusRecurseAction focusRecurseChildren(Node parent) {
 
     auto action = new FocusRecurseAction;
@@ -183,6 +189,7 @@ class FocusRecurseAction : FocusSearchAction {
     public {
 
         bool excludeStartNode;
+        bool isReverse;
         void delegate(FluidFocusable) @safe finished;
 
     }
@@ -198,18 +205,24 @@ class FocusRecurseAction : FocusSearchAction {
         // Check if the node is focusable
         if (auto focusable = cast(FluidFocusable) node) {
 
-            // Mark the node, focus, and stop
+            // Mark the node
             result = node;
-            focusable.focus();
-            stop;
+
+            // Stop here if selecting the first
+            if (!isReverse) stop;
 
         }
 
     }
 
     override void stopped() {
+
+        if (auto focusable = cast(FluidFocusable) result) {
+            focusable.focus();
+            if (finished) finished(focusable);
+        }
         super.stopped();
-        if (finished) finished(cast(FluidFocusable) result);
+
     }
 
 }
