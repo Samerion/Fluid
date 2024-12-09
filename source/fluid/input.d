@@ -803,7 +803,7 @@ interface FluidHoverable {
 
         }
 
-        override bool runInputActionImpl(immutable InputActionID action, bool active) {
+        override bool runInputActionImpl(immutable InputActionID action, bool isActive) {
 
             import std.meta : Filter;
             import fluid.io.action : InputActionHandlers, runInputActionHandler;
@@ -811,29 +811,10 @@ interface FluidHoverable {
             alias This = typeof(this);
 
             // The programmer may override the action
-            if (inputActionImpl(action, active)) return true;
+            if (inputActionImpl(action, isActive)) return true;
 
-            bool handled;
-
-            // Check every action
-            static foreach (handler; InputActionHandlers!This) {
-
-                // Run handlers that handle this action
-                if (handler.inputActionID == action) {
-
-                    // Run the action if the stroke was performed
-                    if (shouldActivateWhileDown!(handler.method) || active) {
-
-                        handled = runInputActionHandler(handler.inputAction, 
-                            &__traits(child, this, handler.method)) || handled;
-
-                    }
-
-                }
-
-            }
-
-            return handled;
+            // Run the action
+            return runInputActionHandler(this, action, isActive);
 
         }
 
