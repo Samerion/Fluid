@@ -463,6 +463,7 @@ final class OrderedFocusAction : TreeAction {
 
 }
 
+
 /// Find and focus a focusable node based on its visual position; above, below, to the left or to the right 
 /// of a chosen node.
 ///
@@ -471,6 +472,10 @@ final class OrderedFocusAction : TreeAction {
 /// 
 ///
 PositionalFocusAction focusAbove(Node node) {
+
+    auto action = new PositionalFocusAction;
+    node.startAction(action);
+    return action;
 
 }
 

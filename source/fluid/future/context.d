@@ -4,6 +4,7 @@ import std.meta;
 import std.traits;
 
 import fluid.types;
+import fluid.tree : TreeAction;
 import fluid.future.stack;
 import fluid.future.static_id;
 
@@ -177,7 +178,6 @@ struct IOID {
 struct TreeActionContext {
 
     import std.array;
-    import fluid.tree : TreeAction;
 
     private {
 
