@@ -37,10 +37,15 @@ abstract class BranchAction : TreeAction {
 
         _balance++;
 
+        // No start node
+        if (startNode is null) {
+            return true;
+        }
+
         const filter = super.filterBeforeDraw(node);
 
         // Skip the start node
-        if (startNode !is null && node == startNode) {
+        if (node == startNode) {
             return false;
         }
 
@@ -54,8 +59,6 @@ abstract class BranchAction : TreeAction {
     ///     True only if the node is a child of the `startNode`; always true if there isn't one set.
     override bool filterAfterDraw(Node node) @trusted { 
 
-        const filter = super.filterAfterDraw(node);
-
         _balance--;
 
         // Stop if balance is negative
@@ -64,8 +67,15 @@ abstract class BranchAction : TreeAction {
             return false;
         }
 
+        // No start node
+        if (startNode is null) {
+            return true;
+        }
+
+        const filter = super.filterAfterDraw(node);
+
         // Stop the action when exiting the start node
-        if (startNode !is null && node == startNode) {
+        if (node == startNode) {
             stop;
             return false;
         }

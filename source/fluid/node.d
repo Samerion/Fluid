@@ -539,7 +539,7 @@ abstract class Node {
         // Run beforeTree actions
         foreach (action; tree.filterActions) {
 
-            action.beforeTree(this, viewport);
+            action.beforeTreeImpl(this, viewport);
 
         }
 
@@ -549,7 +549,7 @@ abstract class Node {
         // Run afterTree actions
         foreach (action; tree.filterActions) {
 
-            action.afterTree();
+            action.afterTreeImpl();
 
         }
 

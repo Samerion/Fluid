@@ -267,20 +267,33 @@ abstract class TreeAction : Publisher!() {
     private {
 
         /// Subscriber for events, i.e. `then`
-        Event!() finished;
+        Event!() _finished;
 
         /// Set to true once the action has descended into `startNode`.
-        bool startNodeFound;
+        bool _inStartNode;
 
+        /// Set to true once `beforeTree` is called. Set to `false` afterwards.
+        bool _inTree;
+
+    }
+
+    /// Returns: True if the tree is currently drawing `startNode` or any of its children.
+    bool inStartNode() const {
+        return _inStartNode;
+    }
+
+    /// Returns: True if the tree has been entered. Set to true on `beforeTree` and to false on `afterTree`.
+    bool inTree() const {
+        return _inTree;
     }
 
     /// Remove all event handlers attached to this tree.
     void clearSubscribers() {
-        finished.clearSubscribers();
+        _finished.clearSubscribers();
     }
 
     override final void subscribe(Subscriber!() subscriber) {
-        finished.subscribe(subscriber);
+        _finished.subscribe(subscriber);
     }
 
     /// Stop the action.
@@ -310,12 +323,30 @@ abstract class TreeAction : Publisher!() {
     /// This can be used to trigger user-assigned callbacks. Call `super.stopped()` when overriding to make sure all
     /// finish hooks are called.
     void stopped() {
-        finished();
+        _finished();
+    }
+
+    /// Determine whether `beforeTree` and `afterTree` should be called.
+    ///
+    /// By default, `afterTree` is disabled if `beforeTree` wasn't called before.
+    /// Subclasses may change this to adjust this behavior.
+    ///
+    /// Returns:
+    ///     For `filterBeforeTree`, true if `beforeTree` is to be called.
+    ///     For `filterAfterTree`, true if `afterTree` is to be called.
+    bool filterBeforeTree() {
+        return true;
+    }
+
+    /// ditto
+    bool filterAfterTree() {
+        return inTree;
     }
 
     /// Determine whether `beforeDraw` and `afterDraw` should be called for the given node.
     ///
-    /// By default, this is used to filter out all nodes except for `startNode` and its children.
+    /// By default, this is used to filter out all nodes except for `startNode` and its children, and to keep
+    /// the action from starting in the middle of the tree.
     /// Subclasses may change this to adjust this behavior.
     ///
     /// Params:
@@ -325,37 +356,21 @@ abstract class TreeAction : Publisher!() {
     ///     For `filterAfterDraw`, true if `afterDraw` is to be called for this node.
     bool filterBeforeDraw(Node node) {
 
-        // There is a start node set
-        if (startNode !is null) {
+        // Not in tree
+        if (!inTree) return false;
 
-            // Check if we're descending into its branch
-            if (node is startNode) startNodeFound = true;
-
-            // Continue only if it was found
-            else if (!startNodeFound) return false;
-
-        }
-
-        return true;
-    
+        // Start mode must have been reached
+        return startNode is null || inStartNode;
     }
 
     /// ditto
     bool filterAfterDraw(Node node) { 
 
-        // There is a start node set
-        if (startNode !is null) {
+        // Not in tree
+        if (!inTree) return false;
 
-            // Check if we're leaving the node
-            if (node is startNode) startNodeFound = false;
-
-            // Continue only if it was found
-            else if (!startNodeFound) return false;
-            // Note: We still emit afterDraw for that node, hence `else if`
-
-        }
-
-        return true;
+        // Start mode must have been reached
+        return startNode is null || inStartNode;
     
     }
 
@@ -365,6 +380,16 @@ abstract class TreeAction : Publisher!() {
     ///     root     = Root of the tree.
     ///     viewport = Screen space for the node.
     void beforeTree(Node root, Rectangle viewport) { }
+
+    final package void beforeTreeImpl(Node root, Rectangle viewport) {
+
+        _inTree = true;
+
+        if (filterBeforeTree()) {
+            beforeTree(root, viewport);
+        }
+
+    }
 
     /// Called before a node is resized.
     void beforeResize(Node node, Vector2 viewportSpace) { }
@@ -386,14 +411,16 @@ abstract class TreeAction : Publisher!() {
     /// internal
     final package void beforeDrawImpl(Node node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) {
 
-        // Run the filter
-        if (!filterBeforeDraw(node)) {
-            return;
+        // Open the start branch
+        if (startNode && node.opEquals(startNode)) {
+            _inStartNode = true;
         }
 
-        // Call the hooks
-        beforeDraw(node, space, paddingBox, contentBox);
-        beforeDraw(node, space);
+        // Run the hooks if the filter passes
+        if (filterBeforeDraw(node)) {
+            beforeDraw(node, space, paddingBox, contentBox);
+            beforeDraw(node, space);
+        }
 
     }
 
@@ -415,12 +442,15 @@ abstract class TreeAction : Publisher!() {
     final package void afterDrawImpl(Node node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) {
 
         // Run the filter
-        if (!filterAfterDraw(node)) {
-            return;
+        if (filterAfterDraw(node)) {
+            afterDraw(node, space, paddingBox, contentBox);
+            afterDraw(node, space);
         }
 
-        afterDraw(node, space, paddingBox, contentBox);
-        afterDraw(node, space);
+        // Close the start branch
+        if (startNode && node.opEquals(startNode)) {
+            _inStartNode = false;
+        }
 
     }
 
@@ -430,6 +460,15 @@ abstract class TreeAction : Publisher!() {
     void afterTree() {
 
         stop();
+
+    }
+
+    final package void afterTreeImpl() {
+
+        if (filterAfterTree()) {
+            afterTree();
+        }
+        _inTree = false;
 
     }
 
