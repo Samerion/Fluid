@@ -1,7 +1,12 @@
 /// This module implements interfaces for handling focus and connecting focusable nodes with input devices.
 module fluid.io.focus;
 
+import optional;
+import fluid.types;
+
+import fluid.future.pipe;
 import fluid.future.context;
+import fluid.future.branch_action;
 
 import fluid.io.action;
 
@@ -73,5 +78,134 @@ interface Focusable : Actionable {
     ///     True if this node has focus. Recommended implementation: `return this == focusIO.focus`. 
     ///     Proxy nodes, such as `FieldSlot` might choose to return the value of the node they hold.
     bool isFocused() const;
+
+}
+
+/// Find the focus box using a `FindFocusAction`.
+/// Params:
+///     focusIO = FocusIO node owning the focus.
+FindFocusBoxAction findFocusBox(FocusIO focusIO) {
+
+    import fluid.node;
+
+    auto node = cast(Node) focusIO;
+    assert(node, "Given FocusIO is not a node");
+    
+    auto action = new FindFocusBoxAction(focusIO);
+    node.startAction(action);
+    return action;
+
+}
+
+/// This branch action tracks and reports position of the current focus box.
+class FindFocusBoxAction : BranchAction, Publisher!(Optional!Rectangle) {
+
+    import fluid.node;
+
+    public {
+
+        /// System holding the focused node in question.
+        FocusIO focusIO;
+
+        /// Focus box reported by the node, if any. Use `.then((Rectangle) { ... })` to get the focus box the moment
+        /// it is found.
+        Optional!Rectangle focusBox;
+
+    }
+
+    private {
+
+        Subscriber!(Optional!Rectangle) _onFinishRectangle;
+
+    }
+
+    /// Prepare the action. To work, it needs to know the `FocusIO` it will search in.
+    /// At this point it can be omitted, but it has to be set before the action launches.
+    this(FocusIO focusIO = null) {
+
+        this.focusIO = focusIO;
+
+    }
+
+    alias then = typeof(super).then;
+    alias then = Publisher!(Optional!Rectangle).then;
+
+    alias subscribe = typeof(super).subscribe;
+
+    override void subscribe(Subscriber!(Optional!Rectangle) subscriber) {
+
+        assert(_onFinishRectangle is null, "Subscriber already connected.");
+        _onFinishRectangle = subscriber;
+
+    }
+
+    override void started() {
+
+        assert(focusIO !is null, "FindFocusBoxAction launched without assigning focusIO");
+
+        this.focusBox = Optional!Rectangle();
+
+    }
+
+    override void beforeDraw(Node node, Rectangle, Rectangle, Rectangle inner) {
+
+        // Only the focused node matters
+        if (cast(Node) focusIO.currentFocus != node) return;
+
+        this.focusBox = node.focusBox(inner);
+        stop;
+
+    }
+
+    override void stopped() {
+
+        super.stopped();
+
+        if (_onFinishRectangle) {
+            _onFinishRectangle(focusBox);
+        }
+
+    }
+    
+}
+
+/// Using FindFocusBoxAction.
+@("FindFocusBoxAction setup example")
+unittest {
+
+    import fluid.node;
+    import fluid.space;
+
+    class MyNode : Space {
+
+        FocusIO focusIO;
+        FindFocusBoxAction findFocusBoxAction;
+
+        this(Node[] nodes...) {
+            super(nodes);
+            this.findFocusBoxAction = new FindFocusBoxAction;
+        }
+
+        override void resizeImpl(Vector2 space) {
+
+            require(focusIO);
+            findFocusBoxAction.focusIO = focusIO;
+            
+            super.resizeImpl(space);
+
+        }
+
+        override void drawImpl(Rectangle outer, Rectangle inner) {
+
+            // Start the action before drawing nodes
+            auto frame = startBranchAction(findFocusBoxAction);
+            super.drawImpl(outer, inner);
+
+            // Inspect the result
+            auto result = findFocusBoxAction.focusBox;
+
+        }
+
+    }
 
 }
