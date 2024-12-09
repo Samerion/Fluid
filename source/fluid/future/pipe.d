@@ -186,7 +186,7 @@ if (!is(Output == void)) {
             subscribe(
                 pipe((Output output) { 
                     static foreach (Publisher; Publishers) {
-                        next(output)
+                        (cast(Publisher) next(output))
                             .subscribe(cast(SubscriberOf!Publisher) result);
                     }
                 })

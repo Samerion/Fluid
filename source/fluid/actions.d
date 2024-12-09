@@ -7,6 +7,8 @@ import fluid.input;
 import fluid.scroll;
 import fluid.backend;
 
+import fluid.io.focus;
+
 import fluid.future.pipe;
 
 
@@ -359,9 +361,7 @@ OrderedFocusAction focusPrevious(Node node, Node branch, bool wrap = true) {
     return action;
 }
 
-final class OrderedFocusAction : TreeAction {
-
-    import fluid.io.focus;
+final class OrderedFocusAction : TreeAction, Publisher!Focusable, Publisher!Node {
 
     public {
 
@@ -377,6 +377,13 @@ final class OrderedFocusAction : TreeAction {
 
     }
 
+    protected {
+
+        Subscriber!Focusable onFinishFocusable;
+        Subscriber!Node onFinishNode;
+
+    }
+
     private {
 
         /// Last focusable node in the branch, first focusable node in the branch. Updates as the node iterates.
@@ -387,8 +394,31 @@ final class OrderedFocusAction : TreeAction {
 
     }
 
+    alias then = typeof(super).then;
+    alias then = Publisher!Node.then;
+    alias then = Publisher!Focusable.then;
+
     this(Node target, bool isReverse = false, bool wrap = true) {
         reset(target, isReverse, wrap);
+    }
+
+    override void clearSubscribers() {
+
+        super.clearSubscribers();
+        this.onFinishFocusable = null;
+
+    }
+
+    override void subscribe(Subscriber!Focusable subscriber)
+    in (onFinishFocusable is null, "Subscriber!Focusable is already connected")
+    do {
+        onFinishFocusable = subscriber;
+    }
+
+    override void subscribe(Subscriber!Node subscriber)
+    in (onFinishNode is null, "Subscriber!Node is already connected")
+    do {
+        onFinishNode = subscriber;
     }
 
     /// Re-arm the action.
@@ -400,6 +430,7 @@ final class OrderedFocusAction : TreeAction {
         this._firstFocusable = null;
         this._previousFocusable = null;
         this._nextFocusable = null;
+        clearSubscribers();
     }
 
     override void beforeDraw(Node node, Rectangle) {
@@ -438,7 +469,8 @@ final class OrderedFocusAction : TreeAction {
 
     }
 
-    override void afterTree() {
+    /// Returns: If the action finished, the focusable that was found and focused.
+    Focusable result() {
 
         // Selecting previous or next node
         auto result = isReverse
@@ -452,12 +484,26 @@ final class OrderedFocusAction : TreeAction {
                 : _firstFocusable;
         }
 
+        return result;
+
+    }
+
+    override void afterTree() {
+
         // Found a result!
-        if (result) {
+        if (auto result = this.result) {
             result.focus();
         }
 
         stop;
+
+    }
+
+    override void stopped() {
+
+        super.stopped();
+        if (onFinishFocusable) onFinishFocusable(this.result);
+        if (onFinishNode) onFinishNode(cast(Node) this.result);
 
     }
 

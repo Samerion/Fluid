@@ -1,6 +1,8 @@
 /// 
 module fluid.focus_space;
 
+import optional;
+
 import fluid.node;
 import fluid.space;
 import fluid.types;
@@ -140,32 +142,46 @@ class FocusSpace : Space, FocusIO {
 
     }
 
-    /// Focus the next or previous node, relative to the one that is currently focused.
+    /// `focusNext` focus the next, and `focusPrevious` focuses the previous node, relative to the one 
+    /// that is currently focused.
+    ///
     /// Params:
     ///     isReverse = Reverse direction; if true, focuses the previous node.
     /// Returns:
-    ///     Tree action that changes the f
-    @(FluidInputAction.focusNext)
-    bool focusNext(FluidInputAction action = FluidInputAction.focusNext) {
-
-        const isReverse = action == FluidInputAction.focusPrevious;
+    ///     Tree action that switches focus to the previous, or next node.
+    ///     If no node is currently focused, returns nothing.
+    Optional!OrderedFocusAction focusNext(bool isReverse = false) {
 
         auto focus = cast(Node) currentFocus;
 
-        if (focus is null) return false;
+        if (focus is null) return Optional!OrderedFocusAction();
 
         // Switch focus
         orderedFocusAction.reset(focus, isReverse);
         startAction(orderedFocusAction);
 
-        return true;
+        return some(orderedFocusAction);
+
+    }
+
+    /// ditto
+    Optional!OrderedFocusAction focusPrevious() {
+
+        return focusNext(true);
+
+    }
+
+    @(FluidInputAction.focusNext)
+    bool focusNext(FluidInputAction) {
+
+        return !focusNext().empty;
 
     }
 
     @(FluidInputAction.focusPrevious)
-    bool focusPrevious() {
+    bool focusPrevious(FluidInputAction) {
 
-        return focusNext(FluidInputAction.focusPrevious);
+        return !focusPrevious().empty;
 
     }
 

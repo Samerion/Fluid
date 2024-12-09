@@ -125,3 +125,27 @@ unittest {
     assert(root.isFocused(buttons[0]));
 
 }
+@("FocusSpace supports tabbing (chained)")
+unittest {
+
+    Button[3] buttons;
+
+    auto root = focusSpace(
+        buttons[0] = button("One", delegate { }),
+        buttons[1] = button("Two", delegate { }),
+        buttons[2] = button("Three", delegate { }),
+    );
+    auto test = testSpace(root);
+    test.draw();
+    buttons[0].focus();
+    assert(root.isFocused(buttons[0]));
+    test.runUntil(
+        root.focusNext.front
+            .then((Node a) => assert(a == buttons[1]))
+            .then(() => root.focusNext.front)
+            .then((Node a) => assert(a == buttons[2]))
+            .then(() => root.focusNext.front)
+            .then((Node a) => assert(a == buttons[0]))
+    );
+
+}
