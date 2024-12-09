@@ -5,6 +5,7 @@ import fluid.node;
 import fluid.space;
 import fluid.types;
 import fluid.utils;
+import fluid.actions;
 
 import fluid.io.focus;
 import fluid.io.action;
@@ -23,6 +24,13 @@ class FocusSpace : Space, FocusIO {
 
     ActionIO actionIO;
 
+    protected {
+
+        /// Action used to switch focus between nodes
+        OrderedFocusAction orderedFocusAction;
+
+    }
+
     private {
 
         Focusable _focus;
@@ -33,6 +41,7 @@ class FocusSpace : Space, FocusIO {
     this(Node[] nodes...) {
 
         super(nodes);
+        orderedFocusAction = new OrderedFocusAction(null);
 
     }
 
@@ -88,23 +97,29 @@ class FocusSpace : Space, FocusIO {
     /// Does nothing if no node has focus.
     ///
     /// Params:
-    ///     action   = Input action for the node to handle.
+    ///     actionID = Input action for the node to handle.
     ///     isActive = If true (default) the action is active, on top of being simply emitted. 
     ///         Most handlers only react to active actions.
     /// Returns:
     ///     True if the action was handled.
     ///     Consequently, `wasInputAction` will be set to true.
-    bool runInputAction(InputActionID action, bool isActive = true) {
+    bool runInputAction(InputActionID actionID, bool isActive = true) {
 
         // Do nothing if there is no focus
         if (_focus is null) return false;
 
         // Run the action, and mark input as handled
-        if (_focus.actionImpl(action, isActive)) {
+        if (_focus.actionImpl(actionID, isActive)) {
             _wasInputHandled = true;
             return true;
         }
 
+        // Run local input actions
+        if (runLocalInputActions(actionID, isActive)) {
+            _wasInputHandled = true;
+            return true;
+        }
+        
         return false;
 
     }
@@ -115,6 +130,42 @@ class FocusSpace : Space, FocusIO {
         const id = inputActionID!action;
 
         return runInputAction(id, isActive);
+
+    }
+
+    /// Run an input action implemented by this node. These usually perform focus switching
+    protected bool runLocalInputActions(InputActionID actionID, bool isActive = true) {
+
+        return runInputActionHandler(this, actionID, isActive);
+
+    }
+
+    /// Focus the next or previous node, relative to the one that is currently focused.
+    /// Params:
+    ///     isReverse = Reverse direction; if true, focuses the previous node.
+    /// Returns:
+    ///     Tree action that changes the f
+    @(FluidInputAction.focusNext)
+    bool focusNext(FluidInputAction action = FluidInputAction.focusNext) {
+
+        const isReverse = action == FluidInputAction.focusPrevious;
+
+        auto focus = cast(Node) currentFocus;
+
+        if (focus is null) return false;
+
+        // Switch focus
+        orderedFocusAction.reset(focus, isReverse);
+        startAction(orderedFocusAction);
+
+        return true;
+
+    }
+
+    @(FluidInputAction.focusPrevious)
+    bool focusPrevious() {
+
+        return focusNext(FluidInputAction.focusPrevious);
 
     }
 

@@ -113,12 +113,15 @@ unittest {
     assert(root.isFocused(buttons[0]));
 
     root.runInputAction!(FluidInputAction.focusNext);
+    root.draw();
     assert(root.isFocused(buttons[1]));
 
     root.runInputAction!(FluidInputAction.focusNext);
+    root.draw();
     assert(root.isFocused(buttons[2]));
 
     root.runInputAction!(FluidInputAction.focusNext);
+    root.draw();
     assert(root.isFocused(buttons[0]));
 
 }
