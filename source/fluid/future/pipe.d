@@ -278,8 +278,6 @@ if (IPipes.length != 0) {
         }
 
         void opCall(PipeContent!IPipe content) {
-            import std.stdio;
-            debug writeln(subscribers[i]);
             if (subscribers[i]) {
                 subscribers[i](content);
             }
