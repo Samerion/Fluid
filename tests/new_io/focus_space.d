@@ -205,3 +205,37 @@ unittest {
 
 }
 
+@("FocusSpace tabbing wraps")
+unittest {
+
+    Button[3] buttons;
+    auto root = focusSpace(
+        buttons[0] = button("One", delegate { }),
+        vspace(
+            buttons[1] = button("Two", delegate { }),
+        ),
+        buttons[2] = button("Three", delegate { }),
+    );
+
+    root.focusNext()
+        .then(node => assert(node == buttons[0]))
+        .then(()   => root.focusNext())
+        .then(node => assert(node == buttons[1]))
+        .then(()   => root.focusNext())
+        .then(node => assert(node == buttons[2]))
+        .then(()   => root.focusNext())
+        .then(node => assert(node == buttons[0]))
+        .runWhileDrawing(root, 4);
+
+    root.clearFocus();
+    root.focusPrevious()
+        .then(node => assert(node == buttons[2]))
+        .then(()   => root.focusPrevious())
+        .then(node => assert(node == buttons[1]))
+        .then(()   => root.focusPrevious())
+        .then(node => assert(node == buttons[0]))
+        .then(()   => root.focusPrevious())
+        .then(node => assert(node == buttons[2]))
+        .runWhileDrawing(root, 4);
+
+}
