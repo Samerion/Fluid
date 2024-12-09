@@ -7,10 +7,11 @@ import fluid.node;
 import fluid.space;
 import fluid.types;
 import fluid.utils;
-import fluid.actions;
 
 import fluid.io.focus;
 import fluid.io.action;
+
+import fluid.future.action;
 
 @safe:
 
