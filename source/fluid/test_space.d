@@ -201,23 +201,31 @@ class TestSpace : Space, CanvasIO {
     /// Params:
     ///     endCondition = This can be a delegate, in which case the loop will stop once the return value is `true`.
     ///         It can also be a `Publisher`, in which case the moment it emits en event, the event loop will finish.
-    void runUntil(bool delegate() @safe endCondition) {
+    /// Returns:
+    ///     Number of frames that were drawn.
+    int runUntil(bool delegate() @safe endCondition) {
 
+        int i;
         while (!endCondition()) {
             draw();
+            i++;
         }
+        return i;
 
     }
 
     /// ditto
-    void runUntil(Publisher!() endCondition) {
+    int runUntil(Publisher!() endCondition) {
 
+        int i;
         bool finished;
         endCondition.then(() => finished = true);
 
         while (!finished) {
             draw();
+            i++;
         }
+        return i;
 
     }
 

@@ -1154,6 +1154,8 @@ abstract class Node {
 
     }
 
+    alias focusBox = focusBoxImpl;
+
     /// Get the current style.
     Style pickStyle() {
 
