@@ -6,16 +6,17 @@ import std.traits;
 import std.string;
 import std.algorithm;
 
-import fluid.backend;
+import fluid.io;
 import fluid.tree;
 import fluid.style;
 import fluid.utils;
 import fluid.input;
 import fluid.actions;
 import fluid.structs;
+import fluid.backend;
 import fluid.theme : Breadcrumbs;
 
-import fluid.io;
+import fluid.future.pipe;
 import fluid.future.context;
 import fluid.future.branch_action;
 
@@ -1307,5 +1308,30 @@ ref RunCallback mockRun() {
 
     static RunCallback callback;
     return callback;
+
+}
+
+/// Draw the node in a loop until an event happens.
+///
+/// This is useful for testing. A chain of tree actions can be finished off with a call to this function
+/// to ensure it will finish after a frame or few.
+///
+/// Params:
+///     publisher = Publisher to subscribe to. If the publisher emits an event, drawing will stop and this
+///         function will return.
+///     node      = Node to draw in loop.
+/// Returns:
+///     Number of frames that were drawn as a consequence.
+int runWhileDrawing(Publisher!() publisher, Node node) {
+
+    int i;
+    bool finished;
+    publisher.then(() => finished = true);
+
+    while (!finished) {
+        node.draw();
+        i++;
+    }
+    return i;
 
 }
