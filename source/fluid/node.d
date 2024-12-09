@@ -957,7 +957,7 @@ abstract class Node {
     }
 
     /// Switch to the previous or next focused item
-    @(FluidInputAction.focusPrevious,FluidInputAction.focusNext)
+    @(FluidInputAction.focusPrevious, FluidInputAction.focusNext)
     protected void focusPreviousOrNext(FluidInputAction actionType) {
 
         auto direction = tree.focusDirection;
