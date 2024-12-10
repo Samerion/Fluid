@@ -1,6 +1,7 @@
 module new_io.focus_space;
 
 import fluid;
+import fluid.future.pipe;
 
 @safe:
 
@@ -237,5 +238,42 @@ unittest {
         .then(()   => root.focusPrevious())
         .then(node => assert(node == buttons[2]))
         .runWhileDrawing(root, 4);
+
+}
+
+@("FocusSpace supports directional movement")
+unittest {
+
+    Button[5] buttons;
+    auto root = focusSpace(
+        buttons[0] = button("Zero", delegate { }),
+        hspace(
+            buttons[1] = button("One", delegate { }),
+            buttons[2] = button("Two", delegate { }),
+            buttons[3] = button("Three", delegate { }),
+        ),
+        buttons[4] = button("Four", delegate { }),
+    );
+
+    root.currentFocus = buttons[0];
+    root.draw();
+
+    // Vertical focus
+    root.focusBelow().thenAssertEquals(buttons[1])
+        .then(() => root.focusBelow).thenAssertEquals(buttons[4])
+        .then(() => root.focusAbove).thenAssertEquals(buttons[1])
+
+        // Horizontal
+        .then(() => root.focusToRight)
+        .thenAssertEquals(buttons[2])
+        .then(() => root.focusToRight)
+        .thenAssertEquals(buttons[3])
+        .then(() => root.focusToRight)
+        .thenAssertEquals(buttons[3])
+
+        // Vertical, again
+        .then(() => root.focusAbove)
+        .thenAssertEquals(buttons[0])
+        .runWhileDrawing(root, 8);
 
 }
