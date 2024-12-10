@@ -145,19 +145,19 @@
 				"fluid-tree-sitter": "~>0.1.6",
 				"fluid-tree-sitter:d": "~>0.1.6"
 			},
-			"environments-linux": {
+			"environments": {
 				"BINDBC_FREETYPE_PACKAGE_DIR": "$BINDBC_FREETYPE_PACKAGE_DIR",
 				"BINDBC_LOADER_PACKAGE_DIR": "$BINDBC_LOADER_PACKAGE_DIR",
+				"OPTIONAL_PACKAGE_DIR": "$OPTIONAL_PACKAGE_DIR",
+				"BOLTS_PACKAGE_DIR": "$BOLTS_PACKAGE_DIR"
+			},
+			"environments-linux": {
 				"FLUID_LIBPATH": "$FLUID_PACKAGE_DIR/libraries/ubuntu"
 			},
 			"environments-osx": {
-				"BINDBC_FREETYPE_PACKAGE_DIR": "$BINDBC_FREETYPE_PACKAGE_DIR",
-				"BINDBC_LOADER_PACKAGE_DIR": "$BINDBC_LOADER_PACKAGE_DIR",
 				"FLUID_LIBPATH": "$FLUID_PACKAGE_DIR/libraries/macos"
 			},
 			"environments-windows": {
-				"BINDBC_FREETYPE_PACKAGE_DIR": "$BINDBC_FREETYPE_PACKAGE_DIR",
-				"BINDBC_LOADER_PACKAGE_DIR": "$BINDBC_LOADER_PACKAGE_DIR",
 				"FLUID_LIBPATH": "$FLUID_PACKAGE_DIR/libraries/windows"
 			},
 			"name": "module-view",

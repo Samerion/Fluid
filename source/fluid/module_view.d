@@ -116,6 +116,8 @@ shared static this() {
         "../source",
         environment.get("BINDBC_FREETYPE_PACKAGE_DIR").buildPath("source"),
         environment.get("BINDBC_LOADER_PACKAGE_DIR").buildPath("source"),
+        environment.get("OPTIONAL_PACKAGE_DIR").buildPath("source"),
+        environment.get("BOLTS_PACKAGE_DIR").buildPath("source"),
     ];
     version (Windows) {
         fluidExtraFlags = [
