@@ -535,7 +535,6 @@ abstract class Node {
         /// Area to render on
         const viewport = Rectangle(0, 0, space.x, space.y);
 
-
         // Run beforeTree actions
         foreach (action; tree.filterActions) {
 
