@@ -3,6 +3,7 @@ module fluid.future.pipe;
 
 import std.meta;
 import std.traits;
+import std.typecons;
 
 @safe:
 
@@ -269,8 +270,6 @@ unittest {
 class MultiPublisherImpl(IPipes...) : staticMap!(PublisherSubscriberPair, IPipes)
 if (IPipes.length != 0) {
 
-    import std.typecons : Tuple;
-
     // Tuple isn't strictly necessary here, but it fixes LDC builds
     private Tuple!(staticMap!(SubscriberOf, IPipes)) subscribers;
 
@@ -402,4 +401,95 @@ struct Event(T...) {
 
     }
 
+}
+
+/// Get the Publisher interfaces that can output a value that shares a common type with `Inputs`.
+template PublisherType(Publisher, Inputs...) {
+
+    alias Result = AliasSeq!();
+
+    // Check each publisher
+    static foreach (P; AllPublishers!Publisher) {
+
+        // See if its type can cast to the inputs
+        static if (is(Inputs : PipeContent!P) || is(PipeContent!P : Inputs)) {
+            Result = AliasSeq!(Result, P);
+        }
+
+    }
+
+    alias PublisherType = Result;
+
+}
+
+/// Connect to a publisher and assert the values it sends equal the one attached.
+AssertPipe!(PipeContent!(PublisherType!(T, Inputs)[0])) thenAssertEquals(T, Inputs...)(T publisher, Inputs value,
+    string file = __FILE__, size_t lineNumber = __LINE__)
+if (PublisherType!(T, Inputs).length != 0) {
+
+    auto pipe = new typeof(return)(value, file, lineNumber);
+    publisher.subscribe(pipe);
+    return pipe;
+
+}
+
+class AssertPipe(Ts...) : Subscriber!Ts, Publisher!(), Publisher!Ts
+if (Ts.length != 0) {
+
+    public {
+
+        /// Value this pipe expects to receive.
+        Tuple!Ts expected;
+        string file;
+        size_t lineNumber;
+
+    }
+
+    private {
+
+        Event!() _eventEmpty;
+        Event!Ts _event;
+
+    }
+
+    this(Ts expected, string file = __FILE__, size_t lineNumber = __LINE__) {
+        this.expected = expected;
+        this.file = file;
+        this.lineNumber = lineNumber;
+    }
+
+    override void subscribe(Subscriber!() subscriber) {
+        _eventEmpty ~= subscriber;
+    }
+
+    override void subscribe(Subscriber!Ts subscriber) {
+        _event ~= subscriber;
+    }
+
+    override void opCall(Ts received) {
+
+        import std.conv;
+        import std.exception;
+        import core.exception;
+
+        // Direct comparison for nodes to ensure safety on older compilers
+        static if (is(Inputs == AliasSeq!Node)) {
+            enforce!AssertError(expected[0].opEquals(received), 
+                text("Expected ", expected.expand, ", but received ", received),
+                file,
+                lineNumber);
+        }
+        else {
+            enforce!AssertError(expected == tuple(received), 
+                text("Expected ", expected.expand, ", but received ", received),
+                file,
+                lineNumber);
+        }
+
+        _event(received);
+        _eventEmpty();
+
+    }
+    
+    
 }
