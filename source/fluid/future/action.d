@@ -219,6 +219,9 @@ final class PositionalFocusAction : FocusSearchAction {
         /// Direction of search.
         Style.Side direction;
 
+        /// Focus box of the located node.
+        Rectangle resultFocusBox;
+
     }
 
     private {
@@ -259,11 +262,16 @@ final class PositionalFocusAction : FocusSearchAction {
         this.target = target;
         this.focusBox = focusBox;
         this.direction = direction;
+        this.resultFocusBox = focusBox;
         clearSubscribers();
     }
 
     override void beforeTree(Node node, Rectangle rectangle) {
-
+        this.result = null;
+        this.priority = 0;
+        this.priorityDirection = 1;
+        this.depth = 0;
+        this.lastDepth = 0;
     }
 
     override void beforeDraw(Node node, Rectangle) {
@@ -283,6 +291,9 @@ final class PositionalFocusAction : FocusSearchAction {
         // Set priority
         priority += priorityDirection * abs(depth - lastDepth);
         lastDepth = depth;
+
+        // Stop if priority starts sinking
+        if (result && priorityDirection < 0 && priority < resultPriority) stop;
 
         // Ignore nodes that don't accept focus
         if (!focusable) return;
@@ -315,6 +326,7 @@ final class PositionalFocusAction : FocusSearchAction {
             result = node;
             resultPriority  = priority;
             resultDistance2 = dist;
+            resultFocusBox  = box;
 
         }
 

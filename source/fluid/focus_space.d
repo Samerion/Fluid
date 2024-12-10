@@ -112,6 +112,12 @@ class FocusSpace : Space, FocusIO {
         _wasInputHandled = false;
         super.drawImpl(outer, inner);
 
+        // If positional focus action is running, it is about to finish;
+        // Read the focus box it found
+        if (positionalFocusAction.result && !positionalFocusAction.toStop) {
+            lastFocusBox = positionalFocusAction.resultFocusBox;
+        }
+
     }
 
     /// Handle an input action using the currently focused node.
