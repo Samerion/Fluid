@@ -18,7 +18,7 @@ import fluid.future.pipe;
 /// Abstract class for tree actions that find and return a node.
 abstract class NodeSearchAction : TreeAction, Publisher!Node {
 
-    protected {
+    public {
 
         /// Node this action has found.
         Node result;
