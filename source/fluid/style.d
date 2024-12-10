@@ -668,3 +668,124 @@ unittest {
     io.assertRectangle(Rectangle(796, 0, 1, 600), border = multiply(border, color!"aaaa"));
 
 }
+
+/// Check if a rectangle is located above (`isAbove`), below (`isBelow`), to the left (`isToLeft`) or to the right 
+/// (`isToRight`) of another rectangle.
+///
+/// The four functions wrap `isBeyond` which accepts a `Side` argument to specify direction at runtime.
+///
+/// Params:
+///     subject   = Rectangle subject to the query. "Is *this* rectangle above the other?"
+///     reference = Rectangle used as reference.
+///     side      = If using `isBeyond`, the direction the subject is expected to be in relation to the other.
+bool isAbove(Rectangle subject, Rectangle reference) {
+    return isBeyond(subject, reference, Style.Side.top);
+}
+
+/// ditto
+bool isBelow(Rectangle subject, Rectangle reference) {
+    return isBeyond(subject, reference, Style.Side.bottom);
+}
+
+/// ditto
+bool isToLeft(Rectangle subject, Rectangle reference) {
+    return isBeyond(subject, reference, Style.Side.left);
+}
+
+/// ditto
+bool isToRight(Rectangle subject, Rectangle reference) {
+    return isBeyond(subject, reference, Style.Side.right);
+}
+
+/// ditto
+bool isBeyond(Rectangle subject, Rectangle reference, Style.Side side) {
+
+    // Distance between box sides facing each other.
+    // To illustrate, we're checking if the subject is to the right of the reference box:
+    // (side = right, side.reverse = left)
+    //
+    // ↓ reference     ↓ subject
+    // +------+        +======+
+    // |      |        |      |
+    // |      | ~~~~~~ |      |
+    // |      |        |      |
+    // +------+        +======+
+    //   side ↑        ↑ side.reverse
+    const distanceExternal = reference.getSide(side) - subject.getSide(side.reverse);
+
+    // Distance between corresponding box sides.
+    //
+    // ↓ reference     ↓ subject
+    // +------+        +======+
+    // |      |        :      |
+    // |      | ~~~~~~~~~~~~~ |
+    // |      |        :      |
+    // +------+        +======+
+    //   side ↑          side ↑
+    const distanceInternal = reference.getSide(side) - subject.getSide(side);
+
+    // The condition for the return value to be true, is for distanceInternal to be greater than distanceExternal.
+    // This is not the case in the opposite situation.
+    //
+    // For example, if we're checking if the subject is on the *right* of reference:
+    //
+    // trueish scenario:                                 falseish scenario:
+    // Subject is to the right of reference              Subject is the left of reference
+    //
+    // ↓ reference     ↓ subject                         ↓ subject       ↓ reference
+    // +------+        +======+                          +======+        +------+
+    // |      | ~~~~~~ :      | external                 | ~~~~~~~~~~~~~~~~~~~~ | external
+    // |      |        :      |    <                     |      :        :      |    >
+    // |      | ~~~~~~~~~~~~~ | internal                 |      : ~~~~~~~~~~~~~ | internal
+    // +------+        +======+                          +======+        +------+
+    //   side ↑        ↑ side.reverse                      side ↑          side ↑
+    const condition = abs(distanceInternal) > abs(distanceExternal);
+
+    // ↓ subject                There is an edgecase though. If one box entirely overlaps the other on one axis, 
+    // +====================+   it will be simultaneously to the left, and to the right, creating an ambiguity.
+    // |   ↓ reference      |   
+    // |   +------------+   |   This is unwated in scenarios like focus switching. A scrollbar placed to the right
+    // |   |            |   |   of the page, should be focused by the right key, not by up or down.
+    // +===|            |===+   
+    //     |            |       For this reason, we require both `distanceInternal` and `distanceExternal` to have
+    //     +------------+       the same sign, as it normally would, but not in case of an overlap.
+    return condition
+        && distanceInternal * distanceExternal >= 0;
+
+}
+
+/// Comparing two rectangles laid out in a column.
+unittest {
+
+    const rect1 = Rectangle(0,  0, 10, 10);
+    const rect2 = Rectangle(0, 20, 10, 10);
+
+    assert(rect1.isAbove(rect2));
+    assert(rect2.isBelow(rect1));
+
+    assert(!rect1.isBelow(rect2));
+    assert(!rect2.isAbove(rect1));
+    assert(!rect1.isToLeft(rect2));
+    assert(!rect2.isToLeft(rect1));
+    assert(!rect1.isToRight(rect2));
+    assert(!rect2.isToRight(rect1));
+
+}
+
+/// Comparing two rectangles laid out in a row.
+unittest {
+
+    const rect1 = Rectangle( 0, 0, 10, 10);
+    const rect2 = Rectangle(20, 0, 10, 10);
+
+    assert(rect1.isToLeft(rect2));
+    assert(rect2.isToRight(rect1));
+
+    assert(!rect1.isToRight(rect2));
+    assert(!rect2.isToLeft(rect1));
+    assert(!rect1.isAbove(rect2));
+    assert(!rect2.isAbove(rect1));
+    assert(!rect1.isBelow(rect2));
+    assert(!rect2.isBelow(rect1));
+
+}

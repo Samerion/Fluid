@@ -6,6 +6,7 @@ import optional;
 import fluid.node;
 import fluid.space;
 import fluid.types;
+import fluid.style;
 import fluid.utils;
 import fluid.actions;
 
@@ -30,8 +31,17 @@ class FocusSpace : Space, FocusIO {
 
     protected {
 
-        /// Action used to switch focus between nodes
+        /// Last known focus box, if any.
+        Optional!Rectangle lastFocusBox;
+
+        /// Focus box tracking action.
+        FindFocusBoxAction findFocusBoxAction;
+
+        /// Action used to switch focus by tabbing between nodes.
         OrderedFocusAction orderedFocusAction;
+
+        /// Action used for directional focus switching, usually with arrow keys.
+        PositionalFocusAction positionalFocusAction;
 
     }
 
@@ -45,7 +55,13 @@ class FocusSpace : Space, FocusIO {
     this(Node[] nodes...) {
 
         super(nodes);
-        orderedFocusAction = new OrderedFocusAction(null);
+        findFocusBoxAction    = new FindFocusBoxAction(this);
+        orderedFocusAction    = new OrderedFocusAction;
+        positionalFocusAction = new PositionalFocusAction;
+
+        // Track the current focus box
+        findFocusBoxAction
+            .then((Optional!Rectangle rect) => lastFocusBox = rect);
 
     }
 
@@ -90,6 +106,8 @@ class FocusSpace : Space, FocusIO {
     }
 
     override void drawImpl(Rectangle outer, Rectangle inner) {
+
+        auto frame = startBranchAction(findFocusBoxAction);
 
         _wasInputHandled = false;
         super.drawImpl(outer, inner);
@@ -141,7 +159,7 @@ class FocusSpace : Space, FocusIO {
 
     }
 
-    /// `focusNext` focus the next, and `focusPrevious` focuses the previous node, relative to the one 
+    /// `focusNext` focuses the next, and `focusPrevious` focuses the previous node, relative to the one 
     /// that is currently focused.
     ///
     /// Params:
@@ -178,40 +196,106 @@ class FocusSpace : Space, FocusIO {
 
     }
 
+    /// Directional focus: Switch focus from the currently focused node to another based on screen position.
+    ///
+    /// This launches a tree action that will find a candidate node and switch focus to it during the next frame.
+    /// Nodes that are the closest semantically (are in the same container node, or overall close in the tree) will
+    /// be chosen first; screen distance will be used when two nodes have the same weight.
+    /// 
+    /// Returns:
+    ///     The launched tree action. You can use `.then` to attach a callback that will run as soon as
+    ///     the node is found.
+    FocusSearchAction focusAbove() {
+        return focusDirection(Style.Side.top);
+    }
+
+    /// ditto
+    FocusSearchAction focusBelow() {
+        return focusDirection(Style.Side.bottom);
+    }
+
+    /// ditto
+    FocusSearchAction focusToLeft() {
+        return focusDirection(Style.Side.left);
+    }
+
+    /// ditto
+    FocusSearchAction focusToRight() {
+        return focusDirection(Style.Side.right);
+    }
+
+    /// ditto
+    FocusSearchAction focusDirection(Style.Side side) {
+
+        return lastFocusBox.match!(
+            (Rectangle focusBox) {
+
+                auto reference = cast(Node) currentFocus;
+
+                // No focus, no action to launch
+                if (reference is null) return null;
+
+                positionalFocusAction.reset(reference, focusBox, side);
+                startAction(positionalFocusAction);
+
+                return positionalFocusAction;
+
+            },
+            () => PositionalFocusAction.init,
+        );
+
+    }
+
     /// Focus the first (`focusFirst`), or the last node (`focusLast`) that exists inside the focus space.
     /// Returns:
     ///     Tree action that switches focus to the first, or the last node.
     ///     You can use `.then` on the returned action to run a callback the moment the focus switches.
     FocusSearchAction focusFirst() {
-
         // TODO cache this, or integrate into OrderedFocusAction?
         return focusRecurseChildren(this);
-
     }
 
     /// ditto
     FocusSearchAction focusLast() {
-
         auto action = focusRecurseChildren(this);
         action.isReverse = true;
         return action; 
-
     }
 
     @(FluidInputAction.focusNext)
     bool focusNext(FluidInputAction) {
-
         focusNext();
         return true;
-
     }
 
     @(FluidInputAction.focusPrevious)
     bool focusPrevious(FluidInputAction) {
-
         focusPrevious();
         return true;
+    }
 
+    @(FluidInputAction.focusUp)
+    bool focusUp() {
+        focusAbove();
+        return true;
+    }
+
+    @(FluidInputAction.focusDown)
+    bool focusDown() {
+        focusBelow();
+        return true;
+    }
+
+    @(FluidInputAction.focusLeft)
+    bool focusLeft() {
+        focusToLeft();
+        return true;
+    }
+
+    @(FluidInputAction.focusRight)
+    bool focusRight() {
+        focusToRight();
+        return true;
     }
 
     override void emitEvent(InputEvent event) {
