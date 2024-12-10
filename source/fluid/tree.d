@@ -315,9 +315,14 @@ abstract class TreeAction : Publisher!() {
 
         if (toStop) return;
 
+        // Perform the stop
         generation++;
         toStop = true;
         stopped();
+
+        // Reset state
+        _inStartNode = false;
+        _inTree      = false;
 
     }
 
