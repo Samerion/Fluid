@@ -269,7 +269,8 @@ unittest {
         .then(() => root.focusToRight)
         .thenAssertEquals(buttons[3])
         .then(() => root.focusToRight)
-        .thenAssertEquals(buttons[3])
+        .thenAssertEquals(null)
+        .then(() => assert(root.isFocused(buttons[3])))
 
         // Vertical, again
         .then(() => root.focusAbove)

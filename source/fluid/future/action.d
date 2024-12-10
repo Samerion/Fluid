@@ -292,9 +292,6 @@ final class PositionalFocusAction : FocusSearchAction {
         priority += priorityDirection * abs(depth - lastDepth);
         lastDepth = depth;
 
-        // Stop if priority starts sinking
-        if (result && priorityDirection < 0 && priority < resultPriority) stop;
-
         // Ignore nodes that don't accept focus
         if (!focusable) return;
 
@@ -306,6 +303,10 @@ final class PositionalFocusAction : FocusSearchAction {
 
         const box = node.focusBox(inner);
         const dist = distance2(box);
+
+
+        // Check if this node matches the direction
+        if (!box.isBeyond(focusBox, direction)) return;
 
         // Compare against previous best match
         if (result) {
@@ -319,16 +320,11 @@ final class PositionalFocusAction : FocusSearchAction {
 
         }
 
-        // Check if this node matches the direction
-        if (box.isBeyond(focusBox, direction)) {
-
-            // Replace the node
-            result = node;
-            resultPriority  = priority;
-            resultDistance2 = dist;
-            resultFocusBox  = box;
-
-        }
+        // Replace the node
+        result = node;
+        resultPriority  = priority;
+        resultDistance2 = dist;
+        resultFocusBox  = box;
 
     }
 
