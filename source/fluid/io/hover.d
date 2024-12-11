@@ -1,6 +1,8 @@
 /// This module implements interfaces for handling hover and connecting hoverable nodes with input devices.
 module fluid.io.hover;
 
+import fluid.types;
+
 import fluid.future.context;
 
 import fluid.io.action;
@@ -21,30 +23,150 @@ public import fluid.io.action : InputEvent, InputEventCode;
 /// hover a single node.
 interface HoverIO : IO {
 
+    /// Load a pointer (mouse cursor, finger) and place it at the posiion currently indicated in the struct.
+    ///
+    /// A pointer is loaded for the duration of the current frame. If the `load` call for a pointer isn't repeated
+    /// during a frame, it will be removed. The pointer's position must be set before the load call.
+    ///
+    /// For a mouse cursor, the pointer would be loaded and updated every frame. For a touchscreen, a pointer would be
+    /// maintained for every finger currently touching the screen.
+    ///
+    /// An example implementation of a pointer device, from inside of a node, could look like:
+    ///
+    /// ---
+    /// HoverIO hoverIO;
+    /// Pointer pointer;
+    ///
+    /// override void resizeImpl(Vector2) {
+    ///     require(hoverIO);
+    ///     minSize = Vector2();
+    /// }
+    /// 
+    /// override void drawImpl(Rectangle, Rectangle) {
+    /// 
+    ///     pointer.device = this;
+    ///     pointer.number = 0;
+    ///     pointer.position = mousePosition();
+    ///     load(mouseIO, pointer);
+    ///     if (clicked) {
+    ///         mouseIO.emitEvent(pointer, MouseIO.createEvent(MouseIO.Button.left, true));
+    ///     }
+    ///
+    /// }
+    /// ---
+    /// 
+    /// Params:
+    ///     pointer = Pointer to prepare.
+    ///         The pointer's `device` field should be set to whatever node represents this device,
+    ///         and the `number` field should be set to whatever number the device can associate with the pointer,
+    ///         if multiple pointers are to be used.
+    /// Returns:
+    ///     An ID the `HoverIO` system will use to recognize the pointer.
+    int load(Pointer pointer);
+
     /// Read an input event from an input device. Input devices will call this function every frame 
-    /// if an input event occurs.
+    /// if an input event (such as a button press) occurs. Moving a mouse does not qualify as an input event.
     ///
-    /// `HoverIO` will usually pass these down to an `ActionIO` system. It is up to `HoverIO` to decide how 
-    /// the input and the resulting input actions is handled, though the hovered node will most often receive
-    /// them.
+    /// The pointer emitting the event must have been loaded earlier (using `load`) during the same frame 
+    /// for the action to work.
     ///
-    /// Params:
-    ///     event = Input event the system should save.
-    void emitEvent(InputEvent event);
-
-    /// Returns:
-    ///     The currently hovered node, or `null` if no hoverable node is at the moment.
-    inout(Hoverable) currentHover() inout;
-
-    /// Change the currently hovered node to another.
-    ///
-    /// This function may frequently be passed `null` with the intent of clearing the hovered node.
+    /// `HoverIO` will usually pass these down to an `ActionIO` system. It is up to `HoverIO` to decide how
+    /// the input and the resulting input actions is handled, though the node hovered by the pointer will most 
+    /// often receive them.
     ///
     /// Params:
-    ///     newValue = Node to assign hover to.
+    ///     pointer = Pointer that emitted the event.
+    ///     event   = Input event the system should emit.
+    ///         The event is usually considered "active" during the frame the action is "released". For example,
+    ///         user stops holding a mouse button, or a finger stops touching the screen.
+    void emitEvent(Pointer pointer, InputEvent event);
+
+    /// List all currently hovered nodes.
+    /// Params:
+    ///     yield = A delegate to be called for every hovered node.
+    ///         If the delegate returns a non-zero value, the value should be returned.
     /// Returns:
-    ///     Node that was focused, to allow chaining assignments.
-    Hoverable currentHover(Hoverable newValue);
+    ///     If `yield` returned a non-zero value, this is the value it returned;
+    ///     if `yield` wasn't called, or has only returned zeroes, a zero is returned.
+    int opApply(int delegate(Hoverable) @safe yield);
+
+}
+
+/// A pointer is a position on the screen chosen by the user using a mouse, touchpad, touchscreen or other device
+/// capable of communicating some position.
+///
+/// While in a typical desktop application there will usually be a single pointer at a time, there can be cases
+/// where there may be none (no mouse connected) or more (multitouch-enabled screen, multiple mouses connected, etc.)
+///
+/// A pointer is associated with an I/O system that represents the device that invoked the pointer.
+/// This may be a dedicated mouse node, but it may also be a generic system that abstracts the device away;
+/// for example, Raylib provides a singular function for getting the mouse position without distinguishing
+/// between multiple devices or touchscreens.
+///
+/// For a pointer to work, it has to be loaded into a `HoverIO` system using its `load` method. This has to be done
+/// once a frame for as long as the pointer is active. This will be every frame for a mouse (if one is connected),
+/// or only the frames a finger is touching the screen for a touchscreen.
+///
+/// See_Also:
+///     `HoverIO`, `HoverIO.load`
+struct Pointer {
+
+    /// I/O system that represents the device controlling the pointer.
+    IO device;
+
+    /// If the device can control multiple pointers (like a touchscreen), this number should uniquely identify
+    /// a pointer.
+    int number;
+
+    /// Position in the window the pointer is pointing at.
+    Vector2 position;
+
+    /// `HoverIO` system controlling the pointer.
+    private HoverIO _hoverIO;
+
+    /// ID of the pointer assigned by the `HoverIO` system.
+    private int _id;
+
+    /// Compare two pointers
+    bool opEquals(const Pointer other) const {
+
+        // Do not compare I/O metadata
+        return device   == other.device
+            && number   == other.number
+            && position == other.position;
+
+    }
+
+    /// Returns: The ID/index assigned by `CanvasIO` when this image was loaded.
+    int id() const nothrow {
+        return this._id;
+    }
+
+    /// Load the pointer into the system.
+    void load(HoverIO hoverIO, int id) nothrow {
+
+        this._hoverIO = hoverIO;
+        this._id = id;
+
+    }
+
+    /// Emit an event through the pointer.
+    ///
+    /// The device should call this every frame an input event associated with the pointer occurs. This will be
+    /// when a mouse button is pressed, every frame a finger touches the screen, or when a gesture recognized
+    /// by the device or system is performed.
+    ///
+    /// Params:
+    ///     event = Event to emit.
+    ///         The event is usually considered "active" during the frame the action is "released". For example,
+    ///         user stops holding a mouse button, or a finger stops touching the screen.
+    /// See_Also: 
+    ///     `HoverIO.emitEvent`
+    void emitEvent(InputEvent event) {
+
+        _hoverIO.emitEvent(this, event);
+
+    }
 
 }
 
@@ -56,15 +178,9 @@ interface Hoverable : Actionable {
     ///     True if hover was handled, false if it was ignored.
     bool hoverImpl();
 
-    /// Mark this node as hovered.
-    ///
-    /// A node will usually redirect this call to `hoverIO.hover()`, but it might instead pass the status to another
-    /// hoverable node.
-    void hover();
-
     /// Returns: 
     ///     True if this node is hovered.
-    ///     This will most of the time be equivalent to `this == hoverIO.hover`, 
+    ///     This will most of the time be equivalent to `hoverIO.isHovered(this)`, 
     ///     but a node wrapping another hoverable may choose to instead redirect this to the other node.
     bool isHovered() const;
 
