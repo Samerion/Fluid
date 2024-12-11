@@ -131,7 +131,7 @@ struct Pointer {
     bool opEquals(const Pointer other) const {
 
         // Do not compare I/O metadata
-        return device   == other.device
+        return device.opEquals(cast(const Object) other.device)
             && number   == other.number
             && position == other.position;
 

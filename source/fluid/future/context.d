@@ -158,6 +158,8 @@ interface HasContext {
 
 interface IO : HasContext {
 
+    bool opEquals(const Object) const;
+
 }
 
 IOID ioID(T)()
