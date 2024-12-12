@@ -10,6 +10,7 @@ import fluid.actions;
 import fluid.io.focus;
 
 import fluid.future.pipe;
+import fluid.future.branch_action;
 
 @safe:
 
@@ -357,6 +358,43 @@ final class PositionalFocusAction : FocusSearchAction {
         const distanceOpposite = center(box) - center(focusBox);
 
         return distanceExternal^^2 + distanceOpposite^^2;
+
+    }
+
+}
+
+/// Find the topmost node that occupies the given position on the screen.
+///
+/// For backwards compatibility, this node is not currently registered as a `NodeSearchAction` and does not emit
+/// a node when done.
+final class NodeAtPointAction : BranchAction {
+
+    public {
+
+        /// If a node was found, this is the result.
+        Node result;
+
+        /// Position that is looked up.
+        Vector2 search;
+
+    }
+
+    this(Vector2 search = Vector2.init) {
+        this.search = search;
+    }
+
+    override void started() {
+        super.started();
+        this.result = null;
+    }
+
+    override void beforeDraw(Node node, Rectangle, Rectangle outer, Rectangle inner) {
+
+        // Check if the position is in bounds of the node
+        if (!node.inBounds(outer, inner, search)) return;
+
+        // Save the result
+        result = node;
 
     }
 

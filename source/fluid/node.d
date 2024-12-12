@@ -1113,6 +1113,8 @@ abstract class Node {
 
     /// Check if the node is hovered.
     ///
+    /// This function is currently being phased out in favor of the `obstructs` function.
+    ///
     /// This will be called right before drawImpl for each node in order to determine the which node should handle mouse
     /// input.
     ///
@@ -1124,6 +1126,39 @@ abstract class Node {
     protected bool hoveredImpl(Rectangle rect, Vector2 mousePosition) {
 
         return rect.contains(mousePosition);
+
+    }
+
+    /// Test if the specified point is the node's bounds. This is used to map screen positions to nodes,
+    /// such as when determining which nodes are hovered by mouse.
+    ///
+    /// While in a typical node this will be true for every pixel inside its padding box — and this
+    /// is the default behavior — some nodes are not of a rectangular shape, or contain largely 
+    /// transparent areas.
+    ///
+    /// User-provided implementation should override `inBoundsImpl`; calls testing the node's bounds should 
+    /// use `inBounds`.
+    ///
+    /// This is rarely used in nodes built into Fluid. A notable example where this is overriden
+    /// is `Space`, which always returns `false`, expecting children to block occupied areas. This makes
+    /// `Space` very handy for partially transparent overlays.
+    ///
+    /// Params:
+    ///     outer    = Padding box of the node.
+    ///     inner    = Content box of the node.
+    ///     position = Tested position.
+    /// Returns: 
+    ///     True if the position is in the node's bounds.
+    protected bool inBoundsImpl(Rectangle outer, Rectangle inner, Vector2 position) {
+
+        return hoveredImpl(outer, position);
+
+    }
+
+    /// ditto
+    final bool inBounds(Rectangle outer, Rectangle inner, Vector2 position) {
+
+        return !ignoreMouse && inBoundsImpl(outer, inner, position);
 
     }
 
