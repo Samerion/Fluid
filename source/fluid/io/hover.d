@@ -23,13 +23,14 @@ public import fluid.io.action : InputEvent, InputEventCode;
 /// hover a single node.
 interface HoverIO : IO {
 
-    /// Load a pointer (mouse cursor, finger) and place it at the posiion currently indicated in the struct.
+    /// Load a pointer (mouse cursor, finger) and place it at the position currently indicated in the struct.
+    /// Update the pointer's position if already loaded.
     ///
-    /// A pointer is loaded for the duration of the current frame. If the `load` call for a pointer isn't repeated
-    /// during a frame, it will be removed. The pointer's position must be set before the load call.
+    /// It is expected `load` will be called after every pointer motion in order to keep its position up to date.
     ///
-    /// For a mouse cursor, the pointer would be loaded and updated every frame. For a touchscreen, a pointer would be
-    /// maintained for every finger currently touching the screen.
+    /// A pointer is considered loaded until the next resize. If the `load` call for a pointer isn't repeated
+    /// during a resize, the pointer is invalidated. Pointers do not have to be loaded while resizing; they can 
+    /// also be loaded while drawing.
     ///
     /// An example implementation of a pointer device, from inside of a node, could look like:
     ///
@@ -121,6 +122,9 @@ struct Pointer {
     /// Position in the window the pointer is pointing at.
     Vector2 position;
 
+    /// True if the pointer is not currently pointing, like a finger that stopped touching the screen.
+    bool isDisabled;
+
     /// `HoverIO` system controlling the pointer.
     private HoverIO _hoverIO;
 
@@ -137,7 +141,7 @@ struct Pointer {
 
     }
 
-    /// Returns: The ID/index assigned by `CanvasIO` when this image was loaded.
+    /// Returns: The ID/index assigned by `HoverIO` when this pointer was loaded.
     int id() const nothrow {
         return this._id;
     }
