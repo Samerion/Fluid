@@ -5,6 +5,27 @@ import fluid;
 
 @safe:
 
+alias myImage = nodeBuilder!MyImage;
+class MyImage : Node {
+
+    CanvasIO canvasIO;
+    DrawableImage image;
+
+    this(Image image = Image.init) {
+        this.image = DrawableImage(image);
+    }
+
+    override void resizeImpl(Vector2 space) {
+        use(canvasIO);
+        load(canvasIO, image);
+    }
+
+    override void drawImpl(Rectangle outer, Rectangle inner) {
+        image.draw(inner);
+    }
+
+}
+
 @("TestSpace can perform basic tests with draws, drawsRectangle and doesNotDraw")
 unittest {
 
@@ -155,105 +176,132 @@ unittest {
 @("TestSpace can handle images")
 unittest {
 
-    static class MyImage : Space {
+    auto root = myImage();
+    auto test = testSpace(root);
 
-        CanvasIO canvasIO;
-        DrawableImage image;
+    // The image will be loaded and drawn
+    test.drawAndAssert(
+        root.drawsImage(root.image),
+    );
+    assert(test.countLoadedImages == 1);
 
-        override void resizeImpl(Vector2 space) {
-            use(canvasIO);
-            load(canvasIO, image);
-            super.resizeImpl(space);
-        }
+    // The image will not be loaded, but it will be kept alive
+    test.drawAndAssert(
+        root.drawsImage(root.image),
+    );
+    assert(test.countLoadedImages == 1);
 
-        override void drawImpl(Rectangle outer, Rectangle inner) {
-            image.draw(inner);
-        }
+    // Request a resize — same situation
+    test.updateSize();
+    test.drawAndAssert(
+        root.drawsImage(root.image),
+    );
+    assert(test.countLoadedImages == 1);
 
-    }
-    alias myImage = nodeBuilder!MyImage;
+    // Hide the node: the node won't resize and the image will be freed
+    root.hide();
+    test.drawAndAssertFailure(
+        root.isDrawn(),
+    );
+    assert(test.countLoadedImages == 0);
 
-    {
-        auto root = myImage();
-        auto test = testSpace(root);
+    // Show the node now and try again
+    root.show();
+    test.drawAndAssert(
+        root.drawsImage(root.image),
+    );
+    assert(test.countLoadedImages == 1);
 
-        // The image will be loaded and drawn
-        test.drawAndAssert(
-            root.drawsImage(root.image),
-        );
-        assert(test.countLoadedImages == 1);
+}
 
-        // The image will not be loaded, but it will be kept alive
-        test.drawAndAssert(
-            root.drawsImage(root.image),
-        );
-        assert(test.countLoadedImages == 1);
+@("TestSpace: Two nodes with the same image will share resources")
+unittest {
 
-        // Request a resize — same situation
-        test.updateSize();
-        test.drawAndAssert(
-            root.drawsImage(root.image),
-        );
-        assert(test.countLoadedImages == 1);
+    auto image1 = myImage();
+    auto image2 = myImage();
+    auto test = testSpace(image1, image2);
 
-        // Hide the node: the node won't resize and the image will be freed
-        root.hide();
-        test.drawAndAssertFailure(
-            root.isDrawn(),
-        );
-        assert(test.countLoadedImages == 0);
+    assert(image1.image == image2.image);
 
-        // Show the node now and try again
-        root.show();
-        test.drawAndAssert(
-            root.drawsImage(root.image),
-        );
-        assert(test.countLoadedImages == 1);
-    }
-    {
-        auto image1 = myImage();
-        auto image2 = myImage();
-        auto test = testSpace(image1, image2);
+    // Two nodes draw the same image — counts as one
+    test.drawAndAssert(
+        image1.drawsImage(image1.image),
+        image2.drawsImage(image2.image),
+    );
+    assert(test.countLoadedImages == 1);
 
-        assert(image1.image == image2.image);
+    // Hide one image
+    image1.hide();
+    test.drawAndAssert(
+        image2.drawsImage(image2.image),
+    );
+    test.drawAndAssertFailure(
+        image1.drawsImage(image1.image),
+    );
+    assert( test.isImageLoaded(image1.image));
+    assert( test.isImageLoaded(image2.image));
+    assert(test.countLoadedImages == 1);
 
-        // Two nodes draw the same image — counts as one
-        test.drawAndAssert(
-            image1.drawsImage(image1.image),
-            image2.drawsImage(image2.image),
-        );
-        assert(test.countLoadedImages == 1);
+    // Hide both — the images should unload
+    image2.hide();
+    test.drawAndAssertFailure(
+        image1.drawsImage(image1.image),
+    );
+    test.drawAndAssertFailure(
+        image2.drawsImage(image2.image),
+    );
+    assert(!test.isImageLoaded(image1.image));
+    assert(!test.isImageLoaded(image2.image));
+    assert(test.countLoadedImages == 0);
 
-        // Hide one image
-        image1.hide();
-        test.drawAndAssert(
-            image2.drawsImage(image2.image),
-        );
-        test.drawAndAssertFailure(
-            image1.drawsImage(image1.image),
-        );
-        assert(test.countLoadedImages == 1);
+    // Show one again
+    image2.show();
+    test.drawAndAssert(
+        image2.drawsImage(image2.image),
+    );
+    test.drawAndAssertFailure(
+        image1.drawsImage(image1.image),
+    );
+    assert( test.isImageLoaded(image2.image));
+    assert(test.countLoadedImages == 1);
 
-        // Hide both — the images should unload
-        image2.hide();
-        test.drawAndAssertFailure(
-            image1.drawsImage(image1.image),
-        );
-        test.drawAndAssertFailure(
-            image2.drawsImage(image2.image),
-        );
-        assert(test.countLoadedImages == 0);
+}
 
-        // Show one again
-        image2.show();
-        test.drawAndAssert(
-            image2.drawsImage(image2.image),
-        );
-        test.drawAndAssertFailure(
-            image1.drawsImage(image1.image),
-        );
-        assert(test.countLoadedImages == 1);
-    }
+@("TestSpace correctly manages lifetime of multiple resources")
+unittest {
+
+    auto image1 = myImage(
+        generateColorImage(4, 4, 
+            color("#f00")
+        )
+    );    
+    auto image2 = myImage(
+        generateColorImage(4, 4, 
+            color("#0f0")
+        )
+    );
+    auto root = testSpace(image1, image2);
+
+    // Draw both images
+    root.drawAndAssert(
+        image1.drawsImage(image1.image),
+        image2.drawsImage(image2.image),
+    );
+    assert(root.countLoadedImages == 2);
+    assert(root.isImageLoaded(image1.image));
+    assert(root.isImageLoaded(image2.image));
+
+    // Unload the second one
+    image1.hide();
+    root.drawAndAssert(
+        image2.drawsImage(image2.image),
+    );
+    root.drawAndAssertFailure(
+        image1.drawsImage(image1.image),
+    );
+    assert(root.countLoadedImages == 1);
+    assert(!root.isImageLoaded(image1.image));
+    assert( root.isImageLoaded(image2.image));
 
 }
 

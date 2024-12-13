@@ -64,14 +64,15 @@ class TestSpace : Space, CanvasIO {
     }
 
     /// Returns: True if the given image is loaded.
+    /// Params:
+    ///     image = Image to check.
     bool isImageLoaded(DrawableImage image) nothrow {
 
         const ptr = cast(size_t) image.data.ptr;
 
-        // Image is registered, OK
+        // Image is registered and up to date, OK
         if (auto index = ptr in _imageIndices) {
-            assert(*index == image.id, "Image index doesn't match assigned ID.");
-            return true;
+            return *index == image.id;
         }
 
         // Not loaded
