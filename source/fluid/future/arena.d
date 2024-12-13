@@ -1,6 +1,8 @@
 /// Provides an arena for keeping track of and periodically freeing unused resources.
 module fluid.future.arena;
 
+import optional;
+
 import std.array;
 import std.algorithm;
 
@@ -78,11 +80,18 @@ struct ResourceArena(T) {
 
     }
 
+    /// Returns: Number of all resources, active or not.
+    int resourceCount() const nothrow {
+
+        return cast(int) _resources[].length;
+
+    }
+
     /// List every resource in the arena.
     /// Returns: A range that lists every active resource.
-    auto opIndex() {
+    auto opIndex(this This)() nothrow {
 
-        return _resources
+        return _resources[]
             .filter!(a => a.lastCycle >= cycleNumber)
             .map!(a => a.value);
 
@@ -99,14 +108,64 @@ struct ResourceArena(T) {
         assert(arena.opIndex.equal([0, 1, 2]));
 
         // Observe the results as we reload the resources during the next cycle
-        foreach (_, __; arena.startCycle()) { }
-        assert(arena.opIndex.equal([]));
+        arena.startCycle((_, __) { });
+        assert(arena[].empty);
         arena.reload(0, 0);
-        assert(arena.opIndex.equal([0]));
+        assert(arena[].equal([0]));
         arena.reload(2, 2);
-        assert(arena.opIndex.equal([0, 2]));
+        assert(arena[].equal([0, 2]));
         arena.reload(1, 1);
-        assert(arena.opIndex.equal([0, 1, 2]));  // Order of insertion
+        assert(arena[].equal([0, 1, 2]));  // Order of insertion
+
+    }
+
+    /// Get a resource by its index.
+    /// Params:
+    ///     index = Index of the resource.
+    /// Returns:
+    ///     The resource, if active, or `none` if not.
+    Optional!T opIndex(int index) {
+
+        // Inactive
+        if (!isActive(index)) return Optional!T();
+
+        // Active
+        return Optional!T(_resources[][index].value);
+
+    }
+
+    /// Check if resource at given index is active; A resource is active if it has been loaded during this cycle. 
+    /// An active resource can be fetched using `opIndex`.
+    ///
+    /// For the looser variant, which would return true also if the resource is still loaded in arena,
+    /// even if not recently loaded, see `isAlive`.
+    ///
+    /// Params:
+    ///     index = Index to check.
+    /// Returns: 
+    ///     True if the resource is active: allocated, alive, ready to use.
+    bool isActive(int index) {
+
+        return isAlive(index)
+            && cycleNumber <= _resources[][index].lastCycle;
+
+    }
+
+    /// Check if the resource is still loaded in the area.
+    ///
+    /// This will return true as long as the resource hasn't expired yet, even if it hasn't been loaded during
+    /// this cycle. `isAlive` is intended for diagnostics and debugging, rather than practical usage. See `isActive`
+    /// for the stricter variant that will not return `true` for unloaded resources.
+    /// 
+    /// Params:
+    ///     index = Index to check.
+    /// Returns:
+    ///     True if the resource is alive, that is, hasn't expired, hasn't been unloaded, but also hasn't been
+    ///     loaded/used during this cycle.
+    bool isAlive(int index) {
+
+        // Any resource in bounds is alive
+        return index < _resources[].length;
 
     }
 
@@ -116,49 +175,38 @@ struct ResourceArena(T) {
     /// Resources that are kept alive, are moved to the start of the array, effectively changing their indices.
     /// Iterate on the return value to safely update your resources to use the new indices.
     ///
-    /// Returns:
-    ///     An iterator struct that frees unused resources and assigns new indices for existing resources.
-    ///     It produces a pair (index, resource) for every item that was freed or moved. For freed resources,
-    ///     the index is set to `-1`. 
+    /// Params:
+    ///     moved = A function that handles freeing and moving resources.
+    ///         It is called with a pair (index, resource) for every item that was freed or moved. 
+    ///         For freed resources, the index is set to `-1`. 
     /// See_Also:
     ///     `resourceLifetime`
-    auto startCycle() {
+    auto startCycle(scope void delegate(int index, ref T resource) @safe moved) {
 
-        @mustuse
-        struct Cycle {
+        int newIndex;
 
-            int opApply(int delegate(int index, T resource) @safe yield) {
+        foreach (oldIndex, ref resource; _resources[]) {
 
-                int newIndex;
-
-                foreach (oldIndex, resource; _resources[]) {
-
-                    // Free the resource if it has expired
-                    if (cycleNumber >= resource.lastCycle + resourceLifetime) {
-                        yield(-1, resource);
-                        continue;
-                    }
-
-                    // Still alive, but moved
-                    else if (oldIndex != newIndex) {
-                        _resources[][newIndex] = resource;
-                        yield(newIndex, resource);
-                    }
-
-                    // Still alive, keep the index up
-                    newIndex++;
-
-                }
-
-                // Truncate the array and advance to the next cycle
-                _resources.shrinkTo(newIndex);
-                cycleNumber++;
-
+            // Free the resource if it has expired
+            if (cycleNumber >= resource.lastCycle + resourceLifetime) {
+                moved(-1, resource.value);
+                continue;
             }
+
+            // Still alive, but moved
+            else if (oldIndex != newIndex) {
+                _resources[][newIndex] = resource;
+                moved(newIndex, _resources[][newIndex].value);
+            }
+
+            // Still alive, keep the index up
+            newIndex++;
 
         }
 
-        return Cycle();
+        // Truncate the array and advance to the next cycle
+        _resources.shrinkTo(newIndex);
+        cycleNumber++;
 
     }
 
@@ -174,7 +222,7 @@ struct ResourceArena(T) {
 
         void nextCycle() {
 
-            foreach (newIndex, resource; arena.startCycle) {
+            arena.startCycle((newIndex, ref resource) {
 
                 // Freed
                 if (newIndex == -1) {
@@ -185,14 +233,14 @@ struct ResourceArena(T) {
                     indices[resource] = newIndex;
                 }
 
-            }
+            });
 
         }
         
         // Start a cycle and remove "Two" from the arena
         nextCycle();
-        reload(indices["One"], "One");
-        reload(indices["Three"], "Three");
+        arena.reload(indices["One"], "One");
+        arena.reload(indices["Three"], "Three");
         assert(indices["One"]   == 0);
         assert(indices["Two"]   == 1);
         assert(indices["Three"] == 2);
@@ -216,8 +264,8 @@ struct ResourceArena(T) {
     ///     Index associated with the resource.
     int load(T resource) {
 
-        const index = _resources.length;
-        _resources ~= resource;
+        const index = cast(int) _resources[].length;
+        _resources ~= Resource(resource, cycleNumber);
         return index;
 
     }
