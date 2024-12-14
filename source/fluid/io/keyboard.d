@@ -62,6 +62,43 @@ interface KeyboardIO : IO {
 
     }
 
+    /// A shortcut for getting input events that are known at compile time. Handy for tests.
+    /// Params:
+    ///     isActive = True if the generated input event should be active. Defaults to `false` for `hold`,
+    ///         is `true` for `press`.
+    /// Returns: A keyboard key input event.
+    static press() {
+
+        return hold(true);
+
+    }
+
+    /// ditto
+    static hold(bool isActive = false) {
+
+        static struct Codes {
+            bool isActive;
+            InputEvent opDispatch(string name)() {
+                return createEvent(__traits(getMember, KeyboardIO.Key, name), isActive);
+            }
+        }
+
+        return Codes(isActive);
+
+    }
+
+    ///
+    @("KeyboardIO.hold resolves into input events")
+    unittest {
+
+        assert(KeyboardIO.hold.comma == KeyboardIO.createEvent(KeyboardIO.Key.comma, false));
+        assert(KeyboardIO.press.comma == KeyboardIO.createEvent(KeyboardIO.Key.comma, true));
+
+        assert(KeyboardIO.hold.slash == KeyboardIO.createEvent(KeyboardIO.Key.slash, false));
+        assert(KeyboardIO.press.slash == KeyboardIO.createEvent(KeyboardIO.Key.slash, true));
+
+    }
+
     enum Key {
         none               = 0,           // No key pressed
         apostrophe         = 39,          // '
