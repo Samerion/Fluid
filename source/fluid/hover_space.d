@@ -67,7 +67,7 @@ class HoverSpace : Space, HoverIO {
 
         // Found, update the pointer
         else {
-            auto updatedPointer = _pointers[index].front;
+            auto updatedPointer = _pointers[index];
             updatedPointer.value.update(pointer);
             updatedPointer.value.load(this, index);
             _pointers.reload(index, updatedPointer); 

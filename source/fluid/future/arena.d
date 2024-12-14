@@ -1,8 +1,6 @@
 /// Provides an arena for keeping track of and periodically freeing unused resources.
 module fluid.future.arena;
 
-import optional;
-
 import std.array;
 import std.algorithm;
 
@@ -160,17 +158,17 @@ struct ResourceArena(T) {
     }
 
     /// Get a resource by its index.
+    ///
+    /// This may return an expired resource, which can be then brought back to life
+    /// with an `update` call.
+    ///
     /// Params:
     ///     index = Index of the resource.
     /// Returns:
-    ///     The resource, if active, or `none` if not.
-    Optional!T opIndex(int index) {
+    ///     The resource.
+    T opIndex(int index) {
 
-        // Inactive
-        if (!isActive(index)) return Optional!T();
-
-        // Active
-        return Optional!T(_resources[][index].value);
+        return _resources[][index].value;
 
     }
 

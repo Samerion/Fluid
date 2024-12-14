@@ -121,3 +121,39 @@ unittest {
     assert(root.hoversOnly([two]));
 
 }
+
+@("Opaque nodes block hover")
+unittest {
+
+    MyHover device;
+    Button btn;
+    Frame frame;
+
+    auto root = hoverSpace(
+        .layout!"fill",
+        device = myHover(),
+        onionFrame(
+            .layout!"fill",
+            btn   = button("One", delegate { }),
+            frame = vframe(.layout!"fill"),
+        ),
+    );
+
+    device.pointers = [
+        device.makePointer(0, Vector2(20, 20)),
+    ];
+    root.draw();
+    root.draw();
+    assert(!root.hovers);
+
+    frame.hide();
+    root.draw();
+    root.draw();
+    assert(root.hovers(btn));
+
+    frame.show();
+    root.draw();
+    root.draw();
+    assert(!root.hovers);
+
+}
