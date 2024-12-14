@@ -48,6 +48,54 @@ class MyHover : Node, MouseIO {
 
 }
 
+alias hoverTracker = nodeBuilder!HoverTracker;
+
+class HoverTracker : Node, Hoverable {
+
+    mixin enableInputActions;
+
+    HoverIO hoverIO;
+
+    int hoverImplCount;
+    int pressHeldCount;
+    int pressCount;
+
+    override void resizeImpl(Vector2) {
+        require(hoverIO);
+        minSize = Vector2();
+    }
+
+    override void drawImpl(Rectangle, Rectangle) {
+
+    }
+
+    override bool hoverImpl() {
+        hoverImplCount++;
+        return false;
+    }
+
+    override bool isHovered() const {
+        return hoverIO.isHovered(this);
+    }
+
+    alias opEquals = typeof(super).opEquals;
+
+    override bool opEquals(const Object other) const {
+        return super.opEquals(other);
+    }
+
+    @(FluidInputAction.press, WhileHeld)
+    void pressHeld() {
+        pressHeldCount++;
+    }
+
+    @(FluidInputAction.press)
+    void press() {
+        pressCount++;
+    }
+
+}
+
 @("HoverSpace assigns unique IDs for each pointer number")
 unittest {
 
@@ -208,5 +256,138 @@ unittest {
 
     root.draw();
     assert(pressCount == 1);
+
+}
+
+@("HoverSpace Actions won't apply if hover changes")
+unittest {
+
+    MyHover device;
+    HoverSpace hover;
+
+    int onePressed;
+    int twoPressed;
+
+    auto map = InputMapping();
+    map.bindNew!(FluidInputAction.press)(MouseIO.codes.left);
+
+    auto root = inputMapSpace(
+        map,
+        hover = sizeLock!hoverSpace(
+            .nullTheme,
+            .sizeLimit(400, 400),
+            device = myHover(),
+    		button(.layout!(1, "fill"), "One", delegate { onePressed++; }),
+            button(.layout!(1, "fill"), "Two", delegate { twoPressed++; }),
+        )
+    );
+
+    device.pointers = [
+        device.makePointer(0, Vector2(100, 100)),
+        device.makePointer(1, Vector2(300, 300)),
+    ];
+    root.draw();
+
+    // Hold both — no input action is necessary
+    device.emit(0, MouseIO.hold.left);
+    device.emit(1, MouseIO.hold.left);
+    root.draw();
+
+    // Move them
+    device.pointers = [
+        device.makePointer(0, Vector2(100, 300)),
+        device.makePointer(1, Vector2(300, 100)),
+    ];
+    device.emit(0, MouseIO.hold.left);
+    device.emit(1, MouseIO.hold.left);
+    root.draw();
+
+    assert(onePressed == 0);
+    assert(twoPressed == 0);
+
+    // Press them
+    device.emit(0, MouseIO.release.left);
+    device.emit(1, MouseIO.release.left);
+    root.draw();
+    hover.runInputAction!(FluidInputAction.press)(device.pointers[0]);
+    hover.runInputAction!(FluidInputAction.press)(device.pointers[1]);
+
+    assert(onePressed == 0);
+    assert(twoPressed == 0);
+
+}
+
+@("HoverAction triggers hover events, even if moved")
+unittest {
+
+    MyHover device;
+    HoverSpace hover;
+    HoverTracker tracker1, tracker2;
+
+    auto map = InputMapping();
+    map.bindNew!(FluidInputAction.press)(MouseIO.codes.left);
+
+    auto root = inputMapSpace(
+        map,
+        hover = sizeLock!hoverSpace(
+            .nullTheme,
+            .sizeLimit(400, 400),
+            device   = myHover(),
+            tracker1 = hoverTracker(.layout!(1, "fill")),
+            tracker2 = hoverTracker(.layout!(1, "fill")),
+        )
+    );
+
+    device.pointers = [
+        device.makePointer(0, Vector2(100, 100)),
+    ];
+    root.draw();
+    assert(tracker1.hoverImplCount == 1);
+    assert(tracker1.pressHeldCount == 0);
+    assert(tracker1.pressCount == 0);
+    assert(tracker2.hoverImplCount == 0);
+
+    // Hover
+    root.draw();
+    assert(tracker1.hoverImplCount == 2);
+    assert(tracker1.pressHeldCount == 0);
+
+    // Hold
+    device.emit(0, MouseIO.hold.left);
+    root.draw();
+    assert(tracker1.hoverImplCount == 3);
+    assert(tracker1.pressHeldCount == 1);
+
+    device.emit(0, MouseIO.hold.left);
+    root.draw();
+    assert(tracker1.hoverImplCount == 4);
+    assert(tracker1.pressHeldCount == 2);
+    assert(tracker1.pressCount == 0);
+    assert(tracker2.hoverImplCount == 0);
+
+    // Press
+    device.emit(0, MouseIO.press.left);
+    root.draw();
+    assert(tracker1.hoverImplCount == 5);
+    assert(tracker1.pressHeldCount == 3);
+    assert(tracker1.pressCount == 1);
+    assert(tracker2.hoverImplCount == 0);
+
+    // Move & press
+    device.pointers = [
+        device.makePointer(0, Vector2(100, 300)),
+    ];
+    device.emit(0, MouseIO.hold.left);
+    root.draw();
+    assert(tracker1.hoverImplCount == 6);
+    assert(tracker1.pressHeldCount == 4);
+
+    device.emit(0, MouseIO.press.left);
+    root.draw();
+    assert(tracker1.hoverImplCount == 6);  // The original tracker doesn't see hover anymore
+    assert(tracker1.pressHeldCount == 4);
+    assert(tracker1.pressCount == 1);
+    assert(tracker2.hoverImplCount == 1);  // Hover new calls the other tracker;
+    assert(tracker2.pressCount == 0);      // The press isn't registered.
 
 }

@@ -21,7 +21,9 @@ import fluid.io.action;
 
 /// Make a InputAction handler react to every frame as long as the action is being held (mouse button held down,
 /// key held down, etc.).
-enum WhileDown;
+enum WhileHeld;
+
+alias WhileDown = WhileHeld;
 
 deprecated ("`whileDown` has been deprecated and will be removed in Fluid 0.8.0. Use `WhileDown` instead.")
 alias whileDown = WhileDown;
@@ -976,6 +978,12 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable, Focusable, Hov
     protected override void mouseImpl() { }
 
     protected bool keyboardImpl() {
+
+        return false;
+
+    }
+
+    override bool hoverImpl() {
 
         return false;
 

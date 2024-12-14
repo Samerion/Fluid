@@ -33,9 +33,22 @@ class HoverSpace : Space, HoverIO {
 
         struct HoverPointer {
 
+            /// The stored pointer.
             Pointer value;
+
+            /// Branch action associated with the pointer; finds the associated node.
             NodeAtPointAction action;
+
+            /// Node last matched to the pointer. "Hovered" node.
             Node node;
+
+            /// Node that is being held, placed under the cursor at the time a button has been pressed.
+            /// Input actions won't fire if the hovered node, the one under the cursor, is different from the one 
+            /// that is being held.
+            Node heldNode;
+
+            /// If true, any button related to the pointer is being held.
+            bool isHeld;
 
             bool opEquals(const Pointer pointer) const {
                 return this.value.isSame(pointer);
@@ -80,8 +93,32 @@ class HoverSpace : Space, HoverIO {
 
         if (!actionIO) return;
 
+        assert(_pointers.isActive(pointer.id), "Pointer is not active");
+
+        // Mark the pointer as held
+        _pointers[pointer.id].isHeld = true;
+
+        // Emit the event
         actionIO.emitEvent(event, pointer.id, &runInputAction);
         
+    }
+
+    override bool isHovered(const Hoverable hoverable) const {
+
+        foreach (pointer; _pointers[]) {
+
+            // Skip disabled pointers
+            if (pointer.value.isDisabled) continue;
+
+            // Check for matches
+            if (hoverable.opEquals(pointer.node)) {
+                return true;
+            }
+
+        }
+
+        return false;
+
     }
 
     override int opApply(int delegate(Hoverable) @safe yield) {
@@ -124,7 +161,20 @@ class HoverSpace : Space, HoverIO {
 
         // Update hover data
         foreach (ref pointer; _pointers[]) {
+
+            // Set the hovered node
             pointer.node = pointer.action.result;
+
+            // Trigger hover events if relevant
+            if (auto hoverable = cast(Hoverable) pointer.node) {
+                hoverable.hoverImpl();
+            }
+
+            // Mark as held ahead of time
+            if (!pointer.isHeld) {
+                pointer.heldNode = pointer.node;
+            }
+            pointer.isHeld = false;
         }
 
     }
@@ -164,6 +214,14 @@ class HoverSpace : Space, HoverIO {
     bool runInputAction(Pointer pointer, InputActionID actionID, bool isActive = true) {
 
         auto hover = cast(Hoverable) hoverOf(pointer);
+        auto meta = _pointers[pointer.id];
+
+        // Active input actions can only fire for `heldNode`
+        if (isActive) {
+            if (!meta.node.opEquals(meta.heldNode)) {
+                return false;
+            }
+        }
 
         // Run the action, and mark input as handled
         if (hover && hover.actionImpl(actionID, isActive)) {
