@@ -1,6 +1,8 @@
 /// This module implements interfaces for handling hover and connecting hoverable nodes with input devices.
 module fluid.io.hover;
 
+import std.range;
+
 import fluid.types;
 
 import fluid.future.context;
@@ -93,6 +95,66 @@ interface HoverIO : IO {
 
 }
 
+/// Returns:
+///     True if the `hoverIO` is hovering some node.
+/// Params:
+///     hoverIO   = HoverIO to test.
+///     hoverable = Node that HoverIO is expected to hover.
+bool hovers(HoverIO hoverIO) {
+
+    foreach (_; hoverIO) {
+        return true;
+    }
+    return false;
+
+}
+
+/// ditto
+bool hovers(HoverIO hoverIO, const Hoverable hoverable) {
+
+    foreach (hovered; hoverIO) {
+        if (hovered.opEquals(cast(const Object) hoverable)) return true;
+    }
+
+    return false;
+
+}
+
+/// Test if the hover I/O system hovers all of the nodes and none other.
+/// Params:
+///     hoverIO    = Hover I/O system to test. Hoverables reported by this system will be checked.
+///     hoverables = A forward range of hoverables.
+/// Returns:
+///     True if the system considers all of the given ranges as hovered,
+///     and it does not find any other nodes hovered.
+bool hoversOnly(Range)(HoverIO hoverIO, Range hoverables) 
+if (isForwardRange!Range && is(ElementType!Range : const Hoverable))
+do {
+
+    import std.algorithm : canFind;
+
+    foreach (hovered; hoverIO) {
+
+        // A node is hovered, but not in the known list
+        if (!hoverables.canFind!((a, b) => a.opEquals(cast(const Object) b))(hovered)) {
+            return false;
+        }
+
+    }
+
+    foreach (hoverable; hoverables) {
+
+        // A hoverable is not hovered
+        if (!hoverIO.hovers(hoverable)) {
+            return false;
+        }
+
+    }
+
+    return true;
+
+}
+
 /// A pointer is a position on the screen chosen by the user using a mouse, touchpad, touchscreen or other device
 /// capable of communicating some position.
 ///
@@ -165,24 +227,16 @@ struct Pointer {
 
     /// Load the pointer into the system.
     void load(HoverIO hoverIO, int id) nothrow {
-
         this._hoverIO = hoverIO;
         this._id = id;
-
     }
 
-    /// Update a pointer using data of another pointer.
+    /// Update a pointer in place using data of another pointer.
     /// Params:
     ///     other = Pointer to copy data from.
-    /// Returns:
-    ///     A new pointer with updated state. The device/pointer ID and I/O ID stay the same.
-    Pointer update(Pointer other) {
-
-        Pointer result = this;
-        result.position = other.position;
-        result.isDisabled = other.isDisabled;
-        return result;
-
+    void update(Pointer other) {
+        this.position = other.position;
+        this.isDisabled = other.isDisabled;
     }
 
     /// Emit an event through the pointer.
@@ -218,5 +272,12 @@ interface Hoverable : Actionable {
     ///     This will most of the time be equivalent to `hoverIO.isHovered(this)`, 
     ///     but a node wrapping another hoverable may choose to instead redirect this to the other node.
     bool isHovered() const;
+
+    /// Compare to another object. Must be `@safe` and `const`.
+    /// Params:
+    ///     other = Object to compare to.
+    /// Returns:
+    ///     True if the objects are equal.
+    bool opEquals(const Object other) const;
 
 }

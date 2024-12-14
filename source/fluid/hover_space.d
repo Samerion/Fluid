@@ -35,7 +35,7 @@ class HoverSpace : Space, HoverIO {
 
             Pointer value;
             NodeAtPointAction action;
-            Node hover;
+            Node node;
 
             bool opEquals(const Pointer pointer) const {
                 return this.value.isSame(pointer);
@@ -69,6 +69,7 @@ class HoverSpace : Space, HoverIO {
         else {
             auto updatedPointer = _pointers[index].front;
             updatedPointer.value.update(pointer);
+            updatedPointer.value.load(this, index);
             _pointers.reload(index, updatedPointer); 
             return index;
         }
@@ -83,35 +84,58 @@ class HoverSpace : Space, HoverIO {
 
     override int opApply(int delegate(Hoverable) @safe yield) {
 
-        assert(false, "TODO");
+        foreach (pointer; _pointers[]) {
+
+            // Skip disabled pointers
+            if (pointer.value.isDisabled) continue;
+
+            // List each hoverable
+            if (auto hoverable = cast(Hoverable) pointer.node) {
+                if (auto result = yield(hoverable)) {
+                    return result;
+                }
+            }
+
+        }
+
+        return 0;
 
     }
 
     override void resizeImpl(Vector2 space) {
 
-        auto frame = implementIO!HoverSpace();
-
         use(actionIO);
+        _pointers.startCycle();
 
+        auto frame = implementIO!HoverSpace();
         super.resizeImpl(space);
 
     }
 
     override void drawImpl(Rectangle outer, Rectangle inner) {
 
-        _pointers.startCycle();
+        // Draw the children and find the current hover
+        {
+            auto frame = startBranchAction(armBranchActions);
+            super.drawImpl(outer, inner);
+        }
 
-        auto frame = startBranchAction(branchActions);
-        
-        super.drawImpl(outer, inner);
+        // Update hover data
+        foreach (ref pointer; _pointers[]) {
+            pointer.node = pointer.action.result;
+        }
 
     }
 
-    private auto branchActions() {
+    /// List all branch actions for active pointers, and change their search positions to match the pointer.
+    private auto armBranchActions() {
 
         return _pointers[]
             .filter!(a => !a.value.isDisabled)
-            .map!(a => a.action);
+            .map!((a) {
+                a.action.search = a.value.position;
+                return a.action;
+            });
 
     }
 
