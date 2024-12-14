@@ -158,7 +158,19 @@ class FocusSpace : Space, FocusIO {
 
     }
 
+    /// ditto
+    protected final bool runInputAction(InputActionID actionID, bool isActive, int) {
+
+        return runInputAction(actionID, isActive);
+
+    }
+
     /// Run an input action implemented by this node. These usually perform focus switching
+    /// Params:
+    ///     actionID = ID of the input action to perform.
+    ///     isActive = If true, the action has been activated during this frame.
+    /// Returns:
+    ///     True if the action was handled, false if not.
     protected bool runLocalInputActions(InputActionID actionID, bool isActive = true) {
 
         return runInputActionHandler(this, actionID, isActive);
@@ -307,7 +319,7 @@ class FocusSpace : Space, FocusIO {
     override void emitEvent(InputEvent event) {
 
         if (actionIO) {
-            actionIO.emitEvent(event, &runInputAction);
+            actionIO.emitEvent(event, 0, &runInputAction);
         }
 
     }

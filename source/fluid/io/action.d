@@ -34,11 +34,15 @@ interface ActionIO : IO {
     ///
     /// Params:
     ///     event    = Input event the system should save.
+    ///     number   = A number that will be passed as-is into the callback. Can be used to distinguish between
+    ///         different action calls without allocating a closure.
     ///     callback = Function to call if the event has triggered an input action. 
     ///         The ID of the action will be passed as an argument, along with a boolean indicating if it was
     ///         triggered by an inactive, or active event.
+    ///         The number passed into the `emitEvent` function will be passed as the third argument to this callback.
     ///         The return value of the callback should indicate if the action was handled or not.
-    void emitEvent(InputEvent event, bool delegate(immutable InputActionID, bool isActive) @safe callback);
+    void emitEvent(InputEvent event, int number, 
+        bool delegate(immutable InputActionID, bool isActive, int number) @safe callback);
     
 }
 
