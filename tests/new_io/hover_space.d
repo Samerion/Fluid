@@ -78,3 +78,46 @@ unittest {
     assert(firstDevice.pointers[0].id != secondDevice.pointers[0].id);
 
 }
+
+@("HoverSpace can list hovered nodes")
+unittest {
+
+    MyHover device;
+    Button one, two;
+
+    auto root = sizeLock!hoverSpace(
+        .nullTheme,
+        .sizeLimit(300, 300),
+        device = myHover(),
+        one    = button(.layout!(1, "fill"), "One", delegate { }),
+                 vframe(.layout!(1, "fill")),
+        two    = button(.layout!(1, "fill"), "Two", delegate { }),
+    );
+
+    root.draw();
+    assert(!root.hovers);
+
+    device.pointers = [
+        device.makePointer(0, Vector2(0, 0)),
+    ];
+    root.draw();
+    root.draw();
+    assert(root.hovers(one));
+    assert(root.hoversOnly([one]));
+
+    device.pointers = [
+        device.makePointer(0, Vector2(0, 120)),
+    ];
+    root.draw();
+    root.draw();
+    assert(!root.hovers());
+
+    device.pointers = [
+        device.makePointer(0, Vector2(0, 220)),
+    ];
+    root.draw();
+    root.draw();
+    assert(root.hovers());
+    assert(root.hoversOnly([two]));
+
+}

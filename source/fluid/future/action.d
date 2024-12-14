@@ -395,6 +395,7 @@ final class NodeAtPointAction : BranchAction {
 
         // Save the result
         result = node;
+        // Do not stop; the result may be overriden
 
     }
 

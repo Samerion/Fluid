@@ -960,6 +960,12 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable, Focusable, Hov
 
     }
 
+    alias opEquals = typeof(super).opEquals;
+
+    override bool opEquals(const Object other) const {
+        return super.opEquals(other);
+    }
+
     /// Handle mouse input if no input action did.
     ///
     /// Usually, you'd prefer to define a method marked with an `InputAction` enum. This function is preferred for more

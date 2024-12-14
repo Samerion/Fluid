@@ -87,13 +87,53 @@ struct ResourceArena(T) {
 
     }
 
-    /// List every resource in the arena.
+    /// List every active resource in the arena. Omits expired resources.
     /// Returns: A range that lists every active resource.
     auto opIndex(this This)() nothrow {
 
-        return _resources[]
-            .filter!(a => a.lastCycle >= cycleNumber)
-            .map!(a => a.value);
+        import std.range;
+
+        alias R = typeof(This._resources[].front);
+        alias Item = typeof(R.value);
+
+        struct ActiveResources {
+
+            private R[] resources;
+            private int cycleNumber;
+
+            this(R[] resources, int cycleNumber) {
+                this.resources = resources;
+                this.cycleNumber = cycleNumber;
+                this.advance();
+            }
+
+            bool empty() const {
+                return resources.empty;
+            }
+
+            ref Item front() {
+                return resources.front.value;
+            }
+
+            void popFront() {
+                resources.popFront();
+                advance();
+            }
+
+            ActiveResources save() {
+                return this;
+            }
+
+            /// Omit expired resources
+            private void advance() {
+                while (!empty && resources.front.lastCycle < cycleNumber) {
+                    resources.popFront();
+                }
+            }
+
+        }
+
+        return ActiveResources(_resources[], cycleNumber);
 
     }
 
