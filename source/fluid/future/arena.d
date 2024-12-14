@@ -108,7 +108,7 @@ struct ResourceArena(T) {
         assert(arena.opIndex.equal([0, 1, 2]));
 
         // Observe the results as we reload the resources during the next cycle
-        arena.startCycle((_, __) { });
+        arena.startCycle();
         assert(arena[].empty);
         arena.reload(0, 0);
         assert(arena[].equal([0]));
@@ -181,7 +181,7 @@ struct ResourceArena(T) {
     ///         For freed resources, the index is set to `-1`. 
     /// See_Also:
     ///     `resourceLifetime`
-    auto startCycle(scope void delegate(int index, ref T resource) @safe moved) {
+    auto startCycle(scope void delegate(int index, ref T resource) @safe moved = null) {
 
         int newIndex;
 
@@ -189,14 +189,18 @@ struct ResourceArena(T) {
 
             // Free the resource if it has expired
             if (cycleNumber >= resource.lastCycle + resourceLifetime) {
-                moved(-1, resource.value);
+                if (moved) {
+                    moved(-1, resource.value);
+                }
                 continue;
             }
 
             // Still alive, but moved
             else if (oldIndex != newIndex) {
                 _resources[][newIndex] = resource;
-                moved(newIndex, _resources[][newIndex].value);
+                if (moved) {
+                    moved(newIndex, _resources[][newIndex].value);
+                }
             }
 
             // Still alive, keep the index up
@@ -295,7 +299,7 @@ unittest {
     assert(!arena.isActive(two));
 
     // Resources are marked inactive when a new cycle starts
-    arena.startCycle((_, __) { });
+    arena.startCycle();
     assert(!arena.isActive(zero));  // The resource isn't active now
     assert( arena.isAlive(zero));   // but it remains loaded
 
@@ -309,7 +313,7 @@ unittest {
     assert(!arena.isAlive(two));
 
     // "Two" hasn't been used on the last cycle, so it will be freed
-    arena.startCycle((_, __) { });
+    arena.startCycle();
     assert( arena.isAlive(zero));
     assert(!arena.isAlive(one));
     assert(!arena.isAlive(two));
@@ -327,7 +331,7 @@ unittest {
     assert( arena.isAlive(0));
 
     // 0 will be freed on a new cycle
-    arena.startCycle((_, __) { });
+    arena.startCycle();
     assert(!arena.isActive(0));
     assert(!arena.isAlive(0));
 
