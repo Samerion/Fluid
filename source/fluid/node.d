@@ -2,6 +2,7 @@
 module fluid.node;
 
 import std.math;
+import std.range;
 import std.traits;
 import std.string;
 import std.algorithm;
@@ -435,7 +436,7 @@ abstract class Node {
 
     }
 
-    /// Start a branch action to run on children of this node.
+    /// Start a branch action (or multiple) to run on children of this node.
     ///
     /// This should only be used inside `drawImpl`. The action will stop as soon as the return value goes 
     /// out of scope.
@@ -443,28 +444,39 @@ abstract class Node {
     /// Params:
     ///     action = Branch action to run. A branch action implements a subset of tree action's functionality,
     ///         guaraneeing correct behavior when combined with this.
+    ///     range = Multiple actions can be launched at once by passing a range of branch actions.
     /// Returns:
     ///     A [RAII](https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization) struct
-    ///     that stops the action as soon as the struct leaves the scope.
+    ///     that stops all started actions as soon as the struct leaves the scope.
     protected final auto startBranchAction(BranchAction action)
     in (action, "Node.runAction(TreeAction) called with a `null` argument")
     do {
+        return startBranchAction(only(action));
+    }
 
-        // Start the action
-        startAction(action);
+    /// ditto
+    protected final auto startBranchAction(T)(T range)
+    if (isForwardRange!T && is(ElementType!T : BranchAction))
+    do {
 
-        // Clear start nodes — bind it to the scope instead
-        action.startNode = null;
+        // Start the actions; clear start nodes so they run immediately
+        foreach (action; range.save) {
+            startAction(action);
+            action.startNode = null;
+        }
 
+        // Stop the actions when the returned struct leaves the scope
         @mustuse
         static struct AutoStop {
-            BranchAction action;
+            T range;
             ~this() {
-                action.stop;
+                foreach (action; range) {
+                    action.stop;
+                }
             }
         }
 
-        return AutoStop(action);
+        return AutoStop(range.move);
 
     }
 
