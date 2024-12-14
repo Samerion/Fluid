@@ -131,13 +131,30 @@ struct Pointer {
     /// ID of the pointer assigned by the `HoverIO` system.
     private int _id;
 
-    /// Compare two pointers
+    /// Compare two pointers. All publicly exposed fields (`device`, `number`, `position`, `isDisabled`)
+    /// must be equal. To check if the two pointers have the same origin (device and number), use `isSame`.
+    /// Params:
+    ///     other = Pointer to compare against.
+    /// Returns: 
+    ///     True if the pointer is the same as the other pointer and has the same state.
     bool opEquals(const Pointer other) const {
 
         // Do not compare I/O metadata
+        return isSame(other)
+            && position   == other.position
+            && isDisabled == other.isDisabled;
+
+    }
+
+    /// Test if the two pointers have the same origin — same device and pointer number.
+    /// Params:
+    ///     other = Pointer to compare against.
+    /// Returns:
+    ///     True if the pointers have the same device and pointer number.
+    bool isSame(const Pointer other) const {
+
         return device.opEquals(cast(const Object) other.device)
-            && number   == other.number
-            && position == other.position;
+            && number == other.number;
 
     }
 
@@ -151,6 +168,20 @@ struct Pointer {
 
         this._hoverIO = hoverIO;
         this._id = id;
+
+    }
+
+    /// Update a pointer using data of another pointer.
+    /// Params:
+    ///     other = Pointer to copy data from.
+    /// Returns:
+    ///     A new pointer with updated state. The device/pointer ID and I/O ID stay the same.
+    Pointer update(Pointer other) {
+
+        Pointer result = this;
+        result.position = other.position;
+        result.isDisabled = other.isDisabled;
+        return result;
 
     }
 

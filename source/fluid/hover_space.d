@@ -2,6 +2,7 @@
 module fluid.hover_space;
 
 import std.array;
+import std.algorithm;
 
 import fluid.node;
 import fluid.space;
@@ -10,6 +11,9 @@ import fluid.utils;
 
 import fluid.io.hover;
 import fluid.io.action;
+
+import fluid.future.arena;
+import fluid.future.action;
 
 @safe:
 
@@ -25,6 +29,24 @@ class HoverSpace : Space, HoverIO {
 
     ActionIO actionIO;
 
+    private {
+
+        struct HoverPointer {
+
+            Pointer value;
+            NodeAtPointAction action;
+            Node hover;
+
+            bool opEquals(const Pointer pointer) const {
+                return this.value.isSame(pointer);
+            }
+
+        }
+
+        ResourceArena!HoverPointer _pointers;
+
+    }
+
     this(Node[] nodes...) {
 
         super(nodes);
@@ -32,9 +54,25 @@ class HoverSpace : Space, HoverIO {
     }
 
     override int load(Pointer pointer) {
-        
-        assert(false, "TODO");
 
+        const index = cast(int) _pointers[].countUntil(pointer);
+
+        // No such pointer
+        if (index == -1) {
+            return _pointers.load(HoverPointer(
+                pointer,
+                new NodeAtPointAction,
+            ));
+        }
+
+        // Found, update the pointer
+        else {
+            auto updatedPointer = _pointers[index].front;
+            updatedPointer.value.update(pointer);
+            _pointers.reload(index, updatedPointer); 
+            return index;
+        }
+        
     }
 
     override void emitEvent(Pointer pointer, InputEvent event) {
@@ -56,6 +94,13 @@ class HoverSpace : Space, HoverIO {
         use(actionIO);
 
         super.resizeImpl(space);
+
+    }
+
+    override void drawImpl(Rectangle outer, Rectangle inner) {
+
+        _pointers.startCycle();
+        super.drawImpl(outer, inner);
 
     }
 
