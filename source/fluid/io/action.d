@@ -105,6 +105,18 @@ interface Actionable {
     ///     True if the action was handled, false if not.
     bool actionImpl(InputActionID action, bool isActive);
 
+    mixin template enableInputActions() {
+
+        override bool actionImpl(InputActionID action, bool isActive) {
+
+            import fluid.io.action : runInputActionHandler;
+
+            return runInputActionHandler(this, action, isActive);
+
+        }
+
+    }
+
 }
 
 /// Get the ID of an input action.

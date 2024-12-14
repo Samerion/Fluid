@@ -84,6 +84,12 @@ interface HoverIO : IO {
     ///         user stops holding a mouse button, or a finger stops touching the screen.
     void emitEvent(Pointer pointer, InputEvent event);
 
+    /// Returns: 
+    ///     True if the node is hovered.
+    /// Params:
+    ///     hoverable = True if this node is hovered.
+    bool isHovered(const Hoverable hoverable) const;
+
     /// List all currently hovered nodes.
     /// Params:
     ///     yield = A delegate to be called for every hovered node.

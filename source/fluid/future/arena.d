@@ -166,7 +166,7 @@ struct ResourceArena(T) {
     ///     index = Index of the resource.
     /// Returns:
     ///     The resource.
-    T opIndex(int index) {
+    ref T opIndex(int index) {
 
         return _resources[][index].value;
 

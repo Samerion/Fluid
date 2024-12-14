@@ -67,13 +67,15 @@ interface MouseIO : IO {
     /// A shortcut for getting input events that are known at compile time. Handy for tests.
     /// Params:
     ///     isActive = True if the generated input event should be active. Defaults to `false` for `hold`,
-    ///         is `true` for `release`.
+    ///         is `true` for `press`.
     /// Returns: A mouse button input event.
     static release() {
 
         return hold(true);
 
     }
+
+    alias press = release;
 
     /// ditto
     static hold(bool isActive = false) {
