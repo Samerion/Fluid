@@ -20,7 +20,8 @@ class InputMapSpace : Space, ActionIO {
 
     private struct ReceivedInputEvent {
         InputEvent event;
-        bool delegate(InputActionID action, bool isActive) @safe callback;
+        int number;
+        bool delegate(InputActionID action, bool isActive, int number) @safe callback;
     }
 
     public {
@@ -52,10 +53,12 @@ class InputMapSpace : Space, ActionIO {
 
     }
 
-    override void emitEvent(InputEvent event, bool delegate(InputActionID action, bool isActive) @safe callback) {
+    override void emitEvent(InputEvent event, int number, 
+        bool delegate(InputActionID action, bool isActive, int number) @safe callback)
+    do {
 
         // Save the event to list
-        events ~= ReceivedInputEvent(event, callback);
+        events ~= ReceivedInputEvent(event, number, callback);
 
     }
 
@@ -93,7 +96,7 @@ class InputMapSpace : Space, ActionIO {
                 // Check if any of the events matches this binding
                 foreach (event; findEvents(binding.code)) {
 
-                    handled = handled || event.callback(binding.inputAction, event.event.isActive);
+                    handled = handled || event.callback(binding.inputAction, event.event.isActive, event.number);
 
                 }
 

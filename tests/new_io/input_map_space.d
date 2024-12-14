@@ -38,6 +38,12 @@ class ActionTester : InputNode!Node {
         return true;
 
     }
+    
+    bool runInputAction(immutable InputActionID actionID, bool isActive, int) {
+
+        return super.runInputAction(actionID, isActive);
+
+    }
 
 }
 
@@ -62,6 +68,7 @@ unittest {
     // Press the button using an event
     root.emitEvent(
         KeyboardIO.createEvent(KeyboardIO.Key.space, true),
+        0,
         &tester.runInputAction,
     );
     root.draw();
@@ -70,6 +77,7 @@ unittest {
     // Break line
     root.emitEvent(
         KeyboardIO.createEvent(KeyboardIO.Key.enter, true),
+        0,
         &tester.runInputAction,
     );
     root.draw();
@@ -81,6 +89,7 @@ unittest {
     tester.disableBreaking = true;
     root.emitEvent(
         KeyboardIO.createEvent(KeyboardIO.Key.enter, true),
+        0,
         &tester.runInputAction,
     );
     root.draw();
