@@ -100,7 +100,18 @@ class HoverSpace : Space, HoverIO {
     override void drawImpl(Rectangle outer, Rectangle inner) {
 
         _pointers.startCycle();
+
+        auto frame = startBranchAction(branchActions);
+        
         super.drawImpl(outer, inner);
+
+    }
+
+    private auto branchActions() {
+
+        return _pointers[]
+            .filter!(a => !a.value.isDisabled)
+            .map!(a => a.action);
 
     }
 
