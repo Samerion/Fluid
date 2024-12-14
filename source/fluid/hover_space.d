@@ -78,7 +78,9 @@ class HoverSpace : Space, HoverIO {
 
     override void emitEvent(Pointer pointer, InputEvent event) {
 
-        assert(false, "TODO");
+        if (!actionIO) return;
+
+        actionIO.emitEvent(event, pointer.id, &runInputAction);
         
     }
 
@@ -136,6 +138,73 @@ class HoverSpace : Space, HoverIO {
                 a.action.search = a.value.position;
                 return a.action;
             });
+
+    }
+
+    /// Returns:
+    ///     Node hovered by the pointer.
+    /// Params:
+    ///     pointer = Pointer to check. The pointer must be loaded.
+    Node hoverOf(Pointer pointer) {
+
+        assert(_pointers.isActive(pointer.id), "Given pointer wasn't loaded");
+
+        return _pointers[pointer.id].node;
+
+    }
+
+    /// Handle an input action associated with a pointer.
+    /// Params:
+    ///     pointer  = Pointer to send the input action. It must be loaded.
+    ///         The input action will be loaded by the node the pointer points at.
+    ///     actionID = ID of the input action.
+    ///     isActive = If true, the action has been activated during this frame.
+    /// Returns:
+    ///     True if the input action was handled.
+    bool runInputAction(Pointer pointer, InputActionID actionID, bool isActive = true) {
+
+        auto hover = cast(Hoverable) hoverOf(pointer);
+
+        // Run the action, and mark input as handled
+        if (hover && hover.actionImpl(actionID, isActive)) {
+            return true;
+        }
+
+        // Run local input actions
+        if (runLocalInputActions(pointer, actionID, isActive)) {
+            return true;
+        }
+
+        return false;
+
+    }
+
+    /// ditto
+    bool runInputAction(alias action)(Pointer pointer, bool isActive = true) {
+
+        const id = inputActionID!action;
+
+        return runInputAction(pointer, id, isActive);
+
+    }
+
+    /// ditto
+    protected final bool runInputAction(InputActionID actionID, bool isActive, int number) {
+
+        return runInputAction(_pointers[number].value, actionID, isActive);
+
+    }
+
+    /// Run an input action implemented by this node. HoverSpace does not implement any by default.
+    /// Params:
+    ///     pointer  = Pointer associated with the event.
+    ///     actionID = ID of the input action to perform.
+    ///     isActive = If true, the action has been activated during this frame.
+    /// Returns:
+    ///     True if the action was handled, false if not.
+    protected bool runLocalInputActions(Pointer pointer, InputActionID actionID, bool isActive = true) {
+
+        return false;
 
     }
 

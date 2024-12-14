@@ -43,6 +43,13 @@ class InputMapSpace : Space, ActionIO {
         this.map = map;
     }
 
+    override void resizeImpl(Vector2 space) {
+
+        auto frame = this.implementIO();
+        super.resizeImpl(space);
+
+    }
+
     override void drawImpl(Rectangle outer, Rectangle inner) {
 
         super.drawImpl(outer, inner);

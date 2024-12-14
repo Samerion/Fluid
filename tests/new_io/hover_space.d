@@ -13,8 +13,18 @@ class MyHover : Node, MouseIO {
     Pointer[] pointers;
 
     inout(Pointer) makePointer(int number, Vector2 position, bool isDisabled = false) inout {
-
         return inout Pointer(this, number, position, isDisabled);
+    }
+
+    void emit(int number, InputEvent event) {
+
+        foreach (pointer; pointers) {
+            if (pointer.number != number) continue;
+            hoverIO.emitEvent(pointer, event);
+            return;
+        }
+
+        assert(false);
 
     }
 
@@ -155,5 +165,48 @@ unittest {
     root.draw();
     root.draw();
     assert(!root.hovers);
+
+}
+
+@("HoverSpace triggers input actions")
+unittest {
+
+    MyHover device;
+    Button btn;
+    HoverSpace hover;
+    int pressCount;
+
+    auto map = InputMapping();
+    map.bindNew!(FluidInputAction.press)(MouseIO.codes.left);
+
+    auto root = inputMapSpace(
+        .nullTheme,
+        .layout!"fill",
+        map,
+        hover = hoverSpace(
+            .layout!"fill",
+            device = myHover(),
+            btn    = button("One", delegate { pressCount++; }),
+        ),
+    );
+
+    device.pointers = [
+        device.makePointer(0, Vector2(10, 10)),
+    ];
+    root.draw();
+    root.draw();
+
+    assert(hover.hovers(btn));
+    assert(pressCount == 0);
+
+    device.emit(0, MouseIO.release.left);
+
+    assert(pressCount == 0);
+
+    root.draw();
+    assert(pressCount == 1);
+
+    root.draw();
+    assert(pressCount == 1);
 
 }
