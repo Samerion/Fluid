@@ -57,10 +57,47 @@ interface MouseIO : IO {
     ///     isActive = True if the button was just released.
     /// Returns:
     ///     The created input event.
-    static InputEvent createEvent(Button button, bool isActive) {
+    static InputEvent createEvent(Button button, bool isActive = true) {
 
         const code = getCode(button);
         return InputEvent(code, isActive);
+
+    }
+
+    /// A shortcut for getting input events that are known at compile time. Handy for tests.
+    /// Params:
+    ///     isActive = True if the generated input event should be active. Defaults to `false` for `hold`,
+    ///         is `true` for `release`.
+    /// Returns: A mouse button input event.
+    static release() {
+
+        return hold(true);
+
+    }
+
+    /// ditto
+    static hold(bool isActive = false) {
+
+        static struct Codes {
+            bool isActive;
+            InputEvent opDispatch(string name)() {
+                return createEvent(__traits(getMember, MouseIO.Button, name), isActive);
+            }
+        }
+
+        return Codes(isActive);
+
+    }
+
+    ///
+    @("MouseIO.hold resolves into input events")
+    unittest {
+
+        assert(MouseIO.hold.left == MouseIO.createEvent(MouseIO.Button.left, false));
+        assert(MouseIO.release.left == MouseIO.createEvent(MouseIO.Button.left, true));
+
+        assert(MouseIO.hold.right == MouseIO.createEvent(MouseIO.Button.right, false));
+        assert(MouseIO.release.right == MouseIO.createEvent(MouseIO.Button.right, true));
 
     }
 
