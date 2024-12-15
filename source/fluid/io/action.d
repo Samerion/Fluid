@@ -122,7 +122,24 @@ struct InputEvent {
 /// this interface if they support input actions.
 interface Actionable {
 
+    /// Determine if the node can currently handle input.
+    ///
+    /// Blocking input changes behavior of I/O systems responsible for passing the node input data:
+    ///
+    /// * A blocked node should NOT have input events called. It is illegal to call `actionImpl`. Input method
+    ///   and device-specific handlers like `hoverImpl` and `focusImpl` usually won't be called either.
+    /// * If the input method has a node selection method like focus or hover, nodes that block input should be
+    ///   excluded from selection. If a node starts blocking while already selected may continue to be selected.
+    ///
+    /// Returns:
+    ///     True if the node "blocks" input — it cannot accept input events, nor focus.
+    ///     False if the node accepts input, and operates like normal.
+    bool blocksInput() const;
+
     /// Handle an input action.
+    ///
+    /// This method should not be called for nodes for which `blocksInput` is true. 
+    ///
     /// Params:
     ///     action   = ID of the action to handle.
     ///     isActive = If true, this is an active action.
@@ -131,7 +148,15 @@ interface Actionable {
     ///         whereas an inactive action merely means the button or key is down.
     /// Returns:
     ///     True if the action was handled, false if not.
-    bool actionImpl(InputActionID action, bool isActive);
+    bool actionImpl(InputActionID action, bool isActive)
+    in (!blocksInput, "This node currently doesn't accept input.");
+
+    /// Memory safe and `const` object comparison.
+    /// Returns:
+    ///     True if this, and the other object, are the same object.
+    /// Params:
+    ///     other = Object to compare to.
+    bool opEquals(const Object other) const;
 
     mixin template enableInputActions() {
 
@@ -144,6 +169,33 @@ interface Actionable {
         }
 
     }
+
+}
+
+/// Cast the node to given type if it accepts input using the given method.
+///
+/// In addition to performing a dynamic cast, this checks if the node currently accepts input.
+/// If it doesn't (for example, if the node is disabled), it will fail the cast.
+///
+/// Params:
+///     node = Node to cast.
+/// Returns:
+///     Node casted to the given type, or null if the node can't be casted, or it doesn't support given input method.
+inout(T) castIfAcceptsFocus(T : Actionable)(inout Object node) {
+
+    // Perform the cast
+    if (auto actionable = cast(T) node) {
+
+        // Fail if the node blocks input
+        if (actionable.blocksInput) {
+            return null;
+        }
+
+        return actionable;
+
+    }
+
+    return null;
 
 }
 
