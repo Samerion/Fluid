@@ -148,7 +148,7 @@ interface Actionable {
     ///         whereas an inactive action merely means the button or key is down.
     /// Returns:
     ///     True if the action was handled, false if not.
-    bool actionImpl(InputActionID action, bool isActive)
+    bool actionImpl(immutable InputActionID action, bool isActive)
     in (!blocksInput, "This node currently doesn't accept input.");
 
     /// Memory safe and `const` object comparison.
@@ -160,7 +160,7 @@ interface Actionable {
 
     mixin template enableInputActions() {
 
-        override bool actionImpl(InputActionID action, bool isActive) {
+        override bool actionImpl(immutable InputActionID action, bool isActive) {
 
             import fluid.io.action : runInputActionHandler;
 

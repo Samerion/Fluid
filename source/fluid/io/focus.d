@@ -68,11 +68,15 @@ interface FocusIO : IO {
 
     /// Returns:
     ///     True if the focusable is currently focused.
+    ///     Always returns `false` if the parameter is `null`.
     /// Params:
     ///     focusable = Focusable to check.
     final bool isFocused(const Focusable focusable) const {
 
-        return currentFocus.opEquals(cast(const Object) focusable);
+        auto focus = currentFocus;
+
+        return focus !is null
+            && focus.opEquals(cast(const Object) focusable);
 
     }
 
@@ -179,8 +183,10 @@ class FindFocusBoxAction : BranchAction, Publisher!(Optional!Rectangle) {
 
     override void beforeDraw(Node node, Rectangle, Rectangle, Rectangle inner) {
 
+        auto focus = focusIO.currentFocus;
+
         // Only the focused node matters
-        if (cast(Node) focusIO.currentFocus != node) return;
+        if (focus is null || !focus.opEquals(node)) return;
 
         this.focusBox = node.focusBox(inner);
         stop;

@@ -1012,7 +1012,7 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable, Focusable, Hov
     ///
     /// This endpoint is used by the new I/O system. `InputNode` implements this by redirecting the input
     /// to `runInputAction`.
-    override bool actionImpl(InputActionID id, bool isActive) {
+    override bool actionImpl(immutable InputActionID id, bool isActive) {
 
         return runInputAction(id, isActive);
 
@@ -1107,7 +1107,7 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable, Focusable, Hov
         bool isFocused() const {
 
             if (focusIO) {
-                return cast(const Node) focusIO.currentFocus == this;
+                return focusIO.isFocused(this);
             } 
             else {
                 return tree.focus is this;

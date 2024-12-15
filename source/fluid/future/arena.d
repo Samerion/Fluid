@@ -1,6 +1,7 @@
 /// Provides an arena for keeping track of and periodically freeing unused resources.
 module fluid.future.arena;
 
+import std.meta;
 import std.array;
 import std.algorithm;
 

@@ -106,7 +106,7 @@ final class OrderedFocusAction : FocusSearchAction {
     override void beforeDraw(Node node, Rectangle) {
 
         // Found the target
-        if (node == target) {
+        if (node.opEquals(target)) {
 
             // Going backwards: Mark the last focusable as the previous node
             if (isReverse) {
