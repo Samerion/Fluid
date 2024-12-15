@@ -949,6 +949,7 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable, Focusable, Hov
     mixin enableInputActions;
 
     FocusIO focusIO;
+    HoverIO hoverIO;
 
     /// Callback to run when the input value is altered.
     void delegate() changed;
@@ -1026,6 +1027,7 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable, Focusable, Hov
     override void resizeImpl(Vector2 space) {
 
         use(focusIO);
+        use(hoverIO);
 
         static if (!isAbstractFunction!(typeof(super).resizeImpl)) {
             super.resizeImpl(space);
@@ -1056,7 +1058,12 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable, Focusable, Hov
 
     override bool isHovered() const {
 
-        return super.isHovered();
+        if (hoverIO) {
+            return hoverIO.isHovered(this);
+        }
+        else {
+            return super.isHovered();
+        }
 
     }
 
