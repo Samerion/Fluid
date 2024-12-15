@@ -59,7 +59,6 @@ class HoverTracker : Node, Hoverable {
     int hoverImplCount;
     int pressHeldCount;
     int pressCount;
-    protected bool _blocksInput;
 
     override void resizeImpl(Vector2) {
         require(hoverIO);
@@ -71,14 +70,11 @@ class HoverTracker : Node, Hoverable {
     }
 
     override bool blocksInput() const {
-        return _blocksInput;
-    }
-
-    bool blocksInput(bool value) {
-        return _blocksInput = value;
+        return isDisabled || isDisabledInherited;
     }
 
     override bool hoverImpl() {
+        assert(!blocksInput);
         hoverImplCount++;
         return false;
     }
@@ -95,11 +91,13 @@ class HoverTracker : Node, Hoverable {
 
     @(FluidInputAction.press, WhileHeld)
     void pressHeld() {
+        assert(!blocksInput);
         pressHeldCount++;
     }
 
     @(FluidInputAction.press)
     void press() {
+        assert(!blocksInput);
         pressCount++;
     }
 
@@ -462,6 +460,77 @@ unittest {
     root.draw();
     assert(tracker.hoverImplCount == 1);
     
+}
 
-    
+@("HoverSpace doesn't call input handlers on disabled nodes")
+unittest {
+
+    MyHover device;
+    HoverTracker inaccessibleTracker, mainTracker;
+
+    auto root = hoverSpace(
+        .layout!"fill",
+        device = myHover(),
+        onionFrame(
+            .layout!(1, "fill"),
+            inaccessibleTracker = hoverTracker(),
+            mainTracker         = hoverTracker(.layout!"fill")
+        ),
+    );
+
+    device.pointers = [
+        device.makePointer(0, Vector2(100, 100)),
+    ];
+    root.draw();
+    assert(mainTracker.isHovered);
+    assert(mainTracker.hoverImplCount == 1);
+    assert(inaccessibleTracker.hoverImplCount == 0);
+
+    // Disable the tracker; it shouldn't take hoverImpl, but it should continue to block
+    mainTracker.disable();
+    root.draw();
+    assert(mainTracker.hoverImplCount == 1);
+    assert(inaccessibleTracker.hoverImplCount == 0);
+
+    // Press it
+    root.emitEvent(device.pointers[0], MouseIO.release.left);
+    root.draw();
+    assert(mainTracker.hoverImplCount == 1);
+    assert(mainTracker.pressCount == 0);
+    assert(inaccessibleTracker.hoverImplCount == 0);
+    assert(inaccessibleTracker.pressCount == 0);
+
+}
+
+@("HoverSpace won't call handlers if disability status changes")
+unittest {
+
+    MyHover device;
+    HoverTracker tracker;
+
+    auto root = hoverSpace(
+        .layout!"fill",
+        device = myHover(),
+        tracker = hoverTracker(.layout!(1, "fill"))
+    );
+
+    device.pointers = [
+        device.makePointer(0, Vector2(100, 100)),
+    ];
+    root.draw();
+
+    // Hold the left button now
+    root.runInputAction!(FluidInputAction.press)(device.pointers[0], false);
+    root.draw();
+    assert(tracker.isHovered);
+    assert(tracker.pressHeldCount == 1);
+
+    // Block the button and press it
+    tracker.disable();
+    root.runInputAction!(FluidInputAction.press)(device.pointers[0], true);
+    root.draw();
+    assert(tracker.isHovered);
+    assert(tracker.pressHeldCount == 1);
+    assert(tracker.pressCount == 0);
+
 }
