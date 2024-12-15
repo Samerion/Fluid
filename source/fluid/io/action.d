@@ -181,10 +181,10 @@ interface Actionable {
 ///     node = Node to cast.
 /// Returns:
 ///     Node casted to the given type, or null if the node can't be casted, or it doesn't support given input method.
-inout(T) castIfAcceptsFocus(T : Actionable)(inout Object node) {
+inout(T) castIfAcceptsInput(T : Actionable)(inout Object node) {
 
     // Perform the cast
-    if (auto actionable = cast(T) node) {
+    if (auto actionable = cast(inout T) node) {
 
         // Fail if the node blocks input
         if (actionable.blocksInput) {
