@@ -89,6 +89,8 @@ class InputMapSpace : Space, ActionIO {
 
         scope (exit) events.clear();
 
+        bool handled;
+
         // Test all mappings
         foreach (layer; map.layers) {
 
@@ -97,8 +99,6 @@ class InputMapSpace : Space, ActionIO {
 
             // Found an active layer, test all bound strokes
             foreach (binding; layer.bindings) {
-
-                bool handled;
 
                 // Check if any of the events matches this binding
                 foreach (event; findEvents(binding.code)) {
@@ -114,6 +114,15 @@ class InputMapSpace : Space, ActionIO {
 
             // End on this layer
             break;
+
+        }
+
+        // No event was handled, fire the frame event
+        if (!handled) {
+
+            foreach (event; findEvents(frameEvent.code)) {
+                event.callback(inputActionID!(CoreAction.frame), event.event.isActive, event.number);
+            }
 
         }
 

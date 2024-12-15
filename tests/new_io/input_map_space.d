@@ -11,11 +11,17 @@ class ActionTester : InputNode!Node {
     int pressed;
     int submitted;
     int broken;
+    int frameCalls;
 
     bool disableBreaking;
 
     override void resizeImpl(Vector2 space) { }
     override void drawImpl(Rectangle, Rectangle) { }
+
+    @(ActionIO.CoreAction.frame)
+    void frame() {
+        frameCalls++;
+    }
 
     @(FluidInputAction.press)
     bool press() {
@@ -96,5 +102,33 @@ unittest {
     assert(tester.pressed   == 1);
     assert(tester.broken    == 1);
     assert(tester.submitted == 1);
+
+}
+
+@("InputMapSpace emits a fallback event")
+unittest {
+
+    auto map = InputMapping();
+    map.bindNew!(FluidInputAction.press)(KeyboardIO.codes.space);
+
+    auto tester = actionTester();
+    auto root = inputMapSpace(map, tester);
+
+    root.draw();
+    assert(tester.frameCalls == 0);
+
+    // Emit frame event and expect it to be handled
+    root.emitEvent(ActionIO.frameEvent, 0, &tester.runInputAction);
+    assert(tester.frameCalls == 0);
+    root.draw();
+    assert(tester.frameCalls == 1);
+
+    // Emit frame event alongside a space press event
+    root.emitEvent(ActionIO.frameEvent, 0, &tester.runInputAction);
+    root.emitEvent(KeyboardIO.press.space, 0, &tester.runInputAction);
+    assert(tester.frameCalls == 1);
+    assert(tester.pressed == 0);
+    root.draw();
+    assert(tester.pressed == 1);
 
 }

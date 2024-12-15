@@ -19,6 +19,34 @@ public import fluid.input;
 /// as children.
 interface ActionIO : IO {
 
+    /// Basic input actions necessary for input actions to work.
+    @InputAction
+    enum CoreAction {
+
+        /// This input action is fired in response to the `frame` input event.
+        frame,
+
+    }
+
+    /// Create an input event to which `ActionIO` should always have bound to the `CoreAction.frame` input action. 
+    /// Consequently, `ActionIO` always responds with a `CoreAction.frame` input action after processing remaining 
+    /// input actions.
+    ///
+    /// This can be used by device and input handling I/Os to detect the moment after which all input actions have 
+    /// been processed. This means that it can be used to develop fallback mechanisms like `hoverImpl` 
+    /// and `focusImpl`, which only trigger if no input action has been activated.
+    ///
+    /// Note that `CoreAction.frame` might, or might not, be emitted if another action event has been emitted during
+    /// the same frame. `InputMapSpace` will only emit `CoreAction.frame` is no other input action has been handled.
+    static InputEvent frameEvent() {
+
+        const code = InputEventCode(ioID!ActionIO, 1);
+        const isHandled = true;
+
+        return InputEvent(code, isHandled);
+
+    }
+
     /// Pass an input event to transform into an input map.
     ///
     /// The `ActionIO` system should withhold all input actions until after its node is drawn. This is when
