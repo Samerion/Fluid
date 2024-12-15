@@ -5,6 +5,52 @@ import fluid.future.pipe;
 
 @safe:
 
+alias focusTracker = nodeBuilder!FocusTracker;
+
+class FocusTracker : Node, Focusable {
+
+    mixin enableInputActions;
+
+    FocusIO focusIO;
+
+    int pressCalls;
+    int focusImplCalls;
+
+    override void resizeImpl(Vector2) {
+        require(focusIO);
+        minSize = Vector2();
+    }
+
+    override void drawImpl(Rectangle, Rectangle) {
+
+    }
+
+    @(FluidInputAction.press)
+    void press() {
+        pressCalls++;
+    }
+
+    bool focusImpl() {
+        focusImplCalls++;
+        return true;
+    }
+
+    void focus() {
+        focusIO.currentFocus = this;
+    }
+
+    bool isFocused() const {
+        return focusIO.isFocused(this);
+    }
+
+    alias opEquals = typeof(super).opEquals;
+
+    override bool opEquals(const Object other) const {
+        return super.opEquals(other);
+    }
+
+}
+
 @("FocusSpace keeps track of current focus")
 unittest {
 
@@ -276,5 +322,62 @@ unittest {
         .then(() => root.focusAbove)
         .thenAssertEquals(buttons[0])
         .runWhileDrawing(root, 8);
+
+}
+
+@("FocusSpace calls focusImpl as a fallback")
+unittest {
+
+    auto map = InputMapping();
+    map.bindNew!(FluidInputAction.press)(KeyboardIO.codes.space);
+
+    auto tracker = focusTracker();
+    auto focus = focusSpace(tracker);
+    auto root = inputMapSpace(map, focus);
+
+    root.draw();
+    assert(tracker.focusImplCalls == 0);
+
+    focus.currentFocus = tracker;
+    root.draw();
+
+    assert(tracker.pressCalls == 0);
+    assert(tracker.focusImplCalls == 1);
+
+    focus.emitEvent(KeyboardIO.press.space);
+    root.draw();
+
+    assert(tracker.pressCalls == 1);
+    assert(tracker.focusImplCalls == 1);
+
+    focus.emitEvent(KeyboardIO.hold.space);
+    root.draw();
+
+    assert(tracker.pressCalls == 1);
+    assert(tracker.focusImplCalls == 2);
+
+    // Unrelated input actions cannot trigger fallback
+    focus.runInputAction!(FluidInputAction.press);
+    assert(tracker.pressCalls == 2);
+    focus.runInputAction!(FluidInputAction.contextMenu);
+    assert(tracker.pressCalls == 2);
+    assert(tracker.focusImplCalls == 2);
+
+}
+
+@("FocusSpace calls focusImpl if there is no ActionIO")
+unittest {
+
+    auto tracker = focusTracker();
+    auto focus = focusSpace(tracker);
+    auto root = focus;
+
+    root.draw();
+    assert(tracker.focusImplCalls == 0);
+
+    focus.currentFocus = tracker;
+    root.draw();
+
+    assert(tracker.focusImplCalls == 1);
 
 }
