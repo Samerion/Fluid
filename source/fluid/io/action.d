@@ -41,9 +41,9 @@ interface ActionIO : IO {
     static InputEvent frameEvent() {
 
         const code = InputEventCode(ioID!ActionIO, 1);
-        const isHandled = true;
+        const isActive = false;
 
-        return InputEvent(code, isHandled);
+        return InputEvent(code, isActive);
 
     }
 

@@ -355,12 +355,12 @@ unittest {
     // Hold
     device.emit(0, MouseIO.hold.left);
     root.draw();
-    assert(tracker1.hoverImplCount == 3);
+    assert(tracker1.hoverImplCount == 2);  // pressHeld overrides this call
     assert(tracker1.pressHeldCount == 1);
 
     device.emit(0, MouseIO.hold.left);
     root.draw();
-    assert(tracker1.hoverImplCount == 4);
+    assert(tracker1.hoverImplCount == 2);
     assert(tracker1.pressHeldCount == 2);
     assert(tracker1.pressCount == 0);
     assert(tracker2.hoverImplCount == 0);
@@ -368,7 +368,7 @@ unittest {
     // Press
     device.emit(0, MouseIO.press.left);
     root.draw();
-    assert(tracker1.hoverImplCount == 5);
+    assert(tracker1.hoverImplCount == 2);
     assert(tracker1.pressHeldCount == 3);
     assert(tracker1.pressCount == 1);
     assert(tracker2.hoverImplCount == 0);
@@ -379,15 +379,50 @@ unittest {
     ];
     device.emit(0, MouseIO.hold.left);
     root.draw();
-    assert(tracker1.hoverImplCount == 6);
+    assert(tracker1.hoverImplCount == 2);
     assert(tracker1.pressHeldCount == 4);
+    assert(tracker2.hoverImplCount == 0);
+    assert(tracker2.pressHeldCount == 0);
+
+    device.emit(0, MouseIO.hold.left);
+    root.draw();
+    assert(tracker1.hoverImplCount == 2);  // The original tracker doesn't see hover anymore
+    assert(tracker1.pressHeldCount == 4);
+    assert(tracker2.hoverImplCount == 0);
+    assert(tracker2.pressHeldCount == 1);  // Hover new calls the other tracker.
+    assert(tracker2.pressCount == 0);
 
     device.emit(0, MouseIO.press.left);
     root.draw();
-    assert(tracker1.hoverImplCount == 6);  // The original tracker doesn't see hover anymore
+    assert(tracker1.hoverImplCount == 2);
     assert(tracker1.pressHeldCount == 4);
     assert(tracker1.pressCount == 1);
-    assert(tracker2.hoverImplCount == 1);  // Hover new calls the other tracker;
+    assert(tracker2.hoverImplCount == 1);
+    assert(tracker2.pressHeldCount == 1);
     assert(tracker2.pressCount == 0);      // The press isn't registered.
 
+}
+
+@("HoverSpace runs hoverImpl if ActionIO is absent")
+unittest {
+
+    MyHover device;
+    HoverSpace hover;
+    HoverTracker tracker;
+
+    auto root = hover = sizeLock!hoverSpace(
+        .nullTheme,
+        .sizeLimit(400, 400),
+        device  = myHover(),
+        tracker = hoverTracker(.layout!(1, "fill")),
+    );
+
+    device.pointers = [
+        device.makePointer(0, Vector2(10, 10)),
+    ];
+    root.draw();
+    assert(tracker.hoverImplCount == 1);
+    
+
+    
 }
