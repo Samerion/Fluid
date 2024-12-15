@@ -51,6 +51,16 @@ interface FocusIO : IO {
     ///     Node that was focused, to allow chaining assignments.
     Focusable currentFocus(Focusable newValue);
 
+    /// Returns:
+    ///     True if the focusable is currently focused.
+    /// Params:
+    ///     focusable = Focusable to check.
+    final bool isFocused(const Focusable focusable) const {
+
+        return currentFocus.opEquals(cast(const Object) focusable);
+
+    }
+
     /// Clear current focus (set it to null).
     final void clearFocus() {
         currentFocus = null;
@@ -78,6 +88,13 @@ interface Focusable : Actionable {
     ///     True if this node has focus. Recommended implementation: `return this == focusIO.focus`. 
     ///     Proxy nodes, such as `FieldSlot` might choose to return the value of the node they hold.
     bool isFocused() const;
+
+    /// Memory safe and `const` object comparison.
+    /// Returns:
+    ///     True if this, and the other object, are the same object.
+    /// Params:
+    ///     other = Object to compare to.
+    bool opEquals(const Object other) const;
 
 }
 

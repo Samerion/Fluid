@@ -118,6 +118,14 @@ class FocusSpace : Space, FocusIO {
             lastFocusBox = positionalFocusAction.resultFocusBox;
         }
 
+        // Send a frame event to trigger focusImpl
+        if (actionIO) {
+            actionIO.emitEvent(ActionIO.frameEvent, 0, &runInputAction);
+        }
+        else if (currentFocus) {
+            _wasInputHandled = currentFocus.focusImpl();
+        }
+
     }
 
     /// Handle an input action using the currently focused node.
@@ -133,19 +141,22 @@ class FocusSpace : Space, FocusIO {
     ///     Consequently, `wasInputAction` will be set to true.
     bool runInputAction(InputActionID actionID, bool isActive = true) {
 
-        // Run the action, and mark input as handled
-        if (_focus && _focus.actionImpl(actionID, isActive)) {
-            _wasInputHandled = true;
-            return true;
-        }
+        // Try to handle the input action
+        const handled =
 
-        // Run local input actions
-        if (runLocalInputActions(actionID, isActive)) {
-            _wasInputHandled = true;
-            return true;
-        }
+            // Run the action, and mark input as handled
+            (currentFocus && currentFocus.actionImpl(actionID, isActive))
+
+            // Run local input actions
+            || (runLocalInputActions(actionID, isActive))
+
+            // Run focusImpl as a fallback
+            || (actionID == inputActionID!(ActionIO.CoreAction.frame) && currentFocus && currentFocus.focusImpl());
+
+        // Mark as handled, if so
+        _wasInputHandled = _wasInputHandled || handled;
         
-        return false;
+        return handled;
 
     }
 

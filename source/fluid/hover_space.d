@@ -224,9 +224,6 @@ class HoverSpace : Space, HoverIO {
         auto hover = cast(Hoverable) hoverOf(pointer);
         auto meta = _pointers[pointer.id];
 
-        // Ignore if already handled
-        if (meta.isHandled) return false;
-
         // Active input actions can only fire for `heldNode`
         if (isActive) {
             if (!meta.node.opEquals(meta.heldNode)) {
@@ -235,7 +232,7 @@ class HoverSpace : Space, HoverIO {
         }
 
         // Try to handle the action
-        return _pointers[pointer.id].isHandled =
+        const handled =
             
             // Try to run the action
             (hover && hover.actionImpl(actionID, isActive))
@@ -245,6 +242,11 @@ class HoverSpace : Space, HoverIO {
 
             // Run hoverImpl as a last resort
             || (actionID == inputActionID!(ActionIO.CoreAction.frame) && hover && hover.hoverImpl());
+
+        // Mark as handled, if so
+        _pointers[pointer.id].isHandled = meta.isHandled || handled;
+
+        return handled;
 
     }
 

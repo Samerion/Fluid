@@ -401,6 +401,16 @@ unittest {
     assert(tracker2.pressHeldCount == 1);
     assert(tracker2.pressCount == 0);      // The press isn't registered.
 
+    root.draw();
+    assert(tracker2.hoverImplCount == 2);
+
+    // Unrelated input actions cannot trigger fallback
+    hover.runInputAction!(FluidInputAction.press)(device.pointers[0]);
+    assert(tracker2.pressCount == 1);
+    hover.runInputAction!(FluidInputAction.contextMenu)(device.pointers[0]);
+    assert(tracker2.pressCount == 1);
+    assert(tracker2.hoverImplCount  == 2);
+
 }
 
 @("HoverSpace runs hoverImpl if ActionIO is absent")
