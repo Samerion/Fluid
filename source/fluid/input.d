@@ -969,6 +969,10 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable, Focusable, Hov
         return super.opEquals(other);
     }
 
+    override bool blocksInput() const {
+        return isDisabled || isDisabledInherited;
+    }
+
     /// Handle mouse input if no input action did.
     ///
     /// Usually, you'd prefer to define a method marked with an `InputAction` enum. This function is preferred for more

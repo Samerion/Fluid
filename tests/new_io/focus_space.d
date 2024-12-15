@@ -15,7 +15,6 @@ class FocusTracker : Node, Focusable {
 
     int pressCalls;
     int focusImplCalls;
-    protected bool _blocksInput;
 
     override void resizeImpl(Vector2) {
         require(focusIO);
@@ -27,25 +26,25 @@ class FocusTracker : Node, Focusable {
     }
 
     override bool blocksInput() const {
-        return _blocksInput;
-    }
-
-    bool blocksInput(bool value) {
-        return _blocksInput = value;
+        return isDisabled || isDisabledInherited;
     }
 
     @(FluidInputAction.press)
     void press() {
+        assert(!blocksInput);
         pressCalls++;
     }
 
     bool focusImpl() {
+        assert(!blocksInput);
         focusImplCalls++;
         return true;
     }
 
     void focus() {
-        focusIO.currentFocus = this;
+        if (!blocksInput) {
+            focusIO.currentFocus = this;
+        }
     }
 
     bool isFocused() const {
@@ -388,5 +387,30 @@ unittest {
     root.draw();
 
     assert(tracker.focusImplCalls == 1);
+
+}
+
+@("FocusSpace doesn't trigger events on disabled nodes")
+unittest {
+
+    auto tracker = focusTracker();
+    auto focus = focusSpace(tracker);
+    auto root = focus;
+
+    // Focused for a frame while enabled
+    focus.currentFocus = tracker;
+    root.draw();
+    assert(tracker.focusImplCalls == 1);
+
+    // Disabled while focused
+    tracker.disable();
+    root.draw();
+    assert(tracker.focusImplCalls == 1);
+    assert(tracker.pressCalls == 0);
+
+    root.runInputAction!(FluidInputAction.press);
+    root.draw();
+    assert(tracker.pressCalls == 0);
+
 
 }
