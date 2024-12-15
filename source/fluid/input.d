@@ -11,13 +11,19 @@ import fluid.tree;
 import fluid.style;
 import fluid.backend;
 
+import fluid.io.focus;
+import fluid.io.hover;
+import fluid.io.action;
+
 
 @safe:
 
 
 /// Make a InputAction handler react to every frame as long as the action is being held (mouse button held down,
 /// key held down, etc.).
-enum WhileDown;
+enum WhileHeld;
+
+alias WhileDown = WhileHeld;
 
 deprecated ("`whileDown` has been deprecated and will be removed in Fluid 0.8.0. Use `WhileDown` instead.")
 alias whileDown = WhileDown;
@@ -128,43 +134,7 @@ immutable struct InputActionID {
 
 }
 
-/// Check if the given symbol is an input action type.
-///
-/// The symbol symbol must be a member of an enum marked with `@InputAction`. The enum $(B must not) be a manifest
-/// constant (eg. `enum foo = 123;`).
-template isInputActionType(alias actionType) {
-
-    // Require the action type to be an enum
-    static if (is(typeof(actionType) == enum)) {
-
-        // Search through the enum attributes
-        static foreach (attribute; __traits(getAttributes, typeof(actionType))) {
-
-            // Not yet found
-            static if (!is(typeof(isInputActionType) == bool)) {
-
-                // Check if this is the attribute we're looking for
-                static if (__traits(isSame, attribute, InputAction)) {
-
-                    enum isInputActionType = true;
-
-                }
-
-            }
-
-        }
-
-    }
-
-    // Not found
-    static if (!is(typeof(isInputActionType) == bool)) {
-
-        // Respond as false
-        enum isInputActionType = false;
-
-    }
-
-}
+enum isInputActionType(alias actionType) = isInputAction!actionType;
 
 unittest {
 
@@ -835,55 +805,18 @@ interface FluidHoverable {
 
         }
 
-        override bool runInputActionImpl(immutable InputActionID action, bool active) {
+        override bool runInputActionImpl(immutable InputActionID action, bool isActive) {
 
             import std.meta : Filter;
+            import fluid.io.action : InputActionHandlers, runInputActionHandler;
 
             alias This = typeof(this);
 
             // The programmer may override the action
-            if (inputActionImpl(action, active)) return true;
+            if (inputActionImpl(action, isActive)) return true;
 
-            bool handled;
-
-            // Check each member
-            static foreach (memberName; __traits(allMembers, This)) {
-
-                static if (!__traits(isDeprecated, __traits(getMember, This, memberName)))
-                static foreach (overload; __traits(getOverloads, This, memberName)) {
-
-                    // Find the matching action
-                    static foreach (actionType; __traits(getAttributes, overload)) {
-
-                        // Input action
-                        static if (isInputActionType!actionType) {
-                            if (InputActionID.from!actionType == action) {
-
-                                // Run the action if the stroke was performed
-                                if (shouldActivateWhileDown!overload || active) {
-
-                                    handled = runInputActionHandler(actionType, &__traits(child, this, overload));
-
-                                }
-
-                            }
-                        }
-
-                        // Prevent usage via @InputAction
-                        else static if (is(typeof(actionType)) && isInstanceOf!(typeof(actionType), InputAction)) {
-
-                            static assert(false,
-                                format!"Please use @(%s) instead of @InputAction!(%1$s)"(actionType.type));
-
-                        }
-
-                    }
-
-                }
-
-            }
-
-            return handled;
+            // Run the action
+            return runInputActionHandler(this, action, isActive);
 
         }
 
@@ -894,35 +827,7 @@ interface FluidHoverable {
 /// Check for `@WhileDown`
 enum shouldActivateWhileDown(alias overload) = hasUDA!(overload, fluid.input.WhileDown);
 
-/// Helper function to run an input action handler through one of the possible overloads.
-bool runInputActionHandler(T)(T action, bool delegate(T action) @safe handler) {
-
-    return handler(action);
-
-}
-
-/// ditto
-bool runInputActionHandler(T)(T action, void delegate(T action) @safe handler) {
-
-    handler(action);
-    return true;
-
-}
-
-/// ditto
-bool runInputActionHandler(T)(T, bool delegate() @safe handler) {
-
-    return handler();
-
-}
-
-/// ditto
-bool runInputActionHandler(T)(T, void delegate() @safe handler) {
-
-    handler();
-    return true;
-
-}
+alias runInputActionHandler = fluid.io.action.runInputActionHandler;
 
 private bool runInputActionsImpl(FluidHoverable hoverable, bool mouse) {
 
@@ -1038,10 +943,13 @@ interface FluidScrollable {
 }
 
 /// Represents a general input node.
-abstract class InputNode(Parent : Node) : Parent, FluidFocusable {
+abstract class InputNode(Parent : Node) : Parent, FluidFocusable, Focusable, Hoverable {
 
     mixin makeHoverable;
     mixin enableInputActions;
+
+    FocusIO focusIO;
+    HoverIO hoverIO;
 
     /// Callback to run when the input value is altered.
     void delegate() changed;
@@ -1055,6 +963,16 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable {
 
     }
 
+    alias opEquals = typeof(super).opEquals;
+
+    override bool opEquals(const Object other) const {
+        return super.opEquals(other);
+    }
+
+    override bool blocksInput() const {
+        return isDisabled || isDisabledInherited;
+    }
+
     /// Handle mouse input if no input action did.
     ///
     /// Usually, you'd prefer to define a method marked with an `InputAction` enum. This function is preferred for more
@@ -1065,6 +983,12 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable {
     protected override void mouseImpl() { }
 
     protected bool keyboardImpl() {
+
+        return false;
+
+    }
+
+    override bool hoverImpl() {
 
         return false;
 
@@ -1084,6 +1008,16 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable {
 
     }
 
+    /// Respond to an input action by its ID. 
+    ///
+    /// This endpoint is used by the new I/O system. `InputNode` implements this by redirecting the input
+    /// to `runInputAction`.
+    override bool actionImpl(immutable InputActionID id, bool isActive) {
+
+        return runInputAction(id, isActive);
+
+    }
+
     /// Check if the node is being pressed. Performs action lookup.
     ///
     /// This is a helper for nodes that might do something when pressed, for example, buttons.
@@ -1091,6 +1025,17 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable {
 
         return (isHovered && tree.isMouseDown!(FluidInputAction.press))
             || (isFocused && tree.isFocusDown!(FluidInputAction.press));
+
+    }
+
+    override void resizeImpl(Vector2 space) {
+
+        use(focusIO);
+        use(hoverIO);
+
+        static if (!isAbstractFunction!(typeof(super).resizeImpl)) {
+            super.resizeImpl(space);
+        }
 
     }
 
@@ -1102,11 +1047,57 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable {
         // Ignore if disabled
         if (isDisabled) return;
 
-        // Switch the scroll
-        tree.focus = this;
+        // Switch focus using the active I/O technique
+        if (focusIO) {
+            focusIO.currentFocus = this;
+        }
+        else {
+            tree.focus = this;
+        }
 
-        // Ensure this node gets focus
+        // Ensure this node is in view
         this.scrollIntoView();
+
+    }
+
+    override bool isHovered() const {
+
+        if (hoverIO) {
+            return hoverIO.isHovered(this);
+        }
+        else {
+            return super.isHovered();
+        }
+
+    }
+
+    override protected void focusPreviousOrNext(FluidInputAction actionType) {
+
+        super.focusPreviousOrNext(actionType);
+
+    }
+
+    @(FluidInputAction.focusPrevious, FluidInputAction.focusNext)
+    protected bool focusPreviousOrNextBool(FluidInputAction actionType) {
+
+        if (focusIO) return false;
+        focusPreviousOrNext(actionType);
+        return true;
+    }
+
+    override protected void focusInDirection(FluidInputAction actionType) {
+
+        super.focusInDirection(actionType);
+
+    }
+
+    @(FluidInputAction.focusLeft, FluidInputAction.focusRight)
+    @(FluidInputAction.focusUp, FluidInputAction.focusDown)
+    protected bool focusInDirectionBool(FluidInputAction action) {
+
+        if (focusIO) return false;
+        focusInDirection(action);
+        return true;
 
     }
 
@@ -1115,7 +1106,12 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable {
         /// Check if the node has focus.
         bool isFocused() const {
 
-            return tree.focus is this;
+            if (focusIO) {
+                return focusIO.isFocused(this);
+            } 
+            else {
+                return tree.focus is this;
+            }
 
         }
 
@@ -1123,7 +1119,16 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable {
         bool isFocused(bool enable) {
 
             if (enable) focus();
-            else if (isFocused) tree.focus = null;
+            else if (isFocused) {
+
+                if (focusIO) {
+                    focusIO.currentFocus = null;
+                } 
+                else {
+                    tree.focus = null;
+                }
+
+            }
 
             return enable;
 

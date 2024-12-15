@@ -3,6 +3,7 @@ module fluid.future.pipe;
 
 import std.meta;
 import std.traits;
+import std.typecons;
 
 @safe:
 
@@ -184,9 +185,16 @@ if (!is(Output == void)) {
             // return: Output => NextOutput
             auto result = new MultiPublisher!Publishers;
             subscribe(
+
+                // When this publisher receives data
                 pipe((Output output) { 
+
+                    // Pass it to the listener
+                    auto publisher = next(output);
+
+                    // And connect the returned publisher to the multipublisher
                     static foreach (Publisher; Publishers) {
-                        next(output)
+                        (cast(Publisher) publisher)
                             .subscribe(cast(SubscriberOf!Publisher) result);
                     }
                 })
@@ -262,8 +270,6 @@ unittest {
 class MultiPublisherImpl(IPipes...) : staticMap!(PublisherSubscriberPair, IPipes)
 if (IPipes.length != 0) {
 
-    import std.typecons : Tuple;
-
     // Tuple isn't strictly necessary here, but it fixes LDC builds
     private Tuple!(staticMap!(SubscriberOf, IPipes)) subscribers;
 
@@ -278,12 +284,17 @@ if (IPipes.length != 0) {
         }
 
         void opCall(PipeContent!IPipe content) {
-            import std.stdio;
-            debug writeln(subscribers[i]);
             if (subscribers[i]) {
                 subscribers[i](content);
             }
         }
+
+    }
+
+    override string toString() const {
+
+        import std.conv;
+        return text("MultiPublisher!", IPipes.stringof);
 
     }
 
@@ -349,4 +360,138 @@ template ToParameter(T) {
     else {
         alias ToParameter = T;
     }
+}
+
+struct Event(T...) {
+
+    import std.array;
+
+    private Appender!(Subscriber!T[]) subscribers;
+
+    size_t length() const {
+        return subscribers[].length;
+    }
+
+    void clearSubscribers() {
+        subscribers.clear();
+    }
+
+    void subscribe(Subscriber!T subscriber) {
+        this.subscribers ~= subscriber;
+    }
+
+    void opOpAssign(string op : "~")(Subscriber!T subscriber) {
+        this.subscribers ~= subscriber;
+    }
+
+    void opOpAssign(string op : "~")(Subscriber!T[] subscribers) {
+        this.subscribers ~= subscribers;
+    }
+
+    void opCall(T arguments) {
+        foreach (subscriber; subscribers[]) {
+            subscriber(arguments);
+        }
+    }
+
+    string toString() const {
+
+        import std.conv;
+        return text("Event!", T.stringof, "(", length, " events)");
+
+    }
+
+}
+
+/// Get the Publisher interfaces that can output a value that shares a common type with `Inputs`.
+template PublisherType(Publisher, Inputs...) {
+
+    alias Result = AliasSeq!();
+
+    // Check each publisher
+    static foreach (P; AllPublishers!Publisher) {
+
+        // See if its type can cast to the inputs
+        static if (is(Inputs : PipeContent!P) || is(PipeContent!P : Inputs)) {
+            Result = AliasSeq!(Result, P);
+        }
+
+    }
+
+    alias PublisherType = Result;
+
+}
+
+/// Connect to a publisher and assert the values it sends equal the one attached.
+AssertPipe!(PipeContent!(PublisherType!(T, Inputs)[0])) thenAssertEquals(T, Inputs...)(T publisher, Inputs value,
+    string file = __FILE__, size_t lineNumber = __LINE__)
+if (PublisherType!(T, Inputs).length != 0) {
+
+    auto pipe = new typeof(return)(value, file, lineNumber);
+    publisher.subscribe(pipe);
+    return pipe;
+
+}
+
+class AssertPipe(Ts...) : Subscriber!Ts, Publisher!(), Publisher!Ts
+if (Ts.length != 0) {
+
+    public {
+
+        /// Value this pipe expects to receive.
+        Tuple!Ts expected;
+        string file;
+        size_t lineNumber;
+
+    }
+
+    private {
+
+        Event!() _eventEmpty;
+        Event!Ts _event;
+
+    }
+
+    this(Ts expected, string file = __FILE__, size_t lineNumber = __LINE__) {
+        this.expected = expected;
+        this.file = file;
+        this.lineNumber = lineNumber;
+    }
+
+    override void subscribe(Subscriber!() subscriber) {
+        _eventEmpty ~= subscriber;
+    }
+
+    override void subscribe(Subscriber!Ts subscriber) {
+        _event ~= subscriber;
+    }
+
+    override void opCall(Ts received) {
+
+        import std.conv;
+        import std.exception;
+        import core.exception;
+        import fluid.node;
+
+        // Direct comparison for nodes to ensure safety on older compilers
+        static if (is(Ts == AliasSeq!Node)) {
+            const bothNull = expected[0] is null && received[0] is null;
+            enforce!AssertError(bothNull || expected[0].opEquals(received), 
+                text("Expected ", expected.expand, ", but received ", received),
+                file,
+                lineNumber);
+        }
+        else {
+            enforce!AssertError(expected == tuple(received), 
+                text("Expected ", expected.expand, ", but received ", received),
+                file,
+                lineNumber);
+        }
+
+        _event(received);
+        _eventEmpty();
+
+    }
+    
+    
 }

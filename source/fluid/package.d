@@ -28,6 +28,7 @@ else {
 
 public import
     fluid.backend,
+    fluid.input_map_space,
     fluid.actions,
     fluid.button,
     fluid.checkbox,
@@ -38,8 +39,10 @@ public import
     fluid.file_input,
     fluid.field_slot,
     fluid.frame,
+    fluid.focus_space,
     fluid.grid,
     fluid.hover_button,
+    fluid.hover_space,
     fluid.image_view,
     fluid.input,
     fluid.io,

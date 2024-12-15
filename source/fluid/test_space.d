@@ -25,6 +25,7 @@ import fluid.backend;
 import fluid.io.canvas;
 
 import fluid.future.pipe;
+import fluid.future.arena;
 
 @safe:
 
@@ -37,19 +38,13 @@ class TestSpace : Space, CanvasIO {
 
     private {
 
-        struct LoadedImage {
-            Image image;
-            int lastResize;
-        }
-
         /// Probe the space will use to analyze the tree.
         TestProbe _probe;
 
-        /// Number of calls made to `resize`.
-        int _resizeNumber;
-
         /// All presently loaded images.
-        LoadedImage[] _loadedImages;
+        ResourceArena!Image _loadedImages;
+
+        /// Map of image pointers (image.data.ptr) to indices in the resource arena
         int[size_t] _imageIndices;
 
     }
@@ -64,14 +59,16 @@ class TestSpace : Space, CanvasIO {
     }
 
     /// Returns: True if the given image is loaded.
+    /// Params:
+    ///     image = Image to check.
     bool isImageLoaded(DrawableImage image) nothrow {
 
         const ptr = cast(size_t) image.data.ptr;
 
-        // Image is registered, OK
+        // Image is registered and up to date, OK
         if (auto index = ptr in _imageIndices) {
-            assert(*index == image.id, "Image index doesn't match assigned ID.");
-            return true;
+            return *index == image.id
+                && _loadedImages.isActive(*index);
         }
 
         // Not loaded
@@ -82,7 +79,7 @@ class TestSpace : Space, CanvasIO {
     /// Returns: The number of images registered by the test runner.
     int countLoadedImages() nothrow const {
 
-        return cast(int) _loadedImages.length;
+        return cast(int) _loadedImages[].walkLength;
 
     }
 
@@ -90,20 +87,22 @@ class TestSpace : Space, CanvasIO {
 
         auto frame = this.implementIO();
 
-        _resizeNumber++;
+        // Free resources
+        _loadedImages.startCycle((newIndex, ref image) {
+
+            const id = cast(size_t) image.data.ptr;
+
+            if (newIndex == -1) {
+                _imageIndices.remove(id);
+            }
+            else {
+                _imageIndices[id] = newIndex;
+            }
+            
+        });
+
+        // Resize contents
         super.resizeImpl(space);
-
-        // Garbage-collect images
-        foreach_reverse (i, ref image; _loadedImages) {
-
-            // Still valid, continue
-            if (image.lastResize >= _resizeNumber) continue;
-
-            // Remove the image
-            _loadedImages = _loadedImages.remove(i);
-            _imageIndices.remove(cast(size_t) image.image.data.ptr);
-
-        }
 
     }
 
@@ -163,18 +162,13 @@ class TestSpace : Space, CanvasIO {
 
         // If the image is already loaded, mark it as so
         if (auto index = ptr in _imageIndices) {
-            _loadedImages[*index].lastResize = _resizeNumber;
+            _loadedImages.reload(*index, image);
             return *index;
         }
 
         // If not, add it
         else {
-            const index = cast(int) _loadedImages.length;
-
-            _loadedImages ~= LoadedImage(image, _resizeNumber);
-            _imageIndices[ptr] = index;
-
-            return index;
+            return _imageIndices[ptr] = _loadedImages.load(image);
         }
 
     }
@@ -194,30 +188,6 @@ class TestSpace : Space, CanvasIO {
         assertThrown!AssertError(
             drawAndAssert(asserts)
         );
-
-    }
-
-    /// Repeatedly draw the space until the condition is satisfied. Useful for testing tree actions.
-    /// Params:
-    ///     endCondition = This can be a delegate, in which case the loop will stop once the return value is `true`.
-    ///         It can also be a `Publisher`, in which case the moment it emits en event, the event loop will finish.
-    void runUntil(bool delegate() @safe endCondition) {
-
-        while (!endCondition()) {
-            draw();
-        }
-
-    }
-
-    /// ditto
-    void runUntil(Publisher!() endCondition) {
-
-        bool finished;
-        endCondition.then(() => finished = true);
-
-        while (!finished) {
-            draw();
-        }
 
     }
 
