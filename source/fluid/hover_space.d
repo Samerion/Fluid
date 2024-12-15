@@ -50,6 +50,9 @@ class HoverSpace : Space, HoverIO {
             /// If true, any button related to the pointer is being held.
             bool isHeld;
 
+            /// If true, the pointer already handled incoming input events.
+            bool isHandled;
+
             bool opEquals(const Pointer pointer) const {
                 return this.value.isSame(pointer);
             }
@@ -165,16 +168,21 @@ class HoverSpace : Space, HoverIO {
             // Set the hovered node
             pointer.node = pointer.action.result;
 
-            // Trigger hover events if relevant
-            if (auto hoverable = cast(Hoverable) pointer.node) {
-                hoverable.hoverImpl();
-            }
-
             // Mark as held ahead of time
             if (!pointer.isHeld) {
                 pointer.heldNode = pointer.node;
             }
             pointer.isHeld = false;
+            pointer.isHandled = false;
+
+            // Send a frame event to trigger hoverImpl
+            if (actionIO) {
+                actionIO.emitEvent(ActionIO.frameEvent, pointer.value.id, &runInputAction);
+            }
+            else if (auto hoverable = cast(Hoverable) pointer.node) {
+                pointer.isHandled = hoverable.hoverImpl();
+            }
+
         }
 
     }
@@ -216,6 +224,9 @@ class HoverSpace : Space, HoverIO {
         auto hover = cast(Hoverable) hoverOf(pointer);
         auto meta = _pointers[pointer.id];
 
+        // Ignore if already handled
+        if (meta.isHandled) return false;
+
         // Active input actions can only fire for `heldNode`
         if (isActive) {
             if (!meta.node.opEquals(meta.heldNode)) {
@@ -223,17 +234,17 @@ class HoverSpace : Space, HoverIO {
             }
         }
 
-        // Run the action, and mark input as handled
-        if (hover && hover.actionImpl(actionID, isActive)) {
-            return true;
-        }
+        // Try to handle the action
+        return _pointers[pointer.id].isHandled =
+            
+            // Try to run the action
+            (hover && hover.actionImpl(actionID, isActive))
 
-        // Run local input actions
-        if (runLocalInputActions(pointer, actionID, isActive)) {
-            return true;
-        }
+            // Run local input actions as fallback
+            || runLocalInputActions(pointer, actionID, isActive)
 
-        return false;
+            // Run hoverImpl as a last resort
+            || (actionID == inputActionID!(ActionIO.CoreAction.frame) && hover && hover.hoverImpl());
 
     }
 
