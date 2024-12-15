@@ -427,7 +427,6 @@ unittest {
     );
 
     root.currentFocus = btn1;
-    root.draw();
     root.focusNext()
         .thenAssertEquals(btn3)
         .then(() => root.focusNext)
@@ -436,6 +435,31 @@ unittest {
         .thenAssertEquals(btn3)
         .then(() => root.focusPrevious)
         .thenAssertEquals(btn1)
+        .runWhileDrawing(root);
+
+}
+
+@("Positional focus skips over disabled nodes")
+unittest {
+
+    Button btn1, btn2, btn3;
+
+    auto root = focusSpace(
+        btn1 = button("One", delegate { }),
+        btn2 = button(.disabled, "Two", delegate { }),
+        btn3 = button("Three", delegate { }),
+    );
+
+    root.currentFocus = btn1;
+    root.draw();
+    root.focusBelow()
+        .thenAssertEquals(btn3)
+        .then(() => root.focusBelow)
+        .thenAssertEquals(null)
+        .then(() => root.focusAbove)
+        .thenAssertEquals(btn1)
+        .then(() => root.focusAbove)
+        .thenAssertEquals(null)
         .runWhileDrawing(root);
 
 }

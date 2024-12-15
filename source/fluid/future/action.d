@@ -288,7 +288,7 @@ final class PositionalFocusAction : FocusSearchAction {
 
         depth--;
 
-        auto focusable = cast(Focusable) node;
+        auto focusable = node.castIfAcceptsInput!Focusable;
 
         // Set priority
         priority += priorityDirection * abs(depth - lastDepth);
