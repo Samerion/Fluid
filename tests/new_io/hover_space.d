@@ -259,7 +259,7 @@ unittest {
 
 }
 
-@("HoverSpace Actions won't apply if hover changes")
+@("HoverSpace actions won't apply if hover changes")
 unittest {
 
     MyHover device;
@@ -314,6 +314,18 @@ unittest {
 
     assert(onePressed == 0);
     assert(twoPressed == 0);
+
+    // Move outside of the canvas
+    device.pointers = [
+        device.makePointer(0, Vector2(500, 500)),
+    ];
+    device.emit(0, MouseIO.hold.left);
+    root.draw();
+    device.emit(0, MouseIO.hold.left);
+    root.draw();
+    device.emit(0, MouseIO.release.left);
+    root.draw();
+    assert(onePressed == 0);
 
 }
 

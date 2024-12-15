@@ -226,7 +226,7 @@ class HoverSpace : Space, HoverIO {
 
         // Active input actions can only fire for `heldNode`
         if (isActive) {
-            if (!meta.node.opEquals(meta.heldNode)) {
+            if (meta.node is null || !meta.node.opEquals(meta.heldNode)) {
                 return false;
             }
         }
