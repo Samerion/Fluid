@@ -8,6 +8,7 @@ import fluid.style;
 import fluid.actions;
 
 import fluid.io.focus;
+import fluid.io.action;
 
 import fluid.future.pipe;
 import fluid.future.branch_action;
@@ -122,7 +123,7 @@ final class OrderedFocusAction : FocusSearchAction {
         }
 
         // Ignore nodes that are not focusable
-        if (!cast(Focusable) node) return;
+        if (node.castIfAcceptsInput!Focusable is null) return;
 
         // Set first and next node to this node
         if (_first is null) {
