@@ -18,7 +18,7 @@ class ActionTester : InputNode!Node {
     override void resizeImpl(Vector2 space) { }
     override void drawImpl(Rectangle, Rectangle) { }
 
-    @(ActionIO.CoreAction.frame)
+    @(ActionIO.CoreAction.frame, WhileHeld)
     void frame() {
         frameCalls++;
     }

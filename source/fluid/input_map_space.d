@@ -34,7 +34,7 @@ class InputMapSpace : Space, ActionIO {
     private {
 
         /// All collected input events.
-        Stack!ReceivedInputEvent events;
+        Stack!ReceivedInputEvent _events;
 
     }
 
@@ -56,7 +56,7 @@ class InputMapSpace : Space, ActionIO {
 
         // Process all input events
         processEvents();
-        events.clear();
+        _events.clear();
 
     }
 
@@ -65,7 +65,7 @@ class InputMapSpace : Space, ActionIO {
     do {
 
         // Save the event to list
-        events ~= ReceivedInputEvent(event, number, callback);
+        _events ~= ReceivedInputEvent(event, number, callback);
 
     }
 
@@ -79,7 +79,7 @@ class InputMapSpace : Space, ActionIO {
     ///     A range with all emitted events that match the query.
     auto findEvents(InputEventCode code) @system {
 
-        return events[].filter!(a => a.event.code == code);
+        return _events[].filter!(a => a.event.code == code);
 
     }
 
@@ -87,7 +87,7 @@ class InputMapSpace : Space, ActionIO {
     /// Clears the current list of events when done.
     private void processEvents() @trusted {
 
-        scope (exit) events.clear();
+        scope (exit) _events.clear();
 
         bool handled;
 
