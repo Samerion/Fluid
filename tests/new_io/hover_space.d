@@ -163,6 +163,8 @@ unittest {
 
     root.draw();
     assert(!root.hovers);
+    assert(!one.isHovered);
+    assert(!two.isHovered);
 
     device.pointers = [
         device.makePointer(0, Vector2(0, 0)),
@@ -171,6 +173,8 @@ unittest {
     root.draw();
     assert(root.hovers(one));
     assert(root.hoversOnly([one]));
+    assert(one.isHovered);
+    assert(!two.isHovered);
 
     device.pointers = [
         device.makePointer(0, Vector2(0, 120)),
@@ -186,6 +190,8 @@ unittest {
     root.draw();
     assert(root.hovers());
     assert(root.hoversOnly([two]));
+    assert(!one.isHovered);
+    assert(two.isHovered);
 
 }
 
@@ -217,11 +223,13 @@ unittest {
     root.draw();
     root.draw();
     assert(root.hovers(btn));
+    assert(btn.isHovered);
 
     frame.show();
     root.draw();
     root.draw();
     assert(!root.hovers);
+    assert(!btn.isHovered);
 
 }
 
