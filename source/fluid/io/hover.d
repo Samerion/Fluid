@@ -269,21 +269,18 @@ struct Pointer {
 interface Hoverable : Actionable {
 
     /// Handle input. Called each frame when focused.
+    ///
+    /// Do not call this method if the `blocksInput` is true.
+    ///
     /// Returns:
     ///     True if hover was handled, false if it was ignored.
-    bool hoverImpl();
+    bool hoverImpl()
+    in (!blocksInput, "This node currently doesn't accept input.");
 
     /// Returns: 
     ///     True if this node is hovered.
     ///     This will most of the time be equivalent to `hoverIO.isHovered(this)`, 
     ///     but a node wrapping another hoverable may choose to instead redirect this to the other node.
     bool isHovered() const;
-
-    /// Compare to another object. Must be `@safe` and `const`.
-    /// Params:
-    ///     other = Object to compare to.
-    /// Returns:
-    ///     True if the objects are equal.
-    bool opEquals(const Object other) const;
 
 }

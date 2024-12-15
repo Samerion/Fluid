@@ -59,6 +59,7 @@ class HoverTracker : Node, Hoverable {
     int hoverImplCount;
     int pressHeldCount;
     int pressCount;
+    protected bool _blocksInput;
 
     override void resizeImpl(Vector2) {
         require(hoverIO);
@@ -67,6 +68,14 @@ class HoverTracker : Node, Hoverable {
 
     override void drawImpl(Rectangle, Rectangle) {
 
+    }
+
+    override bool blocksInput() const {
+        return _blocksInput;
+    }
+
+    bool blocksInput(bool value) {
+        return _blocksInput = value;
     }
 
     override bool hoverImpl() {

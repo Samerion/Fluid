@@ -37,6 +37,9 @@ interface FocusIO : IO {
     ///     event = Input event the system should save.
     void emitEvent(InputEvent event);
 
+    /// Note:
+    ///     Currently focused node may have `blocksInput` set to true; take care to check it before calling input
+    ///     handling methods.
     /// Returns:
     ///     The currently focused node, or `null` if no node has focus at the moment.
     inout(Focusable) currentFocus() inout;
@@ -72,14 +75,19 @@ interface FocusIO : IO {
 interface Focusable : Actionable {
 
     /// Handle input. Called each frame when focused.
+    ///
+    /// This method should not be called if `blocksInput` is true.
+    /// 
     /// Returns:
     ///     True if focus input was handled, false if it was ignored.
-    bool focusImpl();
+    bool focusImpl()
+    in (!blocksInput, "This node currently doesn't accept input.");
 
     /// Set focus to this node.
     ///
-    /// Implementation would usually call `focusIO.focus` on self for this to take effect. A node may override this
-    /// method to redirect the focus to another node (by calling its `focus()` method), or ignore the request.
+    /// Implementation would usually check `blocksInput` and call `focusIO.focus` on self for this to take effect. 
+    /// A node may override this method to redirect the focus to another node (by calling its `focus()` method), 
+    /// or ignore the request.
     ///
     /// Focus should do nothing if the node `isDisabled` is true or if
     void focus();
@@ -88,13 +96,6 @@ interface Focusable : Actionable {
     ///     True if this node has focus. Recommended implementation: `return this == focusIO.focus`. 
     ///     Proxy nodes, such as `FieldSlot` might choose to return the value of the node they hold.
     bool isFocused() const;
-
-    /// Memory safe and `const` object comparison.
-    /// Returns:
-    ///     True if this, and the other object, are the same object.
-    /// Params:
-    ///     other = Object to compare to.
-    bool opEquals(const Object other) const;
 
 }
 

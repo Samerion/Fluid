@@ -15,6 +15,7 @@ class FocusTracker : Node, Focusable {
 
     int pressCalls;
     int focusImplCalls;
+    protected bool _blocksInput;
 
     override void resizeImpl(Vector2) {
         require(focusIO);
@@ -23,6 +24,14 @@ class FocusTracker : Node, Focusable {
 
     override void drawImpl(Rectangle, Rectangle) {
 
+    }
+
+    override bool blocksInput() const {
+        return _blocksInput;
+    }
+
+    bool blocksInput(bool value) {
+        return _blocksInput = value;
     }
 
     @(FluidInputAction.press)
