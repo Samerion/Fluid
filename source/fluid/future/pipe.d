@@ -471,10 +471,12 @@ if (Ts.length != 0) {
         import std.conv;
         import std.exception;
         import core.exception;
+        import fluid.node;
 
         // Direct comparison for nodes to ensure safety on older compilers
-        static if (is(Inputs == AliasSeq!Node)) {
-            enforce!AssertError(expected[0].opEquals(received), 
+        static if (is(Ts == AliasSeq!Node)) {
+            const bothNull = expected[0] is null && received[0] is null;
+            enforce!AssertError(bothNull || expected[0].opEquals(received), 
                 text("Expected ", expected.expand, ", but received ", received),
                 file,
                 lineNumber);

@@ -26,6 +26,6 @@ unittest {
     root.draw();
     input.focus();
 
-    assert(cast(Node) root.currentFocus == input);
+    assert(root.currentFocus.opEquals(input));
 
 }

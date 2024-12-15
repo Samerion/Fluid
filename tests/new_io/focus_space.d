@@ -116,8 +116,8 @@ unittest {
     button2.focus();
     assert(button1.isFocused);
     assert(button2.isFocused);
-    assert(cast(Node) focus1.currentFocus == button1);
-    assert(cast(Node) focus2.currentFocus == button2);
+    assert(focus1.currentFocus.opEquals(button1));
+    assert(focus2.currentFocus.opEquals(button2));
 
     focus1.runInputAction!(FluidInputAction.press);
     assert(one == 1);
@@ -148,8 +148,8 @@ unittest {
     button1.focus();
     button2.focus();
 
-    assert(cast(Node) focus1.currentFocus == button1);
-    assert(cast(Node) focus2.currentFocus == button2);
+    assert(focus1.currentFocus.opEquals(button1));
+    assert(focus2.currentFocus.opEquals(button2));
 
 }
 
@@ -195,11 +195,11 @@ unittest {
     assert(root.isFocused(buttons[0]));
 
     const frames = root.focusNext
-        .then((Node a) => assert(a == buttons[1]))
-        .then(()       => root.focusNext)
-        .then((Node a) => assert(a == buttons[2]))
-        .then(()       => root.focusNext)
-        .then((Node a) => assert(a == buttons[0]))
+        .thenAssertEquals(buttons[1])
+        .then(() => root.focusNext)
+        .thenAssertEquals(buttons[2])
+        .then(() => root.focusNext)
+        .thenAssertEquals(buttons[0])
         .runWhileDrawing(root, 5);
 
     assert(frames == 3);
@@ -220,8 +220,8 @@ unittest {
 
     // Via chains
     root.focusNext()
-        .then((Node n) => assert(n == buttons[0]))
-        .then(()       => assert(root.isFocused(buttons[0])))
+        .thenAssertEquals(buttons[0])
+        .then(() => assert(root.isFocused(buttons[0])))
         .runWhileDrawing(root, 1);
 
     // Via input actions
@@ -247,8 +247,8 @@ unittest {
 
     // Via chains
     root.focusPrevious()
-        .then((Node n) => assert(n == buttons[2]))
-        .then(()       => assert(root.isFocused(buttons[2])))
+        .thenAssertEquals(buttons[2])
+        .then(() => assert(root.isFocused(buttons[2])))
         .runWhileDrawing(root, 1);
 
     // Via input actions
@@ -273,24 +273,24 @@ unittest {
     );
 
     root.focusNext()
-        .then(node => assert(node == buttons[0]))
-        .then(()   => root.focusNext())
-        .then(node => assert(node == buttons[1]))
-        .then(()   => root.focusNext())
-        .then(node => assert(node == buttons[2]))
-        .then(()   => root.focusNext())
-        .then(node => assert(node == buttons[0]))
+        .thenAssertEquals(buttons[0])
+        .then(() => root.focusNext())
+        .thenAssertEquals(buttons[1])
+        .then(() => root.focusNext())
+        .thenAssertEquals(buttons[2])
+        .then(() => root.focusNext())
+        .thenAssertEquals(buttons[0])
         .runWhileDrawing(root, 4);
 
     root.clearFocus();
     root.focusPrevious()
-        .then(node => assert(node == buttons[2]))
-        .then(()   => root.focusPrevious())
-        .then(node => assert(node == buttons[1]))
-        .then(()   => root.focusPrevious())
-        .then(node => assert(node == buttons[0]))
-        .then(()   => root.focusPrevious())
-        .then(node => assert(node == buttons[2]))
+        .thenAssertEquals(buttons[2])
+        .then(() => root.focusPrevious())
+        .thenAssertEquals(buttons[1])
+        .then(() => root.focusPrevious())
+        .thenAssertEquals(buttons[0])
+        .then(() => root.focusPrevious())
+        .thenAssertEquals(buttons[2])
         .runWhileDrawing(root, 4);
 
 }

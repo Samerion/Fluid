@@ -2,6 +2,7 @@
 module fluid.node;
 
 import std.math;
+import std.meta;
 import std.range;
 import std.traits;
 import std.string;
