@@ -179,7 +179,7 @@ class HoverSpace : Space, HoverIO {
             if (actionIO) {
                 actionIO.emitEvent(ActionIO.frameEvent, pointer.value.id, &runInputAction);
             }
-            else if (auto hoverable = cast(Hoverable) pointer.node) {
+            else if (auto hoverable = pointer.node.castIfAcceptsInput!Hoverable) {
                 pointer.isHandled = hoverable.hoverImpl();
             }
 
@@ -203,11 +203,11 @@ class HoverSpace : Space, HoverIO {
     ///     Node hovered by the pointer.
     /// Params:
     ///     pointer = Pointer to check. The pointer must be loaded.
-    Node hoverOf(Pointer pointer) {
+    Hoverable hoverOf(Pointer pointer) {
 
         assert(_pointers.isActive(pointer.id), "Given pointer wasn't loaded");
 
-        return _pointers[pointer.id].node;
+        return _pointers[pointer.id].node.castIfAcceptsInput!Hoverable;
 
     }
 
@@ -221,7 +221,7 @@ class HoverSpace : Space, HoverIO {
     ///     True if the input action was handled.
     bool runInputAction(Pointer pointer, InputActionID actionID, bool isActive = true) {
 
-        auto hover = cast(Hoverable) hoverOf(pointer);
+        auto hover = hoverOf(pointer);
         auto meta = _pointers[pointer.id];
 
         // Active input actions can only fire for `heldNode`

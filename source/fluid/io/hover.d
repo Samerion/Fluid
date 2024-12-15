@@ -93,6 +93,7 @@ interface HoverIO : IO {
     /// List all currently hovered nodes.
     /// Params:
     ///     yield = A delegate to be called for every hovered node.
+    ///         This should include nodes that block input, but are hovered. 
     ///         If the delegate returns a non-zero value, the value should be returned.
     /// Returns:
     ///     If `yield` returned a non-zero value, this is the value it returned;
