@@ -7,14 +7,92 @@ import fluid.input;
 import fluid.scroll;
 import fluid.backend;
 
+import fluid.io.focus;
+
 import fluid.future.pipe;
 
 
 @safe:
 
 
+/// Abstract class for tree actions that find and return a node.
+abstract class NodeSearchAction : TreeAction, Publisher!Node {
+
+    public {
+
+        /// Node this action has found.
+        Node result;
+
+    }
+
+    private {
+
+        /// Event that runs when the tree action finishes.
+        Event!Node finished;
+
+    }
+
+    alias then = typeof(super).then;
+    alias then = Publisher!Node.then;
+    alias subscribe = typeof(super).subscribe;
+    alias subscribe = Publisher!Node.subscribe;
+
+    override void clearSubscribers() {
+        super.clearSubscribers();
+        finished.clearSubscribers();
+    }
+
+    override void subscribe(Subscriber!Node subscriber) {
+        finished.subscribe(subscriber);
+    }
+
+    override void beforeTree(Node node, Rectangle rect) {
+        super.beforeTree(node, rect);
+        result = null;
+    }
+
+    override void stopped() {
+        super.stopped();
+        finished(result);
+    }
+
+}
+
+abstract class FocusSearchAction : NodeSearchAction, Publisher!Focusable {
+
+    private {
+
+        /// Event that runs when the tree action finishes.
+        Event!Focusable finished;
+
+    }
+
+    alias then = typeof(super).then;
+    alias then = Publisher!Focusable.then;
+    alias subscribe = typeof(super).subscribe;
+    alias subscribe = Publisher!Focusable.subscribe;
+
+    override void clearSubscribers() {
+        super.clearSubscribers();
+        finished.clearSubscribers();
+    }
+
+    override void subscribe(Subscriber!Focusable subscriber) {
+        finished.subscribe(subscriber);
+    }
+
+    override void stopped() {
+        super.stopped();
+        finished(cast(Focusable) result);
+    }
+
+}
+
 /// Set focus on the given node, if focusable, or the first of its focusable children. This will be done lazily during
-/// the next draw. If calling `focusRecurseChildren`, the subject of the call will be excluded from taking focus.
+/// the next draw. 
+///
+/// If focusing the given node is not desired, use `focusRecurseChildren`.
+///
 /// Params:
 ///     parent = Container node to search in.
 FocusRecurseAction focusRecurse(Node parent) {
@@ -59,7 +137,10 @@ unittest {
 
 }
 
-/// ditto
+/// Set focus on the first of the node's focusable children. This will be done lazily during the next draw. 
+///
+/// Params:
+///     parent = Container node to search in.
 FocusRecurseAction focusRecurseChildren(Node parent) {
 
     auto action = new FocusRecurseAction;
@@ -107,34 +188,14 @@ unittest {
 
 }
 
-class FocusRecurseAction : TreeAction, Publisher!FluidFocusable, Publisher!Node {
+class FocusRecurseAction : FocusSearchAction {
 
     public {
 
         bool excludeStartNode;
+        bool isReverse;
         void delegate(FluidFocusable) @safe finished;
 
-    }
-
-    private {
-        FluidFocusable _result;
-        Subscriber!FluidFocusable _onFinishFluidFocusable;
-        Subscriber!Node _onFinishNode;
-    }
-
-    /// `FocusRecurseAction` will produce the node when done. If one wasn't found, it will yield `null`.
-    alias then = typeof(super).then;
-    alias then = Publisher!FluidFocusable.then;
-    alias then = Publisher!Node.then;
-
-    alias subscribe = typeof(super).subscribe;
-
-    override void subscribe(Subscriber!FluidFocusable onFinish) {
-        _onFinishFluidFocusable = onFinish;
-    }
-
-    override void subscribe(Subscriber!Node onFinish) {
-        _onFinishNode = onFinish;
     }
 
     override void beforeDraw(Node node, Rectangle) {
@@ -148,27 +209,24 @@ class FocusRecurseAction : TreeAction, Publisher!FluidFocusable, Publisher!Node 
         // Check if the node is focusable
         if (auto focusable = cast(FluidFocusable) node) {
 
-            _result = focusable;
+            // Mark the node
+            result = node;
 
-            // Give it focus
-            focusable.focus();
-
-            // We're done here
-            stop;
+            // Stop here if selecting the first
+            if (!isReverse) stop;
 
         }
 
     }
 
-    override void started() {
-        _result = null;
-    }
-
     override void stopped() {
+
+        if (auto focusable = cast(FluidFocusable) result) {
+            focusable.focus();
+            if (finished) finished(focusable);
+        }
         super.stopped();
-        if (finished) finished(_result);
-        if (_onFinishFluidFocusable) _onFinishFluidFocusable(_result);
-        if (_onFinishNode) _onFinishNode(_result.asNode);
+
     }
 
 }
@@ -336,8 +394,6 @@ NextFrameAction nextFrame(Node node) {
 
 class NextFrameAction : TreeAction {
 
-    override void afterTree() {
-        stop;
-    }
+    // Yes! It's that simple!
 
 }

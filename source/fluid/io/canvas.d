@@ -95,7 +95,8 @@ interface CanvasIO : IO {
     ///     super.resizeImpl();
     ///     foreach_reverse (ref resource; resources) {
     ///         if (resource.lastResize < resizeNumber) {
-    ///             resources = resources.remove(resource);
+    ///             unload(resource);
+    ///             resource.isInvalid = true;
     ///         }
     ///     }    
     ///     return size;
@@ -105,6 +106,8 @@ interface CanvasIO : IO {
     /// Important:
     ///     To make [partial resizing](https://git.samerion.com/Samerion/Fluid/issues/118) possible, 
     ///     `load` can also be called outside of `resizeImpl`.
+    ///
+    ///     Unloading resources may change resource indices, but `load` calls must then set the new indices.
     /// Params:
     ///     image = Image to prepare. 
     ///         The image may be uninitialized, in which case the image should still be valid, but simply empty.
@@ -210,6 +213,14 @@ struct DrawableImage {
         // Do not compare I/O metadata
         return image == other.image;
 
+    }
+
+    /// Assign an image to draw.
+    Image opAssign(Image other) {
+        this.image = other;
+        this._canvasIO = null;
+        this._id = 0;
+        return other;
     }
 
     /// Returns: The ID/index assigned by `CanvasIO` when this image was loaded.

@@ -40,7 +40,7 @@ StaticID staticID(alias symbol)() {
 struct StaticID {
 
     /// The ID.
-    immutable size_t id;
+    size_t id;
 
     /// Name of the symbol holding the ID.
     debug string name;

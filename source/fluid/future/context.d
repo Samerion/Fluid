@@ -4,6 +4,7 @@ import std.meta;
 import std.traits;
 
 import fluid.types;
+import fluid.tree : TreeAction;
 import fluid.future.stack;
 import fluid.future.static_id;
 
@@ -157,6 +158,8 @@ interface HasContext {
 
 interface IO : HasContext {
 
+    bool opEquals(const Object) const;
+
 }
 
 IOID ioID(T)()
@@ -177,12 +180,22 @@ struct IOID {
 struct TreeActionContext {
 
     import std.array;
-    import fluid.tree : TreeAction;
 
     private {
 
+        struct RunningAction {
+
+            TreeAction action;
+            int generation;
+
+            bool isStopped() const {
+                return action.generation > generation;
+            }
+
+        }
+
         /// Currently running actions.
-        Appender!(TreeAction[]) _actions;
+        Appender!(RunningAction[]) _actions;
 
         /// Number of running iterators. Removing tree actions will only happen if there is exactly one
         /// running iterator, as to not break the other ones.
@@ -199,18 +212,21 @@ struct TreeActionContext {
     /// To stop a running action, call the action's `stop` method. Most tree actions will do it automatically
     /// as soon as their job is finished.
     ///
-    /// Warning:
-    ///     If the action is already running, `spawn` will duplicate it, possibly causing bugs.
-    ///     Don't spawn actions if you're not sure if they're running; implement a check if necessary.
+    /// If the action is already running, the previous run will be aborted. The action can only run once at a time.
+    ///
     /// Params:
     ///     actions = Actions to spawn.
     void spawn(TreeAction[] actions...) {
 
-        _actions ~= actions;
+        _actions.reserve(_actions[].length + actions.length);
 
-        // Run the start hook
+        // Start every action and run the hook
         foreach (action; actions) {
+            
+            _actions ~= RunningAction(action, ++action.generation);
             action.started();
+
+
         }
 
     }
@@ -222,36 +238,31 @@ struct TreeActionContext {
         _runningIterators++;
         scope (exit) _runningIterators--;
 
-        // If an action is removed, all subsequent items will be shifted to a new index
-        size_t newIndex;
+        bool kept;
 
         // Iterate on active actions
-        foreach (i, action; _actions[]) {
+        // Do *not* increment if an action was removed
+        for (size_t i = 0; i < _actions[].length; i += kept) {
 
-            // If there's one running iterator, shift the index to remove it from the array
+            auto action = _actions[][i];
+            kept = true;
+
+            // If there's one running iterator, remove it from the array
             // Don't pass stopped actions to the iterator
-            if (action.toStop) {
+            if (action.isStopped) {
 
-                if (_runningIterators != 1) newIndex++;
+                if (_runningIterators == 1) {
+                    _actions[][i] = _actions[][$-1];
+                    _actions.shrinkTo(_actions[].length - 1);
+                    kept = false;
+                }
                 continue;
 
             }
 
             // Run the hook
-            if (auto result = yield(action)) return result;
+            if (auto result = yield(action.action)) return result;
 
-            // Shift the action into the new index
-            if (i != newIndex) {
-                _actions[][newIndex] = action;
-            }
-
-            newIndex++;
-
-        }
-
-        // Shrink the arrays if actions were removed
-        if (newIndex != _actions[].length) {
-            _actions.shrinkTo(newIndex);
         }
 
         return 0;

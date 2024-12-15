@@ -2,20 +2,23 @@
 module fluid.node;
 
 import std.math;
+import std.meta;
+import std.range;
 import std.traits;
 import std.string;
 import std.algorithm;
 
-import fluid.backend;
+import fluid.io;
 import fluid.tree;
 import fluid.style;
 import fluid.utils;
 import fluid.input;
 import fluid.actions;
 import fluid.structs;
+import fluid.backend;
 import fluid.theme : Breadcrumbs;
 
-import fluid.io;
+import fluid.future.pipe;
 import fluid.future.context;
 import fluid.future.branch_action;
 
@@ -434,7 +437,7 @@ abstract class Node {
 
     }
 
-    /// Start a branch action to run on children of this node.
+    /// Start a branch action (or multiple) to run on children of this node.
     ///
     /// This should only be used inside `drawImpl`. The action will stop as soon as the return value goes 
     /// out of scope.
@@ -442,28 +445,39 @@ abstract class Node {
     /// Params:
     ///     action = Branch action to run. A branch action implements a subset of tree action's functionality,
     ///         guaraneeing correct behavior when combined with this.
+    ///     range = Multiple actions can be launched at once by passing a range of branch actions.
     /// Returns:
     ///     A [RAII](https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization) struct
-    ///     that stops the action as soon as the struct leaves the scope.
+    ///     that stops all started actions as soon as the struct leaves the scope.
     protected final auto startBranchAction(BranchAction action)
     in (action, "Node.runAction(TreeAction) called with a `null` argument")
     do {
+        return startBranchAction(only(action));
+    }
 
-        // Start the action
-        startAction(action);
+    /// ditto
+    protected final auto startBranchAction(T)(T range)
+    if (isForwardRange!T && is(ElementType!T : BranchAction))
+    do {
 
-        // Clear start nodes — bind it to the scope instead
-        action.startNode = null;
+        // Start the actions; clear start nodes so they run immediately
+        foreach (action; range.save) {
+            startAction(action);
+            action.startNode = null;
+        }
 
+        // Stop the actions when the returned struct leaves the scope
         @mustuse
         static struct AutoStop {
-            BranchAction action;
+            T range;
             ~this() {
-                action.stop;
+                foreach (action; range) {
+                    action.stop;
+                }
             }
         }
 
-        return AutoStop(action);
+        return AutoStop(range.move);
 
     }
 
@@ -534,11 +548,10 @@ abstract class Node {
         /// Area to render on
         const viewport = Rectangle(0, 0, space.x, space.y);
 
-
         // Run beforeTree actions
         foreach (action; tree.filterActions) {
 
-            action.beforeTree(this, viewport);
+            action.beforeTreeImpl(this, viewport);
 
         }
 
@@ -548,7 +561,7 @@ abstract class Node {
         // Run afterTree actions
         foreach (action; tree.filterActions) {
 
-            action.afterTree();
+            action.afterTreeImpl();
 
         }
 
@@ -957,7 +970,7 @@ abstract class Node {
     }
 
     /// Switch to the previous or next focused item
-    @(FluidInputAction.focusPrevious,FluidInputAction.focusNext)
+    @(FluidInputAction.focusPrevious, FluidInputAction.focusNext)
     protected void focusPreviousOrNext(FluidInputAction actionType) {
 
         auto direction = tree.focusDirection;
@@ -1113,6 +1126,8 @@ abstract class Node {
 
     /// Check if the node is hovered.
     ///
+    /// This function is currently being phased out in favor of the `obstructs` function.
+    ///
     /// This will be called right before drawImpl for each node in order to determine the which node should handle mouse
     /// input.
     ///
@@ -1124,6 +1139,39 @@ abstract class Node {
     protected bool hoveredImpl(Rectangle rect, Vector2 mousePosition) {
 
         return rect.contains(mousePosition);
+
+    }
+
+    /// Test if the specified point is the node's bounds. This is used to map screen positions to nodes,
+    /// such as when determining which nodes are hovered by mouse.
+    ///
+    /// While in a typical node this will be true for every pixel inside its padding box — and this
+    /// is the default behavior — some nodes are not of a rectangular shape, or contain largely 
+    /// transparent areas.
+    ///
+    /// User-provided implementation should override `inBoundsImpl`; calls testing the node's bounds should 
+    /// use `inBounds`.
+    ///
+    /// This is rarely used in nodes built into Fluid. A notable example where this is overriden
+    /// is `Space`, which always returns `false`, expecting children to block occupied areas. This makes
+    /// `Space` very handy for partially transparent overlays.
+    ///
+    /// Params:
+    ///     outer    = Padding box of the node.
+    ///     inner    = Content box of the node.
+    ///     position = Tested position.
+    /// Returns: 
+    ///     True if the position is in the node's bounds.
+    protected bool inBoundsImpl(Rectangle outer, Rectangle inner, Vector2 position) {
+
+        return hoveredImpl(outer, position);
+
+    }
+
+    /// ditto
+    final bool inBounds(Rectangle outer, Rectangle inner, Vector2 position) {
+
+        return !ignoreMouse && inBoundsImpl(outer, inner, position);
 
     }
 
@@ -1153,6 +1201,8 @@ abstract class Node {
         return inner;
 
     }
+
+    alias focusBox = focusBoxImpl;
 
     /// Get the current style.
     Style pickStyle() {
@@ -1305,5 +1355,32 @@ ref RunCallback mockRun() {
 
     static RunCallback callback;
     return callback;
+
+}
+
+/// Draw the node in a loop until an event happens.
+///
+/// This is useful for testing. A chain of tree actions can be finished off with a call to this function
+/// to ensure it will finish after a frame or few.
+///
+/// Params:
+///     publisher  = Publisher to subscribe to. If the publisher emits an event, drawing will stop and this
+///         function will return.
+///     node       = Node to draw in loop.
+///     frameLimit = Maximum number of frames that may be drawn. Errors if reached.
+/// Returns:
+///     Number of frames that were drawn as a consequence.
+int runWhileDrawing(Publisher!() publisher, Node node, int frameLimit = int.max) {
+
+    int i;
+    bool finished;
+    publisher.then(() => finished = true);
+
+    while (!finished) {
+        node.draw();
+        i++;
+        assert(i < frameLimit || finished, "Frame limit reached");
+    }
+    return i;
 
 }
