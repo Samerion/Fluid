@@ -122,7 +122,7 @@ class FocusSpace : Space, FocusIO {
         if (actionIO) {
             actionIO.emitEvent(ActionIO.frameEvent, 0, &runInputAction);
         }
-        else if (currentFocus) {
+        else if (isFocusActionable) {
             _wasInputHandled = currentFocus.focusImpl();
         }
 
@@ -145,13 +145,13 @@ class FocusSpace : Space, FocusIO {
         const handled =
 
             // Run the action, and mark input as handled
-            (currentFocus && currentFocus.actionImpl(actionID, isActive))
+            (isFocusActionable && currentFocus.actionImpl(actionID, isActive))
 
             // Run local input actions
             || (runLocalInputActions(actionID, isActive))
 
             // Run focusImpl as a fallback
-            || (actionID == inputActionID!(ActionIO.CoreAction.frame) && currentFocus && currentFocus.focusImpl());
+            || (actionID == inputActionID!(ActionIO.CoreAction.frame) && isFocusActionable && currentFocus.focusImpl());
 
         // Mark as handled, if so
         _wasInputHandled = _wasInputHandled || handled;

@@ -55,6 +55,18 @@ interface FocusIO : IO {
     Focusable currentFocus(Focusable newValue);
 
     /// Returns:
+    ///     True, if a node focused (`currentFocus` is not null) and if it accepts input (`currentFocus.blocksInput`
+    ///     is false).
+    final bool isFocusActionable() const {
+
+        auto focus = currentFocus;
+
+        return focus !is null
+            && !focus.blocksInput;
+
+    }
+
+    /// Returns:
     ///     True if the focusable is currently focused.
     /// Params:
     ///     focusable = Focusable to check.
