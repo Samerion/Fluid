@@ -32,6 +32,10 @@ import fluid.future.arena;
 @safe:
 
 alias testSpace = nodeBuilder!TestSpace;
+alias vtestSpace = nodeBuilder!TestSpace;
+alias htestSpace = nodeBuilder!(TestSpace, (a) {
+    a.isHorizontal = true;
+});
 
 /// This node allows automatically testing if other nodes draw their contents as expected.
 class TestSpace : Space, CanvasIO {
