@@ -427,6 +427,16 @@ auto drawsImage(Node subject, Image image) {
 }
 
 /// ditto
+auto drawsHintedImage(Node subject, Image image) {
+
+    auto test = drawsImage(subject, image);
+    test.isTestingHint = true;
+    test.targetHint = true;
+    return test;
+
+}
+
+/// ditto
 auto drawsImage(Node subject) {
 
     return new class BlackHole!Assert {
@@ -437,6 +447,8 @@ auto drawsImage(Node subject) {
         Rectangle targetArea;
         bool isTestingColor;
         Color targetColor;
+        bool isTestingHint;
+        bool targetHint;
 
         override bool drawImage(Node node, DrawableImage image, Rectangle rect, Color color) nothrow {
 
@@ -462,7 +474,20 @@ auto drawsImage(Node subject) {
                 assert(color == targetColor);
             }
 
+            if (isTestingHint) {
+                assert(!targetHint);
+            }
+
             return true;
+
+        }
+
+        override bool drawHintedImage(Node node, DrawableImage image, Rectangle rect, Color color) nothrow {
+
+            targetHint = false;
+            scope (exit) targetHint = true;
+
+            return drawImage(node, image, rect, color);
 
         }
 

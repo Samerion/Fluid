@@ -83,7 +83,7 @@ class Label : Node {
         // Using the new I/O
         if (canvasIO) {
             style.drawBackground(tree.io, canvasIO, outer);
-            text.draw(style, inner.start);
+            text.draw(canvasIO, style, inner.start);
         }
 
         // Legacy backend

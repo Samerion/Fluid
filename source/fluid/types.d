@@ -255,7 +255,13 @@ struct Image {
     /// ignored.
     Color[] palette;
 
+    /// Width and height of the texture, **in dots**. The meaning of a dot is defined by `dpiX` and `dpiY`
     int width, height;
+
+    /// Dots per inch for the X and Y axis. Defaults to 96, thus making a dot in the texture equivalent to a pixel.
+    ///
+    /// Applies only if used via `CanvasIO`.
+    int dpiX = 96, dpiY = 96;
 
     /// This number should be incremented after editing the image to signal `CanvasIO` that a change has been made.
     ///
@@ -293,9 +299,20 @@ struct Image {
     }
 
     Vector2 size() const {
-
         return Vector2(width, height);
+    }
 
+    /// Get texture size as a vector.
+    Vector2 canvasSize() const {
+        return Vector2(width, height);
+    }
+
+    /// Get the size the texture will occupy within the viewport.
+    Vector2 viewportSize() const {
+        return Vector2(
+            width * 96 / dpiX,
+            height * 96 / dpiY
+        );
     }
 
     int area() const {
@@ -318,7 +335,7 @@ struct Image {
     }
 
     /// Get data of the image in raw form.
-    inout(void)[] data() inout nothrow {
+    inout(void)[] data() inout pure nothrow {
 
         final switch (format) {
 
@@ -487,7 +504,9 @@ struct Image {
 
         put(writer, "Image(");
         put(writer, format.to!string);
-        put(writer, ", ..., ");
+        put(writer, ", ");
+        put(writer, (cast(size_t) data.ptr).toChars!16);
+        put(writer, ", ");
         if (format == Format.palettedAlpha) {
             put(writer, "palette: ");
             put(writer, palette.to!string);
