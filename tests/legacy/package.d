@@ -4,6 +4,7 @@
 ///
 /// This module provides UDAs for marking legacy tests. If a test is not marked, it means it has yet to be migrated.
 /// `@Migrated` should be used for after a test has been migrated, or `@Abandoned` if a test will not be preserved.
+/// After all tests have been migrated, the test module should also be marked as such.
 module legacy;
 
 @safe:
