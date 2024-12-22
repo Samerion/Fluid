@@ -470,6 +470,38 @@ struct Image {
 
     }
 
+    string toString() const pure {
+
+        import std.array;
+
+        Appender!(char[]) text;
+        toString(text);
+        return text[];
+
+    }
+
+    void toString(Writer)(Writer writer) const {
+
+        import std.conv;
+        import std.range;
+
+        put(writer, "Image(");
+        put(writer, format.to!string);
+        put(writer, ", ..., ");
+        if (format == Format.palettedAlpha) {
+            put(writer, "palette: ");
+            put(writer, palette.to!string);
+            put(writer, ", ");
+        }
+        put(writer, width.toChars);
+        put(writer, "x");
+        put(writer, height.toChars);
+        put(writer, ", rev ");
+        put(writer, revisionNumber.toChars);
+        put(writer, ")");
+
+    }
+
 }
 
 // Structures

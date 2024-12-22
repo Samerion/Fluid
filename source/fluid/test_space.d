@@ -394,6 +394,8 @@ auto drawsImage(Node subject, Image image) {
     auto test = drawsImage(subject);
     test.isTestingImage = true;
     test.targetImage = image;
+    test.isTestingColor = true;
+    test.targetColor = color("#fff");
     return test;
 
 }
@@ -415,7 +417,12 @@ auto drawsImage(Node subject) {
             if (!node.opEquals(subject).assertNotThrown) return false;
 
             if (isTestingImage) {
-                assert(image.data is image.data);
+                assert(image.format == targetImage.format);
+                assert(image.data is targetImage.data);
+
+                if (image.format == Image.Format.palettedAlpha) {
+                    assert(image.palette == targetImage.palette);
+                }
             }
 
             if (isTestingArea) {
@@ -438,6 +445,14 @@ auto drawsImage(Node subject) {
             targetArea = Rectangle(position.tupleof, targetImage.size.tupleof);
             // TODO DPI
             return this;
+
+        }
+        
+        typeof(this) at(typeof(Vector2.tupleof) position) @safe {
+            isTestingArea = true;
+            targetArea = Rectangle(position, targetImage.size.tupleof);
+            // TODO DPI
+            return this;
         }
 
         typeof(this) ofColor(string color) @safe {
@@ -452,8 +467,8 @@ auto drawsImage(Node subject) {
 
         override string toString() const {
             return toText(
-                subject, " should draw an image",
-                isTestingImage ? toText(" image ", targetImage)          : "",
+                subject, " should draw an image ",
+                isTestingImage ? toText(targetImage)                     : "",
                 isTestingArea  ? toText(" rectangle ", targetArea)       : "",
                 isTestingColor ? toText(" of color ", targetColor.toHex) : "",
             );

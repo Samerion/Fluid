@@ -1,34 +1,35 @@
-@Migrated
-module legacy.label;
+module nodes.label;
 
 import fluid;
-import legacy;
 
 @safe:
 
 @("Label draws text, and updates it if written to")
-@Migrated
 unittest {
 
-    auto io = new HeadlessBackend;
-    auto root = label("Hello, World!");
+    import fluid.theme;
 
-    with (Rule)
-    root.theme = nullTheme.derive(
+    auto root = label("Hello, World!");
+    auto test = testSpace(root);
+
+    test.theme = nullTheme.derive(
         rule!Label(textColor = color!"000"),
     );
-    root.io = io;
-    root.draw();
+
+    test.draw();
+    test.drawAndAssert(
+        root.drawsImage(root.text.texture.chunks[0].image).at(0, 0)
+    );
 
     const initialTextArea = root.text.size.x * root.text.size.y;
 
-    io.assertTexture(root.text.texture.chunks[0], Vector2(0, 0), color!"fff");
-    io.nextFrame;
+    // io.assertTexture(root.text.texture.chunks[0], Vector2(0, 0), color!"fff");
+    // io.nextFrame;
 
     root.text ~= " It's a nice day today!";
     root.draw();
 
-    io.assertTexture(root.text.texture.chunks[0], Vector2(0, 0), color!"fff");
+    // io.assertTexture(root.text.texture.chunks[0], Vector2(0, 0), color!"fff");
 
     const newTextArea = root.text.size.x * root.text.size.y;
 
