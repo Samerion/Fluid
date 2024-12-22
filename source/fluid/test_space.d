@@ -8,6 +8,8 @@ debug (Fluid_BuildMessages) {
 
 import core.exception;
 
+import optional;
+
 import std.conv : toText = text;
 import std.range;
 import std.string;
@@ -40,6 +42,9 @@ class TestSpace : Space, CanvasIO {
 
         /// Probe the space will use to analyze the tree.
         TestProbe _probe;
+
+        /// Current crop area.
+        Optional!Rectangle _cropArea;
 
         /// Current DPI.
         Vector2 _dpi = Vector2(96, 96);
@@ -119,15 +124,23 @@ class TestSpace : Space, CanvasIO {
         return value;
     }
 
+    override Optional!Rectangle cropArea() const nothrow {
+
+        return _cropArea;
+
+    }
+
     override void cropArea(Rectangle area) nothrow {
 
         _probe.runAssert(a => a.cropArea(_probe.subject, area));
+        _cropArea = area;
 
     }
 
     override void resetCropArea() nothrow {
 
         _probe.runAssert(a => a.resetCropArea(_probe.subject));
+        _cropArea = none;
 
     }
 
