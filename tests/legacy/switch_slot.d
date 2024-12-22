@@ -1,4 +1,4 @@
-module nodes.switch_slot;
+module legacy.switch_slot;
 
 import fluid;
 

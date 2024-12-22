@@ -1,4 +1,4 @@
-module nodes.popup_button;
+module legacy.popup_button;
 
 import fluid;
 

@@ -1,4 +1,4 @@
-module nodes.grid_frame;
+module legacy.grid_frame;
 
 import fluid;
 

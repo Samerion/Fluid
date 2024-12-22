@@ -1,4 +1,4 @@
-module nodes.code_input;
+module legacy.code_input;
 
 import fluid;
 

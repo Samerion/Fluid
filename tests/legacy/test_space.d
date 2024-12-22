@@ -1,5 +1,5 @@
 // Meta!
-module nodes.test_space;
+module legacy.test_space;
 
 import fluid;
 

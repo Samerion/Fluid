@@ -1,4 +1,4 @@
-module nodes.password_input;
+module legacy.password_input;
 
 import fluid;
 

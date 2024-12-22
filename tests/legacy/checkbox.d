@@ -1,4 +1,4 @@
-module nodes.checkbox;
+module legacy.checkbox;
 
 import fluid;
 

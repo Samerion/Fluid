@@ -1,4 +1,4 @@
-module nodes.node;
+module legacy.node;
 
 import fluid;
 import std.algorithm;

@@ -1,4 +1,4 @@
-module nodes.onion_frame;
+module legacy.onion_frame;
 
 import fluid;
 

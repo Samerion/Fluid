@@ -1,4 +1,4 @@
-module nodes.image_view;
+module legacy.image_view;
 
 import fluid;
 

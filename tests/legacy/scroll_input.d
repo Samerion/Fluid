@@ -1,4 +1,4 @@
-module nodes.scroll_input;
+module legacy.scroll_input;
 
 import fluid;
 

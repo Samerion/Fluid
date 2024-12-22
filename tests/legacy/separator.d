@@ -1,4 +1,4 @@
-module nodes.separator;
+module legacy.separator;
 
 import fluid;
 
