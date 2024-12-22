@@ -17,6 +17,75 @@ import fluid.future.context;
 /// geometry to fit.
 interface CanvasIO : IO {
 
+    /// Determines the screen's pixel density. A higher value will effectively scale up the interface, but keeping all
+    /// detail. The I/O system should trigger a resize when this changes.
+    ///
+    /// Note that this value refers to pixels in the physical sense, as in the dots on the screen, as opposed to pixels
+    /// as a unit. In other places, Fluid uses pixels (or "px") to refer to 1/96th of an inch.
+    ///
+    /// For primitive systems, a value of `(96, 96)` may be a good guess. If possible, please fetch this value from
+    /// the operating system.
+    ///
+    /// Returns:
+    ///     Current [dots-per-inch value](https://en.wikipedia.org/wiki/Dots_per_inch) per axis.
+    Vector2 dpi() const nothrow;
+
+    /// Convert pixels to screen-dependent dots.
+    ///
+    /// In Fluid, pixel is a unit equal to 1/96th of an inch.
+    ///
+    /// Params:
+    ///     pixels = Value in pixels.
+    /// Returns:
+    ///     Corresponding value in dots.
+    final Vector2 toDots(Vector2 pixels) const nothrow {
+
+        const dpi = this.dpi;
+
+        return Vector2(
+            pixels.x * dpi.x / 96,
+            pixels.y * dpi.y / 96,
+        );
+
+    }
+
+    /// Measure distance in pixels taken by a number of dots.
+    ///
+    /// In Fluid, pixel is a unit equal to 1/96th of an inch.
+    ///
+    /// Params:
+    ///     dots = Value in dots.
+    /// Returns:
+    ///     Corresponding value in pixels.
+    final Vector2 fromDots(Vector2 dots) const nothrow {
+
+        const dpi = this.dpi;
+
+        return Vector2(
+            dots.x / dpi.x * 96,
+            dots.y / dpi.y * 96,
+        );
+
+    }
+
+    @("toDots/fromDots performs correct conversion")
+    unittest {
+
+        import std.typecons;
+
+        auto canvasIO = new class BlackHole!CanvasIO {
+
+            override Vector2 dpi() const nothrow {
+                return Vector2(96, 120);
+            }
+
+        };
+
+        assert(canvasIO.toDots(Vector2(10, 10)) == Vector2(10, 12.5));
+        assert(canvasIO.fromDots(Vector2(10, 10)) == Vector2(10, 8));
+
+    }
+
     /// Set an area the shapes can be drawn in. Any shape drawn after this call will be cropped to fit the specified
     /// rectangle on the canvas.
     ///
