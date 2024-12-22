@@ -203,9 +203,9 @@ class HoverSpace : Space, HoverIO {
     ///     Node hovered by the pointer.
     /// Params:
     ///     pointer = Pointer to check. The pointer must be loaded.
-    Hoverable hoverOf(Pointer pointer) {
+    inout(Hoverable) hoverOf(Pointer pointer) inout {
 
-        assert(_pointers.isActive(pointer.id), "Given pointer wasn't loaded");
+        debug assert(_pointers.isActive(pointer.id), "Given pointer wasn't loaded");
 
         return _pointers[pointer.id].node.castIfAcceptsInput!Hoverable;
 
