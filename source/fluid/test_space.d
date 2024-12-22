@@ -41,6 +41,9 @@ class TestSpace : Space, CanvasIO {
         /// Probe the space will use to analyze the tree.
         TestProbe _probe;
 
+        /// Current DPI.
+        Vector2 _dpi = Vector2(96, 96);
+
         /// All presently loaded images.
         ResourceArena!Image _loadedImages;
 
@@ -104,6 +107,16 @@ class TestSpace : Space, CanvasIO {
         // Resize contents
         super.resizeImpl(space);
 
+    }
+
+    override Vector2 dpi() const nothrow {
+        return _dpi;
+    }
+
+    Vector2 dpi(Vector2 value) {
+        _dpi = value;
+        updateSize();
+        return value;
     }
 
     override void cropArea(Rectangle area) nothrow {
