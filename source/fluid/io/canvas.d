@@ -1,6 +1,8 @@
 /// This module contains interfaces for drawing geometry on a canvas.
 module fluid.io.canvas;
 
+import optional;
+
 import fluid.types;
 import fluid.backend;
 import fluid.future.context;
@@ -86,6 +88,18 @@ interface CanvasIO : IO {
 
     }
 
+    /// Getter for the current crop area, if one is set. Any shape drawn is cropped to fit this area on the canvas.
+    ///
+    /// This may be used by nodes to skip objects that are outside of the area. For this reason, a canvas system may
+    /// (and should) provide a value corresponding to the entire canvas, even if no crop area has been explicitly set.
+    ///
+    /// Returning an empty value may be desirable if the canvas is some form of persistent storage,
+    /// like a printable document or vector image, where the entire content may be displayed all at once.
+    ///
+    /// Returns:
+    ///     An area on the canvas that shapes can be drawn in.
+    Optional!Rectangle cropArea() const nothrow;
+
     /// Set an area the shapes can be drawn in. Any shape drawn after this call will be cropped to fit the specified
     /// rectangle on the canvas.
     ///
@@ -93,7 +107,23 @@ interface CanvasIO : IO {
     ///
     /// Params:
     ///     area = Area on the canvas to restrict all subsequently drawn shapes to.
+    ///         If passed an empty `Optional`, calls `resetCropArea`.
     void cropArea(Rectangle area) nothrow;
+
+    /// ditto
+    final void cropArea(Optional!Rectangle area) nothrow {
+
+        // Reset the area if passed None()
+        if (area.empty) {
+            resetCropArea();
+        }
+
+        // Crop otherwise
+        else {
+            cropArea(area.front);
+        }
+
+    }
 
     /// If `cropArea` was called before, this will reset set area, disabling the effect.
     void resetCropArea() nothrow;
