@@ -1,4 +1,4 @@
-module nodes.label;
+module legacy.label;
 
 import fluid;
 

@@ -1,4 +1,4 @@
-module nodes.map_frame;
+module legacy.map_frame;
 
 import fluid;
 

@@ -1,4 +1,4 @@
-module nodes.size_lock;
+module legacy.size_lock;
 
 import fluid;
 

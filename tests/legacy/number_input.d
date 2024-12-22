@@ -1,4 +1,4 @@
-module nodes.number_input;
+module legacy.number_input;
 
 import fluid;
 

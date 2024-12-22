@@ -1,4 +1,4 @@
-module nodes.drag_slot;
+module legacy.drag_slot;
 
 import fluid; 
 

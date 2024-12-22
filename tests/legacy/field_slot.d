@@ -1,4 +1,4 @@
-module nodes.field_slot;
+module legacy.field_slot;
 
 import fluid;
 

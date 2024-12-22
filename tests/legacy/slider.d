@@ -1,4 +1,4 @@
-module nodes.slider;
+module legacy.slider;
 
 import fluid;
 

@@ -1,4 +1,4 @@
-module nodes.space;
+module legacy.space;
 
 import fluid;
 import std.range;

@@ -1,4 +1,4 @@
-module nodes.frame;
+module legacy.frame;
 
 import fluid;
 

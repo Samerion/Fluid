@@ -1,4 +1,4 @@
-module nodes.radiobox;
+module legacy.radiobox;
 
 import fluid;
 
