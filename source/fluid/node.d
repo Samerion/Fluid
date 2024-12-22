@@ -1059,18 +1059,11 @@ abstract class Node {
     /// ---
     /// 
     /// Params:
-    ///   io = 
-    ///   resource = 
-    /// Returns: 
-    protected T load(T, I : IO)(I io, ref T resource) {
+    ///     io       = I/O system to use to load the resource.
+    ///     resource = Resource to load.
+    protected void load(T, I : IO)(I io, ref T resource) {
 
-        // Load the resource
-        const id = io.load(resource);
-
-        // Pass data into the resource
-        resource.load(io, id);
-
-        return resource;
+        io.loadTo(resource);
 
     }
 

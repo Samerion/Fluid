@@ -3,8 +3,10 @@ module fluid.io.hover;
 
 import std.range;
 
+import fluid.tree;
 import fluid.types;
 
+import fluid.future.pipe;
 import fluid.future.context;
 
 import fluid.io.action;
@@ -83,6 +85,12 @@ interface HoverIO : IO {
     ///         The event is usually considered "active" during the frame the action is "released". For example,
     ///         user stops holding a mouse button, or a finger stops touching the screen.
     void emitEvent(Pointer pointer, InputEvent event);
+
+    /// Params:
+    ///     pointer = Pointer to query. The pointer must be loaded.
+    /// Returns:
+    ///     Node hovered by the pointer.
+    inout(Hoverable) hoverOf(Pointer pointer) inout;
 
     /// Returns: 
     ///     True if the node is hovered.
@@ -222,6 +230,11 @@ struct Pointer {
     ///     True if the pointers have the same device and pointer number.
     bool isSame(const Pointer other) const {
 
+        if (device is null) {
+            return other.device is null
+                && number == other.number;
+        }
+
         return device.opEquals(cast(const Object) other.device)
             && number == other.number;
 
@@ -283,5 +296,153 @@ interface Hoverable : Actionable {
     ///     This will most of the time be equivalent to `hoverIO.isHovered(this)`, 
     ///     but a node wrapping another hoverable may choose to instead redirect this to the other node.
     bool isHovered() const;
+
+}
+
+/// Create a virtual Hover I/O pointer for testing, and place it at the given position. Interactions on the pointer
+/// are asynchronous and should be performed by `then` chains, see `fluid.future.pipe`.
+///
+/// The pointer is disabled after every interaction, but it will be automatically re-enabled after every movement.
+///
+/// Params:
+///     hoverIO  = Hover I/O system to target.
+///     position = Position to place the pointer at. 
+PointerAction point(HoverIO hoverIO, Vector2 position) {
+
+    import fluid.node;
+
+    auto action = new PointerAction(hoverIO);
+    action.move(position);
+    return action;
+
+}
+
+/// Virtual Hover I/O pointer, for testing.
+class PointerAction : TreeAction, Publisher!PointerAction {
+
+    import fluid.node;
+
+    public {
+
+        /// Pointer this action operates on.
+        Pointer pointer;
+
+    }
+
+    private {
+
+        /// Hover I/O interface the action interacts with.
+        HoverIO hoverIO;
+
+        /// Hover I/O casted to a node
+        Node _node;
+
+        Event!PointerAction _onInteraction;
+
+    }
+
+    alias then = typeof(super).then;
+    alias then = Publisher!PointerAction.then;
+
+    this(HoverIO hoverIO) {
+
+        this.hoverIO = hoverIO;
+        this._node = cast(Node) hoverIO;
+        assert(_node, "Given Hover I/O is not a valid node");
+
+    }
+
+    void subscribe(Subscriber!PointerAction subscriber) {
+        _onInteraction ~= subscriber;
+    }
+
+    /// Returns:
+    ///     Currently hovered node, if any.
+    Hoverable currentHover() {
+
+        hoverIO.loadTo(pointer);
+        return hoverIO.hoverOf(pointer);
+
+    }
+
+    /// Don't move the pointer, but keep it active.
+    /// Returns: This action, for chaining.
+    PointerAction stayIdle() return {
+
+        _node.startAction(this);
+
+        // Place the pointer
+        pointer.isDisabled = false;
+        hoverIO.loadTo(pointer);
+
+        return this;
+
+    }
+
+    /// Move the pointer to given position.
+    /// Params:
+    ///     position = Position to move the pointer to.
+    /// Returns:
+    ///     This action, for chaining.
+    PointerAction move(Vector2 position) return {
+
+        _node.startAction(this);
+
+        // Place the pointer
+        pointer.isDisabled = false;
+        pointer.position = position;
+        hoverIO.loadTo(pointer);
+
+        return this;
+
+    }
+
+    /// Run an input action on the currently hovered node, if any.
+    /// Params:
+    ///     actionID = ID of the action to run.
+    ///     isActive = "Active" status of the action.
+    /// Returns:
+    ///     True if the action was handled, false if not.
+    bool runInputAction(immutable InputActionID actionID, bool isActive = true) {
+
+        hoverIO.loadTo(pointer);
+        auto hoverable = hoverIO.hoverOf(pointer);
+
+        // Emit a matching, fake hover event
+        const code = InputEventCode(ioID!HoverIO, -1);
+        const event = InputEvent(code, isActive);
+        hoverIO.emitEvent(pointer, event);
+
+        // No hoverable
+        if (!hoverable) return false;
+
+        // Can't run the action
+        if (hoverable.blocksInput) return false;
+
+        return hoverable.actionImpl(actionID, isActive);
+
+    }
+
+    /// ditto
+    bool runInputAction(alias action)(bool isActive = true) {
+
+        alias actionID = inputActionID!action;
+
+        return runInputAction(actionID, isActive);
+
+    }
+
+    /// Shorthand for `runInputAction!(FluidInputAction.press)`
+    alias press = runInputAction!(FluidInputAction.press);
+
+    override void stopped() {
+
+        // Disable the pointer
+        pointer.isDisabled = true;
+        hoverIO.loadTo(pointer);
+
+        _onInteraction(this);
+
+    }
 
 }
