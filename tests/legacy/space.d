@@ -1,40 +1,14 @@
+@Migrated
 module legacy.space;
 
 import fluid;
+import legacy;
 import std.range;
 
 @safe:
 
-@("Space.minSize includes gaps")
-unittest {
-
-    import std.math;
-
-    auto theme = nullTheme.derive(
-        rule!Space(
-            Rule.gap = 12,
-        ),
-    );
-
-    auto root = vspace(
-        theme,
-        sizeLock!vframe(
-            sizeLimitY = 200
-        ),
-        sizeLock!vframe(
-            sizeLimitY = 200
-        ),
-        sizeLock!vframe(
-            sizeLimitY = 200
-        ),
-    );
-    root.draw();
-
-    assert(isClose(root.getMinSize.y, 200 * 3 + 12 * 2));
-
-}
-
-@("[TODO] Legacy: vspace aligns nodes vertically, and hspace does it horizontally")
+@("vspace aligns nodes vertically, and hspace does it horizontally")
+@Migrated
 unittest {
 
     class Square : Node {
@@ -83,7 +57,8 @@ unittest {
 
 }
 
-@("[TODO] Legacy: Layout.expand splits space into columns")
+@("Layout.expand splits space into columns")
+@Migrated
 unittest {
 
     import fluid.frame;
@@ -142,7 +117,8 @@ unittest {
 
 }
 
-@("[TODO] Legacy: Space/Frame works with multiple levels of recursion")
+@("Space/Frame works with multiple levels of recursion")
+@Migrated
 unittest {
 
     import fluid.frame;
@@ -184,8 +160,8 @@ unittest {
 
 }
 
-// https://git.samerion.com/Samerion/Fluid/issues/58
-@("[TODO] Legacy: Rounding errors when placing nodes https://git.samerion.com/Samerion/Fluid/issues/58")
+@("Rounding errors when placing nodes https://git.samerion.com/Samerion/Fluid/issues/58")
+@Migrated
 unittest {
 
     import fluid.frame;
@@ -233,7 +209,8 @@ unittest {
 
 }
 
-@("[TODO] Legacy: Space respects gap")
+@("Space respects gap")
+@Migrated
 unittest {
 
     import fluid.frame;
@@ -265,89 +242,5 @@ unittest {
     io.assertRectangle(Rectangle(0, 151, 800, 147), color("#f00"));
     io.assertRectangle(Rectangle(0, 302, 800, 147), color("#f00"));
     io.assertRectangle(Rectangle(0, 453, 800, 147), color("#f00"));
-
-}
-
-@("Gaps do not apply to invisible children")
-unittest {
-
-    import fluid.theme;
-
-    auto theme = nullTheme.derive(
-        rule!Space(gap = 4),
-    );
-
-    auto spy = new class Space {
-
-        Vector2 position;
-
-        override void drawImpl(Rectangle outer, Rectangle inner) {
-
-            position = outer.start;
-
-        }
-        
-    };
-
-    auto root = vspace(
-        theme,
-        hspace(),
-        hspace(),
-        hspace(),
-        spy,
-    );
-
-    root.draw();
-
-    assert(spy.position == Vector2(0, 12));
-
-    // Hide one child
-    root.children[0].hide();
-    root.draw();
-
-    assert(spy.position == Vector2(0, 8));
-    
-
-}
-
-@("Applied style.gap depends on axis")
-unittest {
-
-    auto theme = nullTheme.derive(
-        rule!Space(
-            Rule.gap = [2, 4],
-        ),
-    );
-
-    class Warden : Space {
-
-        Rectangle outer;
-
-        override void drawImpl(Rectangle outer, Rectangle inner) {
-            super.drawImpl(this.outer = outer, inner);
-        }
-
-    }
-
-    Warden[4] wardens;
-
-    auto root = vspace(
-        theme,
-        hspace(
-            wardens[0] = new Warden,
-            wardens[1] = new Warden,
-        ),
-        vspace(
-            wardens[2] = new Warden,
-            wardens[3] = new Warden,
-        ),
-    );
-
-    root.draw();
-    
-    assert(wardens[0].outer.start == Vector2(0, 0));
-    assert(wardens[1].outer.start == Vector2(2, 0));
-    assert(wardens[2].outer.start == Vector2(0, 4));
-    assert(wardens[3].outer.start == Vector2(0, 8));
 
 }
