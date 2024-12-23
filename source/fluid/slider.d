@@ -189,7 +189,7 @@ abstract class AbstractSlider : InputNode!Node {
 
     }
 
-    @(FluidInputAction.press, WhileDown)
+    @(FluidInputAction.press, WhileHeld)
     protected void press(Pointer pointer) {
 
         // Get mouse position relative to the first step

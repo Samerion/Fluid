@@ -388,6 +388,11 @@ class PointerAction : TreeAction, Publisher!PointerAction {
         _onInteraction ~= subscriber;
     }
 
+    override void clearSubscribers() {
+        super.clearSubscribers();
+        _onInteraction.clearSubscribers();
+    }
+
     /// Returns:
     ///     Currently hovered node, if any.
     Hoverable currentHover() {
@@ -467,7 +472,16 @@ class PointerAction : TreeAction, Publisher!PointerAction {
     /// Shorthand for `runInputAction!(FluidInputAction.press)`
     alias press = runInputAction!(FluidInputAction.press);
 
+    override void started() {
+
+        super.started();
+        clearSubscribers();
+
+    }
+
     override void stopped() {
+
+        super.stopped();
 
         // Disable the pointer
         pointer.isDisabled = true;

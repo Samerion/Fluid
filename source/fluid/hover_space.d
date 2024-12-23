@@ -102,15 +102,15 @@ class HoverSpace : Space, HoverIO {
 
     override void emitEvent(Pointer pointer, InputEvent event) {
 
-        if (!actionIO) return;
-
         assert(_pointers.isActive(pointer.id), "Pointer is not active");
 
         // Mark the pointer as held
         _pointers[pointer.id].isHeld = true;
 
         // Emit the event
-        actionIO.emitEvent(event, pointer.id, &runInputAction);
+        if (actionIO) {
+            actionIO.emitEvent(event, pointer.id, &runInputAction);
+        }
         
     }
 
@@ -215,7 +215,7 @@ class HoverSpace : Space, HoverIO {
 
         debug assert(_pointers.isActive(pointer.id), "Given pointer wasn't loaded");
 
-        return _pointers[pointer.id].node.castIfAcceptsInput!Hoverable;
+        return _pointers[pointer.id].heldNode.castIfAcceptsInput!Hoverable;
 
     }
 
@@ -232,7 +232,7 @@ class HoverSpace : Space, HoverIO {
         auto hover = hoverOf(pointer);
         auto meta = _pointers[pointer.id];
 
-        // Active input actions can only fire for `heldNode`
+        // Active input actions can only fire if `heldNode` is still hovered
         if (isActive) {
             if (meta.node is null || !meta.node.opEquals(meta.heldNode)) {
                 return false;
