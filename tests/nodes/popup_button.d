@@ -1,6 +1,7 @@
 module nodes.popup_button;
 
 import fluid;
+import fluid.future.pipe;
 
 @safe:
 
@@ -17,8 +18,7 @@ unittest {
 
     Button[6] buttons;
 
-    auto io = new HeadlessBackend;
-    auto root = popupButton("Options",
+    auto main = popupButton("Options",
         buttons[0] = button("Edit", &action!"edit"),
         buttons[1] = button("Copy", &action!"copy"),
         buttons[2] = popupButton("Share",
@@ -27,119 +27,59 @@ unittest {
             buttons[5] = button("Send to device", &action!"device"),
         ),
     );
+    auto focus = focusSpace(nullTheme, main);
+    auto root = focus;
 
     auto sharePopupButton = cast(PopupButton) buttons[2];
     auto sharePopup = sharePopupButton.popup;
 
-    root.io = io;
     root.draw();
 
-    import std.stdio;
-
     // Focus the button
-    {
-        io.nextFrame;
-        io.press(KeyboardKey.down);
+    focus.focusNext()
+        .thenAssertEquals(main)
 
-        root.draw();
+        // Press it
+        .then(() => focus.runInputAction!(FluidInputAction.press))
+        .then(_ => root.nextFrame)
+        
+        // A popup should open
+        .then(() => assert(focus.isFocused(buttons[0]), "The first button inside should be focused"))
 
-        assert(root.isFocused);
-    }
+        // Go to the previous button, expecting wrap
+        .then(() => focus.runInputAction!(FluidInputAction.focusPrevious))
+        .then(_ => root.nextFrame)
+        .then(() => assert(focus.isFocused(buttons[2]), "The last button inside the first menu should be focused"))
 
-    // Press it
-    {
-        io.nextFrame;
-        io.release(KeyboardKey.down);
-        io.press(KeyboardKey.enter);
+        // Press the last button
+        .then(() => buttons[2].press())
+        .then(() => root.nextFrame)
+        .then(() => assert(focus.isFocused(buttons[3]), "The first button of the second menu should be focused"))
 
-        root.draw();
-    }
+        // The up arrow should do nothing
+        .then(() => focus.runInputAction!(FluidInputAction.focusUp))
+        .then(_ => root.nextFrame)
+        .then(() => assert(focus.isFocused(buttons[3])))
 
-    // Popup opens
-    {
-        io.nextFrame;
-        io.release(KeyboardKey.enter);
+        // Press the down arrow
+        .then(() => focus.runInputAction!(FluidInputAction.focusDown))
+        .then(_ => root.nextFrame)
+        .then(() => assert(focus.isFocused(buttons[4])))
 
-        root.draw();
+        // Press the button
+        .then(() => buttons[4].press)
+        .then(() => assert(focus.isFocused(buttons[4])))
+        .then(() => assert(lastAction == "email"))
+        .then(() => assert(!sharePopup.isHidden))
 
-        assert(buttons[0].isFocused, "The first button inside should be focused");
-    }
+        // Close the popup
+        .then(() => focus.runInputAction!(FluidInputAction.cancel))
 
-    // Go to the previous button, expecting wrap
-    {
-        io.nextFrame;
-        io.press(KeyboardKey.leftShift);
-        io.press(KeyboardKey.tab);
-
-        root.draw();
-
-        assert(buttons[2].isFocused, "The last button inside the first menu should be focused");
-    }
-
-    // Press it
-    {
-        io.nextFrame;
-        io.release(KeyboardKey.leftShift);
-        io.release(KeyboardKey.tab);
-        io.press(KeyboardKey.enter);
-
-        root.draw();
-    }
-
-    // Wait for the popup to appear
-    {
-        io.nextFrame;
-        io.release(KeyboardKey.enter);
-
-        root.draw();
-        assert(buttons[3].isFocused, "The first button of the second menu should be focused");
-    }
-
-    // Press the up arrow, it should do nothing
-    {
-        io.nextFrame;
-        io.press(KeyboardKey.up);
-
-        root.draw();
-        assert(buttons[3].isFocused);
-    }
-
-    // Press the down arrow
-    {
-        io.nextFrame;
-        io.release(KeyboardKey.up);
-        io.press(KeyboardKey.down);
-
-        root.draw();
-        assert(buttons[4].isFocused);
-    }
-
-    // Press the button
-    {
-        io.nextFrame;
-        io.release(KeyboardKey.down);
-        io.press(KeyboardKey.enter);
-
-        root.draw();
-        assert(buttons[4].isFocused);
-        assert(lastAction == "email");
-        assert(!sharePopup.isHidden);
-
-    }
-
-    // Close the popup by pressing escape
-    {
-        io.nextFrame;
-        io.release(KeyboardKey.enter);
-        io.press(KeyboardKey.escape);
-
-        root.draw();
+        // Need two frames to process the tree action
+        .then(_ => main.nextFrame)
+        .then(() => main.nextFrame)
 
         // Need another frame for the tree action
-        io.nextFrame;
-        root.draw();
-
-        assert(sharePopup.isHidden);
-    }
+        .then(() => assert(sharePopup.isHidden));
 
 }

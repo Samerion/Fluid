@@ -1,4 +1,4 @@
-module nodes.text_input;
+module legacy.text_input;
 
 import fluid;
 

@@ -92,9 +92,15 @@ class HoverSpace : Space, HoverIO {
         
     }
 
-    override void emitEvent(Pointer pointer, InputEvent event) {
+    override inout(Pointer) fetch(int number) inout {
 
-        if (!actionIO) return;
+        assert(_pointers.isActive(number), "Pointer is not active");
+
+        return _pointers[number].value;
+
+    }
+
+    override void emitEvent(Pointer pointer, InputEvent event) {
 
         assert(_pointers.isActive(pointer.id), "Pointer is not active");
 
@@ -102,7 +108,9 @@ class HoverSpace : Space, HoverIO {
         _pointers[pointer.id].isHeld = true;
 
         // Emit the event
-        actionIO.emitEvent(event, pointer.id, &runInputAction);
+        if (actionIO) {
+            actionIO.emitEvent(event, pointer.id, &runInputAction);
+        }
         
     }
 
@@ -203,11 +211,11 @@ class HoverSpace : Space, HoverIO {
     ///     Node hovered by the pointer.
     /// Params:
     ///     pointer = Pointer to check. The pointer must be loaded.
-    Hoverable hoverOf(Pointer pointer) {
+    inout(Hoverable) hoverOf(Pointer pointer) inout {
 
-        assert(_pointers.isActive(pointer.id), "Given pointer wasn't loaded");
+        debug assert(_pointers.isActive(pointer.id), "Given pointer wasn't loaded");
 
-        return _pointers[pointer.id].node.castIfAcceptsInput!Hoverable;
+        return _pointers[pointer.id].heldNode.castIfAcceptsInput!Hoverable;
 
     }
 
@@ -224,7 +232,7 @@ class HoverSpace : Space, HoverIO {
         auto hover = hoverOf(pointer);
         auto meta = _pointers[pointer.id];
 
-        // Active input actions can only fire for `heldNode`
+        // Active input actions can only fire if `heldNode` is still hovered
         if (isActive) {
             if (meta.node is null || !meta.node.opEquals(meta.heldNode)) {
                 return false;
@@ -235,7 +243,7 @@ class HoverSpace : Space, HoverIO {
         const handled =
             
             // Try to run the action
-            (hover && hover.actionImpl(actionID, isActive))
+            (hover && hover.actionImpl(this, pointer.id, actionID, isActive))
 
             // Run local input actions as fallback
             || runLocalInputActions(pointer, actionID, isActive)

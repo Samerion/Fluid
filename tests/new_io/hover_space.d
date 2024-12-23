@@ -413,30 +413,27 @@ unittest {
 
     device.emit(0, MouseIO.hold.left);
     root.draw();
-    assert(tracker1.hoverImplCount == 2);  // The original tracker doesn't see hover anymore
-    assert(tracker1.pressHeldCount == 4);
-    assert(tracker2.hoverImplCount == 0);
-    assert(tracker2.pressHeldCount == 1);  // Hover new calls the other tracker.
-    assert(tracker2.pressCount == 0);
+    assert(tracker1.hoverImplCount == 2);  // Hover still calls the old tracker
+    assert(tracker1.pressHeldCount == 5);
 
     device.emit(0, MouseIO.press.left);
     root.draw();
-    assert(tracker1.hoverImplCount == 2);
-    assert(tracker1.pressHeldCount == 4);
+    assert(tracker1.hoverImplCount == 3);
+    assert(tracker1.pressHeldCount == 5);
     assert(tracker1.pressCount == 1);
-    assert(tracker2.hoverImplCount == 1);
-    assert(tracker2.pressHeldCount == 1);
+    assert(tracker2.hoverImplCount == 0);
+    assert(tracker2.pressHeldCount == 0);
     assert(tracker2.pressCount == 0);      // The press isn't registered.
 
     root.draw();
-    assert(tracker2.hoverImplCount == 2);
+    assert(tracker2.hoverImplCount == 1);  // Hover only registers after release
 
-    // Unrelated input actions cannot trigger fallback
+    // Unrelated input actions cannot trigger press
     hover.runInputAction!(FluidInputAction.press)(device.pointers[0]);
     assert(tracker2.pressCount == 1);
     hover.runInputAction!(FluidInputAction.contextMenu)(device.pointers[0]);
     assert(tracker2.pressCount == 1);
-    assert(tracker2.hoverImplCount  == 2);
+    assert(tracker2.hoverImplCount == 1);
 
 }
 

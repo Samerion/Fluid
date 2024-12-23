@@ -160,6 +160,21 @@ interface IO : HasContext {
 
     bool opEquals(const Object) const;
 
+    /// Load a resource by reference. This is the same as `Node.load`.
+    /// Params:
+    ///     resource = Resource to load. It will be updated with identifying information.
+    void loadTo(this This, T)(ref T resource) {
+
+        auto io = cast(This) this;
+
+        // Load the resource
+        const id = io.load(resource);
+
+        // Pass data into the resource
+        resource.load(io, id);
+
+    }
+
 }
 
 IOID ioID(T)()

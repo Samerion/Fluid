@@ -7,6 +7,8 @@ import fluid.utils;
 import fluid.style;
 import fluid.backend;
 
+import fluid.io.canvas;
+
 @safe:
 
 /// A label can be used to display text on the screen.
@@ -14,6 +16,8 @@ alias label = simpleConstructor!Label;
 
 /// ditto
 class Label : Node {
+
+    CanvasIO canvasIO;
 
     public {
 
@@ -65,6 +69,8 @@ class Label : Node {
 
         import std.math;
 
+        use(canvasIO);
+
         text.resize(available, !isWrapDisabled);
         minSize = text.size;
 
@@ -73,8 +79,18 @@ class Label : Node {
     protected override void drawImpl(Rectangle outer, Rectangle inner) {
 
         const style = pickStyle();
-        style.drawBackground(tree.io, outer);
-        text.draw(style, inner.start);
+
+        // Using the new I/O
+        if (canvasIO) {
+            style.drawBackground(tree.io, canvasIO, outer);
+            text.draw(canvasIO, style, inner.start);
+        }
+
+        // Legacy backend
+        else {
+            style.drawBackground(tree.io, outer);
+            text.draw(style, inner.start);
+        }
 
     }
 

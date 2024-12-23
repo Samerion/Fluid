@@ -14,7 +14,7 @@ import fluid.typeface;
 
 import fluid.io.canvas;
 
-public import fluid.theme : makeTheme, Theme, Selector, rule, Rule, when, WhenRule, children, ChildrenRule, Field, 
+public import fluid.theme : makeTheme, Theme, Selector, rule, Rule, when, WhenRule, children, ChildrenRule, Field,
     Breadcrumbs;
 public import fluid.border;
 public import fluid.default_theme;
@@ -144,7 +144,7 @@ struct Style {
 
     public {
 
-        /// Breadcrumbs associated with this style. Used to keep track of tree-aware theme selectors, such as 
+        /// Breadcrumbs associated with this style. Used to keep track of tree-aware theme selectors, such as
         /// `children`. Does not include breadcrumbs loaded by parent nodes.
         Breadcrumbs breadcrumbs;
 
@@ -217,7 +217,7 @@ struct Style {
         }
 
     }
-    
+
     /// ditto
     void drawBackground(FluidBackend backend, CanvasIO io, Rectangle rect) const {
 
@@ -244,6 +244,20 @@ struct Style {
     void drawLine(FluidBackend backend, Vector2 start, Vector2 end) const {
 
         backend.drawLine(start, end, lineColor);
+
+    }
+
+    /// ditto
+    void drawLine(FluidBackend backend, CanvasIO canvasIO, Vector2 start, Vector2 end) const {
+
+        // New I/O system used
+        if (canvasIO) {
+
+            canvasIO.drawLine(start, end, 1, lineColor);
+
+        }
+
+        else drawLine(backend, start, end);
 
     }
 
@@ -479,7 +493,7 @@ unittest {
 
     assert(sides.sideX == 1);
     assert(sides.sideY == 2);
-    
+
 }
 
 /// Returns a side array created from either: another side array like it, a two item array with each representing an
@@ -669,7 +683,7 @@ unittest {
 
 }
 
-/// Check if a rectangle is located above (`isAbove`), below (`isBelow`), to the left (`isToLeft`) or to the right 
+/// Check if a rectangle is located above (`isAbove`), below (`isBelow`), to the left (`isToLeft`) or to the right
 /// (`isToRight`) of another rectangle.
 ///
 /// The four functions wrap `isBeyond` which accepts a `Side` argument to specify direction at runtime.
@@ -741,12 +755,12 @@ bool isBeyond(Rectangle subject, Rectangle reference, Style.Side side) {
     //   side ↑        ↑ side.reverse                      side ↑          side ↑
     const condition = abs(distanceInternal) > abs(distanceExternal);
 
-    // ↓ subject                There is an edgecase though. If one box entirely overlaps the other on one axis, 
+    // ↓ subject                There is an edgecase though. If one box entirely overlaps the other on one axis,
     // +====================+   it will be simultaneously to the left, and to the right, creating an ambiguity.
-    // |   ↓ reference      |   
+    // |   ↓ reference      |
     // |   +------------+   |   This is unwated in scenarios like focus switching. A scrollbar placed to the right
     // |   |            |   |   of the page, should be focused by the right key, not by up or down.
-    // +===|            |===+   
+    // +===|            |===+
     //     |            |       For this reason, we require both `distanceInternal` and `distanceExternal` to have
     //     +------------+       the same sign, as it normally would, but not in case of an overlap.
     return condition

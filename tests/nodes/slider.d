@@ -1,66 +1,90 @@
 module nodes.slider;
 
-import fluid;
-
 import std.range;
+
+import fluid;
 
 @safe:
 
-@("[TODO] Legacy: Slider can be changed with mouse movements")
+@("Slider can be changed with mouse movements")
 unittest {
 
     const size = Vector2(500, 200);
     const rect = Rectangle(0, 0, size.tupleof);
 
-    auto io = new HeadlessBackend(size);
-    auto root = slider!int(
-        .layout!("fill", "start"),
+    auto input = slider!int(
+        .layout!(1, "fill", "center"),
         iota(1, 4)
     );
+    auto hover = sizeLock!hoverSpace(
+        .sizeLimit(500, 200),
+        input
+    );
+    auto root = hover;
 
-    root.io = io;
     root.draw();
 
     // Default value
-    assert(root.index == 0);
-    assert(root.value == 1);
+    assert(input.index == 0);
+    assert(input.value == 1);
 
     // Press at the center
-    io.mousePosition = center(rect);
-    io.press;
-    root.draw();
+    hover.point(center(rect))
+        .then((pointer) { 
+            
+            pointer.press;
 
-    // This should have switched to the second value
-    assert(root.index == 1);
-    assert(root.value == 2);
+            // This should have switched to the second value
+            assert(input.index == 1);
+            assert(input.value == 2);
 
-    // Move the mouse below the bar
-    io.nextFrame;
-    io.mousePosition = Vector2(0, end(rect).y + 100);
-    root.draw();
+            // Move the mouse below the bar
+            return pointer.move(Vector2(0, end(rect).y + 100));
 
-    // The slider should still be affected
-    assert(root.index == 0);
-    assert(root.value == 1);
+        })
+        .then((pointer) {
 
-    // Release the mouse and move again
-    io.nextFrame;
-    io.release;
-    io.nextFrame;
-    io.mousePosition = Vector2(center(rect).x, end(rect).y + 100);
-    root.draw();
+            // Keep pressing
+            pointer.press(false);
 
-    // No change
-    assert(root.index == 0);
-    assert(root.value == 1);
+            // The slider should still be affected
+            assert(input.index == 0);
+            assert(input.value == 1);
 
-    // Slider should react to input actions
-    io.nextFrame;
-    root.runInputAction!(FluidInputAction.scrollRight);
-    root.draw();
+            return pointer.stayIdle;
 
-    assert(root.index == 1);
-    assert(root.value == 2);
+        })
+        .then((pointer) {
+
+            assert(input.index == 0);
+            assert(input.value == 1);
+
+            // Now the mouse should be released
+            return pointer.move(Vector2(center(rect).x, end(rect).y + 100));
+            
+        })
+        .then((pointer) {
+
+            // No change now
+            assert(input.index == 0);
+            assert(input.value == 1);
+
+        })
+        .runWhileDrawing(root);
+
+    assert(input.value == 1);
 
 }
 
+@("Slider reacts to input actions")
+unittest {
+
+    auto input = slider!string(["One", "Two", "Three"]);
+    assert(input.index == 0);
+    assert(input.value == "One");
+
+    input.runInputAction!(FluidInputAction.scrollRight);
+    assert(input.index == 1);
+    assert(input.value == "Two");
+
+}

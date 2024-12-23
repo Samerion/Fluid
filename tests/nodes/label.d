@@ -4,31 +4,38 @@ import fluid;
 
 @safe:
 
-@("[TODO] Legacy: Label draws text, and updates it if written to")
+@("Label draws text, and updates it if written to")
 unittest {
 
-    auto io = new HeadlessBackend;
-    auto root = label("Hello, World!");
+    import fluid.theme;
 
-    with (Rule)
-    root.theme = nullTheme.derive(
+    auto root = label("Hello, World!");
+    auto test = testSpace(root);
+
+    test.theme = nullTheme.derive(
         rule!Label(textColor = color!"000"),
     );
-    root.io = io;
-    root.draw();
+
+    test.draw();
 
     const initialTextArea = root.text.size.x * root.text.size.y;
-
-    io.assertTexture(root.text.texture.chunks[0], Vector2(0, 0), color!"fff");
-    io.nextFrame;
+    auto firstImage = root.text.texture.chunks[0].image;
+    
+    test.drawAndAssert(
+        root.drawsHintedImage(firstImage).at(0, 0)
+    );
 
     root.text ~= " It's a nice day today!";
     root.draw();
 
-    io.assertTexture(root.text.texture.chunks[0], Vector2(0, 0), color!"fff");
-
     const newTextArea = root.text.size.x * root.text.size.y;
+    auto secondImage = root.text.texture.chunks[0].image;
 
+    test.drawAndAssert(
+        root.drawsHintedImage(secondImage).at(0, 0)
+    );
+
+    assert(firstImage != secondImage);
     assert(newTextArea > initialTextArea);
 
 }
