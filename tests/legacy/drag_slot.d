@@ -1,10 +1,13 @@
+@Migrated
 module legacy.drag_slot;
 
 import fluid; 
+import legacy;
 
 @safe:
 
-@("[TODO] Legacy: DragSlot ignores gap if the handle is hidden")
+@("DragSlot ignores gap if the handle is hidden")
+@Migrated
 unittest {
 
     import std.algorithm;
