@@ -533,6 +533,162 @@ auto drawsImage(Node subject) {
 
 }
 
+/// Assert true if the node draws a child.
+/// Params:
+///     parent = Parent node, subject of the test.
+///     child  = Child to test. Must be drawn directly.
+auto drawsChild(Node parent, Node child = null) {
+
+    return new class BlackHole!Assert {
+
+        // 0 outside of parent, 1 inside, 2 in child, 3 in grandchild, etc.
+        int parentDepth;
+
+        override bool resume(Node node) {
+            if (parent.opEquals(node).assertNotThrown) {
+                parentDepth = 1;
+            }
+            return false;
+        }
+
+        override bool beforeDraw(Node node, Rectangle, Rectangle, Rectangle) {
+
+            // Found the parent
+            if (parent.opEquals(node).assertNotThrown) {
+                parentDepth = 1;
+            }
+
+            // Parent drew a child, great! End the test if the child meets expectations.
+            else if (parentDepth) {
+                if (parentDepth++ == 1) {
+                    return child is null || node.opEquals(child).assertNotThrown;
+                }
+            }
+
+            return false;
+
+        }
+
+        override bool afterDraw(Node node, Rectangle, Rectangle, Rectangle) {
+
+            if (parentDepth) {
+                parentDepth--;
+            }
+
+            return false;
+
+        }
+
+        override string toString() const {
+            if (child)
+                return format!"%s must draw %s"(parent, child);
+            else
+                return format!"%s must draw a child"(parent);
+        }
+
+    };
+
+}
+
+///
+@("drawsChild assert works as expected")
+unittest {
+
+    import fluid.structs;
+
+    Space child, grandchild;
+
+    auto root = testSpace(
+        layout!1,
+        child = vspace(
+            layout!2,
+            grandchild = vspace(
+                layout!3
+            ),
+        ),
+    );
+
+    root.drawAndAssert(
+        root.drawsChild(),
+        child.drawsChild(),
+    );
+
+    root.drawAndAssert(
+        root.drawsChild(child),
+        child.drawsChild(grandchild),
+    );
+
+    root.drawAndAssert(
+        root.drawsChild(child),
+        child.drawsChild(grandchild),
+        grandchild.doesNotDrawChildren(),
+        root.doesNotDrawChildren(),
+    );
+
+    root.drawAndAssertFailure(
+        root.doesNotDrawChildren(),
+    );
+
+    root.drawAndAssertFailure(
+        child.doesNotDrawChildren(),
+    );
+
+    root.drawAndAssert(
+        grandchild.doesNotDrawChildren(),
+    );
+
+    root.drawAndAssertFailure(
+        grandchild.drawsChild(),
+    );
+
+    root.drawAndAssertFailure(
+        root.drawsChild(grandchild),
+    );
+
+}
+
+/// Make sure the parent does not draw any children.
+auto doesNotDrawChildren(Node parent) {
+
+    return new class BlackHole!Assert {
+
+        bool inParent;
+
+        override bool resume(Node node) {
+            if (parent.opEquals(node).assertNotThrown) {
+                inParent =  true;
+            }
+            return false;
+        }
+
+        override bool beforeDraw(Node node, Rectangle, Rectangle, Rectangle) {
+
+            // Found the parent
+            if (parent.opEquals(node).assertNotThrown) {
+                inParent = true;
+            }
+
+            // Parent drew a child
+            else if (inParent) {
+                assert(false, format!"%s must not draw children"(parent).assertNotThrown);
+            }
+
+            return false;
+
+        }
+
+        override bool afterDraw(Node node, Rectangle, Rectangle, Rectangle) {
+            return parent.opEquals(node).assertNotThrown;
+        }
+
+        override string toString() const {
+            return format!"%s must not draw children"(parent).assertNotThrown;
+        }
+
+    };
+
+}
+
 /// Assert true if the parent requests drawing the node, 
 /// but the node does not need to draw anything for the assert to succeed.
 auto isDrawn(Node subject) {
