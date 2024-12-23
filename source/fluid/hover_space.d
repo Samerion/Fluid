@@ -92,6 +92,14 @@ class HoverSpace : Space, HoverIO {
         
     }
 
+    override inout(Pointer) fetch(int number) inout {
+
+        assert(_pointers.isActive(number), "Pointer is not active");
+
+        return _pointers[number].value;
+
+    }
+
     override void emitEvent(Pointer pointer, InputEvent event) {
 
         if (!actionIO) return;
@@ -235,7 +243,7 @@ class HoverSpace : Space, HoverIO {
         const handled =
             
             // Try to run the action
-            (hover && hover.actionImpl(actionID, isActive))
+            (hover && hover.actionImpl(this, pointer.id, actionID, isActive))
 
             // Run local input actions as fallback
             || runLocalInputActions(pointer, actionID, isActive)

@@ -69,6 +69,17 @@ interface HoverIO : IO {
     ///     An ID the `HoverIO` system will use to recognize the pointer.
     int load(Pointer pointer);
 
+    /// Fetch a pointer from a number assigned to it by this I/O. This is used by `Actionable` nodes to find
+    /// `Pointer` data corresponding to fired input action events.
+    ///
+    /// The pointer, and the matching number, must be valid.
+    ///
+    /// Params:
+    ///     number = Number assigned to the pointer by this I/O.
+    /// Returns:
+    ///     The pointer.
+    inout(Pointer) fetch(int number) inout;
+    
     /// Read an input event from an input device. Input devices will call this function every frame 
     /// if an input event (such as a button press) occurs. Moving a mouse does not qualify as an input event.
     ///
@@ -207,6 +218,27 @@ struct Pointer {
 
     /// ID of the pointer assigned by the `HoverIO` system.
     private int _id;
+
+    /// If the given system is a Hover I/O system, fetch a pointer.
+    ///
+    /// Given data must be valid; the I/O must be a `HoverIO` instance and the number must be a valid pointer number.
+    ///
+    /// Params:
+    ///     io     = I/O system to use.
+    ///     number = Valid pointer number assigned by the I/O system.
+    /// Returns:
+    ///     Pointer under given number.
+    static Pointer fetch(IO io, int number) {
+
+        import std.format;
+
+        if (auto hoverIO = cast(HoverIO) io) {
+            return hoverIO.fetch(number);
+        }
+
+        assert(false);
+
+    }
 
     /// Compare two pointers. All publicly exposed fields (`device`, `number`, `position`, `isDisabled`)
     /// must be equal. To check if the two pointers have the same origin (device and number), use `isSame`.
@@ -419,7 +451,7 @@ class PointerAction : TreeAction, Publisher!PointerAction {
         // Can't run the action
         if (hoverable.blocksInput) return false;
 
-        return hoverable.actionImpl(actionID, isActive);
+        return hoverable.actionImpl(hoverIO, pointer.id, actionID, isActive);
 
     }
 
