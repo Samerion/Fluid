@@ -9,6 +9,7 @@ import fluid.style;
 import fluid.backend;
 import fluid.structs;
 
+import fluid.io.hover;
 
 @safe:
 
@@ -92,6 +93,8 @@ abstract class AbstractSlider : InputNode!Node {
     enum railWidth = 4;
     enum minStepDistance = 10;
 
+    HoverIO hoverIO;
+
     public {
 
         /// Handle of the slider.
@@ -133,6 +136,8 @@ abstract class AbstractSlider : InputNode!Node {
     }
 
     override void resizeImpl(Vector2 space) {
+
+        use(hoverIO);
 
         resizeChild(handle, space);
         minSize = handle.minSize;
@@ -184,11 +189,11 @@ abstract class AbstractSlider : InputNode!Node {
 
     }
 
-    @(FluidInputAction.press, whileDown)
-    protected void press() {
+    @(FluidInputAction.press, WhileDown)
+    protected void press(Pointer pointer) {
 
         // Get mouse position relative to the first step
-        const offset = io.mousePosition.x - firstStepX + stepDistance/2;
+        const offset = pointer.position.x - firstStepX + stepDistance/2;
 
         // Get step based on X axis position
         const step = cast(size_t) (offset / stepDistance);
@@ -202,6 +207,19 @@ abstract class AbstractSlider : InputNode!Node {
             index = step;
             if (changed) changed();
 
+        }
+
+    }
+
+    @(FluidInputAction.press, WhileDown)
+    protected void press() {
+
+        // The new I/O system will call the other overload.
+        // Call it as a polyfill for the old system.
+        if (!hoverIO) {
+            Pointer pointer;
+            pointer.position = io.mousePosition;
+            press(pointer);
         }
 
     }

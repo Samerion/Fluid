@@ -141,6 +141,10 @@ interface Actionable {
     /// This method should not be called for nodes for which `blocksInput` is true. 
     ///
     /// Params:
+    ///     io       = I/O input handling system to trigger the action, for example `HoverIO` or `FocusIO`.
+    ///         May be null.
+    ///     number   = Number assigned by the I/O system. May be used to fetch a resource from the I/O system if it
+    ///         supported.
     ///     action   = ID of the action to handle.
     ///     isActive = If true, this is an active action.
     ///         Most event handlers is only interested in active handlers; 
@@ -148,7 +152,7 @@ interface Actionable {
     ///         whereas an inactive action merely means the button or key is down.
     /// Returns:
     ///     True if the action was handled, false if not.
-    bool actionImpl(immutable InputActionID action, bool isActive)
+    bool actionImpl(IO io, int number, immutable InputActionID action, bool isActive)
     in (!blocksInput, "This node currently doesn't accept input.");
 
     /// Memory safe and `const` object comparison.
@@ -160,11 +164,14 @@ interface Actionable {
 
     mixin template enableInputActions() {
 
-        override bool actionImpl(immutable InputActionID action, bool isActive) {
+        import fluid.future.context : IO;
+        import fluid.io.action : InputActionID;
+
+        override bool actionImpl(IO io, int number, immutable InputActionID action, bool isActive) {
 
             import fluid.io.action : runInputActionHandler;
 
-            return runInputActionHandler(this, action, isActive);
+            return runInputActionHandler(this, io, number, action, isActive);
 
         }
 
@@ -248,6 +255,8 @@ template isInputAction(alias action) {
 
 }
 
+enum isRetrievableResource(T) = __traits(compiles, T.fetch(IO.init, 0));
+
 /// Helper function to run an input action handler through one of the possible overloads.
 ///
 /// Params:
@@ -262,12 +271,14 @@ template isInputAction(alias action) {
 ///         if all of its events are bound to its members (like `FluidInputAction.press`).
 /// Returns:
 ///     True if the handler responded to this action, false if not.
-bool runInputActionHandler(T)(T action, bool delegate(T action) @safe handler) {
+bool runInputActionHandler(T)(T action, bool delegate(T action) @safe handler)
+if (isInputAction!action) {
     return handler(action);
 }
 
 /// ditto
-bool runInputActionHandler(T)(T action, void delegate(T action) @safe handler) {
+bool runInputActionHandler(T)(T action, void delegate(T action) @safe handler)
+if (isInputAction!action) {
     handler(action);
     return true;
 }
@@ -283,6 +294,84 @@ bool runInputActionHandler(T)(T, void delegate() @safe handler) {
     return true;
 }
 
+/// Uniform wrapper over the varied set of input action handler variants.
+///
+/// This is an alternative, newer set of overloads for handling input actions with support for passing event metadata 
+/// through resources.
+///
+/// Params:
+///     action  = Evaluated input action type.
+///         Presently, this is an enum member of the input action it comes from.
+///         `InputActionID` cannot be used here.
+///     handler = Handler for the action.
+///         The handler may choose to return a boolean, 
+///         indicating if it handled (true) or ignored the action (false).
+///
+///         It may also optionally accept the input action enum, for example `FluidInputAction`,
+///         if all of its events are bound to its members (like `FluidInputAction.press`).
+///
+///         It may accept a resource type if the resource has a `static fetch(IO, int)` method.
+/// Returns:
+///     True if the handler responded to this action, false if not.
+bool runInputActionHandler(T, R)(T action, IO io, int number, bool delegate(T action, R resource) @safe handler)
+if (isInputAction!action && isRetrievableResource!R) {
+    R resource = R.fetch(io, number);
+    return handler(action, resource);
+}
+
+/// ditto
+bool runInputActionHandler(T, R)(T action, IO io, int number, void delegate(T action, R resource) @safe handler)
+if (isInputAction!action && isRetrievableResource!R) {
+    R resource = R.fetch(io, number);
+    handler(action, resource);
+    return true;
+}
+
+/// ditto
+bool runInputActionHandler(T, R)(T, IO io, int number, bool delegate(R resource) @safe handler)
+if (isRetrievableResource!R) {
+    if (io is null) {
+        return false;
+    }
+    R resource = R.fetch(io, number);
+    return handler(resource);
+}
+
+/// ditto
+bool runInputActionHandler(T, R)(T, IO io, int number, void delegate(R resource) @safe handler)
+if (isRetrievableResource!R) {
+    if (io is null) {
+        return false;
+    }
+    R resource = R.fetch(io, number);
+    handler(resource);
+    return true;
+}
+
+/// ditto
+bool runInputActionHandler(T)(T action, IO, int, bool delegate(T action) @safe handler)
+if (isInputAction!action) {
+    return handler(action);
+}
+
+/// ditto
+bool runInputActionHandler(T)(T action, IO, int, void delegate(T action) @safe handler)
+if (isInputAction!action) {
+    handler(action);
+    return true;
+}
+
+/// ditto
+bool runInputActionHandler(T)(T, IO, int, bool delegate() @safe handler) {
+    return handler();
+}
+
+/// ditto
+bool runInputActionHandler(T)(T, IO, int, void delegate() @safe handler) {
+    handler();
+    return true;
+}
+
 /// Run a handler for an input action.
 /// Params:
 ///     aggregate = Struct or class with input action handlers.
@@ -292,6 +381,29 @@ bool runInputActionHandler(T)(T, void delegate() @safe handler) {
 ///     True if there exists a matching input handler, and if it responded
 ///     to the input action.
 bool runInputActionHandler(T)(auto ref T aggregate, immutable InputActionID actionID, bool isActive = true) {
+
+    return runInputActionHandler(aggregate, null, 0, actionID, isActive);
+
+}
+
+/// Run a handler for an input action.
+///
+/// This is a newer, alternative overload
+///
+/// Params:
+///     aggregate = Struct or class with input action handlers.
+///     io        = I/O system to emit the action.
+///     number    = Number internal to the I/O syste; may be used to fetch additional data.
+///     actionID  = ID of the action to run.
+///     isActive  = True, if the action has fired, false if it is held.
+/// Returns:
+///     True if there exists a matching input handler, and if it responded
+///     to the input action.
+bool runInputActionHandler(T)(auto ref T aggregate, IO io, int number,
+    immutable InputActionID actionID, bool isActive = true) 
+do {
+
+    import std.functional : toDelegate;
 
     bool handled;
 
@@ -304,8 +416,10 @@ bool runInputActionHandler(T)(auto ref T aggregate, immutable InputActionID acti
             // Run the action if the stroke was performed
             if (shouldActivateWhileDown!(handler.method) || isActive) {
 
-                handled = runInputActionHandler(handler.inputAction,
-                    &__traits(child, aggregate, handler.method)) || handled;
+                auto dg = toDelegate(&__traits(child, aggregate, handler.method));
+
+                handled = runInputActionHandler(handler.inputAction, io, number, dg) || handled;
+                // TODO 0.8.0 abandon
 
             }
 
