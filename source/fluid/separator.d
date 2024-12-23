@@ -6,6 +6,7 @@ import fluid.utils;
 import fluid.backend;
 import fluid.structs;
 
+import fluid.io.canvas;
 
 @safe:
 
@@ -29,6 +30,8 @@ alias hseparator = simpleConstructor!(Separator, (a) {
 /// ditto
 class Separator : Node {
 
+    CanvasIO canvasIO;
+
     public {
 
         bool isHorizontal;
@@ -37,6 +40,7 @@ class Separator : Node {
 
     override void resizeImpl(Vector2) {
 
+        use(canvasIO);
         minSize = Vector2(1, 1);
 
     }
@@ -45,14 +49,14 @@ class Separator : Node {
 
         auto style = pickStyle();
 
-        style.drawBackground(io, outer);
+        style.drawBackground(io, canvasIO, outer);
 
         if (isHorizontal) {
 
             auto start = Vector2(start(inner).x, center(inner).y);
             auto end = Vector2(end(inner).x, center(inner).y);
 
-            style.drawLine(io, start, end);
+            style.drawLine(io, canvasIO, start, end);
 
         }
 
@@ -61,7 +65,7 @@ class Separator : Node {
             auto start = Vector2(center(inner).x, start(inner).y);
             auto end = Vector2(center(inner).x, end(inner).y);
 
-            style.drawLine(io, start, end);
+            style.drawLine(io, canvasIO, start, end);
 
         }
 

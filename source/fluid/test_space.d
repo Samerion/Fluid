@@ -482,7 +482,7 @@ auto drawsLine(Node subject) {
         }
 
         typeof(this) to(Vector2 end) @safe {
-            isTestingStart = true;
+            isTestingEnd = true;
             targetEnd = end;
             return this;
         }
@@ -508,7 +508,7 @@ auto drawsLine(Node subject) {
                 subject, " should draw a line",
                 isTestingStart ? toText(" from ", targetStart)           : "",
                 isTestingEnd   ? toText(" to ", targetEnd)               : "",
-                isTestingWidth ? toText(" of width", targetWidth)        : "",
+                isTestingWidth ? toText(" of width ", targetWidth)       : "",
                 isTestingColor ? toText(" of color ", targetColor.toHex) : "",
             );
         }

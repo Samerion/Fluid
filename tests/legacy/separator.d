@@ -1,10 +1,13 @@
+@Migrated
 module legacy.separator;
 
 import fluid;
+import legacy;
 
 @safe:
 
-@("[TODO] Legacy: vseparator draws a vertical line, hseparator draws a horizontal line")
+@("vseparator draws a vertical line, hseparator draws a horizontal line")
+@Migrated
 unittest {
 
     import fluid.theme;
