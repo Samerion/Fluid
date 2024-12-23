@@ -9,6 +9,9 @@ import fluid.input;
 import fluid.style;
 import fluid.backend;
 
+import fluid.io.hover;
+import fluid.io.canvas;
+
 
 @safe:
 
@@ -30,6 +33,8 @@ class ScrollInput : InputNode!Node {
     // `isHidden` to virtually hide the scrollbar, and keep it always "visible" as such?
 
     mixin enableInputActions;
+
+    CanvasIO canvasIO;
 
     public {
 
@@ -117,6 +122,8 @@ class ScrollInput : InputNode!Node {
     /// Set the total size of the scrollbar. Will always fill the available space in the target direction.
     override protected void resizeImpl(Vector2 space) {
 
+        use(canvasIO);
+
         // Get minSize
         minSize = isHorizontal
             ? Vector2(space.x, width)
@@ -142,7 +149,7 @@ class ScrollInput : InputNode!Node {
         setScroll(position);
 
         // Draw the background
-        style.drawBackground(tree.io, paddingBox);
+        style.drawBackground(tree.io, canvasIO, paddingBox);
 
         // Ignore if we can't scroll
         if (scrollMax == 0) return;
@@ -234,10 +241,13 @@ class ScrollInput : InputNode!Node {
 
 }
 
-class ScrollInputHandle : Node, FluidHoverable {
+class ScrollInputHandle : Node, FluidHoverable, Hoverable {
 
     mixin makeHoverable;
-    mixin enableInputActions;
+    mixin FluidHoverable.enableInputActions;
+    mixin Hoverable.enableInputActions;
+
+    HoverIO hoverIO;
 
     public {
 
@@ -290,6 +300,12 @@ class ScrollInputHandle : Node, FluidHoverable {
 
     }
 
+    override bool blocksInput() const {
+
+        return isDisabled || isDisabledInherited;
+
+    }
+
     override bool isHovered() const {
 
         return this is tree.hover || super.isHovered();
@@ -297,6 +313,8 @@ class ScrollInputHandle : Node, FluidHoverable {
     }
 
     override protected void resizeImpl(Vector2 space) {
+
+        use(hoverIO);
 
         if (parent.isHorizontal)
             minSize = Vector2(minimumLength, parent.width);
@@ -307,27 +325,28 @@ class ScrollInputHandle : Node, FluidHoverable {
 
     override protected void drawImpl(Rectangle paddingBox, Rectangle contentBox) @trusted {
 
-        // Check if pressed
-        const pressed = isHovered && tree.isMouseDown!(FluidInputAction.press);
-        justPressed = pressed && !_isPressed;
-        _isPressed = pressed;
-
         auto style = pickStyle();
         style.drawBackground(io, paddingBox);
 
     }
 
     @(FluidInputAction.press, fluid.input.WhileDown)
-    protected void whileDown() @trusted {
+    protected bool whileDown(Pointer pointer) @trusted {
 
-        const mousePosition = io.mousePosition;
+        const mousePosition = pointer.position;
+
+        assert(startMousePosition.x.isFinite);
+        assert(startMousePosition.y.isFinite);
+
+        justPressed = !_isPressed;
+        _isPressed = true;
 
         // Just pressed, save data
         if (justPressed) {
 
             startMousePosition = mousePosition;
             startScrollPosition = parent.position;
-            return;
+            return true;
 
         }
 
@@ -340,6 +359,7 @@ class ScrollInputHandle : Node, FluidHoverable {
         assert(totalMove.isFinite);
         assert(parent.length.isFinite);
         assert(length.isFinite);
+        assert(startScrollPosition.isFinite);
         assert(scrollDifference.isFinite);
 
         // Move the scrollbar
@@ -348,9 +368,34 @@ class ScrollInputHandle : Node, FluidHoverable {
         // Emit signal
         if (parent.changed) parent.changed();
 
+        return true;
+
     }
 
-    protected void mouseImpl() {
+    @(FluidInputAction.press, fluid.input.WhileDown)
+    protected void whileDown() @trusted {
+
+        // Call the new overload if new I/O isn't loaded
+        if (hoverIO is null) {
+            Pointer pointer;
+            pointer.position = io.mousePosition;
+            cast(void) whileDown(pointer);
+        }
+
+    }
+
+    protected override void mouseImpl() {
+
+        hoverImpl();
+
+    }
+
+    protected override bool hoverImpl() {
+
+        justPressed = false;
+        _isPressed = false;
+
+        return false;
 
     }
 
