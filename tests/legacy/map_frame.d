@@ -1,10 +1,13 @@
+@Migrated
 module legacy.map_frame;
 
 import fluid;
+import legacy;
 
 @safe:
 
-@("[TODO] Legacy: MapFrame lays nodes out differently based on their drop vectors")
+@("MapFrame lays nodes out differently based on their drop vectors")
+@Migrated
 unittest {
 
     import fluid.space;
