@@ -1,10 +1,13 @@
+@Migrated
 module fluid.nodes.node_slot;
 
 import fluid;
+import legacy;
 
 @safe:
 
-@("[TODO] Legacy: NodeSlot supports no content")
+@("NodeSlot supports no content")
+@Abandoned
 unittest {
 
     NodeSlot!Label slot1, slot2;
