@@ -33,7 +33,7 @@ interface HoverIO : IO {
     /// It is expected `load` will be called after every pointer motion in order to keep its position up to date.
     ///
     /// A pointer is considered loaded until the next resize. If the `load` call for a pointer isn't repeated
-    /// during a resize, the pointer is invalidated. Pointers do not have to be loaded while resizing; they can 
+    /// during a resize, the pointer is invalidated. Pointers do not have to be loaded while resizing; they can
     /// also be loaded while drawing.
     ///
     /// An example implementation of a pointer device, from inside of a node, could look like:
@@ -46,9 +46,9 @@ interface HoverIO : IO {
     ///     require(hoverIO);
     ///     minSize = Vector2();
     /// }
-    /// 
+    ///
     /// override void drawImpl(Rectangle, Rectangle) {
-    /// 
+    ///
     ///     pointer.device = this;
     ///     pointer.number = 0;
     ///     pointer.position = mousePosition();
@@ -59,7 +59,7 @@ interface HoverIO : IO {
     ///
     /// }
     /// ---
-    /// 
+    ///
     /// Params:
     ///     pointer = Pointer to prepare.
     ///         The pointer's `device` field should be set to whatever node represents this device,
@@ -79,15 +79,15 @@ interface HoverIO : IO {
     /// Returns:
     ///     The pointer.
     inout(Pointer) fetch(int number) inout;
-    
-    /// Read an input event from an input device. Input devices will call this function every frame 
+
+    /// Read an input event from an input device. Input devices will call this function every frame
     /// if an input event (such as a button press) occurs. Moving a mouse does not qualify as an input event.
     ///
-    /// The pointer emitting the event must have been loaded earlier (using `load`) during the same frame 
+    /// The pointer emitting the event must have been loaded earlier (using `load`) during the same frame
     /// for the action to work.
     ///
     /// `HoverIO` will usually pass these down to an `ActionIO` system. It is up to `HoverIO` to decide how
-    /// the input and the resulting input actions is handled, though the node hovered by the pointer will most 
+    /// the input and the resulting input actions is handled, though the node hovered by the pointer will most
     /// often receive them.
     ///
     /// Params:
@@ -103,7 +103,7 @@ interface HoverIO : IO {
     ///     Node hovered by the pointer.
     inout(Hoverable) hoverOf(Pointer pointer) inout;
 
-    /// Returns: 
+    /// Returns:
     ///     True if the node is hovered.
     /// Params:
     ///     hoverable = True if this node is hovered.
@@ -112,7 +112,7 @@ interface HoverIO : IO {
     /// List all currently hovered nodes.
     /// Params:
     ///     yield = A delegate to be called for every hovered node.
-    ///         This should include nodes that block input, but are hovered. 
+    ///         This should include nodes that block input, but are hovered.
     ///         If the delegate returns a non-zero value, the value should be returned.
     /// Returns:
     ///     If `yield` returned a non-zero value, this is the value it returned;
@@ -153,7 +153,7 @@ bool hovers(HoverIO hoverIO, const Hoverable hoverable) {
 /// Returns:
 ///     True if the system considers all of the given ranges as hovered,
 ///     and it does not find any other nodes hovered.
-bool hoversOnly(Range)(HoverIO hoverIO, Range hoverables) 
+bool hoversOnly(Range)(HoverIO hoverIO, Range hoverables)
 if (isForwardRange!Range && is(ElementType!Range : const Hoverable))
 do {
 
@@ -244,7 +244,7 @@ struct Pointer {
     /// must be equal. To check if the two pointers have the same origin (device and number), use `isSame`.
     /// Params:
     ///     other = Pointer to compare against.
-    /// Returns: 
+    /// Returns:
     ///     True if the pointer is the same as the other pointer and has the same state.
     bool opEquals(const Pointer other) const {
 
@@ -301,7 +301,7 @@ struct Pointer {
     ///     event = Event to emit.
     ///         The event is usually considered "active" during the frame the action is "released". For example,
     ///         user stops holding a mouse button, or a finger stops touching the screen.
-    /// See_Also: 
+    /// See_Also:
     ///     `HoverIO.emitEvent`
     void emitEvent(InputEvent event) {
 
@@ -323,9 +323,9 @@ interface Hoverable : Actionable {
     bool hoverImpl()
     in (!blocksInput, "This node currently doesn't accept input.");
 
-    /// Returns: 
+    /// Returns:
     ///     True if this node is hovered.
-    ///     This will most of the time be equivalent to `hoverIO.isHovered(this)`, 
+    ///     This will most of the time be equivalent to `hoverIO.isHovered(this)`,
     ///     but a node wrapping another hoverable may choose to instead redirect this to the other node.
     bool isHovered() const;
 
@@ -338,7 +338,7 @@ interface Hoverable : Actionable {
 ///
 /// Params:
 ///     hoverIO  = Hover I/O system to target.
-///     position = Position to place the pointer at. 
+///     position = Position to place the pointer at.
 PointerAction point(HoverIO hoverIO, Vector2 position) {
 
     import fluid.node;
@@ -399,6 +399,16 @@ class PointerAction : TreeAction, Publisher!PointerAction {
 
         hoverIO.loadTo(pointer);
         return hoverIO.hoverOf(pointer);
+
+    }
+
+    /// Returns: True if the given node is hovered.
+    bool isHovered(Node node) {
+
+        if (node is null)
+            return currentHover is null;
+        else
+            return currentHover.opEquals(node);
 
     }
 

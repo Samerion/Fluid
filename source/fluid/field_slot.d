@@ -7,6 +7,7 @@ import fluid.input;
 import fluid.actions;
 import fluid.backend;
 
+import fluid.io.hover;
 
 @safe:
 
@@ -27,27 +28,33 @@ import fluid.backend;
 alias fieldSlot(alias node) = simpleConstructor!(FieldSlot, node);
 
 /// ditto
-class FieldSlot(T : Node) : T, FluidHoverable {
+class FieldSlot(T : Node) : T, FluidHoverable, Hoverable {
 
     mixin makeHoverable;
-    mixin enableInputActions;
+    mixin FluidHoverable.enableInputActions;
+    mixin Hoverable.enableInputActions;
 
     this(Args...)(Args args) {
         super(args);
     }
 
-    /// Pass focus to the field contained by this slot.
+    /// Pass focus to the field contained by this slot and press it.
     @(FluidInputAction.press)
-    void focus() {
+    void press() {
 
-        auto action = this.focusRecurseChildren();
+        focus()
+            .then((Node node) {
+                if (auto focusable = cast(FluidFocusable) node) {
+                    focusable.runInputAction!(FluidInputAction.press);
+                }
+            });
 
-        // Press the target when found
-        action.finished = (node) {
-            if (node) {
-                node.runInputAction!(FluidInputAction.press);
-            }
-        };
+    }
+
+    /// Pass focus to the field contained by this slot.
+    FocusRecurseAction focus() {
+
+        return this.focusRecurseChildren();
 
     }
 
@@ -78,8 +85,18 @@ class FieldSlot(T : Node) : T, FluidHoverable {
     }
 
     // implements FluidHoverable
-    void mouseImpl() {
+    override void mouseImpl() {
 
+    }
+
+    // implements Hoverable
+    override bool blocksInput() const {
+        return isDisabled || isDisabledInherited;
+    }
+
+    // implements Hoverable
+    override bool hoverImpl() {
+        return false;
     }
 
 }

@@ -1,10 +1,12 @@
 module legacy.field_slot;
 
 import fluid;
+import legacy;
 
 @safe:
 
-@("[TODO] Legacy: Clicking in a FieldSlot passes focus to its child")
+@("Clicking in a FieldSlot passes focus to its child")
+@Migrated
 unittest {
 
     TextInput input;
@@ -42,7 +44,7 @@ unittest {
 
 }
 
-@("[TODO] Legacy: FieldSlot can take hover from non-hoverable child nodes")
+@("FieldSlot can take hover from non-hoverable child nodes")
 unittest {
 
     import fluid.space;

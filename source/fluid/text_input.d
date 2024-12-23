@@ -649,6 +649,8 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         import std.math : isNaN;
 
+        super.resizeImpl(area);
+
         // Set the size
         minSize = size;
 
