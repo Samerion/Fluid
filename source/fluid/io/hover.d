@@ -349,6 +349,13 @@ PointerAction point(HoverIO hoverIO, Vector2 position) {
 
 }
 
+/// ditto
+PointerAction point(HoverIO hoverIO, float x, float y) {
+
+    return point(hoverIO, Vector2(x, y));
+
+}
+
 /// Virtual Hover I/O pointer, for testing.
 class PointerAction : TreeAction, Publisher!PointerAction {
 
@@ -441,6 +448,13 @@ class PointerAction : TreeAction, Publisher!PointerAction {
         hoverIO.loadTo(pointer);
 
         return this;
+
+    }
+
+    /// ditto
+    PointerAction move(float x, float y) return {
+
+        return move(Vector2(x, y));
 
     }
 

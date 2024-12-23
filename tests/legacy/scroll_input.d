@@ -1,9 +1,13 @@
+@Migrated
 module legacy.scroll_input;
 
 import fluid;
+import legacy;
 
 @safe:
 
+@("ScrollInput works by dragging")
+@Migrated
 unittest {
 
     import std.range;
