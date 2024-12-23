@@ -4,7 +4,7 @@ import fluid;
 
 @safe:
 
-@("[TODO] Legacy: MapFrame lays nodes out differently based on their drop vectors")
+@("MapFrame lays nodes out differently based on their drop vectors")
 unittest {
 
     import fluid.space;
@@ -12,6 +12,7 @@ unittest {
 
     class RectangleSpace : Space {
 
+        CanvasIO canvasIO;
         Color color;
 
         this(Color color) @safe {
@@ -19,98 +20,95 @@ unittest {
         }
 
         override void resizeImpl(Vector2) @safe {
+            use(canvasIO);
             minSize = Vector2(10, 10);
         }
 
         override void drawImpl(Rectangle outer, Rectangle inner) @safe {
-            io.drawRectangle(inner, color);
+            canvasIO.drawRectangle(inner, color);
         }
 
     }
 
-    auto io = new HeadlessBackend;
+    RectangleSpace[9] spaces;
+
     auto root = mapFrame(
-        layout!"fill",
+        layout!(1, "fill"),
 
         // Rectangles with same X and Y
 
         Vector2(50, 50),
         .dropVector!"start",
-        new RectangleSpace(color!"f00"),
+        spaces[0] = new RectangleSpace(color!"f00"),
 
         Vector2(50, 50),
         .dropVector!"center",
-        new RectangleSpace(color!"0f0"),
+        spaces[1] = new RectangleSpace(color!"0f0"),
 
         Vector2(50, 50),
         .dropVector!"end",
-        new RectangleSpace(color!"00f"),
+        spaces[2] = new RectangleSpace(color!"00f"),
 
         // Rectangles with different Xs
 
         Vector2(50, 100),
         .dropVector!("start", "start"),
-        new RectangleSpace(color!"e00"),
+        spaces[3] = new RectangleSpace(color!"e00"),
 
         Vector2(50, 100),
         .dropVector!("center", "start"),
-        new RectangleSpace(color!"0e0"),
+        spaces[4] = new RectangleSpace(color!"0e0"),
 
         Vector2(50, 100),
         .dropVector!("end", "start"),
-        new RectangleSpace(color!"00e"),
+        spaces[5] = new RectangleSpace(color!"00e"),
 
         // Overflowing rectangles
         Vector2(-10, -10),
-        new RectangleSpace(color!"f0f"),
+        spaces[6] = new RectangleSpace(color!"f0f"),
 
         Vector2(20, -5),
-        new RectangleSpace(color!"0ff"),
+        spaces[7] = new RectangleSpace(color!"0ff"),
 
         Vector2(-5, 20),
-        new RectangleSpace(color!"ff0"),
+        spaces[8] = new RectangleSpace(color!"ff0"),
     );
-
-    root.io = io;
-    root.theme = nullTheme;
+    auto test = testSpace(.layout!"fill", nullTheme, root);
 
     foreach (preventOverflow; [false, true, false]) {
 
         root.preventOverflow = preventOverflow;
-        root.draw();
+        test.drawAndAssert(
 
-        // Every rectangle is attached to (50, 50) but using a different origin point
-        // The first red rectangle is attached by its start corner, the green by center corner, and the blue by end
-        // corner
-        io.assertRectangle(Rectangle(50, 50, 10, 10), color!"f00");
-        io.assertRectangle(Rectangle(45, 45, 10, 10), color!"0f0");
-        io.assertRectangle(Rectangle(40, 40, 10, 10), color!"00f");
+            // Every rectangle is attached to (50, 50) but using a different origin point
+            // The first red rectangle is attached by its start corner, the green by center corner, and the blue by end
+            // corner
+            spaces[0].drawsRectangle(50, 50, 10, 10).ofColor("f00"),
+            spaces[1].drawsRectangle(45, 45, 10, 10).ofColor("0f0"),
+            spaces[2].drawsRectangle(40, 40, 10, 10).ofColor("00f"),
 
-        // This is similar for the second triple of rectangles, but the Y axis is the same for every one of them
-        io.assertRectangle(Rectangle(50, 100, 10, 10), color!"e00");
-        io.assertRectangle(Rectangle(45, 100, 10, 10), color!"0e0");
-        io.assertRectangle(Rectangle(40, 100, 10, 10), color!"00e");
+            // This is similar for the second triple of rectangles, but the Y axis is the same for every one of them
+            spaces[3].drawsRectangle(50, 100, 10, 10).ofColor("e00"),
+            spaces[4].drawsRectangle(45, 100, 10, 10).ofColor("0e0"),
+            spaces[5].drawsRectangle(40, 100, 10, 10).ofColor("00e"));
 
+        // Two rectangles overflow: one is completely outside the view, and one is only peeking in
+        // With overflow disabled, they should both be moved strictly inside the mapFrame
         if (preventOverflow) {
-
-            // Two rectangles overflow: one is completely outside the view, and one is only peeking in
-            // With overflow disabled, they should both be moved strictly inside the mapFrame
-            io.assertRectangle(Rectangle(0, 0, 10, 10), color!"f0f");
-            io.assertRectangle(Rectangle(20, 0, 10, 10), color!"0ff");
-            io.assertRectangle(Rectangle(0, 20, 10, 10), color!"ff0");
-
+            test.drawAndAssert(
+                spaces[6].drawsRectangle(0, 0, 10, 10).ofColor("f0f"),
+                spaces[7].drawsRectangle(20, 0, 10, 10).ofColor("0ff"),
+                spaces[8].drawsRectangle(0, 20, 10, 10).ofColor("ff0"));
         }
 
+        // With overflow enabled, these two overflows should now be allowed to stay outside
         else {
-
-            // With overflow enabled, these two overflows should now be allowed to stay outside
-            io.assertRectangle(Rectangle(-10, -10, 10, 10), color!"f0f");
-            io.assertRectangle(Rectangle(20, -5, 10, 10), color!"0ff");
-            io.assertRectangle(Rectangle(-5, 20, 10, 10), color!"ff0");
-
+            test.drawAndAssert(
+                spaces[6].drawsRectangle(-10, -10, 10, 10).ofColor("f0f"),
+                spaces[7].drawsRectangle(20, -5, 10, 10).ofColor("0ff"),
+                spaces[8].drawsRectangle(-5, 20, 10, 10).ofColor("ff0"));
         }
 
     }
 
 }
-

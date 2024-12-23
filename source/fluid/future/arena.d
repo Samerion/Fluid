@@ -167,7 +167,7 @@ struct ResourceArena(T) {
     ///     index = Index of the resource.
     /// Returns:
     ///     The resource.
-    ref T opIndex(int index) {
+    ref inout(T) opIndex(int index) inout {
 
         return _resources[][index].value;
 
@@ -183,7 +183,7 @@ struct ResourceArena(T) {
     ///     index = Index to check.
     /// Returns: 
     ///     True if the resource is active: allocated, alive, ready to use.
-    bool isActive(int index) {
+    bool isActive(int index) const {
 
         return isAlive(index)
             && cycleNumber <= _resources[][index].lastCycle;
@@ -201,7 +201,7 @@ struct ResourceArena(T) {
     /// Returns:
     ///     True if the resource is alive, that is, hasn't expired, hasn't been unloaded, but also hasn't been
     ///     loaded/used during this cycle.
-    bool isAlive(int index) {
+    bool isAlive(int index) const {
 
         // Any resource in bounds is alive
         return index < _resources[].length;

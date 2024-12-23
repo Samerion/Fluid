@@ -1,97 +1,88 @@
-module fluid.nodes.node_slot;
+module nodes.node_slot;
 
 import fluid;
 
 @safe:
 
-@("[TODO] Legacy: NodeSlot supports no content")
+@("NodeSlot can be empty")
 unittest {
 
-    NodeSlot!Label slot1, slot2;
+    auto slot = nodeSlot!Node();
+    auto root = testSpace(nullTheme, slot);
 
-    auto io = new HeadlessBackend;
-    auto root = hspace(
-        label("Hello, "),
-        slot1 = nodeSlot!Label(.layout!"fill"),
-        label(" and "),
-        slot2 = nodeSlot!Label(.layout!"fill"),
+    assert(slot.value is null);
+
+    root.drawAndAssert(
+        slot.doesNotDraw(),
     );
-
-    slot1 = label("John");
-    slot2 = button("Jane", delegate {
-
-        slot1.swapSlots(slot2);
-
-    });
-
-    with (Rule)
-    root.theme = nullTheme.derive(
-        rule!Label(textColor = color!"000"),
+    root.drawAndAssert(
+        slot.doesNotDrawChildren(),
     );
-    root.io = io;
-
-    // First frame
-    {
-        root.draw();
-
-        assert(slot1.value.text == "John");
-        assert(slot2.value.text == "Jane");
-        assert(slot1.getMinSize == slot1.value.getMinSize);
-        assert(slot2.getMinSize == slot2.value.getMinSize);
-    }
-
-    // Focus the second button
-    {
-        io.nextFrame;
-        io.press(KeyboardKey.up);
-
-        root.draw();
-
-        assert(root.tree.focus.asNode is slot2.value);
-    }
-
-    // Press it
-    {
-        io.nextFrame;
-        io.release(KeyboardKey.up);
-        io.press(KeyboardKey.enter);
-
-        root.draw();
-
-        assert(slot1.value.text == "Jane");
-        assert(slot2.value.text == "John");
-        assert(slot1.getMinSize == slot1.value.getMinSize);
-        assert(slot2.getMinSize == slot2.value.getMinSize);
-    }
-
-    // Nodes can be unassigned
-    {
-        io.nextFrame;
-        io.release(KeyboardKey.enter);
-
-        slot1.clear();
-
-        root.draw();
-
-        assert(slot1.value is null);
-        assert(slot2.value.text == "John");
-        assert(slot1.getMinSize == Vector2(0, 0));
-        assert(slot2.getMinSize == slot2.value.getMinSize);
-    }
-
-    // toRemove should work as well
-    {
-        io.nextFrame;
-
-        slot2.value.remove();
-
-        root.draw();
-
-        assert(slot1.value is null);
-        assert(slot2.value is null);
-        assert(slot1.getMinSize == Vector2(0, 0));
-        assert(slot2.getMinSize == Vector2(0, 0));
-    }
 
 }
 
+@("NodeSlot can carry a child")
+unittest {
+
+    auto content = label("Hello, World!");
+    auto slot = nodeSlot!Label(content);
+    auto root = testSpace(nullTheme, slot);
+
+    root.drawAndAssert(
+        slot.doesNotDraw(),
+        content.draws(),
+    );
+    root.drawAndAssert(
+        slot.drawsChild(content),
+    );
+
+}
+
+@("NodeSlot can change content")
+unittest {
+
+    auto slot1 = nodeSlot!Label(label("Hello, "));
+    auto slot2 = nodeSlot!Label();
+    auto root = testSpace(nullTheme, slot1, slot2);
+
+    root.drawAndAssert(
+        slot1.drawsChild(slot1.value),
+        slot2.doesNotDrawChildren(),
+    );
+
+    slot2 = label("World!");
+
+    auto value1 = slot1.value;
+    auto value2 = slot2.value;
+
+    root.drawAndAssert(
+        slot1.drawsChild(value1),
+        slot2.drawsChild(value2),
+    );
+
+    slot1.swapSlots(slot2);
+
+    root.drawAndAssert(
+        slot1.drawsChild(value2),
+        slot2.drawsChild(value1),
+    );
+
+}
+
+@("NodeSlot content can be cleared")
+unittest {
+
+    auto slot = nodeSlot!Label(label("Woo!"));
+    auto root = testSpace(slot);
+
+    root.drawAndAssert(
+        slot.drawsChild(slot.value),
+    );
+
+    slot.clear();
+
+    root.drawAndAssert(
+        slot.doesNotDrawChildren(),
+    );
+
+}

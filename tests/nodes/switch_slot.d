@@ -4,92 +4,83 @@ import fluid;
 
 @safe:
 
-@("[TODO] Legacy: SwitchSlot works")
 unittest {
 
-    Frame bigFrame, smallFrame;
-    int bigDrawn, smallDrawn;
+    Node bigNode, smallNode;
 
-    auto io = new HeadlessBackend;
     auto slot = switchSlot(
-        bigFrame = new class Frame {
-            override void resizeImpl(Vector2) {
+        bigNode = new class Frame {
+
+            override void resizeImpl(Vector2 space) {
+                super.resizeImpl(space);
                 minSize = Vector2(300, 300);
             }
-            override void drawImpl(Rectangle outer, Rectangle) {
-                io.drawRectangle(outer, color!"f00");
-                bigDrawn++;
-            }
+
         },
-        smallFrame = new class Frame {
-            override void resizeImpl(Vector2) {
+        smallNode = new class Frame {
+
+            override void resizeImpl(Vector2 space) {
+                super.resizeImpl(space);
                 minSize = Vector2(100, 100);
             }
-            override void drawImpl(Rectangle outer, Rectangle) {
-                io.drawRectangle(outer, color!"0f0");
-                smallDrawn++;
-            }
+
         },
     );
+    auto root = sizeLock!testSpace(
+        .sizeLimit(800, 600),
+        .nullTheme,
+        slot
+    );
 
-    slot.io = io;
-
-    // By default, there should be enough space to draw the big frame
-    slot.draw();
-
-    assert(slot.node is bigFrame);
-    assert(bigDrawn == 1);
-    assert(smallDrawn == 0);
+    // At start, there should be enough space to draw the big frame
+    root.drawAndAssert(
+        slot.drawsChild(bigNode),
+        slot.doesNotDrawChildren(),
+    );
+    assert(slot.node is bigNode);
 
     // Reduce the viewport, this time the small frame should be drawn
-    io.nextFrame;
-    io.windowSize = Vector2(200, 200);
-    slot.draw();
+    root.limit = sizeLimit(200, 200);
+    root.updateSize();
+    root.drawAndAssert(
+        slot.drawsChild(smallNode),
+        slot.doesNotDrawChildren(),
+    );
+    assert(slot.node is smallNode);
 
-    assert(slot.node is smallFrame);
-    assert(bigDrawn == 1);
-    assert(smallDrawn == 1);
-
-    // Do it again, but make it so neither fit
-    io.nextFrame;
-    io.windowSize = Vector2(50, 50);
-    slot.draw();
-
-    // The small one should be drawn regardless
-    assert(slot.node is smallFrame);
-    assert(bigDrawn == 1);
-    assert(smallDrawn == 2);
+    // Do it again, but make it so neither fit; the small one should prevail anyway
+    root.limit = sizeLimit(50, 50);
+    root.updateSize();
+    root.drawAndAssert(
+        slot.drawsChild(smallNode),
+        slot.doesNotDrawChildren(),
+    );
+    assert(slot.node is smallNode);
 
     // Unless a null node is added
-    io.nextFrame;
     slot.availableNodes ~= null;
-    slot.updateSize();
-    slot.draw();
-
+    root.updateSize();
+    root.drawAndAssertFailure(
+        slot.isDrawn(),
+    );
     assert(slot.node is null);
-    assert(bigDrawn == 1);
-    assert(smallDrawn == 2);
 
     // Resize to fit the big node
-    io.nextFrame;
-    io.windowSize = Vector2(400, 400);
-    slot.draw();
-
-    assert(slot.node is bigFrame);
-    assert(bigDrawn == 2);
-    assert(smallDrawn == 2);
+    root.limit = sizeLimit(400, 400);
+    root.updateSize();
+    root.drawAndAssert(
+        slot.drawsChild(bigNode),
+        slot.doesNotDrawChildren(),
+    );
+    assert(slot.node is bigNode);
 
 }
 
-@("[TODO] Legacy: Nodes can be moved between SwitchSlots")
+@("Nodes can be moved between SwitchSlots")
 unittest {
-
-    import fluid.frame;
-    import fluid.structs;
 
     int principalDrawn, deputyDrawn;
 
-    auto io = new HeadlessBackend;
     auto principal = switchSlot(
         layout!(1, "fill"),
         new class Frame {
@@ -115,30 +106,28 @@ unittest {
             }
         }
     );
-    auto root = vframe(
-        layout!(1, "fill"),
+    auto root = sizeLock!testSpace(
+        .layout!(1, "fill"),
+        .sizeLimit(600, 600),
         hframe(
-            layout!(1, "fill"),
+            .layout!(1, "fill"),
             deputy,
         ),
         hframe(
-            layout!(1, "fill"),
+            .layout!(1, "fill"),
             principal,
         ),
     );
 
-    root.io = io;
-
-    // At the default size, the principal should be preferred
+    // At the initial size, the principal should be preferred
     root.draw();
 
     assert(principalDrawn == 1);
     assert(deputyDrawn == 0);
 
     // Resize the window so that the principal can't fit
-    io.nextFrame;
-    io.windowSize = Vector2(300, 300);
-
+    root.limit = sizeLimit(300, 300);
+    root.updateSize();
     root.draw();
 
     assert(principalDrawn == 1);

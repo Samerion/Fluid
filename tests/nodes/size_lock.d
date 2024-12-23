@@ -4,17 +4,19 @@ import fluid;
 
 @safe:
 
-@("[TODO] Legacy: SizeLock reduces the amount of space a node gets")
+@("SizeLock changes the size given to a node")
 unittest {
 
-    auto io = new HeadlessBackend;
-    auto root = sizeLock!vframe(
-        layout!("center", "fill"),
-        sizeLimitX(400),
+    auto lock = sizeLock!vframe(
+        .layout!(1, "center", "fill"),
+        .sizeLimitX(400),
         label("Hello, World!"),
     );
-
-    root.io = io;
+    auto root = sizeLock!testSpace(
+        .layout!"fill",
+        .sizeLimit(800, 600),
+        lock,
+    );
 
     with (Rule)
     root.theme = nullTheme.derive(
@@ -22,30 +24,25 @@ unittest {
         rule!Label(textColor = color!"eee"),
     );
 
-    {
-        root.draw();
+    // The rectangle should display neatly in the middle of the display, limited to 400px
+    root.drawAndAssert(
+        lock.drawsRectangle(200, 0, 400, 600).ofColor("#1c1c1c"),
+    );
 
-        // The rectangle should display neatly in the middle of the display, limited to 400px
-        io.assertRectangle(Rectangle(200, 0, 400, 600), color!"1c1c1c");
-    }
+    // Try different layouts: it can also be placed on the left
+    lock.layout = layout!(1, "start", "fill");
+    root.updateSize();
+    root.drawAndAssert(
+        lock.drawsRectangle(0, 0, 400, 600).ofColor("#1c1c1c"),
+    );
 
-    {
-        io.nextFrame;
-        root.layout = layout!("start", "fill");
-        root.updateSize();
-        root.draw();
-
-        io.assertRectangle(Rectangle(0, 0, 400, 600), color!"1c1c1c");
-    }
-
-    {
-        io.nextFrame;
-        root.layout = layout!"center";
-        root.limit = sizeLimit(200, 200);
-        root.updateSize();
-        root.draw();
-
-        io.assertRectangle(Rectangle(300, 200, 200, 200), color!"1c1c1c");
-    }
+    // Center, also vertically, with a square limit
+    lock.layout = layout!(1, "center");
+    lock.limit = sizeLimit(200, 200);
+    root.updateSize();
+    root.drawAndAssert(
+        lock.drawsRectangle(300, 200, 200, 200).ofColor("#1c1c1c"),
+    );
 
 }
+

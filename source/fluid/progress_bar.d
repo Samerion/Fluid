@@ -7,6 +7,7 @@ import fluid.utils;
 import fluid.backend;
 import fluid.structs;
 
+import fluid.io.canvas;
 
 @safe:
 
@@ -66,6 +67,8 @@ alias progressBar = simpleConstructor!ProgressBar;
 /// ditto
 class ProgressBar : Node {
 
+    CanvasIO canvasIO;
+
     public {
 
         /// `value`, along with `maxValue` indicate the current progress, defined as the fraction of `value` over
@@ -109,6 +112,8 @@ class ProgressBar : Node {
 
     override void resizeImpl(Vector2 space) {
 
+        use(canvasIO);
+
         text = buildText();
         text.resize();
         resizeChild(fill, space);
@@ -119,20 +124,21 @@ class ProgressBar : Node {
     override void drawImpl(Rectangle paddingBox, Rectangle contentBox) {
 
         auto style = pickStyle();
-        style.drawBackground(io, paddingBox);
+        style.drawBackground(io, canvasIO, paddingBox);
 
         // Draw the filling
         drawChild(fill, contentBox);
 
         // Draw the text
         const textPosition = center(contentBox) - text.size / 2;
-        text.draw(style, textPosition);
+
+        text.draw(canvasIO, style, textPosition);
 
     }
 
     /// Get text that displays on top of the progress bar.
     ///
-    /// This function can be overrided to adjust the text and its formatting, or to remove the text completely. Keep in
+    /// This function ;can be overrided to adjust the text and its formatting, or to remove the text completely. Keep in
     /// mind that since `ProgressBar` uses the text as reference for its own size, if the text is removed, the progress
     /// bar will disappear — `minSize` has to be adjusted accordingly.
     string buildText() const {
@@ -168,6 +174,8 @@ unittest {
 /// Content for the progress bar. Used for styling. See `ProgressBar` for usage instructions.
 class ProgressBarFill : Node {
 
+    CanvasIO canvasIO;
+
     public {
 
         /// Progress bar the node belongs to.
@@ -184,6 +192,7 @@ class ProgressBarFill : Node {
 
     override void resizeImpl(Vector2 space) {
 
+        use(canvasIO);
         minSize = Vector2(0, 0);
 
     }
@@ -194,7 +203,7 @@ class ProgressBarFill : Node {
         paddingBox.width *= cast(float) bar.value / bar.maxValue;
 
         auto style = pickStyle();
-        style.drawBackground(io, paddingBox);
+        style.drawBackground(io, canvasIO, paddingBox);
 
     }
 

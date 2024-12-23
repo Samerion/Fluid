@@ -4,59 +4,66 @@ import fluid;
 
 @safe:
 
+@("ScrollInput works by dragging")
 unittest {
 
     import std.range;
 
     Button btn;
 
-    auto io = new HeadlessBackend(Vector2(200, 100));
-    auto root = vscrollFrame(
-        layout!"fill",
-        btn = button(layout!"fill", "Button to test hover slipping", delegate { assert(false); }),
+    auto frame = vscrollFrame(
+        .layout!(1, "fill"),
+        btn = button(.layout!"fill", "Button to test hover slipping", delegate { assert(false); }),
         label("Text long enough to overflow this very small viewport and create a scrollbar"),
     );
+    auto hover = sizeLock!hoverSpace(
+        .sizeLimit(200, 100),
+        .nullTheme,
+        frame
+    );
+    auto root = hover;
 
-    root.io = io;
     root.draw();
+
+    float scrollDiff;
 
     // Grab the scrollbar
-    io.nextFrame;
-    io.mousePosition = Vector2(195, 10);
-    io.press;
-    root.draw();
+    hover.point(195, 10)
+        .then((a) {
+            a.press(false);
 
-    // Drag the scrollbar 10 pixels lower
-    io.nextFrame;
-    io.mousePosition = Vector2(195, 20);
-    root.draw();
+            // Drag the scrollbar 10 pixels lower
+            return a.move(195, 20);
+        })
+        .then((a) {
+            a.press(false);
 
-    // Note down the difference
-    const scrollDiff = root.scroll;
+            // Note down the difference in scroll
+            scrollDiff = frame.scroll;
 
-    // Drag the scrollbar 10 pixels lower, but also move it out of the scrollbar's area
-    io.nextFrame;
-    io.mousePosition = Vector2(150, 30);
-    root.draw();
+            // Drag the scrollbar 10 pixels lower, but also move it out of the scrollbar's area
+            return a.move(150, 30);
+        })
+        .then((a) {
+            const target = scrollDiff*2;
 
-    const target = scrollDiff*2;
+            assert(target-1 <= frame.scroll && frame.scroll <= target+1,
+                "Scrollbar should operate at the same rate, even if the cursor is outside");
 
-    assert(target-1 <= root.scroll && root.scroll <= target+1,
-        "Scrollbar should operate at the same rate, even if the cursor is outside");
+            a.press();
 
-    // Make sure the button is hovered
-    io.nextFrame;
-    io.mousePosition = Vector2(150, 20);
-    root.draw();
-    assert(root.tree.hover is root.scrollBar.handle, "The scrollbar should retain hover control");
-    assert(btn.isHovered, "The button has to be hovered");
+            // Make sure the button is hovered
+            return a.move(150, 20);
+        })
+        .then((a) {
+            assert(a.isHovered(frame.scrollBar.handle), "The scrollbar should retain hover control");
 
-    // Release the mouse while it's hovering the button
-    io.nextFrame;
-    io.release;
-    root.draw();
-    assert(btn.isHovered);
-    // No event should trigger
+            // Release the mouse while it's hovering the button
+            return a.stayIdle;
+        })
+        .then((a) {
+            assert(a.isHovered(btn));
+        })
+        .runWhileDrawing(root);
 
 }
-

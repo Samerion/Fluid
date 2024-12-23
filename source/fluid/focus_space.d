@@ -137,7 +137,7 @@ class FocusSpace : Space, FocusIO {
         const handled =
 
             // Run the action, and mark input as handled
-            (isFocusActionable && currentFocus.actionImpl(actionID, isActive))
+            (isFocusActionable && currentFocus.actionImpl(this, 0, actionID, isActive))
 
             // Run local input actions
             || (runLocalInputActions(actionID, isActive))

@@ -15,6 +15,8 @@ import fluid.io.focus;
 import fluid.io.hover;
 import fluid.io.action;
 
+import fluid.future.context;
+
 
 @safe:
 
@@ -965,6 +967,16 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable, Focusable, Hov
 
     alias opEquals = typeof(super).opEquals;
 
+    mixin template enableInputActions() {
+
+        import fluid.input : FluidFocusable;
+        import fluid.io.action : Actionable;
+
+        mixin FluidFocusable.enableInputActions;
+        mixin Actionable.enableInputActions;
+
+    }
+
     override bool opEquals(const Object other) const {
         return super.opEquals(other);
     }
@@ -1005,16 +1017,6 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable, Focusable, Hov
     override bool focusImpl() {
 
         return keyboardImpl();
-
-    }
-
-    /// Respond to an input action by its ID. 
-    ///
-    /// This endpoint is used by the new I/O system. `InputNode` implements this by redirecting the input
-    /// to `runInputAction`.
-    override bool actionImpl(immutable InputActionID id, bool isActive) {
-
-        return runInputAction(id, isActive);
 
     }
 

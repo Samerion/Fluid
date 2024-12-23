@@ -1,7 +1,8 @@
 module nodes.space;
 
-import fluid;
 import std.range;
+
+import fluid;
 
 @safe:
 
@@ -34,11 +35,12 @@ unittest {
 
 }
 
-@("[TODO] Legacy: vspace aligns nodes vertically, and hspace does it horizontally")
+@("vspace aligns nodes vertically, and hspace does it horizontally")
 unittest {
 
     class Square : Node {
 
+        CanvasIO canvasIO;
         Color color;
 
         this(Color color) {
@@ -46,70 +48,68 @@ unittest {
         }
 
         override void resizeImpl(Vector2) {
+            use(canvasIO);
             minSize = Vector2(50, 50);
         }
 
         override void drawImpl(Rectangle, Rectangle inner) {
-            io.drawRectangle(inner, this.color);
+            canvasIO.drawRectangle(inner, this.color);
         }
 
     }
 
-    auto io = new HeadlessBackend;
-    auto root = vspace(
-        new Square(color!"000"),
-        new Square(color!"001"),
-        new Square(color!"002"),
+    Square[6] squares;
+
+    auto root = testSpace(
+        squares[0] = new Square(color!"000"),
+        squares[1] = new Square(color!"001"),
+        squares[2] = new Square(color!"002"),
         hspace(
-            new Square(color!"010"),
-            new Square(color!"011"),
-            new Square(color!"012"),
+            squares[3] = new Square(color!"010"),
+            squares[4] = new Square(color!"011"),
+            squares[5] = new Square(color!"012"),
         ),
     );
 
-    root.io = io;
     root.theme = nullTheme;
-    root.draw();
+    root.drawAndAssert(
 
-    // vspace
-    io.assertRectangle(Rectangle(0,   0, 50, 50), color!"000");
-    io.assertRectangle(Rectangle(0,  50, 50, 50), color!"001");
-    io.assertRectangle(Rectangle(0, 100, 50, 50), color!"002");
+        // vspace
+        squares[0].drawsRectangle(0,   0, 50, 50).ofColor("#000"),
+        squares[1].drawsRectangle(0,  50, 50, 50).ofColor("#001"),
+        squares[2].drawsRectangle(0, 100, 50, 50).ofColor("#002"),
 
-    // hspace
-    io.assertRectangle(Rectangle(  0, 150, 50, 50), color!"010");
-    io.assertRectangle(Rectangle( 50, 150, 50, 50), color!"011");
-    io.assertRectangle(Rectangle(100, 150, 50, 50), color!"012");
+        // hspace
+        squares[3].drawsRectangle(  0, 150, 50, 50).ofColor("#010"),
+        squares[4].drawsRectangle( 50, 150, 50, 50).ofColor("#011"),
+        squares[5].drawsRectangle(100, 150, 50, 50).ofColor("#012"),
+        
+    );
 
 }
 
-@("[TODO] Legacy: Layout.expand splits space into columns")
+@("Layout.expand splits space into columns")
 unittest {
 
-    import fluid.frame;
-    import fluid.structs;
+    import fluid.theme;
 
-    auto io = new HeadlessBackend;
-    auto root = hspace(
+    Frame[3] frames;
+
+    auto root = htestSpace(
         layout!"fill",
-        vframe(layout!1),
-        vframe(layout!2),
-        vframe(layout!1),
+        frames[0] = vframe(layout!1),
+        frames[1] = vframe(layout!2),
+        frames[2] = vframe(layout!1),
     );
-
-    with (Rule)
     root.theme = nullTheme.derive(
         rule!Frame(backgroundColor = color!"7d9"),
     );
-    root.io = io;
 
-    // Frame 1
-    {
-        root.draw();
-        io.assertRectangle(Rectangle(0,   0, 0, 0), color!"7d9");
-        io.assertRectangle(Rectangle(200, 0, 0, 0), color!"7d9");
-        io.assertRectangle(Rectangle(600, 0, 0, 0), color!"7d9");
-    }
+    root.drawAndAssert(
+        frames[0].drawsRectangle(0,   0, 0, 0).ofColor("#7d9"),
+        frames[1].drawsRectangle(200, 0, 0, 0).ofColor("#7d9"),
+        frames[2].drawsRectangle(600, 0, 0, 0).ofColor("#7d9"),
+    );
 
     // Fill all nodes
     foreach (child; root.children) {
@@ -117,13 +117,11 @@ unittest {
     }
     root.updateSize();
 
-    {
-        io.nextFrame;
-        root.draw();
-        io.assertRectangle(Rectangle(  0, 0, 200, 600), color!"7d9");
-        io.assertRectangle(Rectangle(200, 0, 400, 600), color!"7d9");
-        io.assertRectangle(Rectangle(600, 0, 200, 600), color!"7d9");
-    }
+    root.drawAndAssert(
+        frames[0].drawsRectangle(0,   0, 200, 600).ofColor("#7d9"),
+        frames[1].drawsRectangle(200, 0, 400, 600).ofColor("#7d9"),
+        frames[2].drawsRectangle(600, 0, 200, 600).ofColor("#7d9"),
+    );
 
     const alignments = [NodeAlign.start, NodeAlign.center, NodeAlign.end];
 
@@ -131,61 +129,60 @@ unittest {
     foreach (pair; root.children.zip(alignments)) {
         pair[0].layout.nodeAlign = pair[1];
     }
+    root.updateSize();
 
-    {
-        io.nextFrame;
-        root.draw();
-        io.assertRectangle(Rectangle(  0,   0, 0, 0), color!"7d9");
-        io.assertRectangle(Rectangle(400, 300, 0, 0), color!"7d9");
-        io.assertRectangle(Rectangle(800, 600, 0, 0), color!"7d9");
-    }
+    root.drawAndAssert(
+        frames[0].drawsRectangle(  0,   0, 0, 0).ofColor("#7d9"),
+        frames[1].drawsRectangle(400, 300, 0, 0).ofColor("#7d9"),
+        frames[2].drawsRectangle(800, 600, 0, 0).ofColor("#7d9"),
+    );
 
 }
 
-@("[TODO] Legacy: Space/Frame works with multiple levels of recursion")
+@("Space/Frame works with multiple levels of recursion")
 unittest {
 
-    import fluid.frame;
-    import fluid.structs;
+    import fluid.theme;
 
-    auto io = new HeadlessBackend(Vector2(270, 270));
-    auto root = hframe(
-        layout!"fill",
-        vspace(layout!2),
-        vframe(
-            layout!(1, "fill"),
-            hspace(layout!2),
-            hframe(
-                layout!(1, "fill"),
-                vframe(
-                    layout!(1, "fill"),
-                    hframe(
-                        layout!(1, "fill")
+    Frame[5] frames;
+
+    auto root = sizeLock!vtestSpace(
+        .sizeLimit(270, 270),
+        frames[0] = hframe(
+            .layout!(1, "fill"),
+            vspace(.layout!2),
+            frames[1] = vframe(
+                .layout!(1, "fill"),
+                hspace(.layout!2),
+                frames[2] = hframe(
+                    .layout!(1, "fill"),
+                    frames[3] = vframe(
+                        .layout!(1, "fill"),
+                        frames[4] = hframe(
+                            .layout!(1, "fill")
+                        ),
+                        hspace(.layout!2),
                     ),
-                    hspace(layout!2),
-                ),
-                vspace(layout!2),
-            )
+                    vspace(.layout!2),
+                )
+            ),
         ),
     );
-
-    with (Rule)
     root.theme = nullTheme.derive(
         rule!Frame(backgroundColor = color!"0004"),
     );
-    root.io = io;
-    root.draw();
 
-    io.assertRectangle(Rectangle(  0,   0, 270, 270), color!"0004");
-    io.assertRectangle(Rectangle(180,   0,  90, 270), color!"0004");
-    io.assertRectangle(Rectangle(180, 180,  90,  90), color!"0004");
-    io.assertRectangle(Rectangle(180, 180,  30,  90), color!"0004");
-    io.assertRectangle(Rectangle(180, 180,  30,  30), color!"0004");
+    root.drawAndAssert(
+        frames[0].drawsRectangle(  0,   0, 270, 270).ofColor("#0004"),
+        frames[1].drawsRectangle(180,   0,  90, 270).ofColor("#0004"),
+        frames[2].drawsRectangle(180, 180,  90,  90).ofColor("#0004"),
+        frames[3].drawsRectangle(180, 180,  30,  90).ofColor("#0004"),
+        frames[4].drawsRectangle(180, 180,  30,  30).ofColor("#0004"),
+    );
 
 }
 
-// https://git.samerion.com/Samerion/Fluid/issues/58
-@("[TODO] Legacy: Rounding errors when placing nodes https://git.samerion.com/Samerion/Fluid/issues/58")
+@("Rounding errors when placing nodes https://git.samerion.com/Samerion/Fluid/issues/58")
 unittest {
 
     import fluid.frame;
@@ -193,12 +190,10 @@ unittest {
     import fluid.structs;
 
     auto fill = layout!(1, "fill");
-    auto io = new HeadlessBackend;
     auto myTheme = nullTheme.derive(
-        rule!Frame(Rule.backgroundColor = color!"#303030"),
         rule!Label(Rule.backgroundColor = color!"#e65bb8"),
     );
-    auto root = hframe(
+    auto root = htestSpace(
         fill,
         myTheme,
         label(fill, "1"),
@@ -215,41 +210,34 @@ unittest {
         label(fill, "12"),
     );
 
-    root.io = io;
-    root.draw();
-
-    io.assertRectangle(Rectangle( 0*800/12f, 0, 66.66, 600), color!"#e65bb8");
-    io.assertRectangle(Rectangle( 1*800/12f, 0, 66.66, 600), color!"#e65bb8");
-    io.assertRectangle(Rectangle( 2*800/12f, 0, 66.66, 600), color!"#e65bb8");
-    io.assertRectangle(Rectangle( 3*800/12f, 0, 66.66, 600), color!"#e65bb8");
-    io.assertRectangle(Rectangle( 4*800/12f, 0, 66.66, 600), color!"#e65bb8");
-    io.assertRectangle(Rectangle( 5*800/12f, 0, 66.66, 600), color!"#e65bb8");
-    io.assertRectangle(Rectangle( 6*800/12f, 0, 66.66, 600), color!"#e65bb8");
-    io.assertRectangle(Rectangle( 7*800/12f, 0, 66.66, 600), color!"#e65bb8");
-    io.assertRectangle(Rectangle( 8*800/12f, 0, 66.66, 600), color!"#e65bb8");
-    io.assertRectangle(Rectangle( 9*800/12f, 0, 66.66, 600), color!"#e65bb8");
-    io.assertRectangle(Rectangle(10*800/12f, 0, 66.66, 600), color!"#e65bb8");
-    io.assertRectangle(Rectangle(11*800/12f, 0, 66.66, 600), color!"#e65bb8");
+    root.drawAndAssert(
+        root.children[ 0].drawsRectangle( 0*800/12f, 0, 66.66, 600).ofColor("#e65bb8"),
+        root.children[ 1].drawsRectangle( 1*800/12f, 0, 66.66, 600).ofColor("#e65bb8"),
+        root.children[ 2].drawsRectangle( 2*800/12f, 0, 66.66, 600).ofColor("#e65bb8"),
+        root.children[ 3].drawsRectangle( 3*800/12f, 0, 66.66, 600).ofColor("#e65bb8"),
+        root.children[ 4].drawsRectangle( 4*800/12f, 0, 66.66, 600).ofColor("#e65bb8"),
+        root.children[ 5].drawsRectangle( 5*800/12f, 0, 66.66, 600).ofColor("#e65bb8"),
+        root.children[ 6].drawsRectangle( 6*800/12f, 0, 66.66, 600).ofColor("#e65bb8"),
+        root.children[ 7].drawsRectangle( 7*800/12f, 0, 66.66, 600).ofColor("#e65bb8"),
+        root.children[ 8].drawsRectangle( 8*800/12f, 0, 66.66, 600).ofColor("#e65bb8"),
+        root.children[ 9].drawsRectangle( 9*800/12f, 0, 66.66, 600).ofColor("#e65bb8"),
+        root.children[10].drawsRectangle(10*800/12f, 0, 66.66, 600).ofColor("#e65bb8"),
+        root.children[11].drawsRectangle(11*800/12f, 0, 66.66, 600).ofColor("#e65bb8"));
 
 }
 
-@("[TODO] Legacy: Space respects gap")
+@("Space respects gap")
 unittest {
 
     import fluid.frame;
     import fluid.theme;
     import fluid.structs : layout;
 
-    auto io = new HeadlessBackend;
     auto theme = nullTheme.derive(
-        rule!Space(
-            gap = 4,
-        ),
-        rule!Frame(
-            backgroundColor = color("#f00"),
-        ),
+        rule!Space(gap = 4),
+        rule!Frame(backgroundColor = color("#f00")),
     );
-    auto root = vspace(
+    auto root = vtestSpace(
         layout!"fill",
         theme,
         vframe(layout!(1, "fill")),
@@ -258,13 +246,11 @@ unittest {
         vframe(layout!(1, "fill")),
     );
 
-    root.io = io;
-    root.draw();
-
-    io.assertRectangle(Rectangle(0,   0, 800, 147), color("#f00"));
-    io.assertRectangle(Rectangle(0, 151, 800, 147), color("#f00"));
-    io.assertRectangle(Rectangle(0, 302, 800, 147), color("#f00"));
-    io.assertRectangle(Rectangle(0, 453, 800, 147), color("#f00"));
+    root.drawAndAssert(
+        root.children[0].drawsRectangle(0,   0, 800, 147).ofColor("#f00"),
+        root.children[1].drawsRectangle(0, 151, 800, 147).ofColor("#f00"),
+        root.children[2].drawsRectangle(0, 302, 800, 147).ofColor("#f00"),
+        root.children[3].drawsRectangle(0, 453, 800, 147).ofColor("#f00"));
 
 }
 
@@ -282,9 +268,7 @@ unittest {
         Vector2 position;
 
         override void drawImpl(Rectangle outer, Rectangle inner) {
-
             position = outer.start;
-
         }
         
     };
@@ -306,7 +290,6 @@ unittest {
     root.draw();
 
     assert(spy.position == Vector2(0, 8));
-    
 
 }
 

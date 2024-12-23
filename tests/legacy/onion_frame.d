@@ -1,15 +1,20 @@
-module nodes.onion_frame;
+@Migrated
+module legacy.onion_frame;
 
 import fluid;
+import legacy;
 
 @safe:
+
 @("OnionFrame will display nodes on top of each other")
+@Migrated
 unittest {
 
     ImageView view;
     Label[2] labels;
 
-    auto frame = onionFrame(
+    auto io = new HeadlessBackend(Vector2(1000, 1000));
+    auto root = onionFrame(
 
         view = imageView("logo.png"),
 
@@ -23,18 +28,20 @@ unittest {
         ),
 
     );
-    auto root = testSpace(frame);
 
     with (Rule)
     root.theme = nullTheme.derive(
         rule!Label(textColor = color!"000"),
     );
-
+    root.io = io;
     root.draw();
-    root.drawAndAssert(
-        // TODO view.drawsImage
-        labels[0].drawsHintedImage(labels[0].text.texture.chunks[0].image).at(0, 0),
-        labels[1].drawsHintedImage(labels[1].text.texture.chunks[0].image),
-    );
+
+    // imageView
+    io.assertTexture(view.texture, Vector2(0, 0), color!"fff");
+
+    // First label
+    io.assertTexture(labels[0].text.texture.chunks[0], Vector2(0, 0), color("#fff"));
+
+    // TODO onionFrame should perform shrink-expand ordering similarly to `space`. The last label should wrap.
 
 }

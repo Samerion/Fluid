@@ -1,10 +1,11 @@
 module nodes.frame;
 
 import fluid;
+import legacy;
 
 @safe:
 
-@("Frame works with the new I/O system")
+@("Frame draws background and border")
 unittest {
 
     import fluid.theme;

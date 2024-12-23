@@ -1,6 +1,8 @@
 /// This module contains interfaces for drawing geometry on a canvas.
 module fluid.io.canvas;
 
+import optional;
+
 import fluid.types;
 import fluid.backend;
 import fluid.future.context;
@@ -17,6 +19,87 @@ import fluid.future.context;
 /// geometry to fit.
 interface CanvasIO : IO {
 
+    /// Determines the screen's pixel density. A higher value will effectively scale up the interface, but keeping all
+    /// detail. The I/O system should trigger a resize when this changes.
+    ///
+    /// Note that this value refers to pixels in the physical sense, as in the dots on the screen, as opposed to pixels
+    /// as a unit. In other places, Fluid uses pixels (or "px") to refer to 1/96th of an inch.
+    ///
+    /// For primitive systems, a value of `(96, 96)` may be a good guess. If possible, please fetch this value from
+    /// the operating system.
+    ///
+    /// Returns:
+    ///     Current [dots-per-inch value](https://en.wikipedia.org/wiki/Dots_per_inch) per axis.
+    Vector2 dpi() const nothrow;
+
+    /// Convert pixels to screen-dependent dots.
+    ///
+    /// In Fluid, pixel is a unit equal to 1/96th of an inch.
+    ///
+    /// Params:
+    ///     pixels = Value in pixels.
+    /// Returns:
+    ///     Corresponding value in dots.
+    final Vector2 toDots(Vector2 pixels) const nothrow {
+
+        const dpi = this.dpi;
+
+        return Vector2(
+            pixels.x * dpi.x / 96,
+            pixels.y * dpi.y / 96,
+        );
+
+    }
+
+    /// Measure distance in pixels taken by a number of dots.
+    ///
+    /// In Fluid, pixel is a unit equal to 1/96th of an inch.
+    ///
+    /// Params:
+    ///     dots = Value in dots.
+    /// Returns:
+    ///     Corresponding value in pixels.
+    final Vector2 fromDots(Vector2 dots) const nothrow {
+
+        const dpi = this.dpi;
+
+        return Vector2(
+            dots.x / dpi.x * 96,
+            dots.y / dpi.y * 96,
+        );
+
+    }
+
+    @("toDots/fromDots performs correct conversion")
+    unittest {
+
+        import std.typecons;
+
+        auto canvasIO = new class BlackHole!CanvasIO {
+
+            override Vector2 dpi() const nothrow {
+                return Vector2(96, 120);
+            }
+
+        };
+
+        assert(canvasIO.toDots(Vector2(10, 10)) == Vector2(10, 12.5));
+        assert(canvasIO.fromDots(Vector2(10, 10)) == Vector2(10, 8));
+
+    }
+
+    /// Getter for the current crop area, if one is set. Any shape drawn is cropped to fit this area on the canvas.
+    ///
+    /// This may be used by nodes to skip objects that are outside of the area. For this reason, a canvas system may
+    /// (and should) provide a value corresponding to the entire canvas, even if no crop area has been explicitly set.
+    ///
+    /// Returning an empty value may be desirable if the canvas is some form of persistent storage,
+    /// like a printable document or vector image, where the entire content may be displayed all at once.
+    ///
+    /// Returns:
+    ///     An area on the canvas that shapes can be drawn in.
+    Optional!Rectangle cropArea() const nothrow;
+
     /// Set an area the shapes can be drawn in. Any shape drawn after this call will be cropped to fit the specified
     /// rectangle on the canvas.
     ///
@@ -24,7 +107,23 @@ interface CanvasIO : IO {
     ///
     /// Params:
     ///     area = Area on the canvas to restrict all subsequently drawn shapes to.
+    ///         If passed an empty `Optional`, calls `resetCropArea`.
     void cropArea(Rectangle area) nothrow;
+
+    /// ditto
+    final void cropArea(Optional!Rectangle area) nothrow {
+
+        // Reset the area if passed None()
+        if (area.empty) {
+            resetCropArea();
+        }
+
+        // Crop otherwise
+        else {
+            cropArea(area.front);
+        }
+
+    }
 
     /// If `cropArea` was called before, this will reset set area, disabling the effect.
     void resetCropArea() nothrow;
@@ -52,6 +151,7 @@ interface CanvasIO : IO {
     ///     color  = Color to fill the circle with.
     protected void drawCircleImpl(Vector2 center, float radius, Color color) nothrow;
 
+    /// ditto
     final void drawCircle(Vector2 center, float radius, Color color) nothrow {
 
         drawCircleImpl(center, radius, 
@@ -65,9 +165,26 @@ interface CanvasIO : IO {
     ///     color     = Color to fill the rectangle with.
     protected void drawRectangleImpl(Rectangle rectangle, Color color) nothrow;
 
+    /// ditto
     final void drawRectangle(Rectangle rectangle, Color color) nothrow {
 
         drawRectangleImpl(rectangle,
+            multiply(treeContext.tint, color));
+
+    }
+
+    /// Draw a line between two points.
+    /// Params:
+    ///     start = Start point of the line.
+    ///     end   = End point of the line.
+    ///     width = Width of the line.
+    ///     color = Color of the line.
+    protected void drawLineImpl(Vector2 start, Vector2 end, float width, Color color) nothrow;
+
+    /// ditto
+    final void drawLine(Vector2 start, Vector2 end, float width, Color color) nothrow {
+
+        drawLineImpl(start, end, width,
             multiply(treeContext.tint, color));
 
     }

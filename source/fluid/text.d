@@ -12,6 +12,8 @@ import fluid.utils;
 import fluid.backend;
 import fluid.typeface;
 
+import fluid.io.canvas;
+
 public import fluid.rope;
 
 
@@ -215,28 +217,67 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     /// Generate the textures, if not already generated.
     ///
     /// Params:
-    ///     chunks = Indices of chunks that need to be regenerated.
+    ///     chunks   = Indices of chunks that need to be regenerated.
     ///     position = Position of the text; If given, only on-screen chunks will be generated.
+    ///     dpi      = DPI for the texture. Defaults to legacy backend's DPI.
+    ///     canvasIO = Canvas I/O to get DPI and clip area from.
     void generate(Vector2 position) {
 
-        generate(texture.visibleChunks(position, backend.windowSize));
+        return generate(texture.visibleChunks(position, backend.windowSize));
+
+    }
+
+    /// ditto
+    void generate(CanvasIO canvasIO, Vector2 position) {
+
+        const area = canvasIO.cropArea;
+
+        // Area not set, use all chunks
+        if (area.empty) {
+            return generate(canvasIO.dpi, texture.allChunks);
+        }
+
+        // Area set
+        else {
+            return generate(
+                canvasIO.dpi,
+                texture.visibleChunks(position - area.front.start, area.front.size));
+        }
 
     }
 
     /// ditto
     void generate(R)(R chunks) @trusted {
 
+        auto dpi = backend.dpi;
+
+        // Ignore chunks which have already been generated
+        auto newChunks = chunks
+            .filter!(index => !texture.chunks[index].isValid);
+
+        generate(dpi, newChunks.save);
+
+        // Load the updated chunks
+        foreach (chunkIndex; newChunks) {
+
+            texture.upload(backend, chunkIndex, dpi);
+
+        }
+
+    }
+
+    /// ditto
+    void generate(R)(Vector2 dpi, R chunks) @trusted {
+
         // Empty, nothing to do
         if (chunks.empty) return;
 
         auto style = node.pickStyle;
         auto typeface = style.getTypeface;
-        const dpi = backend.dpi;
-        const scale = backend.hidpiScale;
 
         // Apply sizing settings
         style.setDPI(dpi);
-        typeface.indentWidth = cast(int) (indentWidth * scale.x);
+        typeface.indentWidth = cast(int) (indentWidth * dpi.x / 96);
 
         // Ignore chunks which have already been generated
         auto newChunks = chunks
@@ -334,13 +375,6 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
         }
 
-        // Load the updated chunks
-        foreach (chunkIndex; newChunks) {
-
-            texture.upload(backend, chunkIndex, dpi);
-
-        }
-
     }
 
     /// Draw the text.
@@ -378,6 +412,49 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
         // Draw the texture if present
         texture.drawAlign(backend, rectangle);
+
+    }
+
+    /// ditto
+    void draw(CanvasIO canvasIO, const Style style, Vector2 position) {
+
+        scope const Style[1] styles = [style];
+
+        draw(canvasIO, styles, position);
+
+    }
+
+    /// ditto
+    void draw(CanvasIO canvasIO, scope const Style[] styles, Vector2 position)
+    in (styles.length >= 1, "At least one style must be passed to draw(Style[], Vector2)")
+    do {
+
+        if (canvasIO is null) {
+            draw(styles, position);
+            return;
+        }
+
+        import std.math;
+        import fluid.utils;
+
+        const rectangle = Rectangle(position.tupleof, size.tupleof);
+        const screen = canvasIO.cropArea;
+
+        // Ignore if offscreen
+        if (!screen.empty && !overlap(rectangle, screen.front)) return;
+
+        // Regenerate visible textures
+        generate(canvasIO, position);
+
+        // Make space in the texture's palette
+        if (texture.palette.length != styles.length)
+            texture.palette.length = styles.length;
+
+        // Fill it with text colors of each of the styles
+        styles.map!"a.textColor".copy(texture.palette);
+
+        // Draw the texture if present
+        texture.drawAlign(canvasIO, rectangle);
 
     }
 
@@ -557,7 +634,7 @@ struct CompositeTexture {
     struct Chunk {
 
         TextureGC texture;
-        Image image;
+        DrawableImage image;
         bool isValid;
 
         alias texture this;
@@ -697,6 +774,13 @@ struct CompositeTexture {
 
     }
 
+    /// Get a range of indices for all chunks.
+    const allChunks() {
+
+        return visibleChunks(Vector2(), size);
+
+    }
+
     /// Get a range of indices for all currently visible chunks.
     const visibleChunks(Vector2 position, Vector2 windowSize) {
 
@@ -793,6 +877,37 @@ struct CompositeTexture {
 
         // Mark as valid
         chunks[i].isValid = true;
+
+    }
+
+    /// Draw onscreen parts of the texture using the new backend.
+    void drawAlign(CanvasIO canvasIO, Rectangle rectangle, Color tint = Color(0xff, 0xff, 0xff, 0xff)) {
+
+        const dpi = canvasIO.dpi;
+        const area = canvasIO.cropArea;
+
+        auto chosenChunks = area.empty
+            ? allChunks
+            : visibleChunks(rectangle.start - area.front.start, area.front.size);
+
+        // Draw each visible chunk
+        foreach (index; chosenChunks) {
+
+            // Set parameters
+            chunks[index].palette = palette;
+            chunks[index].texture.dpiX = cast(int) dpi.x;
+            chunks[index].texture.dpiY = cast(int) dpi.y;
+
+            const start = rectangle.start + chunkPosition(index);
+            const size = chunks[index].image.viewportSize;
+            const rect = Rectangle(start.tupleof, size.tupleof);
+
+            // Load the image
+            chunks[index].image.load(canvasIO,
+                canvasIO.load(chunks[index].image));
+            chunks[index].image.drawHinted(rect, tint);
+
+        }
 
     }
 

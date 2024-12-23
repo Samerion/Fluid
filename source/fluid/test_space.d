@@ -8,6 +8,8 @@ debug (Fluid_BuildMessages) {
 
 import core.exception;
 
+import optional;
+
 import std.conv : toText = text;
 import std.range;
 import std.string;
@@ -30,6 +32,10 @@ import fluid.future.arena;
 @safe:
 
 alias testSpace = nodeBuilder!TestSpace;
+alias vtestSpace = nodeBuilder!TestSpace;
+alias htestSpace = nodeBuilder!(TestSpace, (a) {
+    a.isHorizontal = true;
+});
 
 /// This node allows automatically testing if other nodes draw their contents as expected.
 class TestSpace : Space, CanvasIO {
@@ -40,6 +46,12 @@ class TestSpace : Space, CanvasIO {
 
         /// Probe the space will use to analyze the tree.
         TestProbe _probe;
+
+        /// Current crop area.
+        Optional!Rectangle _cropArea;
+
+        /// Current DPI.
+        Vector2 _dpi = Vector2(96, 96);
 
         /// All presently loaded images.
         ResourceArena!Image _loadedImages;
@@ -106,15 +118,33 @@ class TestSpace : Space, CanvasIO {
 
     }
 
+    override Vector2 dpi() const nothrow {
+        return _dpi;
+    }
+
+    Vector2 dpi(Vector2 value) {
+        _dpi = value;
+        updateSize();
+        return value;
+    }
+
+    override Optional!Rectangle cropArea() const nothrow {
+
+        return _cropArea;
+
+    }
+
     override void cropArea(Rectangle area) nothrow {
 
         _probe.runAssert(a => a.cropArea(_probe.subject, area));
+        _cropArea = area;
 
     }
 
     override void resetCropArea() nothrow {
 
         _probe.runAssert(a => a.resetCropArea(_probe.subject));
+        _cropArea = none;
 
     }
 
@@ -133,6 +163,12 @@ class TestSpace : Space, CanvasIO {
     override void drawRectangleImpl(Rectangle rectangle, Color color) nothrow {
 
         _probe.runAssert(a => a.drawRectangle(_probe.subject, rectangle, color));
+
+    }
+
+    override void drawLineImpl(Vector2 start, Vector2 end, float width, Color color) nothrow {
+
+        _probe.runAssert(a => a.drawLine(_probe.subject, start, end, width, color));
 
     }
 
@@ -311,6 +347,7 @@ interface Assert {
     bool drawTriangle(Node node, Vector2 a, Vector2 b, Vector2 c, Color color) nothrow;
     bool drawCircle(Node node, Vector2 center, float radius, Color color) nothrow;
     bool drawRectangle(Node node, Rectangle rectangle, Color color) nothrow;
+    bool drawLine(Node node, Vector2 start, Vector2 end, float width, Color color) nothrow;
     bool drawImage(Node node, DrawableImage image, Rectangle destination, Color tint) nothrow;
     bool drawHintedImage(Node node, DrawableImage image, Rectangle destination, Color tint) nothrow;
 
@@ -385,6 +422,101 @@ auto drawsRectangle(Node subject) {
 
 }
 
+/// Test if the subject draws a line.
+auto drawsLine(Node subject) {
+
+    return new class BlackHole!Assert {
+
+        bool isTestingStart;
+        Vector2 targetStart;
+        bool isTestingEnd;
+        Vector2 targetEnd;
+        bool isTestingWidth;
+        float targetWidth;
+        bool isTestingColor;
+        Color targetColor;
+
+        override bool drawLine(Node node, Vector2 start, Vector2 end, float width, Color color) nothrow {
+
+            // node != subject MAY throw
+            if (!node.opEquals(subject).assertNotThrown) return false;
+
+            if (isTestingStart) {
+                assert(equal(targetStart.x, start.x)
+                    && equal(targetStart.y, start.y),
+                    format!"Expected start %s, got %s"(targetStart, start).assertNotThrown);
+            }
+
+            if (isTestingEnd) {
+                assert(equal(targetEnd.x, end.x)
+                    && equal(targetEnd.y, end.y),
+                    format!"Expected end %s, got %s"(targetEnd, end).assertNotThrown);
+            }
+
+            if (isTestingWidth) {
+                assert(equal(targetWidth, width),
+                    format!"Expected width %s, got %s"(targetWidth, width).assertNotThrown);
+            }
+
+            if (isTestingColor) {
+                assert(targetColor == color,
+                    format!"Expected color %s, got %s"(targetColor, color).assertNotThrown);
+            }
+
+            return true;
+
+        }
+
+        typeof(this) from(float x, float y) @safe {
+            return from(Vector2(x, y));
+        }
+
+        typeof(this) from(Vector2 start) @safe {
+            isTestingStart = true;
+            targetStart = start;
+            return this;
+        }
+
+        typeof(this) to(float x, float y) @safe {
+            return to(Vector2(x, y));
+        }
+
+        typeof(this) to(Vector2 end) @safe {
+            isTestingEnd = true;
+            targetEnd = end;
+            return this;
+        }
+
+        typeof(this) ofWidth(float width) @safe {
+            isTestingWidth = true;
+            targetWidth = width;
+            return this;
+        }
+
+        typeof(this) ofColor(string color) @safe {
+            return ofColor(.color(color));
+        }
+
+        typeof(this) ofColor(Color color) @safe {
+            isTestingColor = true;
+            targetColor = color;
+            return this;
+        }
+
+        override string toString() const {
+            return toText(
+                subject, " should draw a line",
+                isTestingStart ? toText(" from ", targetStart)           : "",
+                isTestingEnd   ? toText(" to ", targetEnd)               : "",
+                isTestingWidth ? toText(" of width ", targetWidth)       : "",
+                isTestingColor ? toText(" of color ", targetColor.toHex) : "",
+            );
+        }
+
+    };
+
+}
+
 /// Params:
 ///     subject = Test if this subject draws an image.
 /// Returns:
@@ -394,6 +526,18 @@ auto drawsImage(Node subject, Image image) {
     auto test = drawsImage(subject);
     test.isTestingImage = true;
     test.targetImage = image;
+    test.isTestingColor = true;
+    test.targetColor = color("#fff");
+    return test;
+
+}
+
+/// ditto
+auto drawsHintedImage(Node subject, Image image) {
+
+    auto test = drawsImage(subject, image);
+    test.isTestingHint = true;
+    test.targetHint = true;
     return test;
 
 }
@@ -409,13 +553,20 @@ auto drawsImage(Node subject) {
         Rectangle targetArea;
         bool isTestingColor;
         Color targetColor;
+        bool isTestingHint;
+        bool targetHint;
 
         override bool drawImage(Node node, DrawableImage image, Rectangle rect, Color color) nothrow {
 
             if (!node.opEquals(subject).assertNotThrown) return false;
 
             if (isTestingImage) {
-                assert(image.data is image.data);
+                assert(image.format == targetImage.format);
+                assert(image.data is targetImage.data);
+
+                if (image.format == Image.Format.palettedAlpha) {
+                    assert(image.palette == targetImage.palette);
+                }
             }
 
             if (isTestingArea) {
@@ -429,13 +580,34 @@ auto drawsImage(Node subject) {
                 assert(color == targetColor);
             }
 
+            if (isTestingHint) {
+                assert(!targetHint);
+            }
+
             return true;
+
+        }
+
+        override bool drawHintedImage(Node node, DrawableImage image, Rectangle rect, Color color) nothrow {
+
+            targetHint = false;
+            scope (exit) targetHint = true;
+
+            return drawImage(node, image, rect, color);
 
         }
 
         typeof(this) at(Vector2 position) @safe {
             isTestingArea = true;
             targetArea = Rectangle(position.tupleof, targetImage.size.tupleof);
+            // TODO DPI
+            return this;
+
+        }
+        
+        typeof(this) at(typeof(Vector2.tupleof) position) @safe {
+            isTestingArea = true;
+            targetArea = Rectangle(position, targetImage.size.tupleof);
             // TODO DPI
             return this;
         }
@@ -452,11 +624,167 @@ auto drawsImage(Node subject) {
 
         override string toString() const {
             return toText(
-                subject, " should draw an image",
-                isTestingImage ? toText(" image ", targetImage)          : "",
+                subject, " should draw an image ",
+                isTestingImage ? toText(targetImage)                     : "",
                 isTestingArea  ? toText(" rectangle ", targetArea)       : "",
                 isTestingColor ? toText(" of color ", targetColor.toHex) : "",
             );
+        }
+
+    };
+
+}
+
+/// Assert true if the node draws a child.
+/// Params:
+///     parent = Parent node, subject of the test.
+///     child  = Child to test. Must be drawn directly.
+auto drawsChild(Node parent, Node child = null) {
+
+    return new class BlackHole!Assert {
+
+        // 0 outside of parent, 1 inside, 2 in child, 3 in grandchild, etc.
+        int parentDepth;
+
+        override bool resume(Node node) {
+            if (parent.opEquals(node).assertNotThrown) {
+                parentDepth = 1;
+            }
+            return false;
+        }
+
+        override bool beforeDraw(Node node, Rectangle, Rectangle, Rectangle) {
+
+            // Found the parent
+            if (parent.opEquals(node).assertNotThrown) {
+                parentDepth = 1;
+            }
+
+            // Parent drew a child, great! End the test if the child meets expectations.
+            else if (parentDepth) {
+                if (parentDepth++ == 1) {
+                    return child is null || node.opEquals(child).assertNotThrown;
+                }
+            }
+
+            return false;
+
+        }
+
+        override bool afterDraw(Node node, Rectangle, Rectangle, Rectangle) {
+
+            if (parentDepth) {
+                parentDepth--;
+            }
+
+            return false;
+
+        }
+
+        override string toString() const {
+            if (child)
+                return format!"%s must draw %s"(parent, child);
+            else
+                return format!"%s must draw a child"(parent);
+        }
+
+    };
+
+}
+
+///
+@("drawsChild assert works as expected")
+unittest {
+
+    import fluid.structs;
+
+    Space child, grandchild;
+
+    auto root = testSpace(
+        layout!1,
+        child = vspace(
+            layout!2,
+            grandchild = vspace(
+                layout!3
+            ),
+        ),
+    );
+
+    root.drawAndAssert(
+        root.drawsChild(),
+        child.drawsChild(),
+    );
+
+    root.drawAndAssert(
+        root.drawsChild(child),
+        child.drawsChild(grandchild),
+    );
+
+    root.drawAndAssert(
+        root.drawsChild(child),
+        child.drawsChild(grandchild),
+        grandchild.doesNotDrawChildren(),
+        root.doesNotDrawChildren(),
+    );
+
+    root.drawAndAssertFailure(
+        root.doesNotDrawChildren(),
+    );
+
+    root.drawAndAssertFailure(
+        child.doesNotDrawChildren(),
+    );
+
+    root.drawAndAssert(
+        grandchild.doesNotDrawChildren(),
+    );
+
+    root.drawAndAssertFailure(
+        grandchild.drawsChild(),
+    );
+
+    root.drawAndAssertFailure(
+        root.drawsChild(grandchild),
+    );
+
+}
+
+/// Make sure the parent does not draw any children.
+auto doesNotDrawChildren(Node parent) {
+
+    return new class BlackHole!Assert {
+
+        bool inParent;
+
+        override bool resume(Node node) {
+            if (parent.opEquals(node).assertNotThrown) {
+                inParent =  true;
+            }
+            return false;
+        }
+
+        override bool beforeDraw(Node node, Rectangle, Rectangle, Rectangle) {
+
+            // Found the parent
+            if (parent.opEquals(node).assertNotThrown) {
+                inParent = true;
+            }
+
+            // Parent drew a child
+            else if (inParent) {
+                assert(false, format!"%s must not draw children"(parent).assertNotThrown);
+            }
+
+            return false;
+
+        }
+
+        override bool afterDraw(Node node, Rectangle, Rectangle, Rectangle) {
+            return parent.opEquals(node).assertNotThrown;
+        }
+
+        override string toString() const {
+            return format!"%s must not draw children"(parent).assertNotThrown;
         }
 
     };
@@ -575,6 +903,10 @@ auto drawsWildcard(alias dg)(lazy string message) {
         
         override bool drawRectangle(Node node, Rectangle, Color) nothrow {
             return dg(node, "drawRectangle");
+        }
+
+        override bool drawLine(Node node, Vector2, Vector2, float, Color) nothrow {
+            return dg(node, "drawLine");
         }
 
         override bool drawImage(Node node, DrawableImage, Rectangle, Color) nothrow {

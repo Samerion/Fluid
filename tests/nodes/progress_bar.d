@@ -1,17 +1,16 @@
-module ttests.nodes.progress_bar;
+module nodes.progress_bar;
 
 import fluid;
 
 @safe:
 
-@("[TODO] Legacy: ProgressBar displays values using ProgressBarFill")
+@("ProgressBar displays values using ProgressBarFill")
 unittest {
 
     import fluid.theme;
 
     const steps = 24;
 
-    auto io = new HeadlessBackend;
     auto theme = nullTheme.derive(
         rule!ProgressBar(
             backgroundColor = color("#eee"),
@@ -21,45 +20,47 @@ unittest {
             backgroundColor = color("#17b117"),
         )
     );
-    auto bar = progressBar(theme, steps);
+    auto bar = progressBar(steps);
+    auto root = testSpace(.layout!"fill", theme, bar);
 
-    bar.io = io;
-    bar.draw();
-
+    root.draw();
     assert(bar.text == "0%");
-    io.assertRectangle(Rectangle(0, 0, 800, 27), color("#eee"));
-    io.assertRectangle(Rectangle(0, 0, 0, 27), color("#17b117"));
-    io.assertTexture(bar.text.texture.chunks[0].texture, Vector2(387, 0), color("#fff"));
 
-    io.nextFrame;
+    root.drawAndAssert(
+        bar.drawsRectangle(0, 0, 800, 27).ofColor("#eee"),
+        bar.fill.drawsRectangle(0, 0, 0, 27).ofColor("#17b117"),
+        bar.drawsImage(bar.text.texture.chunks[0].image).at(387, 0),
+    );
+
     bar.value = 2;
     bar.updateSize();
-    bar.draw();
+    root.draw();
 
     assert(bar.text == "8%");
-    io.assertRectangle(Rectangle(0, 0, 800, 27), color("#eee"));
-    io.assertRectangle(Rectangle(0, 0, 66.66, 27), color("#17b117"));
-    io.assertTexture(bar.text.texture.chunks[0].texture, Vector2(387.5, 0), color("#fff"));
+    root.drawAndAssert(
+        bar.drawsRectangle(0, 0, 800, 27).ofColor("#eee"),
+        bar.fill.drawsRectangle(0, 0, 66.66, 27).ofColor("#17b117"),
+        bar.drawsImage(bar.text.texture.chunks[0].image).at(387.5, 0),
+    );
 
-    io.nextFrame;
     bar.value = steps;
     bar.updateSize();
-    bar.draw();
+    root.draw();
 
     assert(bar.text == "100%");
-    io.assertRectangle(Rectangle(0, 0, 800, 27), color("#eee"));
-    io.assertRectangle(Rectangle(0, 0, 800, 27), color("#17b117"));
-    io.assertTexture(bar.text.texture.chunks[0].texture, Vector2(377, 0), color("#fff"));
+    root.drawAndAssert(
+        bar.drawsRectangle(0, 0, 800, 27).ofColor("#eee"),
+        bar.fill.drawsRectangle(0, 0, 800, 27).ofColor("#17b117"),
+        bar.drawsImage(bar.text.texture.chunks[0].image).at(377, 0),
+    );
 
 }
 
-@("[TODO] Legacy: Progress bar text can be changed by overriding buildText")
+@("Progress bar text can be changed by overriding buildText")
 unittest {
 
-    import fluid.style;
     import fluid.theme;
 
-    auto io = new HeadlessBackend;
     auto theme = nullTheme.derive(
         rule!ProgressBar(
             backgroundColor = color("#eee"),
@@ -84,24 +85,23 @@ unittest {
         }
 
     };
-
-    bar.io = io;
-    bar.theme = theme;
     bar.maxValue = 20;
-    bar.draw();
+    auto root = testSpace(.layout!"fill", theme, bar);
 
+    root.drawAndAssert(
+        bar.drawsRectangle(0, 0, 800, 4).ofColor("#eee"),
+        bar.fill.drawsRectangle(0, 0, 0, 4).ofColor("#17b117"),
+    );
     assert(bar.text == "");
-    io.assertRectangle(Rectangle(0, 0, 800, 4), color("#eee"));
-    io.assertRectangle(Rectangle(0, 0, 0, 4), color("#17b117"));
 
-    io.nextFrame;
     bar.value = 2;
     bar.updateSize();
     bar.draw();
 
+    root.drawAndAssert(
+        bar.drawsRectangle(0, 0, 800, 4).ofColor("#eee"),
+        bar.fill.drawsRectangle(0, 0, 80, 4).ofColor("#17b117"),
+    );
     assert(bar.text == "");
-    io.assertRectangle(Rectangle(0, 0, 800, 4), color("#eee"));
-    io.assertRectangle(Rectangle(0, 0, 80, 4), color("#17b117"));
 
 }
-
