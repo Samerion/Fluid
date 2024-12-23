@@ -151,6 +151,7 @@ interface CanvasIO : IO {
     ///     color  = Color to fill the circle with.
     protected void drawCircleImpl(Vector2 center, float radius, Color color) nothrow;
 
+    /// ditto
     final void drawCircle(Vector2 center, float radius, Color color) nothrow {
 
         drawCircleImpl(center, radius, 
@@ -164,9 +165,26 @@ interface CanvasIO : IO {
     ///     color     = Color to fill the rectangle with.
     protected void drawRectangleImpl(Rectangle rectangle, Color color) nothrow;
 
+    /// ditto
     final void drawRectangle(Rectangle rectangle, Color color) nothrow {
 
         drawRectangleImpl(rectangle,
+            multiply(treeContext.tint, color));
+
+    }
+
+    /// Draw a line between two points.
+    /// Params:
+    ///     start = Start point of the line.
+    ///     end   = End point of the line.
+    ///     width = Width of the line.
+    ///     color = Color of the line.
+    protected void drawLineImpl(Vector2 start, Vector2 end, float width, Color color) nothrow;
+
+    /// ditto
+    final void drawLine(Vector2 start, Vector2 end, float width, Color color) nothrow {
+
+        drawLineImpl(start, end, width,
             multiply(treeContext.tint, color));
 
     }
