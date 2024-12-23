@@ -1,12 +1,15 @@
+@Migrated
 module legacy.slider;
 
 import fluid;
+import legacy;
 
 import std.range;
 
 @safe:
 
-@("[TODO] Legacy: Slider can be changed with mouse movements")
+@("Slider can be changed with mouse movements")
+@Migrated
 unittest {
 
     const size = Vector2(500, 200);
@@ -14,7 +17,7 @@ unittest {
 
     auto io = new HeadlessBackend(size);
     auto root = slider!int(
-        .layout!("fill", "start"),
+        .layout!("fill", "center"),
         iota(1, 4)
     );
 
