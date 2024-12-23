@@ -1,4 +1,4 @@
-module legacy.password_input;
+module nodes.password_input;
 
 import fluid;
 
@@ -69,4 +69,3 @@ unittest {
     assert(root.value == "");
 
 }
-
