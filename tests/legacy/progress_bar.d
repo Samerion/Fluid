@@ -1,10 +1,13 @@
-module ttests.nodes.progress_bar;
+@Migrated
+module legacy.progress_bar;
 
 import fluid;
+import legacy;
 
 @safe:
 
-@("[TODO] Legacy: ProgressBar displays values using ProgressBarFill")
+@("ProgressBar displays values using ProgressBarFill")
+@Migrated
 unittest {
 
     import fluid.theme;
@@ -53,7 +56,8 @@ unittest {
 
 }
 
-@("[TODO] Legacy: Progress bar text can be changed by overriding buildText")
+@("Progress bar text can be changed by overriding buildText")
+@Migrated
 unittest {
 
     import fluid.style;

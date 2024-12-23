@@ -429,6 +429,11 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     in (styles.length >= 1, "At least one style must be passed to draw(Style[], Vector2)")
     do {
 
+        if (canvasIO is null) {
+            draw(styles, position);
+            return;
+        }
+
         import std.math;
         import fluid.utils;
 
