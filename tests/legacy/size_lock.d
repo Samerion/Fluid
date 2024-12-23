@@ -1,10 +1,13 @@
+@Migrated
 module legacy.size_lock;
 
 import fluid;
+import legacy;
 
 @safe:
 
-@("[TODO] Legacy: SizeLock reduces the amount of space a node gets")
+@("SizeLock reduces the amount of space a node gets")
+@Migrated
 unittest {
 
     auto io = new HeadlessBackend;
