@@ -166,6 +166,12 @@ class TestSpace : Space, CanvasIO {
 
     }
 
+    override void drawLineImpl(Vector2 start, Vector2 end, float width, Color color) nothrow {
+
+        _probe.runAssert(a => a.drawLine(_probe.subject, start, end, width, color));
+
+    }
+
     override void drawImageImpl(DrawableImage image, Rectangle destination, Color tint) nothrow {
 
         assert(
@@ -341,6 +347,7 @@ interface Assert {
     bool drawTriangle(Node node, Vector2 a, Vector2 b, Vector2 c, Color color) nothrow;
     bool drawCircle(Node node, Vector2 center, float radius, Color color) nothrow;
     bool drawRectangle(Node node, Rectangle rectangle, Color color) nothrow;
+    bool drawLine(Node node, Vector2 start, Vector2 end, float width, Color color) nothrow;
     bool drawImage(Node node, DrawableImage image, Rectangle destination, Color tint) nothrow;
     bool drawHintedImage(Node node, DrawableImage image, Rectangle destination, Color tint) nothrow;
 
@@ -407,6 +414,101 @@ auto drawsRectangle(Node subject) {
             return toText(
                 subject, " should draw a rectangle",
                 isTestingArea  ? toText(" ", targetArea)                 : "",
+                isTestingColor ? toText(" of color ", targetColor.toHex) : "",
+            );
+        }
+
+    };
+
+}
+
+/// Test if the subject draws a line.
+auto drawsLine(Node subject) {
+
+    return new class BlackHole!Assert {
+
+        bool isTestingStart;
+        Vector2 targetStart;
+        bool isTestingEnd;
+        Vector2 targetEnd;
+        bool isTestingWidth;
+        float targetWidth;
+        bool isTestingColor;
+        Color targetColor;
+
+        override bool drawLine(Node node, Vector2 start, Vector2 end, float width, Color color) nothrow {
+
+            // node != subject MAY throw
+            if (!node.opEquals(subject).assertNotThrown) return false;
+
+            if (isTestingStart) {
+                assert(equal(targetStart.x, start.x)
+                    && equal(targetStart.y, start.y),
+                    format!"Expected start %s, got %s"(targetStart, start).assertNotThrown);
+            }
+
+            if (isTestingEnd) {
+                assert(equal(targetEnd.x, end.x)
+                    && equal(targetEnd.y, end.y),
+                    format!"Expected end %s, got %s"(targetEnd, end).assertNotThrown);
+            }
+
+            if (isTestingWidth) {
+                assert(equal(targetWidth, width),
+                    format!"Expected width %s, got %s"(targetWidth, width).assertNotThrown);
+            }
+
+            if (isTestingColor) {
+                assert(targetColor == color,
+                    format!"Expected color %s, got %s"(targetColor, color).assertNotThrown);
+            }
+
+            return true;
+
+        }
+
+        typeof(this) from(float x, float y) @safe {
+            return from(Vector2(x, y));
+        }
+
+        typeof(this) from(Vector2 start) @safe {
+            isTestingStart = true;
+            targetStart = start;
+            return this;
+        }
+
+        typeof(this) to(float x, float y) @safe {
+            return to(Vector2(x, y));
+        }
+
+        typeof(this) to(Vector2 end) @safe {
+            isTestingStart = true;
+            targetEnd = end;
+            return this;
+        }
+
+        typeof(this) ofWidth(float width) @safe {
+            isTestingWidth = true;
+            targetWidth = width;
+            return this;
+        }
+
+        typeof(this) ofColor(string color) @safe {
+            return ofColor(.color(color));
+        }
+
+        typeof(this) ofColor(Color color) @safe {
+            isTestingColor = true;
+            targetColor = color;
+            return this;
+        }
+
+        override string toString() const {
+            return toText(
+                subject, " should draw a line",
+                isTestingStart ? toText(" from ", targetStart)           : "",
+                isTestingEnd   ? toText(" to ", targetEnd)               : "",
+                isTestingWidth ? toText(" of width", targetWidth)        : "",
                 isTestingColor ? toText(" of color ", targetColor.toHex) : "",
             );
         }
@@ -801,6 +903,10 @@ auto drawsWildcard(alias dg)(lazy string message) {
         
         override bool drawRectangle(Node node, Rectangle, Color) nothrow {
             return dg(node, "drawRectangle");
+        }
+
+        override bool drawLine(Node node, Vector2, Vector2, float, Color) nothrow {
+            return dg(node, "drawLine");
         }
 
         override bool drawImage(Node node, DrawableImage, Rectangle, Color) nothrow {
