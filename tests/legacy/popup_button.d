@@ -1,10 +1,13 @@
+@Migrated
 module legacy.popup_button;
 
 import fluid;
+import legacy;
 
 @safe:
 
 @("PopupButton supports keyboard navigation")
+@Migrated
 unittest {
 
     import fluid.backend;
