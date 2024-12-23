@@ -1,12 +1,16 @@
+@Abandoned
 module legacy.grid_frame;
 
+// `GridFrame` tests have been omitted from the 0.8.0 test suite, because `GridFrame` is inherently flawed.
+
 import fluid;
+import legacy;
 
 import std.algorithm;
 
 @safe:
 
-@("[TODO] Legacy: GridFrame places its children in a table-like grid")
+@("GridFrame places its children in a table-like grid")
 unittest {
 
     import std.math;
