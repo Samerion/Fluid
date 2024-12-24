@@ -460,24 +460,53 @@ abstract class Node {
     if (isForwardRange!T && is(ElementType!T : BranchAction))
     do {
 
-        // Start the actions; clear start nodes so they run immediately
-        foreach (action; range.save) {
-            startAction(action);
-            action.startNode = null;
-        }
+        auto action = controlBranchAction(range);
+        action.start();
+        return action.move;
 
-        // Stop the actions when the returned struct leaves the scope
+    }
+
+    protected final auto controlBranchAction(T)(T range) {
+
         @mustuse
-        static struct AutoStop {
+        static struct BranchControl {
+
+            Node node;
             T range;
-            ~this() {
-                foreach (action; range) {
-                    action.stop;
+            bool isStarted;
+
+            /// Start the actions.
+            ///
+            /// Clear start nodes for each action so they run immediately.
+            void start() {
+                isStarted = true;
+                foreach (action; range.save) {
+                    node.startAction(action);
+                    action.startNode = null;
                 }
             }
+
+            /// Prevent the action from stopping automatically as it leaves the scope.
+            void release() {
+                isStarted = false;
+            }
+
+            void stop() {
+                if (isStarted) {
+                    isStarted = false;
+                    foreach (action; range) {
+                        action.stop;
+                    }
+                }
+            }
+
+            ~this() {
+                stop();
+            }
+
         }
 
-        return AutoStop(range.move);
+        return BranchControl(this, range.move);
 
     }
 
@@ -1074,29 +1103,54 @@ abstract class Node {
     ///     these interfaces on destruction.
     protected auto implementIO(this This)() {
 
+        auto frame = controlIO!This();
+        frame.start();
+        return frame.move;
+
+    }
+
+    protected auto controlIO(this This)() {
+
         import std.meta : AliasSeq, Filter;
 
-        alias IOs = Filter!(isIO, InterfacesTuple!This);
+        alias Interfaces = Filter!(isIO, InterfacesTuple!This, This);
+        alias IOs = NoDuplicates!Interfaces;
         alias IOArray = IO[IOs.length];
 
-        IOArray ios;
-
-        static foreach (i, IO; IOs) {
-            ios[i] = tree.context.io.replace(ioID!IO, cast(This) this);
-        }
-
         @mustuse
-        static struct Close {
-            private LayoutTree* tree;
+        static struct IOControl {
+
+            This node;
             IOArray ios;
-            ~this() {
+            bool isStarted;
+
+            void start() {
+                this.isStarted = true;
                 static foreach (i, IO; IOs) {
-                    tree.context.io.replace(ioID!IO, ios[i]);
+                    ios[i] = node.treeContext.io.replace(ioID!IO, node);
                 }
             }
+
+            void release() {
+                this.isStarted = false;
+            }
+
+            void stop() {
+                if (isStarted) {
+                    isStarted = false;
+                    static foreach (i, IO; IOs) {
+                        node.treeContext.io.replace(ioID!IO, ios[i]);
+                    }
+                }
+            }
+
+            ~this() {
+                stop();
+            }
+
         }
 
-        return Close(tree, ios);
+        return IOControl(cast(This) this);
 
     }
 
