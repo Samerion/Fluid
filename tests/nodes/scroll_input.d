@@ -16,7 +16,7 @@ unittest {
         btn = button(.layout!"fill", "Button to test hover slipping", delegate { assert(false); }),
         label("Text long enough to overflow this very small viewport and create a scrollbar"),
     );
-    auto hover = sizeLock!hoverSpace(
+    auto hover = sizeLock!hoverChain(
         .sizeLimit(200, 100),
         .nullTheme,
         frame

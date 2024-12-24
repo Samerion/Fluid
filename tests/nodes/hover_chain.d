@@ -1,4 +1,4 @@
-module new_io.hover_space;
+module nodes.hover_chain;
 
 import std.array;
 import fluid;
@@ -150,13 +150,16 @@ unittest {
     MyHover device;
     Button one, two;
 
-    auto root = sizeLock!hoverSpace(
+    auto root = sizeLock!hoverChain(
         .nullTheme,
         .sizeLimit(300, 300),
-        device = myHover(),
-        one    = button(.layout!(1, "fill"), "One", delegate { }),
-                 vframe(.layout!(1, "fill")),
-        two    = button(.layout!(1, "fill"), "Two", delegate { }),
+        vspace(
+            .layout!(1, "fill"),
+            device = myHover(),
+            one    = button(.layout!(1, "fill"), "One", delegate { }),
+                     vframe(.layout!(1, "fill")),
+            two    = button(.layout!(1, "fill"), "Two", delegate { }),
+        ),
     );
 
     root.draw();
@@ -288,12 +291,15 @@ unittest {
 
     auto root = inputMapSpace(
         map,
-        hover = sizeLock!hoverSpace(
+        hover = sizeLock!hoverChain(
             .nullTheme,
             .sizeLimit(400, 400),
-            device = myHover(),
-    		button(.layout!(1, "fill"), "One", delegate { onePressed++; }),
-            button(.layout!(1, "fill"), "Two", delegate { twoPressed++; }),
+            vspace(
+                .layout!(1, "fill"),
+                device = myHover(),
+        		button(.layout!(1, "fill"), "One", delegate { onePressed++; }),
+                button(.layout!(1, "fill"), "Two", delegate { twoPressed++; }),
+            ),
         )
     );
 
@@ -356,12 +362,15 @@ unittest {
 
     auto root = inputMapSpace(
         map,
-        hover = sizeLock!hoverSpace(
+        hover = sizeLock!hoverChain(
             .nullTheme,
             .sizeLimit(400, 400),
-            device   = myHover(),
-            tracker1 = hoverTracker(.layout!(1, "fill")),
-            tracker2 = hoverTracker(.layout!(1, "fill")),
+            vspace(
+                .layout!(1, "fill"),
+                device   = myHover(),
+                tracker1 = hoverTracker(.layout!(1, "fill")),
+                tracker2 = hoverTracker(.layout!(1, "fill")),
+            ),
         )
     );
 
@@ -444,11 +453,14 @@ unittest {
     HoverSpace hover;
     HoverTracker tracker;
 
-    auto root = hover = sizeLock!hoverSpace(
+    auto root = hover = sizeLock!hoverChain(
         .nullTheme,
         .sizeLimit(400, 400),
-        device  = myHover(),
-        tracker = hoverTracker(.layout!(1, "fill")),
+        vspace(
+            .layout!(1, "fill"),
+            device  = myHover(),
+            tracker = hoverTracker(.layout!(1, "fill")),
+        ),
     );
 
     device.pointers = [
