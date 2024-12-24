@@ -16,7 +16,7 @@ unittest {
         .layout!(1, "fill", "center"),
         iota(1, 4)
     );
-    auto hover = sizeLock!hoverSpace(
+    auto hover = sizeLock!hoverChain(
         .sizeLimit(500, 200),
         input
     );

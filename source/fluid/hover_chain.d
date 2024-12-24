@@ -1,13 +1,13 @@
 /// 
-module fluid.hover_space;
+module fluid.hover_chain;
 
 import std.array;
 import std.algorithm;
 
 import fluid.node;
-import fluid.space;
 import fluid.types;
 import fluid.utils;
+import fluid.node_chain;
 
 import fluid.io.hover;
 import fluid.io.action;
@@ -17,15 +17,35 @@ import fluid.future.action;
 
 @safe:
 
-alias hoverSpace = nodeBuilder!HoverSpace;
+alias hoverChain = nodeBuilder!HoverChain;
+alias HoverSpace = HoverChain;
 
-/// A hover space can be used to separate hover in different areas of the user interface, effectively treating them
+deprecated("REMOVE ASAP")
+HoverChain hoverSpace(Ts...)(Ts args) {
+
+    import fluid.space;
+    import fluid.structs;
+
+    alias cc = vspace;
+    enum paramCount = cc.leadingParams!Ts;
+
+    return hoverChain(
+        args[0 .. paramCount],
+        vspace(
+            layout!(1, "fill"),
+            args[paramCount .. $],
+        ),
+    );
+
+}
+
+/// A hover chain can be used to separate hover in different areas of the user interface, effectively treating them
 /// like separate windows. A device node (like a mouse) can be placed to control nodes inside.
 ///
-/// For focus-based nodes like keyboard and gamepad, see `FocusSpace`.
+/// For focus-based nodes like keyboard and gamepad, see `FocusChain`.
 ///
-/// `HoverSpace` only works with nodes compatible with the new I/O system introduced in Fluid 0.7.2.
-class HoverSpace : Space, HoverIO {
+/// `HoverChain` only works with nodes compatible with the new I/O system introduced in Fluid 0.7.2.
+class HoverChain : NodeChain, HoverIO {
 
     ActionIO actionIO;
 
@@ -63,10 +83,12 @@ class HoverSpace : Space, HoverIO {
 
     }
 
-    this(Node[] nodes...) {
+    this() {
 
-        super(nodes);
+    }
 
+    this(Node next) {
+        super(next);
     }
 
     override int load(Pointer pointer) {
@@ -152,23 +174,37 @@ class HoverSpace : Space, HoverIO {
 
     }
 
-    override void resizeImpl(Vector2 space) {
+    override void beforeResize(Vector2) {
 
         use(actionIO);
         _pointers.startCycle();
 
-        auto frame = implementIO!HoverSpace();
-        super.resizeImpl(space);
+        auto frame = controlIO!HoverIO();
+        frame.start();
+        frame.release();
 
     }
 
-    override void drawImpl(Rectangle outer, Rectangle inner) {
+    override void afterResize(Vector2) {
 
-        // Draw the children and find the current hover
-        {
-            auto frame = startBranchAction(armBranchActions);
-            super.drawImpl(outer, inner);
-        }
+        auto frame = controlIO!HoverIO();
+        frame.stop();
+
+    }
+
+    override void beforeDraw(Rectangle outer, Rectangle inner) {
+
+        // Find the current hover in child nodes
+        auto frame = controlBranchAction(armBranchActions);
+        frame.start();
+        frame.release();
+
+    }
+
+    override void afterDraw(Rectangle outer, Rectangle inner) {
+
+        auto frame = controlBranchAction(armBranchActions);
+        frame.stop();
 
         // Update hover data
         foreach (ref pointer; _pointers[]) {
