@@ -17,7 +17,8 @@ NodeChain chain(Ts...)(Ts chain, Node node) {
     NodeChain tip = chain[0];
 
     foreach (NodeChain link; chain[1..$]) {
-        tip = tip.next = link;
+        tip.next = link;
+        tip = link;
     }
 
     tip.next = node;
@@ -40,7 +41,8 @@ Node chain(Node node) {
 ///
 /// `NodeChain` disables some of the basic `Node` functionality. A chain link cannot set margin, border or padding
 /// in a way that would make it work, and it also cannot control its own `minSize`. Effectively, a chain will only
-/// use the margin/padding of the inner-most node, that is the first non-chain node.
+/// use the margin/padding of the inner-most node, that is the first non-chain node. Some other functionality like
+/// tint, inheriting `isDisabled` etc. may not work too.
 abstract class NodeChain : Node {
 
     private {
@@ -49,10 +51,10 @@ abstract class NodeChain : Node {
         NodeChain _nextChain;
         NodeChain _previousChain;
 
-        /// If true, `resizeImpl` and `drawImpl` will quit immediately and reset this value.
+        /// If true, `resizeImpl` will quit immediately and reset this value.
         ///
         /// This is used on the assumption that resizing will be performed by NodeChain.
-        bool _skipImpl;
+        bool _skipResizeImpl;
 
     }
 
@@ -104,15 +106,15 @@ abstract class NodeChain : Node {
     alias resizeChild = Node.resizeChild;
 
     protected Vector2 resizeChild(NodeChain child, Vector2 space) {
-        child._skipImpl = true;
+        child._skipResizeImpl = true;
         return super.resizeChild(child, space);
     }
 
     protected final override void resizeImpl(Vector2 space) {
 
         // Called from another `nodeChain`, skip this call
-        if (_skipImpl) {
-            _skipImpl = false;
+        if (_skipResizeImpl) {
+            _skipResizeImpl = false;
             return;
         }
 
@@ -147,24 +149,16 @@ abstract class NodeChain : Node {
 
     }
 
-    alias drawChild = Node.drawChild;
-
-    protected void drawChild(NodeChain child, Rectangle space) {
-        child._skipImpl = true;
-        return super.drawChild(child, space);
-    }
-
     protected final override void drawImpl(Rectangle outer, Rectangle inner) {
-
-        // Called from another `nodeChain`, skip this call
-        if (_skipImpl) {
-            _skipImpl = false;
-            return;
-        }
 
         // Call beforeDraw on each part
         NodeChain chain = this;
         while (true) {
+
+            // Run tree actions
+            foreach (action; tree.filterActions) {
+                action.beforeDrawImpl(chain, outer, outer, inner);
+            }
 
             // Call beforeResize
             chain.beforeDraw(outer, inner);
@@ -186,6 +180,9 @@ abstract class NodeChain : Node {
         // Call afterDraw on each part
         while (chain) {
             chain.afterDraw(outer, inner);
+            foreach (action; tree.filterActions) {
+                action.beforeDrawImpl(chain, outer, outer, inner);
+            }
             chain = chain._previousChain;
         }
 

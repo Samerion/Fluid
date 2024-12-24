@@ -49,6 +49,7 @@ public import
     fluid.label,
     fluid.map_frame,
     fluid.node,
+    fluid.node_chain,
     fluid.number_input,
     fluid.onion_frame,
     fluid.password_input,
