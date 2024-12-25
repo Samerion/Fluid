@@ -6,7 +6,9 @@ import fluid.utils;
 import fluid.style;
 import fluid.backend;
 
+import fluid.io.file;
 import fluid.io.canvas;
+import fluid.io.image_load;
 
 @safe:
 
@@ -35,6 +37,8 @@ auto autoExpand(bool value = true) {
 class ImageView : Node {
 
     CanvasIO canvasIO;
+    FileIO fileIO;
+    ImageLoadIO imageLoadIO;
 
     public {
 
@@ -213,9 +217,19 @@ class ImageView : Node {
         import std.algorithm : min;
 
         use(canvasIO);
+        use(fileIO);
+        use(imageLoadIO);
 
         // New I/O system
         if (canvasIO) {
+
+            // Load an image from the filesystem, if no image is already loaded
+            if (image == Image.init && _texturePath != "" && fileIO && imageLoadIO) {
+
+                auto file = fileIO.loadFile(_texturePath);
+                image = imageLoadIO.loadImage(file);
+
+            }
 
             // Load the image
             load(canvasIO, image);
@@ -224,7 +238,7 @@ class ImageView : Node {
             if (isSizeAutomatic) {
 
                 // No texture loaded, shrink to nothingness
-                if (image.image == Image.init) {
+                if (image == Image.init) {
                     minSize = Vector2(0, 0);
                 }
 
@@ -280,7 +294,7 @@ class ImageView : Node {
         if (canvasIO) {
 
             // Ignore if there is no texture to draw
-            if (image.image == Image.init) return;
+            if (image == Image.init) return;
 
             const size     = fitInto(image.viewportSize, inner.size);
             const position = center(inner) - size/2;
