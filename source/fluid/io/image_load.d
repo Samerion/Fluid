@@ -8,7 +8,7 @@ import fluid.future.context;
 @safe:
 
 /// Interface for loading images in varying formats, like PNG or JPG, into raw `Image`.
-interface ImageLoadIO {
+interface ImageLoadIO : IO {
 
     /// Load an image from raw bytes.
     /// Params:

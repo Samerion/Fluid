@@ -90,3 +90,25 @@ unittest {
     );
 
 }
+
+@("ImageView can load and draw images from files")
+unittest {
+
+    auto view = imageView("logo.png");
+    auto stack = chain(
+        fileChain(),
+        arsdImageChain(),
+        view,
+    );
+    auto root = testSpace(stack);
+
+    root.draw();
+    root.drawAndAssert(
+        view.drawsImage(view.image),
+    );
+
+    // logo.png parameters
+    assert(view.image.width == 998);
+    assert(view.image.height == 480);
+
+}

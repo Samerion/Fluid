@@ -562,7 +562,9 @@ auto drawsImage(Node subject) {
 
             if (isTestingImage) {
                 assert(image.format == targetImage.format);
-                assert(image.data is targetImage.data);
+                assert(image.data is targetImage.data,
+                    format!"%s should draw image 0x%02x but draws 0x%02x"(
+                        node, cast(size_t) targetImage.data.ptr, cast(size_t) image.data.ptr).assertNotThrown);
 
                 if (image.format == Image.Format.palettedAlpha) {
                     assert(image.palette == targetImage.palette);
