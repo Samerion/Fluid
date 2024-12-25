@@ -44,7 +44,7 @@ class ActionTester : InputNode!Node {
         return true;
 
     }
-    
+
     bool runInputAction(immutable InputActionID actionID, bool isActive, int) {
 
         return super.runInputAction(actionID, isActive);
