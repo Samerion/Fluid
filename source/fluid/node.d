@@ -207,7 +207,7 @@ abstract class Node {
 
     }
 
-    /// Nodes automatically inherit theme from their parent, and the root node implictly inherits the default theme.
+    /// Nodes automatically inherit theme from their parent, and the root node implicitly inherits the default theme.
     /// An explicitly-set theme will override any inherited themes recursively, stopping at nodes that also have themes
     /// set explicitly.
     /// Params:
@@ -413,7 +413,7 @@ abstract class Node {
     /// fire for this node and its children.
     ///
     /// Tree actions are responsible for their own lifetime. After a tree action starts, it will decide for itself
-    /// when it should end. This can be overriden by explicitly calling the `TreeAction.stop` method.
+    /// when it should end. This can be overridden by explicitly calling the `TreeAction.stop` method.
     ///
     /// Params:
     ///     action = Action to start.
@@ -575,7 +575,8 @@ abstract class Node {
         // Resize if required
         if (resizePending) {
 
-            resizeInternalImpl(tree, theme, space);
+            prepareInternalImpl(tree, theme);
+            resizeInternalImpl(space);
             _resizePending = false;
 
         }
@@ -896,6 +897,21 @@ abstract class Node {
 
     }
 
+    /// Prepare a child for use. This is automatically called by `resizeChild` and only meant for advanced usage.
+    ///
+    /// This method is intended to be used when conventional resizing through `resizeImpl` is not desired. This can
+    /// be used to implement an advanced system with a different resizing mechanism, or something like `NodeChain`,
+    /// which changes how children are managed. Be mindful that child nodes must have some preparation mechanism
+    /// available to initialize their I/O systems and resources — normally this is done by `resizeImpl`.
+    ///
+    /// Params:
+    ///     child = Child node to resize.
+    protected void prepareChild(Node child) {
+
+        child.prepareInternalImpl(tree, theme);
+
+    }
+
     /// Resize a child of this node.
     /// Params:
     ///     child = Child node to resize.
@@ -904,7 +920,8 @@ abstract class Node {
     ///     Space allocated by the child node.
     protected Vector2 resizeChild(Node child, Vector2 space) {
 
-        child.resizeInternalImpl(tree, theme, space);
+        prepareChild(child);
+        child.resizeInternalImpl(space);
 
         return child.minSize;
 
@@ -921,13 +938,14 @@ abstract class Node {
     in(theme, "Theme for Node.resize() must not be null.")
     do {
 
-        resizeInternalImpl(tree, theme, space);
+        prepareInternalImpl(tree, theme);
+        resizeInternalImpl(space);
 
     }
 
-    private final void resizeInternalImpl(LayoutTree* tree, Theme theme, Vector2 space)
-    in(tree, "Tree for Node.resize() must not be null.")
-    in(theme, "Theme for Node.resize() must not be null.")
+    private final void prepareInternalImpl(LayoutTree* tree, Theme theme)
+    in(tree, "Tree for prepareChild(Node) must not be null.")
+    in(theme, "Theme for prepareChild(Node) must not be null.")
     do {
 
         // Inherit tree and theme
@@ -953,6 +971,12 @@ abstract class Node {
         _queuedActions = null;
         _queuedActionsNew = null;
 
+    }
+
+    private final void resizeInternalImpl(Vector2 space)
+    in(tree, "Tree for Node.resize() must not be null.")
+    in(theme, "Theme for Node.resize() must not be null.")
+    do {
 
         // The node is hidden, reset size
         if (isHidden) minSize = Vector2(0, 0);
@@ -978,13 +1002,15 @@ abstract class Node {
 
             // Run beforeResize actions
             foreach (action; tree.filterActions) {
-
                 action.beforeResize(this, space);
-
             }
 
             // Resize the node
             resizeImpl(space);
+
+            foreach (action; tree.filterActions) {
+                action.afterResize(this, space);
+            }
 
             assert(
                 minSize.x.isFinite && minSize.y.isFinite,
@@ -1205,7 +1231,7 @@ abstract class Node {
     /// User-provided implementation should override `inBoundsImpl`; calls testing the node's bounds should
     /// use `inBounds`.
     ///
-    /// This is rarely used in nodes built into Fluid. A notable example where this is overriden
+    /// This is rarely used in nodes built into Fluid. A notable example where this is overridden
     /// is `Space`, which always returns `false`, expecting children to block occupied areas. This makes
     /// `Space` very handy for partially transparent overlays.
     ///

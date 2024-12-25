@@ -308,8 +308,8 @@ abstract class TreeAction : Publisher!() {
     }
 
     /// Stop the action.
-    /// 
-    /// No further hooks will be triggered after calling this, and the action will soon be removed from the list 
+    ///
+    /// No further hooks will be triggered after calling this, and the action will soon be removed from the list
     /// of running actions. Overloads of the same hook that called `stop` may still be called.
     final void stop() {
 
@@ -326,7 +326,7 @@ abstract class TreeAction : Publisher!() {
 
     }
 
-    /// Called whenever this action is started — added to the list of running actions in the `LayoutTree` 
+    /// Called whenever this action is started — added to the list of running actions in the `LayoutTree`
     /// or `TreeContext`.
     ///
     /// This hook may not be called immediately when added through `node.queueAction` or `node.startAction`;
@@ -382,14 +382,14 @@ abstract class TreeAction : Publisher!() {
     }
 
     /// ditto
-    bool filterAfterDraw(Node node) { 
+    bool filterAfterDraw(Node node) {
 
         // Not in tree
         if (!inTree) return false;
 
         // Start mode must have been reached
         return startNode is null || inStartNode;
-    
+
     }
 
     /// Called before the tree is drawn. Keep in mind this might not be called if the action is started when tree
@@ -411,6 +411,17 @@ abstract class TreeAction : Publisher!() {
 
     /// Called before a node is resized.
     void beforeResize(Node node, Vector2 viewportSpace) { }
+
+    final package void beforeResizeImpl(Node node, Vector2 viewport) {
+        beforeResize(node, viewport);
+    }
+
+    /// Called after a node is resized.
+    void afterResize(Node node, Vector2 viewportSpace) { }
+
+    final package void afterResizeImpl(Node node, Vector2 viewport) {
+        afterResize(node, viewport);
+    }
 
     /// Called before each `drawImpl` call of any node in the tree, so supplying parent nodes before their children.
     ///
@@ -514,7 +525,7 @@ struct LayoutTree {
         /// Root node of the tree.
         Node root;
 
-        /// Node the mouse is hovering over if any. 
+        /// Node the mouse is hovering over if any.
         ///
         /// This is the last — topmost — node in the tree with `isHovered` set to true.
         Node hover;
@@ -564,7 +575,7 @@ struct LayoutTree {
         /// True if keyboard input was handled during the last frame; updated after tree rendering has completed.
         bool wasKeyboardHandled;
 
-        deprecated("keyboardHandled was renamed to wasKeyboardHandled and will be removed in Fluid 0.8.0.") 
+        deprecated("keyboardHandled was renamed to wasKeyboardHandled and will be removed in Fluid 0.8.0.")
         alias keyboardHandled = wasKeyboardHandled;
 
     }
@@ -585,7 +596,7 @@ struct LayoutTree {
         ///
         /// Any node that introduces its own breadcrumbs will push onto this stack, and pop once finished.
         Breadcrumbs breadcrumbs;
-    
+
         /// Context for the new I/O system. https://git.samerion.com/Samerion/Fluid/issues/148
         TreeContextData context;
 
@@ -1179,7 +1190,7 @@ unittest {
     io.nextFrame;
     io.mousePosition = Vector2(-1, -1);
     root.draw();
-    
+
     assert(root.tree.hover !is text);
     assert(!root.tree.isHovered);
 
