@@ -51,11 +51,6 @@ abstract class NodeChain : Node {
         NodeChain _nextChain;
         NodeChain _previousChain;
 
-        /// If true, `resizeImpl` will quit immediately and reset this value.
-        ///
-        /// This is used on the assumption that resizing will be performed by NodeChain.
-        bool _skipResizeImpl;
-
     }
 
     /// Create this node as the last link in chain. No node will be drawn unless changed with `next`.
@@ -103,27 +98,19 @@ abstract class NodeChain : Node {
     protected void beforeDraw(Rectangle outer, Rectangle inner) { }
     protected void afterDraw(Rectangle outer, Rectangle inner) { }
 
-    alias resizeChild = Node.resizeChild;
-
-    protected Vector2 resizeChild(NodeChain child, Vector2 space) {
-        child._skipResizeImpl = true;
-        return super.resizeChild(child, space);
-    }
-
     protected final override void resizeImpl(Vector2 space) {
-
-        // Called from another `nodeChain`, skip this call
-        if (_skipResizeImpl) {
-            _skipResizeImpl = false;
-            return;
-        }
 
         // Call beforeResize on each part
         NodeChain chain = this;
         while (true) {
 
-            // Perform traditional resize and follow up with beforeResize
-            resizeChild(chain, space);
+            // Run tree actions
+            foreach (action; tree.filterActions) {
+                action.beforeResizeImpl(chain, space);
+            }
+
+            // Prepare the node and follow up with beforeResize
+            prepareChild(chain);
             chain.beforeResize(space);
 
             // Update the chain
@@ -144,6 +131,9 @@ abstract class NodeChain : Node {
         // Call afterResize on each part
         while (chain) {
             chain.afterResize(space);
+            foreach (action; tree.filterActions) {
+                action.afterResizeImpl(chain, space);
+            }
             chain = chain._previousChain;
         }
 
