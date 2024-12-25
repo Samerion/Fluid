@@ -30,7 +30,7 @@ Theme nullTheme;
 /// the role of each node understandable.
 Theme fluidDefaultTheme;
 
-@NodeTag 
+@NodeTag
 enum FluidTag {
     warning,
 }

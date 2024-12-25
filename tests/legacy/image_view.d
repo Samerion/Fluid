@@ -1,10 +1,13 @@
+@Migrated
 module legacy.image_view;
 
 import fluid;
+import legacy;
 
 @safe:
 
-@("[TODO] Legacy: ImageView draws images")
+@("ImageView draws images")
+@Migrated
 @system unittest {
 
     // TODO test for keeping aspect ratio
