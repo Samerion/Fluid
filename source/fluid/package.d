@@ -29,6 +29,7 @@ else {
 public import
     fluid.backend,
     fluid.actions,
+    fluid.arsd_image_chain,
     fluid.button,
     fluid.checkbox,
     fluid.children,
