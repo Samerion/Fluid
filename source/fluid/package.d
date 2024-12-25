@@ -35,6 +35,7 @@ public import
     fluid.code_input,
     fluid.default_theme,
     fluid.drag_slot,
+    fluid.file_chain,
     fluid.file_input,
     fluid.field_slot,
     fluid.frame,
