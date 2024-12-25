@@ -128,7 +128,7 @@ unittest {
     );
     auto root = testSpace(link);
 
-    assert(link == link1);
+    assert(link.opEquals(link1));
 
     root.drawAndAssert(
         link1.drawsChild(link2),
