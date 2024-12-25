@@ -28,7 +28,7 @@ class FocusTracker : Space {
 
         require(focusIO);
         findFocusBoxAction.focusIO = focusIO;
-        
+
         super.resizeImpl(space);
 
     }
@@ -45,7 +45,7 @@ class FocusTracker : Space {
 
 alias presetFocusBox = nodeBuilder!PresetFocusBox;
 
-/// Always returns the focus box in the same position, regardless of where the node itself 
+/// Always returns the focus box in the same position, regardless of where the node itself
 /// is on on the screen
 class PresetFocusBox : InputNode!Node {
 
@@ -74,10 +74,12 @@ class PresetFocusBox : InputNode!Node {
 unittest {
 
     PresetFocusBox[2] box;
-    
-    auto root = focusSpace(
-        box[0] = presetFocusBox(Rectangle(2, 2, 2, 2)),
-        box[1] = presetFocusBox(Rectangle(4, 4, 6, 6)),
+
+    auto root = focusChain(
+        vspace(
+            box[0] = presetFocusBox(Rectangle(2, 2, 2, 2)),
+            box[1] = presetFocusBox(Rectangle(4, 4, 6, 6)),
+        ),
     );
 
     // Frame 0: no focus
@@ -106,8 +108,8 @@ unittest {
 
     PresetFocusBox[2] box;
     FocusTracker tracker;
-    
-    auto root = focusSpace(
+
+    auto root = focusChain(
         tracker = focusTracker(
             box[0] = presetFocusBox(Rectangle(2, 2, 2, 2)),
             box[1] = presetFocusBox(Rectangle(4, 4, 6, 6)),

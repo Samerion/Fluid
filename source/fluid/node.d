@@ -188,7 +188,7 @@ abstract class Node {
     ///
     /// Themes affect the node and its children, and can respond to changes in state,
     /// like values changing or user interaction.
-    /// 
+    ///
     /// If no theme has been set, a default one will be provided and used automatically.
     ///
     /// See `Theme` for more information.
@@ -208,7 +208,7 @@ abstract class Node {
     }
 
     /// Nodes automatically inherit theme from their parent, and the root node implictly inherits the default theme.
-    /// An explicitly-set theme will override any inherited themes recursively, stopping at nodes that also have themes 
+    /// An explicitly-set theme will override any inherited themes recursively, stopping at nodes that also have themes
     /// set explicitly.
     /// Params:
     ///     value = Theme to inherit.
@@ -345,7 +345,7 @@ abstract class Node {
     /// This can be used to activate node parameters after the node has been constructed,
     /// or inside of a node constructor.
     ///
-    /// Note: 
+    /// Note:
     ///     Due to language limitations, this function has to be called with the dot operator, like `this.applyAll()`.
     /// Params:
     ///     params = Node parameters to activate.
@@ -374,7 +374,7 @@ abstract class Node {
 
         auto myNode = new MyNode;
         assert(myNode.layout == .layout!"fill");
-        
+
     }
 
     /// Queue an action to perform within this node's branch.
@@ -402,14 +402,14 @@ abstract class Node {
 
     /// Perform a tree action the next time this node is drawn.
     ///
-    /// Tree actions can be used to analyze the node tree and modify its behavior while it runs. Actions can listen 
+    /// Tree actions can be used to analyze the node tree and modify its behavior while it runs. Actions can listen
     /// and respond to hooks like `beforeDraw` and `afterDraw`. They can interact with existing nodes or inject nodes
     /// in any place of the tree.
     ///
     /// Most usually, a tree action will provide its own function for creating and starting tree actions, so this
     /// method will not be called directly.
     ///
-    /// The action will only act on this branch of the tree: `beforeDraw` and `afterDraw` hooks will only 
+    /// The action will only act on this branch of the tree: `beforeDraw` and `afterDraw` hooks will only
     /// fire for this node and its children.
     ///
     /// Tree actions are responsible for their own lifetime. After a tree action starts, it will decide for itself
@@ -439,7 +439,7 @@ abstract class Node {
 
     /// Start a branch action (or multiple) to run on children of this node.
     ///
-    /// This should only be used inside `drawImpl`. The action will stop as soon as the return value goes 
+    /// This should only be used inside `drawImpl`. The action will stop as soon as the return value goes
     /// out of scope.
     ///
     /// Params:
@@ -460,24 +460,59 @@ abstract class Node {
     if (isForwardRange!T && is(ElementType!T : BranchAction))
     do {
 
-        // Start the actions; clear start nodes so they run immediately
-        foreach (action; range.save) {
-            startAction(action);
-            action.startNode = null;
-        }
+        auto action = controlBranchAction(range);
+        action.start();
+        return action.move;
 
-        // Stop the actions when the returned struct leaves the scope
+    }
+
+    protected final auto controlBranchAction(BranchAction action)
+    in (action, "Node.runAction(TreeAction) called with a `null` argument")
+    do {
+        return controlBranchAction(only(action));
+    }
+
+    protected final auto controlBranchAction(T)(T range) {
+
         @mustuse
-        static struct AutoStop {
+        static struct BranchControl {
+
+            Node node;
             T range;
-            ~this() {
-                foreach (action; range) {
-                    action.stop;
+            bool isStarted;
+
+            /// Start the actions.
+            ///
+            /// Clear start nodes for each action so they run immediately.
+            void start() {
+                isStarted = true;
+                foreach (action; range.save) {
+                    node.startAction(action);
+                    action.startNode = null;
                 }
             }
+
+            /// Prevent the action from stopping automatically as it leaves the scope.
+            void release() {
+                isStarted = false;
+            }
+
+            void stop() {
+                if (isStarted) {
+                    isStarted = false;
+                    foreach (action; range) {
+                        action.stop;
+                    }
+                }
+            }
+
+            ~this() {
+                stop();
+            }
+
         }
 
-        return AutoStop(range.move);
+        return BranchControl(this, range.move);
 
     }
 
@@ -1044,7 +1079,7 @@ abstract class Node {
         return io = require!T();
     }
 
-    /// Load a resource associated with the given I/O. 
+    /// Load a resource associated with the given I/O.
     ///
     /// The resource should be continuously loaded during `resizeImpl`. Even if a resource has already been loaded,
     /// it has to be declared with `load` so the I/O system knows it is still in use.
@@ -1057,7 +1092,7 @@ abstract class Node {
     ///     load(canvasIO, image);
     /// }
     /// ---
-    /// 
+    ///
     /// Params:
     ///     io       = I/O system to use to load the resource.
     ///     resource = Resource to load.
@@ -1074,29 +1109,54 @@ abstract class Node {
     ///     these interfaces on destruction.
     protected auto implementIO(this This)() {
 
+        auto frame = controlIO!This();
+        frame.start();
+        return frame.move;
+
+    }
+
+    protected auto controlIO(this This)() {
+
         import std.meta : AliasSeq, Filter;
 
-        alias IOs = Filter!(isIO, InterfacesTuple!This);
+        alias Interfaces = Filter!(isIO, InterfacesTuple!This, This);
+        alias IOs = NoDuplicates!Interfaces;
         alias IOArray = IO[IOs.length];
 
-        IOArray ios;
-
-        static foreach (i, IO; IOs) {
-            ios[i] = tree.context.io.replace(ioID!IO, cast(This) this);
-        }
-
         @mustuse
-        static struct Close {
-            private LayoutTree* tree;
+        static struct IOControl {
+
+            This node;
             IOArray ios;
-            ~this() {
+            bool isStarted;
+
+            void start() {
+                this.isStarted = true;
                 static foreach (i, IO; IOs) {
-                    tree.context.io.replace(ioID!IO, ios[i]);
+                    ios[i] = node.treeContext.io.replace(ioID!IO, node);
                 }
             }
+
+            void release() {
+                this.isStarted = false;
+            }
+
+            void stop() {
+                if (isStarted) {
+                    isStarted = false;
+                    static foreach (i, IO; IOs) {
+                        node.treeContext.io.replace(ioID!IO, ios[i]);
+                    }
+                }
+            }
+
+            ~this() {
+                stop();
+            }
+
         }
 
-        return Close(tree, ios);
+        return IOControl(cast(This) this);
 
     }
 
@@ -1139,10 +1199,10 @@ abstract class Node {
     /// such as when determining which nodes are hovered by mouse.
     ///
     /// While in a typical node this will be true for every pixel inside its padding box — and this
-    /// is the default behavior — some nodes are not of a rectangular shape, or contain largely 
+    /// is the default behavior — some nodes are not of a rectangular shape, or contain largely
     /// transparent areas.
     ///
-    /// User-provided implementation should override `inBoundsImpl`; calls testing the node's bounds should 
+    /// User-provided implementation should override `inBoundsImpl`; calls testing the node's bounds should
     /// use `inBounds`.
     ///
     /// This is rarely used in nodes built into Fluid. A notable example where this is overriden
@@ -1153,7 +1213,7 @@ abstract class Node {
     ///     outer    = Padding box of the node.
     ///     inner    = Content box of the node.
     ///     position = Tested position.
-    /// Returns: 
+    /// Returns:
     ///     True if the position is in the node's bounds.
     protected bool inBoundsImpl(Rectangle outer, Rectangle inner, Vector2 position) {
 
@@ -1185,10 +1245,10 @@ abstract class Node {
 
     }
 
-    /// The focus box defines the *focused* part of the node. This is relevant in nodes which may have a selectable 
-    /// subset, such as a dropdown box, which may be more important at present moment (selected). Scrolling actions 
+    /// The focus box defines the *focused* part of the node. This is relevant in nodes which may have a selectable
+    /// subset, such as a dropdown box, which may be more important at present moment (selected). Scrolling actions
     /// like `scrollIntoView` will use the focus box to make sure the selected area is presented to the user.
-    /// Returns: The focus box of the node. 
+    /// Returns: The focus box of the node.
     Rectangle focusBoxImpl(Rectangle inner) const {
 
         return inner;
@@ -1280,17 +1340,17 @@ abstract class Node {
 }
 
 /// Start a Fluid GUI app.
-/// 
+///
 /// This is meant to be the easiest way to launch a Fluid app. Call this in your `main()` function with the node holding
-/// your user interface, and that's it! The function will not return until the app is closed. 
+/// your user interface, and that's it! The function will not return until the app is closed.
 ///
 /// ---
 /// void main() {
-///     
+///
 ///     run(
 ///         label("Hello, World!"),
 ///     );
-/// 
+///
 /// }
 /// ---
 ///
@@ -1298,9 +1358,9 @@ abstract class Node {
 ///
 /// The exact behavior of this function is defined by the backend in use, so some functionality may vary. Some backends
 /// might not support this.
-/// 
+///
 /// Params:
-///     node = This node will serve as the root of your user interface until closed. If you wish to change it at 
+///     node = This node will serve as the root of your user interface until closed. If you wish to change it at
 ///         runtime, wrap it in a `NodeSlot`.
 void run(Node node) {
 
@@ -1315,7 +1375,7 @@ void run(Node node) {
 
     node.io = backend;
     backend.run(node);
-    
+
 }
 
 /// ditto

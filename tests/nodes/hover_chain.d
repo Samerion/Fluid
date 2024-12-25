@@ -1,4 +1,4 @@
-module new_io.hover_space;
+module nodes.hover_chain;
 
 import std.array;
 import fluid;
@@ -103,12 +103,12 @@ class HoverTracker : Node, Hoverable {
 
 }
 
-@("HoverSpace assigns unique IDs for each pointer number")
+@("HoverChain assigns unique IDs for each pointer number")
 unittest {
 
     MyHover device;
 
-    auto root = hoverSpace(
+    auto root = hoverChain(
         device = myHover(),
     );
 
@@ -122,14 +122,16 @@ unittest {
 
 }
 
-@("HoverSpace assigns unique IDs for different devices")
+@("HoverChain assigns unique IDs for different devices")
 unittest {
 
     MyHover firstDevice, secondDevice;
 
-    auto root = hoverSpace(
-        firstDevice  = myHover(),
-        secondDevice = myHover()
+    auto root = hoverChain(
+        vspace(
+            firstDevice  = myHover(),
+            secondDevice = myHover()
+        ),
     );
 
     firstDevice.pointers = [
@@ -144,19 +146,21 @@ unittest {
 
 }
 
-@("HoverSpace can list hovered nodes")
+@("HoverChain can list hovered nodes")
 unittest {
 
     MyHover device;
     Button one, two;
 
-    auto root = sizeLock!hoverSpace(
+    auto root = hoverChain(
         .nullTheme,
-        .sizeLimit(300, 300),
-        device = myHover(),
-        one    = button(.layout!(1, "fill"), "One", delegate { }),
-                 vframe(.layout!(1, "fill")),
-        two    = button(.layout!(1, "fill"), "Two", delegate { }),
+        sizeLock!vspace(
+            .sizeLimit(300, 300),
+            device = myHover(),
+            one    = button(.layout!(1, "fill"), "One", delegate { }),
+                     vframe(.layout!(1, "fill")),
+            two    = button(.layout!(1, "fill"), "Two", delegate { }),
+        ),
     );
 
     root.draw();
@@ -200,13 +204,14 @@ unittest {
     Button btn;
     Frame frame;
 
-    auto root = hoverSpace(
-        .layout!"fill",
-        device = myHover(),
-        onionFrame(
-            .layout!"fill",
-            btn   = button("One", delegate { }),
-            frame = vframe(.layout!"fill"),
+    auto root = hoverChain(
+        vspace(
+            device = myHover(),
+            onionFrame(
+                .layout!"fill",
+                btn   = button("One", delegate { }),
+                frame = vframe(.layout!"fill"),
+            ),
         ),
     );
 
@@ -231,25 +236,25 @@ unittest {
 
 }
 
-@("HoverSpace triggers input actions")
+@("HoverChain triggers input actions")
 unittest {
 
     MyHover device;
     Button btn;
-    HoverSpace hover;
+    HoverChain hover;
     int pressCount;
 
     auto map = InputMapping();
     map.bindNew!(FluidInputAction.press)(MouseIO.codes.left);
 
-    auto root = inputMapSpace(
+    auto root = inputMapChain(
         .nullTheme,
-        .layout!"fill",
         map,
-        hover = hoverSpace(
-            .layout!"fill",
-            device = myHover(),
-            btn    = button("One", delegate { pressCount++; }),
+        hover = hoverChain(
+            vspace(
+                device = myHover(),
+                btn    = button("One", delegate { pressCount++; }),
+            ),
         ),
     );
 
@@ -274,11 +279,11 @@ unittest {
 
 }
 
-@("HoverSpace actions won't apply if hover changes")
+@("HoverChain actions won't apply if hover changes")
 unittest {
 
     MyHover device;
-    HoverSpace hover;
+    HoverChain hover;
 
     int onePressed;
     int twoPressed;
@@ -286,14 +291,16 @@ unittest {
     auto map = InputMapping();
     map.bindNew!(FluidInputAction.press)(MouseIO.codes.left);
 
-    auto root = inputMapSpace(
+    auto root = inputMapChain(
         map,
-        hover = sizeLock!hoverSpace(
+        hover = hoverChain(
             .nullTheme,
-            .sizeLimit(400, 400),
-            device = myHover(),
-    		button(.layout!(1, "fill"), "One", delegate { onePressed++; }),
-            button(.layout!(1, "fill"), "Two", delegate { twoPressed++; }),
+            sizeLock!vspace(
+                .sizeLimit(400, 400),
+                device = myHover(),
+        		button(.layout!(1, "fill"), "One", delegate { onePressed++; }),
+                button(.layout!(1, "fill"), "Two", delegate { twoPressed++; }),
+            ),
         )
     );
 
@@ -344,24 +351,26 @@ unittest {
 
 }
 
-@("HoverAction triggers hover events, even if moved")
+@("HoverChain triggers hover events, even if moved")
 unittest {
 
     MyHover device;
-    HoverSpace hover;
+    HoverChain hover;
     HoverTracker tracker1, tracker2;
 
     auto map = InputMapping();
     map.bindNew!(FluidInputAction.press)(MouseIO.codes.left);
 
-    auto root = inputMapSpace(
+    auto root = inputMapChain(
         map,
-        hover = sizeLock!hoverSpace(
+        hover = hoverChain(
             .nullTheme,
-            .sizeLimit(400, 400),
-            device   = myHover(),
-            tracker1 = hoverTracker(.layout!(1, "fill")),
-            tracker2 = hoverTracker(.layout!(1, "fill")),
+            sizeLock!vspace(
+                .sizeLimit(400, 400),
+                device   = myHover(),
+                tracker1 = hoverTracker(.layout!(1, "fill")),
+                tracker2 = hoverTracker(.layout!(1, "fill")),
+            ),
         )
     );
 
@@ -437,18 +446,20 @@ unittest {
 
 }
 
-@("HoverSpace runs hoverImpl if ActionIO is absent")
+@("HoverChain runs hoverImpl if ActionIO is absent")
 unittest {
 
     MyHover device;
-    HoverSpace hover;
+    HoverChain hover;
     HoverTracker tracker;
 
-    auto root = hover = sizeLock!hoverSpace(
+    auto root = hover = hoverChain(
         .nullTheme,
-        .sizeLimit(400, 400),
-        device  = myHover(),
-        tracker = hoverTracker(.layout!(1, "fill")),
+        sizeLock!vspace(
+            .sizeLimit(400, 400),
+            device  = myHover(),
+            tracker = hoverTracker(.layout!(1, "fill")),
+        ),
     );
 
     device.pointers = [
@@ -459,19 +470,22 @@ unittest {
     
 }
 
-@("HoverSpace doesn't call input handlers on disabled nodes")
+@("HoverChain doesn't call input handlers on disabled nodes")
 unittest {
 
     MyHover device;
     HoverTracker inaccessibleTracker, mainTracker;
 
-    auto root = hoverSpace(
-        .layout!"fill",
-        device = myHover(),
-        onionFrame(
+    auto root = hoverChain(
+        .layout!(1, "fill"),
+        vspace(
             .layout!(1, "fill"),
-            inaccessibleTracker = hoverTracker(),
-            mainTracker         = hoverTracker(.layout!"fill")
+            device = myHover(),
+            onionFrame(
+                .layout!(1, "fill"),
+                inaccessibleTracker = hoverTracker(),
+                mainTracker         = hoverTracker(.layout!"fill")
+            ),
         ),
     );
 
@@ -499,16 +513,19 @@ unittest {
 
 }
 
-@("HoverSpace won't call handlers if disability status changes")
+@("HoverChain won't call handlers if disability status changes")
 unittest {
 
     MyHover device;
     HoverTracker tracker;
 
-    auto root = hoverSpace(
+    auto root = hoverChain(
         .layout!"fill",
-        device = myHover(),
-        tracker = hoverTracker(.layout!(1, "fill"))
+        vspace(
+            .layout!"fill",
+            device = myHover(),
+            tracker = hoverTracker(.layout!(1, "fill"))
+        ),
     );
 
     device.pointers = [
