@@ -1,4 +1,4 @@
-module new_io.input_map_space;
+module nodes.input_map_chain;
 
 import fluid;
 
@@ -55,7 +55,7 @@ class ActionTester : InputNode!Node {
 
 alias actionTester = nodeBuilder!ActionTester;
 
-@("InputMapSpace can trigger input events")
+@("InputMapChain can trigger input events")
 unittest {
 
     // Create bindings
@@ -66,7 +66,7 @@ unittest {
     map.bindNew!(FluidInputAction.submit)(KeyboardIO.codes.enter);
 
     auto tester = actionTester();
-    auto root = inputMapSpace(map, tester);
+    auto root = inputMapChain(map, tester);
 
     root.draw();
     assert(tester.pressed == 0);
@@ -105,14 +105,14 @@ unittest {
 
 }
 
-@("InputMapSpace emits a fallback event")
+@("InputMapChain emits a fallback event")
 unittest {
 
     auto map = InputMapping();
     map.bindNew!(FluidInputAction.press)(KeyboardIO.codes.space);
 
     auto tester = actionTester();
-    auto root = inputMapSpace(map, tester);
+    auto root = inputMapChain(map, tester);
 
     root.draw();
     assert(tester.frameCalls == 0);

@@ -1,13 +1,13 @@
-/// 
-module fluid.hover_space;
+///
+module fluid.hover_chain;
 
 import std.array;
 import std.algorithm;
 
 import fluid.node;
-import fluid.space;
 import fluid.types;
 import fluid.utils;
+import fluid.node_chain;
 
 import fluid.io.hover;
 import fluid.io.action;
@@ -17,15 +17,15 @@ import fluid.future.action;
 
 @safe:
 
-alias hoverSpace = nodeBuilder!HoverSpace;
+alias hoverChain = nodeBuilder!HoverChain;
 
-/// A hover space can be used to separate hover in different areas of the user interface, effectively treating them
+/// A hover chain can be used to separate hover in different areas of the user interface, effectively treating them
 /// like separate windows. A device node (like a mouse) can be placed to control nodes inside.
 ///
-/// For focus-based nodes like keyboard and gamepad, see `FocusSpace`.
+/// For focus-based nodes like keyboard and gamepad, see `FocusChain`.
 ///
-/// `HoverSpace` only works with nodes compatible with the new I/O system introduced in Fluid 0.7.2.
-class HoverSpace : Space, HoverIO {
+/// `HoverChain` only works with nodes compatible with the new I/O system introduced in Fluid 0.7.2.
+class HoverChain : NodeChain, HoverIO {
 
     ActionIO actionIO;
 
@@ -43,7 +43,7 @@ class HoverSpace : Space, HoverIO {
             Node node;
 
             /// Node that is being held, placed under the cursor at the time a button has been pressed.
-            /// Input actions won't fire if the hovered node, the one under the cursor, is different from the one 
+            /// Input actions won't fire if the hovered node, the one under the cursor, is different from the one
             /// that is being held.
             Node heldNode;
 
@@ -63,10 +63,12 @@ class HoverSpace : Space, HoverIO {
 
     }
 
-    this(Node[] nodes...) {
+    this() {
 
-        super(nodes);
+    }
 
+    this(Node next) {
+        super(next);
     }
 
     override int load(Pointer pointer) {
@@ -86,10 +88,10 @@ class HoverSpace : Space, HoverIO {
             auto updatedPointer = _pointers[index];
             updatedPointer.value.update(pointer);
             updatedPointer.value.load(this, index);
-            _pointers.reload(index, updatedPointer); 
+            _pointers.reload(index, updatedPointer);
             return index;
         }
-        
+
     }
 
     override inout(Pointer) fetch(int number) inout {
@@ -111,7 +113,7 @@ class HoverSpace : Space, HoverIO {
         if (actionIO) {
             actionIO.emitEvent(event, pointer.id, &runInputAction);
         }
-        
+
     }
 
     override bool isHovered(const Hoverable hoverable) const {
@@ -152,23 +154,37 @@ class HoverSpace : Space, HoverIO {
 
     }
 
-    override void resizeImpl(Vector2 space) {
+    override void beforeResize(Vector2) {
 
         use(actionIO);
         _pointers.startCycle();
 
-        auto frame = implementIO!HoverSpace();
-        super.resizeImpl(space);
+        auto frame = controlIO!HoverIO();
+        frame.start();
+        frame.release();
 
     }
 
-    override void drawImpl(Rectangle outer, Rectangle inner) {
+    override void afterResize(Vector2) {
 
-        // Draw the children and find the current hover
-        {
-            auto frame = startBranchAction(armBranchActions);
-            super.drawImpl(outer, inner);
-        }
+        auto frame = controlIO!HoverIO();
+        frame.stop();
+
+    }
+
+    override void beforeDraw(Rectangle outer, Rectangle inner) {
+
+        // Find the current hover in child nodes
+        auto frame = controlBranchAction(armBranchActions);
+        frame.start();
+        frame.release();
+
+    }
+
+    override void afterDraw(Rectangle outer, Rectangle inner) {
+
+        auto frame = controlBranchAction(armBranchActions);
+        frame.stop();
 
         // Update hover data
         foreach (ref pointer; _pointers[]) {
@@ -241,7 +257,7 @@ class HoverSpace : Space, HoverIO {
 
         // Try to handle the action
         const handled =
-            
+
             // Try to run the action
             (hover && hover.actionImpl(this, pointer.id, actionID, isActive))
 
@@ -274,7 +290,7 @@ class HoverSpace : Space, HoverIO {
 
     }
 
-    /// Run an input action implemented by this node. HoverSpace does not implement any by default.
+    /// Run an input action implemented by this node. `HoverChain` does not implement any by default.
     /// Params:
     ///     pointer  = Pointer associated with the event.
     ///     actionID = ID of the input action to perform.

@@ -11,13 +11,12 @@ unittest {
 
     Button btn;
 
-    auto frame = vscrollFrame(
-        .layout!(1, "fill"),
+    auto frame = sizeLock!vscrollFrame(
+        .sizeLimit(200, 100),
         btn = button(.layout!"fill", "Button to test hover slipping", delegate { assert(false); }),
         label("Text long enough to overflow this very small viewport and create a scrollbar"),
     );
-    auto hover = sizeLock!hoverSpace(
-        .sizeLimit(200, 100),
+    auto hover = hoverChain(
         .nullTheme,
         frame
     );

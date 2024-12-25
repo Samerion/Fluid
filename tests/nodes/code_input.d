@@ -372,8 +372,8 @@ unittest {
     map.bindNew!(FluidInputAction.outdent)(KeyboardIO.codes.leftShift, KeyboardIO.codes.tab);
 
     auto input = codeInput();
-    auto focus = focusSpace(input);
-    auto root = inputMapSpace(map, focus);
+    auto focus = focusChain(input);
+    auto root = inputMapChain(map, focus);
     focus.currentFocus = input;
     root.draw();
 
