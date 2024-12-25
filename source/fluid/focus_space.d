@@ -22,7 +22,7 @@ alias focusSpace = nodeBuilder!FocusSpace;
 /// A focus space can be used to separate focus in different areas of the user interface. A device node
 /// (focus-based, like a keyboard or gamepad) node can be placed to control nodes inside.
 ///
-/// For hover-based nodes like mouse, see `HoverSpace`.
+/// For hover-based nodes like mouse, see `HoverChain`.
 ///
 /// `FocusSpace` only works with nodes compatible with the new I/O system introduced in Fluid 0.7.2.
 class FocusSpace : Space, FocusIO {
