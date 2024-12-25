@@ -12,14 +12,11 @@ unittest {
     const size = Vector2(500, 200);
     const rect = Rectangle(0, 0, size.tupleof);
 
-    auto input = slider!int(
-        .layout!(1, "fill", "center"),
+    auto input = sizeLock!(slider!int)(
+        .sizeLimit(500, 200),
         iota(1, 4)
     );
-    auto hover = sizeLock!hoverChain(
-        .sizeLimit(500, 200),
-        input
-    );
+    auto hover = hoverChain(input);
     auto root = hover;
 
     root.draw();

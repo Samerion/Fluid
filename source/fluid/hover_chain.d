@@ -18,26 +18,6 @@ import fluid.future.action;
 @safe:
 
 alias hoverChain = nodeBuilder!HoverChain;
-alias HoverSpace = HoverChain;
-
-deprecated("REMOVE ASAP")
-HoverChain hoverSpace(Ts...)(Ts args) {
-
-    import fluid.space;
-    import fluid.structs;
-
-    alias cc = vspace;
-    enum paramCount = cc.leadingParams!Ts;
-
-    return hoverChain(
-        args[0 .. paramCount],
-        vspace(
-            layout!(1, "fill"),
-            args[paramCount .. $],
-        ),
-    );
-
-}
 
 /// A hover chain can be used to separate hover in different areas of the user interface, effectively treating them
 /// like separate windows. A device node (like a mouse) can be placed to control nodes inside.
@@ -310,7 +290,7 @@ class HoverChain : NodeChain, HoverIO {
 
     }
 
-    /// Run an input action implemented by this node. HoverSpace does not implement any by default.
+    /// Run an input action implemented by this node. `HoverChain` does not implement any by default.
     /// Params:
     ///     pointer  = Pointer associated with the event.
     ///     actionID = ID of the input action to perform.

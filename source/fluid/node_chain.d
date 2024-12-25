@@ -110,7 +110,7 @@ abstract class NodeChain : Node {
         return super.resizeChild(child, space);
     }
 
-    protected override void resizeImpl(Vector2 space) {
+    protected final override void resizeImpl(Vector2 space) {
 
         // Called from another `nodeChain`, skip this call
         if (_skipResizeImpl) {
@@ -149,7 +149,7 @@ abstract class NodeChain : Node {
 
     }
 
-    protected override void drawImpl(Rectangle outer, Rectangle inner) {
+    protected final override void drawImpl(Rectangle outer, Rectangle inner) {
 
         // Call beforeDraw on each part
         NodeChain chain = this;
