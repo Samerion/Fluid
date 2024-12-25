@@ -6,6 +6,8 @@ import fluid.utils;
 import fluid.style;
 import fluid.backend;
 
+import fluid.io.canvas;
+
 @safe:
 
 alias imageView = simpleConstructor!ImageView;
@@ -23,7 +25,6 @@ auto autoExpand(bool value = true) {
     }
 
     return AutoExpand(value);
-    
 
 }
 
@@ -33,7 +34,12 @@ auto autoExpand(bool value = true) {
 /// displayed in the middle of the available box.
 class ImageView : Node {
 
+    CanvasIO canvasIO;
+
     public {
+
+        /// Image this node should display, if any. Requires an active `CanvasIO` to display.
+        DrawableImage image;
 
         /// If true, size of this imageView is adjusted automatically. Changes made to `minSize` will be reversed on
         /// size update.
@@ -80,6 +86,25 @@ class ImageView : Node {
     this(T)(T source) {
 
         this.texture = source;
+        this.isSizeAutomatic = true;
+
+    }
+
+    /// Create an image node using given image.
+    /// Params:
+    ///     image   = Image to load.
+    ///     minSize = Minimum size of the node. Defaults to image size.
+    this(Image image, Vector2 minSize) {
+
+        super.minSize = minSize;
+        this.image = DrawableImage(image);
+
+    }
+
+    /// ditto
+    this(Image image) {
+
+        this.image = DrawableImage(image);
         this.isSizeAutomatic = true;
 
     }
@@ -182,51 +207,101 @@ class ImageView : Node {
         return _targetArea;
 
     }
-    
+
     override protected void resizeImpl(Vector2 space) @trusted {
 
         import std.algorithm : min;
 
-        // Lazy-load the texture if the backend wasn't present earlier
-        if (_texture == _texture.init && _texturePath) {
+        use(canvasIO);
 
-            _texture = tree.io.loadTexture(_texturePath);
-            _isOwner = true;
+        // New I/O system
+        if (canvasIO) {
+
+            // Load the image
+            load(canvasIO, image);
+
+            // Adjust size
+            if (isSizeAutomatic) {
+
+                // No texture loaded, shrink to nothingness
+                if (image.image == Image.init) {
+                    minSize = Vector2(0, 0);
+                }
+
+                else if (isAutoExpand) {
+                    minSize = fitInto(texture.viewportSize, space);
+                }
+
+                else {
+                    minSize = image.viewportSize;
+                }
+
+            }
 
         }
 
-        // Adjust size
-        if (isSizeAutomatic) {
+        // Old backend
+        else {
 
-            // No texture loaded, shrink to nothingness
-            if (_texture is _texture.init) {
-                minSize = Vector2(0, 0);
+            // Lazy-load the texture if the backend wasn't present earlier
+            if (_texture == _texture.init && _texturePath) {
+
+                _texture = tree.io.loadTexture(_texturePath);
+                _isOwner = true;
+
             }
 
-            else if (isAutoExpand) {
-                minSize = fitInto(texture.viewportSize, space);
-            }
+            // Adjust size
+            if (isSizeAutomatic) {
 
-            else {
-                minSize = texture.viewportSize;
+                // No texture loaded, shrink to nothingness
+                if (_texture is _texture.init) {
+                    minSize = Vector2(0, 0);
+                }
+
+                else if (isAutoExpand) {
+                    minSize = fitInto(texture.viewportSize, space);
+                }
+
+                else {
+                    minSize = texture.viewportSize;
+                }
+
             }
 
         }
 
     }
 
-    override protected void drawImpl(Rectangle, Rectangle rect) @trusted {
+    override protected void drawImpl(Rectangle, Rectangle inner) @trusted {
 
         import std.algorithm : min;
 
-        // Ignore if there is no texture to draw
-        if (texture.id <= 0) return;
+        if (canvasIO) {
 
-        const size     = fitInto(texture.viewportSize, rect.size);
-        const position = center(rect) - size/2;
+            // Ignore if there is no texture to draw
+            if (image.image == Image.init) return;
 
-        _targetArea = Rectangle(position.tupleof, size.tupleof);
-        _texture.draw(_targetArea);
+            const size     = fitInto(image.viewportSize, inner.size);
+            const position = center(inner) - size/2;
+
+            _targetArea = Rectangle(position.tupleof, size.tupleof);
+            image.draw(_targetArea);
+
+        }
+
+        else {
+
+            // Ignore if there is no texture to draw
+            if (texture.id <= 0) return;
+
+            const size     = fitInto(texture.viewportSize, inner.size);
+            const position = center(inner) - size/2;
+
+            _targetArea = Rectangle(position.tupleof, size.tupleof);
+            _texture.draw(_targetArea);
+
+        }
 
     }
 
