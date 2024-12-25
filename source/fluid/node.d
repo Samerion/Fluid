@@ -1002,13 +1002,15 @@ abstract class Node {
 
             // Run beforeResize actions
             foreach (action; tree.filterActions) {
-
                 action.beforeResize(this, space);
-
             }
 
             // Resize the node
             resizeImpl(space);
+
+            foreach (action; tree.filterActions) {
+                action.afterResize(this, space);
+            }
 
             assert(
                 minSize.x.isFinite && minSize.y.isFinite,

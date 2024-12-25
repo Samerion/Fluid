@@ -282,11 +282,28 @@ private class TestProbe : TreeAction {
 
     }
 
-    override void beforeTree(Node, Rectangle) {
+    override void started() {
 
         // Reset pass count
         assertsPassed = 0;
 
+    }
+
+    override void beforeResize(Node node, Vector2) {
+        stack ~= node;
+        this.subject = node;
+    }
+
+    override void afterResize(Node node, Vector2) {
+        stack.pop();
+
+        // Restore previous subject from the stack
+        if (!stack.empty) {
+            this.subject = stack.top;
+        }
+        else {
+            this.subject = null;
+        }
     }
 
     override void beforeDraw(Node node, Rectangle space, Rectangle outer, Rectangle inner) {
@@ -310,14 +327,11 @@ private class TestProbe : TreeAction {
 
     }
 
-    override void afterTree() {
+    override void stopped() {
 
         // Make sure the asserts pass
         assert(this.asserts.empty, format!"Assert[%s] failure: %s"(
             assertsPassed, this.asserts.front.toString));
-
-        // Don't iterate again
-        stop();
 
     }
 
