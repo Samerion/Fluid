@@ -1,4 +1,4 @@
-/// 
+///
 module fluid.hover_chain;
 
 import std.array;
@@ -43,7 +43,7 @@ class HoverChain : NodeChain, HoverIO {
             Node node;
 
             /// Node that is being held, placed under the cursor at the time a button has been pressed.
-            /// Input actions won't fire if the hovered node, the one under the cursor, is different from the one 
+            /// Input actions won't fire if the hovered node, the one under the cursor, is different from the one
             /// that is being held.
             Node heldNode;
 
@@ -88,10 +88,10 @@ class HoverChain : NodeChain, HoverIO {
             auto updatedPointer = _pointers[index];
             updatedPointer.value.update(pointer);
             updatedPointer.value.load(this, index);
-            _pointers.reload(index, updatedPointer); 
+            _pointers.reload(index, updatedPointer);
             return index;
         }
-        
+
     }
 
     override inout(Pointer) fetch(int number) inout {
@@ -113,7 +113,7 @@ class HoverChain : NodeChain, HoverIO {
         if (actionIO) {
             actionIO.emitEvent(event, pointer.id, &runInputAction);
         }
-        
+
     }
 
     override bool isHovered(const Hoverable hoverable) const {
@@ -257,7 +257,7 @@ class HoverChain : NodeChain, HoverIO {
 
         // Try to handle the action
         const handled =
-            
+
             // Try to run the action
             (hover && hover.actionImpl(this, pointer.id, actionID, isActive))
 

@@ -1,4 +1,4 @@
-module new_io.focus_space;
+module nodes.focus_chain;
 
 import fluid;
 import fluid.future.pipe;
@@ -59,7 +59,7 @@ class FocusTracker : Node, Focusable {
 
 }
 
-@("FocusSpace keeps track of current focus")
+@("FocusChain keeps track of current focus")
 unittest {
 
     int one;
@@ -67,9 +67,11 @@ unittest {
     Button incrementOne;
     Button incrementTwo;
 
-    auto root = focusSpace(
-        incrementOne = button("One", delegate { one++; }),
-        incrementTwo = button("Two", delegate { two++; }),
+    auto root = focusChain(
+        vspace(
+            incrementOne = button("One", delegate { one++; }),
+            incrementTwo = button("Two", delegate { two++; }),
+        ),
     );
 
     root.draw();
@@ -98,15 +100,15 @@ unittest {
 @("Multiple nodes can be focused if they belong to different focus spaces")
 unittest {
 
-    FocusSpace focus1, focus2;
+    FocusChain focus1, focus2;
     Button button1, button2;
     int one, two;
 
     auto root = vspace(
-        focus1 = focusSpace(
+        focus1 = focusChain(
             button1 = button("One", delegate { one++; }),
         ),
-        focus2 = focusSpace(
+        focus2 = focusChain(
             button2 = button("Two", delegate { two++; }),
         ),
     );
@@ -128,18 +130,20 @@ unittest {
 
 }
 
-@("FocusSpace can be nested")
+@("FocusChain can be nested")
 unittest {
 
-    FocusSpace focus1, focus2;
+    FocusChain focus1, focus2;
     Button button1, button2;
     int one, two;
 
     auto root = vspace(
-        focus1 = focusSpace(
-            button1 = button("One", delegate { one++; }),
-            focus2 = focusSpace(
-                button2 = button("Two", delegate { two++; }),
+        focus1 = focusChain(
+            vspace(
+                button1 = button("One", delegate { one++; }),
+                focus2 = focusChain(
+                    button2 = button("Two", delegate { two++; }),
+                ),
             ),
         ),
     );
@@ -153,15 +157,17 @@ unittest {
 
 }
 
-@("FocusSpace supports tabbing")
+@("FocusChain supports tabbing")
 unittest {
 
     Button[3] buttons;
 
-    auto root = focusSpace(
-        buttons[0] = button("One", delegate { }),
-        buttons[1] = button("Two", delegate { }),
-        buttons[2] = button("Three", delegate { }),
+    auto root = focusChain(
+        vspace(
+            buttons[0] = button("One", delegate { }),
+            buttons[1] = button("Two", delegate { }),
+            buttons[2] = button("Three", delegate { }),
+        ),
     );
     root.draw();
     buttons[0].focus();
@@ -180,15 +186,17 @@ unittest {
     assert(root.isFocused(buttons[0]));
 
 }
-@("FocusSpace supports tabbing (chained)")
+@("FocusChain supports tabbing (chained)")
 unittest {
 
     Button[3] buttons;
 
-    auto root = focusSpace(
-        buttons[0] = button("One", delegate { }),
-        buttons[1] = button("Two", delegate { }),
-        buttons[2] = button("Three", delegate { }),
+    auto root = focusChain(
+        vspace(
+            buttons[0] = button("One", delegate { }),
+            buttons[1] = button("Two", delegate { }),
+            buttons[2] = button("Three", delegate { }),
+        ),
     );
     root.draw();
     buttons[0].focus();
@@ -206,14 +214,16 @@ unittest {
 
 }
 
-@("FocusSpace automatically focuses first item on tab")
+@("FocusChain automatically focuses first item on tab")
 unittest {
 
     Button[3] buttons;
-    auto root = focusSpace(
-        buttons[0] = button("One", delegate { }),
-        buttons[1] = button("Two", delegate { }),
-        buttons[2] = button("Three", delegate { }),
+    auto root = focusChain(
+        vspace(
+            buttons[0] = button("One", delegate { }),
+            buttons[1] = button("Two", delegate { }),
+            buttons[2] = button("Three", delegate { }),
+        ),
     );
 
     assert(root.currentFocus is null);
@@ -233,14 +243,16 @@ unittest {
 
 }
 
-@("FocusSpace focuses the last item on shift tab")
+@("FocusChain focuses the last item on shift tab")
 unittest {
 
     Button[3] buttons;
-    auto root = focusSpace(
-        buttons[0] = button("One", delegate { }),
-        buttons[1] = button("Two", delegate { }),
-        buttons[2] = button("Three", delegate { }),
+    auto root = focusChain(
+        vspace(
+            buttons[0] = button("One", delegate { }),
+            buttons[1] = button("Two", delegate { }),
+            buttons[2] = button("Three", delegate { }),
+        ),
     );
 
     assert(root.currentFocus is null);
@@ -260,16 +272,18 @@ unittest {
 
 }
 
-@("FocusSpace tabbing wraps")
+@("FocusChain tabbing wraps")
 unittest {
 
     Button[3] buttons;
-    auto root = focusSpace(
-        buttons[0] = button("One", delegate { }),
+    auto root = focusChain(
         vspace(
-            buttons[1] = button("Two", delegate { }),
+            buttons[0] = button("One", delegate { }),
+            vspace(
+                buttons[1] = button("Two", delegate { }),
+            ),
+            buttons[2] = button("Three", delegate { }),
         ),
-        buttons[2] = button("Three", delegate { }),
     );
 
     root.focusNext()
@@ -295,18 +309,20 @@ unittest {
 
 }
 
-@("FocusSpace supports directional movement")
+@("FocusChain supports directional movement")
 unittest {
 
     Button[5] buttons;
-    auto root = focusSpace(
-        buttons[0] = button("Zero", delegate { }),
-        hspace(
-            buttons[1] = button("One", delegate { }),
-            buttons[2] = button("Two", delegate { }),
-            buttons[3] = button("Three", delegate { }),
+    auto root = focusChain(
+        vspace(
+            buttons[0] = button("Zero", delegate { }),
+            hspace(
+                buttons[1] = button("One", delegate { }),
+                buttons[2] = button("Two", delegate { }),
+                buttons[3] = button("Three", delegate { }),
+            ),
+            buttons[4] = button("Four", delegate { }),
         ),
-        buttons[4] = button("Four", delegate { }),
     );
 
     root.currentFocus = buttons[0];
@@ -333,14 +349,14 @@ unittest {
 
 }
 
-@("FocusSpace calls focusImpl as a fallback")
+@("FocusChain calls focusImpl as a fallback")
 unittest {
 
     auto map = InputMapping();
     map.bindNew!(FluidInputAction.press)(KeyboardIO.codes.space);
 
     auto tracker = focusTracker();
-    auto focus = focusSpace(tracker);
+    auto focus = focusChain(tracker);
     auto root = inputMapSpace(map, focus);
 
     root.draw();
@@ -373,11 +389,11 @@ unittest {
 
 }
 
-@("FocusSpace calls focusImpl if there is no ActionIO")
+@("FocusChain calls focusImpl if there is no ActionIO")
 unittest {
 
     auto tracker = focusTracker();
-    auto focus = focusSpace(tracker);
+    auto focus = focusChain(tracker);
     auto root = focus;
 
     root.draw();
@@ -390,11 +406,11 @@ unittest {
 
 }
 
-@("FocusSpace doesn't trigger events on disabled nodes")
+@("FocusChain doesn't trigger events on disabled nodes")
 unittest {
 
     auto tracker = focusTracker();
-    auto focus = focusSpace(tracker);
+    auto focus = focusChain(tracker);
     auto root = focus;
 
     // Focused for a frame while enabled
@@ -420,10 +436,12 @@ unittest {
 
     Button btn1, btn2, btn3;
 
-    auto root = focusSpace(
-        btn1 = button("One", delegate { }),
-        btn2 = button(.disabled, "Two", delegate { }),
-        btn3 = button("Three", delegate { }),
+    auto root = focusChain(
+        vspace(
+            btn1 = button("One", delegate { }),
+            btn2 = button(.disabled, "Two", delegate { }),
+            btn3 = button("Three", delegate { }),
+        ),
     );
 
     root.currentFocus = btn1;
@@ -444,10 +462,12 @@ unittest {
 
     Button btn1, btn2, btn3;
 
-    auto root = focusSpace(
-        btn1 = button("One", delegate { }),
-        btn2 = button(.disabled, "Two", delegate { }),
-        btn3 = button("Three", delegate { }),
+    auto root = focusChain(
+        vspace(
+            btn1 = button("One", delegate { }),
+            btn2 = button(.disabled, "Two", delegate { }),
+            btn3 = button("Three", delegate { }),
+        ),
     );
 
     root.currentFocus = btn1;

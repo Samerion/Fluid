@@ -13,7 +13,7 @@ class PlainInput : InputNode!Node {
     }
 
     override void drawImpl(Rectangle outer, Rectangle inner) {
-    } 
+    }
 
 }
 
@@ -21,7 +21,7 @@ class PlainInput : InputNode!Node {
 unittest {
 
     auto input = plainInput();
-    auto root = focusSpace(input);
+    auto root = focusChain(input);
 
     root.draw();
     input.focus();
@@ -36,7 +36,7 @@ unittest {
     int submitted;
 
     auto btn = button("Hello!", delegate { submitted++; });
-    auto root = focusSpace(btn);
+    auto root = focusChain(btn);
     root.currentFocus = btn;
 
     // Press the button
@@ -68,7 +68,7 @@ unittest {
     // TODO use a dedicated node instead of text input
 
     auto input = textInput("Placeholder", delegate { });
-    auto root = focusSpace(input);
+    auto root = focusChain(input);
     root.currentFocus = input;
 
     // Try typing into the input box

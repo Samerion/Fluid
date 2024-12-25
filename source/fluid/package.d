@@ -39,7 +39,7 @@ public import
     fluid.file_input,
     fluid.field_slot,
     fluid.frame,
-    fluid.focus_space,
+    fluid.focus_chain,
     fluid.grid,
     fluid.hover_button,
     fluid.hover_chain,

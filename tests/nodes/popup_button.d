@@ -27,7 +27,7 @@ unittest {
             buttons[5] = button("Send to device", &action!"device"),
         ),
     );
-    auto focus = focusSpace(nullTheme, main);
+    auto focus = focusChain(nullTheme, main);
     auto root = focus;
 
     auto sharePopupButton = cast(PopupButton) buttons[2];
@@ -42,7 +42,7 @@ unittest {
         // Press it
         .then(() => focus.runInputAction!(FluidInputAction.press))
         .then(_ => root.nextFrame)
-        
+
         // A popup should open
         .then(() => assert(focus.isFocused(buttons[0]), "The first button inside should be focused"))
 
