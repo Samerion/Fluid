@@ -110,7 +110,7 @@ class TestSpace : Space, CanvasIO {
             else {
                 _imageIndices[id] = newIndex;
             }
-            
+
         });
 
         // Resize contents
@@ -175,7 +175,7 @@ class TestSpace : Space, CanvasIO {
     override void drawImageImpl(DrawableImage image, Rectangle destination, Color tint) nothrow {
 
         assert(
-            isImageLoaded(image), 
+            isImageLoaded(image),
             "Trying to draw an image without loading");
 
         _probe.runAssert(a => a.drawImage(_probe.subject, image, destination, tint));
@@ -185,7 +185,7 @@ class TestSpace : Space, CanvasIO {
     override void drawHintedImageImpl(DrawableImage image, Rectangle destination, Color tint) nothrow {
 
         assert(
-            isImageLoaded(image), 
+            isImageLoaded(image),
             "Trying to draw an image without loading");
 
         _probe.runAssert(a => a.drawHintedImage(_probe.subject, image, destination, tint));
@@ -324,10 +324,10 @@ private class TestProbe : TreeAction {
 }
 
 /// Class to test I/O calls performed by Fluid nodes. Any I/O method of `TestSpace` will call this.
-/// 
+///
 /// If a tester method returns `pass` or `passNext`, the assert passes, and the next one is loaded.
-/// It it returns `false`, the frame continues until all nodes are exhausted (and fails), 
-/// or a matching test is found. 
+/// It it returns `false`, the frame continues until all nodes are exhausted (and fails),
+/// or a matching test is found.
 ///
 /// `beforeDraw` or `resume` is expected to be called before any of the I/O calls.
 interface Assert {
@@ -392,7 +392,7 @@ auto drawsRectangle(Node subject) {
             }
 
             if (isTestingColor) {
-                assert(color == targetColor, 
+                assert(color == targetColor,
                     format!"Expected color %s, got %s"(targetColor.toHex, color.toHex).assertNotThrown);
             }
 
@@ -562,7 +562,9 @@ auto drawsImage(Node subject) {
 
             if (isTestingImage) {
                 assert(image.format == targetImage.format);
-                assert(image.data is targetImage.data);
+                assert(image.data is targetImage.data,
+                    format!"%s should draw image 0x%02x but draws 0x%02x"(
+                        node, cast(size_t) targetImage.data.ptr, cast(size_t) image.data.ptr).assertNotThrown);
 
                 if (image.format == Image.Format.palettedAlpha) {
                     assert(image.palette == targetImage.palette);
@@ -570,10 +572,11 @@ auto drawsImage(Node subject) {
             }
 
             if (isTestingArea) {
-                assert(equal(targetArea.x, rect.x));
-                assert(equal(targetArea.y, rect.y));
-                assert(equal(targetArea.width, rect.width));
-                assert(equal(targetArea.height, rect.height));
+                assert(equal(targetArea.x, rect.x)
+                    && equal(targetArea.y, rect.y)
+                    && equal(targetArea.width, rect.width)
+                    && equal(targetArea.height, rect.height),
+                    format!"%s should draw image at %s, but draws at %s"(node, targetArea, rect).assertNotThrown);
             }
 
             if (isTestingColor) {
@@ -604,10 +607,25 @@ auto drawsImage(Node subject) {
             return this;
 
         }
-        
+
         typeof(this) at(typeof(Vector2.tupleof) position) @safe {
             isTestingArea = true;
             targetArea = Rectangle(position, targetImage.size.tupleof);
+            // TODO DPI
+            return this;
+        }
+
+        typeof(this) at(Rectangle area) @safe {
+            isTestingArea = true;
+            targetArea = area;
+            // TODO DPI
+            return this;
+
+        }
+
+        typeof(this) at(typeof(Rectangle.tupleof) position) @safe {
+            isTestingArea = true;
+            targetArea = Rectangle(position);
             // TODO DPI
             return this;
         }
@@ -791,7 +809,7 @@ auto doesNotDrawChildren(Node parent) {
 
 }
 
-/// Assert true if the parent requests drawing the node, 
+/// Assert true if the parent requests drawing the node,
 /// but the node does not need to draw anything for the assert to succeed.
 auto isDrawn(Node subject) {
 
@@ -843,7 +861,7 @@ auto doesNotDraw(Node subject) {
         if (!matched) {
             if (!isSubject) {
                 return false;
-            } 
+            }
             matched = true;
         }
 
@@ -888,19 +906,19 @@ auto drawsWildcard(alias dg)(lazy string message) {
         override bool cropArea(Node node, Rectangle) nothrow {
             return dg(node, "cropArea");
         }
-        
+
         override bool resetCropArea(Node node) nothrow {
             return dg(node, "resetCropArea");
         }
-        
+
         override bool drawTriangle(Node node, Vector2, Vector2, Vector2, Color) nothrow {
             return dg(node, "drawTriangle");
         }
-        
+
         override bool drawCircle(Node node, Vector2, float, Color) nothrow {
             return dg(node, "drawCircle");
         }
-        
+
         override bool drawRectangle(Node node, Rectangle, Color) nothrow {
             return dg(node, "drawRectangle");
         }
@@ -920,7 +938,7 @@ auto drawsWildcard(alias dg)(lazy string message) {
         override string toString() const {
             return message;
         }
-        
+
     };
 
 }

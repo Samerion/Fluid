@@ -504,7 +504,7 @@ struct Image {
 
         put(writer, "Image(");
         put(writer, format.to!string);
-        put(writer, ", ");
+        put(writer, ", 0x");
         put(writer, (cast(size_t) data.ptr).toChars!16);
         put(writer, ", ");
         if (format == Format.palettedAlpha) {
