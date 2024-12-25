@@ -1,14 +1,14 @@
-/// 
-module fluid.focus_space;
+///
+module fluid.focus_chain;
 
 import optional;
 
 import fluid.node;
-import fluid.space;
 import fluid.types;
 import fluid.style;
 import fluid.utils;
 import fluid.actions;
+import fluid.node_chain;
 
 import fluid.io.focus;
 import fluid.io.action;
@@ -17,15 +17,15 @@ import fluid.future.action;
 
 @safe:
 
-alias focusSpace = nodeBuilder!FocusSpace;
+alias focusChain = nodeBuilder!FocusChain;
 
-/// A focus space can be used to separate focus in different areas of the user interface. A device node
+/// A focus chain can be used to separate focus in different areas of the user interface. A device node
 /// (focus-based, like a keyboard or gamepad) node can be placed to control nodes inside.
 ///
 /// For hover-based nodes like mouse, see `HoverChain`.
 ///
-/// `FocusSpace` only works with nodes compatible with the new I/O system introduced in Fluid 0.7.2.
-class FocusSpace : Space, FocusIO {
+/// `FocusChain` only works with nodes compatible with the new I/O system introduced in Fluid 0.7.2.
+class FocusChain : NodeChain, FocusIO {
 
     ActionIO actionIO;
 
@@ -52,9 +52,13 @@ class FocusSpace : Space, FocusIO {
 
     }
 
-    this(Node[] nodes...) {
+    this() {
+        this(null);
+    }
 
-        super(nodes);
+    this(Node next) {
+
+        super(next);
         findFocusBoxAction    = new FindFocusBoxAction(this);
         orderedFocusAction    = new OrderedFocusAction;
         positionalFocusAction = new PositionalFocusAction;
@@ -65,8 +69,8 @@ class FocusSpace : Space, FocusIO {
 
     }
 
-    /// If a node inside `FocusSpace` triggers an input event (for example a keyboard node, 
-    /// like a keyboard automaton), another node in the space may handle the event. This property
+    /// If a node inside `FocusChain` triggers an input event (for example a keyboard node,
+    /// like a keyboard automaton), another node inside may handle the event. This property
     /// will be set to true after that happens.
     ///
     /// This status is reset the moment this frame is updated again.
@@ -87,22 +91,34 @@ class FocusSpace : Space, FocusIO {
         return _focus = newFocus;
     }
 
-    override void resizeImpl(Vector2 space) {
-
-        auto frame = implementIO!FocusSpace();
+    override void beforeResize(Vector2) {
 
         use(actionIO);
 
-        super.resizeImpl(space);
+        auto frame = controlIO!FocusChain();
+        frame.start();
+        frame.release();
 
     }
 
-    override void drawImpl(Rectangle outer, Rectangle inner) {
+    override void afterResize(Vector2) {
 
-        auto frame = startBranchAction(findFocusBoxAction);
+        auto frame = controlIO!FocusChain();
+        frame.stop();
+
+    }
+
+    override void beforeDraw(Rectangle, Rectangle) {
+
+        auto frame = controlBranchAction(findFocusBoxAction);
+        frame.start();
+        frame.release();
 
         _wasInputHandled = false;
-        super.drawImpl(outer, inner);
+
+    }
+
+    override void afterDraw(Rectangle outer, Rectangle inner) {
 
         // If positional focus action is running, it is about to finish;
         // Read the focus box it found
@@ -126,7 +142,7 @@ class FocusSpace : Space, FocusIO {
     ///
     /// Params:
     ///     actionID = Input action for the node to handle.
-    ///     isActive = If true (default) the action is active, on top of being simply emitted. 
+    ///     isActive = If true (default) the action is active, on top of being simply emitted.
     ///         Most handlers only react to active actions.
     /// Returns:
     ///     True if the action was handled.
@@ -147,7 +163,7 @@ class FocusSpace : Space, FocusIO {
 
         // Mark as handled, if so
         _wasInputHandled = _wasInputHandled || handled;
-        
+
         return handled;
 
     }
@@ -180,7 +196,7 @@ class FocusSpace : Space, FocusIO {
 
     }
 
-    /// `focusNext` focuses the next, and `focusPrevious` focuses the previous node, relative to the one 
+    /// `focusNext` focuses the next, and `focusPrevious` focuses the previous node, relative to the one
     /// that is currently focused.
     ///
     /// Params:
@@ -222,7 +238,7 @@ class FocusSpace : Space, FocusIO {
     /// This launches a tree action that will find a candidate node and switch focus to it during the next frame.
     /// Nodes that are the closest semantically (are in the same container node, or overall close in the tree) will
     /// be chosen first; screen distance will be used when two nodes have the same weight.
-    /// 
+    ///
     /// Returns:
     ///     The launched tree action. You can use `.then` to attach a callback that will run as soon as
     ///     the node is found.
@@ -280,7 +296,7 @@ class FocusSpace : Space, FocusIO {
     FocusSearchAction focusLast() {
         auto action = focusRecurseChildren(this);
         action.isReverse = true;
-        return action; 
+        return action;
     }
 
     @(FluidInputAction.focusNext)

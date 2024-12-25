@@ -55,7 +55,7 @@ unittest {
 
         override void drawImpl(Rectangle outer, Rectangle inner) {
             drawCount++;
-            canvasIO.drawRectangle(inner, 
+            canvasIO.drawRectangle(inner,
                 color("#123"));
         }
 
@@ -85,10 +85,12 @@ unittest {
     Button firstButton, secondButton;
     Space space;
 
-    auto root = focusSpace(
-        firstButton = button("One", delegate { clicked++; }),
-        space       = vspace(
-            secondButton = button("One", delegate { clicked++; }),
+    auto root = focusChain(
+        vspace(
+            firstButton = button("One", delegate { clicked++; }),
+            space       = vspace(
+                secondButton = button("One", delegate { clicked++; }),
+            ),
         ),
     );
 
@@ -255,7 +257,7 @@ unittest {
     );
     auto test = testSpace(
         .layout!"fill",
-        theme, 
+        theme,
         root
     );
 

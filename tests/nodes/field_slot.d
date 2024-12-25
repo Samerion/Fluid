@@ -14,8 +14,8 @@ unittest {
         label("Hello, World!"),
         input = textInput(),
     );
-    auto hover = hoverChain();
-    auto focus = focusSpace();
+    auto hover = hoverChain(.layout!(1, "fill"));
+    auto focus = focusChain(.layout!(1, "fill"));
     auto root = chain(focus, hover, slot);
 
     root.draw();
@@ -54,7 +54,7 @@ unittest {
         input = textInput(),
     );
     auto hover = hoverChain();
-    auto focus = focusSpace();
+    auto focus = focusChain();
     auto root = chain(hover, focus, slot);
     root.draw();
 
