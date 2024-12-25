@@ -26,6 +26,27 @@ class MyImage : Node {
 
 }
 
+alias emitSignal = nodeBuilder!EmitSignal;
+class EmitSignal : Node {
+
+    DebugSignalIO debugSignalIO;
+    string signal;
+
+    this(string signal) {
+        this.signal = signal;
+    }
+
+    override void resizeImpl(Vector2) {
+        require(debugSignalIO);
+        minSize = Vector2();
+    }
+
+    override void drawImpl(Rectangle, Rectangle) {
+        debugSignalIO.emitSignal(signal);
+    }
+
+}
+
 @("TestSpace can perform basic tests with draws, drawsRectangle and doesNotDraw")
 unittest {
 
@@ -271,12 +292,12 @@ unittest {
 unittest {
 
     auto image1 = myImage(
-        generateColorImage(4, 4, 
+        generateColorImage(4, 4,
             color("#f00")
         )
-    );    
+    );
     auto image2 = myImage(
-        generateColorImage(4, 4, 
+        generateColorImage(4, 4,
             color("#0f0")
         )
     );
@@ -341,7 +362,7 @@ unittest {
         frames[4].drawsRectangle().ofColor("#21212132"),
         frames[5].drawsRectangle().ofColor("#3232324b"),
     );
-    
+
 }
 
 @("Tint can be locked to prevent changes")
@@ -362,7 +383,7 @@ unittest {
             scope (exit) treeContext.unlockTint();
 
             super.drawImpl(outer, inner);
-            
+
         }
 
     }
@@ -403,5 +424,36 @@ unittest {
         frames[5].drawsRectangle().ofColor("#4b4b4b71"),
         frames[6].drawsRectangle().ofColor("#3232324b"),
     );
-    
+
+}
+
+@("TestSpace can capture and analyze debug signals")
+unittest {
+
+    EmitSignal[3] emitters;
+
+    auto root = testSpace(
+        emitters[0] = emitSignal("one"),
+        emitters[1] = emitSignal("two"),
+        emitters[2] = emitSignal("three"),
+    );
+
+    root.drawAndAssert(
+        emitters[0].emits("one"),
+        emitters[1].emits("two"),
+        emitters[2].emits("three"),
+    );
+
+    root.drawAndAssertFailure(
+        emitters[0].emits("two"),
+    );
+
+    root.drawAndAssertFailure(
+        emitters[2].emits("one"),
+    );
+
+    assert(root.emitCount("one") == 3);
+    assert(root.emitCount("two") == 3);
+    assert(root.emitCount("three") == 3);
+
 }

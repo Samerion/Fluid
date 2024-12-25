@@ -25,6 +25,7 @@ import fluid.input;
 import fluid.backend;
 
 import fluid.io.canvas;
+import fluid.io.debug_signal;
 
 import fluid.future.pipe;
 import fluid.future.arena;
@@ -38,7 +39,7 @@ alias htestSpace = nodeBuilder!(TestSpace, (a) {
 });
 
 /// This node allows automatically testing if other nodes draw their contents as expected.
-class TestSpace : Space, CanvasIO {
+class TestSpace : Space, CanvasIO, DebugSignalIO {
 
     // TODO DPI tests
 
@@ -58,6 +59,9 @@ class TestSpace : Space, CanvasIO {
 
         /// Map of image pointers (image.data.ptr) to indices in the resource arena
         int[size_t] _imageIndices;
+
+        /// Track number of debug signals received per signal name.
+        int[string] _debugSignals;
 
     }
 
@@ -128,9 +132,26 @@ class TestSpace : Space, CanvasIO {
         return value;
     }
 
+    /// Returns:
+    ///     The number of times a debug signal has been emitted.
+    /// Params:
+    ///     name = Name of the debug signal.
+    int emitCount(string name) const {
+
+        return _debugSignals.get(name, 0);
+
+    }
+
     override Optional!Rectangle cropArea() const nothrow {
 
         return _cropArea;
+
+    }
+
+    override void emitSignal(string name) nothrow {
+
+        assertNotThrown(_debugSignals.require(name, 0)++);
+        _probe.runAssert(a => a.emitSignal(_probe.subject, name));
 
     }
 
@@ -354,6 +375,9 @@ interface Assert {
     // Tree
     bool beforeDraw(Node node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) nothrow;
     bool afterDraw(Node node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) nothrow;
+
+    // DebugSignalIO
+    bool emitSignal(Node node, string name) nothrow;
 
     // CanvasIO
     bool cropArea(Node node, Rectangle area) nothrow;
@@ -901,6 +925,26 @@ auto doesNotDraw(Node subject) {
 
 }
 
+/// Ensure the node emits a debug signal.
+auto emits(Node subject, string name) {
+
+    return new class BlackHole!Assert {
+
+        override bool emitSignal(Node node, string emittedName) {
+
+            return subject.opEquals(node).assertNotThrown
+                && name == emittedName;
+
+        }
+
+        override string toString() const {
+            return format!"%s should emit %s"(subject, name);
+        }
+
+    };
+
+}
+
 auto drawsWildcard(alias dg)(lazy string message) {
 
     return new class Assert {
@@ -923,6 +967,10 @@ auto drawsWildcard(alias dg)(lazy string message) {
 
         override bool resetCropArea(Node node) nothrow {
             return dg(node, "resetCropArea");
+        }
+
+        override bool emitSignal(Node node, string) nothrow {
+            return dg(node, "emitSignal");
         }
 
         override bool drawTriangle(Node node, Vector2, Vector2, Vector2, Color) nothrow {
