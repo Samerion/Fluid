@@ -1,12 +1,12 @@
-module fluid.input_map_space;
+module fluid.input_map_chain;
 
 import std.algorithm;
 
 import fluid.node;
-import fluid.space;
 import fluid.utils;
 import fluid.input;
 import fluid.types;
+import fluid.node_chain;
 
 import fluid.io.action;
 
@@ -14,9 +14,9 @@ import fluid.future.stack;
 
 @safe:
 
-alias inputMapSpace = nodeBuilder!InputMapSpace;
+alias inputMapChain  = nodeBuilder!InputMapChain;
 
-class InputMapSpace : Space, ActionIO {
+class InputMapChain : NodeChain, ActionIO {
 
     private struct ReceivedInputEvent {
         InputEvent event;
@@ -38,21 +38,27 @@ class InputMapSpace : Space, ActionIO {
 
     }
 
-    this(InputMapping map, Node[] nodes...) {
-        super(nodes);
+    this(InputMapping map, Node next = null) {
+        super(next);
         this.map = map;
     }
 
-    override void resizeImpl(Vector2 space) {
+    override void beforeResize(Vector2) {
 
-        auto frame = this.implementIO();
-        super.resizeImpl(space);
+        auto frame = this.controlIO();
+        frame.start();
+        frame.release();
 
     }
 
-    override void drawImpl(Rectangle outer, Rectangle inner) {
+    override void afterResize(Vector2) {
 
-        super.drawImpl(outer, inner);
+        auto frame = this.controlIO();
+        frame.stop();
+
+    }
+
+    override void afterDraw(Rectangle, Rectangle) {
 
         // Process all input events
         processEvents();

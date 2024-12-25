@@ -373,7 +373,7 @@ unittest {
 
     auto input = codeInput();
     auto focus = focusChain(input);
-    auto root = inputMapSpace(map, focus);
+    auto root = inputMapChain(map, focus);
     focus.currentFocus = input;
     root.draw();
 

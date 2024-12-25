@@ -97,11 +97,11 @@ abstract class NodeChain : Node {
         return _nextChain;
     }
 
-    protected abstract void beforeResize(Vector2 space);
-    protected abstract void afterResize(Vector2 space);
+    protected void beforeResize(Vector2 space) { }
+    protected void afterResize(Vector2 space) { }
 
-    protected abstract void beforeDraw(Rectangle outer, Rectangle inner);
-    protected abstract void afterDraw(Rectangle outer, Rectangle inner);
+    protected void beforeDraw(Rectangle outer, Rectangle inner) { }
+    protected void afterDraw(Rectangle outer, Rectangle inner) { }
 
     alias resizeChild = Node.resizeChild;
 

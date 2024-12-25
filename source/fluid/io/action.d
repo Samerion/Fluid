@@ -37,7 +37,7 @@ interface ActionIO : IO {
     /// and `focusImpl`, which only trigger if no input action has been activated.
     ///
     /// Note that `CoreAction.frame` might, or might not, be emitted if another action event has been emitted during
-    /// the same frame. `InputMapSpace` will only emit `CoreAction.frame` is no other input action has been handled.
+    /// the same frame. `InputMapChain` will only emit `CoreAction.frame` is no other input action has been handled.
     static InputEvent frameEvent() {
 
         const code = InputEventCode(ioID!ActionIO, 1);
