@@ -357,7 +357,7 @@ unittest {
 
     auto tracker = focusTracker();
     auto focus = focusChain(tracker);
-    auto root = inputMapSpace(map, focus);
+    auto root = inputMapChain(map, focus);
 
     root.draw();
     assert(tracker.focusImplCalls == 0);

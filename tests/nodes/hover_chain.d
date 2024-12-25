@@ -247,7 +247,7 @@ unittest {
     auto map = InputMapping();
     map.bindNew!(FluidInputAction.press)(MouseIO.codes.left);
 
-    auto root = inputMapSpace(
+    auto root = inputMapChain(
         .nullTheme,
         map,
         hover = hoverChain(
@@ -291,7 +291,7 @@ unittest {
     auto map = InputMapping();
     map.bindNew!(FluidInputAction.press)(MouseIO.codes.left);
 
-    auto root = inputMapSpace(
+    auto root = inputMapChain(
         map,
         hover = hoverChain(
             .nullTheme,
@@ -361,7 +361,7 @@ unittest {
     auto map = InputMapping();
     map.bindNew!(FluidInputAction.press)(MouseIO.codes.left);
 
-    auto root = inputMapSpace(
+    auto root = inputMapChain(
         map,
         hover = hoverChain(
             .nullTheme,

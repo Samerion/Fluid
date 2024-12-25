@@ -28,7 +28,6 @@ else {
 
 public import
     fluid.backend,
-    fluid.input_map_space,
     fluid.actions,
     fluid.button,
     fluid.checkbox,
@@ -45,6 +44,7 @@ public import
     fluid.hover_chain,
     fluid.image_view,
     fluid.input,
+    fluid.input_map_chain,
     fluid.io,
     fluid.label,
     fluid.map_frame,
