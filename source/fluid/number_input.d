@@ -14,6 +14,9 @@ import fluid.backend;
 import fluid.structs;
 import fluid.text_input;
 
+import fluid.io.hover;
+import fluid.io.canvas;
+
 alias numberInput(T) = simpleConstructor!(NumberInput!T);
 alias intInput = simpleConstructor!IntInput;
 alias floatInput = simpleConstructor!FloatInput;
@@ -76,8 +79,6 @@ class NumberInput(T) : AbstractNumberInput {
     }
 
     override void drawImpl(Rectangle outer, Rectangle inner) {
-
-        auto style = pickStyle();
 
         super.drawImpl(outer, inner);
         drawChild(spinner, inner);
@@ -200,7 +201,7 @@ unittest {
 
 }
 
-@("[TODO] Legacy: NumberInput supports math operations")
+@("NumberInput supports math operations")
 unittest {
 
     int calls;
@@ -325,9 +326,13 @@ abstract class AbstractNumberInput : TextInput {
 }
 
 /// Increment and decrement buttons that appear on the right of number inputs.
-class NumberInputSpinner : Node, FluidHoverable {
+class NumberInputSpinner : Node, FluidHoverable, Hoverable {
 
-    mixin enableInputActions;
+    mixin FluidHoverable.enableInputActions;
+    mixin Hoverable.enableInputActions;
+
+    CanvasIO canvasIO;
+    HoverIO hoverIO;
 
     /// Additional features available for number input styling
     static class Extra : typeof(super).Extra {
@@ -350,6 +355,12 @@ class NumberInputSpinner : Node, FluidHoverable {
 
     }
 
+    protected {
+
+        DrawableImage spinnerImage;
+
+    }
+
     private {
 
         Rectangle _lastRectangle;
@@ -364,20 +375,29 @@ class NumberInputSpinner : Node, FluidHoverable {
     }
 
     override ref inout(bool) isDisabled() inout {
-
         return super.isDisabled();
+    }
 
+    override bool blocksInput() const {
+        return isDisabled || isDisabledInherited;
     }
 
     override bool isHovered() const {
-
         return super.isHovered();
-
     }
 
     override void resizeImpl(Vector2) {
 
+        use(hoverIO);
+        use(canvasIO);
+
         minSize = Vector2();
+
+        // Load image for the spinner from CanvasIO
+        if (canvasIO) {
+            spinnerImage = getImage(style);
+            load(canvasIO, spinnerImage);
+        }
 
     }
 
@@ -393,21 +413,34 @@ class NumberInputSpinner : Node, FluidHoverable {
 
         auto style = pickStyle();
 
-        style.drawBackground(io, outer);
+        style.drawBackground(io, canvasIO, outer);
+
+        _lastRectangle = buttonsRectangle(style, inner);
+
+        // If using canvasIO, draw the image
+        if (canvasIO) {
+            spinnerImage.draw(_lastRectangle);
+        }
 
         // If there's a texture for buttons, display it
-        if (auto texture = getTexture(style)) {
-
-            _lastRectangle = buttonsRectangle(style, inner);
-
+        else if (auto texture = getTexture(style)) {
             texture.draw(_lastRectangle);
-
         }
 
     }
 
     /// Get rectangle for the buttons
     Rectangle buttonsRectangle(const Style style, Rectangle inner) {
+
+        if (spinnerImage != Image.init) {
+
+            const scale = inner.height / spinnerImage.height;
+            const size = spinnerImage.viewportSize * scale;
+            const position = end(inner) - size;
+
+            return Rectangle(position.tupleof, size.tupleof);
+
+        }
 
         if (auto texture = getTexture(style)) {
 
@@ -424,25 +457,47 @@ class NumberInputSpinner : Node, FluidHoverable {
     }
 
     @(FluidInputAction.press)
-    void press() {
+    void press(Pointer pointer) {
 
         // Above center (increment)
-        if (io.mousePosition.y < center(_lastRectangle).y) {
-
+        if (pointer.position.y < center(_lastRectangle).y) {
             if (incremented) incremented();
-
         }
 
         // Below center (decrement)
         else {
-
             if (decremented) decremented();
+        }
 
+    }
+
+    @(FluidInputAction.press)
+    void press() {
+
+        // Polyfill for old I/O
+        if (!hoverIO) {
+            Pointer pointer;
+            pointer.position = io.mousePosition;
+            press(pointer);
         }
 
     }
 
     void mouseImpl() {
+
+    }
+
+    bool hoverImpl() {
+        return false;
+    }
+
+    /// Get image used by the spinner.
+    protected Image getImage(Style style) {
+
+        auto extra = cast(Extra) style.extra;
+        if (!extra) return Image.init;
+
+        return extra.buttons;
 
     }
 
@@ -509,7 +564,7 @@ struct ExpressionResult(T) {
 
 }
 
-/// Evalute a string containing a mathematical expression and return the result.
+/// Evaluate a string containing a mathematical expression and return the result.
 ///
 /// Supported operations are `+`, `-`, `*` and `/`
 ///
