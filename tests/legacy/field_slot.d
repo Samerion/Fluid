@@ -1,3 +1,4 @@
+@Migrated
 module legacy.field_slot;
 
 import fluid;
@@ -45,6 +46,7 @@ unittest {
 }
 
 @("FieldSlot can take hover from non-hoverable child nodes")
+@Abandoned
 unittest {
 
     import fluid.space;
