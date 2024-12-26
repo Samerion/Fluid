@@ -195,7 +195,8 @@ unittest {
 
 }
 
-@("[TODO] Legacy: TextInput text can be selected with mouse")
+@("TextInput text can be selected with mouse")
+@Migrated
 unittest {
 
     // This test relies on properties of the default typeface
@@ -240,7 +241,8 @@ unittest {
 
 }
 
-@("[TODO] Legacy: Double-click selects words, and triple-click selects lines")
+@("Double-click selects words, and triple-click selects lines")
+@Migrated
 unittest {
 
     // This test relies on properties of the default typeface
@@ -630,7 +632,8 @@ unittest {
 
 }
 
-@("[TODO] Legacy: caretToMouse correctly maps mouse coordinates to internal")
+@("caretToMouse correctly maps mouse coordinates to internal")
+@Migrated
 unittest {
 
     import std.math : isClose;

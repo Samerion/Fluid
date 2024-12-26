@@ -1325,3 +1325,122 @@ unittest {
     assert(focusBox.end.y - viewportHeight == root.scroll);
 
 }
+
+@("TextInput text can be selected with mouse")
+unittest {
+
+    // This test relies on properties of the default typeface
+
+    import std.math : isClose;
+
+    auto input = textInput();
+    auto hover = hoverChain();
+    auto root = testSpace(
+        nullTheme.derive(
+            rule!TextInput(
+                Rule.selectionBackgroundColor = color("#02a"),
+            ),
+        ),
+        chain(hover, input)
+    );
+    input.value = "Hello, World! Foo, bar, scroll this input";
+    input.caretToEnd();
+    root.draw();
+
+    assert(input.scroll.isClose(127));
+
+    // Select some stuff
+    hover.point(150, 10)
+        .then((a) {
+            a.press(false);
+            return a.move(65, 10);
+        })
+        .then((a) {
+            a.press(false);
+            assert(input.selectedValue == "scroll this");
+        })
+        .runWhileDrawing(root);
+
+    // Match the selection box
+    root.drawAndAssert(
+        input.drawsRectangle(64, 0, 86, 27).ofColor("#02a")
+    );
+
+}
+
+@("Double-click selects words, and triple-click selects lines")
+unittest {
+
+    // This test relies on properties of the default typeface
+
+    import std.math : isClose;
+
+    auto input = textInput(nullTheme);
+    auto hover = hoverChain();
+    auto root = chain(hover, input);
+    input.value = "Hello, World! Foo, bar, scroll this input";
+    input.caretToEnd();
+    root.draw();
+
+    hover.point(150, 10)
+        .then((action) {
+
+            // Double- and triple-click
+            foreach (i; 0..3) {
+
+                assert(action.isHovered(input));
+
+                action.press;
+                root.draw();
+
+                // Double-clicked
+                if (i == 1) {
+                    assert(input.selectedValue == "this");
+                }
+
+                // Triple-clicked
+                if (i == 2) {
+                    assert(input.selectedValue == input.value);
+                }
+
+            }
+
+        })
+        .runWhileDrawing(root);
+
+    assert(input.selectedValue == input.value);
+
+}
+
+@("caretToPointer correctly maps mouse coordinates to internal")
+unittest {
+
+    import std.math : isClose;
+
+    // caretToMouse is a just a wrapper over caretTo, enabling mouse input
+    // This test checks if it correctly maps mouse coordinates to internal coordinates
+
+    auto theme = nullTheme.derive(
+        rule!TextInput(
+            Rule.margin = 40,
+            Rule.padding = 40,
+        )
+    );
+    auto input = textInput(.multiline, theme);
+    auto hover = hoverChain();
+    auto root = chain(hover, input);
+    input.size = Vector2(200, 0);
+    input.value = "123\n456\n789";
+    root.draw();
+
+    assert(input.caretIndex == 0);
+
+    hover.point(140, 90)
+        .then((a) {
+             input.caretToPointer(a.pointer);
+        })
+        .runWhileDrawing(root);
+
+    assert(input.caretIndex == 3);
+
+}
