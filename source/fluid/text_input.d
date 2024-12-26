@@ -24,6 +24,7 @@ import fluid.typeface;
 import fluid.popup_frame;
 
 import fluid.io.focus;
+import fluid.io.hover;
 import fluid.io.canvas;
 
 @safe:
@@ -61,6 +62,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     CanvasIO canvasIO;
     FocusIO focusIO;
+    HoverIO hoverIO;
 
     public {
 
@@ -180,7 +182,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         }
 
-        /// If true, current movement action is performed while selecting.
+        /// If true, movement actions select text, as opposed to clearing selection.
         bool selectionMovement;
 
         /// Last padding box assigned to this node, with scroll applied.
@@ -656,6 +658,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         use(canvasIO);
         use(focusIO);
+        use(hoverIO);
 
         super.resizeImpl(area);
 
@@ -934,6 +937,9 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         // Save the inner box
         _inner = scrolledInner;
+
+        // Update scroll to match the new box
+        scroll = scroll;
 
         // Increase the size of the inner box so that tree doesn't turn on scissors mode on its own
         scrolledInner.w += scroll;
@@ -1492,8 +1498,6 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     private {
 
-        bool _pressed;
-
         /// Number of clicks performed within short enough time from each other. First click is number 0.
         int _clickCount;
 
@@ -1505,39 +1509,41 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
-    protected override void mouseImpl() {
+    /// Switch hover selection mode.
+    ///
+    /// A single click+hold will use per-character selection. A double click+hold will select whole words,
+    /// and a triple click+hold will select entire lines.
+    @(FluidInputAction.press)
+    protected void press(Pointer pointer) {
 
         enum maxDistance = 5;
 
-        // Pressing with the mouse
-        if (!tree.isMouseDown!(FluidInputAction.press)) return;
+        // To count as repeated, the click must be within the specified double click time, and close enough
+        // to the original location
+        const isRepeated = Clock.currTime - _lastClick < io.doubleClickTime  /* TODO GET RID */
+            && distance(pointer.position, _lastClickPosition) < maxDistance;
 
-        const justPressed = !_pressed;
+        // Count repeated clicks
+        _clickCount = isRepeated
+            ? _clickCount + 1
+            : 0;
 
-        // Just pressed
-        if (justPressed) {
+        // Register the click
+        _lastClick = Clock.currTime;
+        _lastClickPosition = pointer.position;
 
-            const clickPosition = io.mousePosition;
+    }
 
-            // To count as repeated, the click must be within the specified double click time, and close enough
-            // to the original location
-            const isRepeated = Clock.currTime - _lastClick < io.doubleClickTime
-                && distance(clickPosition, _lastClickPosition) < maxDistance;
-
-            // Count repeated clicks
-            _clickCount = isRepeated
-                ? _clickCount + 1
-                : 0;
-
-            // Register the click
-            _lastClick = Clock.currTime;
-            _lastClickPosition = clickPosition;
-
-        }
+    /// Update selection using the mouse.
+    @(FluidInputAction.press, WhileHeld)
+    protected void pressAndHold(Pointer pointer) {
 
         // Move the caret with the mouse
-        caretToMouse();
+        caretToPointer(pointer);
         moveOrClearSelection();
+
+        // Turn on selection from now on, disable it once released
+        selectionMovement = true;
 
         final switch (_clickCount % 3) {
 
@@ -1556,9 +1562,37 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         }
 
-        // Enable selection mode
-        // Disable it when releasing
-        _pressed = selectionMovement = !tree.isMouseActive!(FluidInputAction.press);
+    }
+
+    protected override void mouseImpl() {
+
+        // The new I/O system will call the other overload.
+        // Call it as a polyfill for the old system.
+        if (!hoverIO) {
+
+            // Not holding, disable selection
+            if (!tree.isMouseDown!(FluidInputAction.press)) {
+                selectionMovement = false;
+                return;
+            }
+
+            Pointer pointer;
+            pointer.position = io.mousePosition;
+
+            if (tree.isMouseActive!(FluidInputAction.press)) {
+                press(pointer);
+            }
+            pressAndHold(pointer);
+
+        }
+
+    }
+
+    protected override bool hoverImpl() {
+
+        if (hoverIO) {
+        }
+        return false;
 
     }
 
@@ -2166,6 +2200,15 @@ class TextInput : InputNode!Node, FluidScrollable {
     void caretToMouse() {
 
         caretTo(io.mousePosition - _inner.start);
+        updateCaretPosition(false);
+        horizontalAnchor = caretPosition.x;
+
+    }
+
+    /// ditto
+    void caretToPointer(Pointer pointer) {
+
+        caretTo(pointer.position - _inner.start);
         updateCaretPosition(false);
         horizontalAnchor = caretPosition.x;
 
