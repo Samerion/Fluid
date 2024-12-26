@@ -1046,3 +1046,282 @@ unittest {
     assert("\r\nabc\r\n  a".wordBack == "a");
 
 }
+
+@("TextInput.chop supports unicode")
+unittest {
+
+    auto root = textInput();
+
+    // Type stuff
+    root.value = "hello‽";
+    root.caretToEnd();
+    root.draw();
+
+    assert(root.value == "hello‽");
+    assert(root.contentLabel.text == "hello‽");
+
+    // Erase a letter
+    root.chop;
+    root.draw();
+    assert(root.value == "hello");
+    assert(root.contentLabel.text == "hello");
+
+    // Erase a letter
+    root.chop;
+    root.draw();
+    assert(root.value == "hell");
+    assert(root.contentLabel.text == "hell");
+
+}
+
+@("TextInput.chop/chopWord/clear don't affect extracted ropes")
+unittest {
+
+    auto root = textInput();
+
+    root.push("Hello, World!");
+    auto value1 = root.value;
+
+    root.chop();
+    assert(root.value == "Hello, World");
+
+    auto value2 = root.value;
+    root.chopWord();
+
+    assert(root.value == "Hello, ");
+    assert(value1  == "Hello, World!");
+
+    auto value3 = root.value;
+    root.clear();
+
+    assert(root.value == "");
+    assert(value3  == "Hello, ");
+    assert(value2  == "Hello, World");
+    assert(value1  == "Hello, World!");
+
+}
+
+@("TextInput.chopWord/push doesn't affect extracted ropes")
+unittest {
+
+    auto root = textInput();
+
+    root.push("Hello, World");
+    root.draw();
+
+    auto value1 = root.value;
+    root.chopWord();
+    assert(root.value == "Hello, ");
+
+    auto value2 = root.value;
+    root.push("Moon");
+    assert(root.value == "Hello, Moon");
+
+    auto value3 = root.value;
+    root.clear();
+
+    assert(root.value == "");
+    assert(value3 == "Hello, Moon");
+    assert(value2 == "Hello, ");
+    assert(value1 == "Hello, World");
+
+}
+
+@("TextInput.caretTo works")
+unittest {
+
+    // Note: This test depends on parameters specific to the default typeface.
+
+    import std.math : isClose;
+
+    auto root = textInput(.nullTheme, .multiline);
+    root.size = Vector2(200, 0);
+    root.value = "Hello, World!\nHello, Moon\n\nHello, Sun\nWrap this line µp, make it long enough to cross over";
+    root.draw();
+
+    // Move the caret to different points on the canvas
+
+    // Left side of the second "l" in "Hello", first line
+    root.caretTo(Vector2(30, 10));
+    assert(root.caretIndex == "Hel".length);
+
+    // Right side of the same "l"
+    root.caretTo(Vector2(33, 10));
+    assert(root.caretIndex == "Hell".length);
+
+    // Comma, right side, close to the second line
+    root.caretTo(Vector2(50, 24));
+    assert(root.caretIndex == "Hello,".length);
+
+    // End of the line, far right
+    root.caretTo(Vector2(200, 10));
+    assert(root.caretIndex == "Hello, World!".length);
+
+    // Start of the next line
+    root.caretTo(Vector2(0, 30));
+    assert(root.caretIndex == "Hello, World!\n".length);
+
+    // Space, right between "Hello," and "Moon"
+    root.caretTo(Vector2(54, 40));
+    assert(root.caretIndex == "Hello, World!\nHello, ".length);
+
+    // Empty line
+    root.caretTo(Vector2(54, 60));
+    assert(root.caretIndex == "Hello, World!\nHello, Moon\n".length);
+
+    // Beginning of the next line; left side of the "H"
+    root.caretTo(Vector2(4, 85));
+    assert(root.caretIndex == "Hello, World!\nHello, Moon\n\n".length);
+
+    // Wrapped line, the bottom of letter "p" in "up"
+    root.caretTo(Vector2(142, 128));
+    assert(root.caretIndex == "Hello, World!\nHello, Moon\n\nHello, Sun\nWrap this line µp".length);
+
+    // End of line
+    root.caretTo(Vector2(160, 128));
+    assert(root.caretIndex == "Hello, World!\nHello, Moon\n\nHello, Sun\nWrap this line µp, ".length);
+
+    // Beginning of the next line; result should be the same
+    root.caretTo(Vector2(2, 148));
+    assert(root.caretIndex == "Hello, World!\nHello, Moon\n\nHello, Sun\nWrap this line µp, ".length);
+
+    // Just by the way, check if the caret position is correct
+    root.updateCaretPosition(true);
+    assert(root.caretPosition.x.isClose(0));
+    assert(root.caretPosition.y.isClose(135));
+
+    root.updateCaretPosition(false);
+    assert(root.caretPosition.x.isClose(153));
+    assert(root.caretPosition.y.isClose(108));
+
+    // Try the same with the third line
+    root.caretTo(Vector2(200, 148));
+    assert(root.caretIndex
+        == "Hello, World!\nHello, Moon\n\nHello, Sun\nWrap this line µp, make it long enough ".length);
+    root.caretTo(Vector2(2, 168));
+    assert(root.caretIndex
+        == "Hello, World!\nHello, Moon\n\nHello, Sun\nWrap this line µp, make it long enough ".length);
+
+}
+
+@("previousLine/nextLine keep visual column in TextInput")
+unittest {
+
+    // Note: This test depends on parameters specific to the default typeface.
+
+    import std.math : isClose;
+
+    auto root = textInput(.nullTheme, .multiline);
+    root.size = Vector2(200, 0);
+    root.value = "Hello, World!\nHello, Moon\n\nHello, Sun\nWrap this line µp, make it long enough to cross over";
+    root.draw();
+
+    root.caretIndex = 0;
+    root.updateCaretPosition();
+    root.runInputAction!(FluidInputAction.toLineEnd);
+
+    assert(root.caretIndex == "Hello, World!".length);
+
+    // Move to the next line, should be at the end
+    root.runInputAction!(FluidInputAction.nextLine);
+
+    assert(root.valueBeforeCaret.wordBack == "Moon");
+    assert(root.valueAfterCaret.wordFront == "\n");
+
+    // Move to the blank line
+    root.runInputAction!(FluidInputAction.nextLine);
+
+    const blankLine = root.caretIndex;
+    assert(root.valueBeforeCaret.wordBack == "\n");
+    assert(root.valueAfterCaret.wordFront == "\n");
+
+    // toLineEnd and toLineStart should have no effect
+    root.runInputAction!(FluidInputAction.toLineStart);
+    assert(root.caretIndex == blankLine);
+    root.runInputAction!(FluidInputAction.toLineEnd);
+    assert(root.caretIndex == blankLine);
+
+    // Next line again
+    // The anchor has been reset to the beginning
+    root.runInputAction!(FluidInputAction.nextLine);
+
+    assert(root.valueBeforeCaret.wordBack == "\n");
+    assert(root.valueAfterCaret.wordFront == "Hello");
+
+    // Move to the very end
+    root.runInputAction!(FluidInputAction.toEnd);
+
+    assert(root.valueBeforeCaret.wordBack == "over");
+    assert(root.valueAfterCaret.wordFront == "");
+
+    // Move to start of the line
+    root.runInputAction!(FluidInputAction.toLineStart);
+
+    assert(root.valueBeforeCaret.wordBack == "enough ");
+    assert(root.valueAfterCaret.wordFront == "to ");
+    assert(root.caretPosition.x.isClose(0));
+
+    // Move to the previous line
+    root.runInputAction!(FluidInputAction.previousLine);
+
+    assert(root.valueBeforeCaret.wordBack == ", ");
+    assert(root.valueAfterCaret.wordFront == "make ");
+    assert(root.caretPosition.x.isClose(0));
+
+    // Move to its end — position should be the same as earlier, but the caret should be on the same line
+    root.runInputAction!(FluidInputAction.toLineEnd);
+
+    assert(root.valueBeforeCaret.wordBack == "enough ");
+    assert(root.valueAfterCaret.wordFront == "to ");
+    assert(root.caretPosition.x.isClose(181));
+
+    // Move to the previous line — again
+    root.runInputAction!(FluidInputAction.previousLine);
+
+    assert(root.valueBeforeCaret.wordBack == ", ");
+    assert(root.valueAfterCaret.wordFront == "make ");
+    assert(root.caretPosition.x.isClose(153));
+
+}
+
+@("TextInput automatically updates scrolling ancestors")
+unittest {
+
+    // Note: This theme relies on properties of the default typeface
+
+    import fluid.scroll;
+
+    const viewportWidth = 200;
+    const viewportHeight = 50;
+
+    auto theme = nullTheme.derive(
+        rule!Node(
+            Rule.typeface = Style.defaultTypeface,
+            Rule.fontSize = 20.pt,
+            Rule.textColor = color("#fff"),
+            Rule.backgroundColor = color("#000"),
+        ),
+    );
+    auto input = multilineInput();
+    auto root = sizeLock!vscrollFrame(
+        .sizeLimit(viewportWidth, viewportHeight),
+        theme,
+        input
+    );
+
+    root.draw();
+    assert(root.scroll == 0);
+
+    // Begin typing
+    input.push("FLUID\nIS\nAWESOME");
+    input.caretToStart();
+    input.push("FLUID\nIS\nAWESOME\n");
+    root.draw();
+    root.draw();
+
+    const focusBox = input.focusBoxImpl(Rectangle(0, 0, viewportWidth, viewportHeight));
+
+    assert(focusBox.start == input.caretPosition);
+    assert(focusBox.end.y - viewportHeight == root.scroll);
+
+}
