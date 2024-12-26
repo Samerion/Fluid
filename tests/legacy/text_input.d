@@ -1,6 +1,7 @@
 module legacy.text_input;
 
 import fluid;
+import legacy;
 
 import std.range;
 import std.datetime;
@@ -8,116 +9,8 @@ import std.algorithm;
 
 @safe:
 
-@("TextInput removes line feeds in single line mode")
-unittest {
-
-    auto root = textInput();
-
-    root.value = "hello wörld!";
-    assert(root.value == "hello wörld!");
-
-    root.value = "hello wörld!\n";
-    assert(root.value == "hello wörld! ");
-
-    root.value = "hello wörld!\r\n";
-    assert(root.value == "hello wörld! ");
-
-    root.value = "hello wörld!\v";
-    assert(root.value == "hello wörld! ");
-
-}
-
-@("TextInput keeps line feeds in multiline mode")
-unittest {
-
-    auto root = textInput(.multiline);
-
-    root.value = "hello wörld!";
-    assert(root.value == "hello wörld!");
-
-    root.value = "hello wörld!\n";
-    assert(root.value == "hello wörld!\n");
-
-    root.value = "hello wörld!\r\n";
-    assert(root.value == "hello wörld!\r\n");
-
-    root.value = "hello wörld!\v";
-    assert(root.value == "hello wörld!\v");
-
-}
-
-@("TextInput.selectSlice can be used to change the selection in a consistent manner")
-unittest {
-
-    auto root = textInput();
-    root.value = "foo bar baz";
-    root.selectSlice(0, 3);
-    assert(root.selectedValue == "foo");
-
-    root.caretIndex = 4;
-    root.selectSlice(4, 7);
-    assert(root.selectedValue == "bar");
-
-    root.caretIndex = 11;
-    root.selectSlice(8, 11);
-    assert(root.selectedValue == "baz");
-
-}
-
-
-@("[TODO] Legacy: TextInput resizes to fit text")
-unittest {
-
-    auto io = new HeadlessBackend(Vector2(800, 600));
-    auto root = textInput(
-        .layout!"fill",
-        .multiline,
-        .nullTheme,
-        "This placeholder exceeds the default size of a text input."
-    );
-
-    root.io = io;
-    root.draw();
-
-    Vector2 textSize() {
-        return root.contentLabel.getMinSize;
-    }
-
-    assert(textSize.x > 200);
-    assert(textSize.x > root.size.x);
-
-    io.nextFrame;
-    root.placeholder = "";
-    root.updateSize();
-    root.draw();
-
-    assert(root.caretPosition.x < 1);
-    assert(textSize.x < 1);
-
-    io.nextFrame;
-    root.value = "This value exceeds the default size of a text input.";
-    root.updateSize();
-    root.caretToEnd();
-    root.draw();
-
-    assert(root.caretPosition.x > 200);
-    assert(textSize.x > 200);
-    assert(textSize.x > root.size.x);
-
-    io.nextFrame;
-    root.value = "This value is long enough to start a new line in the output. To make sure of it, here's "
-        ~ "some more text. And more.";
-    root.updateSize();
-    root.draw();
-
-    assert(textSize.x > root.size.x);
-    assert(textSize.x <= 800);
-    assert(textSize.y >= root.style.getTypeface.lineHeight * 2);
-    assert(root.getMinSize.y >= textSize.y);
-
-}
-
-@("[TODO] Legacy: TextInput accepts text when focused")
+@("TextInput accepts text when focused")
+@Migrated
 unittest {
 
     auto io = new HeadlessBackend;
@@ -317,7 +210,7 @@ unittest {
     io.nextFrame();
     version (OSX)
         io.press(KeyboardKey.leftCommand);
-    else 
+    else
         io.press(KeyboardKey.leftControl);
     io.press(KeyboardKey.enter);
     root.draw();
@@ -1705,7 +1598,7 @@ unittest {
     import fluid.scroll;
 
     const viewportHeight = 50;
-    
+
     auto theme = nullTheme.derive(
         rule!Node(
             Rule.typeface = Style.defaultTypeface,
@@ -1733,5 +1626,5 @@ unittest {
 
     assert(focusBox.start == input.caretPosition);
     assert(focusBox.end.y - viewportHeight == root.scroll);
-    
+
 }
