@@ -425,7 +425,8 @@ unittest {
 
 }
 
-@("[TODO] Legacy: Additional TextInput.chop test")
+@("Additional TextInput.chop test")
+@Migrated
 unittest {
 
     auto io = new HeadlessBackend;
@@ -479,7 +480,8 @@ unittest {
 
 }
 
-@("[TODO] Legacy: TextInput.chop doesn't affect extracted ropes")
+@("TextInput.chop doesn't affect extracted ropes")
+@Migrated
 unittest {
 
     auto io = new HeadlessBackend;
@@ -512,7 +514,8 @@ unittest {
 
 }
 
-@("[TODO] Legacy: TextInput.push doesn't affect previously extracted ropes")
+@("TextInput.push doesn't affect previously extracted ropes")
+@Migrated
 unittest {
 
     auto io = new HeadlessBackend;
@@ -546,7 +549,8 @@ unittest {
 
 }
 
-@("[TODO] Legacy: TextInput.caretTo works")
+@("TextInput.caretTo works")
+@Migrated
 unittest {
 
     // Note: This test depends on parameters specific to the default typeface.
@@ -656,7 +660,8 @@ unittest {
 
 }
 
-@("[TODO] Legacy: previousLine/nextLine keep visual column in TextInput")
+@("previousLine/nextLine keep visual column in TextInput")
+@Migrated
 unittest {
 
     // Note: This test depends on parameters specific to the default typeface.
@@ -843,7 +848,8 @@ unittest {
 
 }
 
-@("[TODO] Legacy: TextInput automatically updates scrolling ancestors")
+@("TextInput automatically updates scrolling ancestors")
+@Migrated
 unittest {
 
     // Note: This theme relies on properties of the default typeface
