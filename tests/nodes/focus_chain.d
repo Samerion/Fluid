@@ -483,3 +483,41 @@ unittest {
         .runWhileDrawing(root);
 
 }
+
+@("Text can be typed into FocusChain")
+unittest {
+
+    char[8] buffer;
+
+    auto focus = focusChain();
+    focus.typeText("Text");
+
+    // Multiple reads are possible
+    foreach (i; 0..4) {
+        int offset;
+        auto text = focus.readText(buffer, offset);
+        assert(text == "Text");
+        assert(offset == 4);
+        assert(buffer[0..4] == "Text");
+        assert(focus.readText(buffer, offset) is null);
+    }
+
+}
+
+@("FocusChain supports writing text longer than the buffer")
+unittest {
+
+    char[8] buffer;
+
+    auto focus = focusChain();
+    focus.typeText("Hello, World!");
+
+    foreach (i; 0..4) {
+        int offset;
+        assert(focus.readText(buffer, offset) == "Hello, W");
+        assert(offset == 8);
+        assert(focus.readText(buffer, offset) == "orld!");
+        assert(offset == 13);
+    }
+
+}

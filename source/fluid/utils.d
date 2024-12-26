@@ -163,7 +163,7 @@ unittest {
 ///     subject    = Subject to modify.
 ///     parameters = Parameters to apply onto the subject;
 /// Returns:
-///     The subject after applying the modifications. 
+///     The subject after applying the modifications.
 ///     If subject is a class, this is the same object as passed.
 Subject applyAll(Subject, Parameters...)(Subject subject, Parameters parameters) {
 
@@ -252,23 +252,37 @@ bool overlap(Rectangle a, Rectangle b) {
 // Extremely useful Rectangle utilities
 
 /// Get the top-left corner of a rectangle.
-Vector2 start(Rectangle r) {
+Vector2 start(Rectangle r) nothrow {
     return Vector2(r.x, r.y);
 }
 
 /// Get the bottom-right corner of a rectangle.
-Vector2 end(Rectangle r) {
+Vector2 end(Rectangle r) nothrow {
     return Vector2(r.x + r.w, r.y + r.h);
 }
 
 /// Get the center of a rectangle.
-Vector2 center(Rectangle r) {
+Vector2 center(Rectangle r) nothrow {
     return Vector2(r.x + r.w/2, r.y + r.h/2);
 }
 
 /// Get the size of a rectangle.
-Vector2 size(Rectangle r) {
+Vector2 size(Rectangle r) nothrow {
     return Vector2(r.w, r.h);
+}
+
+/// Intersect two rectangles
+Rectangle intersect(Rectangle one, Rectangle two) nothrow {
+
+    import std.algorithm : min, max;
+
+    Rectangle result;
+    result.x = max(one.x, two.x);
+    result.y = max(one.y, two.y);
+    result.w = max(0, min(one.x + one.w, two.x + two.w) - result.x);
+    result.h = max(0, min(one.y + one.h, two.y + two.h) - result.y);
+    return result;
+
 }
 
 /// Get names of static fields in the given object.

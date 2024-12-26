@@ -415,7 +415,7 @@ class PointerAction : TreeAction, Publisher!PointerAction {
         if (node is null)
             return currentHover is null;
         else
-            return currentHover.opEquals(node);
+            return currentHover && currentHover.opEquals(node);
 
     }
 

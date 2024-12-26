@@ -26,16 +26,71 @@ public import fluid.io.action : InputEvent, InputEventCode;
 /// focus a single node.
 interface FocusIO : IO {
 
-    /// Read an input event from an input device. Input devices will call this function every frame 
+    /// Read an input event from an input device. Input devices will call this function every frame
     /// if an input event occurs.
     ///
-    /// `FocusIO` will usually pass these down to an `ActionIO` system. It is up to `FocusIO` to decide how 
-    /// the input and the resulting input actions are handled, though they will most often be passed 
+    /// `FocusIO` will usually pass these down to an `ActionIO` system. It is up to `FocusIO` to decide how
+    /// the input and the resulting input actions are handled, though they will most often be passed
     /// to the focused node.
     ///
     /// Params:
     ///     event = Input event the system should save.
     void emitEvent(InputEvent event);
+
+    /// Write text received from the system. Input devices should call this function every frame to transmit text
+    /// that the user wrote on the keyboard, which other nodes can then read through `readText`.
+    /// Params:
+    ///     text = Text written by the user.
+    void typeText(scope const char[] text);
+
+    /// Read text inserted by the user into a buffer.
+    ///
+    /// Reads a UTF-8 sequence of characters from the system that was typed in by the user during the last frame.
+    /// This will be keyboard input as interpreted by the system, using the system's input method, providing support
+    /// for internationalization.
+    ///
+    /// All the text will be written by reference into the provided buffer, overwriting previously stored text.
+    /// The returned value will be a slice of this buffer, representing the entire value:
+    ///
+    /// ---
+    /// char[1024] buffer;
+    /// int offset;
+    /// auto text = focusIO.readText(buffer, offset);
+    /// writeln(text);
+    /// assert(text is buffer[0 .. text.length] || text is null);
+    /// ---
+    ///
+    /// The buffer may not fit the entire text. Because of this, the function should be called repeatedly until the
+    /// returned value is `null`.
+    ///
+    /// ---
+    /// char[1024] buffer;
+    /// int offset;
+    /// while (true) {
+    ///     if (auto text = focusIO.readText(buffer, offset)) {
+    ///         writeln(text);
+    ///     }
+    ///     else {
+    ///         break;
+    ///     }
+    /// }
+    /// ---
+    ///
+    /// This function may not throw: In the instance the offset extends beyond text boundaries, the buffer is empty
+    /// or text cannot be read, this function should return `null`, as if no text should remain to read.
+    ///
+    /// Params:
+    ///     buffer = Buffer to write the text to.
+    ///     offset = Number of leading bytes to skip when writing into the buffer. Updated to point to the end
+    ///         of the buffer. This makes it possible to keep track of position in the text if it doesn't fit
+    ///         in a single buffer.
+    /// Returns:
+    ///     A slice of the given buffer with text that was read. `null` if no text remains to read.
+    char[] readText(return scope char[] buffer, ref int offset) nothrow
+    out(text; text is buffer[0 .. text.length] || text is null,
+        "Returned value must be a slice of the buffer, or be null")
+    out(text; text is null || text.length > 0,
+        "Returned value must be null if it is empty");
 
     /// Note:
     ///     Currently focused node may have `blocksInput` set to true; take care to check it before calling input
@@ -93,7 +148,7 @@ interface Focusable : Actionable {
     /// Handle input. Called each frame when focused.
     ///
     /// This method should not be called if `blocksInput` is true.
-    /// 
+    ///
     /// Returns:
     ///     True if focus input was handled, false if it was ignored.
     bool focusImpl()
@@ -101,15 +156,15 @@ interface Focusable : Actionable {
 
     /// Set focus to this node.
     ///
-    /// Implementation would usually check `blocksInput` and call `focusIO.focus` on self for this to take effect. 
-    /// A node may override this method to redirect the focus to another node (by calling its `focus()` method), 
+    /// Implementation would usually check `blocksInput` and call `focusIO.focus` on self for this to take effect.
+    /// A node may override this method to redirect the focus to another node (by calling its `focus()` method),
     /// or ignore the request.
     ///
     /// Focus should do nothing if the node `isDisabled` is true or if
     void focus();
 
-    /// Returns: 
-    ///     True if this node has focus. Recommended implementation: `return this == focusIO.focus`. 
+    /// Returns:
+    ///     True if this node has focus. Recommended implementation: `return this == focusIO.focus`.
     ///     Proxy nodes, such as `FieldSlot` might choose to return the value of the node they hold.
     bool isFocused() const;
 
@@ -124,7 +179,7 @@ FindFocusBoxAction findFocusBox(FocusIO focusIO) {
 
     auto node = cast(Node) focusIO;
     assert(node, "Given FocusIO is not a node");
-    
+
     auto action = new FindFocusBoxAction(focusIO);
     node.startAction(action);
     return action;
@@ -202,7 +257,7 @@ class FindFocusBoxAction : BranchAction, Publisher!(Optional!Rectangle) {
         }
 
     }
-    
+
 }
 
 /// Using FindFocusBoxAction.
@@ -226,7 +281,7 @@ unittest {
 
             require(focusIO);
             findFocusBoxAction.focusIO = focusIO;
-            
+
             super.resizeImpl(space);
 
         }
