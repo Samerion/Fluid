@@ -1,12 +1,15 @@
+@Migrated
 module legacy.number_input;
 
 import fluid;
+import legacy;
 
 import std.algorithm;
 
 @safe:
 
-@("[TODO] Legacy: NumberInput supports scientific notation")
+@("NumberInput supports scientific notation")
+@Migrated
 unittest {
 
     import std.math;
