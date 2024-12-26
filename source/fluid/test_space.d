@@ -422,16 +422,14 @@ auto drawsRectangle(Node subject) {
             if (!node.opEquals(subject).assertNotThrown) return false;
 
             if (isTestingArea) {
-                assert(equal(targetArea.x, rect.x)
-                    && equal(targetArea.y, rect.y)
-                    && equal(targetArea.width, rect.width)
-                    && equal(targetArea.height, rect.height),
-                    format!"Expected rectangle %s, got %s"(targetArea, rect).assertNotThrown);
+                if (!equal(targetArea.x, rect.x)
+                    || !equal(targetArea.y, rect.y)
+                    || !equal(targetArea.width, rect.width)
+                    || !equal(targetArea.height, rect.height)) return false;
             }
 
             if (isTestingColor) {
-                assert(color == targetColor,
-                    format!"Expected color %s, got %s"(targetColor.toHex, color.toHex).assertNotThrown);
+                if (color != targetColor) return false;
             }
 
             return true;

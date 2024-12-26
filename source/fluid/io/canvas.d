@@ -96,6 +96,8 @@ interface CanvasIO : IO {
     /// Returning an empty value may be desirable if the canvas is some form of persistent storage,
     /// like a printable document or vector image, where the entire content may be displayed all at once.
     ///
+    /// Crop area should be reset by Canvas I/O to its initial value before every frame.
+    ///
     /// Returns:
     ///     An area on the canvas that shapes can be drawn in.
     Optional!Rectangle cropArea() const nothrow;
@@ -122,6 +124,29 @@ interface CanvasIO : IO {
         else {
             cropArea(area.front);
         }
+
+    }
+
+    /// Crop the area to fit. Unlike setting `cropArea`, this will not replace the old area, but create an intersection
+    /// between the new and old area.
+    /// Params:
+    ///     rectangle = New crop region.
+    /// Returns:
+    ///     The old region for later restoration.
+    final Optional!Rectangle intersectCrop(Rectangle rectangle) nothrow {
+
+        import fluid.utils : intersect;
+
+        const oldArea = cropArea;
+
+        if (oldArea.empty) {
+            cropArea = rectangle;
+        }
+        else {
+            cropArea = intersect(oldArea.front, rectangle);
+        }
+
+        return oldArea;
 
     }
 

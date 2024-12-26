@@ -23,6 +23,9 @@ import fluid.structs;
 import fluid.typeface;
 import fluid.popup_frame;
 
+import fluid.io.focus;
+import fluid.io.hover;
+import fluid.io.canvas;
 
 @safe:
 
@@ -56,6 +59,10 @@ alias multilineInput = nodeBuilder!(TextInput, (a) {
 class TextInput : InputNode!Node, FluidScrollable {
 
     mixin enableInputActions;
+
+    CanvasIO canvasIO;
+    FocusIO focusIO;
+    HoverIO hoverIO;
 
     public {
 
@@ -175,7 +182,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         }
 
-        /// If true, current movement action is performed while selecting.
+        /// If true, movement actions select text, as opposed to clearing selection.
         bool selectionMovement;
 
         /// Last padding box assigned to this node, with scroll applied.
@@ -202,7 +209,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         /// See_Also: `buffer`
         char[] _buffer;
 
-        /// Number of bytes stored in the bufer.
+        /// Number of bytes stored in the buffer.
         size_t _usedBufferSize;
 
         /// Node the buffer is stored in.
@@ -649,6 +656,10 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         import std.math : isNaN;
 
+        use(canvasIO);
+        use(focusIO);
+        use(hoverIO);
+
         super.resizeImpl(area);
 
         // Set the size
@@ -915,7 +926,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         auto style = pickStyle();
 
         // Fill the background
-        style.drawBackground(tree.io, outer);
+        style.drawBackground(tree.io, canvasIO, outer);
 
         // Copy style to the label
         contentLabel.style = pickLabelStyle(style);
@@ -927,14 +938,33 @@ class TextInput : InputNode!Node, FluidScrollable {
         // Save the inner box
         _inner = scrolledInner;
 
+        // Update scroll to match the new box
+        scroll = scroll;
+
         // Increase the size of the inner box so that tree doesn't turn on scissors mode on its own
         scrolledInner.w += scroll;
 
-        const lastScissors = tree.pushScissors(outer);
-        scope (exit) tree.popScissors(lastScissors);
+        // New I/O
+        if (canvasIO) {
 
-        // Draw the contents
-        drawContents(inner, scrolledInner);
+            const lastArea = canvasIO.intersectCrop(outer);
+            scope (exit) canvasIO.cropArea = lastArea;
+
+            // Draw the contents
+            drawContents(inner, scrolledInner);
+
+        }
+
+        // Old I/O
+        else {
+
+            const lastScissors = tree.pushScissors(outer);
+            scope (exit) tree.popScissors(lastScissors);
+
+            // Draw the contents
+            drawContents(inner, scrolledInner);
+
+        }
 
     }
 
@@ -965,11 +995,20 @@ class TextInput : InputNode!Node, FluidScrollable {
             const caretPosition = start(inner) + relativeCaretPosition;
 
             // Draw the caret
-            io.drawLine(
-                caretPosition + Vector2(0, margin),
-                caretPosition - Vector2(0, margin - lineHeight),
-                style.textColor,
-            );
+            if (canvasIO) {
+                canvasIO.drawLine(
+                    caretPosition + Vector2(0, margin),
+                    caretPosition - Vector2(0, margin - lineHeight),
+                    1,
+                    style.textColor);
+            }
+            else {
+                io.drawLine(
+                    caretPosition + Vector2(0, margin),
+                    caretPosition - Vector2(0, margin - lineHeight),
+                    style.textColor,
+                );
+            }
 
         }
 
@@ -1035,7 +1074,13 @@ class TextInput : InputNode!Node, FluidScrollable {
                     );
 
                     lineStart = caret.start;
-                    io.drawRectangle(rect, style.selectionBackgroundColor);
+
+                    if (canvasIO) {
+                        canvasIO.drawRectangle(rect, style.selectionBackgroundColor);
+                    }
+                    else {
+                        io.drawRectangle(rect, style.selectionBackgroundColor);
+                    }
 
                 }
 
@@ -1058,7 +1103,12 @@ class TextInput : InputNode!Node, FluidScrollable {
                         (lineEnd - lineStart).tupleof
                     );
 
-                    io.drawRectangle(rect, style.selectionBackgroundColor);
+                    if (canvasIO) {
+                        canvasIO.drawRectangle(rect, style.selectionBackgroundColor);
+                    }
+                    else {
+                        io.drawRectangle(rect, style.selectionBackgroundColor);
+                    }
                     return;
 
                 }
@@ -1085,8 +1135,38 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         bool changed;
 
+        // Read text off FocusIO
+        if (focusIO) {
+
+            int offset;
+
+            // Read text
+            while (true) {
+
+                // Get the buffer
+                auto buffer = freeBuffer();
+                if (buffer.empty) {
+                    newBuffer();
+                    buffer = freeBuffer();
+                }
+
+                // Push the text
+                if (auto text = focusIO.readText(buffer, offset)) {
+                    push(text);
+                }
+                else break;
+
+            }
+
+            // Mark as changed
+            if (offset != 0) {
+                changed = true;
+            }
+
+        }
+
         // Get pressed key
-        while (true) {
+        else while (true) {
 
             // Read text
             if (const key = io.inputCharacter) {
@@ -1146,8 +1226,10 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         auto slice = freeBuffer[0 .. ch.length];
 
-        // Save the data in the buffer
-        slice[] = ch;
+        // Save the data in the buffer, unless they're the same
+        if (slice[] !is ch[]) {
+            slice[] = ch[];
+        }
         _usedBufferSize += ch.length;
 
         // Selection is active, overwrite it
@@ -1416,8 +1498,6 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     private {
 
-        bool _pressed;
-
         /// Number of clicks performed within short enough time from each other. First click is number 0.
         int _clickCount;
 
@@ -1429,39 +1509,41 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
-    protected override void mouseImpl() {
+    /// Switch hover selection mode.
+    ///
+    /// A single click+hold will use per-character selection. A double click+hold will select whole words,
+    /// and a triple click+hold will select entire lines.
+    @(FluidInputAction.press)
+    protected void press(Pointer pointer) {
 
         enum maxDistance = 5;
 
-        // Pressing with the mouse
-        if (!tree.isMouseDown!(FluidInputAction.press)) return;
+        // To count as repeated, the click must be within the specified double click time, and close enough
+        // to the original location
+        const isRepeated = Clock.currTime - _lastClick < io.doubleClickTime  /* TODO GET RID */
+            && distance(pointer.position, _lastClickPosition) < maxDistance;
 
-        const justPressed = !_pressed;
+        // Count repeated clicks
+        _clickCount = isRepeated
+            ? _clickCount + 1
+            : 0;
 
-        // Just pressed
-        if (justPressed) {
+        // Register the click
+        _lastClick = Clock.currTime;
+        _lastClickPosition = pointer.position;
 
-            const clickPosition = io.mousePosition;
+    }
 
-            // To count as repeated, the click must be within the specified double click time, and close enough
-            // to the original location
-            const isRepeated = Clock.currTime - _lastClick < io.doubleClickTime
-                && distance(clickPosition, _lastClickPosition) < maxDistance;
-
-            // Count repeated clicks
-            _clickCount = isRepeated
-                ? _clickCount + 1
-                : 0;
-
-            // Register the click
-            _lastClick = Clock.currTime;
-            _lastClickPosition = clickPosition;
-
-        }
+    /// Update selection using the mouse.
+    @(FluidInputAction.press, WhileHeld)
+    protected void pressAndHold(Pointer pointer) {
 
         // Move the caret with the mouse
-        caretToMouse();
+        caretToPointer(pointer);
         moveOrClearSelection();
+
+        // Turn on selection from now on, disable it once released
+        selectionMovement = true;
 
         final switch (_clickCount % 3) {
 
@@ -1480,9 +1562,37 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         }
 
-        // Enable selection mode
-        // Disable it when releasing
-        _pressed = selectionMovement = !tree.isMouseActive!(FluidInputAction.press);
+    }
+
+    protected override void mouseImpl() {
+
+        // The new I/O system will call the other overload.
+        // Call it as a polyfill for the old system.
+        if (!hoverIO) {
+
+            // Not holding, disable selection
+            if (!tree.isMouseDown!(FluidInputAction.press)) {
+                selectionMovement = false;
+                return;
+            }
+
+            Pointer pointer;
+            pointer.position = io.mousePosition;
+
+            if (tree.isMouseActive!(FluidInputAction.press)) {
+                press(pointer);
+            }
+            pressAndHold(pointer);
+
+        }
+
+    }
+
+    protected override bool hoverImpl() {
+
+        if (hoverIO) {
+        }
+        return false;
 
     }
 
@@ -2090,6 +2200,15 @@ class TextInput : InputNode!Node, FluidScrollable {
     void caretToMouse() {
 
         caretTo(io.mousePosition - _inner.start);
+        updateCaretPosition(false);
+        horizontalAnchor = caretPosition.x;
+
+    }
+
+    /// ditto
+    void caretToPointer(Pointer pointer) {
+
+        caretTo(pointer.position - _inner.start);
         updateCaretPosition(false);
         horizontalAnchor = caretPosition.x;
 

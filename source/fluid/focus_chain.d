@@ -2,6 +2,7 @@
 module fluid.focus_chain;
 
 import optional;
+import std.array;
 
 import fluid.node;
 import fluid.types;
@@ -49,6 +50,7 @@ class FocusChain : NodeChain, FocusIO {
 
         Focusable _focus;
         bool _wasInputHandled;
+        Appender!(char[]) _buffer;
 
     }
 
@@ -133,6 +135,9 @@ class FocusChain : NodeChain, FocusIO {
         else if (isFocusActionable) {
             _wasInputHandled = currentFocus.focusImpl();
         }
+
+        // Clear the input buffer
+        _buffer.clear();
 
     }
 
@@ -333,6 +338,32 @@ class FocusChain : NodeChain, FocusIO {
     bool focusRight() {
         focusToRight();
         return true;
+    }
+
+    /// Type text to read during the next frame.
+    ///
+    /// This text will then become available for reading through `readText`.
+    ///
+    /// Params:
+    ///     text = Text to write into the buffer.
+    override void typeText(scope const char[] text) {
+        _buffer ~= text;
+    }
+
+    override char[] readText(return scope char[] buffer, ref int offset) nothrow {
+
+        import std.algorithm : min;
+
+        // Read the entire text, nothing remains to be read
+        if (offset >= _buffer[].length) return null;
+
+        // Get remaining text
+        const text = _buffer[][offset .. $];
+        const length = min(text.length, buffer.length);
+
+        offset += length;
+        return buffer[0 .. length] = text[0 .. length];
+
     }
 
     override void emitEvent(InputEvent event) {

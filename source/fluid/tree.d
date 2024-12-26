@@ -1068,20 +1068,12 @@ struct LayoutTree {
     /// Intersect the given rectangle against current scissor area.
     Rectangle intersectScissors(Rectangle rect) {
 
-        import std.algorithm : min, max;
+        import fluid.utils : intersect;
 
         // No limit applied
         if (scissors is scissors.init) return rect;
 
-        Rectangle result;
-
-        // Intersect
-        result.x = max(rect.x, scissors.x);
-        result.y = max(rect.y, scissors.y);
-        result.w = max(0, min(rect.x + rect.w, scissors.x + scissors.w) - result.x);
-        result.h = max(0, min(rect.y + rect.h, scissors.y + scissors.h) - result.y);
-
-        return result;
+        return intersect(rect, scissors);
 
     }
 
