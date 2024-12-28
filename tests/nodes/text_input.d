@@ -1444,3 +1444,106 @@ unittest {
     assert(input.caretIndex == 3);
 
 }
+
+@("TextInput.cut removes text and puts it in the clipboard")
+unittest {
+
+    auto input = textInput();
+    auto root = clipboardChain(input);
+
+    root.draw();
+    input.push("Foo Bar Baz Ban");
+
+    // Move cursor to "Bar"
+    input.runInputAction!(FluidInputAction.toStart);
+    input.runInputAction!(FluidInputAction.nextWord);
+
+    // Select "Bar Baz "
+    input.runInputAction!(FluidInputAction.selectNextWord);
+    input.runInputAction!(FluidInputAction.selectNextWord);
+
+    assert(root.value == "");
+    assert(input.selectedValue == "Bar Baz ");
+
+    // Cut the text
+    input.cut();
+
+    assert(root.value == "Bar Baz ");
+    assert(input.value == "Foo Ban");
+
+}
+
+@("TextInput.cut works with Unicode")
+unittest {
+
+    auto input = textInput();
+    auto clipboard = clipboardChain(input);
+    auto root = clipboard;
+
+    input.push("Привет, мир! Это пример текста для тестирования поддержки Unicode во Fluid.");
+    root.draw();
+    clipboard.value = "ą";
+
+    input.runInputAction!(FluidInputAction.previousChar);
+    input.selectionStart = 106;  // Before "Unicode"
+    input.cut();
+
+    assert(input.value == "Привет, мир! Это пример текста для тестирования поддержки .");
+    assert(clipboard.value == "Unicode во Fluid");
+
+    input.caretIndex = 14;
+    input.runInputAction!(FluidInputAction.selectNextWord);  // мир
+    input.paste();
+
+    assert(input.value == "Привет, Unicode во Fluid! Это пример текста для тестирования поддержки .");
+
+}
+
+@("TextInput.copy copies text without editing")
+unittest {
+
+    auto input = textInput();
+    auto clipboard = clipboardChain(input);
+    auto root = clipboard;
+
+    root.draw();
+    input.push("Foo Bar Baz Ban");
+    input.selectAll();
+    assert(clipboard.value == "");
+
+    input.copy();
+    assert(clipboard.value == "Foo Bar Baz Ban");
+
+    // Reduce selection by a word
+    input.runInputAction!(FluidInputAction.selectPreviousWord);
+    input.copy();
+
+    assert(clipboard.value == "Foo Bar Baz ");
+    assert(input.value == "Foo Bar Baz Ban");
+
+}
+
+@("TextInput.paste inserts text from the clipboard")
+unittest {
+
+    auto input = textInput();
+    auto clipboard = clipboardChain(input);
+    auto root = clipboard;
+
+    input.value = "Foo ";
+    root.draw();
+    input.caretToEnd();
+    clipboard.value = "Bar";
+    assert(input.caretIndex == 4);
+    assert(input.value == "Foo ");
+
+    input.paste();
+    assert(input.caretIndex == 7);
+    assert(input.value == "Foo Bar");
+
+    input.caretToStart();
+    input.paste();
+    assert(input.caretIndex == 3);
+    assert(input.value == "BarFoo Bar");
+
+}

@@ -1,3 +1,4 @@
+@Migrated
 module legacy.text_input;
 
 import fluid;
@@ -748,7 +749,8 @@ unittest {
 
 }
 
-@("[TODO] Legacy: TextInput.cut removes text and puts it in the clipboard")
+@("TextInput.cut removes text and puts it in the clipboard")
+@Migrated
 unittest {
 
     auto root = textInput();
@@ -776,6 +778,7 @@ unittest {
 }
 
 @("TextInput.cut works with Unicode")
+@Migrated
 unittest {
 
     auto root = textInput();
@@ -799,7 +802,8 @@ unittest {
 
 }
 
-@("[TODO] Legacy: TextInput.copy copies text without editing")
+@("TextInput.copy copies text without editing")
+@Migrated
 unittest {
 
     auto root = textInput();
@@ -825,7 +829,8 @@ unittest {
 
 }
 
-@("[TODO] Legacy: TextInput.paste inserts text from the clipboard")
+@("TextInput.paste inserts text from the clipboard")
+@Migrated
 unittest {
 
     auto root = textInput();

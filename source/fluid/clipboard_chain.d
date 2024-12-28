@@ -20,11 +20,26 @@ alias clipboardChain = nodeBuilder!ClipboardChain;
 class ClipboardChain : NodeChain, ClipboardIO {
 
     private {
-        string _content;
+        string _value;
     }
 
     this(Node next = null) {
         super(next);
+    }
+
+    /// Returns:
+    ///     Current clipboard content.
+    string value() const {
+        return _value;
+    }
+
+    /// Replace the clipboard contents.
+    /// Params:
+    ///     newValue = New clipboard content.
+    /// Returns:
+    ///     Same text as passed into the function.
+    string value(string newValue) {
+        return _value = newValue;
     }
 
     override void beforeResize(Vector2) {
@@ -39,7 +54,7 @@ class ClipboardChain : NodeChain, ClipboardIO {
     }
 
     override bool writeClipboard(string text) {
-        _content = text;
+        _value = text;
         return true;
     }
 
@@ -48,10 +63,10 @@ class ClipboardChain : NodeChain, ClipboardIO {
         import std.algorithm : min;
 
         // Read the entire text, nothing remains to be read
-        if (offset >= _content.length) return null;
+        if (offset >= _value.length) return null;
 
         // Get remaining text
-        const text = _content[offset .. $];
+        const text = _value[offset .. $];
         const length = min(text.length, buffer.length);
 
         offset += length;
@@ -79,7 +94,8 @@ unittest {
     root.draw();
 
     // Text copied by the first input...
-    first.selectedValue = "Hello!";
+    first.value = "Hello!";
+    first.selectAll();
     first.copy();
 
     // ... can now be pasted into the other
