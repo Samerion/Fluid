@@ -1547,3 +1547,43 @@ unittest {
     assert(input.value == "BarFoo Bar");
 
 }
+
+@("TextInput read large amounts of text at once")
+unittest {
+
+    import std.array;
+    import std.range : repeat;
+
+    immutable(char)[4096] content = 'a';
+
+    auto input = textInput();
+    auto focus = focusChain();
+    auto root = chain(focus, input);
+    root.draw();
+
+    focus.currentFocus = input;
+    focus.typeText(content[]);
+    root.draw();
+
+    assert(input.value == content);
+
+}
+
+@("TextInput.paste supports clipboard with lots of content")
+unittest {
+
+    import std.array;
+    import std.range : repeat;
+
+    immutable(char)[4096] content = 'a';
+
+    auto input = textInput();
+    auto clipboard = clipboardChain();
+    auto root = chain(clipboard, input);
+    clipboard.value = content[];
+    root.draw();
+
+    input.paste();
+    assert(input.value == content);
+
+}
