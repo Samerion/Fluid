@@ -469,7 +469,7 @@ class CodeInput : TextInput {
         outdent(1);
 
     }
-    
+
     void outdent(int i) {
 
         // Write an undo/redo history entry
@@ -654,6 +654,34 @@ class CodeInput : TextInput {
     @(FluidInputAction.paste)
     override void paste() {
 
+        import std.array : Appender;
+
+        if (clipboardIO) {
+
+            char[1024] buffer;
+            Appender!(char[]) content;
+            int offset;
+
+            // Read text from the clipboard and into the buffer
+            // This is not the most optimal, but pasting is completely reworked in the next release anyway
+            while (true) {
+                if (auto text = clipboardIO.readClipboard(buffer, offset)) {
+                    content ~= text;
+                }
+                else break;
+            }
+
+            paste(content[]);
+
+        }
+        else {
+            paste(io.clipboard);
+        }
+
+    }
+
+    void paste(const char[] clipboard) {
+
         import fluid.typeface : Typeface;
 
         // Write an undo/redo history entry
@@ -661,7 +689,6 @@ class CodeInput : TextInput {
         scope (success) forcePushSnapshot(shot);
 
         const pasteStart = selectionLowIndex;
-        const clipboard = io.clipboard;
         auto indentLevel = indentLevelByIndex(pasteStart);
 
         // Find the smallest indent in the clipboard
