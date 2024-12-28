@@ -120,8 +120,16 @@ struct Stack(T) {
     out (; empty)
     do {
 
+        import core.memory : GC;
+
         // Already empty, nothing to do
         if (empty) return;
+
+        // If triggered from the GC, the objects cannot be trashed, as they may not be recyclable anymore
+        if (GC.inFinalizer) {
+            _top = null;
+            return;
+        }
 
         // Trash the bottom
         _bottom.next = _trash;
