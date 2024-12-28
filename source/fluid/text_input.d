@@ -26,6 +26,7 @@ import fluid.popup_frame;
 import fluid.io.focus;
 import fluid.io.hover;
 import fluid.io.canvas;
+import fluid.io.clipboard;
 
 @safe:
 
@@ -63,6 +64,7 @@ class TextInput : InputNode!Node, FluidScrollable {
     CanvasIO canvasIO;
     FocusIO focusIO;
     HoverIO hoverIO;
+    ClipboardIO clipboardIO;
 
     public {
 
@@ -659,6 +661,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         use(canvasIO);
         use(focusIO);
         use(hoverIO);
+        use(clipboardIO);
 
         super.resizeImpl(area);
 
@@ -859,6 +862,26 @@ class TextInput : InputNode!Node, FluidScrollable {
     protected inout(char)[] freeBuffer() inout {
 
         return _buffer[_usedBufferSize .. $];
+
+    }
+
+    /// Get the empty part of the text buffer. If the buffer is full, allocate a new buffer.
+    /// Params:
+    ///     minimumSize = Minimum size to use for a *new* buffer. If free space exists in the existing buffer,
+    ///         it will be returned regardless of how much space remains.
+    /// Returns:
+    ///     Free part of the buffer. Cannot be empty.
+    protected char[] requireFreeBuffer(size_t minimumSize = 64)
+    out (r; r != "")
+    do {
+
+        auto buffer = freeBuffer();
+        if (buffer.empty) {
+            newBuffer(minimumSize);
+            buffer = freeBuffer();
+        }
+
+        return buffer;
 
     }
 
@@ -1143,15 +1166,8 @@ class TextInput : InputNode!Node, FluidScrollable {
             // Read text
             while (true) {
 
-                // Get the buffer
-                auto buffer = freeBuffer();
-                if (buffer.empty) {
-                    newBuffer();
-                    buffer = freeBuffer();
-                }
-
                 // Push the text
-                if (auto text = focusIO.readText(buffer, offset)) {
+                if (auto text = focusIO.readText(requireFreeBuffer, offset)) {
                     push(text);
                 }
                 else break;
@@ -2353,8 +2369,14 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         import std.conv : text;
 
-        if (isSelecting)
-            io.clipboard = text(selectedValue);
+        if (!isSelecting) return;
+
+        if (clipboardIO) {
+            clipboardIO.writeClipboard = selectedValue.toString();
+        }
+        else {
+            io.clipboard = selectedValue.toString();
+        }
 
     }
 
@@ -2363,7 +2385,30 @@ class TextInput : InputNode!Node, FluidScrollable {
     void paste() {
 
         auto snap = snapshot();
-        push(io.clipboard);
+
+        // New I/O
+        if (clipboardIO) {
+
+            int offset;
+
+            // Read text
+            while (true) {
+
+                // Push the text
+                if (auto text = clipboardIO.readClipboard(requireFreeBuffer, offset)) {
+                    push(text);
+                }
+                else break;
+
+            }
+
+        }
+
+        // Old clipboard
+        else {
+            push(io.clipboard);
+        }
+
         forcePushSnapshot(snap);
 
     }
