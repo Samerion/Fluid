@@ -26,6 +26,7 @@ import fluid.popup_frame;
 import fluid.io.focus;
 import fluid.io.hover;
 import fluid.io.canvas;
+import fluid.io.clipboard;
 
 @safe:
 
@@ -63,6 +64,7 @@ class TextInput : InputNode!Node, FluidScrollable {
     CanvasIO canvasIO;
     FocusIO focusIO;
     HoverIO hoverIO;
+    ClipboardIO clipboardIO;
 
     public {
 
@@ -659,6 +661,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         use(canvasIO);
         use(focusIO);
         use(hoverIO);
+        use(clipboardIO);
 
         super.resizeImpl(area);
 
@@ -1139,16 +1142,10 @@ class TextInput : InputNode!Node, FluidScrollable {
         if (focusIO) {
 
             int offset;
+            char[1024] buffer;
 
             // Read text
             while (true) {
-
-                // Get the buffer
-                auto buffer = freeBuffer();
-                if (buffer.empty) {
-                    newBuffer();
-                    buffer = freeBuffer();
-                }
 
                 // Push the text
                 if (auto text = focusIO.readText(buffer, offset)) {
@@ -2353,8 +2350,14 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         import std.conv : text;
 
-        if (isSelecting)
-            io.clipboard = text(selectedValue);
+        if (!isSelecting) return;
+
+        if (clipboardIO) {
+            clipboardIO.writeClipboard = selectedValue.toString();
+        }
+        else {
+            io.clipboard = selectedValue.toString();
+        }
 
     }
 
@@ -2363,7 +2366,31 @@ class TextInput : InputNode!Node, FluidScrollable {
     void paste() {
 
         auto snap = snapshot();
-        push(io.clipboard);
+
+        // New I/O
+        if (clipboardIO) {
+
+            char[1024] buffer;
+            int offset;
+
+            // Read text
+            while (true) {
+
+                // Push the text
+                if (auto text = clipboardIO.readClipboard(buffer, offset)) {
+                    push(text);
+                }
+                else break;
+
+            }
+
+        }
+
+        // Old clipboard
+        else {
+            push(io.clipboard);
+        }
+
         forcePushSnapshot(snap);
 
     }

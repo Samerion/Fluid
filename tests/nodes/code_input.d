@@ -1002,3 +1002,156 @@ unittest {
     }
 
 }
+
+@("CodeInput.paste changes indents to match the current text")
+unittest {
+
+    auto input = codeInput(.useTabs);
+    auto clipboard = clipboardChain(input);
+    auto root = clipboard;
+    root.draw();
+
+    clipboard.value = "text";
+    input.insertTab;
+    input.paste();
+    assert(input.value == "\ttext");
+
+    input.breakLine;
+    input.paste();
+    assert(input.value == "\ttext\n\ttext");
+
+    clipboard.value = "text\ntext";
+    input.value = "";
+    input.paste();
+    assert(input.value == "text\ntext");
+
+    input.breakLine;
+    input.insertTab;
+    input.paste();
+    assert(input.value == "text\ntext\n\ttext\n\ttext");
+
+    clipboard.value = "  {\n    text\n  }\n";
+    input.value = "";
+    input.paste();
+    assert(input.value == "{\n  text\n}\n");
+
+    input.value = "\t";
+    input.caretToEnd();
+    input.paste();
+    assert(input.value == "\t{\n\t  text\n\t}\n\t");
+
+    input.value = "\t";
+    input.caretToStart();
+    input.paste();
+    assert(input.value == "{\n  text\n}\n\t");
+
+}
+
+@("CodeInput.paste keeps the pasted value as-is if it's composed of spaces or tabs")
+unittest {
+
+    auto input = codeInput();
+    auto clipboard = clipboardChain();
+    auto root = chain(clipboard, input);
+    root.draw();
+
+    foreach (i, value; ["", "  ", "    ", "\t", "\t\t"]) {
+
+        clipboard.value = value;
+        input.value = "";
+        input.paste();
+        assert(input.value == value,
+            format!"Clipboard preset index %s (%s) not preserved"(i, value));
+
+    }
+
+}
+
+@("CodeInput.paste replaces the selection")
+unittest {
+
+    auto input = codeInput(.useTabs);
+    auto clipboard = clipboardChain();
+    auto root = chain(clipboard, input);
+    root.draw();
+
+    clipboard.value = "text\ntext";
+    input.value = "let foo() {\n\tbar\t\tbaz\n}";
+    input.selectSlice(
+        input.value.indexOf("bar"),
+        input.value.indexOf("baz"),
+    );
+    input.paste();
+    assert(input.value == "let foo() {\n\ttext\n\ttextbaz\n}");
+
+    clipboard.value = "\t\ttext\n\ttext";
+    input.value = "let foo() {\n\tbar\t\tbaz\n}";
+    input.selectSlice(
+        input.value.indexOf("bar"),
+        input.value.indexOf("baz"),
+    );
+    input.paste();
+    assert(input.value == "let foo() {\n\t\ttext\n\ttextbaz\n}");
+
+}
+
+@("CodeInput.paste creates a history entry (single line)")
+unittest {
+
+    // Same test as above, but insert a space instead of line break
+
+    auto input = codeInput(.useSpaces(2));
+    auto clipboard = clipboardChain();
+    auto root = chain(clipboard, input);
+    root.draw();
+
+    clipboard.value = "World";
+    input.push("  Hello,");
+    input.push(" ");
+    input.paste();
+    input.push("!");
+    assert(input.value == "  Hello, World!");
+
+    // Undo the exclamation mark
+    input.undo();
+    assert(input.value == "  Hello, World");
+
+    // Next undo moves before pasting, just like above
+    input.undo();
+    assert(input.value == "  Hello, ");
+    assert(input.valueBeforeCaret == input.value);
+
+    input.undo();
+    assert(input.value == "");
+
+    // No change
+    input.undo();
+    assert(input.value == "");
+
+    input.redo();
+    assert(input.value == "  Hello, ");
+    assert(input.valueBeforeCaret == input.value);
+
+}
+
+@("CodeInput.paste strips common indent, even if indent character differs from the editor's")
+unittest {
+
+    auto input = codeInput(.useTabs);
+    auto clipboard = clipboardChain();
+    auto root = chain(clipboard, input);
+    root.draw();
+
+    clipboard.value = "  foo\n  ";
+    input.value = "let foo() {\n\t\n}";
+    input.caretIndex = input.value.indexOf("\n}");
+    input.paste();
+    assert(input.value == "let foo() {\n\tfoo\n\t\n}");
+
+    clipboard.value = "foo\n  bar\n";
+    input.value = "let foo() {\n\tx\n}";
+    input.caretIndex = input.value.indexOf("x");
+    input.paste();
+    assert(input.value == "let foo() {\n\tfoo\n\tbar\n\tx\n}");
+
+}
