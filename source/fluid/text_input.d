@@ -865,26 +865,6 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
-    /// Get the empty part of the text buffer. If the buffer is full, allocate a new buffer.
-    /// Params:
-    ///     minimumSize = Minimum size to use for a *new* buffer. If free space exists in the existing buffer,
-    ///         it will be returned regardless of how much space remains.
-    /// Returns:
-    ///     Free part of the buffer. Cannot be empty.
-    protected char[] requireFreeBuffer(size_t minimumSize = 64)
-    out (r; r != "")
-    do {
-
-        auto buffer = freeBuffer();
-        if (buffer.empty) {
-            newBuffer(minimumSize);
-            buffer = freeBuffer();
-        }
-
-        return buffer;
-
-    }
-
     /// Request a new or a larger buffer.
     /// Params:
     ///     minimumSize = Minimum size to allocate for the buffer.
@@ -1162,12 +1142,13 @@ class TextInput : InputNode!Node, FluidScrollable {
         if (focusIO) {
 
             int offset;
+            char[1024] buffer;
 
             // Read text
             while (true) {
 
                 // Push the text
-                if (auto text = focusIO.readText(requireFreeBuffer, offset)) {
+                if (auto text = focusIO.readText(buffer, offset)) {
                     push(text);
                 }
                 else break;
@@ -2389,13 +2370,14 @@ class TextInput : InputNode!Node, FluidScrollable {
         // New I/O
         if (clipboardIO) {
 
+            char[1024] buffer;
             int offset;
 
             // Read text
             while (true) {
 
                 // Push the text
-                if (auto text = clipboardIO.readClipboard(requireFreeBuffer, offset)) {
+                if (auto text = clipboardIO.readClipboard(buffer, offset)) {
                     push(text);
                 }
                 else break;
