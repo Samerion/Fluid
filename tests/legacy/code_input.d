@@ -1,3 +1,4 @@
+@Migrated
 module legacy.code_input;
 
 import fluid;
@@ -101,7 +102,8 @@ unittest {
 
 }
 
-@("[TODO] CodeInput.paste changes indents to match the current text")
+@("CodeInput.paste changes indents to match the current text")
+@Migrated
 unittest {
 
     auto io = new HeadlessBackend;
@@ -144,7 +146,8 @@ unittest {
 
 }
 
-@("[TODO] CodeInput.paste keeps the clipboard as-is if it's composed of spaces or tabs")
+@("CodeInput.paste keeps the clipboard as-is if it's composed of spaces or tabs")
+@Migrated
 unittest {
 
     auto io = new HeadlessBackend;
@@ -163,7 +166,8 @@ unittest {
 
 }
 
-@("[TODO] Legacy: CodeInput.paste replaces the selection")
+@("CodeInput.paste replaces the selection")
+@Migrated
 unittest {
 
     auto io = new HeadlessBackend;
@@ -190,7 +194,8 @@ unittest {
 
 }
 
-@("[TODO] Legacy: CodeInput.paste creates a history entry (single line)")
+@("CodeInput.paste creates a history entry (single line)")
+@Migrated
 unittest {
 
     // Same test as above, but insert a space instead of line break
@@ -228,7 +233,8 @@ unittest {
 
 }
 
-@("[TODO] Legacy: CodeInput.paste uses the indentor to reformat code")
+@("CodeInput.paste uses the indentor to reformat code")
+@Abandoned
 unittest {
 
     auto indentor = new class CodeIndentor {
@@ -291,6 +297,7 @@ unittest {
 }
 
 @("CodeInput.paste strips common indent, even if indent character differs from the editor's")
+@Migrated
 unittest {
 
     auto io = new HeadlessBackend;
@@ -311,7 +318,8 @@ unittest {
 
 }
 
-@("[TODO] Legacy: CodeInput can trigger outdents from Indentor while typing")
+@("CodeInput can trigger outdents from Indentor while typing")
+@Abandoned
 unittest {
 
     import std.typecons : BlackHole;
