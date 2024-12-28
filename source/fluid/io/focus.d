@@ -1,4 +1,4 @@
-/// This module implements interfaces for handling focus and connecting focusable nodes with input devices.
+/// This module contains interfaces for handling focus and connecting focusable nodes with input devices.
 module fluid.io.focus;
 
 import optional;
