@@ -189,10 +189,9 @@ class HoverChain : NodeChain, HoverIO {
         // Update hover data
         foreach (ref pointer; _pointers[]) {
 
-            // Set the hovered node
+            // Keep the same hovered node if the pointer is being held,
+            // otherwise switch.
             pointer.node = pointer.action.result;
-
-            // Mark as held ahead of time
             if (!pointer.isHeld) {
                 pointer.heldNode = pointer.node;
             }

@@ -210,6 +210,17 @@ struct Pointer {
     /// Position in the window the pointer is pointing at.
     Vector2 position;
 
+    /// Current scroll value. For a mouse, this indicates mouse wheel movement, for other devices like touchpad or
+    /// touchscreen, this will be translated from its movement.
+    ///
+    /// While it is possible to read scroll of the `Pointer` data received in an input action handler,
+    /// it is recommended to implement scroll through `Scrollable.scrollImpl`.
+    ///
+    /// Scroll is exposed for both the horizontal and vertical axis. While a typical mouse wheel only supports
+    /// vertical movement, touchscreens, touchpads, trackpads or more advanced mouses do support horizontal movement.
+    /// It is also possible for a device to perform both horizontal and vertical movement at once.
+    Vector2 scroll;
+
     /// True if the pointer is not currently pointing, like a finger that stopped touching the screen.
     bool isDisabled;
 
@@ -328,6 +339,54 @@ interface Hoverable : Actionable {
     ///     This will most of the time be equivalent to `hoverIO.isHovered(this)`,
     ///     but a node wrapping another hoverable may choose to instead redirect this to the other node.
     bool isHovered() const;
+
+}
+
+/// Nodes implementing this interface can react to scroll motion if selected by a `HoverIO` system.
+///
+/// Temporarily called `HoverScrollable`, this node will be renamed to `Scrollable` in a future release.
+/// https://git.samerion.com/Samerion/Fluid/issues/278
+interface HoverScrollable {
+
+    import fluid.node;
+
+    /// Controls whether this node can accept scroll input and the input can have visible effect. This is usually
+    /// determined by the node's position; for example a container node already scrolled to the bottom cannot accept
+    /// further vertical movement down.
+    ///
+    /// This property is used to determine which node should be used to accept scroll. If there's a scrollable
+    /// container nested in another scrollable node, it will be chosen for scrolling only if the scroll motion
+    /// can still be performed. On the other hand, if the intent is specifically to block scroll motion (like in
+    /// a modal window), this method should always return true.
+    ///
+    /// Note that a node "can scroll" even if it can only accept part of the motion. If the scroll would have
+    /// the node scroll beyond its maximum value, but the node is not already at its maximum, it should accept
+    /// the input and clamp the value.
+    ///
+    /// Params:
+    ///     value = Input scroll value for both X and Y axis. This corresponds to the screen distance the scroll
+    ///         motion should cover.
+    /// Returns:
+    ///     True if the node can accept the scroll value in part or in whole,
+    ///     false if the motion would have no effect.
+    bool canScroll(Vector2 value) const;
+
+    /// Perform a scroll motion, moving the node's contents by the specified distance.
+    ///
+    /// At the moment this function returns `void` for backwards compatibility. This will change in the future
+    /// into a boolean value, indicating if the motion was handled or not.
+    ///
+    /// Params:
+    ///     value = Value to scroll the contents by.
+    void scrollImpl(Vector2 value);
+
+    /// Scroll towards a specified child node, trying to get it into view.
+    ///
+    /// Params:
+    ///     child     = Target node, a child of this node. Ideally, this node should appear on screen as a consequence.
+    ///     parentBox = Padding box of this node, the node performing the scroll.
+    ///     childBox  = Known padding box of the target child node.
+    Rectangle shallowScrollTo(const Node child, Rectangle parentBox, Rectangle childBox);
 
 }
 
