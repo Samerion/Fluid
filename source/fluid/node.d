@@ -498,16 +498,16 @@ abstract class Node {
             }
 
             void stop() {
-                if (isStarted) {
-                    isStarted = false;
-                    foreach (action; range) {
-                        action.stop;
-                    }
+                isStarted = false;
+                foreach (action; range) {
+                    action.stop;
                 }
             }
 
             ~this() {
-                stop();
+                if (isStarted) {
+                    stop();
+                }
             }
 
         }
@@ -1168,16 +1168,16 @@ abstract class Node {
             }
 
             void stop() {
-                if (isStarted) {
-                    isStarted = false;
-                    static foreach (i, IO; IOs) {
-                        node.treeContext.io.replace(ioID!IO, ios[i]);
-                    }
+                isStarted = false;
+                static foreach (i, IO; IOs) {
+                    node.treeContext.io.replace(ioID!IO, ios[i]);
                 }
             }
 
             ~this() {
-                stop();
+                if (isStarted) {
+                    stop();
+                }
             }
 
         }
