@@ -66,6 +66,11 @@ class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable, Ho
 
     }
 
+    alias opEquals = Node.opEquals;
+    override bool opEquals(const Object other) const {
+        return super.opEquals(other);
+    }
+
     /// Distance the node is scrolled by.
     ref inout(float) scroll() inout {
 

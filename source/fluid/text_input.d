@@ -325,6 +325,11 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     }
 
+    alias opEquals = Node.opEquals;
+    override bool opEquals(const Object other) const {
+        return super.opEquals(other);
+    }
+
     /// Mark the text input as modified.
     void touch() {
 
