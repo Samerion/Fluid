@@ -95,7 +95,7 @@ class TestSpace : Space, CanvasIO, DebugSignalIO {
     /// Returns: The number of images registered by the test runner.
     int countLoadedImages() nothrow const {
 
-        return cast(int) _loadedImages[].walkLength;
+        return cast(int) _loadedImages.activeResources.walkLength;
 
     }
 
