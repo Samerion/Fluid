@@ -146,11 +146,13 @@ abstract class NodeChain : Node {
         while (true) {
 
             // Run tree actions
-            foreach (action; tree.filterActions) {
-                action.beforeDrawImpl(chain, outer, outer, inner);
+            // tree actions were already called by `drawChild` for `this`
+            if (chain !is this) {
+                foreach (action; tree.filterActions) {
+                    action.beforeDrawImpl(chain, outer, outer, inner);
+                }
             }
 
-            // Call beforeResize
             chain.beforeDraw(outer, inner);
 
             // Update the chain
@@ -170,8 +172,10 @@ abstract class NodeChain : Node {
         // Call afterDraw on each part
         while (chain) {
             chain.afterDraw(outer, inner);
-            foreach (action; tree.filterActions) {
-                action.beforeDrawImpl(chain, outer, outer, inner);
+            if (chain !is this) {
+                foreach (action; tree.filterActions) {
+                    action.beforeDrawImpl(chain, outer, outer, inner);
+                }
             }
             chain = chain._previousChain;
         }
