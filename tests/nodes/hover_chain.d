@@ -103,6 +103,39 @@ class HoverTracker : Node, Hoverable {
 
 }
 
+alias scrollTracker = nodeBuilder!ScrollTracker;
+
+class ScrollTracker : Frame, HoverScrollable {
+
+    bool disableScroll;
+    Vector2 totalScroll;
+    Vector2 lastScroll;
+
+    this(Node[] nodes...) {
+        super(nodes);
+    }
+
+    alias opEquals = Frame.opEquals;
+
+    override bool opEquals(const Object other) const {
+        return super.opEquals(other);
+    }
+
+    override bool canScroll(Vector2) const {
+        return !disableScroll;
+    }
+
+    override Rectangle shallowScrollTo(const Node, Rectangle, Rectangle childBox) {
+        return childBox;
+    }
+
+    override void scrollImpl(Vector2 scroll) {
+        totalScroll += scroll;
+        lastScroll   = scroll;
+    }
+
+}
+
 @("HoverChain assigns unique IDs for each pointer number")
 unittest {
 
@@ -546,5 +579,45 @@ unittest {
     assert(tracker.isHovered);
     assert(tracker.pressHeldCount == 1);
     assert(tracker.pressCount == 0);
+
+}
+
+@("HoverChain fires scroll events for scrollable nodes")
+unittest {
+
+    ScrollTracker tracker;
+    Button btn;
+
+    auto hover = hoverChain(
+        .layout!"fill",
+        tracker = scrollTracker(
+            .layout!(1, "fill"),
+            btn = button(
+                .layout!(1, "fill"),
+                "Do not press me",
+                delegate {
+                    assert(false);
+                }
+            ),
+        ),
+    );
+    auto root = hover;
+
+    hover.point(50, 50).scroll(0, 10)
+        .then((a) {
+            assert(a.currentHover && a.currentHover.opEquals(btn));
+            assert(a.currentScroll && a.currentScroll.opEquals(tracker));
+            assert(tracker.totalScroll == Vector2(0, 10));
+            assert(tracker.lastScroll == Vector2(0, 10));
+
+            return a.scroll(5, 20);
+        })
+        .then((a) {
+            assert(a.currentHover && a.currentHover.opEquals(btn));
+            assert(a.currentScroll && a.currentScroll.opEquals(tracker));
+            assert(tracker.lastScroll == Vector2(5, 20));
+            assert(tracker.totalScroll == Vector2(5, 30));
+        })
+        .runWhileDrawing(root, 3);
 
 }

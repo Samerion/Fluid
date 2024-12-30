@@ -47,6 +47,9 @@ class HoverChain : NodeChain, HoverIO {
             /// that is being held.
             Node heldNode;
 
+            /// Scrollable hovered by this pointer, if any.
+            HoverScrollable scrollable;
+
             /// If true, any button related to the pointer is being held.
             bool isHeld;
 
@@ -195,6 +198,14 @@ class HoverChain : NodeChain, HoverIO {
             if (!pointer.isHeld) {
                 pointer.heldNode = pointer.node;
             }
+
+            // Update scroll and send new events
+            pointer.scrollable = pointer.action.scrollable;
+            if (pointer.scrollable) {
+                pointer.scrollable.scrollImpl(pointer.value.scroll);
+            }
+
+            // Reset state
             pointer.isHeld = false;
             pointer.isHandled = false;
 
@@ -217,20 +228,25 @@ class HoverChain : NodeChain, HoverIO {
             .filter!(a => !a.value.isDisabled)
             .map!((a) {
                 a.action.search = a.value.position;
+                a.action.scroll = a.value.scroll;
                 return a.action;
             });
 
     }
 
-    /// Returns:
-    ///     Node hovered by the pointer.
-    /// Params:
-    ///     pointer = Pointer to check. The pointer must be loaded.
-    inout(Hoverable) hoverOf(Pointer pointer) inout {
+    override inout(Hoverable) hoverOf(Pointer pointer) inout {
 
         debug assert(_pointers.isActive(pointer.id), "Given pointer wasn't loaded");
 
         return _pointers[pointer.id].heldNode.castIfAcceptsInput!Hoverable;
+
+    }
+
+    override inout(HoverScrollable) scrollOf(Pointer pointer) inout {
+
+        debug assert(_pointers.isActive(pointer.id), "Given pointer wasn't loaded");
+
+        return _pointers[pointer.id].scrollable;
 
     }
 
