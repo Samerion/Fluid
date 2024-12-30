@@ -13,7 +13,7 @@ class MyHover : Node, MouseIO {
     Pointer[] pointers;
 
     inout(Pointer) makePointer(int number, Vector2 position, bool isDisabled = false) inout {
-        return inout Pointer(this, number, position, isDisabled);
+        return inout Pointer(this, number, position, Vector2(), isDisabled);
     }
 
     void emit(int number, InputEvent event) {
@@ -43,7 +43,7 @@ class MyHover : Node, MouseIO {
         foreach (ref pointer; pointers) {
             load(hoverIO, pointer);
         }
-        
+
     }
 
 }
@@ -467,7 +467,7 @@ unittest {
     ];
     root.draw();
     assert(tracker.hoverImplCount == 1);
-    
+
 }
 
 @("HoverChain doesn't call input handlers on disabled nodes")
