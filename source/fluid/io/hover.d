@@ -102,7 +102,17 @@ interface HoverIO : IO {
     ///     pointer = Pointer to query. The pointer must be loaded.
     /// Returns:
     ///     Node hovered by the pointer.
+    /// See_Also:
+    ///     `scrollOf` to get the current scrollable node.
     inout(Hoverable) hoverOf(Pointer pointer) inout;
+
+    /// Params:
+    ///     pointer = Pointer to query. The pointer must be loaded.
+    /// Returns:
+    ///     Scrollable ancestor for the currently hovered node.
+    /// See_Also:
+    ///     `hoverOf` to get the currently hovered node.
+    inout(HoverScrollable) scrollOf(Pointer pointer) inout;
 
     /// Returns:
     ///     True if the node is hovered.
@@ -320,7 +330,8 @@ struct Pointer {
     /// Params:
     ///     other = Pointer to copy data from.
     void update(Pointer other) {
-        this.position = other.position;
+        this.position   = other.position;
+        this.scroll     = other.scroll;
         this.isDisabled = other.isDisabled;
     }
 
@@ -602,6 +613,15 @@ class PointerAction : TreeAction, Publisher!PointerAction {
 
     }
 
+    /// Returns:
+    ///     Chosen scrollable, if any.
+    HoverScrollable currentScroll() {
+
+        hoverIO.loadTo(pointer);
+        return hoverIO.scrollOf(pointer);
+
+    }
+
     /// Returns: True if the given node is hovered.
     bool isHovered(Node node) {
 
@@ -616,6 +636,7 @@ class PointerAction : TreeAction, Publisher!PointerAction {
     /// Returns: This action, for chaining.
     PointerAction stayIdle() return {
 
+        clearSubscribers();
         _node.startAction(this);
 
         // Place the pointer
@@ -633,6 +654,7 @@ class PointerAction : TreeAction, Publisher!PointerAction {
     ///     This action, for chaining.
     PointerAction move(Vector2 position) return {
 
+        clearSubscribers();
         _node.startAction(this);
 
         // Place the pointer
@@ -648,6 +670,32 @@ class PointerAction : TreeAction, Publisher!PointerAction {
     PointerAction move(float x, float y) return {
 
         return move(Vector2(x, y));
+
+    }
+
+    /// Set a scroll value for the action.
+    /// Params:
+    ///     motion = Distance to scroll.
+    /// Returns:
+    ///     This action, for chaining.
+    PointerAction scroll(Vector2 motion) return {
+
+        clearSubscribers();
+        _node.startAction(this);
+
+        // Place the pointer
+        pointer.isDisabled = false;
+        pointer.scroll = motion;
+        hoverIO.loadTo(pointer);
+
+        return this;
+
+    }
+
+    /// ditto
+    PointerAction scroll(float x, float y) return {
+
+        return scroll(Vector2(x, y));
 
     }
 
@@ -692,7 +740,6 @@ class PointerAction : TreeAction, Publisher!PointerAction {
     override void started() {
 
         super.started();
-        clearSubscribers();
 
     }
 
