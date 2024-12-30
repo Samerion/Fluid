@@ -561,7 +561,7 @@ PointerAction point(HoverIO hoverIO, float x, float y) {
 }
 
 /// Virtual Hover I/O pointer, for testing.
-class PointerAction : TreeAction, Publisher!PointerAction {
+class PointerAction : TreeAction, Publisher!PointerAction, IO {
 
     import fluid.node;
 
@@ -591,8 +591,17 @@ class PointerAction : TreeAction, Publisher!PointerAction {
 
         this.hoverIO = hoverIO;
         this._node = cast(Node) hoverIO;
+        this.pointer.device = this;
         assert(_node, "Given Hover I/O is not a valid node");
 
+    }
+
+    override bool opEquals(const Object other) const {
+        return this is other;
+    }
+
+    override inout(TreeContext) treeContext() inout {
+        return hoverIO.treeContext;
     }
 
     void subscribe(Subscriber!PointerAction subscriber) {
@@ -737,9 +746,13 @@ class PointerAction : TreeAction, Publisher!PointerAction {
     /// Shorthand for `runInputAction!(FluidInputAction.press)`
     alias press = runInputAction!(FluidInputAction.press);
 
-    override void started() {
+    override void beforeDraw(Node node, Rectangle) {
 
-        super.started();
+        // Make sure the pointer is loaded and up to date
+        // If the action was scheduled before a resize, the pointer would die during it
+        if (hoverIO.opEquals(node)) {
+            hoverIO.loadTo(pointer);
+        }
 
     }
 
