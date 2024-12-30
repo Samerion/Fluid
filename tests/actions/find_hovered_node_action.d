@@ -95,7 +95,7 @@ unittest {
     action.search = Vector2(0, 0);
     root.startAction(action);
     root.draw();
-    assert(action.result == rect1);
+    assert(action.result.opEquals(rect1));
 
     action.search = Vector2(60, 0);
     root.startAction(action);
@@ -105,12 +105,12 @@ unittest {
     action.search = Vector2(60, 50);
     root.startAction(action);
     root.draw();
-    assert(action.result == circle);
+    assert(action.result.opEquals(circle));
 
     action.search = Vector2(75, 75);
     root.startAction(action);
     root.draw();
-    assert(action.result == rect2);
+    assert(action.result.opEquals(rect2));
 
 }
 

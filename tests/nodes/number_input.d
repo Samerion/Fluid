@@ -87,10 +87,12 @@ unittest {
     root.theme = Theme(
         rule!IntInput(
             Rule.margin  = 0,
+            Rule.border  = 0,
             Rule.padding = 0,
         ),
         rule!NumberInputSpinner(
             Rule.margin  = 0,
+            Rule.border  = 0,
             Rule.padding = 0,
         ),
     );
@@ -119,6 +121,7 @@ unittest {
         })
         .then((a) {
             a.press;
+            assert(a.isHovered(input.spinner));
             return a.stayIdle;
         })
         .runWhileDrawing(root);
