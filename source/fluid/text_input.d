@@ -57,7 +57,7 @@ alias multilineInput = nodeBuilder!(TextInput, (a) {
 });
 
 /// ditto
-class TextInput : InputNode!Node, FluidScrollable {
+class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     mixin enableInputActions;
 

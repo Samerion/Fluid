@@ -13,6 +13,8 @@ import fluid.style;
 import fluid.backend;
 import fluid.structs;
 
+import fluid.io.hover;
+
 public import fluid.scroll_input;
 
 
@@ -41,7 +43,7 @@ alias hscrollable(alias T) = simpleConstructor!(ApplyRight!(ScrollFrame, "true")
 /// Implement scrolling for the given node.
 ///
 /// This only supports scrolling in one axis.
-class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable {
+class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable, HoverScrollable {
 
     public {
 

@@ -8,6 +8,7 @@ import fluid.types;
 
 import fluid.future.pipe;
 import fluid.future.context;
+import fluid.future.branch_action;
 
 import fluid.io.action;
 
@@ -230,6 +231,27 @@ struct Pointer {
     /// ID of the pointer assigned by the `HoverIO` system.
     private int _id;
 
+    /// Create a new pointer.
+    /// Params:
+    ///     device     = I/O system representing the device that created the pointer.
+    ///     number     = Pointer number as assigned by the device.
+    ///     position   = Position of the pointer.
+    ///     isDisabled = If true, disable the node.
+    this(inout IO device, int number, Vector2 position, Vector2 scroll = Vector2.init, bool isDisabled = false) inout {
+        this.device     = device;
+        this.number     = number;
+        this.position   = position;
+        this.scroll     = scroll;
+        this.isDisabled = isDisabled;
+    }
+
+    /// Create a new pointer.
+    /// Params:
+    ///     position   = Position of the pointer.
+    this(Vector2 position) {
+        this.position = position;
+    }
+
     /// If the given system is a Hover I/O system, fetch a pointer.
     ///
     /// Given data must be valid; the I/O must be a `HoverIO` instance and the number must be a valid pointer number.
@@ -387,6 +409,109 @@ interface HoverScrollable {
     ///     parentBox = Padding box of this node, the node performing the scroll.
     ///     childBox  = Known padding box of the target child node.
     Rectangle shallowScrollTo(const Node child, Rectangle parentBox, Rectangle childBox);
+
+}
+
+/// Cast the node to given type if it accepts scroll.
+///
+/// In addition to performing a dynamic cast, this checks if the node can handle a specified scroll value
+/// according to its `HoverScrollable.canScroll` method.
+/// If it doesn't, it will fail the cast.
+///
+/// Params:
+///     node = Node to cast.
+/// Returns:
+///     Node casted to `Scrollable`, or null if the node can't be casted, or the motion would not have effect.
+inout(HoverScrollable) castIfAcceptsScroll(inout Object node, Vector2 value) {
+
+    // Perform the cast
+    if (auto scrollable = cast(inout HoverScrollable) node) {
+
+        // Node must accept scroll
+        if (scrollable.canScroll(value)) {
+            return scrollable;
+        }
+
+    }
+
+    return null;
+
+}
+
+/// Find the topmost node that occupies the given position on the screen.
+///
+/// The result may change while the search runs; the final result is available once the action stops.
+/// On top of finding the node at specified position, a scroll value can be passed so this action will also find
+/// any `Scrollable` ancestor present in the branch, if one can handle the motion.
+/// If the resulting node is scrollable, it may be returned.
+///
+/// For backwards compatibility, this node is not currently registered as a `NodeSearchAction` and does not emit
+/// a node when done.
+final class FindHoveredNodeAction : BranchAction {
+
+    import fluid.node;
+
+    public {
+
+        /// If a node was found, this is the result.
+        Node result;
+
+        /// Topmost scrollable ancestor of `result` (the chosen node).
+        HoverScrollable scrollable;
+
+        /// Position that is looked up.
+        Vector2 search;
+
+        /// Scroll value to test `scrollable` against. If the scroll motion with this value would not have effect
+        /// on a scrollable, it will not be chosen.
+        Vector2 scroll;
+
+    }
+
+    this(Vector2 search = Vector2.init, Vector2 scroll = Vector2.init) {
+        this.search = search;
+        this.scroll = scroll;
+    }
+
+    override void started() {
+        super.started();
+        this.result = null;
+        this.scrollable = null;
+    }
+
+    /// Test if the searched position is within the bounds of this node, and set it as the result if so.
+    /// Any previously found result is overridden.
+    ///
+    /// If a node is found, `scrollable` is cleared. A new one will be found in `afterDraw`.
+    ///
+    /// Because of how layering works in Fluid, the last node in bounds will be the result. This action cannot quit
+    /// early as any node can override the current hover.
+    override void beforeDraw(Node node, Rectangle, Rectangle outer, Rectangle inner) {
+
+        // Check if the position is in bounds of the node
+        if (!node.inBounds(outer, inner, search)) return;
+
+        // Save the result
+        result = node;
+
+        // Clear scrollable
+        scrollable = null;
+
+        // Do not stop; the result may be overridden
+
+    }
+
+    /// Find a matching scrollable for the node. The topmost ancestor of `result` (the chosen node) will be used.
+    override void afterDraw(Node node, Rectangle) {
+
+        // A result is required and no scrollable could have matched already
+        if (result is null) return;
+        if (scrollable) return;
+
+        // Try to match this node
+        scrollable = node.castIfAcceptsScroll(scroll);
+
+    }
 
 }
 

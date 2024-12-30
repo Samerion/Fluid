@@ -37,7 +37,7 @@ class HoverChain : NodeChain, HoverIO {
             Pointer value;
 
             /// Branch action associated with the pointer; finds the associated node.
-            NodeAtPointAction action;
+            FindHoveredNodeAction action;
 
             /// Node last matched to the pointer. "Hovered" node.
             Node node;
@@ -79,7 +79,7 @@ class HoverChain : NodeChain, HoverIO {
         if (index == -1) {
             return _pointers.load(HoverPointer(
                 pointer,
-                new NodeAtPointAction,
+                new FindHoveredNodeAction,
             ));
         }
 
