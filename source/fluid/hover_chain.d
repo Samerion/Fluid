@@ -76,7 +76,7 @@ class HoverChain : NodeChain, HoverIO {
 
     override int load(Pointer pointer) {
 
-        const index = cast(int) _pointers[].countUntil(pointer);
+        const index = cast(int) _pointers.allResources.countUntil(pointer);
 
         // No such pointer
         if (index == -1) {
@@ -121,7 +121,7 @@ class HoverChain : NodeChain, HoverIO {
 
     override bool isHovered(const Hoverable hoverable) const {
 
-        foreach (pointer; _pointers[]) {
+        foreach (pointer; _pointers.activeResources) {
 
             // Skip disabled pointers
             if (pointer.value.isDisabled) continue;
@@ -139,7 +139,7 @@ class HoverChain : NodeChain, HoverIO {
 
     override int opApply(int delegate(Hoverable) @safe yield) {
 
-        foreach (pointer; _pointers[]) {
+        foreach (pointer; _pointers.activeResources) {
 
             // Skip disabled pointers
             if (pointer.value.isDisabled) continue;
@@ -190,7 +190,9 @@ class HoverChain : NodeChain, HoverIO {
         frame.stop();
 
         // Update hover data
-        foreach (ref pointer; _pointers[]) {
+        foreach (pointer; _pointers.activeResources) {
+
+            scope (exit) _pointers[pointer.value.id] = pointer;
 
             // Keep the same hovered node if the pointer is being held,
             // otherwise switch.
@@ -224,7 +226,7 @@ class HoverChain : NodeChain, HoverIO {
     /// List all branch actions for active pointers, and change their search positions to match the pointer.
     private auto armBranchActions() {
 
-        return _pointers[]
+        return _pointers.activeResources
             .filter!(a => !a.value.isDisabled)
             .map!((a) {
                 a.action.search = a.value.position;
