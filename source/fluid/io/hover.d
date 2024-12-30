@@ -408,7 +408,16 @@ interface HoverScrollable {
     ///     child     = Target node, a child of this node. Ideally, this node should appear on screen as a consequence.
     ///     parentBox = Padding box of this node, the node performing the scroll.
     ///     childBox  = Known padding box of the target child node.
+    /// Returns:
+    ///     A new padding box for the child node after applying scroll.
     Rectangle shallowScrollTo(const Node child, Rectangle parentBox, Rectangle childBox);
+
+    /// Memory safe and `const` object comparison.
+    /// Returns:
+    ///     True if this, and the other object, are the same object.
+    /// Params:
+    ///     other = Object to compare to.
+    bool opEquals(const Object other) const;
 
 }
 
