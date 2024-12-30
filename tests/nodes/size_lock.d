@@ -4,6 +4,14 @@ import fluid;
 
 @safe:
 
+@("sizeLock supports hspace")
+unittest {
+
+    assert(sizeLock!vspace().isHorizontal == false);
+    assert(sizeLock!hspace().isHorizontal == true);
+
+}
+
 @("SizeLock changes the size given to a node")
 unittest {
 
