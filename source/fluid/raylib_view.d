@@ -490,11 +490,31 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO {
         // Image already loaded, reuse
         if (auto indexPtr = id in _imageIndices) {
 
-            // TODO update the texture
-            auto internalImage = _images[*indexPtr];
-            internalImage.image = image;
+            auto resource = _images[*indexPtr];
 
-            _images.reload(*indexPtr, internalImage);
+            // Image was updated, mirror the changes
+            if (image.revisionNumber > resource.image.revisionNumber) {
+
+                const sameFormat = resource.image.width == image.width
+                    && resource.image.height == image.height
+                    && resource.image.format == image.format;
+
+                resource.image = image;
+
+                // Update the texture in place if the format is the same
+                if (sameFormat) {
+                    UpdateTexture(resource.texture, image.data.ptr);
+                }
+
+                // Reupload the image if not
+                else {
+                    UnloadTexture(resource.texture);
+                    resource.texture = LoadTextureFromImage(image.toRaylib);
+                }
+
+            }
+
+            _images.reload(*indexPtr, resource);
             return *indexPtr;
         }
 
