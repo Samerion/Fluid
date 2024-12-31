@@ -33,6 +33,9 @@ version (OSX) {
 import raylib;
 import optional;
 
+import std.meta;
+import std.traits;
+
 import fluid.node;
 import fluid.utils;
 import fluid.types;
@@ -43,6 +46,8 @@ import fluid.future.arena;
 import fluid.backend.raylib5 : Raylib5Backend, toRaylib;
 
 import fluid.io.canvas;
+import fluid.io.hover;
+import fluid.io.mouse;
 
 static if (!__traits(compiles, IsShaderReady))
     private alias IsShaderReady = IsShaderValid;
@@ -103,7 +108,9 @@ struct RaylibViewBuilder(alias T) {
 /// * `KeyboardIO` to provide keyboard support.
 /// * `ClipboardIO` to access system keyboard.
 /// * `ImageLoadIO` to load images using codecs available in Raylib.
-class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO {
+class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO {
+
+    HoverIO hoverIO;
 
     public {
 
@@ -119,12 +126,14 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO {
 
     private {
 
+        // Window state
         Vector2 _dpi;
         Vector2 _dpiScale;
         Vector2 _windowSize;
         Rectangle _cropArea;
-        ResourceArena!RaylibImage _images;
 
+        // Resources
+        ResourceArena!RaylibImage _images;
         raylib.Texture _paletteTexture;
         Shader _alphaImageShader;
         Shader _palettedAlphaImageShader;
@@ -133,6 +142,9 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO {
         /// Map of image pointers (image.data.ptr) to indices in the resource arena (_images)
         int[size_t] _imageIndices;
 
+        // I/O
+        Pointer _mousePointer;
+
     }
 
     this(Node next = null) {
@@ -140,6 +152,9 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO {
     }
 
     override void resizeImpl(Vector2) @trusted {
+
+        require(hoverIO);
+        hoverIO.loadTo(_mousePointer);
 
         // Fetch data from Raylib
         _dpiScale = GetWindowScaleDPI;
@@ -189,10 +204,53 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO {
 
     override void drawImpl(Rectangle, Rectangle) {
 
+        updateMouse();
+
         if (next) {
             resetCropArea();
             drawChild(next, _cropArea);
         }
+
+    }
+
+    protected void updateMouse() @trusted {
+
+        // Update mouse status
+        _mousePointer.position     = toFluid(GetMousePosition);
+        _mousePointer.scroll       = scroll();
+        _mousePointer.isScrollHeld = false;
+        hoverIO.loadTo(_mousePointer);
+
+        // Send buttons
+        foreach (button; NoDuplicates!(EnumMembers!(MouseIO.Button))) {
+
+            const buttonRay = .toRaylibEx(button);
+
+            if (buttonRay == -1) continue;
+
+            // Active event
+            if (IsMouseButtonReleased(buttonRay)) {
+                hoverIO.emitEvent(_mousePointer, MouseIO.createEvent(button, true));
+            }
+
+            else if (IsMouseButtonDown(buttonRay)) {
+                hoverIO.emitEvent(_mousePointer, MouseIO.createEvent(button, false));
+            }
+
+        }
+
+    }
+
+    /// Returns:
+    ///     Distance travelled by the mouse in Fluid coordinates.
+    private Vector2 scroll() @trusted {
+
+        // Normalize the value: Linux and Windows provide trinary values (-1, 0, 1) but macOS gives analog that often
+        // goes far higher than that. This is a rough guess of the proportions based on feeling.
+        version (OSX)
+            return -GetMouseWheelMoveV / 4;
+        else
+            return -GetMouseWheelMoveV;
 
     }
 
@@ -521,6 +579,36 @@ class RaylibStack(RaylibViewVersion raylibVersion) : Node {
 
     override void drawImpl(Rectangle, Rectangle inner) {
         drawChild(root, inner);
+    }
+
+}
+
+/// Convert a `MouseIO.Button` to a `raylib.MouseButton`.
+///
+/// Temporarily named `toRaylibEx` instead of `toRaylib` to avoid conflicts with legacy Raylib functionality.
+///
+/// Note:
+///     `raylib.MouseButton` does not have a dedicated invalid value so this function will instead
+///     return `-1`.
+/// Params:
+///     button = A Fluid `MouseIO` button code.
+/// Returns:
+///     A corresponding `raylib.MouseButton` value.
+int toRaylibEx(MouseIO.Button button) {
+
+    with (MouseButton)
+    with (button)
+    final switch (button) {
+
+        case none:    return -1;
+        case left:    return MOUSE_BUTTON_LEFT;
+        case right:   return MOUSE_BUTTON_RIGHT;
+        case middle:  return MOUSE_BUTTON_MIDDLE;
+        case extra1:  return MOUSE_BUTTON_SIDE;
+        case extra2:  return MOUSE_BUTTON_EXTRA;
+        case forward: return MOUSE_BUTTON_FORWARD;
+        case back:    return MOUSE_BUTTON_BACK;
+
     }
 
 }
