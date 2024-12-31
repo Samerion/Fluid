@@ -621,3 +621,125 @@ unittest {
         .runWhileDrawing(root, 3);
 
 }
+
+@("HoverChain supports touchscreen scrolling")
+unittest {
+
+    // Try the same motion without holding the scroll (like a mouse)
+    // and then while holding (like a touchscreen)
+    foreach (testHold; [false, true]) {
+
+        ScrollTracker targetTracker, dummyTracker;
+
+        auto hover = hoverChain(
+            .layout!"fill",
+            sizeLock!vspace(
+                .sizeLimit(100, 100),
+                targetTracker = scrollTracker(
+                    .layout!(2, "fill"),
+                ),
+                dummyTracker = scrollTracker(
+                    .layout!(1, "fill"),
+                ),
+            ),
+        );
+        auto root = hover;
+
+        hover.point(50, 25)
+            .then((a) {
+
+                assert(a.currentScroll.opEquals(targetTracker));
+
+                // Hold the left mouse button
+                a.press(false);
+                a.holdScroll(testHold);
+                return a.move(50, 75).scroll(0, -25);
+
+            })
+            .then((a) {
+
+                if (testHold)
+                    assert(a.currentScroll.opEquals(targetTracker));
+                else
+                    assert(a.currentScroll.opEquals(dummyTracker));
+
+                // Release the mouse button
+                a.press;
+                a.holdScroll(testHold);
+                return a.scroll(0, -25);
+
+            })
+            .runWhileDrawing(root);
+
+        if (testHold) {
+            assert(targetTracker.totalScroll.y == -50);
+            assert(dummyTracker.totalScroll.y  ==   0);
+        }
+        else {
+            assert(targetTracker.totalScroll.y ==   0);
+            assert(dummyTracker.totalScroll.y  == -50);
+        }
+
+    }
+
+}
+
+@("Held scroll counts as a single motion for canScroll() in HoverChain")
+unittest {
+
+    // Compare differences between held and hovered scroll
+    foreach (testHold; [false, true]) {
+
+        ScrollTracker outerTracker, innerTracker;
+
+        auto hover = hoverChain(
+            sizeLock!vspace(
+                .sizeLimit(100, 100),
+                outerTracker = scrollTracker(
+                    .layout!(1, "fill"),
+                    innerTracker = scrollTracker(
+                        .layout!(1, "fill"),
+                    ),
+                ),
+            ),
+        );
+        auto root = hover;
+
+        hover.point(50, 50)
+            .then((a) {
+                assert(a.currentScroll.opEquals(innerTracker));
+                a.holdScroll(testHold);
+                return a.scroll(0, -20);
+            })
+            // Pretend innerTracker has reached its limit for scrolling
+            .then((a) {
+                assert(a.currentScroll.opEquals(innerTracker));
+                a.holdScroll(testHold);
+                innerTracker.disableScroll = true;
+                return a.scroll(0, -10);
+            })
+            .then((a) {
+                if (testHold) {
+                    assert(a.currentScroll.opEquals(innerTracker));
+                }
+                else {
+                    assert(a.currentScroll.opEquals(outerTracker));
+                }
+            })
+            .runWhileDrawing(root, 3);
+
+        // A held scroll counts as a single motion, so it shouldn't test canScroll during the second frame
+        if (testHold) {
+            assert(innerTracker.totalScroll == Vector2(0, -30));
+            assert(outerTracker.totalScroll == Vector2(0,   0));
+        }
+
+        // If not held, the motions are separate, so outerTracker should get the second part
+        else {
+            assert(innerTracker.totalScroll == Vector2(0, -20));
+            assert(outerTracker.totalScroll == Vector2(0, -10));
+        }
+
+    }
+
+}

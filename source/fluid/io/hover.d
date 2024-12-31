@@ -232,6 +232,17 @@ struct Pointer {
     /// It is also possible for a device to perform both horizontal and vertical movement at once.
     Vector2 scroll;
 
+    /// If true, the scroll control is held, like a finger swiping through the screen. This does not apply to mouse
+    /// wheels.
+    ///
+    /// If scroll is "held," the scrolling motion should detach from pointer position. Whatever scrollable was
+    /// selected at the time scroll was pressed should continue to be selected while held even if the pointer moves
+    /// away from it. This makes it possible to comfortably scroll with a touchscreen without having to mind node
+    /// boundaries, or to implement features such as [autoscroll].
+    ///
+    /// [autoscroll]: (https://chromewebstore.google.com/detail/autoscroll/occjjkgifpmdgodlplnacmkejpdionan)
+    bool isScrollHeld;
+
     /// True if the pointer is not currently pointing, like a finger that stopped touching the screen.
     bool isDisabled;
 
@@ -330,9 +341,10 @@ struct Pointer {
     /// Params:
     ///     other = Pointer to copy data from.
     void update(Pointer other) {
-        this.position   = other.position;
-        this.scroll     = other.scroll;
-        this.isDisabled = other.isDisabled;
+        this.position     = other.position;
+        this.scroll       = other.scroll;
+        this.isScrollHeld = other.isScrollHeld;
+        this.isDisabled   = other.isDisabled;
     }
 
     /// Emit an event through the pointer.
@@ -683,6 +695,9 @@ class PointerAction : TreeAction, Publisher!PointerAction, IO {
     }
 
     /// Set a scroll value for the action.
+    ///
+    /// Once the motion is completed, the scroll value will be reset and will not apply for future actions.
+    ///
     /// Params:
     ///     motion = Distance to scroll.
     /// Returns:
@@ -705,6 +720,17 @@ class PointerAction : TreeAction, Publisher!PointerAction, IO {
     PointerAction scroll(float x, float y) return {
 
         return scroll(Vector2(x, y));
+
+    }
+
+    /// Hold the scroll control in place. This makes it possible to continue scrolling a single node while
+    /// moving the cursor, which is commonly the scrolling behavior of touchscreens.
+    ///
+    /// The hold status will be reset after a frame.
+    void holdScroll(bool value = true) return {
+
+        pointer.isScrollHeld = value;
+        hoverIO.loadTo(pointer);
 
     }
 
@@ -760,8 +786,10 @@ class PointerAction : TreeAction, Publisher!PointerAction, IO {
 
         super.stopped();
 
-        // Disable the pointer
+        // Disable the pointer and clear scroll
         pointer.isDisabled = true;
+        pointer.scroll = Vector2();
+        pointer.isScrollHeld = false;
         hoverIO.loadTo(pointer);
 
         _onInteraction(this);

@@ -202,7 +202,9 @@ class HoverChain : NodeChain, HoverIO {
             }
 
             // Update scroll and send new events
-            pointer.scrollable = pointer.action.scrollable;
+            if (!pointer.value.isScrollHeld) {
+                pointer.scrollable = pointer.action.scrollable;
+            }
             if (pointer.scrollable) {
                 pointer.scrollable.scrollImpl(pointer.value.scroll);
             }
