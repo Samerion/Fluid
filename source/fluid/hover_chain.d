@@ -37,7 +37,7 @@ class HoverChain : NodeChain, HoverIO {
             Pointer value;
 
             /// Branch action associated with the pointer; finds the associated node.
-            NodeAtPointAction action;
+            FindHoveredNodeAction action;
 
             /// Node last matched to the pointer. "Hovered" node.
             Node node;
@@ -46,6 +46,9 @@ class HoverChain : NodeChain, HoverIO {
             /// Input actions won't fire if the hovered node, the one under the cursor, is different from the one
             /// that is being held.
             Node heldNode;
+
+            /// Scrollable hovered by this pointer, if any.
+            HoverScrollable scrollable;
 
             /// If true, any button related to the pointer is being held.
             bool isHeld;
@@ -73,13 +76,13 @@ class HoverChain : NodeChain, HoverIO {
 
     override int load(Pointer pointer) {
 
-        const index = cast(int) _pointers[].countUntil(pointer);
+        const index = cast(int) _pointers.allResources.countUntil(pointer);
 
         // No such pointer
         if (index == -1) {
             return _pointers.load(HoverPointer(
                 pointer,
-                new NodeAtPointAction,
+                new FindHoveredNodeAction,
             ));
         }
 
@@ -118,7 +121,7 @@ class HoverChain : NodeChain, HoverIO {
 
     override bool isHovered(const Hoverable hoverable) const {
 
-        foreach (pointer; _pointers[]) {
+        foreach (pointer; _pointers.activeResources) {
 
             // Skip disabled pointers
             if (pointer.value.isDisabled) continue;
@@ -136,7 +139,7 @@ class HoverChain : NodeChain, HoverIO {
 
     override int opApply(int delegate(Hoverable) @safe yield) {
 
-        foreach (pointer; _pointers[]) {
+        foreach (pointer; _pointers.activeResources) {
 
             // Skip disabled pointers
             if (pointer.value.isDisabled) continue;
@@ -187,15 +190,26 @@ class HoverChain : NodeChain, HoverIO {
         frame.stop();
 
         // Update hover data
-        foreach (ref pointer; _pointers[]) {
+        foreach (pointer; _pointers.activeResources) {
 
-            // Set the hovered node
+            scope (exit) _pointers[pointer.value.id] = pointer;
+
+            // Keep the same hovered node if the pointer is being held,
+            // otherwise switch.
             pointer.node = pointer.action.result;
-
-            // Mark as held ahead of time
             if (!pointer.isHeld) {
                 pointer.heldNode = pointer.node;
             }
+
+            // Update scroll and send new events
+            if (!pointer.value.isScrollHeld) {
+                pointer.scrollable = pointer.action.scrollable;
+            }
+            if (pointer.scrollable) {
+                pointer.scrollable.scrollImpl(pointer.value.scroll);
+            }
+
+            // Reset state
             pointer.isHeld = false;
             pointer.isHandled = false;
 
@@ -214,24 +228,29 @@ class HoverChain : NodeChain, HoverIO {
     /// List all branch actions for active pointers, and change their search positions to match the pointer.
     private auto armBranchActions() {
 
-        return _pointers[]
+        return _pointers.activeResources
             .filter!(a => !a.value.isDisabled)
             .map!((a) {
                 a.action.search = a.value.position;
+                a.action.scroll = a.value.scroll;
                 return a.action;
             });
 
     }
 
-    /// Returns:
-    ///     Node hovered by the pointer.
-    /// Params:
-    ///     pointer = Pointer to check. The pointer must be loaded.
-    inout(Hoverable) hoverOf(Pointer pointer) inout {
+    override inout(Hoverable) hoverOf(Pointer pointer) inout {
 
         debug assert(_pointers.isActive(pointer.id), "Given pointer wasn't loaded");
 
         return _pointers[pointer.id].heldNode.castIfAcceptsInput!Hoverable;
+
+    }
+
+    override inout(HoverScrollable) scrollOf(Pointer pointer) inout {
+
+        debug assert(_pointers.isActive(pointer.id), "Given pointer wasn't loaded");
+
+        return _pointers[pointer.id].scrollable;
 
     }
 

@@ -8,6 +8,7 @@ import fluid.types;
 
 import fluid.future.pipe;
 import fluid.future.context;
+import fluid.future.branch_action;
 
 import fluid.io.action;
 
@@ -101,7 +102,17 @@ interface HoverIO : IO {
     ///     pointer = Pointer to query. The pointer must be loaded.
     /// Returns:
     ///     Node hovered by the pointer.
+    /// See_Also:
+    ///     `scrollOf` to get the current scrollable node.
     inout(Hoverable) hoverOf(Pointer pointer) inout;
+
+    /// Params:
+    ///     pointer = Pointer to query. The pointer must be loaded.
+    /// Returns:
+    ///     Scrollable ancestor for the currently hovered node.
+    /// See_Also:
+    ///     `hoverOf` to get the currently hovered node.
+    inout(HoverScrollable) scrollOf(Pointer pointer) inout;
 
     /// Returns:
     ///     True if the node is hovered.
@@ -210,6 +221,28 @@ struct Pointer {
     /// Position in the window the pointer is pointing at.
     Vector2 position;
 
+    /// Current scroll value. For a mouse, this indicates mouse wheel movement, for other devices like touchpad or
+    /// touchscreen, this will be translated from its movement.
+    ///
+    /// While it is possible to read scroll of the `Pointer` data received in an input action handler,
+    /// it is recommended to implement scroll through `Scrollable.scrollImpl`.
+    ///
+    /// Scroll is exposed for both the horizontal and vertical axis. While a typical mouse wheel only supports
+    /// vertical movement, touchscreens, touchpads, trackpads or more advanced mouses do support horizontal movement.
+    /// It is also possible for a device to perform both horizontal and vertical movement at once.
+    Vector2 scroll;
+
+    /// If true, the scroll control is held, like a finger swiping through the screen. This does not apply to mouse
+    /// wheels.
+    ///
+    /// If scroll is "held," the scrolling motion should detach from pointer position. Whatever scrollable was
+    /// selected at the time scroll was pressed should continue to be selected while held even if the pointer moves
+    /// away from it. This makes it possible to comfortably scroll with a touchscreen without having to mind node
+    /// boundaries, or to implement features such as [autoscroll].
+    ///
+    /// [autoscroll]: (https://chromewebstore.google.com/detail/autoscroll/occjjkgifpmdgodlplnacmkejpdionan)
+    bool isScrollHeld;
+
     /// True if the pointer is not currently pointing, like a finger that stopped touching the screen.
     bool isDisabled;
 
@@ -218,6 +251,27 @@ struct Pointer {
 
     /// ID of the pointer assigned by the `HoverIO` system.
     private int _id;
+
+    /// Create a new pointer.
+    /// Params:
+    ///     device     = I/O system representing the device that created the pointer.
+    ///     number     = Pointer number as assigned by the device.
+    ///     position   = Position of the pointer.
+    ///     isDisabled = If true, disable the node.
+    this(inout IO device, int number, Vector2 position, Vector2 scroll = Vector2.init, bool isDisabled = false) inout {
+        this.device     = device;
+        this.number     = number;
+        this.position   = position;
+        this.scroll     = scroll;
+        this.isDisabled = isDisabled;
+    }
+
+    /// Create a new pointer.
+    /// Params:
+    ///     position   = Position of the pointer.
+    this(Vector2 position) {
+        this.position = position;
+    }
 
     /// If the given system is a Hover I/O system, fetch a pointer.
     ///
@@ -287,8 +341,10 @@ struct Pointer {
     /// Params:
     ///     other = Pointer to copy data from.
     void update(Pointer other) {
-        this.position = other.position;
-        this.isDisabled = other.isDisabled;
+        this.position     = other.position;
+        this.scroll       = other.scroll;
+        this.isScrollHeld = other.isScrollHeld;
+        this.isDisabled   = other.isDisabled;
     }
 
     /// Emit an event through the pointer.
@@ -331,6 +387,166 @@ interface Hoverable : Actionable {
 
 }
 
+/// Nodes implementing this interface can react to scroll motion if selected by a `HoverIO` system.
+///
+/// Temporarily called `HoverScrollable`, this node will be renamed to `Scrollable` in a future release.
+/// https://git.samerion.com/Samerion/Fluid/issues/278
+interface HoverScrollable {
+
+    import fluid.node;
+
+    /// Controls whether this node can accept scroll input and the input can have visible effect. This is usually
+    /// determined by the node's position; for example a container node already scrolled to the bottom cannot accept
+    /// further vertical movement down.
+    ///
+    /// This property is used to determine which node should be used to accept scroll. If there's a scrollable
+    /// container nested in another scrollable node, it will be chosen for scrolling only if the scroll motion
+    /// can still be performed. On the other hand, if the intent is specifically to block scroll motion (like in
+    /// a modal window), this method should always return true.
+    ///
+    /// Note that a node "can scroll" even if it can only accept part of the motion. If the scroll would have
+    /// the node scroll beyond its maximum value, but the node is not already at its maximum, it should accept
+    /// the input and clamp the value.
+    ///
+    /// Params:
+    ///     value = Input scroll value for both X and Y axis. This corresponds to the screen distance the scroll
+    ///         motion should cover.
+    /// Returns:
+    ///     True if the node can accept the scroll value in part or in whole,
+    ///     false if the motion would have no effect.
+    bool canScroll(Vector2 value) const;
+
+    /// Perform a scroll motion, moving the node's contents by the specified distance.
+    ///
+    /// At the moment this function returns `void` for backwards compatibility. This will change in the future
+    /// into a boolean value, indicating if the motion was handled or not.
+    ///
+    /// Params:
+    ///     value = Value to scroll the contents by.
+    void scrollImpl(Vector2 value);
+
+    /// Scroll towards a specified child node, trying to get it into view.
+    ///
+    /// Params:
+    ///     child     = Target node, a child of this node. Ideally, this node should appear on screen as a consequence.
+    ///     parentBox = Padding box of this node, the node performing the scroll.
+    ///     childBox  = Known padding box of the target child node.
+    /// Returns:
+    ///     A new padding box for the child node after applying scroll.
+    Rectangle shallowScrollTo(const Node child, Rectangle parentBox, Rectangle childBox);
+
+    /// Memory safe and `const` object comparison.
+    /// Returns:
+    ///     True if this, and the other object, are the same object.
+    /// Params:
+    ///     other = Object to compare to.
+    bool opEquals(const Object other) const;
+
+}
+
+/// Cast the node to given type if it accepts scroll.
+///
+/// In addition to performing a dynamic cast, this checks if the node can handle a specified scroll value
+/// according to its `HoverScrollable.canScroll` method.
+/// If it doesn't, it will fail the cast.
+///
+/// Params:
+///     node = Node to cast.
+/// Returns:
+///     Node casted to `Scrollable`, or null if the node can't be casted, or the motion would not have effect.
+inout(HoverScrollable) castIfAcceptsScroll(inout Object node, Vector2 value) {
+
+    // Perform the cast
+    if (auto scrollable = cast(inout HoverScrollable) node) {
+
+        // Node must accept scroll
+        if (scrollable.canScroll(value)) {
+            return scrollable;
+        }
+
+    }
+
+    return null;
+
+}
+
+/// Find the topmost node that occupies the given position on the screen.
+///
+/// The result may change while the search runs; the final result is available once the action stops.
+/// On top of finding the node at specified position, a scroll value can be passed so this action will also find
+/// any `Scrollable` ancestor present in the branch, if one can handle the motion.
+/// If the resulting node is scrollable, it may be returned.
+///
+/// For backwards compatibility, this node is not currently registered as a `NodeSearchAction` and does not emit
+/// a node when done.
+final class FindHoveredNodeAction : BranchAction {
+
+    import fluid.node;
+
+    public {
+
+        /// If a node was found, this is the result.
+        Node result;
+
+        /// Topmost scrollable ancestor of `result` (the chosen node).
+        HoverScrollable scrollable;
+
+        /// Position that is looked up.
+        Vector2 search;
+
+        /// Scroll value to test `scrollable` against. If the scroll motion with this value would not have effect
+        /// on a scrollable, it will not be chosen.
+        Vector2 scroll;
+
+    }
+
+    this(Vector2 search = Vector2.init, Vector2 scroll = Vector2.init) {
+        this.search = search;
+        this.scroll = scroll;
+    }
+
+    override void started() {
+        super.started();
+        this.result = null;
+        this.scrollable = null;
+    }
+
+    /// Test if the searched position is within the bounds of this node, and set it as the result if so.
+    /// Any previously found result is overridden.
+    ///
+    /// If a node is found, `scrollable` is cleared. A new one will be found in `afterDraw`.
+    ///
+    /// Because of how layering works in Fluid, the last node in bounds will be the result. This action cannot quit
+    /// early as any node can override the current hover.
+    override void beforeDraw(Node node, Rectangle, Rectangle outer, Rectangle inner) {
+
+        // Check if the position is in bounds of the node
+        if (!node.inBounds(outer, inner, search)) return;
+
+        // Save the result
+        result = node;
+
+        // Clear scrollable
+        scrollable = null;
+
+        // Do not stop; the result may be overridden
+
+    }
+
+    /// Find a matching scrollable for the node. The topmost ancestor of `result` (the chosen node) will be used.
+    override void afterDraw(Node node, Rectangle) {
+
+        // A result is required and no scrollable could have matched already
+        if (result is null) return;
+        if (scrollable) return;
+
+        // Try to match this node
+        scrollable = node.castIfAcceptsScroll(scroll);
+
+    }
+
+}
+
 /// Create a virtual Hover I/O pointer for testing, and place it at the given position. Interactions on the pointer
 /// are asynchronous and should be performed by `then` chains, see `fluid.future.pipe`.
 ///
@@ -357,7 +573,7 @@ PointerAction point(HoverIO hoverIO, float x, float y) {
 }
 
 /// Virtual Hover I/O pointer, for testing.
-class PointerAction : TreeAction, Publisher!PointerAction {
+class PointerAction : TreeAction, Publisher!PointerAction, IO {
 
     import fluid.node;
 
@@ -387,8 +603,17 @@ class PointerAction : TreeAction, Publisher!PointerAction {
 
         this.hoverIO = hoverIO;
         this._node = cast(Node) hoverIO;
+        this.pointer.device = this;
         assert(_node, "Given Hover I/O is not a valid node");
 
+    }
+
+    override bool opEquals(const Object other) const {
+        return this is other;
+    }
+
+    override inout(TreeContext) treeContext() inout {
+        return hoverIO.treeContext;
     }
 
     void subscribe(Subscriber!PointerAction subscriber) {
@@ -409,6 +634,15 @@ class PointerAction : TreeAction, Publisher!PointerAction {
 
     }
 
+    /// Returns:
+    ///     Chosen scrollable, if any.
+    HoverScrollable currentScroll() {
+
+        hoverIO.loadTo(pointer);
+        return hoverIO.scrollOf(pointer);
+
+    }
+
     /// Returns: True if the given node is hovered.
     bool isHovered(Node node) {
 
@@ -423,6 +657,7 @@ class PointerAction : TreeAction, Publisher!PointerAction {
     /// Returns: This action, for chaining.
     PointerAction stayIdle() return {
 
+        clearSubscribers();
         _node.startAction(this);
 
         // Place the pointer
@@ -440,6 +675,7 @@ class PointerAction : TreeAction, Publisher!PointerAction {
     ///     This action, for chaining.
     PointerAction move(Vector2 position) return {
 
+        clearSubscribers();
         _node.startAction(this);
 
         // Place the pointer
@@ -455,6 +691,46 @@ class PointerAction : TreeAction, Publisher!PointerAction {
     PointerAction move(float x, float y) return {
 
         return move(Vector2(x, y));
+
+    }
+
+    /// Set a scroll value for the action.
+    ///
+    /// Once the motion is completed, the scroll value will be reset and will not apply for future actions.
+    ///
+    /// Params:
+    ///     motion = Distance to scroll.
+    /// Returns:
+    ///     This action, for chaining.
+    PointerAction scroll(Vector2 motion) return {
+
+        clearSubscribers();
+        _node.startAction(this);
+
+        // Place the pointer
+        pointer.isDisabled = false;
+        pointer.scroll = motion;
+        hoverIO.loadTo(pointer);
+
+        return this;
+
+    }
+
+    /// ditto
+    PointerAction scroll(float x, float y) return {
+
+        return scroll(Vector2(x, y));
+
+    }
+
+    /// Hold the scroll control in place. This makes it possible to continue scrolling a single node while
+    /// moving the cursor, which is commonly the scrolling behavior of touchscreens.
+    ///
+    /// The hold status will be reset after a frame.
+    void holdScroll(bool value = true) return {
+
+        pointer.isScrollHeld = value;
+        hoverIO.loadTo(pointer);
 
     }
 
@@ -496,10 +772,13 @@ class PointerAction : TreeAction, Publisher!PointerAction {
     /// Shorthand for `runInputAction!(FluidInputAction.press)`
     alias press = runInputAction!(FluidInputAction.press);
 
-    override void started() {
+    override void beforeDraw(Node node, Rectangle) {
 
-        super.started();
-        clearSubscribers();
+        // Make sure the pointer is loaded and up to date
+        // If the action was scheduled before a resize, the pointer would die during it
+        if (hoverIO.opEquals(node)) {
+            hoverIO.loadTo(pointer);
+        }
 
     }
 
@@ -507,8 +786,10 @@ class PointerAction : TreeAction, Publisher!PointerAction {
 
         super.stopped();
 
-        // Disable the pointer
+        // Disable the pointer and clear scroll
         pointer.isDisabled = true;
+        pointer.scroll = Vector2();
+        pointer.isScrollHeld = false;
         hoverIO.loadTo(pointer);
 
         _onInteraction(this);

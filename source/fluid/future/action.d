@@ -16,12 +16,12 @@ import fluid.future.branch_action;
 @safe:
 
 
-/// Focus next or previous focusable node relative to the point of reference. 
+/// Focus next or previous focusable node relative to the point of reference.
 /// This function only works with nodes compatible with the new I/O system introduced in Fluid 0.7.2.
 ///
 /// Params:
 ///     node   = Node to use for reference.
-///     branch = Branch to search. Nodes that are not children of this node will not be matched. 
+///     branch = Branch to search. Nodes that are not children of this node will not be matched.
 ///         Default to the whole tree.
 ///     wrap   = If true, if no node remains to focus, focus the first or last node found.
 OrderedFocusAction focusNext(Node node, bool wrap = true) {
@@ -164,7 +164,7 @@ final class OrderedFocusAction : FocusSearchAction {
 }
 
 
-/// Find and focus a focusable node based on its visual position; above, below, to the left or to the right 
+/// Find and focus a focusable node based on its visual position; above, below, to the left or to the right
 /// of a chosen node.
 ///
 /// Using this function requires knowing the last position of the node, which isn't usually stored. Depending on
@@ -172,7 +172,7 @@ final class OrderedFocusAction : FocusSearchAction {
 ///
 /// Nodes are chosen based on semantical weight — nodes within the same container will be prioritized over
 /// nodes in another. Only if the weight is the same, they will be compared based on their visual distance.
-/// 
+///
 /// Params:
 ///     node      = Node to use as reference.
 ///     focusBox  = Last known `focusBox` of the node.
@@ -238,7 +238,7 @@ final class PositionalFocusAction : FocusSearchAction {
         /// Multiplier for changes to priority; +1 when moving towards the target, -1 when moving away from it.
         /// This assigns higher priority for nodes that are semantically closer to the match.
         ///
-        /// Priority changes only when depth changes; if two nodes are drawn and they're siblings, priority 
+        /// Priority changes only when depth changes; if two nodes are drawn and they're siblings, priority
         /// won't change. Priority will only change if the relation is different, e.g. child, cousin, etc.
         int priorityDirection = 1;
 
@@ -359,44 +359,6 @@ final class PositionalFocusAction : FocusSearchAction {
         const distanceOpposite = center(box) - center(focusBox);
 
         return distanceExternal^^2 + distanceOpposite^^2;
-
-    }
-
-}
-
-/// Find the topmost node that occupies the given position on the screen.
-///
-/// For backwards compatibility, this node is not currently registered as a `NodeSearchAction` and does not emit
-/// a node when done.
-final class NodeAtPointAction : BranchAction {
-
-    public {
-
-        /// If a node was found, this is the result.
-        Node result;
-
-        /// Position that is looked up.
-        Vector2 search;
-
-    }
-
-    this(Vector2 search = Vector2.init) {
-        this.search = search;
-    }
-
-    override void started() {
-        super.started();
-        this.result = null;
-    }
-
-    override void beforeDraw(Node node, Rectangle, Rectangle outer, Rectangle inner) {
-
-        // Check if the position is in bounds of the node
-        if (!node.inBounds(outer, inner, search)) return;
-
-        // Save the result
-        result = node;
-        // Do not stop; the result may be overriden
 
     }
 
