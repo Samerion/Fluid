@@ -894,9 +894,9 @@ struct CompositeTexture {
         foreach (index; chosenChunks) {
 
             // Set parameters
-            chunks[index].palette = palette;
-            chunks[index].texture.dpiX = cast(int) dpi.x;
-            chunks[index].texture.dpiY = cast(int) dpi.y;
+            chunks[index].image.palette = palette;
+            chunks[index].image.dpiX = cast(int) dpi.x;
+            chunks[index].image.dpiY = cast(int) dpi.y;
 
             const start = rectangle.start + chunkPosition(index);
             const size = chunks[index].image.viewportSize;
@@ -919,7 +919,7 @@ struct CompositeTexture {
 
             assert(chunks[index].texture.backend !is null);
             debug assert(backend == chunks[index].texture.backend,
-                .format!"Backend mismatch %s (%s) != %s (%s)"(backend, cast(void*) backend, 
+                .format!"Backend mismatch %s (%s) != %s (%s)"(backend, cast(void*) backend,
                     chunks[index].texture.backend, cast(void*) chunks[index].texture.backend));
 
             const start = rectangle.start + chunkPosition(index);
