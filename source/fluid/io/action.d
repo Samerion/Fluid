@@ -1,6 +1,8 @@
 /// This module contains interfaces for mapping input events to input actions.
 module fluid.io.action;
 
+import optional;
+
 import fluid.input;
 import fluid.future.context;
 
@@ -10,7 +12,7 @@ public import fluid.input;
 
 /// I/O interface for mapping input events to input actions.
 ///
-/// Input events correspond to direct events from input devices, like keyboard or mouse. 
+/// Input events correspond to direct events from input devices, like keyboard or mouse.
 /// The job of `ActionIO` is to translate them into more meaningful input actions, which nodes
 /// can set up listeners for.
 ///
@@ -28,12 +30,12 @@ interface ActionIO : IO {
 
     }
 
-    /// Create an input event to which `ActionIO` should always have bound to the `CoreAction.frame` input action. 
-    /// Consequently, `ActionIO` always responds with a `CoreAction.frame` input action after processing remaining 
+    /// Create an input event to which `ActionIO` should always have bound to the `CoreAction.frame` input action.
+    /// Consequently, `ActionIO` always responds with a `CoreAction.frame` input action after processing remaining
     /// input actions.
     ///
-    /// This can be used by device and input handling I/Os to detect the moment after which all input actions have 
-    /// been processed. This means that it can be used to develop fallback mechanisms like `hoverImpl` 
+    /// This can be used by device and input handling I/Os to detect the moment after which all input actions have
+    /// been processed. This means that it can be used to develop fallback mechanisms like `hoverImpl`
     /// and `focusImpl`, which only trigger if no input action has been activated.
     ///
     /// Note that `CoreAction.frame` might, or might not, be emitted if another action event has been emitted during
@@ -53,7 +55,7 @@ interface ActionIO : IO {
     /// all input handling nodes that the system interacts with, like `HoverIO` and `FocusIO`, have been processed
     /// and are ready to handle the event.
     ///
-    /// Once processing has completed, if the event has triggered an action, the system will trigger the callback that 
+    /// Once processing has completed, if the event has triggered an action, the system will trigger the callback that
     /// was passed along with the event. Events that were saved in the system should be discarded.
     ///
     /// Note if an event functions as a modifier — for example the "control" key in a "ctrl+c" action — it should not
@@ -64,19 +66,19 @@ interface ActionIO : IO {
     ///     event    = Input event the system should save.
     ///     number   = A number that will be passed as-is into the callback. Can be used to distinguish between
     ///         different action calls without allocating a closure.
-    ///     callback = Function to call if the event has triggered an input action. 
+    ///     callback = Function to call if the event has triggered an input action.
     ///         The ID of the action will be passed as an argument, along with a boolean indicating if it was
     ///         triggered by an inactive, or active event.
     ///         The number passed into the `emitEvent` function will be passed as the third argument to this callback.
     ///         The return value of the callback should indicate if the action was handled or not.
-    void emitEvent(InputEvent event, int number, 
+    void emitEvent(InputEvent event, int number,
         bool delegate(immutable InputActionID, bool isActive, int number) @safe callback);
-    
+
 }
 
 /// Uniquely codes a pressed key, button or a gesture, by using an I/O ID and event code map.
 /// Each I/O interface can define its own keys and buttons it needs to map. The way it maps
-/// codes to buttons is left up to the interface to define, but it usually is with an enum. 
+/// codes to buttons is left up to the interface to define, but it usually is with an enum.
 struct InputEventCode {
 
     /// ID for the I/O interface representing the input device. The I/O interface defines a code
@@ -86,8 +88,8 @@ struct InputEventCode {
     /// from another device, however this scenario is likely better handled as a separate binding in `ActionIO`.
     IOID ioID;
 
-    /// Event code identifying the key or button that triggered the event. These codes are defined 
-    /// by the I/O interface that send them. 
+    /// Event code identifying the key or button that triggered the event. These codes are defined
+    /// by the I/O interface that send them.
     ///
     /// See_Also:
     ///     For keyboard codes, see `KeyboardIO`.
@@ -117,8 +119,8 @@ struct InputEvent {
 
 }
 
-/// This is a base interface for nodes that respond to input actions. While `ActionIO` shouldn't interact 
-/// with nodes directly, input handling systems like `FocusIO` or `HoverIO` will expect nodes to implement 
+/// This is a base interface for nodes that respond to input actions. While `ActionIO` shouldn't interact
+/// with nodes directly, input handling systems like `FocusIO` or `HoverIO` will expect nodes to implement
 /// this interface if they support input actions.
 interface Actionable {
 
@@ -138,7 +140,7 @@ interface Actionable {
 
     /// Handle an input action.
     ///
-    /// This method should not be called for nodes for which `blocksInput` is true. 
+    /// This method should not be called for nodes for which `blocksInput` is true.
     ///
     /// Params:
     ///     io       = I/O input handling system to trigger the action, for example `HoverIO` or `FocusIO`.
@@ -147,8 +149,8 @@ interface Actionable {
     ///         supported.
     ///     action   = ID of the action to handle.
     ///     isActive = If true, this is an active action.
-    ///         Most event handlers is only interested in active handlers; 
-    ///         they indicate the event has changed state (just pressed, or just released), 
+    ///         Most event handlers is only interested in active handlers;
+    ///         they indicate the event has changed state (just pressed, or just released),
     ///         whereas an inactive action merely means the button or key is down.
     /// Returns:
     ///     True if the action was handled, false if not.
@@ -264,7 +266,7 @@ enum isRetrievableResource(T) = __traits(compiles, T.fetch(IO.init, 0));
 ///         Presently, this is an enum member of the input action it comes from.
 ///         `InputActionID` cannot be used here.
 ///     handler = Handler for the action.
-///         The handler may choose to return a boolean, 
+///         The handler may choose to return a boolean,
 ///         indicating if it handled (true) or ignored the action (false).
 ///
 ///         It may also optionally accept the input action enum, for example `FluidInputAction`,
@@ -296,7 +298,7 @@ bool runInputActionHandler(T)(T, void delegate() @safe handler) {
 
 /// Uniform wrapper over the varied set of input action handler variants.
 ///
-/// This is an alternative, newer set of overloads for handling input actions with support for passing event metadata 
+/// This is an alternative, newer set of overloads for handling input actions with support for passing event metadata
 /// through resources.
 ///
 /// Params:
@@ -304,7 +306,7 @@ bool runInputActionHandler(T)(T, void delegate() @safe handler) {
 ///         Presently, this is an enum member of the input action it comes from.
 ///         `InputActionID` cannot be used here.
 ///     handler = Handler for the action.
-///         The handler may choose to return a boolean, 
+///         The handler may choose to return a boolean,
 ///         indicating if it handled (true) or ignored the action (false).
 ///
 ///         It may also optionally accept the input action enum, for example `FluidInputAction`,
@@ -315,15 +317,27 @@ bool runInputActionHandler(T)(T, void delegate() @safe handler) {
 ///     True if the handler responded to this action, false if not.
 bool runInputActionHandler(T, R)(T action, IO io, int number, bool delegate(T action, R resource) @safe handler)
 if (isInputAction!action && isRetrievableResource!R) {
-    R resource = R.fetch(io, number);
-    return handler(action, resource);
+    if (io is null) {
+        return false;
+    }
+    Optional!R resource = R.fetch(io, number);
+    if (resource.empty) {
+        return false;
+    }
+    return handler(action, resource.front);
 }
 
 /// ditto
 bool runInputActionHandler(T, R)(T action, IO io, int number, void delegate(T action, R resource) @safe handler)
 if (isInputAction!action && isRetrievableResource!R) {
-    R resource = R.fetch(io, number);
-    handler(action, resource);
+    if (io is null) {
+        return false;
+    }
+    Optional!R resource = R.fetch(io, number);
+    if (resource.empty) {
+        return false;
+    }
+    handler(action, resource.front);
     return true;
 }
 
@@ -333,8 +347,11 @@ if (isRetrievableResource!R) {
     if (io is null) {
         return false;
     }
-    R resource = R.fetch(io, number);
-    return handler(resource);
+    Optional!R resource = R.fetch(io, number);
+    if (resource.empty) {
+        return false;
+    }
+    return handler(resource.front);
 }
 
 /// ditto
@@ -343,8 +360,11 @@ if (isRetrievableResource!R) {
     if (io is null) {
         return false;
     }
-    R resource = R.fetch(io, number);
-    handler(resource);
+    Optional!R resource = R.fetch(io, number);
+    if (resource.empty) {
+        return false;
+    }
+    handler(resource.front);
     return true;
 }
 
@@ -400,7 +420,7 @@ bool runInputActionHandler(T)(auto ref T aggregate, immutable InputActionID acti
 ///     True if there exists a matching input handler, and if it responded
 ///     to the input action.
 bool runInputActionHandler(T)(auto ref T aggregate, IO io, int number,
-    immutable InputActionID actionID, bool isActive = true) 
+    immutable InputActionID actionID, bool isActive = true)
 do {
 
     import std.functional : toDelegate;
@@ -470,7 +490,7 @@ template InputActionHandlers(T) {
                 static if (isInputActionType!actionType) {
 
                     Result = AliasSeq!(
-                        Result, 
+                        Result,
                         InputActionHandler!(__traits(getAttributes, overload)[i], overload)
                     );
 

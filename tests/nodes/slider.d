@@ -27,8 +27,8 @@ unittest {
 
     // Press at the center
     hover.point(center(rect))
-        .then((pointer) { 
-            
+        .then((pointer) {
+
             pointer.press;
 
             // This should have switched to the second value
@@ -58,7 +58,7 @@ unittest {
 
             // Now the mouse should be released
             return pointer.move(Vector2(center(rect).x, end(rect).y + 100));
-            
+
         })
         .then((pointer) {
 
@@ -82,6 +82,21 @@ unittest {
 
     input.runInputAction!(FluidInputAction.scrollRight);
     assert(input.index == 1);
+    assert(input.value == "Two");
+
+}
+
+@("Pressing a slider with keyboard has no effect")
+unittest {
+
+    auto input = slider!string(["One", "Two", "Three"]);
+    auto focus = focusChain();
+    auto root = chain(hoverChain(), focus, input);
+    root.draw();
+    input.increment();
+    assert(input.value == "Two");
+
+    input.actionImpl(focus, 0, inputActionID!(FluidInputAction.press), true);
     assert(input.value == "Two");
 
 }
