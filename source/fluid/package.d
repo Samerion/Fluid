@@ -60,7 +60,7 @@ public import
     fluid.popup_frame,
     fluid.progress_bar,
     fluid.radiobox,
-    fluid.raylib_chain,
+    fluid.raylib_view,
     fluid.scroll,
     fluid.scroll_input,
     fluid.separator,
