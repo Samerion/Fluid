@@ -599,8 +599,9 @@ auto drawsImage(Node subject) {
             if (!node.opEquals(subject).assertNotThrown) return false;
 
             if (isTestingImage) {
+                const bothEmpty = image.data.empty && targetImage.data.empty;
                 assert(image.format == targetImage.format);
-                assert(image.data is targetImage.data,
+                assert(bothEmpty || image.data is targetImage.data,
                     format!"%s should draw image 0x%02x but draws 0x%02x"(
                         node, cast(size_t) targetImage.data.ptr, cast(size_t) image.data.ptr).assertNotThrown);
 
