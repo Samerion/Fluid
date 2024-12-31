@@ -237,32 +237,51 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO {
 
     }
 
-    void drawTriangleImpl(Vector2 a, Vector2 b, Vector2 c, Color color) nothrow {
-        assert(false);
+    void drawTriangleImpl(Vector2 a, Vector2 b, Vector2 c, Color color) nothrow @trusted {
+        DrawTriangle(
+            toRaylib(a),
+            toRaylib(b),
+            toRaylib(c),
+            color);
     }
 
-    void drawCircleImpl(Vector2 center, float radius, Color color) nothrow {
-        assert(false);
+    void drawCircleImpl(Vector2 center, float radius, Color color) nothrow @trusted {
+        const centerRay = toRaylib(center);
+        const radiusRay = toRaylib(Vector2(radius, radius));
+        DrawEllipse(
+            cast(int) centerRay.x,
+            cast(int) centerRay.y,
+            radiusRay.tupleof,
+            color);
     }
 
-    void drawRectangleImpl(Rectangle rectangle, Color color) nothrow {
-        assert(false);
+    void drawRectangleImpl(Rectangle rectangle, Color color) nothrow @trusted {
+        DrawRectangleRec(
+            toRaylib(rectangle),
+            color);
     }
 
-    void drawLineImpl(Vector2 start, Vector2 end, float width, Color color) nothrow {
-        assert(false);
+    void drawLineImpl(Vector2 start, Vector2 end, float width, Color color) nothrow @trusted {
+        DrawLineEx(
+            toRaylib(start),
+            toRaylib(end),
+            width,
+            color);
     }
 
     void drawImageImpl(DrawableImage image, Rectangle destination, Color tint) nothrow {
-        assert(false);
+        // TODO
+        drawRectangleImpl(destination, tint);
     }
 
     void drawHintedImageImpl(DrawableImage image, Rectangle destination, Color tint) nothrow {
-        assert(false);
+        // TODO
+        drawRectangleImpl(destination, tint);
     }
 
     int load(fluid.Image image) nothrow {
-        assert(false);
+        // TODO
+        return 0;
     }
 
 
