@@ -269,7 +269,7 @@ struct Image {
     int revisionNumber;
 
     /// Create an RGBA image.
-    this(Color[] rgbaPixels, int width, int height) {
+    this(Color[] rgbaPixels, int width, int height) nothrow {
 
         this.format = Format.rgba;
         this.rgbaPixels = rgbaPixels;
@@ -279,7 +279,7 @@ struct Image {
     }
 
     /// Create a paletted image.
-    this(PalettedColor[] palettedAlphaPixels, int width, int height) {
+    this(PalettedColor[] palettedAlphaPixels, int width, int height) nothrow {
 
         this.format = Format.palettedAlpha;
         this.palettedAlphaPixels = palettedAlphaPixels;
@@ -289,7 +289,7 @@ struct Image {
     }
 
     /// Create an alpha mask.
-    this(ubyte[] alphaPixels, int width, int height) {
+    this(ubyte[] alphaPixels, int width, int height) nothrow {
 
         this.format = Format.alpha;
         this.alphaPixels = alphaPixels;

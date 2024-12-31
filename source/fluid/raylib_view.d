@@ -38,7 +38,14 @@ import fluid.utils;
 import fluid.types;
 import fluid.node_chain;
 
+import fluid.future.arena;
+
+import fluid.backend.raylib5 : Raylib5Backend, toRaylib;
+
 import fluid.io.canvas;
+
+static if (!__traits(compiles, IsShaderReady))
+    private alias IsShaderReady = IsShaderValid;
 
 @safe:
 
@@ -105,12 +112,26 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO {
 
     }
 
+    private struct RaylibImage {
+        fluid.Image image;
+        raylib.Texture texture;
+    }
+
     private {
 
         Vector2 _dpi;
         Vector2 _dpiScale;
         Vector2 _windowSize;
         Rectangle _cropArea;
+        ResourceArena!RaylibImage _images;
+
+        raylib.Texture _paletteTexture;
+        Shader _alphaImageShader;
+        Shader _palettedAlphaImageShader;
+        int _palettedAlphaImageShader_palette;
+
+        /// Map of image pointers (image.data.ptr) to indices in the resource arena (_images)
+        int[size_t] _imageIndices;
 
     }
 
@@ -125,6 +146,33 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO {
         _dpi = Vector2(_dpiScale.x * 96, _dpiScale.y * 96);
         _windowSize = toFluid(GetScreenWidth, GetScreenHeight);
         resetCropArea();
+
+        // Load shaders
+        if (!IsShaderReady(_alphaImageShader)) {
+            _alphaImageShader = LoadShaderFromMemory(null, Raylib5Backend.alphaImageShaderCode.ptr);
+        }
+        if (!IsShaderReady(_palettedAlphaImageShader)) {
+            _palettedAlphaImageShader = LoadShaderFromMemory(null, Raylib5Backend.palettedAlphaImageShaderCode.ptr);
+            _palettedAlphaImageShader_palette = GetShaderLocation(_palettedAlphaImageShader, "palette");
+        }
+
+        // Free resources
+        _images.startCycle((newIndex, ref resource) @trusted {
+
+            const id = cast(size_t) resource.image.data.ptr;
+
+            // Resource freed
+            if (newIndex == -1) {
+                _imageIndices.remove(id);
+                UnloadTexture(resource.texture);
+            }
+
+            // Moved
+            else {
+                _imageIndices[id] = newIndex;
+            }
+
+        });
 
         // Enable the system
         auto io = this.implementIO();
@@ -237,7 +285,57 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO {
 
     }
 
-    void drawTriangleImpl(Vector2 a, Vector2 b, Vector2 c, Color color) nothrow @trusted {
+    /// Get the shader used for `alpha` images. This shader is loaded on the first resize,
+    /// and is not accessible before.
+    /// Returns:
+    ///     Shader used for images with the `alpha` format set.
+    Shader alphaImageShader() nothrow @trusted {
+        assert(IsShaderReady(_alphaImageShader), "alphaImageShader is not accessible before resize");
+        return _alphaImageShader;
+    }
+
+    /// Get the shader used for `palettedAlpha` images. This shader is loaded on the first resize,
+    /// and is not accessible before.
+    /// Params:
+    ///     palette = Palette to use with the shader.
+    /// Returns:
+    ///     Shader used for images with the `palettedAlpha` format set.
+    Shader palettedAlphaImageShader(Color[] palette) nothrow @trusted {
+        assert(IsShaderReady(_palettedAlphaImageShader), "palettedAlphaImageShader is not accessible before resize");
+
+        auto paletteTexture = this.paletteTexture(palette);
+
+        // Load the palette
+        SetShaderValueTexture(_palettedAlphaImageShader, _palettedAlphaImageShader_palette, paletteTexture);
+
+        return _palettedAlphaImageShader;
+    }
+
+    /// Create a palette texture.
+    private raylib.Texture paletteTexture(scope Color[] colors) nothrow @trusted
+    in (colors.length <= 256, "There can only be at most 256 colors in a palette.")
+    do {
+
+        // Fill empty slots in the palette with white
+        Color[256] allColors = Color(0xff, 0xff, 0xff, 0xff);
+        allColors[0 .. colors.length] = colors;
+
+        // Prepare an image for the texture
+        scope image = fluid.Image(allColors[], 256, 1);
+
+        // Create the texture if it doesn't exist
+        if (_paletteTexture is _paletteTexture.init)
+            _paletteTexture = LoadTextureFromImage(image.toRaylib);
+
+        // Or, update existing palette image
+        else
+            UpdateTexture(_paletteTexture, image.data.ptr);
+
+        return _paletteTexture;
+
+    }
+
+    override void drawTriangleImpl(Vector2 a, Vector2 b, Vector2 c, Color color) nothrow @trusted {
         DrawTriangle(
             toRaylib(a),
             toRaylib(b),
@@ -245,7 +343,7 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO {
             color);
     }
 
-    void drawCircleImpl(Vector2 center, float radius, Color color) nothrow @trusted {
+    override void drawCircleImpl(Vector2 center, float radius, Color color) nothrow @trusted {
         const centerRay = toRaylib(center);
         const radiusRay = toRaylib(Vector2(radius, radius));
         DrawEllipse(
@@ -255,13 +353,13 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO {
             color);
     }
 
-    void drawRectangleImpl(Rectangle rectangle, Color color) nothrow @trusted {
+    override void drawRectangleImpl(Rectangle rectangle, Color color) nothrow @trusted {
         DrawRectangleRec(
             toRaylib(rectangle),
             color);
     }
 
-    void drawLineImpl(Vector2 start, Vector2 end, float width, Color color) nothrow @trusted {
+    override void drawLineImpl(Vector2 start, Vector2 end, float width, Color color) nothrow @trusted {
         DrawLineEx(
             toRaylib(start),
             toRaylib(end),
@@ -269,19 +367,86 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO {
             color);
     }
 
-    void drawImageImpl(DrawableImage image, Rectangle destination, Color tint) nothrow {
-        // TODO
-        drawRectangleImpl(destination, tint);
+    override void drawImageImpl(DrawableImage image, Rectangle destination, Color tint) nothrow {
+        drawImageImpl(image, destination, tint, false);
     }
 
-    void drawHintedImageImpl(DrawableImage image, Rectangle destination, Color tint) nothrow {
-        // TODO
-        drawRectangleImpl(destination, tint);
+    override void drawHintedImageImpl(DrawableImage image, Rectangle destination, Color tint) nothrow {
+        drawImageImpl(image, destination, tint, true);
     }
 
-    int load(fluid.Image image) nothrow {
-        // TODO
-        return 0;
+    private void drawImageImpl(DrawableImage image, Rectangle destination, Color tint, bool hinted) nothrow @trusted {
+
+        import std.math;
+
+        // Perform hinting if enabled
+        auto start = destination.start;
+        if (hinted) {
+            start = toDots(destination.start);
+            start.x = floor(start.x);
+            start.y = floor(start.y);
+            start = fromDots(start);
+        }
+
+        const destinationRay = Rectangle(
+            toRaylib(start).tupleof,
+            toRaylib(destination.size).tupleof
+        );
+
+        const source = Rectangle(0, 0, image.width, image.height);
+        Shader shader;
+
+        // Enable shaders relevant to given format
+        switch (image.format) {
+
+            case fluid.Image.Format.alpha:
+                shader = alphaImageShader;
+                break;
+
+            case fluid.Image.Format.palettedAlpha:
+                shader = palettedAlphaImageShader(image.palette);
+                break;
+
+            default: break;
+
+        }
+
+        // Start shaders, if applicable
+        if (IsShaderReady(shader))
+            BeginShaderMode(shader);
+
+        auto texture = _images[image.id].texture;
+
+        DrawTexturePro(texture, source, destinationRay, Vector2(0, 0), 0, tint);
+
+        // End shaders
+        if (IsShaderReady(shader))
+            EndShaderMode();
+
+    }
+
+    override int load(fluid.Image image) nothrow @trusted {
+
+        const id = cast(size_t) image.data.ptr;
+
+        // Image already loaded, reuse
+        if (auto indexPtr = id in _imageIndices) {
+
+            // TODO update the texture
+            auto internalImage = _images[*indexPtr];
+            internalImage.image = image;
+
+            _images.reload(*indexPtr, internalImage);
+            return *indexPtr;
+        }
+
+        // Load the image
+        else {
+            auto texture = LoadTextureFromImage(image.toRaylib);
+            auto internalImage = RaylibImage(image, texture);
+
+            return _imageIndices[id] = _images.load(internalImage);
+        }
     }
 
 
