@@ -574,7 +574,10 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
 
     override int load(fluid.Image image) nothrow @trusted {
 
-        const id = cast(size_t) image.data.ptr;
+        const empty = image.width * image.height == 0;
+        const id = empty
+            ? 0
+            : cast(size_t) image.data.ptr;
 
         // Image already loaded, reuse
         if (auto indexPtr = id in _imageIndices) {
@@ -589,6 +592,8 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
                     && resource.image.format == image.format;
 
                 resource.image = image;
+
+                if (empty) { }
 
                 // Update the texture in place if the format is the same
                 if (sameFormat) {
@@ -605,6 +610,12 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
 
             _images.reload(*indexPtr, resource);
             return *indexPtr;
+        }
+
+        // Empty image; do not upload
+        else if (empty) {
+            auto internalImage = RaylibImage(image, raylib.Texture.init);
+            return _imageIndices[id] = _images.load(internalImage);
         }
 
         // Load the image
