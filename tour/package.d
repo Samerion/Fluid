@@ -175,7 +175,10 @@ void main(string[] args) {
     // Prepare the window
     SetConfigFlags(ConfigFlags.FLAG_WINDOW_RESIZABLE);
     SetTraceLogLevel(TraceLogLevel.LOG_WARNING);
-    InitWindow(1000, 750, "Fluid tour");
+    version (FluidTour_NewIO)
+        InitWindow(1000, 750, "Fluid tour (New I/O)");
+    else
+        InitWindow(1000, 750, "Fluid tour");
     SetTargetFPS(60);
     SetExitKey(0);
     scope (exit) CloseWindow();

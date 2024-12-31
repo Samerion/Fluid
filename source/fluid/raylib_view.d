@@ -35,6 +35,7 @@ import optional;
 
 import std.meta;
 import std.traits;
+import std.array;
 
 import fluid.node;
 import fluid.utils;
@@ -48,6 +49,8 @@ import fluid.backend.raylib5 : Raylib5Backend, toRaylib;
 import fluid.io.canvas;
 import fluid.io.hover;
 import fluid.io.mouse;
+import fluid.io.focus;
+import fluid.io.keyboard;
 
 static if (!__traits(compiles, IsShaderReady))
     private alias IsShaderReady = IsShaderValid;
@@ -108,9 +111,10 @@ struct RaylibViewBuilder(alias T) {
 /// * `KeyboardIO` to provide keyboard support.
 /// * `ClipboardIO` to access system keyboard.
 /// * `ImageLoadIO` to load images using codecs available in Raylib.
-class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO {
+class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, KeyboardIO {
 
     HoverIO hoverIO;
+    FocusIO focusIO;
 
     public {
 
@@ -144,6 +148,7 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO {
 
         // I/O
         Pointer _mousePointer;
+        Appender!(KeyboardKey[]) _heldKeys;
 
     }
 
@@ -153,6 +158,7 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO {
 
     override void resizeImpl(Vector2) @trusted {
 
+        require(focusIO);
         require(hoverIO);
         hoverIO.loadTo(_mousePointer);
 
@@ -205,6 +211,7 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO {
     override void drawImpl(Rectangle, Rectangle) {
 
         updateMouse();
+        updateKeyboard();
 
         if (next) {
             resetCropArea();
@@ -216,6 +223,8 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO {
     protected void updateMouse() @trusted {
 
         // Update mouse status
+        _mousePointer.device       = this;
+        _mousePointer.number       = 0;
         _mousePointer.position     = toFluid(GetMousePosition);
         _mousePointer.scroll       = scroll();
         _mousePointer.isScrollHeld = false;
@@ -224,7 +233,7 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO {
         // Send buttons
         foreach (button; NoDuplicates!(EnumMembers!(MouseIO.Button))) {
 
-            const buttonRay = .toRaylibEx(button);
+            const buttonRay = button.toRaylibEx;
 
             if (buttonRay == -1) continue;
 
@@ -241,8 +250,58 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO {
 
     }
 
+    protected void updateKeyboard() @trusted {
+
+        import std.utf;
+
+        // Take text input character by character
+        while (true) {
+
+            // TODO take more at once
+            char[4] buffer;
+
+            const ch = cast(dchar) GetCharPressed();
+            if (ch == 0) break;
+
+            const size = buffer.encode(ch);
+            focusIO.typeText(buffer[0 .. size]);
+
+        }
+
+        // Find all newly pressed keyboard keys
+        while (true) {
+
+            const keyRay = cast(KeyboardKey) GetKeyPressed();
+            if (keyRay == 0) break;
+
+            _heldKeys ~= keyRay;
+
+        }
+
+        size_t newIndex;
+        foreach (keyRay; _heldKeys[]) {
+
+            const key = keyRay.toFluid;
+
+            // Pressed
+            if (IsKeyPressed(keyRay) || IsKeyPressedRepeat(keyRay)) {
+                focusIO.emitEvent(KeyboardIO.createEvent(key, true));
+                _heldKeys[][newIndex++] = keyRay;
+            }
+
+            // Held
+            else if (IsKeyDown(keyRay)) {
+                focusIO.emitEvent(KeyboardIO.createEvent(key, false));
+                _heldKeys[][newIndex++] = keyRay;
+            }
+
+        }
+        _heldKeys.shrinkTo(newIndex);
+
+    }
+
     /// Returns:
-    ///     Distance travelled by the mouse in Fluid coordinates.
+    ///     Distance ravelled by the mouse in Fluid coordinates.
     private Vector2 scroll() @trusted {
 
         // Normalize the value: Linux and Windows provide trinary values (-1, 0, 1) but macOS gives analog that often
@@ -613,7 +672,7 @@ class RaylibStack(RaylibViewVersion raylibVersion) : Node {
 /// Params:
 ///     button = A Fluid `MouseIO` button code.
 /// Returns:
-///     A corresponding `raylib.MouseButton` value.
+///     A corresponding `raylib.MouseButton` value, `-1` if there isn't one.
 int toRaylibEx(MouseIO.Button button) {
 
     with (MouseButton)
@@ -628,6 +687,133 @@ int toRaylibEx(MouseIO.Button button) {
         case extra2:  return MOUSE_BUTTON_EXTRA;
         case forward: return MOUSE_BUTTON_FORWARD;
         case back:    return MOUSE_BUTTON_BACK;
+
+    }
+
+}
+
+/// Convert a Raylib keyboard key to a `KeyboardIO.Key` code.
+///
+/// Params:
+///     button = A Raylib `KeyboardKey` key code.
+/// Returns:
+///     A corresponding `KeyboardIO.Key` value. `KeyboardIO.Key.none` if the key is not recognized.
+KeyboardIO.Key toFluid(KeyboardKey key) {
+
+    with (KeyboardIO.Key)
+    with (KeyboardKey)
+    final switch (key) {
+
+        case KEY_NULL:          return none;
+        case KEY_APOSTROPHE:    return apostrophe;
+        case KEY_COMMA:         return comma;
+        case KEY_MINUS:         return minus;
+        case KEY_PERIOD:        return period;
+        case KEY_SLASH:         return slash;
+        case KEY_ZERO:          return digit0;
+        case KEY_ONE:           return digit1;
+        case KEY_TWO:           return digit2;
+        case KEY_THREE:         return digit3;
+        case KEY_FOUR:          return digit4;
+        case KEY_FIVE:          return digit5;
+        case KEY_SIX:           return digit6;
+        case KEY_SEVEN:         return digit7;
+        case KEY_EIGHT:         return digit8;
+        case KEY_NINE:          return digit9;
+        case KEY_SEMICOLON:     return semicolon;
+        case KEY_EQUAL:         return equal;
+        case KEY_A:             return a;
+        case KEY_B:             return b;
+        case KEY_C:             return c;
+        case KEY_D:             return d;
+        case KEY_E:             return e;
+        case KEY_F:             return f;
+        case KEY_G:             return g;
+        case KEY_H:             return h;
+        case KEY_I:             return i;
+        case KEY_J:             return j;
+        case KEY_K:             return k;
+        case KEY_L:             return l;
+        case KEY_M:             return m;
+        case KEY_N:             return n;
+        case KEY_O:             return o;
+        case KEY_P:             return p;
+        case KEY_Q:             return q;
+        case KEY_R:             return r;
+        case KEY_S:             return s;
+        case KEY_T:             return t;
+        case KEY_U:             return u;
+        case KEY_V:             return v;
+        case KEY_W:             return w;
+        case KEY_X:             return x;
+        case KEY_Y:             return y;
+        case KEY_Z:             return z;
+        case KEY_LEFT_BRACKET:  return leftBracket;
+        case KEY_BACKSLASH:     return backslash;
+        case KEY_RIGHT_BRACKET: return rightBracket;
+        case KEY_GRAVE:         return grave;
+        case KEY_SPACE:         return space;
+        case KEY_ESCAPE:        return escape;
+        case KEY_ENTER:         return enter;
+        case KEY_TAB:           return tab;
+        case KEY_BACKSPACE:     return backspace;
+        case KEY_INSERT:        return insert;
+        case KEY_DELETE:        return delete_;
+        case KEY_RIGHT:         return right;
+        case KEY_LEFT:          return left;
+        case KEY_DOWN:          return down;
+        case KEY_UP:            return up;
+        case KEY_PAGE_UP:       return pageUp;
+        case KEY_PAGE_DOWN:     return pageDown;
+        case KEY_HOME:          return home;
+        case KEY_END:           return end;
+        case KEY_CAPS_LOCK:     return capsLock;
+        case KEY_SCROLL_LOCK:   return scrollLock;
+        case KEY_NUM_LOCK:      return numLock;
+        case KEY_PRINT_SCREEN:  return printScreen;
+        case KEY_PAUSE:         return pause;
+        case KEY_F1:            return f1;
+        case KEY_F2:            return f2;
+        case KEY_F3:            return f3;
+        case KEY_F4:            return f4;
+        case KEY_F5:            return f5;
+        case KEY_F6:            return f6;
+        case KEY_F7:            return f7;
+        case KEY_F8:            return f8;
+        case KEY_F9:            return f9;
+        case KEY_F10:           return f10;
+        case KEY_F11:           return f11;
+        case KEY_F12:           return f12;
+        case KEY_LEFT_SHIFT:    return leftShift;
+        case KEY_LEFT_CONTROL:  return leftControl;
+        case KEY_LEFT_ALT:      return leftAlt;
+        case KEY_LEFT_SUPER:    return leftSuper;
+        case KEY_RIGHT_SHIFT:   return rightShift;
+        case KEY_RIGHT_CONTROL: return rightControl;
+        case KEY_RIGHT_ALT:     return rightAlt;
+        case KEY_RIGHT_SUPER:   return rightSuper;
+        case KEY_KB_MENU:       return contextMenu;
+        case KEY_KP_0:          return keypad0;
+        case KEY_KP_1:          return keypad1;
+        case KEY_KP_2:          return keypad2;
+        case KEY_KP_3:          return keypad3;
+        case KEY_KP_4:          return keypad4;
+        case KEY_KP_5:          return keypad5;
+        case KEY_KP_6:          return keypad6;
+        case KEY_KP_7:          return keypad7;
+        case KEY_KP_8:          return keypad8;
+        case KEY_KP_9:          return keypad9;
+        case KEY_KP_DECIMAL:    return keypadDecimal;
+        case KEY_KP_DIVIDE:     return keypadDivide;
+        case KEY_KP_MULTIPLY:   return keypadMultiply;
+        case KEY_KP_SUBTRACT:   return keypadSubtract;
+        case KEY_KP_ADD:        return keypadSum;
+        case KEY_KP_ENTER:      return keypadEnter;
+        case KEY_KP_EQUAL:      return keypadEqual;
+        case KEY_BACK:          return androidBack;
+        case KEY_MENU:          return androidMenu;
+        case KEY_VOLUME_UP:     return volumeUp;
+        case KEY_VOLUME_DOWN:   return volumeDown;
 
     }
 

@@ -90,9 +90,9 @@ static this() {
                 margin.sideY = 2,
                 padding.sideX = 6,
 
-                when!"a.isHovered"(backgroundColor = color("#ccc")),
-                when!"a.isFocused"(backgroundColor = color("#ddd")),  // TODO use an outline for focus
-                when!"a.isPressed"(backgroundColor = color("#aaa")),
+                when!"a.isHovered"(backgroundColor = color("#aaa")),
+                when!"a.isFocused"(backgroundColor = color("#bbb")),  // TODO use an outline for focus
+                when!"a.isPressed"(backgroundColor = color("#888")),
                 when!"a.isDisabled"(
                     textColor = color("000a"),
                     backgroundColor = color("eee5"),
