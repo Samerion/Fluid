@@ -230,18 +230,19 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     /// ditto
     void generate(CanvasIO canvasIO, Vector2 position) {
 
+        // Pick relevant chunks based on the crop area
         const area = canvasIO.cropArea;
+        const dpi  = canvasIO.dpi;
+        auto chunks = area.empty
+            ? texture.allChunks
+            : texture.visibleChunks(position - area.front.start, area.front.size);
 
-        // Area not set, use all chunks
-        if (area.empty) {
-            return generate(canvasIO.dpi, texture.allChunks);
-        }
+        // Generate the text
+        generate(dpi, chunks.save);
 
-        // Area set
-        else {
-            return generate(
-                canvasIO.dpi,
-                texture.visibleChunks(position - area.front.start, area.front.size));
+        // Load the updated chunks
+        foreach (chunkIndex; chunks) {
+            texture.upload(canvasIO, chunkIndex, dpi);
         }
 
     }
@@ -880,6 +881,24 @@ struct CompositeTexture {
 
     }
 
+    /// Update the texture of a given chunk using its corresponding image.
+    void upload(CanvasIO canvasIO, size_t index, Vector2 dpi) @trusted {
+
+        // Update texture DPI
+        chunks[index].image.dpiX = cast(int) dpi.x;
+        chunks[index].image.dpiY = cast(int) dpi.y;
+
+        // Mark as valid
+        chunks[index].isValid = true;
+
+        // Bump revision number
+        chunks[index].image.revisionNumber++;
+
+        chunks[index].image.load(canvasIO,
+            canvasIO.load(chunks[index].image));
+
+    }
+
     /// Draw onscreen parts of the texture using the new backend.
     void drawAlign(CanvasIO canvasIO, Rectangle rectangle, Color tint = Color(0xff, 0xff, 0xff, 0xff)) {
 
@@ -902,9 +921,6 @@ struct CompositeTexture {
             const size = chunks[index].image.viewportSize;
             const rect = Rectangle(start.tupleof, size.tupleof);
 
-            // Load the image
-            chunks[index].image.load(canvasIO,
-                canvasIO.load(chunks[index].image));
             chunks[index].image.drawHinted(rect, tint);
 
         }
