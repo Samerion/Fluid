@@ -53,6 +53,7 @@ import fluid.io.mouse;
 import fluid.io.focus;
 import fluid.io.keyboard;
 import fluid.io.clipboard;
+import fluid.io.image_load;
 
 static if (!__traits(compiles, IsShaderReady))
     private alias IsShaderReady = IsShaderValid;
@@ -113,7 +114,7 @@ struct RaylibViewBuilder(alias T) {
 /// * `KeyboardIO` to provide keyboard support.
 /// * `ClipboardIO` to access system keyboard.
 /// * `ImageLoadIO` to load images using codecs available in Raylib.
-class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, KeyboardIO, ClipboardIO {
+class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, KeyboardIO, ClipboardIO, ImageLoadIO {
 
     HoverIO hoverIO;
     FocusIO focusIO;
@@ -619,6 +620,22 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
 
     }
 
+    override fluid.Image loadImage(const ubyte[] image) @trusted {
+
+        assert(image.length < int.max, "Image is too big to load");
+
+        const fileType = identifyImageType(image);
+
+        auto imageRay = LoadImageFromMemory(fileType.ptr, image.ptr, cast(int) image.length);
+        auto colors = LoadImageColors(imageRay);
+        scope (exit) UnloadImageColors(colors);
+
+        const size = imageRay.width * imageRay.height;
+
+        return fluid.Image(colors[0 .. size].dup, imageRay.width, imageRay.height);
+
+    }
+
 }
 
 /// A complete implementation of all systems Fluid needs to function, using Raylib as the base for communicating with
@@ -848,5 +865,72 @@ KeyboardIO.Key toFluid(KeyboardKey key) {
         case KEY_VOLUME_DOWN:   return volumeDown;
 
     }
+
+}
+
+enum ImageType : string {
+
+    none = "",
+    png = ".png",
+    bmp = ".bmp",
+    tga = ".tga",
+    jpg = ".jpg",
+    gif = ".gif",
+    qoi = ".qoi",
+    psd = ".psd",
+    dds = ".dds",
+    hdr = ".hdr",
+    pic = ".pic",
+    ktx = ".ktx",
+    astc = ".astc",
+    pkm = ".pkm",
+    pvr = ".pvr",
+
+}
+
+/// Identify image type by contents.
+/// Params:
+///     image = File data of the image to identify.
+/// Returns:
+///     String containing the image extension, or an empty string indicating unknown file.
+ImageType identifyImageType(const ubyte[] data) {
+
+    import std.algorithm : predSwitch;
+    import std.conv : hexString;
+
+
+    return data.predSwitch!"a.startsWith(cast(const ubyte[]) b)"(
+        // Source: https://en.wikipedia.org/wiki/List_of_file_signatures
+        hexString!"89 50 4E 47 0D 0A 1A 0A",             ImageType.png,
+        hexString!"42 4D",                               ImageType.bmp,
+        hexString!"FF D8 FF E0 00 10 4A 46 49 46 00 01", ImageType.jpg,
+        hexString!"FF D8 FF EE",                         ImageType.jpg,
+        hexString!"FF D8 FF E1",                         ImageType.jpg,
+        hexString!"FF D8 FF E0",                         ImageType.jpg,
+        hexString!"00 00 00 0C 6A 50 20 20 0D 0A 87 0A", ImageType.jpg,
+        hexString!"FF 4F FF 51",                         ImageType.jpg,
+        hexString!"47 49 46 38 37 61",                   ImageType.gif,
+        hexString!"47 49 46 38 39 61",                   ImageType.gif,
+        hexString!"71 6f 69 66",                         ImageType.qoi,
+        hexString!"38 42 50 53",                         ImageType.psd,
+        hexString!"23 3F 52 41 44 49 41 4E 43 45 0A",    ImageType.hdr,
+        hexString!"6E 69 31 00",                         ImageType.hdr,
+        hexString!"00",                                  ImageType.pic,
+        // Source: https://en.wikipedia.org/wiki/DirectDraw_Surface
+        hexString!"44 44 53 20",                         ImageType.dds,
+        // Source: https://paulbourke.net/dataformats/ktx/
+        hexString!"AB 4B 54 58 20 31 31 BB 0D 0A 1A 0A", ImageType.ktx,
+        // Source: https://github.com/ARM-software/astc-encoder/blob/main/Docs/FileFormat.md
+        hexString!"13 AB A1 5C",                         ImageType.astc,
+        // Source: https://stackoverflow.com/questions/35881537/how-to-decode-this-image
+        hexString!"50 4B 4D 20",                         ImageType.pkm,
+        // Source: http://powervr-graphics.github.io/WebGL_SDK/WebGL_SDK/Documentation/Specifications/PVR%20File%20Format.Specification.pdf
+        hexString!"03 52 56 50",                         ImageType.pvr,
+        hexString!"50 56 52 03",                         ImageType.pvr,
+        // Source: https://en.wikipedia.org/wiki/Truevision_TGA
+        data.endsWith("TRUEVISION-XFILE.\0")
+            ? ImageType.tga
+            : ImageType.none,
+    );
 
 }
