@@ -136,9 +136,6 @@ class FocusChain : NodeChain, FocusIO {
             _wasInputHandled = currentFocus.focusImpl();
         }
 
-        // Clear the input buffer
-        _buffer.clear();
-
     }
 
     /// Handle an input action using the currently focused node.
@@ -154,6 +151,8 @@ class FocusChain : NodeChain, FocusIO {
     ///     Consequently, `wasInputAction` will be set to true.
     bool runInputAction(InputActionID actionID, bool isActive = true) {
 
+        const isFrameAction = actionID == inputActionID!(ActionIO.CoreAction.frame);
+
         // Try to handle the input action
         const handled =
 
@@ -164,10 +163,15 @@ class FocusChain : NodeChain, FocusIO {
             || (runLocalInputActions(actionID, isActive))
 
             // Run focusImpl as a fallback
-            || (actionID == inputActionID!(ActionIO.CoreAction.frame) && isFocusActionable && currentFocus.focusImpl());
+            || (isFrameAction && isFocusActionable && currentFocus.focusImpl());
 
         // Mark as handled, if so
         _wasInputHandled = _wasInputHandled || handled;
+
+        // Clear the input buffer after frame action
+        if (isFrameAction) {
+            _buffer.clear();
+        }
 
         return handled;
 
