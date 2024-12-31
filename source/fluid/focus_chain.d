@@ -134,10 +134,8 @@ class FocusChain : NodeChain, FocusIO {
         }
         else if (isFocusActionable) {
             _wasInputHandled = currentFocus.focusImpl();
+            _buffer.clear();
         }
-
-        // Clear the input buffer
-        _buffer.clear();
 
     }
 
@@ -154,6 +152,8 @@ class FocusChain : NodeChain, FocusIO {
     ///     Consequently, `wasInputAction` will be set to true.
     bool runInputAction(InputActionID actionID, bool isActive = true) {
 
+        const isFrameAction = actionID == inputActionID!(ActionIO.CoreAction.frame);
+
         // Try to handle the input action
         const handled =
 
@@ -164,10 +164,15 @@ class FocusChain : NodeChain, FocusIO {
             || (runLocalInputActions(actionID, isActive))
 
             // Run focusImpl as a fallback
-            || (actionID == inputActionID!(ActionIO.CoreAction.frame) && isFocusActionable && currentFocus.focusImpl());
+            || (isFrameAction && isFocusActionable && currentFocus.focusImpl());
 
         // Mark as handled, if so
         _wasInputHandled = _wasInputHandled || handled;
+
+        // Clear the input buffer after frame action
+        if (isFrameAction) {
+            _buffer.clear();
+        }
 
         return handled;
 
@@ -339,6 +344,10 @@ class FocusChain : NodeChain, FocusIO {
         focusToRight();
         return true;
     }
+
+    // Disable default focus switching
+    override protected void focusPreviousOrNext(FluidInputAction actionType) { }
+    override protected void focusInDirection(FluidInputAction actionType) { }
 
     /// Type text to read during the next frame.
     ///

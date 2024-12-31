@@ -74,16 +74,24 @@ class HoverChain : NodeChain, HoverIO {
         super(next);
     }
 
-    override int load(Pointer pointer) {
+    override int load(Pointer pointer)
+    out(r) {
+        import std.format;
+        debug assert(_pointers.allResources.count(pointer) == 1,
+            format!"Duplicate pointers created: %(\n  %s%)"(_pointers.allResources));
+    }
+    do {
 
         const index = cast(int) _pointers.allResources.countUntil(pointer);
 
         // No such pointer
         if (index == -1) {
-            return _pointers.load(HoverPointer(
+            const newIndex = _pointers.load(HoverPointer(
                 pointer,
                 new FindHoveredNodeAction,
             ));
+            _pointers[newIndex].value.load(this, newIndex);
+            return newIndex;
         }
 
         // Found, update the pointer

@@ -62,8 +62,6 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
     mixin enableInputActions;
 
     CanvasIO canvasIO;
-    FocusIO focusIO;
-    HoverIO hoverIO;
     ClipboardIO clipboardIO;
 
     public {
@@ -291,29 +289,23 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
     static class ContentLabel : Label {
 
         this() {
-
             super("");
-
         }
 
         override bool hoveredImpl(Rectangle, Vector2) const {
-
             return false;
-
         }
 
         override void drawImpl(Rectangle outer, Rectangle inner) {
 
             // Don't draw background
             const style = pickStyle();
-            text.draw(style, inner.start);
+            text.draw(canvasIO, style, inner.start);
 
         }
 
         override void reloadStyles() {
-
             // Do not load styles
-
         }
 
         override Style pickStyle() {

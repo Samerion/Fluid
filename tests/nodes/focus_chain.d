@@ -521,3 +521,21 @@ unittest {
     }
 
 }
+
+@("FocusChain: text input is readable from input actions")
+unittest {
+
+    auto input = textInput();
+    auto focus = focusChain(input);
+    auto root = chain(
+        inputMapChain(InputMapping.init),
+        focus
+    );
+
+    focus.currentFocus = input;
+    focus.typeText("Hello");
+    root.draw();
+
+    assert(input.value == "Hello");
+
+}

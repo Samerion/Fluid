@@ -743,3 +743,28 @@ unittest {
     }
 
 }
+
+@("Multiple pointers can be created in HoverChain at once")
+unittest {
+
+    auto hover = hoverChain();
+    auto root = hover;
+
+    // Resize first
+    root.draw();
+
+    Pointer pointer1;
+    pointer1.number = 1;
+    pointer1.position = Vector2(10, 10);
+    hover.loadTo(pointer1);
+
+    Pointer pointer2;
+    pointer2.number = 2;
+    pointer2.position = Vector2(20, 20);
+    hover.loadTo(pointer2);
+    root.draw();
+
+    assert(hover.fetch(pointer1.id).position == Vector2(10, 10));
+    assert(hover.fetch(pointer2.id).position == Vector2(20, 20));
+
+}

@@ -20,7 +20,7 @@ unittest {
 
     const initialTextArea = root.text.size.x * root.text.size.y;
     auto firstImage = root.text.texture.chunks[0].image;
-    
+
     test.drawAndAssert(
         root.drawsHintedImage(firstImage).at(0, 0)
     );
@@ -32,7 +32,7 @@ unittest {
     auto secondImage = root.text.texture.chunks[0].image;
 
     test.drawAndAssert(
-        root.drawsHintedImage(secondImage).at(0, 0)
+        root.drawsHintedImage(secondImage).at(0, 0).withPalette(color("#000"))
     );
 
     assert(firstImage != secondImage);
