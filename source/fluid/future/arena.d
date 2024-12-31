@@ -25,7 +25,7 @@ else
 /// ---
 ///
 /// In a practical scenario, resources will likely continue to be used across cycles. The `load` call will be repeated
-/// next cycle with the same resource. The arena will therefore *not* free resources immediately, but keep them alive 
+/// next cycle with the same resource. The arena will therefore *not* free resources immediately, but keep them alive
 /// in the background for long enough they can be reused for another `load`. This means that on the outside
 /// the resources appear freed, while they stay active until it can be confirmed they will not be reused.
 ///
@@ -86,9 +86,17 @@ struct ResourceArena(T) {
 
     }
 
+    /// List every resource in the arena.
+    /// Returns: A range that lists every resource.
+    auto allResources(this This)() nothrow {
+
+        return _resources[].map!(a => a.value);
+
+    }
+
     /// List every active resource in the arena. Omits expired resources.
     /// Returns: A range that lists every active resource.
-    auto opIndex(this This)() nothrow {
+    auto activeResources(this This)() nothrow {
 
         import std.range;
 
@@ -110,7 +118,7 @@ struct ResourceArena(T) {
                 return resources.empty;
             }
 
-            ref Item front() {
+            Item front() {
                 return resources.front.value;
             }
 
@@ -137,24 +145,24 @@ struct ResourceArena(T) {
     }
 
     /// Only resources that were reloaded are included when using `[]`.
-    @("ResourceArena only provides resources that have been reloaded.")
+    @("ResourceArena.activeResources only provides resources that have been reloaded.")
     unittest {
 
         ResourceArena!int arena;
         arena.load(0);
         arena.load(1);
         arena.load(2);
-        assert(arena.opIndex.equal([0, 1, 2]));
+        assert(arena.activeResources.equal([0, 1, 2]));
 
         // Observe the results as we reload the resources during the next cycle
         arena.startCycle();
-        assert(arena[].empty);
+        assert(arena.activeResources.empty);
         arena.reload(0, 0);
-        assert(arena[].equal([0]));
+        assert(arena.activeResources.equal([0]));
         arena.reload(2, 2);
-        assert(arena[].equal([0, 2]));
+        assert(arena.activeResources.equal([0, 2]));
         arena.reload(1, 1);
-        assert(arena[].equal([0, 1, 2]));  // Order of insertion
+        assert(arena.activeResources.equal([0, 1, 2]));  // Order of insertion
 
     }
 
@@ -173,7 +181,7 @@ struct ResourceArena(T) {
 
     }
 
-    /// Check if resource at given index is active; A resource is active if it has been loaded during this cycle. 
+    /// Check if resource at given index is active; A resource is active if it has been loaded during this cycle.
     /// An active resource can be fetched using `opIndex`.
     ///
     /// For the looser variant, which would return true also if the resource is still loaded in arena,
@@ -181,7 +189,7 @@ struct ResourceArena(T) {
     ///
     /// Params:
     ///     index = Index to check.
-    /// Returns: 
+    /// Returns:
     ///     True if the resource is active: allocated, alive, ready to use.
     bool isActive(int index) const {
 
@@ -195,7 +203,7 @@ struct ResourceArena(T) {
     /// This will return true as long as the resource hasn't expired yet, even if it hasn't been loaded during
     /// this cycle. `isAlive` is intended for diagnostics and debugging, rather than practical usage. See `isActive`
     /// for the stricter variant that will not return `true` for unloaded resources.
-    /// 
+    ///
     /// Params:
     ///     index = Index to check.
     /// Returns:
@@ -209,15 +217,15 @@ struct ResourceArena(T) {
     }
 
     /// Start a new cycle.
-    /// 
+    ///
     /// Each time a cycle is started, all expired resources are freed, making space for new resources.
     /// Resources that are kept alive, are moved to the start of the array, effectively changing their indices.
     /// Iterate on the return value to safely update your resources to use the new indices.
     ///
     /// Params:
     ///     moved = A function that handles freeing and moving resources.
-    ///         It is called with a pair (index, resource) for every item that was freed or moved. 
-    ///         For freed resources, the index is set to `-1`. 
+    ///         It is called with a pair (index, resource) for every item that was freed or moved.
+    ///         For freed resources, the index is set to `-1`.
     /// See_Also:
     ///     `resourceLifetime`
     auto startCycle(scope void delegate(int index, ref T resource) @safe moved = null) {
@@ -279,7 +287,7 @@ struct ResourceArena(T) {
             });
 
         }
-        
+
         // Start a cycle and remove "Two" from the arena
         nextCycle();
         arena.reload(indices["One"], "One");
@@ -302,7 +310,7 @@ struct ResourceArena(T) {
     /// use `reload`.
     ///
     /// Params:
-    ///     resource = Resource to load. 
+    ///     resource = Resource to load.
     /// Returns:
     ///     Index associated with the resource.
     int load(T resource) {

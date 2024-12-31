@@ -43,7 +43,7 @@ template nodeBuilder(alias T, alias Parent, alias fun = "a") {
         alias initializer = unaryFun!fun;
 
         initializer(a);
-        Parent.initializer(a);
+        Parent.initialize(a);
 
     });
 
@@ -60,7 +60,15 @@ struct NodeBuilder(T, alias fun = "a") {
     import fluid.structs;
 
     alias Type = T;
+
+    deprecated("`NodeBuilder.initializer` is affected by a codegen bug in DMD, "
+        ~ "and has been replaced with `initialize`. "
+        ~ "Please update your code before Fluid 0.8.0")
     alias initializer = unaryFun!fun;
+
+    void initialize(T node) {
+        unaryFun!fun(node);
+    }
 
     Type opCall(Args...)(Args args) {
 
@@ -71,7 +79,7 @@ struct NodeBuilder(T, alias fun = "a") {
         auto result = new Type(args[paramCount..$]);
 
         // Run the initializer
-        initializer(result);
+        initialize(result);
 
         // Apply the parameters
         result.applyAll(args[0..paramCount]);
