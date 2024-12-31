@@ -3,7 +3,7 @@ module fluid.backend.raylib5;
 version (Have_raylib_d):
 
 debug (Fluid_BuildMessages) {
-    pragma(msg, "Fluid: Building with Raylib 5 support");
+    pragma(msg, "Fluid: Building with Raylib 5 support (Raylib5Backend)");
 }
 
 import raylib;
@@ -201,10 +201,10 @@ class Raylib5Backend : FluidBackend, FluidEntrypointBackend {
             if (newMinX != minX || newMinY != minY) {
 
                 SetWindowMinSize(
-                    minX = newMinX, 
+                    minX = newMinX,
                     minY = newMinY);
                 SetWindowSize(
-                    max(minX, GetScreenWidth), 
+                    max(minX, GetScreenWidth),
                     max(minY, GetScreenHeight));
 
             }
@@ -734,7 +734,7 @@ raylib.GamepadButton toRaylib(GamepadButton button) {
 }
 
 /// Convert image to a Raylib image. Do not call `UnloadImage` on the result.
-raylib.Image toRaylib(fluid.backend.Image image) @trusted {
+raylib.Image toRaylib(fluid.backend.Image image) nothrow @trusted {
 
     raylib.Image result;
     result.data = image.data.ptr;
@@ -747,7 +747,7 @@ raylib.Image toRaylib(fluid.backend.Image image) @trusted {
 }
 
 /// Convert Fluid image format to Raylib's closest alternative.
-raylib.PixelFormat toRaylib(fluid.backend.Image.Format imageFormat) {
+raylib.PixelFormat toRaylib(fluid.backend.Image.Format imageFormat) nothrow {
 
     final switch (imageFormat) {
 

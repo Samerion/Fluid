@@ -109,7 +109,7 @@ interface MouseIO : IO {
         right,        // Right (secondary) mouse button.
         middle,       // Middle mouse button.
         extra1,       // Additional mouse button.
-        extra2,       // ditto.
+        extra2,       // ditto
         forward,      // Mouse button going forward in browser history.
         back,         // Mouse button going back in browser history.
 

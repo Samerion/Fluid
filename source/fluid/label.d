@@ -79,18 +79,8 @@ class Label : Node {
     protected override void drawImpl(Rectangle outer, Rectangle inner) {
 
         const style = pickStyle();
-
-        // Using the new I/O
-        if (canvasIO) {
-            style.drawBackground(tree.io, canvasIO, outer);
-            text.draw(canvasIO, style, inner.start);
-        }
-
-        // Legacy backend
-        else {
-            style.drawBackground(tree.io, outer);
-            text.draw(style, inner.start);
-        }
+        style.drawBackground(tree.io, canvasIO, outer);
+        text.draw(canvasIO, style, inner.start);
 
     }
 

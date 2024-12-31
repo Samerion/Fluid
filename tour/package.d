@@ -175,7 +175,10 @@ void main(string[] args) {
     // Prepare the window
     SetConfigFlags(ConfigFlags.FLAG_WINDOW_RESIZABLE);
     SetTraceLogLevel(TraceLogLevel.LOG_WARNING);
-    InitWindow(1000, 750, "Fluid tour");
+    version (FluidTour_NewIO)
+        InitWindow(1000, 750, "Fluid tour (New I/O)");
+    else
+        InitWindow(1000, 750, "Fluid tour");
     SetTargetFPS(60);
     SetExitKey(0);
     scope (exit) CloseWindow();
@@ -184,6 +187,16 @@ void main(string[] args) {
     auto ui = args.length > 1
         ? createUI(args[1])
         : createUI();
+
+    // If new I/O is toggled on, disable the default backend
+    // and wrap the UI in the raylibStack root
+    version (FluidTour_NewIO) {
+        auto root = raylibStack.v5_5(ui);
+        root.io = new HeadlessBackend;
+    }
+    else {
+        auto root = ui;
+    }
 
     // Event loop
     while (!WindowShouldClose) {
@@ -195,7 +208,7 @@ void main(string[] args) {
 
         // Fluid is by default configured to work with Raylib, so all you need to make them work together is a single
         // call
-        ui.draw();
+        root.draw();
 
     }
 
@@ -364,6 +377,8 @@ Space exampleList(void delegate(Chapter) @safe changeChapter) @safe {
         label(.layout!"fill", .tags!(FluidTag.warning), "While this tutorial covers the most important parts of Fluid, "
             ~ "it's still incomplete. Content will be added in further updates of Fluid. Contributions are welcome."),
         chapterGrid,
+        vseparator(),
+        imageView(.layout!"center", "logo.png", Vector2(249.5, 120)),
     );
 
 }
