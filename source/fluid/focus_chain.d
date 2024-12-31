@@ -134,6 +134,7 @@ class FocusChain : NodeChain, FocusIO {
         }
         else if (isFocusActionable) {
             _wasInputHandled = currentFocus.focusImpl();
+            _buffer.clear();
         }
 
     }

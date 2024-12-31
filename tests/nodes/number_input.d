@@ -23,6 +23,7 @@ unittest {
     root.draw();
 
     assert(input.value.isClose(10e8));
+    assert(input.value.isClose(1e9));
     assert(input.TextInput.value.among("1e+9", "1e+09"));
 
 }
