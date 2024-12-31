@@ -340,6 +340,10 @@ class FocusChain : NodeChain, FocusIO {
         return true;
     }
 
+    // Disable default focus switching
+    override protected void focusPreviousOrNext(FluidInputAction actionType) { }
+    override protected void focusInDirection(FluidInputAction actionType) { }
+
     /// Type text to read during the next frame.
     ///
     /// This text will then become available for reading through `readText`.

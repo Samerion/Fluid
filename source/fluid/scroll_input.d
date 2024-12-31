@@ -122,6 +122,7 @@ class ScrollInput : InputNode!Node {
     /// Set the total size of the scrollbar. Will always fill the available space in the target direction.
     override protected void resizeImpl(Vector2 space) {
 
+        super.resizeImpl(space);
         use(canvasIO);
 
         // Get minSize
