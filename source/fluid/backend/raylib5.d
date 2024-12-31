@@ -3,7 +3,7 @@ module fluid.backend.raylib5;
 version (Have_raylib_d):
 
 debug (Fluid_BuildMessages) {
-    pragma(msg, "Fluid: Building with Raylib 5 support");
+    pragma(msg, "Fluid: Building with Raylib 5 support (Raylib5Backend)");
 }
 
 import raylib;
@@ -201,10 +201,10 @@ class Raylib5Backend : FluidBackend, FluidEntrypointBackend {
             if (newMinX != minX || newMinY != minY) {
 
                 SetWindowMinSize(
-                    minX = newMinX, 
+                    minX = newMinX,
                     minY = newMinY);
                 SetWindowSize(
-                    max(minX, GetScreenWidth), 
+                    max(minX, GetScreenWidth),
                     max(minY, GetScreenHeight));
 
             }
