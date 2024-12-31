@@ -185,6 +185,16 @@ void main(string[] args) {
         ? createUI(args[1])
         : createUI();
 
+    // If new I/O is toggled on, disable the default backend
+    // and wrap the UI in the raylibStack root
+    version (FluidTour_NewIO) {
+        auto root = raylibStack.v5_5(ui);
+        root.io = new HeadlessBackend;
+    }
+    else {
+        auto root = ui;
+    }
+
     // Event loop
     while (!WindowShouldClose) {
 
@@ -195,7 +205,7 @@ void main(string[] args) {
 
         // Fluid is by default configured to work with Raylib, so all you need to make them work together is a single
         // call
-        ui.draw();
+        root.draw();
 
     }
 

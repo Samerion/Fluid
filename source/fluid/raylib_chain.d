@@ -5,8 +5,8 @@
 /// be preferred for advanced usage and requires manual setup. See `RaylibChain`'s documentation for more
 /// information.
 ///
-/// Note that because Raylib introduces breaking changes in every version, a `RaylibChainVersion` enum should
-/// be supplied to specify the Raylib version in use. Raylib 5.5 is currently the oldest version supported,
+/// Note that because Raylib introduces breaking changes in every version, the current version of Raylib should
+/// be specified using `raylibStack.v5_5()`. Raylib 5.5 is currently the oldest version supported,
 /// and is the default in case no version is chosen explicitly.
 ///
 /// Unlike `fluid.backend.Raylib5Backend`, this uses the new I/O system introduced in Fluid 0.8.0. This layer
@@ -19,30 +19,46 @@ debug (Fluid_BuildMessages) {
     pragma(msg, "Fluid: Building with Raylib 5.5 support (RaylibChain)");
 }
 
+import fluid.node;
 import fluid.utils;
 import fluid.node_chain;
+
+import fluid.io.hover;
+import fluid.io.focus;
+import fluid.io.action;
+import fluid.io.file;
 
 @safe:
 
 /// `raylibStack` implements all I/O functionality needed for Fluid to function, using Raylib to read user input
 /// and present visuals on the screen.
 ///
+/// Specify Raylib version by using a member: `raylibStack.v5_5()` will create a stack for Raylib 5.5.
+///
 /// `raylibStack` provides a default implementation for `HoverIO`, `FocusIO`, `ActionIO` and `FileIO`, on top of all
 /// the systems provided by Raylib itself: `CanvasIO`, `KeyboardIO`, `MouseIO`, `ClipboardIO` and `ImageLoadIO`.
-alias raylibStack(RaylibChainVersion raylibVersion = RaylibChainVersion.v5_5)
-    = nodeBuilder!(RaylibStack!raylibVersion);
+enum raylibStack = RaylibChainBuilder!RaylibStack.init;
 
 /// `raylibChain` implements some I/O functionality using the Raylib library, namely `CanvasIO`, `KeyboardIO`,
 /// `MouseIO`, `ClipboardIO` and `ImageLoadIO`.
 ///
 /// These systems are not enough for Fluid to function. Use `raylibStack` to also initialize all other necessary
 /// systems.
-alias raylibChain(RaylibChainVersion raylibVersion = RaylibChainVersion.v5_5)
-    = nodeBuilder!(RaylibChain!raylibVersion);
+///
+/// Specify Raylib version by using a member: `raylibChain.v5_5()` will create a stack for Raylib 5.5.
+enum raylibChain = RaylibChainBuilder!RaylibChain.init;
 
 /// Use this enum to pick version of Raylib to use.
 enum RaylibChainVersion {
     v5_5,
+}
+
+/// Wrapper over `NodeBuilder` which enables specifying Raylib version.
+struct RaylibChainBuilder(alias T) {
+
+    alias v5_5 this;
+    enum v5_5 = nodeBuilder!(T!(RaylibChainVersion.v5_5));
+
 }
 
 /// Implements Raylib support through Fluid's I/O system. Use `raylibStack` or `raylibChain` to construct.
@@ -83,22 +99,27 @@ class RaylibChain(RaylibChainVersion raylibVersion) : NodeChain {
 /// and `FileIO`. You can access them through fields named `hoverIO`, `focusIO`, `actionIO` and `fileIO` respectively.
 class RaylibStack(RaylibChainVersion raylibVersion) : NodeChain {
 
+    import fluid.hover_chain;
+    import fluid.focus_chain;
+    import fluid.input_map_chain;
+    import fluid.file_chain;
+
     public {
 
         /// I/O implementations provided by the stack.
-        HoverIO hoverIO;
+        HoverChain hoverIO;
 
         /// ditto
-        FocusIO focusIO;
+        FocusChain focusIO;
 
         /// ditto
-        ActionIO actionIO;
+        InputMapChain actionIO;
 
         /// ditto
-        FileIO fileIO;
+        FileChain fileIO;
 
         /// ditto
-        RaylibChain raylibIO;
+        RaylibChain!raylibVersion raylibIO;
 
     }
 
@@ -106,11 +127,6 @@ class RaylibStack(RaylibChainVersion raylibVersion) : NodeChain {
     /// Params:
     ///     next = Node to draw using the stack.
     this(Node next) {
-
-        import fluid.hover_chain;
-        import fluid.focus_chain;
-        import fluid.input_map_chain;
-        import fluid.file_chain;
 
         super(chain(
             actionIO = inputMapChain(),
