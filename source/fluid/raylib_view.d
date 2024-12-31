@@ -153,7 +153,13 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
     }
 
     this(Node next = null) {
+
         this.next = next;
+
+        // Initialize the mouse
+        _mousePointer.device = this;
+        _mousePointer.number = 0;
+
     }
 
     override void resizeImpl(Vector2) @trusted {
@@ -223,8 +229,6 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
     protected void updateMouse() @trusted {
 
         // Update mouse status
-        _mousePointer.device       = this;
-        _mousePointer.number       = 0;
         _mousePointer.position     = toFluid(GetMousePosition);
         _mousePointer.scroll       = scroll();
         _mousePointer.isScrollHeld = false;
