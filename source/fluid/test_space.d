@@ -591,6 +591,8 @@ auto drawsImage(Node subject) {
         Color targetColor;
         bool isTestingHint;
         bool targetHint;
+        bool isTestingPalette;
+        Color[] targetPalette;
 
         override bool drawImage(Node node, DrawableImage image, Rectangle rect, Color color) nothrow {
 
@@ -602,8 +604,12 @@ auto drawsImage(Node subject) {
                     format!"%s should draw image 0x%02x but draws 0x%02x"(
                         node, cast(size_t) targetImage.data.ptr, cast(size_t) image.data.ptr).assertNotThrown);
 
-                if (image.format == Image.Format.palettedAlpha) {
-                    assert(image.palette == targetImage.palette);
+                if (isTestingPalette) {
+                    assert(image.format == Image.Format.palettedAlpha);
+                    assert(image.palette == targetPalette,
+                        format!"%s should draw image with palette %s but uses %s"(
+                            node, targetPalette.map!(a => a.toHex), image.palette.map!(a => a.toHex))
+                            .assertNotThrown);
                 }
             }
 
@@ -663,6 +669,12 @@ auto drawsImage(Node subject) {
             isTestingArea = true;
             targetArea = Rectangle(position);
             // TODO DPI
+            return this;
+        }
+
+        typeof(this) withPalette(Color[] colors...) @safe {
+            isTestingPalette = true;
+            targetPalette = colors.dup;
             return this;
         }
 
