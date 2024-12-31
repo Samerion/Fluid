@@ -36,6 +36,7 @@ import optional;
 import std.meta;
 import std.traits;
 import std.array;
+import std.string;
 
 import fluid.node;
 import fluid.utils;
@@ -51,6 +52,7 @@ import fluid.io.hover;
 import fluid.io.mouse;
 import fluid.io.focus;
 import fluid.io.keyboard;
+import fluid.io.clipboard;
 
 static if (!__traits(compiles, IsShaderReady))
     private alias IsShaderReady = IsShaderValid;
@@ -111,7 +113,7 @@ struct RaylibViewBuilder(alias T) {
 /// * `KeyboardIO` to provide keyboard support.
 /// * `ClipboardIO` to access system keyboard.
 /// * `ImageLoadIO` to load images using codecs available in Raylib.
-class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, KeyboardIO {
+class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, KeyboardIO, ClipboardIO {
 
     HoverIO hoverIO;
     FocusIO focusIO;
@@ -588,8 +590,34 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
 
             return _imageIndices[id] = _images.load(internalImage);
         }
+
     }
 
+    override bool writeClipboard(string text) nothrow @trusted {
+
+        SetClipboardText(text.toStringz);
+        return true;
+
+    }
+
+    override char[] readClipboard(return scope char[] buffer, ref int offset) nothrow @trusted {
+
+        import std.algorithm : min;
+
+        // This is horrible but this API will change https://git.samerion.com/Samerion/Fluid/issues/276
+        const scope clipboard = GetClipboardText().fromStringz;
+
+        // Read the entire text, nothing remains to be read
+        if (offset >= clipboard.length) return null;
+
+        // Get remaining text
+        const text = clipboard[offset .. $];
+        const length = min(text.length, buffer.length);
+
+        offset += length;
+        return buffer[0 .. length] = text[0 .. length];
+
+    }
 
 }
 
