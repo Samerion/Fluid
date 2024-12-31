@@ -146,18 +146,17 @@ class CodeInput : TextInput {
         Style[256] styles;
 
         this() {
-
             text = typeof(text)(this, "", CodeHighlighterRange.init);
             text.hasFastEdits = true;
-
         }
 
         override void resizeImpl(Vector2 available) {
 
             assert(text.hasFastEdits);
 
-            auto typeface = style.getTypeface;
+            use(canvasIO);
 
+            auto typeface = style.getTypeface;
             typeface.setSize(io.dpi, style.fontSize);
 
             this.text.value = super.text.value;
@@ -170,7 +169,7 @@ class CodeInput : TextInput {
         override void drawImpl(Rectangle outer, Rectangle inner) {
 
             const style = pickStyle();
-            text.draw(styles, inner.start);
+            text.draw(canvasIO, styles, inner.start);
 
         }
 
