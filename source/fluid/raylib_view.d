@@ -500,6 +500,21 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
             color);
     }
 
+    override void drawCircleOutlineImpl(Vector2 center, float radius, float width, Color color) nothrow @trusted {
+        const centerRay = toRaylib(center);
+        const radiusRay = toRaylib(Vector2(radius, radius));
+        const previousLineWidth = rlGetLineWidth();
+        // Note: This isn't very accurate at greater widths
+        rlSetLineWidth(width);
+        DrawEllipseLines(
+            cast(int) centerRay.x,
+            cast(int) centerRay.y,
+            radiusRay.tupleof,
+            color);
+        rlDrawRenderBatchActive();
+        rlSetLineWidth(previousLineWidth);
+    }
+
     override void drawRectangleImpl(Rectangle rectangle, Color color) nothrow @trusted {
         DrawRectangleRec(
             toRaylib(rectangle),

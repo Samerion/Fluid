@@ -137,60 +137,46 @@ class TestSpace : Space, CanvasIO, DebugSignalIO {
     /// Params:
     ///     name = Name of the debug signal.
     int emitCount(string name) const {
-
         return _debugSignals.get(name, 0);
-
     }
 
     override Optional!Rectangle cropArea() const nothrow {
-
         return _cropArea;
-
     }
 
     override void emitSignal(string name) nothrow {
-
         assertNotThrown(_debugSignals.require(name, 0)++);
         _probe.runAssert(a => a.emitSignal(_probe.subject, name));
-
     }
 
     override void cropArea(Rectangle area) nothrow {
-
         _probe.runAssert(a => a.cropArea(_probe.subject, area));
         _cropArea = area;
-
     }
 
     override void resetCropArea() nothrow {
-
         _probe.runAssert(a => a.resetCropArea(_probe.subject));
         _cropArea = none;
-
     }
 
     override void drawTriangleImpl(Vector2 x, Vector2 y, Vector2 z, Color color) nothrow {
-
         _probe.runAssert(a => a.drawTriangle(_probe.subject, x, y, z, color));
-
     }
 
     override void drawCircleImpl(Vector2 center, float radius, Color color) nothrow {
-
         _probe.runAssert(a => a.drawCircle(_probe.subject, center, radius, color));
+    }
 
+    override void drawCircleOutlineImpl(Vector2 center, float radius, float width, Color color) nothrow {
+        _probe.runAssert(a => a.drawCircleOutline(_probe.subject, center, radius, width, color));
     }
 
     override void drawRectangleImpl(Rectangle rectangle, Color color) nothrow {
-
         _probe.runAssert(a => a.drawRectangle(_probe.subject, rectangle, color));
-
     }
 
     override void drawLineImpl(Vector2 start, Vector2 end, float width, Color color) nothrow {
-
         _probe.runAssert(a => a.drawLine(_probe.subject, start, end, width, color));
-
     }
 
     override void drawImageImpl(DrawableImage image, Rectangle destination, Color tint) nothrow {
@@ -384,6 +370,7 @@ interface Assert {
     bool resetCropArea(Node node) nothrow;
     bool drawTriangle(Node node, Vector2 a, Vector2 b, Vector2 c, Color color) nothrow;
     bool drawCircle(Node node, Vector2 center, float radius, Color color) nothrow;
+    bool drawCircleOutline(Node node, Vector2 center, float radius, float width, Color color) nothrow;
     bool drawRectangle(Node node, Rectangle rectangle, Color color) nothrow;
     bool drawLine(Node node, Vector2 start, Vector2 end, float width, Color color) nothrow;
     bool drawImage(Node node, DrawableImage image, Rectangle destination, Color tint) nothrow;
@@ -990,6 +977,10 @@ auto drawsWildcard(alias dg)(lazy string message) {
 
         override bool drawCircle(Node node, Vector2, float, Color) nothrow {
             return dg(node, "drawCircle");
+        }
+
+        override bool drawCircleOutline(Node node, Vector2, float, float, Color) nothrow {
+            return dg(node, "drawCircleOutline");
         }
 
         override bool drawRectangle(Node node, Rectangle, Color) nothrow {
