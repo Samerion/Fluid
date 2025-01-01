@@ -768,3 +768,54 @@ unittest {
     assert(hover.fetch(pointer2.id).position == Vector2(20, 20));
 
 }
+
+@("Pressing a node switches focus")
+unittest {
+
+    Button button1, button2;
+
+    auto focus = focusChain();
+    auto hover = hoverChain();
+    auto root = chain(
+        focus,
+        hover,
+        sizeLock!vspace(
+            .sizeLimit(100, 100),
+            .nullTheme,
+            button1 = button(.layout!(1, "fill"), "One", delegate { }),
+            button2 = button(.layout!(1, "fill"), "Two", delegate { }),
+        ),
+    );
+
+    root.draw();
+
+    // Hover the first button; focus should stay the same
+    hover.point(50, 25)
+        .then((a) {
+            assert(a.isHovered(button1));
+            assert(focus.currentFocus is null);
+
+            // Press to change focus (inactive)
+            a.press(false);
+            return a.stayIdle;
+        })
+        .then((a) {
+            assert(a.isHovered(button1));
+            assert(focus.isFocused(button1));
+
+            // Move onto the other button, focus should stay the same
+            a.press(false);
+            return a.move(50, 75);
+        })
+        .then((a) {
+            assert(a.isHovered(button1));
+            assert(focus.isFocused(button1));
+
+            a.press();
+
+        })
+        .runWhileDrawing(root);
+
+    assert(focus.isFocused(button1));
+
+}
