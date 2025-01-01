@@ -124,12 +124,26 @@ class Radiobox : Checkbox {
                 inner.height / 2,
             );
 
-            // Draw the outline
-            io.drawCircleOutline(center(outer), outerRadius, extra.outlineColor);
+            if (canvasIO) {
 
-            // Draw the inside
-            if (isChecked)
-            io.drawCircle(center(inner), innerRadius, extra.fillColor);
+                // Draw the inside
+                canvasIO.drawCircle(center(inner), innerRadius, extra.fillColor);
+
+                // Draw the outline
+                canvasIO.drawCircleOutline(center(outer), outerRadius, extra.outlineWidth, extra.outlineColor);
+
+            }
+
+            else {
+
+                // Draw the outline
+                io.drawCircleOutline(center(outer), outerRadius, extra.outlineColor);
+
+                // Draw the inside
+                if (isChecked)
+                io.drawCircle(center(inner), innerRadius, extra.fillColor);
+
+            }
 
         }
 
