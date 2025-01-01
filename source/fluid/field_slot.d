@@ -8,6 +8,7 @@ import fluid.actions;
 import fluid.backend;
 
 import fluid.io.hover;
+import fluid.io.focus;
 
 @safe:
 
@@ -28,11 +29,15 @@ import fluid.io.hover;
 alias fieldSlot(alias node) = simpleConstructor!(FieldSlot, node);
 
 /// ditto
-class FieldSlot(T : Node) : T, FluidHoverable, Hoverable {
+class FieldSlot(T : Node) : T, FluidHoverable, Hoverable, Focusable {
 
     mixin makeHoverable;
     mixin FluidHoverable.enableInputActions;
     mixin Hoverable.enableInputActions;
+
+    private {
+        Focusable _focusableChild;
+    }
 
     this(Args...)(Args args) {
         super(args);
@@ -42,20 +47,30 @@ class FieldSlot(T : Node) : T, FluidHoverable, Hoverable {
     @(FluidInputAction.press)
     void press() {
 
-        focus()
-            .then((Node node) {
-                if (auto focusable = cast(FluidFocusable) node) {
-                    focusable.runInputAction!(FluidInputAction.press);
-                }
-            });
+        focusAnd.then((Node node) {
+            if (auto focusable = cast(FluidFocusable) node) {
+                focusable.runInputAction!(FluidInputAction.press);
+            }
+        });
 
     }
 
     /// Pass focus to the field contained by this slot.
-    FocusRecurseAction focus() {
+    void focus() {
+        cast(void) focusAnd();
+    }
 
-        return this.focusRecurseChildren();
+    /// ditto
+    FocusRecurseAction focusAnd() {
 
+        auto action = this.focusRecurseChildren();
+        action.then(&setFocusableChild);
+        return action;
+
+    }
+
+    private void setFocusableChild(Focusable focus) {
+        _focusableChild = focus;
     }
 
     override void drawImpl(Rectangle outer, Rectangle inner) {
@@ -89,14 +104,20 @@ class FieldSlot(T : Node) : T, FluidHoverable, Hoverable {
 
     }
 
-    // implements Hoverable
     override bool blocksInput() const {
         return isDisabled || isDisabledInherited;
     }
 
-    // implements Hoverable
     override bool hoverImpl() {
         return false;
+    }
+
+    override bool focusImpl() {
+        return false;
+    }
+
+    override bool isFocused() const {
+        return _focusableChild && _focusableChild.isFocused();
     }
 
 }
