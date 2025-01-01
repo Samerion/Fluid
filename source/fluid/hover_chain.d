@@ -10,6 +10,7 @@ import fluid.utils;
 import fluid.node_chain;
 
 import fluid.io.hover;
+import fluid.io.focus;
 import fluid.io.action;
 
 import fluid.future.arena;
@@ -22,12 +23,15 @@ alias hoverChain = nodeBuilder!HoverChain;
 /// A hover chain can be used to separate hover in different areas of the user interface, effectively treating them
 /// like separate windows. A device node (like a mouse) can be placed to control nodes inside.
 ///
+/// `HoverChain` has to be placed inside `FocusIO` to enable switching focus by pressing nodes.
+///
 /// For focus-based nodes like keyboard and gamepad, see `FocusChain`.
 ///
 /// `HoverChain` only works with nodes compatible with the new I/O system introduced in Fluid 0.7.2.
 class HoverChain : NodeChain, HoverIO {
 
     ActionIO actionIO;
+    FocusIO focusIO;
 
     private {
 
@@ -51,6 +55,9 @@ class HoverChain : NodeChain, HoverIO {
             HoverScrollable scrollable;
 
             /// If true, any button related to the pointer is being held.
+            ///
+            /// `heldNode` will not be updated while this is true, and current focus will be updated to match
+            /// the hovered node.
             bool isHeld;
 
             /// If true, the pointer already handled incoming input events.
@@ -168,6 +175,7 @@ class HoverChain : NodeChain, HoverIO {
     override void beforeResize(Vector2) {
 
         use(actionIO);
+        use(focusIO);
         _pointers.startCycle();
 
         auto frame = controlIO!HoverIO();
@@ -207,6 +215,18 @@ class HoverChain : NodeChain, HoverIO {
             pointer.node = pointer.action.result;
             if (!pointer.isHeld) {
                 pointer.heldNode = pointer.node;
+            }
+
+            // Switch focus to hovered node if holding
+            else if (focusIO) {
+                if (auto focusable = pointer.heldNode.castIfAcceptsInput!Focusable) {
+                    if (!focusable.isFocused) {
+                        focusable.focus();
+                    }
+                }
+                else {
+                    focusIO.clearFocus();
+                }
             }
 
             // Update scroll and send new events
