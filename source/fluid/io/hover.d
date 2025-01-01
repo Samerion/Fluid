@@ -647,12 +647,12 @@ class PointerAction : TreeAction, Publisher!PointerAction, IO {
     }
 
     /// Returns: True if the given node is hovered.
-    bool isHovered(Node node) {
+    bool isHovered(const Hoverable hoverable) {
 
-        if (node is null)
+        if (hoverable is null)
             return currentHover is null;
         else
-            return currentHover && currentHover.opEquals(node);
+            return currentHover && currentHover.opEquals(cast(const Object) hoverable);
 
     }
 

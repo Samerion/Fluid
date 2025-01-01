@@ -657,10 +657,10 @@ class RaylibStack(RaylibViewVersion raylibVersion) : Node {
     public {
 
         /// I/O implementations provided by the stack.
-        HoverChain hoverIO;
+        FocusChain focusIO;
 
         /// ditto
-        FocusChain focusIO;
+        HoverChain hoverIO;
 
         /// ditto
         InputMapChain actionIO;
@@ -680,8 +680,8 @@ class RaylibStack(RaylibViewVersion raylibVersion) : Node {
 
         chain(
             actionIO = inputMapChain(),
-            hoverIO  = hoverChain(),
             focusIO  = focusChain(),
+            hoverIO  = hoverChain(),
             fileIO   = fileChain(),
             raylibIO = raylibView(next),
         );
