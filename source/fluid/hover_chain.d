@@ -10,6 +10,7 @@ import fluid.utils;
 import fluid.node_chain;
 
 import fluid.io.hover;
+import fluid.io.focus;
 import fluid.io.action;
 
 import fluid.future.arena;
@@ -51,6 +52,9 @@ class HoverChain : NodeChain, HoverIO {
             HoverScrollable scrollable;
 
             /// If true, any button related to the pointer is being held.
+            ///
+            /// `heldNode` will not be updated while this is true, and current focus will be updated to match
+            /// the hovered node.
             bool isHeld;
 
             /// If true, the pointer already handled incoming input events.
@@ -207,6 +211,18 @@ class HoverChain : NodeChain, HoverIO {
             pointer.node = pointer.action.result;
             if (!pointer.isHeld) {
                 pointer.heldNode = pointer.node;
+            }
+
+            // Switch focus to hovered node if holding
+            else {
+                if (auto focusable = pointer.heldNode.castIfAcceptsInput!Focusable) {
+                    if (!focusable.isFocused) {
+                        focusable.focus();
+                    }
+                }
+                else {
+                    // TODO clear focus
+                }
             }
 
             // Update scroll and send new events
