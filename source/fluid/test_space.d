@@ -540,6 +540,123 @@ auto drawsLine(Node subject) {
 
 }
 
+/// Test if the subject draws a circle outline.
+auto drawsCircleOutline(Node subject) {
+    auto a = drawsCircle(subject);
+    a.isOutline = true;
+    return a;
+}
+
+/// ditto
+auto drawsCircleOutline(Node subject, float width) {
+    auto a = drawsCircleOutline(subject);
+    a.isTestingOutlineWidth = true;
+    a.targetOutlineWidth = width;
+    return a;
+}
+
+/// Test if the subject draws a circle.
+auto drawsCircle(Node subject) {
+
+    return new class BlackHole!Assert {
+
+        bool isOutline;
+        bool isTestingCenter;
+        Vector2 targetCenter;
+        bool isTestingRadius;
+        float targetRadius;
+        bool isTestingColor;
+        Color targetColor;
+        bool isTestingOutlineWidth;
+        float targetOutlineWidth;
+
+        override bool drawCircle(Node node, Vector2 center, float radius, Color color) nothrow {
+            if (isOutline) {
+                return false;
+            }
+            else {
+                return drawTargetCircle(node, center, radius, color);
+            }
+        }
+
+        override bool drawCircleOutline(Node node, Vector2 center, float radius, float width, Color color) nothrow {
+            if (isOutline) {
+                if (isTestingOutlineWidth) {
+                    assert(equal(width, targetOutlineWidth),
+                        format!"Expected outline width %s, got %s"(targetOutlineWidth, width).assertNotThrown);
+                }
+                return drawTargetCircle(node, center, radius, color);
+            }
+            else {
+                return false;
+            }
+        }
+
+        bool drawTargetCircle(Node node, Vector2 center, float radius, Color color) nothrow @safe {
+
+            if (!node.opEquals(subject).assertNotThrown) return false;
+
+            if (isTestingCenter) {
+                assert(equal(targetCenter.x, center.x)
+                    && equal(targetCenter.y, center.y),
+                    format!"Expected center %s, got %s"(targetCenter, center).assertNotThrown);
+            }
+
+            if (isTestingRadius) {
+                assert(equal(targetRadius, radius),
+                    format!"Expected radius %s, got %s"(targetRadius, radius).assertNotThrown);
+            }
+
+            if (isTestingColor) {
+                assert(targetColor == color,
+                    format!"Expected color %s, got %s"(targetColor, color).assertNotThrown);
+            }
+
+            return true;
+
+        }
+
+        typeof(this) at(float x, float y) @safe {
+            return at(Vector2(x, y));
+        }
+
+        typeof(this) at(Vector2 center) @safe {
+            isTestingCenter = true;
+            targetCenter = center;
+            return this;
+        }
+
+        typeof(this) ofRadius(float radius) @safe {
+            isTestingRadius = true;
+            targetRadius = radius;
+            return this;
+        }
+
+        typeof(this) ofColor(string color) @safe {
+            return ofColor(.color(color));
+        }
+
+        typeof(this) ofColor(Color color) @safe {
+            isTestingColor = true;
+            targetColor = color;
+            return this;
+        }
+
+        override string toString() const {
+            return toText(
+                subject, " should draw a circle",
+                isOutline             ? "outline"                                : "",
+                isTestingCenter       ? toText(" at ", targetCenter)             : "",
+                isTestingRadius       ? toText(" of radius ", targetRadius)      : "",
+                isTestingOutlineWidth ? toText(" of width ", targetOutlineWidth) : "",
+                isTestingColor        ? toText(" of color ", targetColor.toHex)  : "",
+            );
+        }
+
+    };
+
+}
+
 /// Params:
 ///     subject = Test if this subject draws an image.
 /// Returns:
