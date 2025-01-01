@@ -819,3 +819,56 @@ unittest {
     assert(focus.isFocused(button1));
 
 }
+
+@("Pressing a non-focusable node clears focus")
+unittest {
+
+    Button targetButton;
+    Frame filler;
+
+    auto focus = focusChain();
+    auto hover = hoverChain();
+    auto root = chain(
+        focus,
+        hover,
+        sizeLock!vspace(
+            .sizeLimit(100, 100),
+            .nullTheme,
+            filler = vframe(.layout!(1, "fill")),
+            targetButton = button(.layout!(1, "fill"), "Target", delegate { }),
+        ),
+    );
+
+    root.draw();
+    focus.currentFocus = targetButton;
+
+    // Hover the space; focus should stay the same
+    hover.point(50, 25)
+        .then((a) {
+            assert(!a.isHovered(targetButton));
+            assert(focus.currentFocus.opEquals(targetButton));
+
+            // Press to change focus (inactive)
+            a.press(false);
+            return a.stayIdle;
+        })
+        .then((a) {
+            assert(!a.isHovered(targetButton));
+            assert(focus.currentFocus is null);
+
+            // Move onto the button, focus should remain empty
+            a.press(false);
+            return a.move(50, 75);
+        })
+        .then((a) {
+            assert(!a.isHovered(targetButton));
+            assert(focus.currentFocus is null);
+
+            a.press();
+
+        })
+        .runWhileDrawing(root);
+
+    assert(focus.currentFocus is null);
+
+}
