@@ -4,6 +4,7 @@ module fluid.io.canvas;
 import optional;
 
 import fluid.types;
+import fluid.utils;
 import fluid.backend;
 import fluid.future.context;
 
@@ -155,9 +156,9 @@ interface CanvasIO : IO {
 
     /// Draw a triangle, consisting of 3 vertices with counter-clockwise winding.
     /// Params:
-    ///     a = First of the three points to connect.
-    ///     b = Second of the three points to connect.
-    ///     c = Third of the three points to connect.
+    ///     a     = First of the three points to connect.
+    ///     b     = Second of the three points to connect.
+    ///     c     = Third of the three points to connect.
     ///     color = Color to fill the triangle with.
     protected void drawTriangleImpl(Vector2 a, Vector2 b, Vector2 c, Color color) nothrow;
 
@@ -166,6 +167,21 @@ interface CanvasIO : IO {
 
         drawTriangleImpl(a, b, c,
             multiply(treeContext.tint, color));
+
+    }
+
+    /// Draw an outline of a triangle.
+    /// Params:
+    ///     a     = First of the three points to connect.
+    ///     b     = Second of the three points to connect.
+    ///     c     = Third of the three points to connect.
+    ///     width = Width of each line.
+    ///     color = Color of the outline.
+    final void drawTriangleOutline(Vector2 a, Vector2 b, Vector2 c, float width, Color color) nothrow {
+
+        drawLine(a, b, width, color);
+        drawLine(b, c, width, color);
+        drawLine(c, a, width, color);
 
     }
 
@@ -184,6 +200,22 @@ interface CanvasIO : IO {
 
     }
 
+    /// Draw the outline of a circle.
+    /// Params:
+    ///     center = Position of the circle's center.
+    ///     radius = Radius of the circle.
+    ///     width  = Width of the outline.
+    ///     color  = Color for the outline.
+    protected void drawCircleOutlineImpl(Vector2 center, float radius, float width, Color color) nothrow;
+
+    /// ditto
+    final void drawCircleOutline(Vector2 center, float radius, float width, Color color) nothrow {
+
+        drawCircleOutlineImpl(center, radius, width,
+            multiply(treeContext.tint, color));
+
+    }
+
     /// Draw a rectangle.
     /// Params:
     ///     rectangle = Rectangle to draw.
@@ -195,6 +227,25 @@ interface CanvasIO : IO {
 
         drawRectangleImpl(rectangle,
             multiply(treeContext.tint, color));
+
+    }
+
+    /// Draw an outline of a rectangle.
+    /// Params:
+    ///     rectangle = Rectangle to draw an outline of.
+    ///     width = Width of each line.
+    ///     color = Color of the outline.
+    final void drawRectangleOutline(Rectangle rectangle, float width, Color color) nothrow {
+
+        const a = Vector2(rectangle.start.x, rectangle.start.y);
+        const b = Vector2(rectangle.end.x,   rectangle.start.y);
+        const c = Vector2(rectangle.end.x,   rectangle.end.y);
+        const d = Vector2(rectangle.start.x, rectangle.end.y);
+
+        drawLine(a, b, width, color);
+        drawLine(b, c, width, color);
+        drawLine(c, d, width, color);
+        drawLine(d, a, width, color);
 
     }
 

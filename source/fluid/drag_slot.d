@@ -9,9 +9,9 @@ import fluid.style;
 import fluid.backend;
 import fluid.structs;
 
+import fluid.io.canvas;
 
 @safe:
-
 
 /// A drag slot is a node slot providing drag & drop functionality.
 alias dragSlot = simpleConstructor!DragSlot;
@@ -208,6 +208,8 @@ alias dragHandle = simpleConstructor!DragHandle;
 /// ditto
 class DragHandle : Node {
 
+    CanvasIO canvasIO;
+
     /// Additional features available for drag handle styling
     static class Extra : typeof(super).Extra {
 
@@ -242,6 +244,7 @@ class DragHandle : Node {
 
     override void resizeImpl(Vector2 available) {
 
+        use(canvasIO);
         minSize = Vector2(width * 2, width);
 
     }
@@ -255,9 +258,16 @@ class DragHandle : Node {
         const color = style.lineColor;
         const fill = style.cropBox(inner, [radius, radius, 0, 0]);
 
-        io.drawCircle(start(inner) + circleVec, radius, color);
-        io.drawCircle(end(inner) - circleVec, radius, color);
-        io.drawRectangle(fill, color);
+        if (canvasIO) {
+            canvasIO.drawCircle(start(inner) + circleVec, radius, color);
+            canvasIO.drawCircle(end(inner) - circleVec, radius, color);
+            canvasIO.drawRectangle(fill, color);
+        }
+        else {
+            io.drawCircle(start(inner) + circleVec, radius, color);
+            io.drawCircle(end(inner) - circleVec, radius, color);
+            io.drawRectangle(fill, color);
+        }
 
     }
 

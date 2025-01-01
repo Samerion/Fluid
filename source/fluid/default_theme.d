@@ -173,7 +173,7 @@ static this() {
                 border = 0,
                 borderStyle = null,
                 padding = 2,
-                extra = new Radiobox.Extra(1, color("#555"), color("#5550")),
+                extra = new Radiobox.Extra(1, color("#555"), color("#5552")),
 
                 when!"a.isFocused"(backgroundColor = color("#ddd")),
                 when!"a.isChecked"(

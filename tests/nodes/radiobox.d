@@ -67,7 +67,7 @@ unittest {
     assert(!a2.isChecked);
     assert(!b1.isChecked);
     assert(!b2.isChecked);
-    
+
     b2.runInputAction!(FluidInputAction.press);
     assert( a1.isChecked);
     assert(!a2.isChecked);
@@ -79,5 +79,35 @@ unittest {
     assert( a2.isChecked);
     assert(!b1.isChecked);
     assert( b2.isChecked);
+
+}
+
+@("Radiobox is represented with a circle")
+unittest {
+
+    auto theme = nullTheme.derive(
+        rule!Radiobox(
+            Rule.padding = 2,
+            Rule.extra = new Radiobox.Extra(1, color("#555"), color("#5552")),
+            when!"a.isChecked"(
+                Rule.extra = new Radiobox.Extra(1, color("#555"), color("#000"))
+            ),
+        ),
+
+    );
+    auto input = radiobox(new RadioboxGroup);
+    auto root = testSpace(theme, input);
+
+    input.size = Vector2(16, 16);  // (20, 20) with padding
+    root.drawAndAssert(
+        input.drawsCircle()       .at(10, 10).ofRadius( 8).ofColor("#5552"),
+        input.drawsCircleOutline().at(10, 10).ofRadius(10).ofColor("#555"),
+    );
+
+    input.select();
+    root.drawAndAssert(
+        input.drawsCircle()       .at(10, 10).ofRadius( 8).ofColor("#000"),
+        input.drawsCircleOutline().at(10, 10).ofRadius(10).ofColor("#555"),
+    );
 
 }
