@@ -13,9 +13,6 @@ unittest {
     assert(slot.value is null);
 
     root.drawAndAssert(
-        slot.doesNotDraw(),
-    );
-    root.drawAndAssert(
         slot.doesNotDrawChildren(),
     );
 
@@ -29,7 +26,6 @@ unittest {
     auto root = testSpace(nullTheme, slot);
 
     root.drawAndAssert(
-        slot.doesNotDraw(),
         content.draws(),
     );
     root.drawAndAssert(

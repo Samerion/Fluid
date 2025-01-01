@@ -8,6 +8,7 @@ import fluid.style;
 import fluid.backend;
 import fluid.structs;
 
+import fluid.io.canvas;
 
 @safe:
 
@@ -20,6 +21,8 @@ alias nodeSlot(alias T) = simpleConstructor!(NodeSlot!T);
 
 /// ditto
 class NodeSlot(T : Node) : Node {
+
+    CanvasIO canvasIO;
 
     public {
 
@@ -60,6 +63,8 @@ class NodeSlot(T : Node) : Node {
 
     protected override void resizeImpl(Vector2 space) {
 
+        use(canvasIO);
+
         minSize = Vector2();
 
         // Don't resize if there's no child node
@@ -78,7 +83,7 @@ class NodeSlot(T : Node) : Node {
 
     protected override void drawImpl(Rectangle outer, Rectangle inner) {
 
-        pickStyle().drawBackground(io, outer);
+        pickStyle().drawBackground(io, canvasIO, outer);
 
         if (!value) return;
 
