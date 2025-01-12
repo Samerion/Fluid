@@ -58,6 +58,7 @@ public import
     fluid.password_input,
     fluid.popup_button,
     fluid.popup_frame,
+    fluid.preference_chain,
     fluid.progress_bar,
     fluid.radiobox,
     fluid.raylib_view,
