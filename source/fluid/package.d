@@ -72,6 +72,8 @@ public import
     fluid.style,
     fluid.switch_slot,
     fluid.test_space,
+    fluid.time_chain,
+    fluid.time_machine,
     fluid.text,
     fluid.text_input,
     // Note: fluid.theme is not included

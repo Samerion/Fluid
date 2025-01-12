@@ -2,6 +2,7 @@
 module fluid.io;
 
 // Basic
+public import fluid.io.time;
 public import fluid.io.focus;
 public import fluid.io.hover;
 public import fluid.io.action;

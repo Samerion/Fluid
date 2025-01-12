@@ -47,6 +47,7 @@ import fluid.future.arena;
 
 import fluid.backend.raylib5 : Raylib5Backend, toRaylib;
 
+import fluid.io.time;
 import fluid.io.canvas;
 import fluid.io.hover;
 import fluid.io.mouse;
@@ -65,8 +66,9 @@ static if (!__traits(compiles, IsShaderReady))
 ///
 /// Specify Raylib version by using a member: `raylibStack.v5_5()` will create a stack for Raylib 5.5.
 ///
-/// `raylibStack` provides a default implementation for `HoverIO`, `FocusIO`, `ActionIO` and `FileIO`, on top of all
-/// the systems provided by Raylib itself: `CanvasIO`, `KeyboardIO`, `MouseIO`, `ClipboardIO` and `ImageLoadIO`.
+/// `raylibStack` provides a default implementation for `TimeIO`,  `HoverIO`, `FocusIO`, `ActionIO` and `FileIO`,
+/// on top of all the systems provided by Raylib itself: `CanvasIO`, `KeyboardIO`, `MouseIO`, `ClipboardIO`
+/// and `ImageLoadIO`.
 enum raylibStack = RaylibViewBuilder!RaylibStack.init;
 
 /// `raylibView` implements some I/O functionality using the Raylib library, namely `CanvasIO`, `KeyboardIO`,
@@ -106,6 +108,7 @@ struct RaylibViewBuilder(alias T) {
 ///
 /// * `ActionIO` for translating user input into a format Fluid nodes can understand.
 /// * `FileIO` for loading and writing files.
+/// * `TimeIO` for measuring time.
 ///
 /// `RaylibView` itself provides a number of I/O systems using functionality from the Raylib library:
 ///
@@ -694,10 +697,12 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
 /// Note that `RaylibView` does not provide all the systems Fluid needs to function. See its documentation for more
 /// information.
 ///
-/// On top of systems already provided by `RaylibView`, `RaylibStack` also includes `HoverIO`, `FocusIO`, `ActionIO`
-/// and `FileIO`. You can access them through fields named `hoverIO`, `focusIO`, `actionIO` and `fileIO` respectively.
+/// On top of systems already provided by `RaylibView`, `RaylibStack` also includes `HoverIO`, `FocusIO`, `ActionIO`,
+/// `TimeIO` and `FileIO`. You can access them through fields named `hoverIO`, `focusIO`, `actionIO`, `timeIO`
+/// and `fileIO` respectively.
 class RaylibStack(RaylibViewVersion raylibVersion) : Node {
 
+    import fluid.time_chain;
     import fluid.hover_chain;
     import fluid.focus_chain;
     import fluid.input_map_chain;
@@ -715,6 +720,9 @@ class RaylibStack(RaylibViewVersion raylibVersion) : Node {
         InputMapChain actionIO;
 
         /// ditto
+        TimeChain timeIO;
+
+        /// ditto
         FileChain fileIO;
 
         /// ditto
@@ -728,6 +736,7 @@ class RaylibStack(RaylibViewVersion raylibVersion) : Node {
     this(Node next) {
 
         chain(
+            timeIO   = timeChain(),
             actionIO = inputMapChain(),
             focusIO  = focusChain(),
             hoverIO  = hoverChain(),
