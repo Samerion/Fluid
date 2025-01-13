@@ -9,6 +9,7 @@ import fluid.style;
 import fluid.backend;
 import fluid.structs;
 
+import fluid.io.hover;
 import fluid.io.canvas;
 
 @safe:
@@ -17,10 +18,13 @@ import fluid.io.canvas;
 alias dragSlot = simpleConstructor!DragSlot;
 
 /// ditto
-class DragSlot : NodeSlot!Node, FluidHoverable {
+class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable {
 
     mixin makeHoverable;
-    mixin enableInputActions;
+    mixin FluidHoverable.enableInputActions;
+    mixin Hoverable.enableInputActions;
+
+    HoverIO hoverIO;
 
     public {
 
@@ -51,6 +55,10 @@ class DragSlot : NodeSlot!Node, FluidHoverable {
 
     }
 
+    override bool blocksInput() const {
+        return isDisabled || isDisabledInherited;
+    }
+
     /// If true, this node is currently being dragged.
     bool isDragged() const {
 
@@ -60,24 +68,42 @@ class DragSlot : NodeSlot!Node, FluidHoverable {
 
     /// Drag the node.
     @(FluidInputAction.press, .WhileDown)
-    void drag()
+    void drag(Pointer pointer)
     in (tree)
     do {
 
         // Ignore if already dragging
         if (dragAction) {
-
             dragAction._stopDragging = false;
-
+            dragAction.pointerPosition = pointer.position;
         }
 
+        // Queue the drag action
         else {
-
-            // Queue the drag action
-            dragAction = new DragAction(this);
-            tree.queueAction(dragAction);
+            dragAction = new DragAction(this, pointer.position);
+            if (hoverIO) {
+                auto hover = cast(Node) hoverIO;
+                hover.startAction(dragAction);
+            }
+            else {
+                tree.queueAction(dragAction);
+            }
             updateSize();
+        }
 
+    }
+
+    /// Drag the node.
+    @(FluidInputAction.press, .WhileDown)
+    void drag()
+    in (tree)
+    do {
+
+        // Polyfill for old backend-based I/O
+        if (!hoverIO) {
+            Pointer pointer;
+            pointer.position = io.mousePosition;
+            drag(pointer);
         }
 
     }
@@ -118,6 +144,8 @@ class DragSlot : NodeSlot!Node, FluidHoverable {
     }
 
     override void resizeImpl(Vector2 available) {
+
+        use(hoverIO);
 
         // Resize the slot
         super.resizeImpl(available);
@@ -198,6 +226,10 @@ class DragSlot : NodeSlot!Node, FluidHoverable {
 
     void mouseImpl() {
 
+    }
+
+    bool hoverImpl() {
+        return false;
     }
 
 }
@@ -282,6 +314,9 @@ class DragAction : TreeAction {
         FluidDroppable target;
         Rectangle targetRectangle;
 
+        /// Current position of the pointer seen by the action.
+        Vector2 pointerPosition;
+
     }
 
     private {
@@ -291,16 +326,20 @@ class DragAction : TreeAction {
 
     }
 
-    this(DragSlot slot) {
-
+    deprecated this(DragSlot slot) {
         this.slot = slot;
         this.mouseStart = slot.io.mousePosition;
+    }
 
+    this(DragSlot slot, Vector2 pointerPosition) {
+        this.slot = slot;
+        this.pointerPosition = pointerPosition;
+        this.mouseStart = pointerPosition;
     }
 
     Vector2 offset() const {
 
-        return slot.io.mousePosition - mouseStart;
+        return pointerPosition - mouseStart;
 
     }
 
@@ -324,8 +363,8 @@ class DragAction : TreeAction {
 
     override void beforeResize(Node node, Vector2 space) {
 
-        // Resizing the root
-        if (node is node.tree.root) {
+        // Legacy backend; use tree root for resizing
+        if (!startNode && node is node.tree.root) {
 
             // Resize the slot too
             slot.resizeInternal(node, space);
@@ -348,15 +387,31 @@ class DragAction : TreeAction {
         this.target = droppable;
         this.targetRectangle = rectangle;
 
-        droppable.dropHover(slot.io.mousePosition, relativeDragRectangle);
+        droppable.dropHover(pointerPosition, relativeDragRectangle);
+
+    }
+
+    override void afterDraw(Node node, Rectangle space) {
+
+        if (startNode && startNode.opEquals(node)) {
+            drawSlot(node);
+        }
 
     }
 
     /// Tree drawn, draw the node now.
     override void afterTree() {
 
+        if (startNode is null) {
+            drawSlot(slot.tree.root);
+        }
+
+    }
+
+    void drawSlot(Node parent) {
+
         // Draw the slot
-        slot.drawDragged(slot.tree.root, offset);
+        slot.drawDragged(parent, offset);
         _stopDragging = true;
 
     }
@@ -373,7 +428,7 @@ class DragAction : TreeAction {
             // Ready to drop, perform the action
             if (_readyToDrop) {
 
-                target.drop(slot.io.mousePosition, relativeDragRectangle, slot);
+                target.drop(pointerPosition, relativeDragRectangle, slot);
 
             }
 
