@@ -85,6 +85,12 @@ struct MultipleClickSensor {
     private Vector2 _lastPosition;
     private bool _down;
 
+    /// Clear the counter, resetting click count to 0.
+    void clear() {
+        clicks = 0;
+        _down = false;
+    }
+
     /// Call this function every time the desired click event is emitted.
     ///
     /// This overload accepts `TimeIO` and `ActionIO` systems and reads their properties to determine
@@ -121,7 +127,8 @@ struct MultipleClickSensor {
         if (_down) return;
 
         const shouldReset = currentTime - _lastClickTime > doubleClickInterval
-            || distance2(pointerPosition, _lastPosition) > maximumDistance^^2;
+            || distance2(pointerPosition, _lastPosition) > maximumDistance^^2
+            || clicks == 0;
 
         // Reset clicks if enough time has passed, or if the cursor has gone too far
         if (shouldReset) {
