@@ -1341,7 +1341,7 @@ unittest {
                 Rule.selectionBackgroundColor = color("#02a"),
             ),
         ),
-        chain(hover, input)
+        chain(inputMapChain(), hover, input)
     );
     input.value = "Hello, World! Foo, bar, scroll this input";
     input.caretToEnd();
@@ -1390,7 +1390,7 @@ unittest {
 
                 assert(action.isHovered(input));
 
-                action.press;
+                action.press(true, i+1);
                 root.draw();
 
                 // Double-clicked

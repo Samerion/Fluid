@@ -81,7 +81,7 @@ class InputMapChain : NodeChain, ActionIO {
 
     /// Find the given event type among ones that were emitted this frame.
     /// Safety:
-    ///     The range has to be exhaused immediately.
+    ///     The range has to be exhausted immediately.
     ///     No input events can be emitted before the range is disposed of, or the range will break.
     /// Params:
     ///     code = Input event code to find.
@@ -93,13 +93,18 @@ class InputMapChain : NodeChain, ActionIO {
 
     }
 
-    /// Detect all input actions that should be emitted as a consequence of the events that occured this frame.
+    /// Detect all input actions that should be emitted as a consequence of the events that occurred this frame.
     /// Clears the current list of events when done.
     private void processEvents() @trusted {
 
         scope (exit) _events.clear();
 
         bool handled;
+
+        // Test noop event first
+        foreach (event; findEvents(noopEvent.code)) {
+            return;
+        }
 
         // Test all mappings
         foreach (layer; map.layers) {

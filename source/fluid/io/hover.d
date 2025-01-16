@@ -226,6 +226,12 @@ struct Pointer {
     /// Current scroll value. For a mouse, this indicates mouse wheel movement, for other devices like touchpad or
     /// touchscreen, this will be translated from its movement.
     ///
+    /// This value indicates the distance and direction in window space that the scroll should result in covering.
+    /// This means that on the X axis negative values move left and positive values move right, while on the Y axis
+    /// negative values go upwards and positive values go downwards.
+    /// For example, a scroll value of `(0, 20)` scrolls 20 pixels down vertically, while `(0, -10)` scrolls 10 pixels
+    /// up.
+    ///
     /// While it is possible to read scroll of the `Pointer` data received in an input action handler,
     /// it is recommended to implement scroll through `Scrollable.scrollImpl`.
     ///
@@ -233,6 +239,16 @@ struct Pointer {
     /// vertical movement, touchscreens, touchpads, trackpads or more advanced mouses do support horizontal movement.
     /// It is also possible for a device to perform both horizontal and vertical movement at once.
     Vector2 scroll;
+
+    /// True if the pointer is not currently pointing, like a finger that stopped touching the screen.
+    bool isDisabled;
+
+    /// Consecutive click counter. A value of 1 represents a single click, 2 is a double click, 3 is a triple click,
+    /// and so on. The counter should reset after a small delay, or if a distance threshold is crossed.
+    ///
+    /// This value is usually provided by the system. If unavailable, you can use
+    /// `fluid.io.preference.MultipleClickCounter` to generate this value from data available to Fluid.
+    int clickCount;
 
     /// If true, the scroll control is held, like a finger swiping through the screen. This does not apply to mouse
     /// wheels.
@@ -245,35 +261,11 @@ struct Pointer {
     /// [autoscroll]: (https://chromewebstore.google.com/detail/autoscroll/occjjkgifpmdgodlplnacmkejpdionan)
     bool isScrollHeld;
 
-    /// True if the pointer is not currently pointing, like a finger that stopped touching the screen.
-    bool isDisabled;
-
     /// `HoverIO` system controlling the pointer.
     private HoverIO _hoverIO;
 
     /// ID of the pointer assigned by the `HoverIO` system.
     private int _id;
-
-    /// Create a new pointer.
-    /// Params:
-    ///     device     = I/O system representing the device that created the pointer.
-    ///     number     = Pointer number as assigned by the device.
-    ///     position   = Position of the pointer.
-    ///     isDisabled = If true, disable the node.
-    this(inout IO device, int number, Vector2 position, Vector2 scroll = Vector2.init, bool isDisabled = false) inout {
-        this.device     = device;
-        this.number     = number;
-        this.position   = position;
-        this.scroll     = scroll;
-        this.isDisabled = isDisabled;
-    }
-
-    /// Create a new pointer.
-    /// Params:
-    ///     position   = Position of the pointer.
-    this(Vector2 position) {
-        this.position = position;
-    }
 
     /// If the given system is a Hover I/O system, fetch a pointer.
     ///
@@ -348,6 +340,7 @@ struct Pointer {
         this.scroll       = other.scroll;
         this.isScrollHeld = other.isScrollHeld;
         this.isDisabled   = other.isDisabled;
+        this.clickCount   = other.clickCount;
     }
 
     /// Emit an event through the pointer.
@@ -739,8 +732,8 @@ class PointerAction : TreeAction, Publisher!PointerAction, IO {
 
     /// Run an input action on the currently hovered node, if any.
     /// Params:
-    ///     actionID = ID of the action to run.
-    ///     isActive = "Active" status of the action.
+    ///     actionID   = ID of the action to run.
+    ///     isActive   = "Active" status of the action.
     /// Returns:
     ///     True if the action was handled, false if not.
     bool runInputAction(immutable InputActionID actionID, bool isActive = true) {
@@ -748,9 +741,9 @@ class PointerAction : TreeAction, Publisher!PointerAction, IO {
         hoverIO.loadTo(pointer);
         auto hoverable = hoverIO.hoverOf(pointer);
 
-        // Emit a matching, fake hover event
-        const code = InputEventCode(ioID!HoverIO, -1);
-        const event = InputEvent(code, isActive);
+        // Emit a matching, fake hover event, to inform HoverIO of this
+        // If HoverIO uses ActionIO, ActionIO should recognize and prioritize this event
+        const event = ActionIO.noopEvent(isActive);
         hoverIO.emitEvent(pointer, event);
 
         // No hoverable
@@ -772,8 +765,20 @@ class PointerAction : TreeAction, Publisher!PointerAction, IO {
 
     }
 
-    /// Shorthand for `runInputAction!(FluidInputAction.press)`
-    alias press = runInputAction!(FluidInputAction.press);
+    /// Perform a left click.
+    /// Params:
+    ///     isActive   = Trigger input actions (like a mouse release event) if true, emulate holding if false.
+    ///     clickCount = Set to 2 to emulate a double click, 3 to emulate a triple click, etc.
+    /// Returns:
+    ///     True if the action was handled, false if not.
+    bool click(bool isActive = true, int clickCount = 1) {
+
+        pointer.clickCount = clickCount;
+        return runInputAction!(FluidInputAction.press)(isActive);
+
+    }
+
+    alias press = click;
 
     override void beforeDraw(Node node, Rectangle) {
 
@@ -793,6 +798,7 @@ class PointerAction : TreeAction, Publisher!PointerAction, IO {
         pointer.isDisabled = true;
         pointer.scroll = Vector2();
         pointer.isScrollHeld = false;
+        pointer.clickCount = 0;
         hoverIO.loadTo(pointer);
 
         _onInteraction(this);

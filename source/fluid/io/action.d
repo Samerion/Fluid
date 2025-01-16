@@ -30,9 +30,35 @@ interface ActionIO : IO {
 
     }
 
-    /// Create an input event to which `ActionIO` should always have bound to the `CoreAction.frame` input action.
+    enum Event {
+        noopEvent,
+        frameEvent,
+    }
+
+    /// Create an input event which should never activate any input action. For propagation purposes, this event
+    /// always counts as handled.
+    ///
+    /// The usual purpose of this event is to prevent input actions from running, assuming the `ActionIO` system's
+    /// logic stops once an event is handled. For example, `fluid.io.hover.PointerAction` emits this event when
+    /// it is ordered to run an input action, effectively overriding `ActionIO`'s response.
+    ///
+    /// See_Also:
+    ///     `frameEvent`
+    /// Params:
+    ///     isActive = Should the input event be marked as active or not. Defaults to true.
+    /// Returns:
+    ///     An instance of `Event.noopEvent`.
+    static InputEvent noopEvent(bool isActive = true) {
+
+        const code = InputEventCode(ioID!ActionIO, Event.noopEvent);
+
+        return InputEvent(code, isActive);
+
+    }
+
+    /// Create an input event to which `ActionIO` should always bind to the `CoreAction.frame` input action.
     /// Consequently, `ActionIO` always responds with a `CoreAction.frame` input action after processing remaining
-    /// input actions.
+    /// input actions. This can be cancelled by emitting a `noopEvent` before the `frameEvent` is handled.
     ///
     /// This can be used by device and input handling I/Os to detect the moment after which all input actions have
     /// been processed. This means that it can be used to develop fallback mechanisms like `hoverImpl`
@@ -40,9 +66,14 @@ interface ActionIO : IO {
     ///
     /// Note that `CoreAction.frame` might, or might not, be emitted if another action event has been emitted during
     /// the same frame. `InputMapChain` will only emit `CoreAction.frame` is no other input action has been handled.
+    ///
+    /// See_Also:
+    ///     `noopEvent`
+    /// Returns:
+    ///     An instance of `Event.frameEvent`.
     static InputEvent frameEvent() {
 
-        const code = InputEventCode(ioID!ActionIO, 1);
+        const code = InputEventCode(ioID!ActionIO, Event.frameEvent);
         const isActive = false;
 
         return InputEvent(code, isActive);

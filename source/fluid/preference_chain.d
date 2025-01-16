@@ -18,8 +18,8 @@ alias preferenceChain = nodeBuilder!PreferenceChain;
 /// of Fluid programs.
 ///
 /// Currently, `PreferenceChain` does *not* communicate with the system, and instead assumes a default value of 400
-/// milliseconds for the double-click interval. Communicating with the system will be enabled in a future update
-/// through a `version` flag.
+/// milliseconds for the double-click interval, and 6 pixels for the maximum double click distance. Communicating
+/// with the system will be enabled in a future update through a `version` flag.
 class PreferenceChain : NodeChain, PreferenceIO {
 
     this(Node next = null) {
@@ -39,6 +39,10 @@ class PreferenceChain : NodeChain, PreferenceIO {
 
     override Duration doubleClickInterval() const nothrow {
         return 400.msecs;
+    }
+
+    override float maximumDoubleClickDistance() const nothrow {
+        return 6;
     }
 
 }
