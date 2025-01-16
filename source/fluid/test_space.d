@@ -807,6 +807,23 @@ auto drawsImage(Node subject) {
 }
 
 /// Assert true if the node draws a child.
+/// Bugs:
+///     If testing with a specific child, it will not detect the action if resumed inside of a sibling node.
+///     In other words, this will fail:
+///
+///     ---
+///     // tree
+///     parent = vspace(
+///         sibling = label("Sibling"),
+///         child = label("Target"),
+///     )
+///     // test
+///     drawAndAssert(
+///         sibling.isDrawn,
+///         parent.drawsChild(child),
+///     ),
+///     ---
+///
 /// Params:
 ///     parent = Parent node, subject of the test.
 ///     child  = Child to test. Must be drawn directly.
@@ -962,7 +979,7 @@ auto doesNotDrawChildren(Node parent) {
 
 }
 
-/// Assert true if the parent requests drawing the node,
+/// Assert true if a node is attempted to be drawn,
 /// but the node does not need to draw anything for the assert to succeed.
 auto isDrawn(Node subject) {
 
