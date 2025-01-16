@@ -399,13 +399,14 @@ class DragAction : TreeAction {
 
     }
 
-    override void beforeDraw(Node node, Rectangle rectangle) {
+    override void beforeDraw(Node node, Rectangle rectangle, Rectangle outer, Rectangle inner) {
 
         auto droppable = cast(FluidDroppable) node;
 
         // Find all hovered droppable nodes
         if (!droppable) return;
-        if (!node.isHovered) return;
+        // TODO modal support?
+        if (!node.inBounds(outer, inner, pointerPosition)) return;
 
         // Make sure this slot can be dropped in
         if (!droppable.canDrop(slot)) return;
