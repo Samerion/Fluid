@@ -732,12 +732,14 @@ class PointerAction : TreeAction, Publisher!PointerAction, IO {
 
     /// Run an input action on the currently hovered node, if any.
     /// Params:
-    ///     actionID = ID of the action to run.
-    ///     isActive = "Active" status of the action.
+    ///     actionID   = ID of the action to run.
+    ///     isActive   = "Active" status of the action.
+    ///     clickCount = Set to 2 to simulate a double click, 3 to simulate a triple click, etc.
     /// Returns:
     ///     True if the action was handled, false if not.
-    bool runInputAction(immutable InputActionID actionID, bool isActive = true) {
+    bool runInputAction(immutable InputActionID actionID, bool isActive = true, int clickCount = 1) {
 
+        pointer.clickCount = clickCount;
         hoverIO.loadTo(pointer);
         auto hoverable = hoverIO.hoverOf(pointer);
 
@@ -757,16 +759,28 @@ class PointerAction : TreeAction, Publisher!PointerAction, IO {
     }
 
     /// ditto
-    bool runInputAction(alias action)(bool isActive = true) {
+    bool runInputAction(alias action)(bool isActive = true, int clickCount = 1) {
 
         alias actionID = inputActionID!action;
 
-        return runInputAction(actionID, isActive);
+        return runInputAction(actionID, isActive, clickCount);
 
     }
 
-    /// Shorthand for `runInputAction!(FluidInputAction.press)`
-    alias press = runInputAction!(FluidInputAction.press);
+    /// Perform a left click.
+    /// Params:
+    ///     isActive   = Trigger input actions (like a mouse release event) if true, emulate holding if false.
+    ///     clickCount = Set to 2 to emulate a double click, 3 to emulate a triple click, etc.
+    /// Returns:
+    ///     True if the action was handled, false if not.
+    bool click(alias action)(bool isActive = true, int clickCount = 1) {
+
+        this.pointer.clickCount = clickCount;
+        return runInputAction!(FluidInputAction.press)(actionID, isActive);
+
+    }
+
+    alias press = click;
 
     override void beforeDraw(Node node, Rectangle) {
 
@@ -786,6 +800,7 @@ class PointerAction : TreeAction, Publisher!PointerAction, IO {
         pointer.isDisabled = true;
         pointer.scroll = Vector2();
         pointer.isScrollHeld = false;
+        pointer.clickCount = 0;
         hoverIO.loadTo(pointer);
 
         _onInteraction(this);

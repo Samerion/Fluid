@@ -1390,7 +1390,7 @@ unittest {
 
                 assert(action.isHovered(input));
 
-                action.press;
+                action.press(true, i+1);
                 root.draw();
 
                 // Double-clicked
