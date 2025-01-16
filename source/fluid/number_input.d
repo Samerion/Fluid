@@ -201,7 +201,7 @@ unittest {
 
 }
 
-@("NumberInput supports math operations")
+@("Legacy: NumberInput supports math operations (migrated)")
 unittest {
 
     int calls;
