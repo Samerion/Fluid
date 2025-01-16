@@ -813,7 +813,7 @@ class CodeInput : TextInput {
 
     }
 
-    @("[TODO] Legacy: CodeInput.paste creates a history entry")
+    @("Legacy: CodeInput.paste creates a history entry")
     unittest {
 
         auto io = new HeadlessBackend;
