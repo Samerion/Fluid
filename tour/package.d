@@ -377,7 +377,7 @@ Space exampleList(void delegate(Chapter) @safe changeChapter) @safe {
         label(.layout!"fill", .tags!(FluidTag.warning), "While this tutorial covers the most important parts of Fluid, "
             ~ "it's still incomplete. Content will be added in further updates of Fluid. Contributions are welcome."),
         chapterGrid,
-        vseparator(),
+        hseparator(),
         imageView(.layout!"center", "logo.png", Vector2(249.5, 120)),
     );
 
