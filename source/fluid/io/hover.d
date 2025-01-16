@@ -734,18 +734,16 @@ class PointerAction : TreeAction, Publisher!PointerAction, IO {
     /// Params:
     ///     actionID   = ID of the action to run.
     ///     isActive   = "Active" status of the action.
-    ///     clickCount = Set to 2 to simulate a double click, 3 to simulate a triple click, etc.
     /// Returns:
     ///     True if the action was handled, false if not.
-    bool runInputAction(immutable InputActionID actionID, bool isActive = true, int clickCount = 1) {
+    bool runInputAction(immutable InputActionID actionID, bool isActive = true) {
 
-        pointer.clickCount = clickCount;
         hoverIO.loadTo(pointer);
         auto hoverable = hoverIO.hoverOf(pointer);
 
-        // Emit a matching, fake hover event
-        const code = InputEventCode(ioID!HoverIO, -1);
-        const event = InputEvent(code, isActive);
+        // Emit a matching, fake hover event, to inform HoverIO of this
+        // If HoverIO uses ActionIO, ActionIO should recognize and prioritize this event
+        const event = ActionIO.noopEvent(isActive);
         hoverIO.emitEvent(pointer, event);
 
         // No hoverable
@@ -759,11 +757,11 @@ class PointerAction : TreeAction, Publisher!PointerAction, IO {
     }
 
     /// ditto
-    bool runInputAction(alias action)(bool isActive = true, int clickCount = 1) {
+    bool runInputAction(alias action)(bool isActive = true) {
 
         alias actionID = inputActionID!action;
 
-        return runInputAction(actionID, isActive, clickCount);
+        return runInputAction(actionID, isActive);
 
     }
 
@@ -773,10 +771,10 @@ class PointerAction : TreeAction, Publisher!PointerAction, IO {
     ///     clickCount = Set to 2 to emulate a double click, 3 to emulate a triple click, etc.
     /// Returns:
     ///     True if the action was handled, false if not.
-    bool click(alias action)(bool isActive = true, int clickCount = 1) {
+    bool click(bool isActive = true, int clickCount = 1) {
 
-        this.pointer.clickCount = clickCount;
-        return runInputAction!(FluidInputAction.press)(actionID, isActive);
+        pointer.clickCount = clickCount;
+        return runInputAction!(FluidInputAction.press)(isActive);
 
     }
 
