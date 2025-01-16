@@ -179,10 +179,18 @@ struct TreeIOContext {
     }
 
     /// Iterate on all active I/O systems.
+    ///
+    /// Elements are passed by value and cannot be modified.
+    ///
     /// Returns:
     ///     A sorted input range of `(IOID id, IO io)` pairs.
     auto opIndex() {
-        return activeIOs;
+
+        // `map` should prevent modifications
+        import std.algorithm : map;
+
+        return activeIOs.save.map!(a => a).assumeSorted;
+
     }
 
     /// Create a copy of the context.
