@@ -174,8 +174,6 @@ struct TreeIOContext {
             return previous.io;
         }
 
-        debug assert(activeIOs.equalRange(id).front.io == system);
-
     }
 
     /// Iterate on all active I/O systems.
