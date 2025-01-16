@@ -382,18 +382,19 @@ class DragAction : TreeAction {
 
         auto regularIOContext = slot.treeContext.io;
 
-        // Swap the I/O context for the node
-        slot.treeContext.io = this.io;
-        scope (exit) slot.treeContext.io = regularIOContext;
+        // Resize inside the start node, or inside the root if there isn't one
+        const condition = startNode
+            ? startNode.opEquals(node)
+            : node is node.tree.root;
 
-        // Resize inside the start node
-        if (startNode && startNode.opEquals(node)) {
-            slot.resizeInternal(node, space);
-        }
+        if (condition) {
 
-        // No start node; use tree root for resizing
-        if (!startNode && node is node.tree.root) {
+            // Swap the I/O context for the node
+            node.treeContext.io = this.io;
+            scope (exit) node.treeContext.io = regularIOContext;
+
             slot.resizeInternal(node, space);
+
         }
 
     }
@@ -437,7 +438,6 @@ class DragAction : TreeAction {
 
         // Draw the slot
         slot.drawDragged(parent, offset);
-        _stopDragging = true;
 
     }
 
@@ -445,7 +445,10 @@ class DragAction : TreeAction {
     override void afterInput(ref bool focusHandled) {
 
         // We should have received a signal from the slot if it is still being dragged
-        if (!_stopDragging) return;
+        if (!_stopDragging) {
+            _stopDragging = true;
+            return;
+        }
 
         // Drop the slot if a droppable node was found
         if (target) {

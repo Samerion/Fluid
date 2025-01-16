@@ -128,3 +128,59 @@ unittest {
     assert(content.getMinSize == Vector2(0, 0));
 
 }
+
+@("DragSlot contents can load I/O systems while dragged")
+unittest {
+
+    static class IOTracker : Node {
+
+        HoverIO hoverIO;
+        CanvasIO canvasIO;
+
+        override void resizeImpl(Vector2) {
+            use(hoverIO);
+            use(canvasIO);
+        }
+
+        override void drawImpl(Rectangle, Rectangle) {
+
+        }
+
+    }
+
+    alias ioTracker = nodeBuilder!IOTracker;
+
+    auto slot = dragSlot();
+    auto hover = hoverChain(slot);
+    auto root = testSpace(hover);
+
+    root.drawAndAssert(
+        hover.drawsChild(slot),
+    );
+    assert(slot.hoverIO.opEquals(hover));
+    auto action = hover.point(0, 0);
+    slot.drag(action.pointer);
+    assert(slot.dragAction);
+    root.drawAndAssert(
+        hover.doesNotDrawChildren,
+        slot.isDrawn,
+    );
+    assert(slot.dragAction);
+    assert(slot.hoverIO.opEquals(hover));
+
+    // Place the tracker in the slot, continue dragging
+    auto tracker = ioTracker();
+    slot = tracker;
+    slot.drag(action.pointer);
+    root.drawAndAssert(
+        hover.doesNotDrawChildren,
+        slot.isDrawn,
+        slot.value.isDrawn,
+    );
+    assert(slot.dragAction);
+    assert(slot.hoverIO.opEquals(hover));
+    assert(slot.canvasIO.opEquals(root));
+    assert(tracker.hoverIO.opEquals(hover));
+    assert(tracker.canvasIO.opEquals(hover));
+
+}
