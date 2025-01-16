@@ -152,7 +152,12 @@ unittest {
 
     auto slot = dragSlot();
     auto hover = hoverChain(slot);
-    auto root = testSpace(hover);
+    auto root = testSpace(
+        chain(
+            focusChain(),
+            hover,
+        )
+    );
 
     root.drawAndAssert(
         hover.drawsChild(slot),
@@ -181,6 +186,6 @@ unittest {
     assert(slot.hoverIO.opEquals(hover));
     assert(slot.canvasIO.opEquals(root));
     assert(tracker.hoverIO.opEquals(hover));
-    assert(tracker.canvasIO.opEquals(hover));
+    assert(tracker.canvasIO.opEquals(root));
 
 }
