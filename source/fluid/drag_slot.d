@@ -1,5 +1,8 @@
 module fluid.drag_slot;
 
+import std.array;
+import std.range;
+
 import fluid.tree;
 import fluid.node;
 import fluid.slot;
@@ -11,6 +14,8 @@ import fluid.structs;
 
 import fluid.io.hover;
 import fluid.io.canvas;
+
+import fluid.future.context;
 
 @safe:
 
@@ -44,6 +49,9 @@ class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable {
 
         /// Last position when drawing statically (not dragging).
         Vector2 _staticPosition;
+
+        /// All I/O systems active on the last draw.
+        Appender!(TreeIOContext.IOInstance[]) _ioSystems;
 
     }
 
@@ -146,6 +154,10 @@ class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable {
     override void resizeImpl(Vector2 available) {
 
         use(hoverIO);
+
+        // Save active I/O systems
+        _ioSystems.clear();
+        put(_ioSystems, treeContext.io[]);
 
         // Resize the slot
         super.resizeImpl(available);
@@ -317,6 +329,11 @@ class DragAction : TreeAction {
         /// Current position of the pointer seen by the action.
         Vector2 pointerPosition;
 
+        /// I/O context for the node while it is mid-air.
+        ///
+        /// This preserves the I/O stack that was active for the drag slot when the gesture started.
+        TreeIOContext io;
+
     }
 
     private {
@@ -327,14 +344,14 @@ class DragAction : TreeAction {
     }
 
     deprecated this(DragSlot slot) {
-        this.slot = slot;
-        this.mouseStart = slot.io.mousePosition;
+        this(slot, slot.io.mousePosition);
     }
 
     this(DragSlot slot, Vector2 pointerPosition) {
         this.slot = slot;
         this.pointerPosition = pointerPosition;
         this.mouseStart = pointerPosition;
+        this.io = TreeIOContext(slot._ioSystems[].assumeSorted);
     }
 
     Vector2 offset() const {
@@ -363,12 +380,20 @@ class DragAction : TreeAction {
 
     override void beforeResize(Node node, Vector2 space) {
 
-        // Legacy backend; use tree root for resizing
-        if (!startNode && node is node.tree.root) {
+        auto regularIOContext = slot.treeContext.io;
 
-            // Resize the slot too
+        // Swap the I/O context for the node
+        slot.treeContext.io = this.io;
+        scope (exit) slot.treeContext.io = regularIOContext;
+
+        // Resize inside the start node
+        if (startNode && startNode.opEquals(node)) {
             slot.resizeInternal(node, space);
+        }
 
+        // No start node; use tree root for resizing
+        if (!startNode && node is node.tree.root) {
+            slot.resizeInternal(node, space);
         }
 
     }

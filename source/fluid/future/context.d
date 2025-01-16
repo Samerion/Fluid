@@ -108,7 +108,7 @@ struct TreeIOContext {
     import std.range;
     import std.algorithm : completeSort;
 
-    private struct IOInstance {
+    struct IOInstance {
         IOID id;
         IO io;
         int opCmp(const IOInstance rhs) const {
@@ -176,6 +176,13 @@ struct TreeIOContext {
 
         debug assert(activeIOs.equalRange(id).front.io == system);
 
+    }
+
+    /// Iterate on all active I/O systems.
+    /// Returns:
+    ///     A sorted input range of `(IOID id, IO io)` pairs.
+    auto opIndex() {
+        return activeIOs;
     }
 
     /// Create a copy of the context.
