@@ -1539,6 +1539,9 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         // Turn on selection from now on, disable it once released
         selectionMovement = true;
 
+        // Multi-click not supported
+        if (pointer.clickCount == 0) return;
+
         final switch ((pointer.clickCount + 2) % 3) {
 
             // First click, merely move the caret while selecting
