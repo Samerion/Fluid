@@ -1,6 +1,6 @@
 /// This module enables allocating a runtime ID for symbols. This makes it possible to uniquely identify node tags,
 /// input actions and I/O modules.
-/// 
+///
 /// Use `staticID` to produce new static IDs.
 module fluid.future.static_id;
 
@@ -8,10 +8,10 @@ import std.traits;
 
 @safe:
 
-/// This function will produce a unique ID associated with the given symbol by allocating a small piece 
+/// This function will produce a unique ID associated with the given symbol by allocating a small piece
 /// of static memory. Its address will be then used as an ID.
 ///
-/// Each symbol will be associated with its own, unique ID. The ID will be the same for every call with 
+/// Each symbol will be associated with its own, unique ID. The ID will be the same for every call with
 /// the same symbol.
 ///
 /// Returns: A unique ID produced from the symbol.
@@ -47,9 +47,18 @@ struct StaticID {
 
     /// Returns: True if the IDs are the same.
     bool opEquals(StaticID other) const {
-
         return id == other.id;
+    }
 
+    /// Compare two static IDs, enabling sorting. Note that this order is only guaranteed to be the same during
+    /// the same program run, as the IDs may change.
+    /// Returns:
+    ///     A negative value if this ID comes before the other. `0` if they're equal.
+    ///     A positive value if this ID comes after the other.
+    int opCmp(const StaticID other) const {
+        if (this.id < other.id) return -1;
+        if (this.id > other.id) return +1;
+        return 0;
     }
 
     /// Returns: The ID, which by itself is a sufficient hash.
