@@ -1587,3 +1587,163 @@ unittest {
     assert(input.value == content);
 
 }
+
+@("TextInput: Mouse selections works correctly across lines")
+unittest {
+
+    import std.math : isClose;
+
+    auto theme = nullTheme.derive(
+        rule!TextInput(
+            Rule.selectionBackgroundColor = color("#02a"),
+            Rule.fontSize = 14.pt,
+        ),
+    );
+    auto input = textInput(.multiline, theme);
+    auto focus = focusChain();
+    auto hover = hoverChain();
+    auto root = chain(focus, hover, input);
+
+    input.value = "Line one\nLine two\n\nLine four";
+    focus.currentFocus = input;
+    root.draw();
+
+    auto lineHeight = input.style.getTypeface.lineHeight;
+
+    // Move the caret to second line
+    input.caretIndex = "Line one\nLin".length;
+    input.updateCaretPosition();
+
+    const middle = input.caretPosition;
+    const top    = middle - Vector2(0, lineHeight);
+    const blank  = middle + Vector2(0, lineHeight);
+    const bottom = middle + Vector2(0, lineHeight * 2);
+
+    // Press in the middle and drag to the top
+    hover.point(middle)
+        .then((a) {
+            a.press(false);
+            return a.move(top);
+        })
+
+        // Check results; move to bottom
+        .then((a) {
+            a.press(false);
+            assert(input.selectedValue == "e one\nLin");
+            assert(input.selectionStart > input.selectionEnd);
+            return a.move(bottom);
+        })
+
+        // Now move to the blank line
+        .then((a) {
+            a.press(false);
+            assert(input.selectedValue == "e two\n\nLin");
+            assert(input.selectionStart < input.selectionEnd);
+            return a.move(blank);
+        })
+        .then((a) {
+            a.press(true);
+            assert(input.selectedValue == "e two\n");
+            assert(input.selectionStart < input.selectionEnd);
+        })
+        .runWhileDrawing(root);
+
+}
+
+version (TODO)
+unittest {
+
+    {
+        // Double click
+        io.mousePosition = middle;
+        root._lastClick = SysTime.init;
+
+        foreach (i; 0..2) {
+
+            io.nextFrame();
+            io.release();
+            root.draw();
+
+            io.nextFrame();
+            io.press();
+            root.draw();
+
+        }
+
+        assert(root.selectedValue == "Line");
+        assert(root.selectionStart < root.selectionEnd);
+
+        // Move it to top row
+        io.nextFrame();
+        io.mousePosition = top;
+        root.draw();
+
+        assert(root.selectedValue == "Line one\nLine");
+        assert(root.selectionStart > root.selectionEnd);
+
+        // Move it to bottom row
+        io.nextFrame();
+        io.mousePosition = bottom;
+        root.draw();
+
+        assert(root.selectedValue == "Line two\n\nLine");
+        assert(root.selectionStart < root.selectionEnd);
+
+        // And to the blank line
+        io.nextFrame();
+        io.mousePosition = blank;
+        root.draw();
+
+        assert(root.selectedValue == "Line two\n");
+        assert(root.selectionStart < root.selectionEnd);
+
+    }
+
+    {
+
+        // Triple
+        io.mousePosition = middle;
+        root._lastClick = SysTime.init;
+
+        foreach (i; 0..3) {
+
+            io.nextFrame();
+            io.release();
+            root.draw();
+
+            io.nextFrame();
+            io.press();
+            root.draw();
+
+        }
+
+        assert(root.selectedValue == "Line two");
+        assert(root.selectionStart < root.selectionEnd);
+
+        // Move it to top row
+        io.nextFrame();
+        io.mousePosition = top;
+        root.draw();
+
+        assert(root.selectedValue == "Line one\nLine two");
+        assert(root.selectionStart > root.selectionEnd);
+
+        // Move it to bottom row
+        io.nextFrame();
+        io.mousePosition = bottom;
+        root.draw();
+
+        assert(root.selectedValue == "Line two\n\nLine four");
+        assert(root.selectionStart < root.selectionEnd);
+
+        // And to the blank line
+        io.nextFrame();
+        io.mousePosition = blank;
+        root.draw();
+
+        assert(root.selectedValue == "Line two\n");
+        assert(root.selectionStart < root.selectionEnd);
+
+    }
+
+}

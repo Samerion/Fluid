@@ -1095,6 +1095,60 @@ unittest {
 
 }
 
+@("CodeInput.paste creates a history entry")
+unittest {
+
+    auto input = codeInput(.useSpaces(2));
+    auto clipboard = clipboardChain();
+    auto root = chain(clipboard, input);
+
+    root.draw();
+    clipboard.value = "World";
+    input.push("  Hello,");
+    input.runInputAction!(FluidInputAction.breakLine);
+    input.paste();
+    input.push("!");
+    assert(input.value == "  Hello,\n  World!");
+
+    // Undo the exclamation mark
+    input.undo();
+    assert(input.value == "  Hello,\n  World");
+
+    // Undo moves before pasting
+    input.undo();
+    assert(input.value == "  Hello,\n  ");
+    assert(input.valueBeforeCaret == input.value);
+
+    // Next undo moves before line break
+    input.undo();
+    assert(input.value == "  Hello,");
+
+    // Next undo clears all changes
+    input.undo();
+    assert(input.value == "");
+
+    // No change
+    input.undo();
+    assert(input.value == "");
+
+    // It can all be redone
+    input.redo();
+    assert(input.value == "  Hello,");
+    assert(input.valueBeforeCaret == input.value);
+    input.redo();
+    assert(input.value == "  Hello,\n  ");
+    assert(input.valueBeforeCaret == input.value);
+    input.redo();
+    assert(input.value == "  Hello,\n  World");
+    assert(input.valueBeforeCaret == input.value);
+    input.redo();
+    assert(input.value == "  Hello,\n  World!");
+    assert(input.valueBeforeCaret == input.value);
+    input.redo();
+    assert(input.value == "  Hello,\n  World!");
+
+}
+
 @("CodeInput.paste creates a history entry (single line)")
 unittest {
 
