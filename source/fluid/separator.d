@@ -12,20 +12,20 @@ import fluid.io.canvas;
 
 
 /// A separator node creates a line, used to separate unrelated parts of content.
-alias vseparator = simpleConstructor!(Separator, (a) {
+enum vseparator = NodeBuilder!(Separator, (a) {
 
     a.isHorizontal = false;
     a.layout = .layout!("center", "fill");
 
-});
+}).init;
 
 /// ditto
-alias hseparator = simpleConstructor!(Separator, (a) {
+enum hseparator = NodeBuilder!(Separator, (a) {
 
     a.isHorizontal = true;
     a.layout = .layout!("fill", "center");
 
-});
+}).init;
 
 /// ditto
 class Separator : Node {
