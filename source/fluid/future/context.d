@@ -50,13 +50,13 @@ struct TreeContextData {
         auto _tint = Color(0xff, 0xff, 0xff, 0xff);
     }
 
-    /// Tint is a transitive styling property that can be used to reduce color intensity of everything 
+    /// Tint is a transitive styling property that can be used to reduce color intensity of everything
     /// that a node draws. Tint applies per channel, which means it can be used to reduce opacity (by changing
     /// the alpha channel) and any of the three RGB colors.
     ///
     /// A tint of value `0` sets intensity to 0% (disable). A tint of value `255` sets intensity to 100% (no change).
     ///
-    /// See_Also: 
+    /// See_Also:
     ///     `Style.tint`
     /// Returns: The current tint.
     Color tint() const nothrow {
@@ -76,7 +76,7 @@ struct TreeContextData {
     /// Lock tint in place, preventing it from changing, or cancel a lock, making changes possible again.
     ///
     /// This function is needed for compatibility with the legacy `FluidBackend` system.
-    /// Locks can be stacked, so if `lockTint()` is called twice, `unlockTint()` also has to be called twice 
+    /// Locks can be stacked, so if `lockTint()` is called twice, `unlockTint()` also has to be called twice
     /// to unlock tinting.
     ///
     /// It is expected that this function will be deprecated as soon as `FluidBackend` is no longer a part
@@ -92,20 +92,51 @@ struct TreeContextData {
         }
     }
 
-} 
+}
 
 /// Active context for I/O operations. Keeps track of currently active systems for each I/O interface.
+///
+/// I/O systems are changed by a replace operation. `replace` takes the new I/O systems, but returns the one set
+/// previously. This can be used to manage I/Os as a stack:
+///
+/// ---
+/// auto previous = io.replace(id, this);
+/// scope (exit) io.replace(id, previous);
+/// ---
 struct TreeIOContext {
 
-    /// Map of I/O interface IDs to an index in the IO array.
-    private IO[IOID] activeIOs;
+    import std.range;
+    import std.algorithm : completeSort;
 
-    /// Returns: The active instance of the given IO interface.
+    struct IOInstance {
+        IOID id;
+        IO io;
+        int opCmp(const IOInstance rhs) const {
+            return id.opCmp(rhs.id);
+        }
+        int opCmp(const IOID rhs) const {
+            return id.opCmp(rhs);
+        }
+    }
+
+    /// Key-value pairs of active I/O systems. Each pair contains the system and the ID of the interface
+    /// it implements. Pairs are sorted by the interface ID.
+    private SortedRange!(IOInstance[]) activeIOs;
+
+    /// Returns:
+    ///     The active instance of the given IO interface.
+    ///     `null`, no instance of this interface is currently active.
     /// Params:
     ///     id = ID of the IO interface to load.
     IO get(IOID id) {
 
-        return activeIOs.get(id, null);
+        auto range = activeIOs.equalRange(id);
+        if (range.empty) {
+            return null;
+        }
+        else {
+            return range.front.io;
+        }
 
     }
 
@@ -119,30 +150,66 @@ struct TreeIOContext {
 
     /// Set currently active I/O instance for a set interface.
     /// Params:
-    ///     id       = ID of the IO interface the instance implements.
-    ///     instance = Instance to activate.
+    ///     id     = ID of the IO interface the instance implements.
+    ///     system = System to activate.
     /// Returns:
     ///     Returns *previously set* I/O instance.
-    IO replace(IOID id, IO instance) {
+    IO replace(IOID id, IO system) {
 
-        // Override the previous result
-        if (auto result = id in activeIOs) {
-            auto previous = *result;
-            *result = instance;
-            return previous;
+        auto range = activeIOs.equalRange(id);
+        auto instance = IOInstance(id, system);
+
+        // Nothing set, add a new value
+        if (range.empty) {
+            IOInstance[1] instanceRange = instance;
+            completeSort(activeIOs, instanceRange[]);
+            activeIOs = assumeSorted(activeIOs.release ~ instanceRange[]);
+            return null;
         }
 
-        // Nothing set, create a new value
+        // Override the previous result
         else {
-            activeIOs[id] = instance;
-            return null;
+            auto previous = range.front;
+            range.front = instance;
+            return previous.io;
         }
 
     }
 
+    /// Iterate on all active I/O systems.
+    ///
+    /// Elements are passed by value and cannot be modified.
+    ///
+    /// Returns:
+    ///     A sorted input range of `(IOID id, IO io)` pairs.
+    auto opIndex() {
+
+        // `map` should prevent modifications
+        import std.algorithm : map;
+
+        return activeIOs.save.map!(a => a).assumeSorted;
+
+    }
+
+    /// Create a copy of the context.
+    ///
+    /// This creates a shallow clone: I/O systems can be replaced in the copy without affecting the original
+    /// and vice-versa. The individual systems will *not* be copied.
+    ///
+    /// This is useful if the I/O stack created at some specific point in time has to be reproduced elsewhere.
+    /// For example, in a drag-and-drop scenario, while a node is being dragged, it does not have a place as a child
+    /// of any node. A copy of the I/O stack it had at the start is used to continue drawing while the node
+    /// is "in air".
+    ///
+    /// Returns:
+    ///     A shallow copy of the I/O context.
+    TreeIOContext dup() {
+        return TreeIOContext(activeIOs.release.dup.assumeSorted);
+    }
+
 }
 
-enum isIO(T) = is(T == interface) 
+enum isIO(T) = is(T == interface)
     && is(T : IO)
     && !is(T == IO);
 
@@ -189,6 +256,10 @@ struct IOID {
 
     StaticID id;
 
+    int opCmp(const IOID rhs) const {
+        return id.opCmp(rhs.id);
+    }
+
 }
 
 /// Keeps track of currently active actions.
@@ -221,7 +292,7 @@ struct TreeActionContext {
 
     }
 
-    /// Start a number of tree actions. As the node tree is drawn, the action's hook will be called whenever 
+    /// Start a number of tree actions. As the node tree is drawn, the action's hook will be called whenever
     /// a relevant place is reached in the tree.
     ///
     /// To stop a running action, call the action's `stop` method. Most tree actions will do it automatically
@@ -237,7 +308,7 @@ struct TreeActionContext {
 
         // Start every action and run the hook
         foreach (action; actions) {
-            
+
             _actions ~= RunningAction(action, ++action.generation);
             action.started();
 

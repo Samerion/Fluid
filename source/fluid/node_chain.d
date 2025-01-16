@@ -174,7 +174,7 @@ abstract class NodeChain : Node {
             chain.afterDraw(outer, inner);
             if (chain !is this) {
                 foreach (action; tree.filterActions) {
-                    action.beforeDrawImpl(chain, outer, outer, inner);
+                    action.afterDrawImpl(chain, outer, outer, inner);
                 }
             }
             chain = chain._previousChain;
