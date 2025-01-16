@@ -1341,7 +1341,7 @@ unittest {
                 Rule.selectionBackgroundColor = color("#02a"),
             ),
         ),
-        chain(hover, input)
+        chain(inputMapChain(), hover, input)
     );
     input.value = "Hello, World! Foo, bar, scroll this input";
     input.caretToEnd();
