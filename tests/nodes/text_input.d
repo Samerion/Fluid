@@ -6,6 +6,17 @@ import fluid;
 
 @safe:
 
+Theme testTheme;
+
+static this() {
+    testTheme = nullTheme.derive(
+        rule!TextInput(
+            Rule.selectionBackgroundColor = color("#02a"),
+            Rule.fontSize = 14.pt,
+        ),
+    );
+}
+
 @("TextInput removes line feeds in single line mode")
 unittest {
 
@@ -1336,11 +1347,7 @@ unittest {
     auto input = textInput();
     auto hover = hoverChain();
     auto root = testSpace(
-        nullTheme.derive(
-            rule!TextInput(
-                Rule.selectionBackgroundColor = color("#02a"),
-            ),
-        ),
+        .testTheme,
         chain(inputMapChain(), hover, input)
     );
     input.value = "Hello, World! Foo, bar, scroll this input";
@@ -1593,19 +1600,11 @@ unittest {
 
     import std.math : isClose;
 
-    auto theme = nullTheme.derive(
-        rule!TextInput(
-            Rule.selectionBackgroundColor = color("#02a"),
-            Rule.fontSize = 14.pt,
-        ),
-    );
-    auto input = textInput(.multiline, theme);
-    auto focus = focusChain();
+    auto input = textInput(.multiline, .testTheme);
     auto hover = hoverChain();
-    auto root = chain(focus, hover, input);
+    auto root = chain(inputMapChain(), hover, input);
 
     input.value = "Line one\nLine two\n\nLine four";
-    focus.currentFocus = input;
     root.draw();
 
     auto lineHeight = input.style.getTypeface.lineHeight;
@@ -1650,100 +1649,112 @@ unittest {
 
 }
 
-version (TODO)
+@("TextInput: Mouse selections can select words by double clicking")
 unittest {
 
-    {
-        // Double click
-        io.mousePosition = middle;
-        root._lastClick = SysTime.init;
+    auto input = textInput(.multiline, .testTheme);
+    auto hover = hoverChain();
+    auto root = chain(inputMapChain(), hover, input);
 
-        foreach (i; 0..2) {
+    input.value = "Line one\nLine two\n\nLine four";
+    root.draw();
 
-            io.nextFrame();
-            io.release();
-            root.draw();
+    auto lineHeight = input.style.getTypeface.lineHeight;
 
-            io.nextFrame();
-            io.press();
-            root.draw();
+    // Move the caret to second line
+    input.caretIndex = "Line one\nLin".length;
+    input.updateCaretPosition();
 
-        }
+    const middle = input.caretPosition;
+    const top    = middle - Vector2(0, lineHeight);
+    const blank  = middle + Vector2(0, lineHeight);
+    const bottom = middle + Vector2(0, lineHeight * 2);
 
-        assert(root.selectedValue == "Line");
-        assert(root.selectionStart < root.selectionEnd);
+    // Double click in the middle
+    hover.point(middle)
+        .then((a) {
+            a.doubleClick(false);
+            assert(input.selectedValue == "Line");
+            assert(input.selectionStart < input.selectionEnd);
 
-        // Move it to top row
-        io.nextFrame();
-        io.mousePosition = top;
-        root.draw();
+            // Drag the pointer to top row
+            return a.move(top);
+        })
+        .then((a) {
+            a.doubleClick(false);
+            assert(input.selectedValue == "Line one\nLine");
+            assert(input.selectionStart > input.selectionEnd);
 
-        assert(root.selectedValue == "Line one\nLine");
-        assert(root.selectionStart > root.selectionEnd);
+            // Bottom row
+            return a.move(bottom);
+        })
+        .then((a) {
+            a.doubleClick(false);
+            assert(input.selectedValue == "Line two\n\nLine");
+            assert(input.selectionStart < input.selectionEnd);
 
-        // Move it to bottom row
-        io.nextFrame();
-        io.mousePosition = bottom;
-        root.draw();
+            // And now drag the pointer to the blank line
+            return a.move(blank);
+        })
+        .then((a) {
+            a.doubleClick(true);
+        })
+        .runWhileDrawing(root);
 
-        assert(root.selectedValue == "Line two\n\nLine");
-        assert(root.selectionStart < root.selectionEnd);
+    assert(input.selectedValue == "Line two\n");
+    assert(input.selectionStart < input.selectionEnd);
 
-        // And to the blank line
-        io.nextFrame();
-        io.mousePosition = blank;
-        root.draw();
+}
 
-        assert(root.selectedValue == "Line two\n");
-        assert(root.selectionStart < root.selectionEnd);
+@("TextInput: Mouse selections can select words by triple clicking")
+unittest {
 
-    }
+    auto input = textInput(.multiline, .testTheme);
+    auto hover = hoverChain();
+    auto root = chain(inputMapChain(), hover, input);
 
-    {
+    input.value = "Line one\nLine two\n\nLine four";
+    root.draw();
 
-        // Triple
-        io.mousePosition = middle;
-        root._lastClick = SysTime.init;
+    auto lineHeight = input.style.getTypeface.lineHeight;
 
-        foreach (i; 0..3) {
+    // Move the caret to second line
+    input.caretIndex = "Line one\nLin".length;
+    input.updateCaretPosition();
 
-            io.nextFrame();
-            io.release();
-            root.draw();
+    const middle = input.caretPosition;
+    const top    = middle - Vector2(0, lineHeight);
+    const blank  = middle + Vector2(0, lineHeight);
+    const bottom = middle + Vector2(0, lineHeight * 2);
 
-            io.nextFrame();
-            io.press();
-            root.draw();
+    hover.point(middle)
+        .then((a) {
+            a.tripleClick(false);
+            assert(input.selectedValue == "Line two");
+            assert(input.selectionStart < input.selectionEnd);
 
-        }
+            return a.move(top);
+        })
+        .then((a) {
+            a.tripleClick(false);
+            assert(input.selectedValue == "Line one\nLine two");
+            assert(input.selectionStart > input.selectionEnd);
 
-        assert(root.selectedValue == "Line two");
-        assert(root.selectionStart < root.selectionEnd);
+            return a.move(bottom);
+        })
+        .then((a) {
+            a.tripleClick(false);
+            assert(input.selectedValue == "Line two\n\nLine four");
+            assert(input.selectionStart < input.selectionEnd);
 
-        // Move it to top row
-        io.nextFrame();
-        io.mousePosition = top;
-        root.draw();
+            return a.move(blank);
+        })
+        .then((a) {
+            a.tripleClick(true);
+        })
+        .runWhileDrawing(root);
 
-        assert(root.selectedValue == "Line one\nLine two");
-        assert(root.selectionStart > root.selectionEnd);
-
-        // Move it to bottom row
-        io.nextFrame();
-        io.mousePosition = bottom;
-        root.draw();
-
-        assert(root.selectedValue == "Line two\n\nLine four");
-        assert(root.selectionStart < root.selectionEnd);
-
-        // And to the blank line
-        io.nextFrame();
-        io.mousePosition = blank;
-        root.draw();
-
-        assert(root.selectedValue == "Line two\n");
-        assert(root.selectionStart < root.selectionEnd);
-
-    }
+    assert(input.selectedValue == "Line two\n");
+    assert(input.selectionStart < input.selectionEnd);
 
 }
