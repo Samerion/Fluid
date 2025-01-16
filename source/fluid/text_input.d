@@ -1539,7 +1539,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         // Turn on selection from now on, disable it once released
         selectionMovement = true;
 
-        final switch (_clickCount % 3) {
+        final switch ((pointer.clickCount + 2) % 3) {
 
             // First click, merely move the caret while selecting
             case 0: break;
@@ -1572,10 +1572,14 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
             Pointer pointer;
             pointer.position = io.mousePosition;
+            pointer.clickCount = _clickCount + 1;
 
             if (tree.isMouseActive!(FluidInputAction.press)) {
                 press(pointer);
             }
+
+            pointer.clickCount = _clickCount + 1;
+
             pressAndHold(pointer);
 
         }

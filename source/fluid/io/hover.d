@@ -340,6 +340,7 @@ struct Pointer {
         this.scroll       = other.scroll;
         this.isScrollHeld = other.isScrollHeld;
         this.isDisabled   = other.isDisabled;
+        this.clickCount   = other.clickCount;
     }
 
     /// Emit an event through the pointer.

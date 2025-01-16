@@ -97,9 +97,10 @@ struct MultipleClickSensor {
     /// the right values. If for some reason you cannot use these systems, use the other overload instead.
     ///
     /// Params:
-    ///     timeIO       = Time I/O system.
-    ///     preferenceIO = User preferences I/O system.
-    ///     pointer      = Pointer emitting the event.
+    ///     timeIO          = Time I/O system.
+    ///     preferenceIO    = User preferences I/O system.
+    ///     pointer         = Pointer emitting the event.
+    ///     pointerPosition = Alternatively to `pointer`, just the pointer's position.
     void hold(TimeIO timeIO, PreferenceIO preferenceIO, Pointer pointer) {
         return hold(
             timeIO.now,
@@ -107,7 +108,16 @@ struct MultipleClickSensor {
             preferenceIO.maximumDoubleClickDistance,
             pointer.position
         );
+    }
 
+    /// ditto
+    void hold(TimeIO timeIO, PreferenceIO preferenceIO, Vector2 pointerPosition) {
+        return hold(
+            timeIO.now,
+            preferenceIO.doubleClickInterval,
+            preferenceIO.maximumDoubleClickDistance,
+            pointerPosition
+        );
     }
 
     /// Call this function every time the desired click event is emitted.
