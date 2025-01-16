@@ -226,6 +226,12 @@ struct Pointer {
     /// Current scroll value. For a mouse, this indicates mouse wheel movement, for other devices like touchpad or
     /// touchscreen, this will be translated from its movement.
     ///
+    /// This value indicates the distance and direction in window space that the scroll should result in covering.
+    /// This means that on the X axis negative values move left and positive values move right, while on the Y axis
+    /// negative values go upwards and positive values go downwards.
+    /// For example, a scroll value of `(0, 20)` scrolls 20 pixels down vertically, while `(0, -10)` scrolls 10 pixels
+    /// up.
+    ///
     /// While it is possible to read scroll of the `Pointer` data received in an input action handler,
     /// it is recommended to implement scroll through `Scrollable.scrollImpl`.
     ///
@@ -233,6 +239,16 @@ struct Pointer {
     /// vertical movement, touchscreens, touchpads, trackpads or more advanced mouses do support horizontal movement.
     /// It is also possible for a device to perform both horizontal and vertical movement at once.
     Vector2 scroll;
+
+    /// True if the pointer is not currently pointing, like a finger that stopped touching the screen.
+    bool isDisabled;
+
+    /// Consecutive click counter. A value of 1 represents a single click, 2 is a double click, 3 is a triple click,
+    /// and so on. The counter should reset after a small delay, or if a distance threshold is crossed.
+    ///
+    /// This value is usually provided by the system. If unavailable, you can use
+    /// `fluid.io.preference.MultipleClickCounter` to generate this value from data available to Fluid.
+    int clickCount;
 
     /// If true, the scroll control is held, like a finger swiping through the screen. This does not apply to mouse
     /// wheels.
@@ -245,35 +261,11 @@ struct Pointer {
     /// [autoscroll]: (https://chromewebstore.google.com/detail/autoscroll/occjjkgifpmdgodlplnacmkejpdionan)
     bool isScrollHeld;
 
-    /// True if the pointer is not currently pointing, like a finger that stopped touching the screen.
-    bool isDisabled;
-
     /// `HoverIO` system controlling the pointer.
     private HoverIO _hoverIO;
 
     /// ID of the pointer assigned by the `HoverIO` system.
     private int _id;
-
-    /// Create a new pointer.
-    /// Params:
-    ///     device     = I/O system representing the device that created the pointer.
-    ///     number     = Pointer number as assigned by the device.
-    ///     position   = Position of the pointer.
-    ///     isDisabled = If true, disable the node.
-    this(inout IO device, int number, Vector2 position, Vector2 scroll = Vector2.init, bool isDisabled = false) inout {
-        this.device     = device;
-        this.number     = number;
-        this.position   = position;
-        this.scroll     = scroll;
-        this.isDisabled = isDisabled;
-    }
-
-    /// Create a new pointer.
-    /// Params:
-    ///     position   = Position of the pointer.
-    this(Vector2 position) {
-        this.position = position;
-    }
 
     /// If the given system is a Hover I/O system, fetch a pointer.
     ///
