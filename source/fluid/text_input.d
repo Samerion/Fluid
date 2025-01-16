@@ -1591,7 +1591,9 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     protected override bool hoverImpl() {
 
+        // Disable selection when not holding
         if (hoverIO) {
+            selectionMovement = false;
         }
         return false;
 
