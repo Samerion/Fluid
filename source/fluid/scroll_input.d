@@ -249,6 +249,7 @@ class ScrollInputHandle : Node, FluidHoverable, Hoverable {
     mixin Hoverable.enableInputActions;
 
     HoverIO hoverIO;
+    CanvasIO canvasIO;
 
     public {
 
@@ -316,6 +317,7 @@ class ScrollInputHandle : Node, FluidHoverable, Hoverable {
     override protected void resizeImpl(Vector2 space) {
 
         use(hoverIO);
+        use(canvasIO);
 
         if (parent.isHorizontal)
             minSize = Vector2(minimumLength, parent.width);
@@ -327,7 +329,7 @@ class ScrollInputHandle : Node, FluidHoverable, Hoverable {
     override protected void drawImpl(Rectangle paddingBox, Rectangle contentBox) @trusted {
 
         auto style = pickStyle();
-        style.drawBackground(io, paddingBox);
+        style.drawBackground(io, canvasIO, paddingBox);
 
     }
 

@@ -11,7 +11,6 @@ import fluid.utils;
 import fluid.backend;
 import fluid.structs;
 
-
 @safe:
 
 
@@ -255,7 +254,7 @@ class GridFrame : Frame {
         }
 
         // Draw the background
-        pickStyle.drawBackground(tree.io, outer);
+        pickStyle.drawBackground(tree.io, canvasIO, outer);
 
         // Get the position
         auto position = inner.y;
@@ -315,6 +314,8 @@ class GridRow : Frame {
 
     override void resizeImpl(Vector2 space) {
 
+        use(canvasIO);
+
         // Reset the size
         minSize = Vector2();
 
@@ -335,7 +336,7 @@ class GridRow : Frame {
 
             const segments = either(child.layout.expand, 1);
             const gapSpace = max(
-                0, 
+                0,
                 style.gap.sideX * (cast(ptrdiff_t) children.length - 1)
             );
             const childSpace = Vector2(
@@ -371,7 +372,7 @@ class GridRow : Frame {
 
         size_t segment;
 
-        pickStyle.drawBackground(tree.io, outer);
+        pickStyle.drawBackground(tree.io, canvasIO, outer);
 
         /// Child position.
         auto position = Vector2(inner.x, inner.y);

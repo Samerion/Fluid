@@ -37,6 +37,18 @@ unittest {
 
 }
 
+/// Create a color from RGBA values.
+Color color(ubyte r, ubyte g, ubyte b, ubyte a = ubyte.max) pure nothrow {
+
+    Color color;
+    color.r = r;
+    color.g = g;
+    color.b = b;
+    color.a = a;
+    return color;
+
+}
+
 /// Create a color from hex code.
 Color color(string hexCode)() {
 
@@ -112,7 +124,7 @@ unittest {
 }
 
 /// Set the alpha channel for the given color, as a float.
-Color setAlpha(Color color, float alpha) {
+Color setAlpha(Color color, float alpha) pure nothrow {
 
     import std.algorithm : clamp;
 
@@ -121,7 +133,7 @@ Color setAlpha(Color color, float alpha) {
 
 }
 
-Color setAlpha()(Color color, int alpha) {
+Color setAlpha()(Color, int) pure nothrow {
 
     static assert(false, "Overload setAlpha(Color, int). Explicitly choose setAlpha(Color, float) (0...1 range) or "
         ~ "setAlpha(Color, ubyte) (0...255 range)");
@@ -129,7 +141,7 @@ Color setAlpha()(Color color, int alpha) {
 }
 
 /// Set the alpha channel for the given color, as a float.
-Color setAlpha(Color color, ubyte alpha) {
+Color setAlpha(Color color, ubyte alpha) pure nothrow {
 
     color.a = alpha;
     return color;
@@ -269,7 +281,7 @@ struct Image {
     int revisionNumber;
 
     /// Create an RGBA image.
-    this(Color[] rgbaPixels, int width, int height) nothrow {
+    this(Color[] rgbaPixels, int width, int height) pure nothrow {
 
         this.format = Format.rgba;
         this.rgbaPixels = rgbaPixels;
@@ -279,7 +291,7 @@ struct Image {
     }
 
     /// Create a paletted image.
-    this(PalettedColor[] palettedAlphaPixels, int width, int height) nothrow {
+    this(PalettedColor[] palettedAlphaPixels, int width, int height) pure nothrow {
 
         this.format = Format.palettedAlpha;
         this.palettedAlphaPixels = palettedAlphaPixels;
@@ -289,7 +301,7 @@ struct Image {
     }
 
     /// Create an alpha mask.
-    this(ubyte[] alphaPixels, int width, int height) nothrow {
+    this(ubyte[] alphaPixels, int width, int height) pure nothrow {
 
         this.format = Format.alpha;
         this.alphaPixels = alphaPixels;
@@ -298,31 +310,31 @@ struct Image {
 
     }
 
-    Vector2 size() const {
+    Vector2 size() const pure nothrow {
         return Vector2(width, height);
     }
 
     /// Get texture size as a vector.
-    Vector2 canvasSize() const {
+    Vector2 canvasSize() const pure nothrow {
         return Vector2(width, height);
     }
 
     /// Get the size the texture will occupy within the viewport.
-    Vector2 viewportSize() const {
+    Vector2 viewportSize() const pure nothrow {
         return Vector2(
             width * 96 / dpiX,
             height * 96 / dpiY
         );
     }
 
-    int area() const {
+    int area() const nothrow {
 
         return width * height;
 
     }
 
     /// Get a palette entry at given index.
-    Color paletteColor(PalettedColor pixel) const {
+    Color paletteColor(PalettedColor pixel) const pure nothrow {
 
         // Valid index, return the color; Set alpha to match the pixel
         if (pixel.index < palette.length)
@@ -330,7 +342,7 @@ struct Image {
 
         // Invalid index, return white
         else
-            return Color(0xff, 0xff, 0xff, pixel.alpha);
+            return color(0xff, 0xff, 0xff, pixel.alpha);
 
     }
 
@@ -482,6 +494,38 @@ struct Image {
             case Format.alpha:
                 alphaPixels[] = color.a;
                 return;
+
+        }
+
+    }
+
+    /// Convert to an RGBA image.
+    ///
+    /// Does nothing if the image is already an RGBA image. If it's a paletted image, decodes the colors
+    /// using currently assigned palette. If it's an alpha mask, fills the image with white.
+    ///
+    /// Returns:
+    ///     Self if already in RGBA format, or a newly made image by converting the data.
+    Image toRGBA() pure nothrow {
+
+        final switch (format) {
+
+            case Format.rgba:
+                return this;
+
+            case Format.palettedAlpha:
+                auto colors = new Color[palettedAlphaPixels.length];
+                foreach (i, pixel; palettedAlphaPixels) {
+                    colors[i] = paletteColor(pixel);
+                }
+                return Image(colors, width, height);
+
+            case Format.alpha:
+                auto colors = new Color[alphaPixels.length];
+                foreach (i, pixel; alphaPixels) {
+                    colors[i] = color(0xff, 0xff, 0xff, pixel);
+                }
+                return Image(colors, width, height);
 
         }
 
