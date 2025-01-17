@@ -107,6 +107,7 @@ unittest {
 
 }
 
+@("Legacy: readme.md example (migrated)")
 unittest {
 
     import std.math;
@@ -128,5 +129,33 @@ unittest {
 
     // Both textures should have the same bottom line
     assert(textTexture.rectangle.end.y.isClose(imageView.rectangle.end.y));
+
+}
+
+@("readme.md example")
+unittest {
+
+    import std.math;
+
+    auto ui = vspace(
+        .layout!"center",
+        label(
+            .layout!"center",
+            "Hello World from"
+        ),
+        imageView(
+            "./logo.png",
+            Vector2(499, 240)
+        ),
+    );
+    auto root = testSpace(ui);
+
+    root.draw();
+
+    // This should render two textures
+    root.drawAndAssert(
+        ui.children[0].drawsImage,
+        ui.children[1].drawsImage,
+    );
 
 }

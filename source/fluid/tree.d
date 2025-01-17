@@ -1156,7 +1156,7 @@ struct LayoutTree {
 
 }
 
-@("LayoutTree.isHovered is true when a node is hovered, false when not")
+@("Legacy: LayoutTree.isHovered is true when a node is hovered, false when not (abandoned)")
 unittest {
 
     import fluid.space;

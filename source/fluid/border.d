@@ -238,6 +238,7 @@ class ColorBorder : FluidIOBorder {
 
 }
 
+@("Legacy: Color borders work (abandoned)")
 unittest {
 
     import fluid;

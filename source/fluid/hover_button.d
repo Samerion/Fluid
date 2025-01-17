@@ -60,8 +60,7 @@ class HoverButtonImpl(T : Node = Label) : ButtonImpl!T {
 
 }
 
-// TODO Needs an example
-
+@("Legacy: HoverButton works (abandoned)")
 unittest {
 
     import fluid.backend;

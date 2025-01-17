@@ -778,6 +778,20 @@ class PointerAction : TreeAction, Publisher!PointerAction, IO {
 
     }
 
+    /// Perform a double (`doubleClick`) or triple click (`tripleClick`) using the primary press action.
+    /// Params:
+    ///     isActive = Trigger input actions (like a mouse release event) if true, emulate holding if false.
+    /// Returns:
+    ///     True if the action was handled, false if not.
+    bool doubleClick(bool isActive = true) {
+        return click(isActive, 2);
+    }
+
+    /// ditto
+    bool tripleClick(bool isActive = true) {
+        return click(isActive, 3);
+    }
+
     alias press = click;
 
     override void beforeDraw(Node node, Rectangle) {
