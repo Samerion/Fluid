@@ -227,7 +227,7 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
 
     }
 
-    override void drawImpl(Rectangle, Rectangle) {
+    override void drawImpl(Rectangle, Rectangle) @trusted {
 
         updateMouse();
         updateKeyboard();
@@ -235,6 +235,10 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
         if (next) {
             resetCropArea();
             drawChild(next, _cropArea);
+        }
+
+        if (IsWindowResized) {
+            updateSize();
         }
 
     }
