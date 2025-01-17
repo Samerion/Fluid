@@ -50,7 +50,17 @@ unittest {
     input.caretToEnd();
 
     root.drawAndAssert(
-        input.dumpDrawsToSVG("/tmp/fluid.svg"),
+        input.drawsRectangle(0, 0, 200, 27).ofColor("#ff00ff"),
+        input.cropsTo       (0, 0, 200, 27),
+        // ... many irrelevant dots skipped...
+        input.drawsCircle().at(-23, 13.5).ofRadius(5).ofColor("#000000"),
+        input.drawsCircle().at(-11, 13.5).ofRadius(5).ofColor("#000000"),
+        input.drawsCircle().at(  1, 13.5).ofRadius(5).ofColor("#000000"),
+        input.drawsCircle().at( 13, 13.5).ofRadius(5).ofColor("#000000"),
+        // ... more dots skipped...
+        input.drawsCircle().at(181, 13.5).ofRadius(5).ofColor("#000000"),
+        input.drawsCircle().at(193, 13.5).ofRadius(5).ofColor("#000000"),
+        input.resetsCrop(),
     );
 
 }

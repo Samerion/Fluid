@@ -11,10 +11,29 @@ Theme testTheme;
 static this() {
     testTheme = nullTheme.derive(
         rule!TextInput(
+            Rule.backgroundColor = color("#faf"),
             Rule.selectionBackgroundColor = color("#02a"),
             Rule.fontSize = 14.pt,
         ),
     );
+}
+
+@("TextInput scrolls when there is too much text to fit in its width")
+unittest {
+
+    auto input = textInput(.testTheme);
+    auto root = testSpace(input);
+
+    input.value = "correct horse battery staple";
+    root.draw();
+    input.caretToEnd();
+
+    root.drawAndAssert(
+        input.drawsRectangle(0, 0, 200, 27).ofColor("#faf"),
+        input.cropsTo       (0, 0, 200, 27),
+        input.contentLabel.drawsHintedImage().at(-42, 0),
+    );
+
 }
 
 @("TextInput removes line feeds in single line mode")
