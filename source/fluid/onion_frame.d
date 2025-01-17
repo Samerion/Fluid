@@ -28,6 +28,8 @@ class OnionFrame : Frame {
 
         import std.algorithm : max;
 
+        use(canvasIO);
+
         minSize = Vector2(0, 0);
 
         // Check each child
@@ -47,7 +49,7 @@ class OnionFrame : Frame {
     protected override void drawImpl(Rectangle outer, Rectangle inner) {
 
         const style = pickStyle();
-        style.drawBackground(tree.io, outer);
+        style.drawBackground(tree.io, canvasIO, outer);
 
         foreach (child; filterChildren) {
 
