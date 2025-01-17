@@ -38,10 +38,49 @@ alias htestSpace = nodeBuilder!(TestSpace, (a) {
     a.isHorizontal = true;
 });
 
+/// Node property for `TestSpace` that enables cropping. This will prevent overflowing content from being drawn.
+/// This can be used to test nodes that rely on cropping information, for example to limit drawn content to what
+/// is visible on the screen.
+///
+/// To control size of the viewport, use `fluid.size_lock.SizeLock` and `fluid.size_lock.sizeLimit`.
+///
+/// Params:
+///     enabled = Controls if cropping should be enabled or disabled. Defaults to `true`.
+/// See_Also:
+///     `CanvasIO.cropArea`
+auto cropViewport(bool enabled = true) {
+
+    static struct CropViewport {
+
+        bool enabled;
+
+        void apply(TestSpace node) {
+            node.cropViewport = enabled;
+        }
+
+    }
+
+    return CropViewport(enabled);
+
+}
+
 /// This node allows automatically testing if other nodes draw their contents as expected.
 class TestSpace : Space, CanvasIO, DebugSignalIO {
 
     // TODO DPI tests
+
+    public {
+
+        /// If true, test space will set the default crop area to its own viewport size.
+        /// By default `TestSpace` exposes an infinite crop area, disabling any clipping behavior.
+        /// Enabling this again is useful if testing a node's cropping behavior.
+        ///
+        /// The viewport size is controlled by the node's own size. The canvas available to its children
+        /// will be the same size as `TestSpace`'s contents would normally be. `fluid.size_lock.SizeLock` can be used
+        /// to set a specific size.
+        bool cropViewport;
+
+    }
 
     private {
 
@@ -50,6 +89,9 @@ class TestSpace : Space, CanvasIO, DebugSignalIO {
 
         /// Current crop area.
         Optional!Rectangle _cropArea;
+
+        /// Rectangle given to TestSpace when drawing.
+        Rectangle _viewport;
 
         /// Current DPI.
         Vector2 _dpi = Vector2(96, 96);
@@ -103,6 +145,9 @@ class TestSpace : Space, CanvasIO, DebugSignalIO {
 
         auto frame = this.implementIO();
 
+        _viewport = Rectangle(0, 0, space.tupleof);
+        resetCropArea();
+
         // Free resources
         _loadedImages.startCycle((newIndex, ref image) {
 
@@ -119,6 +164,14 @@ class TestSpace : Space, CanvasIO, DebugSignalIO {
 
         // Resize contents
         super.resizeImpl(space);
+
+    }
+
+    override void drawImpl(Rectangle outer, Rectangle inner) {
+
+        _viewport = inner;
+        resetCropArea();
+        super.drawImpl(outer, inner);
 
     }
 
@@ -156,7 +209,12 @@ class TestSpace : Space, CanvasIO, DebugSignalIO {
 
     override void resetCropArea() nothrow {
         _probe.runAssert(a => a.resetCropArea(_probe.subject));
-        _cropArea = none;
+        if (cropViewport) {
+            _cropArea = _viewport;
+        }
+        else {
+            _cropArea = none;
+        }
     }
 
     override void drawTriangleImpl(Vector2 x, Vector2 y, Vector2 z, Color color) nothrow {
@@ -689,8 +747,10 @@ auto drawsImage(Node subject) {
 
         bool isTestingImage;
         Image targetImage;
-        bool isTestingArea;
-        Rectangle targetArea;
+        bool isTestingStart;
+        Vector2 targetStart;
+        bool isTestingSize;
+        Vector2 targetSize;
         bool isTestingColor;
         Color targetColor;
         bool isTestingHint;
@@ -718,12 +778,18 @@ auto drawsImage(Node subject) {
                 }
             }
 
-            if (isTestingArea) {
-                assert(equal(targetArea.x, rect.x)
-                    && equal(targetArea.y, rect.y)
-                    && equal(targetArea.width, rect.width)
-                    && equal(targetArea.height, rect.height),
-                    format!"%s should draw image at %s, but draws at %s"(node, targetArea, rect).assertNotThrown);
+            if (isTestingStart) {
+                assert(equal(targetStart.x, rect.x)
+                    && equal(targetStart.y, rect.y),
+                    format!"%s should draw image at %s, but draws at %s"(node, targetStart, rect.start)
+                        .assertNotThrown);
+            }
+
+            if (isTestingSize) {
+                assert(equal(targetSize.x, rect.w)
+                    && equal(targetSize.y, rect.h),
+                    format!"%s should draw image of size %s, but draws %s"(node, targetSize, rect.size)
+                        .assertNotThrown);
             }
 
             if (isTestingColor) {
@@ -748,33 +814,27 @@ auto drawsImage(Node subject) {
         }
 
         typeof(this) at(Vector2 position) @safe {
-            isTestingArea = true;
-            targetArea = Rectangle(position.tupleof, targetImage.size.tupleof);
+            isTestingStart = true;
+            targetStart = position;
             // TODO DPI
             return this;
 
         }
 
         typeof(this) at(typeof(Vector2.tupleof) position) @safe {
-            isTestingArea = true;
-            targetArea = Rectangle(position, targetImage.size.tupleof);
-            // TODO DPI
-            return this;
+            return at(Vector2(position));
         }
 
         typeof(this) at(Rectangle area) @safe {
-            isTestingArea = true;
-            targetArea = area;
-            // TODO DPI
+            at(area.start);
+            isTestingSize = true;
+            targetSize = area.size;
             return this;
 
         }
 
-        typeof(this) at(typeof(Rectangle.tupleof) position) @safe {
-            isTestingArea = true;
-            targetArea = Rectangle(position);
-            // TODO DPI
-            return this;
+        typeof(this) at(typeof(Rectangle.tupleof) area) @safe {
+            return at(Rectangle(area));
         }
 
         typeof(this) withPalette(Color[] colors...) @safe {
@@ -797,7 +857,8 @@ auto drawsImage(Node subject) {
             return toText(
                 subject, " should draw an image ",
                 isTestingImage ? toText(targetImage)                     : "",
-                isTestingArea  ? toText(" rectangle ", targetArea)       : "",
+                isTestingStart ? toText(" at ", targetStart)             : "",
+                isTestingSize  ? toText(" of size ", targetSize)         : "",
                 isTestingColor ? toText(" of color ", targetColor.toHex) : "",
             );
         }
@@ -1015,10 +1076,14 @@ auto draws(Node subject) {
 }
 
 /// Make sure the selected node doesn't draw anything until another node does.
-auto doesNotDraw(Node subject) {
+auto doesNotDraw(alias predicate = `a.startsWith("draw")`)(Node subject) {
+
+    import std.functional : unaryFun;
 
     bool matched;
     string failedName;
+
+    alias fun = unaryFun!predicate;
 
     return drawsWildcard!((node, methodName) {
 
@@ -1045,7 +1110,7 @@ auto doesNotDraw(Node subject) {
             return true;
         }
 
-        if (isSubject && methodName.startsWith("draw")) {
+        if (isSubject && fun(methodName)) {
             failedName = methodName;
             return false;
         }
@@ -1056,6 +1121,8 @@ auto doesNotDraw(Node subject) {
                : format!"%s should be reached"(subject));
 
 }
+
+alias doesNotDrawImages = doesNotDraw!`a.among("drawImage", "drawHintedImage")`;
 
 /// Ensure the node emits a debug signal.
 auto emits(Node subject, string name) {

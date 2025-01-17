@@ -6,6 +6,17 @@ import fluid;
 
 @safe:
 
+Theme testTheme;
+
+static this() {
+    testTheme = nullTheme.derive(
+        rule!TextInput(
+            Rule.selectionBackgroundColor = color("#02a"),
+            Rule.fontSize = 14.pt,
+        ),
+    );
+}
+
 @("TextInput removes line feeds in single line mode")
 unittest {
 
@@ -1336,11 +1347,7 @@ unittest {
     auto input = textInput();
     auto hover = hoverChain();
     auto root = testSpace(
-        nullTheme.derive(
-            rule!TextInput(
-                Rule.selectionBackgroundColor = color("#02a"),
-            ),
-        ),
+        .testTheme,
         chain(inputMapChain(), hover, input)
     );
     input.value = "Hello, World! Foo, bar, scroll this input";
@@ -1585,5 +1592,169 @@ unittest {
 
     input.paste();
     assert(input.value == content);
+
+}
+
+@("TextInput: Mouse selections works correctly across lines")
+unittest {
+
+    import std.math : isClose;
+
+    auto input = textInput(.multiline, .testTheme);
+    auto hover = hoverChain();
+    auto root = chain(inputMapChain(), hover, input);
+
+    input.value = "Line one\nLine two\n\nLine four";
+    root.draw();
+
+    auto lineHeight = input.style.getTypeface.lineHeight;
+
+    // Move the caret to second line
+    input.caretIndex = "Line one\nLin".length;
+    input.updateCaretPosition();
+
+    const middle = input.caretPosition;
+    const top    = middle - Vector2(0, lineHeight);
+    const blank  = middle + Vector2(0, lineHeight);
+    const bottom = middle + Vector2(0, lineHeight * 2);
+
+    // Press in the middle and drag to the top
+    hover.point(middle)
+        .then((a) {
+            a.press(false);
+            return a.move(top);
+        })
+
+        // Check results; move to bottom
+        .then((a) {
+            a.press(false);
+            assert(input.selectedValue == "e one\nLin");
+            assert(input.selectionStart > input.selectionEnd);
+            return a.move(bottom);
+        })
+
+        // Now move to the blank line
+        .then((a) {
+            a.press(false);
+            assert(input.selectedValue == "e two\n\nLin");
+            assert(input.selectionStart < input.selectionEnd);
+            return a.move(blank);
+        })
+        .then((a) {
+            a.press(true);
+            assert(input.selectedValue == "e two\n");
+            assert(input.selectionStart < input.selectionEnd);
+        })
+        .runWhileDrawing(root);
+
+}
+
+@("TextInput: Mouse selections can select words by double clicking")
+unittest {
+
+    auto input = textInput(.multiline, .testTheme);
+    auto hover = hoverChain();
+    auto root = chain(inputMapChain(), hover, input);
+
+    input.value = "Line one\nLine two\n\nLine four";
+    root.draw();
+
+    auto lineHeight = input.style.getTypeface.lineHeight;
+
+    // Move the caret to second line
+    input.caretIndex = "Line one\nLin".length;
+    input.updateCaretPosition();
+
+    const middle = input.caretPosition;
+    const top    = middle - Vector2(0, lineHeight);
+    const blank  = middle + Vector2(0, lineHeight);
+    const bottom = middle + Vector2(0, lineHeight * 2);
+
+    // Double click in the middle
+    hover.point(middle)
+        .then((a) {
+            a.doubleClick(false);
+            assert(input.selectedValue == "Line");
+            assert(input.selectionStart < input.selectionEnd);
+
+            // Drag the pointer to top row
+            return a.move(top);
+        })
+        .then((a) {
+            a.doubleClick(false);
+            assert(input.selectedValue == "Line one\nLine");
+            assert(input.selectionStart > input.selectionEnd);
+
+            // Bottom row
+            return a.move(bottom);
+        })
+        .then((a) {
+            a.doubleClick(false);
+            assert(input.selectedValue == "Line two\n\nLine");
+            assert(input.selectionStart < input.selectionEnd);
+
+            // And now drag the pointer to the blank line
+            return a.move(blank);
+        })
+        .then((a) {
+            a.doubleClick(true);
+        })
+        .runWhileDrawing(root);
+
+    assert(input.selectedValue == "Line two\n");
+    assert(input.selectionStart < input.selectionEnd);
+
+}
+
+@("TextInput: Mouse selections can select words by triple clicking")
+unittest {
+
+    auto input = textInput(.multiline, .testTheme);
+    auto hover = hoverChain();
+    auto root = chain(inputMapChain(), hover, input);
+
+    input.value = "Line one\nLine two\n\nLine four";
+    root.draw();
+
+    auto lineHeight = input.style.getTypeface.lineHeight;
+
+    // Move the caret to second line
+    input.caretIndex = "Line one\nLin".length;
+    input.updateCaretPosition();
+
+    const middle = input.caretPosition;
+    const top    = middle - Vector2(0, lineHeight);
+    const blank  = middle + Vector2(0, lineHeight);
+    const bottom = middle + Vector2(0, lineHeight * 2);
+
+    hover.point(middle)
+        .then((a) {
+            a.tripleClick(false);
+            assert(input.selectedValue == "Line two");
+            assert(input.selectionStart < input.selectionEnd);
+
+            return a.move(top);
+        })
+        .then((a) {
+            a.tripleClick(false);
+            assert(input.selectedValue == "Line one\nLine two");
+            assert(input.selectionStart > input.selectionEnd);
+
+            return a.move(bottom);
+        })
+        .then((a) {
+            a.tripleClick(false);
+            assert(input.selectedValue == "Line two\n\nLine four");
+            assert(input.selectionStart < input.selectionEnd);
+
+            return a.move(blank);
+        })
+        .then((a) {
+            a.tripleClick(true);
+        })
+        .runWhileDrawing(root);
+
+    assert(input.selectedValue == "Line two\n");
+    assert(input.selectionStart < input.selectionEnd);
 
 }

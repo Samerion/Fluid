@@ -1599,7 +1599,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     }
 
-    @("[TODO] Legacy: mouse selections works correctly across lines")
+    @("Legacy: mouse selections works correctly across lines (migrated)")
     unittest {
 
         import std.math : isClose;
