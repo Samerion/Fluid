@@ -38,10 +38,49 @@ alias htestSpace = nodeBuilder!(TestSpace, (a) {
     a.isHorizontal = true;
 });
 
+/// Node property for `TestSpace` that enables cropping. This will prevent overflowing content from being drawn.
+/// This can be used to test nodes that rely on cropping information, for example to limit drawn content to what
+/// is visible on the screen.
+///
+/// To control size of the viewport, use `fluid.size_lock.SizeLock` and `fluid.size_lock.sizeLimit`.
+///
+/// Params:
+///     enabled = Controls if cropping should be enabled or disabled. Defaults to `true`.
+/// See_Also:
+///     `CanvasIO.cropArea`
+auto cropViewport(bool enabled = true) {
+
+    static struct CropViewport {
+
+        bool enabled;
+
+        void apply(TestSpace node) {
+            node.cropViewport = enabled;
+        }
+
+    }
+
+    return CropViewport(enabled);
+
+}
+
 /// This node allows automatically testing if other nodes draw their contents as expected.
 class TestSpace : Space, CanvasIO, DebugSignalIO {
 
     // TODO DPI tests
+
+    public {
+
+        /// If true, test space will set the default crop area to its own viewport size.
+        /// By default `TestSpace` exposes an infinite crop area, disabling any clipping behavior.
+        /// Enabling this again is useful if testing a node's cropping behavior.
+        ///
+        /// The viewport size is controlled by the node's own size. The canvas available to its children
+        /// will be the same size as `TestSpace`'s contents would normally be. `fluid.size_lock.SizeLock` can be used
+        /// to set a specific size.
+        bool cropViewport;
+
+    }
 
     private {
 
@@ -50,6 +89,9 @@ class TestSpace : Space, CanvasIO, DebugSignalIO {
 
         /// Current crop area.
         Optional!Rectangle _cropArea;
+
+        /// Rectangle given to TestSpace when drawing.
+        Rectangle _viewport;
 
         /// Current DPI.
         Vector2 _dpi = Vector2(96, 96);
@@ -103,6 +145,9 @@ class TestSpace : Space, CanvasIO, DebugSignalIO {
 
         auto frame = this.implementIO();
 
+        _viewport = Rectangle(0, 0, space.tupleof);
+        resetCropArea();
+
         // Free resources
         _loadedImages.startCycle((newIndex, ref image) {
 
@@ -119,6 +164,14 @@ class TestSpace : Space, CanvasIO, DebugSignalIO {
 
         // Resize contents
         super.resizeImpl(space);
+
+    }
+
+    override void drawImpl(Rectangle outer, Rectangle inner) {
+
+        _viewport = inner;
+        resetCropArea();
+        super.drawImpl(outer, inner);
 
     }
 
@@ -156,7 +209,12 @@ class TestSpace : Space, CanvasIO, DebugSignalIO {
 
     override void resetCropArea() nothrow {
         _probe.runAssert(a => a.resetCropArea(_probe.subject));
-        _cropArea = none;
+        if (cropViewport) {
+            _cropArea = _viewport;
+        }
+        else {
+            _cropArea = none;
+        }
     }
 
     override void drawTriangleImpl(Vector2 x, Vector2 y, Vector2 z, Color color) nothrow {
