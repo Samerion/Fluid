@@ -4,6 +4,49 @@ import fluid;
 
 @safe:
 
+alias tallBox = nodeBuilder!TallBox;
+
+class TallBox : Node {
+
+    override void resizeImpl(Vector2) {
+        minSize = Vector2(40, 5250);
+    }
+
+    override void drawImpl(Rectangle, Rectangle) {
+
+    }
+
+}
+
+@("ScrollInput draws a track and a handle")
+unittest {
+
+    auto frame = sizeLock!vscrollFrame(
+        .sizeLimit(250, 250),
+        nullTheme.derive(
+            rule!ScrollInput(
+                Rule.backgroundColor = color("#f00"),
+            ),
+            rule!ScrollInputHandle(
+                Rule.backgroundColor = color("#00f"),
+            ),
+        ),
+        tallBox(),
+    );
+    auto root = testSpace(frame);
+
+    root.drawAndAssert(
+        frame.scrollBar       .drawsRectangle(240,   0, 10, 250).ofColor("#ff0000"),
+        frame.scrollBar.handle.drawsRectangle(240,   0, 10,  50).ofColor("#0000ff"),
+    );
+    frame.scroll = 2500;
+    root.drawAndAssert(
+        frame.scrollBar       .drawsRectangle(240,   0, 10, 250).ofColor("#ff0000"),
+        frame.scrollBar.handle.drawsRectangle(240, 100, 10,  50).ofColor("#0000ff"),
+    );
+
+}
+
 @("ScrollInput works by dragging")
 unittest {
 
