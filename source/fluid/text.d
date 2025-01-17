@@ -507,6 +507,7 @@ struct TextStyleSlice {
 
 }
 
+@("Legacy: Text coloring works (abandoned)")
 unittest {
 
     import fluid.space;
@@ -555,6 +556,7 @@ unittest {
 
 }
 
+@("Legacy: Text coloring works, pt. 2 (abandoned)")
 unittest {
 
     import fluid.space;
@@ -582,6 +584,7 @@ unittest {
 
 }
 
+@("Legacy: Text coloring works, pt. 3 (abandoned)")
 unittest {
 
     import fluid.space;
@@ -610,6 +613,7 @@ unittest {
 
 }
 
+@("Text can be used with, or without specifying styles")
 unittest {
 
     import fluid.space;
@@ -953,6 +957,7 @@ struct CompositeTexture {
 
 }
 
+@("Legacy: Only visible chunks are drawn (migrated)")
 unittest {
 
     import std.conv;
