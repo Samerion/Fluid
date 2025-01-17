@@ -89,7 +89,7 @@ abstract class FocusSearchAction : NodeSearchAction, Publisher!Focusable {
 }
 
 /// Set focus on the given node, if focusable, or the first of its focusable children. This will be done lazily during
-/// the next draw. 
+/// the next draw.
 ///
 /// If focusing the given node is not desired, use `focusRecurseChildren`.
 ///
@@ -137,7 +137,7 @@ unittest {
 
 }
 
-/// Set focus on the first of the node's focusable children. This will be done lazily during the next draw. 
+/// Set focus on the first of the node's focusable children. This will be done lazily during the next draw.
 ///
 /// Params:
 ///     parent = Container node to search in.
@@ -158,27 +158,23 @@ FocusRecurseAction focusChild(Node parent) {
 
 }
 
+@("FocusRecurse works")
 unittest {
 
     import fluid.space;
     import fluid.button;
 
-    auto io = new HeadlessBackend;
     auto root = vframeButton(
         button("", delegate { }),
         button("", delegate { }),
         delegate { }
     );
 
-    root.io = io;
-
     // Typical focusRecurse call will focus the button
     root.focusRecurse;
     root.draw();
 
     assert(root.tree.focus is root);
-
-    io.nextFrame;
 
     // If we want to make sure the action descends below the root, we must
     root.focusRecurseChildren;
@@ -252,6 +248,7 @@ ScrollIntoViewAction scrollToTop(Node node) {
 
 }
 
+@("Legacy: ScrollIntoViewAction works (migrated)")
 unittest {
 
     import fluid;
