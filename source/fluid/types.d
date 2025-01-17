@@ -37,6 +37,18 @@ unittest {
 
 }
 
+/// Create a color from RGBA values.
+Color color(ubyte r, ubyte g, ubyte b, ubyte a = ubyte.max) pure nothrow {
+
+    Color color;
+    color.r = r;
+    color.g = g;
+    color.b = b;
+    color.a = a;
+    return color;
+
+}
+
 /// Create a color from hex code.
 Color color(string hexCode)() {
 
@@ -330,7 +342,7 @@ struct Image {
 
         // Invalid index, return white
         else
-            return Color(0xff, 0xff, 0xff, pixel.alpha);
+            return color(0xff, 0xff, 0xff, pixel.alpha);
 
     }
 
@@ -501,8 +513,6 @@ struct Image {
             case Format.rgba:
                 return this;
 
-            // At the moment, this loads the palette available at the time of generation.
-            // Could it be possible to update the palette later?
             case Format.palettedAlpha:
                 auto colors = new Color[palettedAlphaPixels.length];
                 foreach (i, pixel; palettedAlphaPixels) {
@@ -513,7 +523,7 @@ struct Image {
             case Format.alpha:
                 auto colors = new Color[alphaPixels.length];
                 foreach (i, pixel; alphaPixels) {
-                    colors[i] = Color(0xff, 0xff, 0xff, pixel);
+                    colors[i] = color(0xff, 0xff, 0xff, pixel);
                 }
                 return Image(colors, width, height);
 
