@@ -10,6 +10,7 @@ import fluid.backend;
 import fluid.structs;
 
 import fluid.io.hover;
+import fluid.io.canvas;
 
 @safe:
 
@@ -93,6 +94,7 @@ abstract class AbstractSlider : InputNode!Node {
     enum railWidth = 4;
     enum minStepDistance = 10;
 
+    CanvasIO canvasIO;
     HoverIO hoverIO;
 
     public {
@@ -137,6 +139,7 @@ abstract class AbstractSlider : InputNode!Node {
 
     override void resizeImpl(Vector2 space) {
 
+        use(canvasIO);
         use(hoverIO);
 
         resizeChild(handle, space);
@@ -157,7 +160,7 @@ abstract class AbstractSlider : InputNode!Node {
         _isPressed = checkIsPressed();
 
         // Draw the rail
-        style.drawBackground(io, rail);
+        style.drawBackground(io, canvasIO, rail);
 
         const availableWidth = rail.width - handle.size.x;
         const handleOffset = availableWidth * index / (length - 1f);
@@ -180,7 +183,7 @@ abstract class AbstractSlider : InputNode!Node {
             const start = Vector2(firstStepX + visualStepDistance * step, end(rail).y);
             const end = Vector2(start.x, end(outer).y);
 
-            style.drawLine(io, start, end);
+            style.drawLine(io, canvasIO, start, end);
 
         }
 
@@ -296,6 +299,8 @@ class SliderRangeImpl(T) : SliderRange!(ElementType!T) {
 /// Defines the handle of a slider.
 class SliderHandle : Node {
 
+    CanvasIO canvasIO;
+
     public {
 
         Vector2 size = Vector2(16, 20);
@@ -310,13 +315,14 @@ class SliderHandle : Node {
 
     override void resizeImpl(Vector2 space) {
 
+        use(canvasIO);
         minSize = size;
 
     }
 
     override void drawImpl(Rectangle outer, Rectangle inner) {
 
-        style.drawBackground(io, outer);
+        style.drawBackground(io, canvasIO, outer);
 
     }
 
