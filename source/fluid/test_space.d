@@ -440,6 +440,66 @@ interface Assert {
 }
 
 ///
+auto cropsTo(Node subject, typeof(Rectangle.tupleof) rectangle) {
+    return cropsTo(subject, Rectangle(rectangle));
+}
+
+/// ditto
+auto cropsTo(Node subject, Rectangle rectangle) {
+    auto result = crops(subject);
+    result.isTestingArea = true;
+    result.targetArea = rectangle;
+    return result;
+}
+
+/// ditto
+auto crops(Node subject) {
+
+    return new class BlackHole!Assert {
+
+        bool isTestingArea;
+        Rectangle targetArea;
+
+        override bool cropArea(Node node, Rectangle area) nothrow {
+
+            if (isTestingArea) {
+                if (!equal(area.x, targetArea.x)
+                    || !equal(area.y, targetArea.y)
+                    || !equal(area.w, targetArea.w)
+                    || !equal(area.h, targetArea.h)) return false;
+            }
+
+            return subject.opEquals(node).assumeWontThrow;
+
+        }
+
+        override string toString() const {
+            return toText(subject, " should set crop area")
+                ~ (isTestingArea ? toText(" to ", targetArea) : "");
+        }
+
+    };
+
+}
+
+///
+auto resetsCrop(Node subject) {
+
+    return new class BlackHole!Assert {
+
+        override bool resetCropArea(Node node) nothrow {
+            return subject.opEquals(node).assumeWontThrow;
+        }
+
+        override string toString() const {
+            return toText(subject, " should reset crop area");
+        }
+
+    };
+
+}
+
+///
 auto drawsRectangle(Node subject, typeof(Rectangle.tupleof) rectangle) {
     return drawsRectangle(subject, Rectangle(rectangle));
 }
@@ -1291,17 +1351,17 @@ auto dumpDraws(Node subject) {
         }
 
         override bool cropArea(Node node, Rectangle rectangle) nothrow {
-            dump!"cropArea(%s)"(node, rectangle);
+            dump!"node.cropsTo(%s, %s, %s, %s),"(node, rectangle.tupleof);
             return false;
         }
 
         override bool resetCropArea(Node node) nothrow {
-            dump!"resetCropArea()"(node);
+            dump!"node.resetsCrop(),"(node);
             return false;
         }
 
         override bool emitSignal(Node node, string text) nothrow {
-            dump!"emitSignal(%s)"(node, text);
+            dump!"node.emits(%(%s%)),"(node, text.only);
             return false;
         }
 
@@ -1330,8 +1390,8 @@ auto dumpDraws(Node subject) {
         override bool drawCircle(Node node, Vector2 center, float radius, Color color) nothrow {
 
             if (isSubject(node)) {
-                dump!`node.drawsCircle().at(%s).ofRadius(%s).ofColor("%s"),`
-                    (node, center, radius, color.toHex.assumeWontThrow);
+                dump!`node.drawsCircle().at(%s, %s).ofRadius(%s).ofColor("%s"),`
+                    (node, center.x, center.y, radius, color.toHex.assumeWontThrow);
 
                 version (Fluid_SVG) if (generateSVG) {
                     assumeWontThrow(
