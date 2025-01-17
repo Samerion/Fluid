@@ -6,6 +6,44 @@ import fluid;
 
 @safe:
 
+@("Slider draws a rail and a handle")
+unittest {
+
+    auto input = slider!int(
+        .layout!"fill",
+        iota(1, 4)
+    );
+    auto root = sizeLock!testSpace(
+        .sizeLimit(500, 200),
+        nullTheme.derive(
+            rule!AbstractSlider(
+                Rule.backgroundColor = color("#000"),
+                Rule.lineColor = color("#f00"),
+            ),
+            rule!SliderHandle(
+                Rule.backgroundColor = color("#0f0"),
+            ),
+        ),
+        input,
+    );
+
+    root.drawAndAssert(
+
+        // Rail
+        input.drawsRectangle(0, 8, 500, 4).ofColor("#000"),
+
+        // Marks
+        input.drawsLine().from(  8, 12).to(  8, 20).ofWidth(1).ofColor("#f00"),
+        input.drawsLine().from(250, 12).to(250, 20).ofWidth(1).ofColor("#f00"),
+        input.drawsLine().from(492, 12).to(492, 20).ofWidth(1).ofColor("#f00"),
+
+        // Handle
+        input.handle.drawsRectangle(0, 0, 16, 20).ofColor("#0f0"),
+
+    );
+
+}
+
 @("Slider can be changed with mouse movements")
 unittest {
 
