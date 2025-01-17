@@ -747,8 +747,10 @@ auto drawsImage(Node subject) {
 
         bool isTestingImage;
         Image targetImage;
-        bool isTestingArea;
-        Rectangle targetArea;
+        bool isTestingStart;
+        Vector2 targetStart;
+        bool isTestingSize;
+        Vector2 targetSize;
         bool isTestingColor;
         Color targetColor;
         bool isTestingHint;
@@ -776,12 +778,18 @@ auto drawsImage(Node subject) {
                 }
             }
 
-            if (isTestingArea) {
-                assert(equal(targetArea.x, rect.x)
-                    && equal(targetArea.y, rect.y)
-                    && equal(targetArea.width, rect.width)
-                    && equal(targetArea.height, rect.height),
-                    format!"%s should draw image at %s, but draws at %s"(node, targetArea, rect).assertNotThrown);
+            if (isTestingStart) {
+                assert(equal(targetStart.x, rect.x)
+                    && equal(targetStart.y, rect.y),
+                    format!"%s should draw image at %s, but draws at %s"(node, targetStart, rect.start)
+                        .assertNotThrown);
+            }
+
+            if (isTestingSize) {
+                assert(equal(targetSize.x, rect.w)
+                    && equal(targetSize.y, rect.h),
+                    format!"%s should draw image of size %s, but draws %s"(node, targetSize, rect.size)
+                        .assertNotThrown);
             }
 
             if (isTestingColor) {
@@ -806,33 +814,27 @@ auto drawsImage(Node subject) {
         }
 
         typeof(this) at(Vector2 position) @safe {
-            isTestingArea = true;
-            targetArea = Rectangle(position.tupleof, targetImage.size.tupleof);
+            isTestingStart = true;
+            targetStart = position;
             // TODO DPI
             return this;
 
         }
 
         typeof(this) at(typeof(Vector2.tupleof) position) @safe {
-            isTestingArea = true;
-            targetArea = Rectangle(position, targetImage.size.tupleof);
-            // TODO DPI
-            return this;
+            return at(Vector2(position));
         }
 
         typeof(this) at(Rectangle area) @safe {
-            isTestingArea = true;
-            targetArea = area;
-            // TODO DPI
+            at(area.start);
+            isTestingSize = true;
+            targetSize = area.size;
             return this;
 
         }
 
-        typeof(this) at(typeof(Rectangle.tupleof) position) @safe {
-            isTestingArea = true;
-            targetArea = Rectangle(position);
-            // TODO DPI
-            return this;
+        typeof(this) at(typeof(Rectangle.tupleof) area) @safe {
+            return at(Rectangle(area));
         }
 
         typeof(this) withPalette(Color[] colors...) @safe {
@@ -855,7 +857,8 @@ auto drawsImage(Node subject) {
             return toText(
                 subject, " should draw an image ",
                 isTestingImage ? toText(targetImage)                     : "",
-                isTestingArea  ? toText(" rectangle ", targetArea)       : "",
+                isTestingStart ? toText(" at ", targetStart)             : "",
+                isTestingSize  ? toText(" of size ", targetSize)         : "",
                 isTestingColor ? toText(" of color ", targetColor.toHex) : "",
             );
         }
@@ -1073,10 +1076,14 @@ auto draws(Node subject) {
 }
 
 /// Make sure the selected node doesn't draw anything until another node does.
-auto doesNotDraw(Node subject) {
+auto doesNotDraw(alias predicate = `a.startsWith("draw")`)(Node subject) {
+
+    import std.functional : unaryFun;
 
     bool matched;
     string failedName;
+
+    alias fun = unaryFun!predicate;
 
     return drawsWildcard!((node, methodName) {
 
@@ -1103,7 +1110,7 @@ auto doesNotDraw(Node subject) {
             return true;
         }
 
-        if (isSubject && methodName.startsWith("draw")) {
+        if (isSubject && fun(methodName)) {
             failedName = methodName;
             return false;
         }
@@ -1114,6 +1121,8 @@ auto doesNotDraw(Node subject) {
                : format!"%s should be reached"(subject));
 
 }
+
+alias doesNotDrawImages = doesNotDraw!`a.among("drawImage", "drawHintedImage")`;
 
 /// Ensure the node emits a debug signal.
 auto emits(Node subject, string name) {
