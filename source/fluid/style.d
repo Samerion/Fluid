@@ -594,6 +594,7 @@ unittest {
 
 }
 
+@("Legacy: Style.tint stacks")
 unittest {
 
     import fluid.frame;
@@ -634,6 +635,7 @@ unittest {
 
 }
 
+@("Legacy: Border occupies and takes space")
 unittest {
 
     import fluid.frame;
