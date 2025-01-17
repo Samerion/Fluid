@@ -1,9 +1,11 @@
 module fluid.password_input;
 
 import fluid.utils;
+import fluid.style;
 import fluid.backend;
 import fluid.text_input;
 
+import fluid.io.canvas;
 
 @safe:
 
@@ -39,6 +41,23 @@ class PasswordInput : TextInput {
     this(string placeholder = "", void delegate() @trusted submitted = null) {
 
         super(placeholder, submitted);
+        this.contentLabel = new LocalContentLabel;
+
+    }
+
+    static class LocalContentLabel : ContentLabel {
+
+        override void resizeImpl(Vector2) {
+
+            const x = getAdvanceX(io, canvasIO, style);
+            const radius = x / 2f;
+            const advance = x * 1.2;
+            minSize = Vector2(
+                advance * value.countCharacters,
+                radius * 2,
+            );
+
+        }
 
     }
 
@@ -167,9 +186,8 @@ class PasswordInput : TextInput {
 
     }
 
-    protected override void reloadStyles() {
-
-        super.reloadStyles();
+    /// Get the X advance of letter "X."
+    protected static getAdvanceX(FluidBackend io, CanvasIO canvasIO, Style style) {
 
         if (canvasIO) {
             style.setDPI(canvasIO.dpi);
@@ -178,9 +196,17 @@ class PasswordInput : TextInput {
             style.setDPI(io.dpi);
         }
 
-        // Use the "X" character as reference
         auto typeface = style.getTypeface;
-        auto x = typeface.advance('X').x;
+        return typeface.advance('X').x;
+
+    }
+
+    protected override void reloadStyles() {
+
+        super.reloadStyles();
+
+        // Use the "X" character as reference
+        const x = getAdvanceX(io, canvasIO, style);
 
         radius = x / 2f;
         advance = x * 1.2;
