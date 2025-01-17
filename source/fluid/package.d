@@ -107,6 +107,7 @@ unittest {
 
 }
 
+@("Legacy: readme.md example (migrated)")
 unittest {
 
     import std.math;

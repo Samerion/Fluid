@@ -594,7 +594,7 @@ unittest {
 
 }
 
-@("Legacy: Style.tint stacks")
+@("Legacy: Style.tint stacks (migrated)")
 unittest {
 
     import fluid.frame;
@@ -635,7 +635,7 @@ unittest {
 
 }
 
-@("Legacy: Border occupies and takes space")
+@("Legacy: Border occupies and takes space (abandoned)")
 unittest {
 
     import fluid.frame;
