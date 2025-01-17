@@ -4,6 +4,95 @@ import fluid;
 
 @safe:
 
+Theme testTheme;
+
+static this() {
+    testTheme = nullTheme.derive(
+        rule!PasswordInput(
+            Rule.fontSize = 14.pt,
+            Rule.backgroundColor = color("#f0f"),
+            Rule.selectionBackgroundColor = color("#700"),
+            Rule.textColor = color("#000"),
+        ),
+    );
+}
+
+@("PasswordInput draws background and contents")
+unittest {
+
+    auto input = passwordInput(.testTheme);
+    auto root = testSpace(input);
+
+    root.drawAndAssert(
+        input.drawsRectangle(0, 0, 200, 27).ofColor("#ff00ff"),
+        input.cropsTo(0, 0, 200, 27),
+        input.resetsCrop(),
+    );
+    input.value = "woo";
+    root.drawAndAssert(
+        input.drawsRectangle(0, 0, 200, 27).ofColor("#ff00ff"),
+        input.cropsTo(0, 0, 200, 27),
+        input.drawsCircle().at( 5, 13.5).ofRadius(5).ofColor("#000000"),
+        input.drawsCircle().at(17, 13.5).ofRadius(5).ofColor("#000000"),
+        input.drawsCircle().at(29, 13.5).ofRadius(5).ofColor("#000000"),
+        input.resetsCrop(),
+    );
+
+}
+
+@("PasswordInput scrolls when there is too much text to fit in its width")
+unittest {
+
+    auto input = passwordInput(.testTheme);
+    auto root = testSpace(input);
+
+    input.value = "correct horse battery staple";
+    root.draw();
+    input.caretToEnd();
+
+    root.drawAndAssert(
+        input.drawsRectangle(0, 0, 200, 27).ofColor("#ff00ff"),
+        input.cropsTo       (0, 0, 200, 27),
+        // ... many irrelevant dots skipped...
+        input.drawsCircle().at(-23, 13.5).ofRadius(5).ofColor("#000000"),
+        input.drawsCircle().at(-11, 13.5).ofRadius(5).ofColor("#000000"),
+        input.drawsCircle().at(  1, 13.5).ofRadius(5).ofColor("#000000"),
+        input.drawsCircle().at( 13, 13.5).ofRadius(5).ofColor("#000000"),
+        // ... more dots skipped...
+        input.drawsCircle().at(181, 13.5).ofRadius(5).ofColor("#000000"),
+        input.drawsCircle().at(193, 13.5).ofRadius(5).ofColor("#000000"),
+        input.resetsCrop(),
+    );
+
+}
+
+@("PasswordInput draws a rectangle behind selection")
+unittest {
+
+    auto input = passwordInput(.testTheme);
+    auto root = testSpace(input);
+
+    input.value = "correct horse";
+    root.draw();
+    input.selectSlice("correct ".length, input.value.length);
+
+    root.drawAndAssert(
+        input.drawsRectangle(0, 0, 200, 27).ofColor("#ff00ff"),
+        input.cropsTo       (0, 0, 200, 27),
+        input.drawsRectangle(96, 0, 60, 27).ofColor("#770000"),
+        input.drawsCircle().at(  5, 13.5).ofRadius(5).ofColor("#000000"),
+        input.drawsCircle().at( 17, 13.5).ofRadius(5).ofColor("#000000"),
+        // ... irrelevant dots skipped...
+        input.drawsCircle().at( 89, 13.5).ofRadius(5).ofColor("#000000"),  // space
+        input.drawsCircle().at(101, 13.5).ofRadius(5).ofColor("#000000"),  // h
+        input.drawsCircle().at(113, 13.5).ofRadius(5).ofColor("#000000"),  // o
+        input.drawsCircle().at(125, 13.5).ofRadius(5).ofColor("#000000"),  // r
+        input.drawsCircle().at(137, 13.5).ofRadius(5).ofColor("#000000"),  // s
+        input.drawsCircle().at(149, 13.5).ofRadius(5).ofColor("#000000"),  // e
+    );
+
+}
+
 @("PasswordInput.shred fills data with invalid characters")
 unittest {
 
