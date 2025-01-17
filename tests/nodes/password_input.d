@@ -4,6 +4,57 @@ import fluid;
 
 @safe:
 
+Theme testTheme;
+
+static this() {
+    testTheme = nullTheme.derive(
+        rule!PasswordInput(
+            Rule.fontSize = 14.pt,
+            Rule.backgroundColor = color("#f0f"),
+            Rule.textColor = color("#000"),
+        ),
+    );
+}
+
+@("PasswordInput draws background and contents")
+unittest {
+
+    auto input = passwordInput(.testTheme);
+    auto root = testSpace(input);
+
+    root.drawAndAssert(
+        input.drawsRectangle(0, 0, 200, 27).ofColor("#ff00ff"),
+        input.cropsTo(0, 0, 200, 27),
+        input.resetsCrop(),
+    );
+    input.value = "woo";
+    root.drawAndAssert(
+        input.drawsRectangle(0, 0, 200, 27).ofColor("#ff00ff"),
+        input.cropsTo(0, 0, 200, 27),
+        input.drawsCircle().at( 5, 13.5).ofRadius(5).ofColor("#000000"),
+        input.drawsCircle().at(17, 13.5).ofRadius(5).ofColor("#000000"),
+        input.drawsCircle().at(29, 13.5).ofRadius(5).ofColor("#000000"),
+        input.resetsCrop(),
+    );
+
+}
+
+@("PasswordInput scrolls when there is too much text to fit in its width")
+unittest {
+
+    auto input = passwordInput(.testTheme);
+    auto root = testSpace(input);
+
+    input.value = "correct horse battery staple";
+    root.draw();
+    input.caretToEnd();
+
+    root.drawAndAssert(
+        input.dumpDrawsToSVG("/tmp/fluid.svg"),
+    );
+
+}
+
 @("PasswordInput.shred fills data with invalid characters")
 unittest {
 

@@ -95,12 +95,17 @@ class PasswordInput : TextInput {
         auto cursor = start(innerScrolled) + Vector2(radius, typeface.lineHeight / 2f);
 
         // Draw a circle for each character
-        foreach (_; value) {
-
-            io.drawCircle(cursor, radius, style.textColor);
-
-            cursor.x += advance;
-
+        if (canvasIO) {
+            foreach (_; value) {
+                canvasIO.drawCircle(cursor, radius, style.textColor);
+                cursor.x += advance;
+            }
+        }
+        else {
+            foreach (_; value) {
+                io.drawCircle(cursor, radius, style.textColor);
+                cursor.x += advance;
+            }
         }
 
         // Draw the caret
@@ -165,6 +170,13 @@ class PasswordInput : TextInput {
     protected override void reloadStyles() {
 
         super.reloadStyles();
+
+        if (canvasIO) {
+            style.setDPI(canvasIO.dpi);
+        }
+        else {
+            style.setDPI(io.dpi);
+        }
 
         // Use the "X" character as reference
         auto typeface = style.getTypeface;
