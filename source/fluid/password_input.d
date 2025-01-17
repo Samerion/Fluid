@@ -182,7 +182,12 @@ class PasswordInput : TextInput {
             size, typeface.lineHeight,
         );
 
-        io.drawRectangle(rect, style.selectionBackgroundColor);
+        if (canvasIO) {
+            canvasIO.drawRectangle(rect, style.selectionBackgroundColor);
+        }
+        else {
+            io.drawRectangle(rect, style.selectionBackgroundColor);
+        }
 
     }
 
