@@ -1,9 +1,11 @@
 module fluid.password_input;
 
 import fluid.utils;
+import fluid.style;
 import fluid.backend;
 import fluid.text_input;
 
+import fluid.io.canvas;
 
 @safe:
 
@@ -39,6 +41,23 @@ class PasswordInput : TextInput {
     this(string placeholder = "", void delegate() @trusted submitted = null) {
 
         super(placeholder, submitted);
+        this.contentLabel = new LocalContentLabel;
+
+    }
+
+    static class LocalContentLabel : ContentLabel {
+
+        override void resizeImpl(Vector2) {
+
+            const x = getAdvanceX(io, canvasIO, style);
+            const radius = x / 2f;
+            const advance = x * 1.2;
+            minSize = Vector2(
+                advance * value.countCharacters,
+                radius * 2,
+            );
+
+        }
 
     }
 
@@ -95,12 +114,17 @@ class PasswordInput : TextInput {
         auto cursor = start(innerScrolled) + Vector2(radius, typeface.lineHeight / 2f);
 
         // Draw a circle for each character
-        foreach (_; value) {
-
-            io.drawCircle(cursor, radius, style.textColor);
-
-            cursor.x += advance;
-
+        if (canvasIO) {
+            foreach (_; value) {
+                canvasIO.drawCircle(cursor, radius, style.textColor);
+                cursor.x += advance;
+            }
+        }
+        else {
+            foreach (_; value) {
+                io.drawCircle(cursor, radius, style.textColor);
+                cursor.x += advance;
+            }
         }
 
         // Draw the caret
@@ -158,7 +182,27 @@ class PasswordInput : TextInput {
             size, typeface.lineHeight,
         );
 
-        io.drawRectangle(rect, style.selectionBackgroundColor);
+        if (canvasIO) {
+            canvasIO.drawRectangle(rect, style.selectionBackgroundColor);
+        }
+        else {
+            io.drawRectangle(rect, style.selectionBackgroundColor);
+        }
+
+    }
+
+    /// Get the X advance of letter "X."
+    protected static getAdvanceX(FluidBackend io, CanvasIO canvasIO, Style style) {
+
+        if (canvasIO) {
+            style.setDPI(canvasIO.dpi);
+        }
+        else {
+            style.setDPI(io.dpi);
+        }
+
+        auto typeface = style.getTypeface;
+        return typeface.advance('X').x;
 
     }
 
@@ -167,8 +211,7 @@ class PasswordInput : TextInput {
         super.reloadStyles();
 
         // Use the "X" character as reference
-        auto typeface = style.getTypeface;
-        auto x = typeface.advance('X').x;
+        const x = getAdvanceX(io, canvasIO, style);
 
         radius = x / 2f;
         advance = x * 1.2;

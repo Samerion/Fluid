@@ -274,6 +274,21 @@ class TestSpace : Space, CanvasIO, DebugSignalIO {
 
     }
 
+    /// Draw a single frame and save the output to an SVG file at given location.
+    ///
+    /// Requires Fluid to be built with SVG support. To do so, set version `Fluid_SVG` and include dependencies
+    /// `elemi` and `arsd-official:image_files`.
+    version (Fluid_SVG)
+    void drawToSVG(string filename) {
+
+        auto generator = dumpDrawsToSVG(null, filename);
+        _probe.asserts = [generator];
+        queueAction(_probe);
+        draw();
+        generator.saveSVG();
+
+    }
+
     /// Draw a single frame and test if the asserts can be fulfilled.
     void drawAndAssert(Assert[] asserts...) {
 
@@ -436,6 +451,66 @@ interface Assert {
 
     // Meta
     string toString() const;
+
+}
+
+///
+auto cropsTo(Node subject, typeof(Rectangle.tupleof) rectangle) {
+    return cropsTo(subject, Rectangle(rectangle));
+}
+
+/// ditto
+auto cropsTo(Node subject, Rectangle rectangle) {
+    auto result = crops(subject);
+    result.isTestingArea = true;
+    result.targetArea = rectangle;
+    return result;
+}
+
+/// ditto
+auto crops(Node subject) {
+
+    return new class BlackHole!Assert {
+
+        bool isTestingArea;
+        Rectangle targetArea;
+
+        override bool cropArea(Node node, Rectangle area) nothrow {
+
+            if (isTestingArea) {
+                if (!equal(area.x, targetArea.x)
+                    || !equal(area.y, targetArea.y)
+                    || !equal(area.w, targetArea.w)
+                    || !equal(area.h, targetArea.h)) return false;
+            }
+
+            return subject.opEquals(node).assumeWontThrow;
+
+        }
+
+        override string toString() const {
+            return toText(subject, " should set crop area")
+                ~ (isTestingArea ? toText(" to ", targetArea) : "");
+        }
+
+    };
+
+}
+
+///
+auto resetsCrop(Node subject) {
+
+    return new class BlackHole!Assert {
+
+        override bool resetCropArea(Node node) nothrow {
+            return subject.opEquals(node).assumeWontThrow;
+        }
+
+        override string toString() const {
+            return toText(subject, " should reset crop area");
+        }
+
+    };
 
 }
 
@@ -655,19 +730,16 @@ auto drawsCircle(Node subject) {
             if (!node.opEquals(subject).assertNotThrown) return false;
 
             if (isTestingCenter) {
-                assert(equal(targetCenter.x, center.x)
-                    && equal(targetCenter.y, center.y),
-                    format!"Expected center %s, got %s"(targetCenter, center).assertNotThrown);
+                if (!equal(targetCenter.x, center.x)
+                    || !equal(targetCenter.y, center.y)) return false;
             }
 
             if (isTestingRadius) {
-                assert(equal(targetRadius, radius),
-                    format!"Expected radius %s, got %s"(targetRadius, radius).assertNotThrown);
+                if (!equal(targetRadius, radius)) return false;
             }
 
             if (isTestingColor) {
-                assert(targetColor == color,
-                    format!"Expected color %s, got %s"(targetColor, color).assertNotThrown);
+                if (targetColor != color) return false;
             }
 
             return true;
@@ -720,24 +792,28 @@ auto drawsCircle(Node subject) {
 /// Returns:
 ///     An `Assert` that can be passed to `TestSpace.drawAndAssert` to test if a node draws an image.
 auto drawsImage(Node subject, Image image) {
-
     auto test = drawsImage(subject);
     test.isTestingImage = true;
     test.targetImage = image;
     test.isTestingColor = true;
     test.targetColor = color("#fff");
     return test;
-
 }
 
 /// ditto
 auto drawsHintedImage(Node subject, Image image) {
-
     auto test = drawsImage(subject, image);
     test.isTestingHint = true;
     test.targetHint = true;
     return test;
+}
 
+/// ditto
+auto drawsHintedImage(Node subject) {
+    auto test = drawsImage(subject);
+    test.isTestingHint = true;
+    test.targetHint = true;
+    return test;
 }
 
 /// ditto
@@ -1263,8 +1339,22 @@ auto dumpDraws(Node subject) {
 
         }
 
+        void saveSVG() nothrow @safe {
+
+            import std.file : write;
+
+            version (Fluid_SVG) {
+                if (generateSVG && svgFilename !is null) {
+                    assumeWontThrow(
+                        write(svgFilename, exportSVG)
+                    );
+                }
+            }
+
+        }
+
         bool isSubject(Node node) nothrow @trusted {
-            return node.opEquals(subject).assertNotThrown;
+            return subject is null || node.opEquals(subject).assertNotThrown;
         }
 
         void dump(string fmt, Arguments...)(Node node, Arguments arguments) nothrow @trusted {
@@ -1274,34 +1364,25 @@ auto dumpDraws(Node subject) {
         }
 
         override bool afterDraw(Node node, Rectangle, Rectangle, Rectangle) nothrow {
-
-            import std.file : write;
-
             if (isSubject(node)) {
-                version (Fluid_SVG) {
-                    if (generateSVG && svgFilename !is null) {
-                        assumeWontThrow(
-                            write(svgFilename, exportSVG)
-                        );
-                    }
-                }
+                saveSVG();
                 return true;
             }
             return false;
         }
 
         override bool cropArea(Node node, Rectangle rectangle) nothrow {
-            dump!"cropArea(%s)"(node, rectangle);
+            dump!"node.cropsTo(%s, %s, %s, %s),"(node, rectangle.tupleof);
             return false;
         }
 
         override bool resetCropArea(Node node) nothrow {
-            dump!"resetCropArea()"(node);
+            dump!"node.resetsCrop(),"(node);
             return false;
         }
 
         override bool emitSignal(Node node, string text) nothrow {
-            dump!"emitSignal(%s)"(node, text);
+            dump!"node.emits(%(%s%)),"(node, text.only);
             return false;
         }
 
@@ -1330,8 +1411,8 @@ auto dumpDraws(Node subject) {
         override bool drawCircle(Node node, Vector2 center, float radius, Color color) nothrow {
 
             if (isSubject(node)) {
-                dump!`node.drawsCircle().at(%s).ofRadius(%s).ofColor("%s"),`
-                    (node, center, radius, color.toHex.assumeWontThrow);
+                dump!`node.drawsCircle().at(%s, %s).ofRadius(%s).ofColor("%s"),`
+                    (node, center.x, center.y, radius, color.toHex.assumeWontThrow);
 
                 version (Fluid_SVG) if (generateSVG) {
                     assumeWontThrow(
@@ -1455,7 +1536,7 @@ auto dumpDraws(Node subject) {
                 const url = "data:image/png;base64," ~ base64;
 
                 assumeWontThrow(
-                    elems ~= elems(
+                    svg ~= elems(
                         useTint(tint),
                         elem!"image"(
                             attr("x")      = toText(area.x),
