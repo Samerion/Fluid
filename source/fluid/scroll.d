@@ -286,7 +286,14 @@ class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable, Ho
         drawChild(scrollBar, scrollBarRect);
 
         // Draw the frame
-        super.drawImpl(mainOuter, inner);
+        if (canvasIO) {
+            const lastArea = canvasIO.intersectCrop(mainOuter);
+            scope (exit) canvasIO.cropArea = lastArea;
+            super.drawImpl(mainOuter, inner);
+        }
+        else {
+            super.drawImpl(mainOuter, inner);
+        }
 
     }
 
