@@ -132,7 +132,7 @@ unittest {
     assert(yfoo().value == "foo");
 
     auto myFoo = new Foo;
-    yfoo.initializer(myFoo);
+    yfoo.initialize(myFoo);
     assert(myFoo.value == "foo");
 
     static class Bar(T) : T {
