@@ -149,16 +149,16 @@ static this() {
 }
 
 enum Chapter {
-    @"Introduction" introduction,
-    @"Frames" frames,
-    @"Buttons & mutability" buttons,
-    @"Node slots" slots,
-    @"Themes" themes,
-    @"Margin, padding and border" margins,
-    @"Writing forms" forms,
-    @"moduleView" module_view,
-    // @"Popups" popups,
-    // @"Drag and drop" drag_and_drop,
+    @("Introduction")               introduction,
+    @("Frames")                     frames,
+    @("Buttons & mutability")       buttons,
+    @("Node slots")                 slots,
+    @("Themes")                     themes,
+    @("Margin, padding and border") margins,
+    @("Writing forms")              forms,
+    @("moduleView")                 module_view,
+    // @("Popups")                     popups,
+    // @("Drag and drop")              drag_and_drop,
 }
 
 @NodeTag
