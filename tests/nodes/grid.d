@@ -4,7 +4,7 @@ import fluid;
 
 @safe:
 
-@("Grid and GridFrame draw background")
+@("GridFrame and GridRow draw background")
 unittest {
 
     GridRow firstRow, secondRow;
@@ -13,7 +13,7 @@ unittest {
         .sizeLimit(500, 500),
         .segments(3),
         .nullTheme.derive(
-            rule!Grid(
+            rule!GridFrame(
                 Rule.backgroundColor = color("#f00"),
             ),
             rule!GridRow(
