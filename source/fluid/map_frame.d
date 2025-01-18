@@ -193,24 +193,30 @@ class MapFrame : Frame {
 
     /// Make a node move relatively according to mouse position changes, making it behave as if it was being dragged by
     /// the mouse.
-    Node mouseDrag(Node node) @trusted {
+    deprecated("`MapFrame.mouseDrag` is legacy and will not continue to work with Fluid's new I/O system. "
+        ~ "You can use `dragChildBy` to move nodes, but you need to implement mouse controls yourself. "
+        ~ "Consequently, `mouseDrag` will be removed in Fluid 0.8.0.") {
 
-        assert(node in positions, "Requested node is not present in the map");
+        Node mouseDrag(Node node) @trusted {
 
-        _mouseDrag = node;
-        _mousePosition = Vector2(float.nan, float.nan);
+            assert(node in positions, "Requested node is not present in the map");
 
-        return node;
+            _mouseDrag = node;
+            _mousePosition = Vector2(float.nan, float.nan);
 
-    }
+            return node;
 
-    /// Get the node currently affected by mouseDrag.
-    inout(Node) mouseDrag() inout { return _mouseDrag; }
+        }
 
-    /// Stop current mouse movements
-    final void stopMouseDrag() {
+        /// Get the node currently affected by mouseDrag.
+        inout(Node) mouseDrag() inout { return _mouseDrag; }
 
-        _mouseDrag = null;
+        /// Stop current mouse movements
+        final void stopMouseDrag() {
+
+            _mouseDrag = null;
+
+        }
 
     }
 
