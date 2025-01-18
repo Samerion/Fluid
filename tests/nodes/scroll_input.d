@@ -1,5 +1,6 @@
 module nodes.scroll_input;
 
+import std.range;
 import fluid;
 
 @safe:
@@ -18,19 +19,25 @@ class TallBox : Node {
 
 }
 
+Theme testTheme;
+
+static this() {
+    testTheme = nullTheme.derive(
+        rule!ScrollInput(
+            Rule.backgroundColor = color("#f00"),
+        ),
+        rule!ScrollInputHandle(
+            Rule.backgroundColor = color("#00f"),
+        ),
+    );
+}
+
 @("ScrollInput draws a track and a handle")
 unittest {
 
     auto frame = sizeLock!vscrollFrame(
         .sizeLimit(250, 250),
-        nullTheme.derive(
-            rule!ScrollInput(
-                Rule.backgroundColor = color("#f00"),
-            ),
-            rule!ScrollInputHandle(
-                Rule.backgroundColor = color("#00f"),
-            ),
-        ),
+        .testTheme,
         tallBox(),
     );
     auto root = testSpace(frame);
@@ -50,20 +57,22 @@ unittest {
 @("ScrollInput works by dragging")
 unittest {
 
-    import std.range;
-
     Button btn;
 
     auto frame = sizeLock!vscrollFrame(
+        .testTheme,
         .sizeLimit(200, 100),
         btn = button(.layout!"fill", "Button to test hover slipping", delegate { assert(false); }),
         label("Text long enough to overflow this very small viewport and create a scrollbar"),
     );
-    auto hover = hoverChain(
-        .nullTheme,
-        frame
+    auto hover = hoverChain();
+    auto root = testSpace(
+        chain(
+            inputMapChain(),
+            hover,
+            frame,
+        )
     );
-    auto root = hover;
 
     root.draw();
 
@@ -72,6 +81,7 @@ unittest {
     // Grab the scrollbar
     hover.point(195, 10)
         .then((a) {
+            assert(a.isHovered(frame.scrollBar.handle));
             a.press(false);
 
             // Drag the scrollbar 10 pixels lower
@@ -82,6 +92,7 @@ unittest {
 
             // Note down the difference in scroll
             scrollDiff = frame.scroll;
+            assert(scrollDiff > 5);
 
             // Drag the scrollbar 10 pixels lower, but also move it out of the scrollbar's area
             return a.move(150, 30);
@@ -89,10 +100,10 @@ unittest {
         .then((a) {
             const target = scrollDiff*2;
 
+            a.press();
+
             assert(target-1 <= frame.scroll && frame.scroll <= target+1,
                 "Scrollbar should operate at the same rate, even if the cursor is outside");
-
-            a.press();
 
             // Make sure the button is hovered
             return a.move(150, 20);
