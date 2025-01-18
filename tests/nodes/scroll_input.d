@@ -2,35 +2,9 @@ module nodes.scroll_input;
 
 import std.range;
 import fluid;
+import nodes.scroll;
 
 @safe:
-
-alias tallBox = nodeBuilder!TallBox;
-
-class TallBox : Node {
-
-    override void resizeImpl(Vector2) {
-        minSize = Vector2(40, 5250);
-    }
-
-    override void drawImpl(Rectangle, Rectangle) {
-
-    }
-
-}
-
-Theme testTheme;
-
-static this() {
-    testTheme = nullTheme.derive(
-        rule!ScrollInput(
-            Rule.backgroundColor = color("#f00"),
-        ),
-        rule!ScrollInputHandle(
-            Rule.backgroundColor = color("#00f"),
-        ),
-    );
-}
 
 @("ScrollInput draws a track and a handle")
 unittest {

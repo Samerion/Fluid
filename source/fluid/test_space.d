@@ -283,6 +283,8 @@ class TestSpace : Space, CanvasIO, DebugSignalIO {
 
         auto generator = dumpDrawsToSVG(null, filename);
         _probe.asserts = [generator];
+        _probe.allowFailure = true;
+        scope (exit) _probe.allowFailure = false;
         queueAction(_probe);
         draw();
         generator.saveSVG();
@@ -323,6 +325,13 @@ private class TestProbe : TreeAction {
 
         /// Number of asserts that passed since start of iteration.
         int assertsPassed;
+
+        /// Disables throwing an error if the probe exited with incomplete asserts.
+        ///
+        /// Every assert needs to finish for a successful test run. `TestProbe` will throw an `AssertError` if it
+        /// finishes a run without completing all of the assigned assertions, but this behavior can be disabled
+        /// by setting this option to `true`.
+        bool allowFailure;
 
     }
 
@@ -408,6 +417,8 @@ private class TestProbe : TreeAction {
     }
 
     override void stopped() {
+
+        if (allowFailure) return;
 
         // Make sure the asserts pass
         assert(this.asserts.empty, format!"Assert[%s] failure: %s"(
@@ -1364,7 +1375,7 @@ auto dumpDraws(Node subject) {
         }
 
         override bool afterDraw(Node node, Rectangle, Rectangle, Rectangle) nothrow {
-            if (isSubject(node)) {
+            if (subject && isSubject(node)) {
                 saveSVG();
                 return true;
             }
