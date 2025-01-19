@@ -45,6 +45,8 @@ alias hscrollable(alias T) = simpleConstructor!(ApplyRight!(ScrollFrame, "true")
 /// This only supports scrolling in one axis.
 class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable, HoverScrollable {
 
+    HoverIO hoverIO;
+
     public {
 
         /// Scrollbar for the frame. Can be replaced with a customized one.
@@ -191,6 +193,8 @@ class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable, Ho
         assert(scrollBar !is null, "No scrollbar has been set for FluidScrollable");
         assert(tree !is null);
 
+        use(hoverIO);
+
         /// Padding represented as a vector. This sums the padding on each axis.
         const paddingVector = Vector2(style.padding.sideX[].sum, style.padding.sideY[].sum);
 
@@ -255,7 +259,7 @@ class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable, Ho
 
             scrollBarRect.y += outer.height;
             scrollBarRect.height = scrollBar.minSize.y;
-            mainOuter.height -= scrollBarRect.width;
+            mainOuter.height -= scrollBarRect.height;
 
         }
 
@@ -286,25 +290,38 @@ class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable, Ho
         drawChild(scrollBar, scrollBarRect);
 
         // Draw the frame
-        super.drawImpl(mainOuter, inner);
+        if (canvasIO) {
+            const lastArea = canvasIO.intersectCrop(mainOuter);
+            scope (exit) canvasIO.cropArea = lastArea;
+            super.drawImpl(mainOuter, inner);
+        }
+        else {
+            super.drawImpl(mainOuter, inner);
+        }
 
     }
 
     bool canScroll(Vector2 valueVec) const {
 
-        const speed = scrollBar.scrollSpeed;
+        const speed = hoverIO
+            ? 1
+            : scrollBar.scrollSpeed;
         const value = isHorizontal
             ? valueVec.x
             : valueVec.y;
         const move = speed * value;
+        const maxMoveBackward = -scroll;
+        const maxMoveForward  = maxScroll - scroll;
 
-        return move.to!ptrdiff_t != 0;
+        return move.clamp(maxMoveBackward, maxMoveForward) != 0;
 
     }
 
     void scrollImpl(Vector2 valueVec) {
 
-        const speed = scrollBar.scrollSpeed;
+        const speed = hoverIO
+            ? 1
+            : scrollBar.scrollSpeed;
         const value = isHorizontal
             ? valueVec.x
             : valueVec.y;

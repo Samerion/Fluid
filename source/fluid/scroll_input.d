@@ -39,6 +39,7 @@ class ScrollInput : InputNode!Node {
     public {
 
         /// Mouse scroll speed; Pixels per event in Scrollable.
+        /// Only applies to legacy backend-based I/O.
         enum scrollSpeed = 60.0;
 
         /// Keyboard/gamepad scroll speed in pixels per event.
