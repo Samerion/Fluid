@@ -60,6 +60,8 @@ class HoverTracker : Node, Hoverable {
     int pressHeldCount;
     int pressCount;
 
+    Pointer lastPointer;
+
     override void resizeImpl(Vector2) {
         require(hoverIO);
         minSize = Vector2();
@@ -90,15 +92,17 @@ class HoverTracker : Node, Hoverable {
     }
 
     @(FluidInputAction.press, WhileHeld)
-    void pressHeld() {
+    void pressHeld(Pointer pointer) {
         assert(!blocksInput);
         pressHeldCount++;
+        lastPointer = pointer;
     }
 
     @(FluidInputAction.press)
-    void press() {
+    void press(Pointer pointer) {
         assert(!blocksInput);
         pressCount++;
+        lastPointer = pointer;
     }
 
 }
@@ -870,5 +874,92 @@ unittest {
         .runWhileDrawing(root);
 
     assert(focus.currentFocus is null);
+
+}
+
+@("Input event handlers receive negative pointer IDs from HoverChain")
+unittest {
+
+    auto tracker = sizeLock!hoverTracker(
+        .sizeLimit(100, 100),
+    );
+    auto hover = hoverChain(tracker);
+    auto root = chain(
+        inputMapChain(),
+        hover,
+    );
+
+    // Try two pointers:
+    // First pointer should be ID 0, armed ID -1,
+    // Second pointer should be ID 1, armed ID -2
+    foreach (int id, armedID; [-1, -2]) {
+
+        // Setup the pointer and click
+        auto action = hover.point(50, 50);
+        action.runWhileDrawing(root);
+        hover.emitEvent(action.pointer, MouseIO.press.left);
+        root.draw();
+
+        assert(action.pointer.id == id);
+        assert(tracker.pressCount == 1);
+        assert(tracker.lastPointer.id == armedID);
+
+        // Try upadting the data
+        action.move(20, 20);
+        assert(hover.fetch(id).position == Vector2(20, 20));
+        assert(hover.fetch(armedID).position == Vector2(50, 50));
+
+        tracker.pressCount = 0;
+
+    }
+
+}
+
+@("HoverChain correctly receives scroll data from node inside")
+unittest {
+
+    static class IncrementalScroller : Node, MouseIO {
+
+        HoverIO hoverIO;
+        Pointer pointer;
+        int value;
+
+        override void resizeImpl(Vector2) {
+            require(hoverIO);
+            pointer.device = this;
+            minSize = Vector2(0, 0);
+        }
+
+        override void drawImpl(Rectangle, Rectangle) {
+            pointer.position = Vector2(0, 0);
+            pointer.scroll = Vector2(0, ++value);
+            load(hoverIO, pointer);
+        }
+
+    }
+
+    alias incrementalScroller = nodeBuilder!IncrementalScroller;
+
+    auto automaton = incrementalScroller();
+    auto tracker = sizeLock!scrollTracker(
+        .sizeLimit(10, 10),
+    );
+    auto hover = hoverChain(
+        vspace(tracker, automaton),
+    );
+    auto root = testSpace(hover);
+
+    // One frame to find the node
+    root.draw();
+    assert(tracker.lastScroll.y == 0);
+    assert(tracker.totalScroll.y == 0);
+
+    root.draw();
+    assert(tracker.lastScroll.y == 1);
+    assert(tracker.totalScroll.y == 1);
+
+    root.draw();
+    assert(tracker.lastScroll.y == 2);
+    assert(tracker.totalScroll.y == 3);
 
 }
