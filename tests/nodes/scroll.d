@@ -189,3 +189,82 @@ unittest {
     );
 
 }
+
+@("ScrollFrame sets canScroll to false if maxed out")
+unittest {
+
+    const vec = Vector2(0, 100);
+
+    auto frame = vscrollFrame(
+        tallBox(),
+    );
+    testSpace(frame).draw();
+
+    assert(frame.canScroll(vec));
+
+    frame.scroll = frame.maxScroll - 200;
+    assert(frame.canScroll(vec));
+
+    frame.scroll = frame.maxScroll - 10;
+    assert(frame.canScroll(vec));
+
+    // Only an exact (or excess) value should output false
+    frame.scroll = frame.maxScroll;
+    assert(!frame.canScroll( vec));
+    assert( frame.canScroll(-vec));
+
+    frame.scroll = frame.maxScroll + 10;
+    assert(!frame.canScroll( vec));
+    assert( frame.canScroll(-vec));
+
+    // Same test but for the other direction
+    frame.scroll = 200;
+    assert(frame.canScroll(-vec));
+
+    frame.scroll = 10;
+    assert( frame.canScroll( vec));
+    assert( frame.canScroll(-vec));
+
+    frame.scroll = 0;
+    assert( frame.canScroll( vec));
+    assert(!frame.canScroll(-vec));
+
+    frame.scroll = -10;
+    assert( frame.canScroll( vec));
+    assert(!frame.canScroll(-vec));
+
+}
+
+@("ScrollFrame blocks canScroll on the other axis")
+unittest {
+
+    auto vf = vscrollFrame(
+        tallBox(),
+    );
+    auto hf = hscrollFrame(
+        wideBox(),
+    );
+    testSpace(vf, hf).draw();
+
+    vf.scroll = 500;
+    hf.scroll = 500;
+
+    assert( vf.canScroll(Vector2(  0,  50)));
+    assert( vf.canScroll(Vector2(  0, -50)));
+    assert( vf.canScroll(Vector2( 50,  50)));
+    assert( vf.canScroll(Vector2(-50, -50)));
+    assert( vf.canScroll(Vector2(-50,  50)));
+    assert( vf.canScroll(Vector2( 50, -50)));
+    assert(!vf.canScroll(Vector2( 50,   0)));
+    assert(!vf.canScroll(Vector2(-50,   0)));
+
+    assert( hf.canScroll(Vector2( 50,   0)));
+    assert( hf.canScroll(Vector2(-50,   0)));
+    assert( hf.canScroll(Vector2( 50,  50)));
+    assert( hf.canScroll(Vector2(-50, -50)));
+    assert( hf.canScroll(Vector2( 50, -50)));
+    assert( hf.canScroll(Vector2(-50,  50)));
+    assert(!hf.canScroll(Vector2(  0,  50)));
+    assert(!hf.canScroll(Vector2(  0, -50)));
+
+}
