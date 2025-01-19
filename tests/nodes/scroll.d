@@ -316,3 +316,34 @@ unittest {
     assert(frame.scroll == 100 + 1000);
 
 }
+
+@("ScrollFrame.scroll is clamped to its boundaries")
+unittest {
+
+    auto frame = sizeLock!vscrollFrame(
+        .sizeLimit(250, 250),
+        plainBox(250, 5250),
+    );
+    auto root = testSpace(frame);
+
+    root.draw();
+
+    assert(frame.scroll == 0);
+
+    frame.scroll = -50;
+    assert(frame.scroll == 0);
+
+    frame.scroll = 5250;
+    assert(frame.scroll == 5000);
+
+    frame.scroll = -50;
+    assert(frame.scroll == 0);
+
+    frame.scroll = 5;
+    assert(frame.scroll == 5);
+
+    frame.scroll = 5000;
+    assert(frame.scroll == 5000);
+
+
+}
