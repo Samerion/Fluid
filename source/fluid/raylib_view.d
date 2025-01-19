@@ -357,15 +357,13 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
     }
 
     /// Returns:
-    ///     Distance ravelled by the mouse in Fluid coordinates.
+    ///     Distance travelled by the mouse in Fluid coordinates.
     private Vector2 scroll() @trusted {
 
-        // Normalize the value: Linux and Windows provide trinary values (-1, 0, 1) but macOS gives analog that often
-        // goes far higher than that. This is a rough guess of the proportions based on feeling.
-        version (OSX)
-            return -GetMouseWheelMoveV / 4;
-        else
-            return -GetMouseWheelMoveV;
+        const move = -GetMouseWheelMoveV;
+        const speed = preferenceIO.scrollSpeed;
+
+        return Vector2(move.x * speed.x, move.y * speed.y);
 
     }
 

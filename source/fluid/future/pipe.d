@@ -78,7 +78,7 @@ unittest {
 
 }
 
-/// Pipes provide a callback system where functions can be chained. The result of one callback can be passed 
+/// Pipes provide a callback system where functions can be chained. The result of one callback can be passed
 /// to another in a linear chain.
 ///
 /// Pipes make it possible to write callback-based code that shows the underlying sequence of events:
@@ -92,14 +92,14 @@ unittest {
 /// In Fluid, they are most often used to operate on `TreeAction`. A tree action callback will fire when
 /// the action finishes.
 ///
-/// This pattern resembles a [commandline pipelines](pipe), where a process "pipes" data into another. 
-/// It may be a bit similar to [JavaScript Promises][Promise], but unlike Promises, pipes may trigger 
+/// This pattern resembles a [commandline pipelines](pipe), where a process "pipes" data into another.
+/// It may be a bit similar to [JavaScript Promises][Promise], but unlike Promises, pipes may trigger
 /// a callback multiple times, as opposed to just once.
 ///
 /// [pipeline]: https://en.wikipedia.org/wiki/Pipeline_(Unix)#Pipelines_in_command_line_interfaces
 /// [Promise]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise
 final class Pipe(Return, Args...) : Subscriber!Args, Publisher!Return {
-    
+
     alias Output = ToParameter!Return;
     alias Input = Args;
     alias Delegate = Return delegate(Input) @safe;
@@ -142,7 +142,7 @@ final class Pipe(Return, Args...) : Subscriber!Args, Publisher!Return {
             auto output = callback(input);
             if (next) next(output);
         }
-        
+
     }
 
 }
@@ -157,9 +157,9 @@ if (!is(Output == void)) {
     // Bug workaround: manually unwrap Outputs
     static if (Outputs.length == 1)
         alias Output = Outputs[0];
-    else 
+    else
         alias Output = Outputs;
-    
+
     /// Low-level API to directly subscribe to the data sent by this publisher.
     ///
     /// Calling this multiple times is undefined behavior.
@@ -187,7 +187,7 @@ if (!is(Output == void)) {
             subscribe(
 
                 // When this publisher receives data
-                pipe((Output output) { 
+                pipe((Output output) {
 
                     // Pass it to the listener
                     auto publisher = next(output);
@@ -200,7 +200,7 @@ if (!is(Output == void)) {
                 })
             );
             return result;
-            
+
         }
 
         // Plain return value
@@ -216,7 +216,7 @@ if (!is(Output == void)) {
 /// A subscriber is an object that receives data from a `Publisher`.
 interface Subscriber(Ts...) {
 
-    void opCall(Ts args); 
+    void opCall(Ts args);
 
 }
 
@@ -476,13 +476,13 @@ if (Ts.length != 0) {
         // Direct comparison for nodes to ensure safety on older compilers
         static if (is(Ts == AliasSeq!Node)) {
             const bothNull = expected[0] is null && received[0] is null;
-            enforce!AssertError(bothNull || expected[0].opEquals(received), 
+            enforce!AssertError(bothNull || expected[0].opEquals(received),
                 text("Expected ", expected.expand, ", but received ", received),
                 file,
                 lineNumber);
         }
         else {
-            enforce!AssertError(expected == tuple(received), 
+            enforce!AssertError(expected == tuple(received),
                 text("Expected ", expected.expand, ", but received ", received),
                 file,
                 lineNumber);
@@ -492,6 +492,108 @@ if (Ts.length != 0) {
         _eventEmpty();
 
     }
-    
-    
+
+
+}
+
+/// Combine multiple publishers to create one that waits until all of them are completed.
+///
+/// ---
+/// auto one = pipe({
+///     writeln("One finished");
+/// });
+/// auto two = pipe({
+///     writeln("Two finished");
+/// });
+/// join(one, two).then({
+///     writeln("Both done");
+/// });
+/// one();  // One finished
+/// two();  // Two finished
+/// // Both done
+/// ---
+JoinPublisher join(Publisher!()[] publishers...) {
+
+    return new JoinPublisher(publishers);
+
+}
+
+@("JoinPublisher emits an event when all tasks finish")
+unittest {
+
+    int oneFinished;
+    int twoFinished;
+    int joinFinished;
+
+    auto one = pipe({
+        oneFinished++;
+    });
+    auto two = pipe({
+        twoFinished++;
+    });
+    join(one, two).then({
+        joinFinished++;
+    });
+    one();
+    assert(oneFinished == 1);
+    assert(joinFinished == 0);
+    two();
+    assert(twoFinished == 1);
+    assert(joinFinished == 1);
+
+}
+
+/// Listens to a number of publishers, and as soon as all of them emit a result at least once, emits an event.
+///
+/// Only emits events once; if a publisher emits multiple events, only the first one is used.
+/// Does not publish any values on finish.
+class JoinPublisher : Publisher!() {
+
+    private {
+
+        Event!() _subscribers;
+        bool[] _done;
+        size_t _tasksLeft;
+
+    }
+
+    this(Publisher!()[] publishers...) {
+
+        this._done = new bool[publishers.length];
+        this._tasksLeft = publishers.length;
+
+        foreach (i, publisher; publishers) {
+            add(i, publisher);
+        }
+
+    }
+
+    void subscribe(Subscriber!() subscriber) {
+        _subscribers ~= subscriber;
+    }
+
+    /// Assign a publisher to listen to by index.
+    private void add(size_t i, Publisher!() publisher) {
+        publisher.then({
+            emit(i);
+        });
+    }
+
+    /// Mark a task as finished using its index.
+    ///
+    /// Does nothing if the task has already finished. Counts the number of tasks that remains to be completed,
+    /// and if all have, emits an event.
+    private void emit(size_t i) {
+
+        if (_done[i]) return;
+
+        _done[i] = true;
+        _tasksLeft--;
+
+        if (_tasksLeft == 0) {
+            _subscribers();
+        }
+
+    }
+
 }

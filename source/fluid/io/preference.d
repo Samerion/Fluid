@@ -10,7 +10,7 @@ import fluid.future.context;
 
 /// I/O interface for loading low-level user preferences, such as the double click interval, from the system.
 ///
-/// Right now, this interface only includes the double click interval. Other user-specific preference options
+/// Right now, this interface only includes a few basic options. Other user-specific preference options
 /// may be added in the future if they need to be handled at Fluid's level. When this happens, they will first
 /// be added through a separate interface, and become merged on a major release.
 ///
@@ -40,6 +40,16 @@ interface PreferenceIO : IO {
     /// Returns:
     ///     Maximum distance a pointer can travel before dismissing a double click.
     float maximumDoubleClickDistance() const nothrow;
+
+    /// Get the desired scroll speed (in pixels, or 1/96th of an inch) for every scroll unit. This value should
+    /// be used by mouse devices to translate scroll in ticks to screen space.
+    ///
+    /// The way scroll values are specified may vary across systems, but scroll speed is usually separate.
+    /// `PreferenceIO` should take care of normalizing this, ensuring that this behavior is consistent.
+    ///
+    /// Returns:
+    ///     Desired scroll speed in pixels per unit for both movement axes.
+    Vector2 scrollSpeed() const nothrow;
 
 }
 
