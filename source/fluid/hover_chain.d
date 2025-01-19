@@ -37,8 +37,13 @@ class HoverChain : NodeChain, HoverIO {
 
         struct HoverPointer {
 
-            /// The stored pointer.
+            /// The stored pointer. This is the last pointer assigned by `load`, as given by the device node.
+            /// Event handlers are given `armedValue` instead.
             Pointer value;
+
+            /// Pointer passed to event handlers. Associated with a negative ID, i.e. if the pointer's ID is `0`,
+            /// the ID of `armedValue` is `-1`, if the main ID is `1`, the ID of `armedValue` is `-2` and so on.
+            Pointer armedValue;
 
             /// Branch action associated with the pointer; finds the associated node.
             FindHoveredNodeAction action;
@@ -81,6 +86,55 @@ class HoverChain : NodeChain, HoverIO {
         super(next);
     }
 
+    /// Each `Pointer` loaded into `HoverChain` has two values, under two different ID numbers.
+    /// This function converts either number into the original one.
+    ///
+    /// Since the IDs are assigned in a consistent, deterministic manner,
+    /// the pointer does not need to be loaded for this function to work.
+    ///
+    /// See_Also:
+    ///     `fetch` for information on the difference between the values.
+    ///     `armedPointerID` for a function to get the ID of the armed pointer.
+    /// Params:
+    ///     number = Pointer ID to normalize, negative or not.
+    /// Returns:
+    ///     The normalized, non-negative pointer number.
+    ///     Returns the same ID as given if it was already normalized.
+    int normalizePointerID(int number) const {
+
+        if (number < 0) {
+            return -number - 1;
+        }
+        else {
+            return number;
+        }
+
+    }
+
+    /// Performs the opposite of `normalizePointerID`; gets the ID of the armed pointer, the one made available
+    /// to event handling nodes.
+    ///
+    /// Since the IDs are assigned in a consistent, deterministic manner,
+    /// the pointer does not need to be loaded for this function to work.
+    ///
+    /// See_Also:
+    ///     `normalizePointerID`
+    /// Params:
+    ///     number = ID of the pointer, either negative or not.
+    /// Returns:
+    ///     The ID of the armed pointer.
+    ///     Returns the same ID as given if it was already armed.
+    int armedPointerID(int number) const {
+
+        if (number >= 0) {
+            return -number - 1;
+        }
+        else {
+            return number;
+        }
+
+    }
+
     override int load(Pointer pointer)
     out(r) {
         import std.format;
@@ -93,10 +147,12 @@ class HoverChain : NodeChain, HoverIO {
 
         // No such pointer
         if (index == -1) {
-            const newIndex = _pointers.load(HoverPointer(
-                pointer,
-                new FindHoveredNodeAction,
-            ));
+            HoverPointer newPointer;
+            newPointer.value = pointer;
+            newPointer.armedValue.isDisabled = true;
+            newPointer.action = new FindHoveredNodeAction;
+
+            const newIndex = _pointers.load(newPointer);
             _pointers[newIndex].value.load(this, newIndex);
             return newIndex;
         }
@@ -112,24 +168,48 @@ class HoverChain : NodeChain, HoverIO {
 
     }
 
+    /// Fetch a pointer by the number assigned to it when loading.
+    ///
+    /// Under the hood, `HoverChain` creates two pointers for each load.
+    /// One has a number of zero or more (the original pointer), and one has a negative number (armed pointer).
+    /// The original pointer reflects the changes made when loading and updating exactly,
+    /// while the armed pointer is updated only when a new frame starts.
+    /// This makes it possible to update the pointer, while it is in use by `FindHoveredNodeAction`.
+    /// Otherwise, the values given to the could be out of date by the time the relevant node is found.
+    ///
+    /// See_Also:
+    ///     `normalizedPointerID` and `armedPointerID` for converting between pointer IDs.
+    /// Returns:
+    ///     Pointer associated with the node.
     override inout(Pointer) fetch(int number) inout {
 
-        assert(_pointers.isActive(number), "Pointer is not active");
+        // Armed variant
+        if (number < 0) {
+            const trueNumber = normalizePointerID(number);
+            assert(_pointers.isActive(trueNumber), "Pointer is not active");
+            return _pointers[trueNumber].armedValue;
+        }
 
-        return _pointers[number].value;
+        // Original variant
+        else {
+            assert(_pointers.isActive(number), "Pointer is not active");
+            return _pointers[number].value;
+        }
 
     }
 
     override void emitEvent(Pointer pointer, InputEvent event) {
 
-        assert(_pointers.isActive(pointer.id), "Pointer is not active");
+        const id = normalizePointerID(pointer.id);
+
+        assert(_pointers.isActive(id), "Pointer is not active");
 
         // Mark the pointer as held
-        _pointers[pointer.id].isHeld = true;
+        _pointers[id].isHeld = true;
 
         // Emit the event
         if (actionIO) {
-            actionIO.emitEvent(event, pointer.id, &runInputAction);
+            actionIO.emitEvent(event, id, &runInputAction);
         }
 
     }
@@ -193,33 +273,60 @@ class HoverChain : NodeChain, HoverIO {
 
     override void beforeDraw(Rectangle outer, Rectangle inner) {
 
-        // Find the current hover in child nodes
-        auto frame = controlBranchAction(armBranchActions);
-        frame.start();
-        frame.release();
+        foreach (resource; _pointers.activeResources) {
+
+            const id = resource.value.id;
+            const armedID = armedPointerID(id);
+
+            // Update the pointer when done
+            scope (exit) _pointers[id] = resource;
+
+            // Arm the pointer
+            resource.armedValue = resource.value;
+            resource.armedValue.load(this, armedID);
+
+            if (resource.value.isDisabled) continue;
+
+            // Start the tree action
+            resource.action.search = resource.value.position;
+            resource.action.scroll = resource.value.scroll;
+            auto frame = controlBranchAction(resource.action);
+            frame.start();
+            frame.release();
+
+        }
 
     }
 
     override void afterDraw(Rectangle outer, Rectangle inner) {
 
-        auto frame = controlBranchAction(armBranchActions);
+        auto frame = controlBranchAction(_pointers.activeResources.map!"a.action");
         frame.stop();
 
         // Update hover data
-        foreach (pointer; _pointers.activeResources) {
+        foreach (resource; _pointers.activeResources) {
 
-            scope (exit) _pointers[pointer.value.id] = pointer;
+            const pointer = resource.armedValue;
+
+            // Ignore disabled pointers
+            if (pointer.isDisabled) continue;
+
+            const id = resource.value.id;
+            const armedID = pointer.id;
+            assert(armedID < 0);
+
+            scope (exit) _pointers[id] = resource;
 
             // Keep the same hovered node if the pointer is being held,
             // otherwise switch.
-            pointer.node = pointer.action.result;
-            if (!pointer.isHeld) {
-                pointer.heldNode = pointer.node;
+            resource.node = resource.action.result;
+            if (!resource.isHeld) {
+                resource.heldNode = resource.node;
             }
 
             // Switch focus to hovered node if holding
             else if (focusIO) {
-                if (auto focusable = pointer.heldNode.castIfAcceptsInput!Focusable) {
+                if (auto focusable = resource.heldNode.castIfAcceptsInput!Focusable) {
                     if (!focusable.isFocused) {
                         focusable.focus();
                     }
@@ -230,56 +337,39 @@ class HoverChain : NodeChain, HoverIO {
             }
 
             // Update scroll and send new events
-            if (!pointer.value.isScrollHeld) {
-                pointer.scrollable = pointer.action.scrollable;
+            if (!pointer.isScrollHeld) {
+                resource.scrollable = resource.action.scrollable;
             }
-            if (pointer.scrollable) {
-                pointer.scrollable.scrollImpl(pointer.value.scroll);
+            if (resource.scrollable) {
+                resource.scrollable.scrollImpl(pointer.scroll);
             }
 
             // Reset state
-            pointer.isHeld = false;
-            pointer.isHandled = false;
+            resource.isHeld = false;
+            resource.isHandled = false;
 
             // Send a frame event to trigger hoverImpl
             if (actionIO) {
-                actionIO.emitEvent(ActionIO.frameEvent, pointer.value.id, &runInputAction);
+                actionIO.emitEvent(ActionIO.frameEvent, armedID, &runInputAction);
             }
-            else if (auto hoverable = pointer.node.castIfAcceptsInput!Hoverable) {
-                pointer.isHandled = hoverable.hoverImpl();
+            else if (auto hoverable = resource.node.castIfAcceptsInput!Hoverable) {
+                resource.isHandled = hoverable.hoverImpl();
             }
 
         }
 
     }
 
-    /// List all branch actions for active pointers, and change their search positions to match the pointer.
-    private auto armBranchActions() {
-
-        return _pointers.activeResources
-            .filter!(a => !a.value.isDisabled)
-            .map!((a) {
-                a.action.search = a.value.position;
-                a.action.scroll = a.value.scroll;
-                return a.action;
-            });
-
-    }
-
     override inout(Hoverable) hoverOf(Pointer pointer) inout {
-
-        debug assert(_pointers.isActive(pointer.id), "Given pointer wasn't loaded");
-
-        return _pointers[pointer.id].heldNode.castIfAcceptsInput!Hoverable;
-
+        const id = normalizePointerID(pointer.id);
+        debug assert(_pointers.isActive(id), "Given pointer wasn't loaded");
+        return _pointers[id].heldNode.castIfAcceptsInput!Hoverable;
     }
 
     override inout(HoverScrollable) scrollOf(Pointer pointer) inout {
-
-        debug assert(_pointers.isActive(pointer.id), "Given pointer wasn't loaded");
-
-        return _pointers[pointer.id].scrollable;
-
+        const id = normalizePointerID(pointer.id);
+        debug assert(_pointers.isActive(id), "Given pointer wasn't loaded");
+        return _pointers[id].scrollable;
     }
 
     /// Handle an input action associated with a pointer.
@@ -292,8 +382,11 @@ class HoverChain : NodeChain, HoverIO {
     ///     True if the input action was handled.
     bool runInputAction(Pointer pointer, InputActionID actionID, bool isActive = true) {
 
+        const id = normalizePointerID(pointer.id);
+        const armedID = -id - 1;
+
         auto hover = hoverOf(pointer);
-        auto meta = _pointers[pointer.id];
+        auto meta = _pointers[id];
 
         // Active input actions can only fire if `heldNode` is still hovered
         if (isActive) {
@@ -306,7 +399,7 @@ class HoverChain : NodeChain, HoverIO {
         const handled =
 
             // Try to run the action
-            (hover && hover.actionImpl(this, pointer.id, actionID, isActive))
+            (hover && hover.actionImpl(this, armedID, actionID, isActive))
 
             // Run local input actions as fallback
             || runLocalInputActions(pointer, actionID, isActive)
@@ -315,7 +408,7 @@ class HoverChain : NodeChain, HoverIO {
             || (actionID == inputActionID!(ActionIO.CoreAction.frame) && hover && hover.hoverImpl());
 
         // Mark as handled, if so
-        _pointers[pointer.id].isHandled = meta.isHandled || handled;
+        _pointers[id].isHandled = meta.isHandled || handled;
 
         return handled;
 
@@ -333,7 +426,8 @@ class HoverChain : NodeChain, HoverIO {
     /// ditto
     protected final bool runInputAction(InputActionID actionID, bool isActive, int number) {
 
-        return runInputAction(_pointers[number].value, actionID, isActive);
+        auto pointer = fetch(number);
+        return runInputAction(pointer, actionID, isActive);
 
     }
 
