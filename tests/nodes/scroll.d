@@ -5,32 +5,33 @@ import fluid.future.pipe;
 
 @safe:
 
-alias tallBox = nodeBuilder!TallBox;
-
-class TallBox : Node {
-
-    CanvasIO canvasIO;
-
-    override void resizeImpl(Vector2) {
-        require(canvasIO);
-        minSize = Vector2(40, 5250);
-    }
-
-    override void drawImpl(Rectangle outer, Rectangle) {
-        style.drawBackground(io, canvasIO, outer);
-    }
-
+@NodeTag
+enum TestTag {
+    green,
 }
 
-alias wideBox = nodeBuilder!WideBox;
+PlainBox tallBox() {
+    return plainBox(40, 5250);
+}
 
-class WideBox : Node {
+PlainBox wideBox() {
+    return plainBox(5250, 40);
+}
+
+alias plainBox = nodeBuilder!PlainBox;
+
+class PlainBox : Node {
 
     CanvasIO canvasIO;
+    Vector2 size;
+
+    this(float width, float height) {
+        this.size = Vector2(width, height);
+    }
 
     override void resizeImpl(Vector2) {
         require(canvasIO);
-        minSize = Vector2(5250, 40);
+        minSize = size;
     }
 
     override void drawImpl(Rectangle outer, Rectangle) {
@@ -51,6 +52,9 @@ static this() {
         ),
         rule!ScrollInputHandle(
             Rule.backgroundColor = color("#00f"),
+        ),
+        rule!(Node, TestTag.green)(
+            Rule.backgroundColor = color("#0f0"),
         ),
     );
 }
@@ -266,5 +270,49 @@ unittest {
     assert( hf.canScroll(Vector2(-50,  50)));
     assert(!hf.canScroll(Vector2(  0,  50)));
     assert(!hf.canScroll(Vector2(  0, -50)));
+
+}
+
+@("ScrollFrame supports scrollIntoView")
+unittest {
+
+    PlainBox[6] boxes;
+
+    // TODO tests scrolling to odd-numbered boxes too please
+    //      https://git.samerion.com/Samerion/Fluid/issues/307
+    auto frame = sizeLock!vscrollFrame(
+        .sizeLimit(500, 500),
+        .testTheme,
+        boxes[0] = plainBox(.tags!(TestTag.green), 500, 100),
+        boxes[1] = plainBox(500, 1000),
+        boxes[2] = plainBox(.tags!(TestTag.green), 500, 100),
+        boxes[3] = plainBox(500, 1000),
+        boxes[4] = plainBox(.tags!(TestTag.green), 500, 100),
+        boxes[5] = plainBox(500, 1000),
+    );
+    auto root = testSpace(frame);
+
+    boxes[0]
+        .scrollIntoView()
+        .runWhileDrawing(root);
+    assert(frame.scroll == 0);
+
+    boxes[2]
+        .scrollIntoView()
+        .runWhileDrawing(root);
+    assert(frame.scroll == 100 + 1000 - 500 + 100);
+
+    boxes[2]
+        .scrollToTop()
+        .runWhileDrawing(root);
+    assert(frame.scroll == 100 + 1000);
+
+    // Scroll into view should yield a different result when scrolling
+    // from the bottom than from the top.
+    frame.scrollEnd();
+    boxes[2]
+        .scrollIntoView()
+        .runWhileDrawing(root);
+    assert(frame.scroll == 100 + 1000);
 
 }
