@@ -310,8 +310,10 @@ class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable, Ho
             ? valueVec.x
             : valueVec.y;
         const move = speed * value;
+        const maxMoveBackward = -scroll;
+        const maxMoveForward  = maxScroll - scroll;
 
-        return move.to!ptrdiff_t != 0;
+        return move.clamp(maxMoveBackward, maxMoveForward) != 0;
 
     }
 
