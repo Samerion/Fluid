@@ -497,6 +497,11 @@ abstract class Node {
                 isStarted = false;
             }
 
+            void startAndRelease() {
+                start();
+                release();
+            }
+
             void stop() {
                 isStarted = false;
                 foreach (action; range) {
@@ -524,7 +529,7 @@ abstract class Node {
     }
 
     /// Recalculate the window size before next draw.
-    final void updateSize() scope {
+    final void updateSize() scope nothrow {
 
         if (tree) tree.root._resizePending = true;
         // Tree might be null — if so, the node will be resized regardless
@@ -1165,6 +1170,11 @@ abstract class Node {
 
             void release() {
                 this.isStarted = false;
+            }
+
+            void startAndRelease() {
+                start();
+                release();
             }
 
             void stop() {
