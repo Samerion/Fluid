@@ -55,6 +55,7 @@ public import
     fluid.node_chain,
     fluid.number_input,
     fluid.onion_frame,
+    fluid.overlay_chain,
     fluid.password_input,
     fluid.popup_button,
     fluid.popup_frame,
