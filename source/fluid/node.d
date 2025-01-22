@@ -137,7 +137,7 @@ abstract class Node {
     @property {
 
         /// Check if the node is hidden.
-        bool isHidden() const return { return _isHidden; }
+        bool isHidden() const return { return _isHidden || toRemove; }
 
         /// Set the visibility
         bool isHidden(bool value) return {
@@ -308,24 +308,18 @@ abstract class Node {
 
     /// Toggle the node's visibility.
     final void toggleShow() {
-
         isHidden = !isHidden;
-
     }
 
     /// Remove this node from the tree before the next draw.
     final void remove() {
-
-        isHidden = true;
         toRemove = true;
-
+        updateSize();
     }
 
     /// Get the minimum size of this node.
     final Vector2 getMinSize() const {
-
         return minSize;
-
     }
 
     /// Check if this node is hovered.
@@ -497,6 +491,11 @@ abstract class Node {
                 isStarted = false;
             }
 
+            void startAndRelease() {
+                start();
+                release();
+            }
+
             void stop() {
                 isStarted = false;
                 foreach (action; range) {
@@ -524,7 +523,7 @@ abstract class Node {
     }
 
     /// Recalculate the window size before next draw.
-    final void updateSize() scope {
+    final void updateSize() scope nothrow {
 
         if (tree) tree.root._resizePending = true;
         // Tree might be null — if so, the node will be resized regardless
@@ -1165,6 +1164,11 @@ abstract class Node {
 
             void release() {
                 this.isStarted = false;
+            }
+
+            void startAndRelease() {
+                start();
+                release();
             }
 
             void stop() {
