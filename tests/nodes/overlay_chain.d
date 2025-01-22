@@ -85,3 +85,30 @@ unittest {
     );
 
 }
+
+@("Overlays in OverlayChain can be aligned with NodeAlign")
+unittest {
+
+    auto chain = overlayChain();
+    auto root = testSpace(chain);
+
+    const centerTarget = Vector2(55, 55) - overlaySize/2;
+    auto centerOverlay = sampleOverlay(
+        .layout!"center",
+        Rectangle(50, 50, 10, 10),
+    );
+    chain.addOverlay(centerOverlay);
+
+    const endTarget = Vector2(50, 50) - overlaySize;
+    auto endOverlay = sampleOverlay(
+        .layout!"end",
+        Rectangle(50, 50, 10, 10),
+    );
+    chain.addOverlay(endOverlay);
+
+    root.drawAndAssert(
+        centerOverlay.drawsRectangle(centerTarget.tupleof, overlaySize.tupleof),
+        endOverlay.drawsRectangle(endTarget.tupleof, overlaySize.tupleof),
+    );
+
+}
