@@ -1,9 +1,6 @@
 /// Implementation of `OverlayIO` using its own space to lay out its children.
 module fluid.overlay_chain;
 
-import std.array;
-import std.algorithm;
-
 import fluid.node;
 import fluid.utils;
 import fluid.types;
@@ -65,20 +62,17 @@ class OverlayChain : NodeChain, OverlayIO {
         foreach (child; children) {
 
             const size = child.node.minSize;
+            const nodeAlign = child.node.layout.nodeAlign;
 
             // Calculate the node's position based on the anchor
             const anchor = child.overlayable.anchor(inner);
-            const layout = child.node.layout.nodeAlign[]
-                .map!alignLayout
-                .staticArray!2;
+            const layout = Vector2(
+                alignLayout!'x'(nodeAlign[0], inner, anchor, size),
+                alignLayout!'y'(nodeAlign[1], inner, anchor, size),
+            );
             const anchorPoint = anchor.end
-                - Vector2(layout[0] * anchor.size.x, layout[1] * anchor.size.y)
-                - Vector2(layout[0] * size.x,        layout[1] * size.y);
-
-            import std.stdio;
-            import std.stdio;
-            debug writeln(i"$(anchor.end) - $(Vector2(layout[0] * anchor.size.x, layout[1] * anchor.size.y)) - $(Vector2(layout[0] * size.x,        layout[1] * size.y))");
-            debug writeln(anchorPoint);
+                - Vector2(layout.x * anchor.size.x, layout.y * anchor.size.y)
+                - Vector2(layout.x * size.x,        layout.y * size.y);
 
             drawChild(child.node, Rectangle(
                 anchorPoint.tupleof,
@@ -88,10 +82,41 @@ class OverlayChain : NodeChain, OverlayIO {
         }
     }
 
-    private static alignLayout(NodeAlign alignment) {
+    private static alignLayout(char axis)(NodeAlign alignment, Rectangle inner, Rectangle anchor, Vector2 size) {
 
-        // TODO fill
-        return alignment.predSwitch(
+        import std.algorithm : predSwitch;
+
+        if (alignment == NodeAlign.fill) {
+
+            // +---- inner ---+
+            // | . .|  <- end |
+            // |. . |   space |
+            // +----+====+    |
+            // |    | . .|    |
+            // |    |. . | <- anchor
+            // |    +====+----+
+            // | start   | . .|
+            // | space-> |. . |
+            // +---------+----+
+
+            const startSpace = inner.end - anchor.end;
+            const endSpace   = anchor.start - inner.start;
+
+            static if (axis == 'x') {
+                if (size.x <= startSpace.x) return 0;
+                if (size.x <= endSpace.x)   return 1;
+                return 0.5;
+            }
+
+            static if (axis == 'y') {
+                if (size.y <= startSpace.y) return 0;
+                if (size.y <= endSpace.y)   return 1;
+                return 0.5;
+            }
+
+        }
+
+        else return alignment.predSwitch(
             NodeAlign.start,  0,
             NodeAlign.center, 0.5,
             NodeAlign.end,    1,
