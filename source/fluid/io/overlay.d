@@ -85,6 +85,7 @@ interface OverlayIO : IO {
     /// Insert new overlay content.
     ///
     /// Overlay content should remain alive until the node specifies a `toRemove` status.
+    /// Overlays should not be added if they're not already in the node tree.
     ///
     /// See_Also:
     ///     `addChildOverlay`

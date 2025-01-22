@@ -59,7 +59,15 @@ class OverlayChain : NodeChain, OverlayIO {
     }
 
     override void afterDraw(Rectangle, Rectangle inner) {
+        size_t newIndex;
         foreach (child; children) {
+
+            // Filter removed nodes out
+            if (child.node.toRemove) {
+                child.node.toRemove = false;
+                continue;
+            }
+            scope (exit) children[newIndex++] = child;
 
             const size = child.node.minSize;
             const nodeAlign = child.node.layout.nodeAlign;
@@ -80,6 +88,7 @@ class OverlayChain : NodeChain, OverlayIO {
             ));
 
         }
+        children.length = newIndex;
     }
 
     private static alignLayout(char axis)(NodeAlign alignment, Rectangle inner, Rectangle anchor, Vector2 size) {

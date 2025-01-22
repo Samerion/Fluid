@@ -276,3 +276,51 @@ unittest {
     );
 
 }
+
+@("OverlayChain supports removing nodes with .remove()")
+unittest {
+
+    const size = Vector2(32, 32);
+    const anchor = Rectangle(0, 0, 0, 0);
+
+    auto chain = overlayChain();
+    auto root = testSpace(chain);
+
+    auto one   = sampleOverlay(.layout!1, size, anchor);
+    auto two   = sampleOverlay(.layout!2, size, anchor);
+    auto three = sampleOverlay(.layout!3, size, anchor);
+
+    chain.addOverlay(one);
+    chain.addOverlay(two);
+    chain.addOverlay(three);
+
+    root.drawAndAssert(
+        one.isDrawn,
+        two.isDrawn,
+        three.isDrawn,
+        chain.doesNotDrawChildren,
+    );
+
+    two.remove();
+    root.drawAndAssertFailure(
+        one.isDrawn,
+        two.isDrawn,
+        three.isDrawn,
+        chain.doesNotDrawChildren,
+    );
+    root.drawAndAssert(
+        one.isDrawn,
+        three.isDrawn,
+        chain.doesNotDrawChildren,
+    );
+
+    chain.addOverlay(two);
+    assert(two.toRemove == false);
+    root.drawAndAssert(
+        one.isDrawn,
+        three.isDrawn,
+        two.isDrawn,
+        chain.doesNotDrawChildren,
+    );
+
+}
