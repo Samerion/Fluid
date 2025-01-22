@@ -2,7 +2,6 @@
 docs.json
 __dummy.html
 profilegc.log
-docs/
 build/
 *.exe
 *.o
