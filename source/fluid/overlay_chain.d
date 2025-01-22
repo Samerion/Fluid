@@ -1,6 +1,9 @@
 /// Implementation of `OverlayIO` using its own space to lay out its children.
 module fluid.overlay_chain;
 
+import std.array;
+import std.algorithm;
+
 import fluid.node;
 import fluid.utils;
 import fluid.types;
@@ -61,11 +64,21 @@ class OverlayChain : NodeChain, OverlayIO {
     override void afterDraw(Rectangle, Rectangle inner) {
         foreach (child; children) {
 
-            // Get the anchor
-            const anchor = child.overlayable.anchor(inner);
-
-            const anchorPoint = anchor.end;
             const size = child.node.minSize;
+
+            // Calculate the node's position based on the anchor
+            const anchor = child.overlayable.anchor(inner);
+            const layout = child.node.layout.nodeAlign[]
+                .map!alignLayout
+                .staticArray!2;
+            const anchorPoint = anchor.end
+                - Vector2(layout[0] * anchor.size.x, layout[1] * anchor.size.y)
+                - Vector2(layout[0] * size.x,        layout[1] * size.y);
+
+            import std.stdio;
+            import std.stdio;
+            debug writeln(i"$(anchor.end) - $(Vector2(layout[0] * anchor.size.x, layout[1] * anchor.size.y)) - $(Vector2(layout[0] * size.x,        layout[1] * size.y))");
+            debug writeln(anchorPoint);
 
             drawChild(child.node, Rectangle(
                 anchorPoint.tupleof,
@@ -73,6 +86,17 @@ class OverlayChain : NodeChain, OverlayIO {
             ));
 
         }
+    }
+
+    private static alignLayout(NodeAlign alignment) {
+
+        // TODO fill
+        return alignment.predSwitch(
+            NodeAlign.start,  0,
+            NodeAlign.center, 0.5,
+            NodeAlign.end,    1,
+        );
+
     }
 
     override void addOverlay(Overlayable overlayable, OverlayType[] type...) nothrow {
