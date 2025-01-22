@@ -5,12 +5,16 @@ import fluid;
 @safe:
 
 alias sampleOverlay = nodeBuilder!SampleOverlay;
+alias relativeOverlay = nodeBuilder!(SampleOverlay, (a) {
+    a.isRelative = true;
+});
 
 class SampleOverlay : Node, Overlayable {
 
     CanvasIO canvasIO;
     Rectangle _anchor;
     Vector2 size;
+    bool isRelative;
 
     this(Vector2 size, Rectangle anchor) {
         this.layout = .layout!"fill";
@@ -18,8 +22,16 @@ class SampleOverlay : Node, Overlayable {
         this._anchor = anchor;
     }
 
-    override Rectangle anchor(Rectangle) const nothrow {
-        return _anchor;
+    override Rectangle anchor(Rectangle viewport) const nothrow {
+        if (isRelative) {
+            return Rectangle(
+                (viewport.start + _anchor.start).tupleof,
+                _anchor.size.tupleof,
+            );
+        }
+        else {
+            return _anchor;
+        }
     }
 
     override void resizeImpl(Vector2) {
@@ -116,7 +128,7 @@ unittest {
 
 }
 
-@("NodeAlign.fill chooses alignment based on available space")
+@("In OverlayChain, NodeAlign.fill chooses alignment based on available space")
 unittest {
 
     auto chain = overlayChain(
@@ -156,6 +168,111 @@ unittest {
         cornerOverlay.drawsRectangle(8, 8, 32, 32),
         edgeOverlay.drawsRectangle(28, 50, 32, 32),
         bigOverlay.drawsRectangle(-10, -10, 80, 80),
+    );
+
+}
+
+@("OverlayChain allows using different alignment per axis")
+unittest {
+
+    auto chain = overlayChain(
+        .layout!(1, "fill")
+    );
+    auto root = testSpace(chain);
+
+    SampleOverlay[] overlays;
+
+    foreach (x; [NodeAlign.start, NodeAlign.center, NodeAlign.end]) {
+        foreach (y; [NodeAlign.start, NodeAlign.center, NodeAlign.end]) {
+
+            overlays ~= sampleOverlay(
+                .layout(x, y),
+                Vector2(32, 16),
+                Rectangle(0, 0, 10, 20),
+            );
+            chain.addOverlay(overlays[$-1]);
+
+        }
+    }
+
+    root.drawAndAssert(
+        // (start, _)
+        overlays[0].drawsRectangle( 10,  20, 32, 16),  // start
+        overlays[1].drawsRectangle( 10,   2, 32, 16),  // center
+        overlays[2].drawsRectangle( 10, -16, 32, 16),  // end
+
+        // (center, _)
+        overlays[3].drawsRectangle(-11,  20, 32, 16),  // start
+        overlays[4].drawsRectangle(-11,   2, 32, 16),  // center
+        overlays[5].drawsRectangle(-11, -16, 32, 16),  // end
+
+        // (end, _)
+        overlays[6].drawsRectangle(-32,  20, 32, 16),  // start
+        overlays[7].drawsRectangle(-32,   2, 32, 16),  // center
+        overlays[8].drawsRectangle(-32, -16, 32, 16),  // end
+     );
+
+}
+
+@("Overlays in OverlayChain can move without a resize")
+unittest {
+
+    auto chain = overlayChain(
+        .layout!(1, "fill")
+    );
+    auto root = testSpace(chain);
+    auto overlay = sampleOverlay(
+        .layout!"start",
+        Vector2(32, 32),
+        Rectangle(0, 0, 0, 0),
+    );
+    chain.addOverlay(overlay);
+
+    root.drawAndAssert(
+        overlay.drawsRectangle(0, 0, 32, 32),
+    );
+
+    overlay._anchor = Rectangle(-16, -16, 0, 0),
+    root.drawAndAssert(
+        overlay.drawsRectangle(-16, -16, 32, 32),
+    );
+
+    overlay._anchor = Rectangle(400, 400, 0, 0),
+    root.drawAndAssert(
+        overlay.drawsRectangle(400, 400, 32, 32),
+    );
+
+}
+
+@("OverlayChain overlays can be positioned relative to screen, or to the chain")
+unittest {
+
+    auto chain = overlayChain(
+        .layout!(1, "fill")
+    );
+    auto root = sizeLock!vtestSpace(
+        .sizeLimit(300, 300),
+        vspace(.layout!1),
+        chain,
+        vspace(.layout!1),
+    );
+    auto absolute = sampleOverlay(
+        .layout!"start",
+        Vector2(32, 32),
+        Rectangle(0, 0, 0, 0),
+    );
+    auto relative = relativeOverlay(
+        .layout!"start",
+        Vector2(32, 32),
+        Rectangle(0, 0, 0, 0),
+    );
+
+    chain.addOverlay(absolute);
+    chain.addOverlay(relative);
+
+    root.drawAndAssert(
+        absolute.drawsRectangle(0,   0, 32, 32),
+        relative.drawsRectangle(0, 100, 32, 32),
     );
 
 }
