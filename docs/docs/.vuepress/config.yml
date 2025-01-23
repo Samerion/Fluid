@@ -1,0 +1,15 @@
+title: Fluid Docs
+description: Documentation pages for the Fluid graphics library.
+themeConfig:
+  nav:
+    - text: 'Home'
+      link: '/'
+    - text: 'Guide'
+      link: '/guide/'
+  sidebarDepth: 2
+  sidebar:
+    '/guide/':
+      - ''
+      - 'some-feature'
+  lastUpdated: 'Last Updated'
+  smoothScroll: true
