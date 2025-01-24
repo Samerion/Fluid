@@ -68,7 +68,7 @@ void spawnChildPopup(PopupFrame parent, PopupFrame popup) {
 ///     anchor    = Box to attach the frame to;
 ///         likely a 0×0 rectangle at the mouse position for hover events,
 ///         and the relevant `focusBox` for keyboard events.
-void spawnPopup(OverlayIO overlayIO, PopupFrame popup, Rectangle anchor) {
+void addPopup(OverlayIO overlayIO, PopupFrame popup, Rectangle anchor) {
     popup.anchor = anchor;
     popup.toTakeFocus = true;
     overlayIO.addOverlay(popup, OverlayIO.types.context);
@@ -76,7 +76,7 @@ void spawnPopup(OverlayIO overlayIO, PopupFrame popup, Rectangle anchor) {
 
 /// This is an override of Frame to simplify creating popups: if clicked outside of it, it will disappear from
 /// the node tree.
-class PopupFrame : InputNode!Frame, Overlayable {
+class PopupFrame : InputNode!Frame, FocusIO, Overlayable {
 
     mixin makeHoverable;
     mixin enableInputActions;
@@ -100,18 +100,11 @@ class PopupFrame : InputNode!Frame, Overlayable {
 
     }
 
-    protected {
-
-        /// Action tracking the current focus. Used to close the popup frame once there is no focus
-        /// inside.
-        FindFocusBoxAction findFocusAction;
-
-    }
-
     private {
 
         Rectangle _anchor;
         Vector2 _anchorVec;
+        Focusable _currentFocus;
 
         bool childHasFocus;
 
@@ -123,7 +116,6 @@ class PopupFrame : InputNode!Frame, Overlayable {
 
         super(nodes);
         this.layout = layout!"fill";
-        this.findFocusAction = new FindFocusBoxAction;
 
     }
 
@@ -243,7 +235,21 @@ class PopupFrame : InputNode!Frame, Overlayable {
     }
 
     protected override void resizeImpl(Vector2 space) {
-        super.resizeImpl(space);
+
+        // Load the parent's `focusIO`
+        if (auto focusIO = use(this.focusIO)) {
+
+            {
+                auto io = this.implementIO();
+                super.resizeImpl(space);
+            }
+
+            // The above resizeImpl call sets `focusIO` to `this`, it now needs to be restored
+            this.focusIO = focusIO;
+        }
+
+        // No `focusIO` in use
+        else super.resizeImpl(space);
 
         // Immediately switch focus to self
         if (focusIO && toTakeFocus) {
@@ -254,21 +260,15 @@ class PopupFrame : InputNode!Frame, Overlayable {
 
     protected override void drawImpl(Rectangle outer, Rectangle inner) {
 
-        auto action = this.controlBranchAction(findFocusAction);
-
-        if (focusIO) {
-            findFocusAction.focusIO = focusIO;
-            action.startAndRelease();
-        }
-
         // Clear directional focus data; give the popup a separate context
         tree.focusDirection = FocusDirection(tree.focusDirection.lastFocusBox);
 
         super.drawImpl(outer, inner);
 
-        // Stop if the focusable is not inside
+        // (New I/O only) Stop if focus is lost
+        // The old backend controls lifetime in the tree action
         if (focusIO) {
-            childHasFocus = !findFocusAction.focusBox.empty;
+            childHasFocus = focusIO.isFocused(this) && _currentFocus !is null;
             if (!isFocused) {
                 remove();
             }
@@ -320,6 +320,9 @@ class PopupFrame : InputNode!Frame, Overlayable {
         }
 
         // Clear focus
+        else if (focusIO) {
+            focusIO.clearFocus();
+        }
         else tree.focus = null;
 
     }
@@ -339,6 +342,35 @@ class PopupFrame : InputNode!Frame, Overlayable {
 
     override bool opEquals(const Object other) const {
         return super.opEquals(other);
+    }
+
+    override void emitEvent(InputEvent event) {
+        assert(focusIO, "FocusIO is not loaded");
+        focusIO.emitEvent(event);
+    }
+
+    override void typeText(scope const char[] text) {
+        assert(focusIO, "FocusIO is not loaded");
+        focusIO.typeText(text);
+    }
+
+    override char[] readText(return scope char[] buffer, ref int offset) {
+        assert(focusIO, "FocusIO is not loaded");
+        return focusIO.readText(buffer, offset);
+    }
+
+    override inout(Focusable) currentFocus() inout {
+        if (focusIO && !focusIO.isFocused(this)) {
+            return null;
+        }
+        return _currentFocus;
+    }
+
+    override Focusable currentFocus(Focusable newValue) {
+        if (focusIO) {
+            focusIO.currentFocus = this;
+        }
+        return _currentFocus = newValue;
     }
 
 }
