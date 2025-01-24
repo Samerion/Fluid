@@ -12,6 +12,7 @@ import fluid.utils;
 import fluid.actions;
 import fluid.backend;
 
+import fluid.io.focus;
 import fluid.io.overlay;
 
 @safe:
@@ -69,6 +70,7 @@ void spawnChildPopup(PopupFrame parent, PopupFrame popup) {
 ///         and the relevant `focusBox` for keyboard events.
 void spawnPopup(OverlayIO overlayIO, PopupFrame popup, Rectangle anchor) {
     popup.anchor = anchor;
+    popup.toTakeFocus = true;
     overlayIO.addOverlay(popup, OverlayIO.types.context);
 }
 
@@ -92,6 +94,18 @@ class PopupFrame : InputNode!Frame, Overlayable {
         /// Assigned automatically if `spawnPopup` or `spawnChildPopup` is used, but otherwise not.
         FluidFocusable previousFocus;
 
+        /// If true, the frame will claim focus on the next *resize*. This is used to give
+        /// the popup focus when it is spawned, respecting currently active `FocusIO`.
+        bool toTakeFocus;
+
+    }
+
+    protected {
+
+        /// Action tracking the current focus. Used to close the popup frame once there is no focus
+        /// inside.
+        FindFocusBoxAction findFocusAction;
+
     }
 
     private {
@@ -109,6 +123,7 @@ class PopupFrame : InputNode!Frame, Overlayable {
 
         super(nodes);
         this.layout = layout!"fill";
+        this.findFocusAction = new FindFocusBoxAction;
 
     }
 
@@ -227,12 +242,37 @@ class PopupFrame : InputNode!Frame, Overlayable {
 
     }
 
+    protected override void resizeImpl(Vector2 space) {
+        super.resizeImpl(space);
+
+        // Immediately switch focus to self
+        if (focusIO && toTakeFocus) {
+            focus();
+            toTakeFocus = false;
+        }
+    }
+
     protected override void drawImpl(Rectangle outer, Rectangle inner) {
+
+        auto action = this.controlBranchAction(findFocusAction);
+
+        if (focusIO) {
+            findFocusAction.focusIO = focusIO;
+            action.startAndRelease();
+        }
 
         // Clear directional focus data; give the popup a separate context
         tree.focusDirection = FocusDirection(tree.focusDirection.lastFocusBox);
 
         super.drawImpl(outer, inner);
+
+        // Stop if the focusable is not inside
+        if (focusIO) {
+            childHasFocus = !findFocusAction.focusBox.empty;
+            if (!isFocused) {
+                remove();
+            }
+        }
 
         // Forcibly register previous & next focus if missing
         // The popup will register itself just after it gets drawn without this — and it'll be better if it doesn't
@@ -263,7 +303,7 @@ class PopupFrame : InputNode!Frame, Overlayable {
     override void focus() {
 
         // Set focus to self
-        tree.focus = this;
+        super.focus();
 
         // Prefer if children get it, though
         this.focusRecurseChildren();
@@ -290,7 +330,7 @@ class PopupFrame : InputNode!Frame, Overlayable {
     override bool isFocused() const {
 
         return childHasFocus
-            || tree.focus is this
+            || super.isFocused
             || (childPopup && childPopup.isFocused);
 
     }
@@ -298,7 +338,7 @@ class PopupFrame : InputNode!Frame, Overlayable {
     alias opEquals = typeof(super).opEquals;
 
     override bool opEquals(const Object other) const {
-        return this.opEquals(other);
+        return super.opEquals(other);
     }
 
 }
