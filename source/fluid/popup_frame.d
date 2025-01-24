@@ -27,6 +27,7 @@ void spawnPopup(LayoutTree* tree, PopupFrame popup) {
     popup.tree = tree;
 
     // Set anchor
+    popup.anchor = tree.focusBox;
     popup._anchorVec = Vector2(
         tree.focusBox.x,
         tree.focusBox.y + tree.focusBox.height
@@ -56,6 +57,19 @@ void spawnChildPopup(PopupFrame parent, PopupFrame popup) {
     // Spawn the popup
     spawnPopup(tree, popup);
 
+}
+
+/// Spawn a new popup using `OverlayIO`.
+///
+/// Params:
+///     overlayIO = `OverlayIO` instance to control to popup.
+///     popup     = Popup to draw.
+///     anchor    = Box to attach the frame to;
+///         likely a 0×0 rectangle at the mouse position for hover events,
+///         and the relevant `focusBox` for keyboard events.
+void spawnPopup(OverlayIO overlayIO, PopupFrame popup, Rectangle anchor) {
+    popup.anchor = anchor;
+    overlayIO.addOverlay(popup, OverlayIO.types.context);
 }
 
 /// This is an override of Frame to simplify creating popups: if clicked outside of it, it will disappear from
@@ -91,7 +105,10 @@ class PopupFrame : InputNode!Frame, Overlayable {
 
     this(Node[] nodes...) {
 
+        import fluid.structs : layout;
+
         super(nodes);
+        this.layout = layout!"fill";
 
     }
 
