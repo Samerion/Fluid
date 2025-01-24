@@ -44,6 +44,9 @@ interface OverlayIO : IO {
         /// A tooltip explaining the purpose or usage of a user interface component.
         tooltip,
 
+        /// A drag-and-drop object.
+        draggable,
+
         contextMenu = context,
 
     }
