@@ -14,6 +14,7 @@ import fluid.structs;
 
 import fluid.io.hover;
 import fluid.io.canvas;
+import fluid.io.overlay;
 
 import fluid.future.context;
 
@@ -23,13 +24,14 @@ import fluid.future.context;
 alias dragSlot = simpleConstructor!DragSlot;
 
 /// ditto
-class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable {
+class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable, Overlayable {
 
     mixin makeHoverable;
     mixin FluidHoverable.enableInputActions;
     mixin Hoverable.enableInputActions;
 
     HoverIO hoverIO;
+    OverlayIO overlayIO;
 
     public {
 
@@ -49,9 +51,6 @@ class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable {
 
         /// Last position when drawing statically (not dragging).
         Vector2 _staticPosition;
-
-        /// All I/O systems active on the last draw.
-        Appender!(TreeIOContext.IOInstance[]) _ioSystems;
 
     }
 
@@ -89,6 +88,9 @@ class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable {
         // Queue the drag action
         else {
             dragAction = new DragAction(this, pointer.position);
+            if (overlayIO) {
+                overlayIO.addOverlay(this, OverlayIO.types.draggable);
+            }
             if (hoverIO) {
                 auto hover = cast(Node) hoverIO;
                 hover.startAction(dragAction);
@@ -116,7 +118,21 @@ class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable {
 
     }
 
-    private Rectangle dragRectangle(Vector2 offset) const {
+    override Rectangle anchor(Rectangle) const nothrow {
+
+        // backwards compatibility
+        import std.exception : assumeWontThrow;
+
+        if (dragAction) {
+            return dragRectangle(dragAction.offset.assumeWontThrow);
+        }
+
+        // Not dragged, no valid anchor
+        else return Rectangle.init;
+
+    }
+
+    private Rectangle dragRectangle(Vector2 offset) const nothrow {
 
         const position = _staticPosition + offset;
 
@@ -154,10 +170,7 @@ class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable {
     override void resizeImpl(Vector2 available) {
 
         use(hoverIO);
-
-        // Save active I/O systems
-        _ioSystems.clear();
-        put(_ioSystems, treeContext.io[]);
+        use(overlayIO);
 
         // Resize the slot
         super.resizeImpl(available);
@@ -242,6 +255,12 @@ class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable {
 
     bool hoverImpl() {
         return false;
+    }
+
+    alias opEquals = typeof(super).opEquals;
+
+    override bool opEquals(const Object other) const {
+        return super.opEquals(other);
     }
 
 }
@@ -329,11 +348,6 @@ class DragAction : TreeAction {
         /// Current position of the pointer seen by the action.
         Vector2 pointerPosition;
 
-        /// I/O context for the node while it is mid-air.
-        ///
-        /// This preserves the I/O stack that was active for the drag slot when the gesture started.
-        TreeIOContext io;
-
     }
 
     private {
@@ -351,7 +365,6 @@ class DragAction : TreeAction {
         this.slot = slot;
         this.pointerPosition = pointerPosition;
         this.mouseStart = pointerPosition;
-        this.io = TreeIOContext(slot._ioSystems[].assumeSorted);
     }
 
     Vector2 offset() const {
@@ -380,21 +393,9 @@ class DragAction : TreeAction {
 
     override void beforeResize(Node node, Vector2 space) {
 
-        auto regularIOContext = slot.treeContext.io;
-
-        // Resize inside the start node, or inside the root if there isn't one
-        const condition = startNode
-            ? startNode.opEquals(node)
-            : node is node.tree.root;
-
-        if (condition) {
-
-            // Swap the I/O context for the node
-            node.treeContext.io = this.io;
-            scope (exit) node.treeContext.io = regularIOContext;
-
+        // Reside only if OverlayIO is not in use
+        if (slot.overlayIO is null && node is node.tree.root) {
             slot.resizeInternal(node, space);
-
         }
 
     }
@@ -418,18 +419,10 @@ class DragAction : TreeAction {
 
     }
 
-    override void afterDraw(Node node, Rectangle space) {
-
-        if (startNode && startNode.opEquals(node)) {
-            drawSlot(node);
-        }
-
-    }
-
     /// Tree drawn, draw the node now.
     override void afterTree() {
 
-        if (startNode is null) {
+        if (slot.overlayIO is null ) {
             drawSlot(slot.tree.root);
         }
 
