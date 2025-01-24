@@ -275,7 +275,7 @@ class DragSlotOverlay : Node, Overlayable {
         next.drawDragged(this, inner);
     }
 
-    override Rectangle anchor(Rectangle) const nothrow {
+    override Rectangle getAnchor(Rectangle) const nothrow {
 
         // backwards compatibility
         import std.exception : assumeWontThrow;

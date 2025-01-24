@@ -22,7 +22,7 @@ class SampleOverlay : Node, Overlayable {
         this._anchor = anchor;
     }
 
-    override Rectangle anchor(Rectangle viewport) const nothrow {
+    override Rectangle getAnchor(Rectangle viewport) const nothrow {
         if (isRelative) {
             return Rectangle(
                 (viewport.start + _anchor.start).tupleof,
