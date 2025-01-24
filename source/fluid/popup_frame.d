@@ -12,6 +12,7 @@ import fluid.utils;
 import fluid.actions;
 import fluid.backend;
 
+import fluid.io.overlay;
 
 @safe:
 
@@ -26,7 +27,7 @@ void spawnPopup(LayoutTree* tree, PopupFrame popup) {
     popup.tree = tree;
 
     // Set anchor
-    popup.anchor = Vector2(
+    popup._anchorVec = Vector2(
         tree.focusBox.x,
         tree.focusBox.y + tree.focusBox.height
     );
@@ -59,15 +60,12 @@ void spawnChildPopup(PopupFrame parent, PopupFrame popup) {
 
 /// This is an override of Frame to simplify creating popups: if clicked outside of it, it will disappear from
 /// the node tree.
-class PopupFrame : InputNode!Frame {
+class PopupFrame : InputNode!Frame, Overlayable {
 
     mixin makeHoverable;
     mixin enableInputActions;
 
     public {
-
-        /// Position the frame is "anchored" to. A corner of the frame will be chosen to match this position.
-        Vector2 anchor;
 
         /// A child popup will keep this focus alive while focused.
         /// Typically, child popups are spawned as a result of actions within the popup itself, for example in context
@@ -84,6 +82,9 @@ class PopupFrame : InputNode!Frame {
 
     private {
 
+        Rectangle _anchor;
+        Vector2 _anchorVec;
+
         bool childHasFocus;
 
     }
@@ -92,6 +93,47 @@ class PopupFrame : InputNode!Frame {
 
         super(nodes);
 
+    }
+
+    /// Returns:
+    ///     Position the frame is "anchored" to. A corner of the frame will be chosen to match
+    ///     this position.
+    deprecated("`Vector2 anchor` has been deprecated in favor of `Rectangle getAnchor` and "
+        ~ "will be removed in Fluid 0.8.0.")
+    final ref inout(Vector2) anchor() inout nothrow pure {
+        return _anchorVec;
+    }
+
+    /// Set a new rectangular anchor.
+    ///
+    /// The popup is used to specify the popup's position. The popup may appear below the `anchor`,
+    /// above, next to it, or it may cover the anchor. The exact behavior depends on the `OverlayIO`
+    /// system drawing the frame. Usually the direction is covered by the `layout` node property.
+    ///
+    /// For backwards compatibility, to getting the rectangular anchor is currently done using
+    /// `getAnchor`.
+    ///
+    /// See_Also:
+    ///     `getAnchor` to get the current anchor value.
+    ///     `fluid.io.overlay` for information about how overlays and popups work in Fluid.
+    /// Params:
+    ///     value = Anchor to set.
+    /// Returns:
+    ///     Newly set anchor; same as passed in.
+    Rectangle anchor(Rectangle value) nothrow {
+        return _anchor = value;
+    }
+
+    /// Returns:
+    ///     Currently set rectangular anchor.
+    /// See_Also:
+    ///     `anchor` for more information.
+    final Rectangle getAnchor() const nothrow {
+        return _anchor;
+    }
+
+    override final Rectangle getAnchor(Rectangle) const nothrow {
+        return getAnchor;
     }
 
     /// ditto
@@ -128,9 +170,9 @@ class PopupFrame : InputNode!Frame {
         //  |--o--| <- center (anchor)
         //     |  |
         //     |--x <- right
-        const left = anchor - minSize;
-        const center = anchor;
-        const right = anchor + minSize;
+        const left = _anchorVec - minSize;
+        const center = _anchorVec;
+        const right = _anchorVec + minSize;
 
         // Horizontal position
         const x
@@ -217,9 +259,7 @@ class PopupFrame : InputNode!Frame {
 
         // Restore focus if possible
         if (previousFocus) {
-
             previousFocus.focus();
-
         }
 
         // Clear focus
@@ -236,6 +276,12 @@ class PopupFrame : InputNode!Frame {
             || tree.focus is this
             || (childPopup && childPopup.isFocused);
 
+    }
+
+    alias opEquals = typeof(super).opEquals;
+
+    override bool opEquals(const Object other) const {
+        return this.opEquals(other);
     }
 
 }

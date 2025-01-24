@@ -1999,7 +1999,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         tree.spawnPopup(contextMenu);
 
         // Anchor to caret position
-        contextMenu.anchor = _inner.start + caretPosition;
+        contextMenu.anchor = focusBoxImpl(_inner);
 
     }
 
