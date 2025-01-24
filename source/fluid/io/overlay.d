@@ -145,7 +145,7 @@ interface Overlayable {
     ///         or a fragment of the window.
     /// Returns:
     ///     The anchor rectangle to use for positioning the node.
-    Rectangle anchor(Rectangle space) const nothrow;
+    Rectangle getAnchor(Rectangle space) const nothrow;
 
     /// Memory safe and `const` object comparison.
     /// Returns:
