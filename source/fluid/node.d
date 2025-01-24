@@ -396,18 +396,23 @@ abstract class Node {
 
     /// Perform a tree action the next time this node is drawn.
     ///
-    /// Tree actions can be used to analyze the node tree and modify its behavior while it runs. Actions can listen
-    /// and respond to hooks like `beforeDraw` and `afterDraw`. They can interact with existing nodes or inject nodes
-    /// in any place of the tree.
+    /// Tree actions can be used to analyze the node tree and modify its behavior while it runs.
+    /// Actions can listen and respond to hooks like `beforeDraw` and `afterDraw`. They can interact
+    /// with existing nodes or inject nodes in any place of the tree.
     ///
-    /// Most usually, a tree action will provide its own function for creating and starting tree actions, so this
-    /// method will not be called directly.
+    /// **Limited scope:** The action will only act on this branch of the tree: `beforeDraw`
+    /// and `afterDraw` hooks will only fire for this node and its children.
     ///
-    /// The action will only act on this branch of the tree: `beforeDraw` and `afterDraw` hooks will only
-    /// fire for this node and its children.
+    /// **Starting actions:** Most usually, a tree actions provides its own function for creating
+    /// and starting, so this method does not need to be called directly. This method may still be
+    /// used if more control is needed, or to implement a such a starter function.
     ///
-    /// Tree actions are responsible for their own lifetime. After a tree action starts, it will decide for itself
-    /// when it should end. This can be overridden by explicitly calling the `TreeAction.stop` method.
+    /// If an action has already started, calling `startAction` again will replace it. Making it
+    /// possible to adjust the action's scope, or restart the action automatically if it stops.
+    ///
+    /// **Lifetime control:** Tree actions are responsible for their own lifetime. After a tree
+    /// action starts, it will decide for itself when it should end. This can be overridden by
+    /// explicitly calling the `TreeAction.stop` method.
     ///
     /// Params:
     ///     action = Action to start.
