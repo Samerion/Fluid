@@ -258,21 +258,28 @@ class PopupFrame : InputNode!Frame, FocusIO, Overlayable {
         }
     }
 
+    alias toRemove = typeof(super).toRemove;
+
+    /// `PopupFrame` will automatically be marked for removal if not focused.
+    ///
+    /// For the new I/O, this is done by overriding the `toRemove` mark; the old backend does this
+    /// from the tree action.
+    ///
+    /// Returns:
+    ///     True if the `PopupFrame` was marked for removal, or if it has no focus.
+    override bool toRemove() const nothrow {
+        if (!toTakeFocus && focusIO && !focusIO.isFocused(this)) {
+            return true;
+        }
+        return super.toRemove;
+    }
+
     protected override void drawImpl(Rectangle outer, Rectangle inner) {
 
         // Clear directional focus data; give the popup a separate context
         tree.focusDirection = FocusDirection(tree.focusDirection.lastFocusBox);
 
         super.drawImpl(outer, inner);
-
-        // (New I/O only) Stop if focus is lost
-        // The old backend controls lifetime in the tree action
-        if (focusIO) {
-            childHasFocus = focusIO.isFocused(this) && _currentFocus !is null;
-            if (!isFocused) {
-                remove();
-            }
-        }
 
         // Forcibly register previous & next focus if missing
         // The popup will register itself just after it gets drawn without this — and it'll be better if it doesn't
