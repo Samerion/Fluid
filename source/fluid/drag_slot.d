@@ -24,7 +24,7 @@ import fluid.future.context;
 alias dragSlot = simpleConstructor!DragSlot;
 
 /// ditto
-class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable, Overlayable {
+class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable {
 
     mixin makeHoverable;
     mixin FluidHoverable.enableInputActions;
@@ -39,6 +39,9 @@ class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable, Overlayable {
 
         /// Current drag action, if applicable.
         DragAction dragAction;
+
+        /// If used with `OverlayIO`, this node wraps the drag slot to provide the overlay.
+        DragSlotOverlay overlay;
 
     }
 
@@ -59,6 +62,7 @@ class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable, Overlayable {
 
         super(node);
         this.handle = dragHandle(.layout!"fill");
+        this.overlay = new DragSlotOverlay(this);
 
     }
 
@@ -89,7 +93,7 @@ class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable, Overlayable {
         else {
             dragAction = new DragAction(this, pointer.position);
             if (overlayIO) {
-                overlayIO.addOverlay(this, OverlayIO.types.draggable);
+                overlayIO.addOverlay(overlay, OverlayIO.types.draggable);
             }
             if (hoverIO) {
                 auto hover = cast(Node) hoverIO;
@@ -118,31 +122,12 @@ class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable, Overlayable {
 
     }
 
-    override Rectangle anchor(Rectangle) const nothrow {
-
-        // backwards compatibility
-        import std.exception : assumeWontThrow;
-
-        if (dragAction) {
-            return dragRectangle(dragAction.offset.assumeWontThrow);
-        }
-
-        // Not dragged, no valid anchor
-        else return Rectangle.init;
-
-    }
-
     private Rectangle dragRectangle(Vector2 offset) const nothrow {
-
         const position = _staticPosition + offset;
-
         return Rectangle(position.tupleof, _size.tupleof);
-
     }
 
-    private void drawDragged(Node parent, Vector2 offset) {
-
-        const rect = dragRectangle(offset);
+    private void drawDragged(Node parent, Rectangle rect) {
 
         _drawDragged = true;
         minSize = _size;
@@ -255,6 +240,54 @@ class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable, Overlayable {
 
     bool hoverImpl() {
         return false;
+    }
+
+    alias opEquals = typeof(super).opEquals;
+
+    override bool opEquals(const Object other) const {
+        return super.opEquals(other);
+    }
+
+}
+
+/// Wraps the `DragSlot` while it is being dragged.
+///
+/// This is used to detect when `DragSlot` is drawn as an overlay or not. The `DragSlotOverlay`
+/// is passed to `OverlayIO`, so it is known that if drawn, `DragSlotOverlay` functions
+/// as an overlay.
+///
+/// **`DragSlotOverlay` does not offer a stable interface.** It may only be a temporary solution
+/// for the detection problem, before a more general option is added for `OverlayIO`.
+class DragSlotOverlay : Node, Overlayable {
+
+    DragSlot next;
+
+    this(DragSlot next = null) {
+        this.next = next;
+    }
+
+    override void resizeImpl(Vector2 space) {
+        next.resizeInternal(this, space);
+        minSize = next.minSize;
+    }
+
+    override void drawImpl(Rectangle, Rectangle inner) {
+        next.drawDragged(this, inner);
+    }
+
+    override Rectangle anchor(Rectangle) const nothrow {
+
+        // backwards compatibility
+        import std.exception : assumeWontThrow;
+
+        if (next.dragAction) {
+            const position = next._staticPosition + next.dragAction.offset.assumeWontThrow;
+            return Rectangle(position.tupleof, 0, 0);
+        }
+
+        // Not dragged, no valid anchor
+        else return Rectangle.init;
+
     }
 
     alias opEquals = typeof(super).opEquals;
@@ -430,8 +463,10 @@ class DragAction : TreeAction {
 
     void drawSlot(Node parent) {
 
+        const rect = slot.dragRectangle(offset);
+
         // Draw the slot
-        slot.drawDragged(parent, offset);
+        slot.drawDragged(parent, rect);
 
     }
 
@@ -449,24 +484,21 @@ class DragAction : TreeAction {
 
             // Ready to drop, perform the action
             if (_readyToDrop) {
-
                 target.drop(pointerPosition, relativeDragRectangle, slot);
-
             }
 
             // Remove it from the original container and wait a frame
             else {
-
                 slot.toRemove = true;
+                slot.overlay.toRemove = true;
                 _readyToDrop = true;
                 return;
-
             }
 
         }
 
         // Stop dragging
-        slot.dragAction = null;
+        slot.dragAction = null;  // TODO Don't nullify this
         slot.updateSize();
         stop;
 
