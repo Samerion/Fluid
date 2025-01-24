@@ -56,6 +56,7 @@ import fluid.io.keyboard;
 import fluid.io.clipboard;
 import fluid.io.image_load;
 import fluid.io.preference;
+import fluid.io.overlay;
 
 static if (!__traits(compiles, IsShaderReady))
     private alias IsShaderReady = IsShaderValid;
@@ -729,6 +730,7 @@ class RaylibStack(RaylibViewVersion raylibVersion) : Node {
     import fluid.preference_chain;
     import fluid.time_chain;
     import fluid.file_chain;
+    import fluid.overlay_chain;
 
     public {
 
@@ -753,12 +755,15 @@ class RaylibStack(RaylibViewVersion raylibVersion) : Node {
         /// ditto
         RaylibView!raylibVersion raylibIO;
 
+        /// ditto
+        OverlayChain overlayIO;
+
     }
 
     /// Initialize the stack.
     /// Params:
     ///     next = Node to draw using the stack.
-    this(Node next) {
+    this(Node next = null) {
 
         chain(
             preferenceIO = preferenceChain(),
@@ -767,7 +772,12 @@ class RaylibStack(RaylibViewVersion raylibVersion) : Node {
             focusIO      = focusChain(),
             hoverIO      = hoverChain(),
             fileIO       = fileChain(),
-            raylibIO     = raylibView(next),
+            raylibIO     = raylibView(
+                chain(
+                    overlayIO = overlayChain(),
+                    next,
+                ),
+            ),
         );
 
     }
@@ -779,9 +789,24 @@ class RaylibStack(RaylibViewVersion raylibVersion) : Node {
     }
 
     /// Returns:
-    ///     The last node in the stack, child node of the `RaylibView`.
-    ref inout(Node) next() inout {
-        return raylibIO.next;
+    ///     Top node of the stack, before `next`
+    inout(NodeChain) top() inout {
+        return overlayIO;
+    }
+
+    /// Returns:
+    ///     The node contained by the stack, child node of the `top`.
+    inout(Node) next() inout {
+        return top.next;
+    }
+
+    /// Change the node contained by the stack.
+    /// Params:
+    ///     value = Value to set.
+    /// Returns:
+    ///     Newly set node.
+    Node next(Node value) {
+        return top.next = value;
     }
 
     override void resizeImpl(Vector2 space) {

@@ -56,7 +56,11 @@ unittest {
     auto content = label(.ignoreMouse, "a");
     auto slot = dragSlot(.nullTheme, content);
     auto hover = hoverChain();
-    auto root = chain(hover, slot);
+    auto root = chain(
+        hover,
+        overlayChain(),
+        slot
+    );
 
     root.draw();
     hover.point(4, 4)
@@ -89,7 +93,11 @@ unittest {
     auto content = resizable(Vector2(10, 10));
     auto slot = dragSlot(.nullTheme, content);
     auto hover = hoverChain();
-    auto root = chain(hover, slot);
+    auto root = chain(
+        hover,
+        overlayChain(),
+        slot
+    );
 
     root.draw();
     hover.point(5, 5)
@@ -151,24 +159,30 @@ unittest {
     alias ioTracker = nodeBuilder!IOTracker;
 
     auto slot = dragSlot();
-    auto hover = hoverChain(slot);
+    auto overlay = overlayChain();
+    auto hover = hoverChain();
     auto root = testSpace(
         chain(
             focusChain(),
             hover,
+            overlay,
+            slot,
         )
     );
 
     root.drawAndAssert(
-        hover.drawsChild(slot),
+        overlay.drawsChild(slot),
     );
     assert(slot.hoverIO.opEquals(hover));
     auto action = hover.point(0, 0);
     slot.drag(action.pointer);
     assert(slot.dragAction);
     root.drawAndAssert(
-        hover.doesNotDrawChildren,
+        overlay.drawsChild(slot.overlay),
         slot.isDrawn,
+    );
+    root.drawAndAssertFailure(
+        overlay.drawsChild(slot),
     );
     assert(slot.dragAction);
     assert(slot.hoverIO.opEquals(hover));
@@ -178,8 +192,7 @@ unittest {
     slot = tracker;
     slot.drag(action.pointer);
     root.drawAndAssert(
-        hover.doesNotDrawChildren,
-        slot.isDrawn,
+        overlay.drawsChild(slot.overlay),
         slot.value.isDrawn,
     );
     assert(slot.dragAction);
