@@ -97,7 +97,7 @@ interface FocusIO : IO {
     ///     handling methods.
     /// Returns:
     ///     The currently focused node, or `null` if no node has focus at the moment.
-    inout(Focusable) currentFocus() inout;
+    inout(Focusable) currentFocus() inout nothrow;
 
     /// Change the currently focused node to another.
     ///
@@ -107,7 +107,7 @@ interface FocusIO : IO {
     ///     newValue = Node to assign focus to.
     /// Returns:
     ///     Node that was focused, to allow chaining assignments.
-    Focusable currentFocus(Focusable newValue);
+    Focusable currentFocus(Focusable newValue) nothrow;
 
     /// Returns:
     ///     True, if a node focused (`currentFocus` is not null) and if it accepts input (`currentFocus.blocksInput`
@@ -126,12 +126,14 @@ interface FocusIO : IO {
     ///     Always returns `false` if the parameter is `null`.
     /// Params:
     ///     focusable = Focusable to check.
-    final bool isFocused(const Focusable focusable) const {
+    final bool isFocused(const Focusable focusable) const nothrow {
+
+        import std.exception : assumeWontThrow;
 
         auto focus = currentFocus;
 
         return focus !is null
-            && focus.opEquals(cast(const Object) focusable);
+            && focus.opEquals(cast(const Object) focusable).assumeWontThrow;
 
     }
 

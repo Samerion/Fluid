@@ -79,9 +79,6 @@ abstract class Node {
         /// Breadcrumbs assigned and applicable to this node. Loaded every resize and every draw.
         Breadcrumbs breadcrumbs;
 
-        /// If true, this node will be removed from the tree on the next draw.
-        bool toRemove;
-
         /// If true, mouse focus will be disabled for this node, so mouse signals will "go through" to its parents, as
         /// if the node wasn't there. The node will still detect hover like normal.
         bool ignoreMouse;
@@ -113,6 +110,9 @@ abstract class Node {
 
         /// Check if this node is disabled, or has inherited the status.
         bool _isDisabledInherited;
+
+        /// If true, this node will be removed from the tree on the next draw.
+        bool _toRemove;
 
         /// Theme of this node.
         Theme _theme;
@@ -314,7 +314,24 @@ abstract class Node {
     /// Remove this node from the tree before the next draw.
     final void remove() {
         toRemove = true;
-        updateSize();
+    }
+
+    /// `toRemove` is used to mark nodes for removal. A node marked as such should stop being
+    /// drawn, and should be removed from the tree.
+    /// Params:
+    ///     value = New value to use for the node.
+    /// Returns:
+    ///     True if the node is to be removed from the tree.
+    bool toRemove(bool value) nothrow {
+        if (value != _toRemove) {
+            updateSize();
+        }
+        return _toRemove = value;
+    }
+
+    /// ditto
+    bool toRemove() const nothrow {
+        return _toRemove;
     }
 
     /// Get the minimum size of this node.
@@ -522,17 +539,13 @@ abstract class Node {
 
     /// True if this node is pending a resize.
     bool resizePending() const {
-
         return _resizePending;
-
     }
 
     /// Recalculate the window size before next draw.
     final void updateSize() scope nothrow {
-
         if (tree) tree.root._resizePending = true;
         // Tree might be null — if so, the node will be resized regardless
-
     }
 
     /// Draw this node as a root node.

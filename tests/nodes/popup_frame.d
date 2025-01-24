@@ -66,7 +66,6 @@ unittest {
         })
         .runWhileDrawing(root, 2);
 
-    root.draw();
     root.drawAndAssert(
         overlay.doesNotDrawChildren(),
     );
@@ -80,13 +79,11 @@ unittest {
 unittest {
 
     auto overlay = overlayChain();
-    auto hover = hoverChain();
     auto focus = focusChain();
     auto root = testSpace(
         .nullTheme,
         chain(
             focus,
-            hover,
             overlay
         ),
     );
@@ -124,7 +121,6 @@ unittest {
 
     // Focus cleared, close the popup
     focus.clearFocus();
-    root.draw();
     assert(!focus.isFocused(popup));
     assert(!popup.FocusIO.isFocused(outerButton));
     assert(!popup.isFocused);
@@ -140,13 +136,11 @@ unittest {
 unittest {
 
     auto overlay = overlayChain();
-    auto hover = hoverChain();
     auto focus = focusChain();
     auto root = testSpace(
         .nullTheme,
         chain(
             focus,
-            hover,
             overlay
         ),
     );
@@ -159,7 +153,35 @@ unittest {
 
     root.drawAndAssert(popup.isDrawn);
     focus.runInputAction!(FluidInputAction.cancel);
+    root.drawAndAssertFailure(popup.isDrawn);
+
+}
+
+@("PopupFrames can be exited with an escape key")
+unittest {
+
+    auto overlay = overlayChain();
+    auto focus = focusChain();
+    auto root = testSpace(
+        .nullTheme,
+        chain(
+            inputMapChain(),
+            focus,
+            overlay
+        ),
+    );
+
+    Button btn;
+    auto popup = sizeLock!popupFrame(
+        btn = button("Bar", delegate { }),
+    );
+    overlay.addPopup(popup, Rectangle(0, 0, 0, 0));
+
+    root.drawAndAssert(popup.isDrawn);
+    assert(focus.isFocused(popup));
+    focus.emitEvent(KeyboardIO.press.escape);
     root.draw();
+    assert(!focus.isFocused(popup));
     root.drawAndAssertFailure(popup.isDrawn);
 
 }

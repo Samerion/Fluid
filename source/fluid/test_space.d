@@ -1159,7 +1159,7 @@ auto isDrawn(Node subject) {
             return node.opEquals(subject).assertNotThrown;
         }
 
-        auto at(Rectangle space) {
+        auto at(Rectangle space) @safe {
             isTestingSpaceStart = true;
             targetSpaceStart = space.start;
             isTestingSpaceEnd = true;
@@ -1167,17 +1167,17 @@ auto isDrawn(Node subject) {
             return this;
         }
 
-        auto at(float x, float y, float width, float height) {
+        auto at(float x, float y, float width, float height) @safe {
             return at(Rectangle(x, y, width, height));
         }
 
-        auto at(Vector2 start) {
+        auto at(Vector2 start) @safe {
             isTestingSpaceStart = true;
             targetSpaceStart = start;
             return this;
         }
 
-        auto at(float x, float y) {
+        auto at(float x, float y) @safe {
             return at(Vector2(x, y));
         }
 
