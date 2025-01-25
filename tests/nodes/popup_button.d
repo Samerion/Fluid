@@ -91,8 +91,15 @@ unittest {
     auto button = popupButton("Hello",
         label("Popup opened"),
     );
-    auto overlay = overlayChain(button);
-    auto root = testSpace(.nullTheme, overlay);
+    auto overlay = overlayChain(
+        .layout!(1, "fill"),
+        button
+    );
+    auto root = sizeLock!testSpace(
+        .nullTheme,
+        .sizeLimit(400, 400),
+        overlay
+    );
 
     root.drawAndAssert(button.isDrawn);
     root.drawAndAssertFailure(button.popup.isDrawn);
