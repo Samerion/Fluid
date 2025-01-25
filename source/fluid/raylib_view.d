@@ -172,42 +172,12 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
 
     this(Node next = null) {
 
-        import std.process : environment;
-
-        const scaleString = environment.get("FLUID_SCALE", "1");
-
         this.next = next;
-        this.loadScaleFromString(scaleString);
+        this.scale = getGlobalScale();
 
         // Initialize the mouse
         _mousePointer.device = this;
         _mousePointer.number = 0;
-
-    }
-
-    /// Load scale from a string. The scale will be loaded into the `scale` field.
-    ///
-    /// The string should either be a single float value, like `1.5`, or two, separated by an `x`
-    /// character: `1.5 x 1.2`.
-    ///
-    /// The scale is automatically loaded from the `FLUID_SCALE` environment variable on startup.
-    ///
-    /// Params:
-    ///     String to load scale from.
-    void loadScaleFromString(string scaleString) {
-
-        import std.conv : to;
-        import std.algorithm : findSplit;
-
-        // Load the render scale from environment
-        if (auto pair = scaleString.findSplit("x")) {
-            this.scale.x = pair[0].strip.to!float;
-            this.scale.y = pair[2].strip.to!float;
-        }
-        else {
-            this.scale.x = scaleString.strip.to!float;
-            this.scale.y = this.scale.x;
-        }
 
     }
 
