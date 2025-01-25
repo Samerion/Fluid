@@ -322,7 +322,7 @@ abstract class Node {
     ///     value = New value to use for the node.
     /// Returns:
     ///     True if the node is to be removed from the tree.
-    bool toRemove(bool value) nothrow {
+    bool toRemove(bool value) {
         if (value != _toRemove) {
             updateSize();
         }
@@ -330,7 +330,7 @@ abstract class Node {
     }
 
     /// ditto
-    bool toRemove() const nothrow {
+    bool toRemove() const {
         return _toRemove;
     }
 
