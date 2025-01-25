@@ -457,3 +457,23 @@ unittest {
     assert(root.emitCount("three") == 3);
 
 }
+
+@("TestSpace can compare images by SHA256 hash")
+unittest {
+
+    auto node = myImage();
+    auto root = testSpace(node);
+    node.image = generateColorImage(2, 2, color("#400"));
+
+    root.drawAndAssert(
+        node.isDrawn().at(0, 0, 0, 0),
+        node.drawsImage().at(0, 0, 0, 0).ofColor("#ffffff")
+            .sha256("e9cc20e218b20c9402676298e71ad7469f7d78f9e9ca253733c91a299995be45"),
+    );
+    root.drawAndAssertFailure(
+        node.isDrawn().at(0, 0, 0, 0),
+        node.drawsImage().at(0, 0, 0, 0).ofColor("#ffffff")
+            .sha256("fb3a6a641bbce9b762a240d320a72e963ebbfd6d38cf17e86f37f165574bdbe0"),
+    );
+
+}

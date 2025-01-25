@@ -161,7 +161,7 @@ class CodeInput : TextInput {
 
             this.text.value = super.text.value;
             text.indentWidth = indentWidth * typeface.advance(' ').x / io.hidpiScale.x;
-            text.resize(available);
+            text.resize(canvasIO, available);
             minSize = text.size;
 
         }

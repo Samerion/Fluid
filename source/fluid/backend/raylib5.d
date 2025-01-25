@@ -328,13 +328,17 @@ class Raylib5Backend : FluidBackend, FluidEntrypointBackend {
 
     Vector2 dpi() const @trusted {
 
+        import fluid.io.canvas : getGlobalScale;
+
         static Vector2 value;
 
         if (value == value.init) {
 
+            const globalScale = getGlobalScale();
+
             value = GetWindowScaleDPI;
-            value.x *= 96;
-            value.y *= 96;
+            value.x *= 96 * globalScale.x;
+            value.y *= 96 * globalScale.y;
 
         }
 

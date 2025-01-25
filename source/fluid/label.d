@@ -71,7 +71,7 @@ class Label : Node {
 
         use(canvasIO);
 
-        text.resize(available, !isWrapDisabled);
+        text.resize(canvasIO, available, !isWrapDisabled);
         minSize = text.size;
 
     }

@@ -132,6 +132,12 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
         /// Node drawn by this view.
         Node next;
 
+        /// Scale set for this view. It can be controlled through the `FLUID_SCALE` environment
+        /// variable (expected to be a float, e.g. `1.5` or a pair of floats `1.5x1.25`)
+        ///
+        /// Changing the scale requires an `updateSize` call.
+        auto scale = Vector2(1, 1);
+
     }
 
     private struct RaylibImage {
@@ -167,6 +173,7 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
     this(Node next = null) {
 
         this.next = next;
+        this.scale = getGlobalScale();
 
         // Initialize the mouse
         _mousePointer.device = this;
@@ -184,7 +191,7 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
 
         // Fetch data from Raylib
         _dpiScale = GetWindowScaleDPI;
-        _dpi = Vector2(_dpiScale.x * 96, _dpiScale.y * 96);
+        _dpi = Vector2(_dpiScale.x * scale.x * 96, _dpiScale.y * scale.y * 96);
         _windowSize = toFluid(GetScreenWidth, GetScreenHeight);
         resetCropArea();
 

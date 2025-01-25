@@ -473,3 +473,22 @@ struct DrawableImage {
     }
 
 }
+
+/// Get the global program scale from the `FLUID_SCALE` environment variable.
+///
+/// The variable is used by Fluid's built-in systems like `RaylibView` and is particularly useful
+/// for testing Fluid's HiDPI display.
+///
+/// The value is fetched anew every time this is called, and it is not cached.
+///
+/// Returns:
+///     Globally applied scale as a vector for each axis.
+Vector2 getGlobalScale() {
+
+    import std.process : environment;
+
+    return environment
+        .get("FLUID_SCALE", "1")
+        .toSizeVector2();
+
+}
