@@ -26,6 +26,7 @@ import fluid.popup_frame;
 import fluid.io.focus;
 import fluid.io.hover;
 import fluid.io.canvas;
+import fluid.io.overlay;
 import fluid.io.clipboard;
 
 @safe:
@@ -63,6 +64,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     CanvasIO canvasIO;
     ClipboardIO clipboardIO;
+    OverlayIO overlayIO;
 
     public {
 
@@ -658,6 +660,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         use(canvasIO);
         use(focusIO);
         use(hoverIO);
+        use(overlayIO);
         use(clipboardIO);
 
         super.resizeImpl(area);
@@ -1989,17 +1992,28 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     /// Open the input's context menu.
     @(FluidInputAction.contextMenu)
+    void openContextMenu(Pointer pointer) {
+
+        // Move the caret to the pointer's position
+        if (!isSelecting)
+            caretToPointer(pointer);
+
+    }
+
+    /// Open the input's context menu.
+    @(FluidInputAction.contextMenu)
     void openContextMenu() {
 
-        // Move the caret
-        if (!isSelecting)
-            caretToMouse();
+        const anchor = focusBoxImpl(_inner);
 
-        // Spawn the popup
-        tree.spawnPopup(contextMenu);
-
-        // Anchor to caret position
-        contextMenu.anchor = focusBoxImpl(_inner);
+        // Spawn the popup at caret position
+        if (overlayIO) {
+            overlayIO.addPopup(contextMenu, anchor);
+        }
+        else {
+            contextMenu.anchor = anchor;
+            tree.spawnPopup(contextMenu);
+        }
 
     }
 

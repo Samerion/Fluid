@@ -499,6 +499,7 @@ struct InputMapping {
                         [KeyboardIO.codes.leftAlt],
                         [
                             bind!entryUp(KeyboardIO.codes.up),
+                            bind!contextMenu(KeyboardIO.codes.f10),
                         ]
                     ),
 
