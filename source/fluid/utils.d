@@ -257,6 +257,44 @@ bool overlap(Rectangle a, Rectangle b) {
 
 }
 
+/// Load a two dimensional vector from a string.
+///
+/// The string should either be a single float value, like `1.5`, or two, separated by an `x`
+/// character: `1.5 x 1.2`. If there is only one value, it will be used for both axes.
+///
+/// Params:
+///     source = String to parse.
+/// Params:
+///     String to load from.
+Vector2 toSizeVector2(string source) {
+
+    import std.conv : to;
+    import std.string : strip;
+    import std.algorithm : findSplit;
+
+    // Load the render scale from environment
+    if (auto pair = source.findSplit("x")) {
+        return Vector2(
+            pair[0].strip.to!float,
+            pair[2].strip.to!float
+        );
+    }
+    else {
+        const value = source.strip.to!float;
+        return Vector2(value, value);
+    }
+
+}
+
+unittest {
+
+    assert("1.5".toSizeVector2 == Vector2(1.5, 1.5));
+    assert("1.5x1.2".toSizeVector2 == Vector2(1.5, 1.2));
+    assert("2.0 x 1.0".toSizeVector2 == Vector2(2.0, 1.0));
+    assert(" 2.0x1.0 ".toSizeVector2 == Vector2(2.0, 1.0));
+
+}
+
 // Extremely useful Rectangle utilities
 
 /// Get the top-left corner of a rectangle.
