@@ -319,7 +319,7 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
         else super.resizeImpl(space);
 
         // Immediately switch focus to self
-        if (focusIO && toTakeFocus) {
+        if (usingFocusIO && toTakeFocus) {
             previousFocusable = focusIO.currentFocus;
             focus();
             toTakeFocus = false;
@@ -336,7 +336,7 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
     /// Returns:
     ///     True if the `PopupFrame` was marked for removal, or if it has no focus.
     override bool toRemove() const {
-        if (!toTakeFocus && focusIO && !this.isFocused) {
+        if (!toTakeFocus && usingFocusIO && !this.isFocused) {
             return true;
         }
         return super.toRemove;
@@ -407,7 +407,7 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
         }
 
         // Clear focus
-        else if (focusIO) {
+        else if (usingFocusIO) {
             focusIO.clearFocus();
         }
         else tree.focus = null;
@@ -447,17 +447,21 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
     }
 
     override inout(Focusable) currentFocus() inout {
-        if (focusIO && !focusIO.isFocused(this)) {
+        if (usingFocusIO && !focusIO.isFocused(this)) {
             return null;
         }
         return _currentFocus;
     }
 
     override Focusable currentFocus(Focusable newValue) {
-        if (focusIO) {
+        if (usingFocusIO) {
             focusIO.currentFocus = this;
         }
         return _currentFocus = newValue;
+    }
+
+    private bool usingFocusIO() const nothrow {
+        return focusIO && focusIO !is this;
     }
 
 }
