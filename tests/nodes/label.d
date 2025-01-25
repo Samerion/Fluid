@@ -51,7 +51,11 @@ unittest {
             .sha256("e5b75b97f0894aeba0c17c078a7509ab0e9e652b89797817fac0063cc82055f4"),
     );
 
+    // TODO affected by https://git.samerion.com/Samerion/Fluid/issues/330
     root.dpi = Vector2(120, 120);
-    root.drawToSVG("/tmp/fluid.svg");
+    root.drawAndAssert(
+        content.drawsHintedImage().at(0, 0, 107.2, 26.4).ofColor("#ffffff")
+            .sha256("700fa10edb2d15dd74b4232c0ff479ab8a0a099240f7597481365ec242c2229a"),
+    );
 
 }

@@ -162,8 +162,8 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     Vector2 size() const {
 
         return Vector2(
-            _sizeDots.x * 96 / _dpi.x,
-            _sizeDots.y * 96 / _dpi.y,
+            _sizeDots.x * 96f / _dpi.x,
+            _sizeDots.y * 96f / _dpi.y,
         );
 
     }

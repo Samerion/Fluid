@@ -325,8 +325,8 @@ struct Image {
     ///     in the viewport.
     Vector2 viewportSize() const pure nothrow {
         return Vector2(
-            width * 96 / dpiX,
-            height * 96 / dpiY
+            width * 96f / dpiX,
+            height * 96f / dpiY
         );
     }
 
