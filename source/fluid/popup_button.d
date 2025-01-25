@@ -5,8 +5,11 @@ import fluid.node;
 import fluid.utils;
 import fluid.label;
 import fluid.style;
+import fluid.types;
 import fluid.button;
 import fluid.popup_frame;
+
+import fluid.io.overlay;
 
 @safe:
 
@@ -21,6 +24,8 @@ class PopupButton : ButtonImpl!Label {
 
     mixin enableInputActions;
 
+    OverlayIO overlayIO;
+
     public {
 
         /// Popup enabled by this button.
@@ -28,6 +33,12 @@ class PopupButton : ButtonImpl!Label {
 
         /// Popup this button belongs to, if any. Set automatically if the popup is spawned with `spawnPopup`.
         PopupFrame parentPopup;
+
+    }
+
+    private {
+
+        Rectangle _inner;
 
     }
 
@@ -42,8 +53,24 @@ class PopupButton : ButtonImpl!Label {
 
         super(text, delegate {
 
+            // New I/O
+            if (overlayIO) {
+
+                const anchor = focusBoxImpl(_inner);
+
+                // Parent popup active
+                if (parentPopup && parentPopup.isFocused)
+                    overlayIO.addChildPopup(parentPopup, popup, anchor);
+
+                // No parent
+                else {
+                    overlayIO.addPopup(popup, anchor);
+                }
+
+            }
+
             // Parent popup active
-            if (parentPopup && parentPopup.isFocused)
+            else if (parentPopup && parentPopup.isFocused)
                 parentPopup.spawnChildPopup(popup);
 
             // No parent
@@ -54,6 +81,16 @@ class PopupButton : ButtonImpl!Label {
 
         });
 
+    }
+
+    override void resizeImpl(Vector2 space) {
+        use(overlayIO);
+        super.resizeImpl(space);
+    }
+
+    override void drawImpl(Rectangle outer, Rectangle inner) {
+        _inner = inner;
+        super.drawImpl(outer, inner);
     }
 
     override string toString() const {
