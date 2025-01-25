@@ -115,7 +115,7 @@ class ProgressBar : Node {
         use(canvasIO);
 
         text = buildText();
-        text.resize();
+        text.resize(canvasIO);
         resizeChild(fill, space);
         minSize = text.size;
 
