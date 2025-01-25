@@ -28,7 +28,8 @@ unittest {
         ),
     );
     auto focus = focusChain(nullTheme, main);
-    auto root = focus;
+    auto overlay = overlayChain(focus);
+    auto root = overlay;
 
     auto sharePopupButton = cast(PopupButton) buttons[2];
     auto sharePopup = sharePopupButton.popup;
@@ -81,5 +82,29 @@ unittest {
 
         // Need another frame for the tree action
         .then(() => assert(sharePopup.isHidden));
+
+}
+
+@("PopupButton uses OverlayIO to create the popup")
+unittest {
+
+    auto button = popupButton("Hello",
+        label("Popup opened"),
+    );
+    auto overlay = overlayChain(button);
+    auto root = testSpace(.nullTheme, overlay);
+
+    root.drawAndAssert(button.isDrawn);
+    root.drawAndAssertFailure(button.popup.isDrawn);
+
+    button.press();
+
+    root.drawAndAssert(
+        button.isDrawn,
+        button.popup.isDrawn.at(button.getMinSize),
+    );
+    root.drawAndAssert(
+        overlay.drawsChild(button.popup),
+    );
 
 }
