@@ -73,7 +73,7 @@ class OverlayChain : NodeChain, OverlayIO {
             const nodeAlign = child.node.layout.nodeAlign;
 
             // Calculate the node's position based on the anchor
-            const anchor = child.overlayable.anchor(inner);
+            const anchor = child.overlayable.getAnchor(inner);
             const layout = Vector2(
                 alignLayout!'x'(nodeAlign[0], inner, anchor, size),
                 alignLayout!'y'(nodeAlign[1], inner, anchor, size),

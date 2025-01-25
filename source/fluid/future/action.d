@@ -105,6 +105,9 @@ final class OrderedFocusAction : FocusSearchAction {
 
     override void beforeDraw(Node node, Rectangle) {
 
+        // The start node is not a valid subject
+        if (startNode && node.opEquals(startNode)) return;
+
         // Found the target
         if (node.opEquals(target)) {
 
