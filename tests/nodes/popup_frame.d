@@ -1,6 +1,7 @@
 module nodes.popup_frame;
 
 import fluid;
+import fluid.future.pipe;
 
 @safe:
 
@@ -266,5 +267,46 @@ unittest {
     root.draw();
     assert(tracker.pressCalls == 1);
     assert(tracker.focusImplCalls == 2);
+
+}
+
+@("PopupFrame implements tabbing and tab wrapping")
+unittest {
+
+    Button button1, button2, button3;
+
+    auto overlay = overlayChain();
+    auto focus = focusChain(overlay);
+    auto root = testSpace(.nullTheme, focus);
+    auto popup = sizeLock!popupFrame(
+        button1 = button("One", delegate { }),
+        button2 = button("Two", delegate { }),
+        button3 = button("Three", delegate { }),
+    );
+    overlay.addPopup(popup, Rectangle(0, 0, 0, 0));
+
+    root.draw();
+
+    // Forwards
+    focus.focusNext()
+        .thenAssertEquals(button2)
+        .runWhileDrawing(root, 1);
+    focus.focusNext()
+        .thenAssertEquals(button3)
+        .runWhileDrawing(root, 1);
+    focus.focusNext()
+        .thenAssertEquals(button1)
+        .runWhileDrawing(root, 1);
+
+    // Backwards
+    focus.focusPrevious()
+        .thenAssertEquals(button3)
+        .runWhileDrawing(root, 1);
+    focus.focusPrevious()
+        .thenAssertEquals(button2)
+        .runWhileDrawing(root, 1);
+    focus.focusPrevious()
+        .thenAssertEquals(button1)
+        .runWhileDrawing(root, 1);
 
 }

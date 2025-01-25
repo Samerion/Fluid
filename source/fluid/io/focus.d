@@ -24,7 +24,7 @@ public import fluid.io.action : InputEvent, InputEventCode;
 /// to be focused at the same time, as long as they belong in different branches of the node tree. That means
 /// two different nodes can be focused by two different `FocusIO` systems, but a single `FocusIO` system can only
 /// focus a single node.
-interface FocusIO : IO {
+interface FocusIO : IO, WithFocus {
 
     /// Read an input event from an input device. Input devices will call this function every frame
     /// if an input event occurs.
@@ -91,56 +91,6 @@ interface FocusIO : IO {
         "Returned value must be a slice of the buffer, or be null")
     out(text; text is null || text.length > 0,
         "Returned value must be null if it is empty");
-
-    /// Note:
-    ///     Currently focused node may have `blocksInput` set to true; take care to check it before calling input
-    ///     handling methods.
-    /// Returns:
-    ///     The currently focused node, or `null` if no node has focus at the moment.
-    inout(Focusable) currentFocus() inout nothrow;
-
-    /// Change the currently focused node to another.
-    ///
-    /// This function may frequently be passed `null` with the intent of clearing the focused node.
-    ///
-    /// Params:
-    ///     newValue = Node to assign focus to.
-    /// Returns:
-    ///     Node that was focused, to allow chaining assignments.
-    Focusable currentFocus(Focusable newValue) nothrow;
-
-    /// Returns:
-    ///     True, if a node focused (`currentFocus` is not null) and if it accepts input (`currentFocus.blocksInput`
-    ///     is false).
-    final bool isFocusActionable() const {
-
-        auto focus = currentFocus;
-
-        return focus !is null
-            && !focus.blocksInput;
-
-    }
-
-    /// Returns:
-    ///     True if the focusable is currently focused.
-    ///     Always returns `false` if the parameter is `null`.
-    /// Params:
-    ///     focusable = Focusable to check.
-    final bool isFocused(const Focusable focusable) const nothrow {
-
-        import std.exception : assumeWontThrow;
-
-        auto focus = currentFocus;
-
-        return focus !is null
-            && focus.opEquals(cast(const Object) focusable).assumeWontThrow;
-
-    }
-
-    /// Clear current focus (set it to null).
-    final void clearFocus() {
-        currentFocus = null;
-    }
 
 }
 
@@ -299,6 +249,275 @@ unittest {
 
         }
 
+    }
+
+}
+
+/// Base interface for `FocusIO`, providing access and control over the current focusable.
+/// Used to create additional interfaces like `WithPositionalFocus` without defining a new I/O
+/// set.
+interface WithFocus {
+
+    /// Note:
+    ///     Currently focused node may have `blocksInput` set to true; take care to check it before calling input
+    ///     handling methods.
+    /// Returns:
+    ///     The currently focused node, or `null` if no node has focus at the moment.
+    inout(Focusable) currentFocus() inout nothrow;
+
+    /// Change the currently focused node to another.
+    ///
+    /// This function may frequently be passed `null` with the intent of clearing the focused node.
+    ///
+    /// Params:
+    ///     newValue = Node to assign focus to.
+    /// Returns:
+    ///     Node that was focused, to allow chaining assignments.
+    Focusable currentFocus(Focusable newValue) nothrow;
+
+    /// Returns:
+    ///     True, if a node focused (`currentFocus` is not null) and if it accepts input (`currentFocus.blocksInput`
+    ///     is false).
+    final bool isFocusActionable() const {
+
+        auto focus = currentFocus;
+
+        return focus !is null
+            && !focus.blocksInput;
+
+    }
+
+    /// Returns:
+    ///     True if the focusable is currently focused.
+    ///     Always returns `false` if the parameter is `null`.
+    /// Params:
+    ///     focusable = Focusable to check.
+    final bool isFocused(const Focusable focusable) const nothrow {
+
+        import std.exception : assumeWontThrow;
+
+        auto focus = currentFocus;
+
+        return focus !is null
+            && focus.opEquals(cast(const Object) focusable).assumeWontThrow;
+
+    }
+
+    /// Clear current focus (set it to null).
+    final void clearFocus() {
+        currentFocus = null;
+    }
+
+}
+
+/// A ready-made implementation of tabbing for `FocusIO` using `orderedFocusAction`,
+/// provided as an interface to subclass from.
+///
+/// Tabbing can be performed using the `focusNext` and `focusPrevious` methods. They are bound to
+/// the corresponding `FluidInputAction` actions and should be automatically picked up by
+/// `enableInputActions`. A complete implementation will thus provide the ability to navigate
+/// between nodes using the "tab" key.
+///
+/// To make `WithOrderedFocus` work, it is currently necessary to override two methods:
+///
+/// ---
+/// override protected inout(OrederedFocusAction) orderedFocusAction() inout;
+/// override protected void focusPreviousOrNext(FluidInputAction actionType) { }
+/// ---
+///
+/// The latter, `focusPreviousOrNext` must be overridden so that it does nothing if `FocusIO`
+/// is in use, as it only applies to the old backend. It will be removed in Fluid 0.8.0.
+interface WithOrderedFocus : WithFocus {
+
+    import fluid.node;
+    import fluid.style : Style;
+    import fluid.actions;
+    import fluid.future.action;
+
+    /// Returns:
+    ///     An instance of OrderedFocusAction.
+    protected inout(OrderedFocusAction) orderedFocusAction() inout;
+
+    /// `focusNext` focuses the next, and `focusPrevious` focuses the previous node, relative
+    /// to the one that is currently focused.
+    ///
+    /// Params:
+    ///     isReverse = Reverse direction; if true, focuses the previous node.
+    /// Returns:
+    ///     Tree action that switches focus to the previous, or next node.
+    ///     If no node is currently focused, returns a tree action to focus the first
+    ///     or the last node, equivalent to `focusFirst` or `focusLast`.
+    ///
+    ///     You can use `.then` on the returned action to run a callback the moment
+    ///     the focus switches.
+    final FocusSearchAction focusNext(bool isReverse = false) {
+
+        auto focus = cast(Node) currentFocus;
+        auto self = cast(Node) this;
+
+        if (focus is null) {
+            if (isReverse)
+                return focusLast();
+            else
+                return focusFirst();
+        }
+
+        // Switch focus
+        orderedFocusAction.reset(focus, isReverse);
+        self.startAction(orderedFocusAction);
+
+        return orderedFocusAction;
+
+    }
+
+    /// ditto
+    final FocusSearchAction focusPrevious() {
+        return focusNext(true);
+    }
+
+    /// Focus the first (`focusFirst`), or the last node (`focusLast`) that exists inside the
+    /// focus space.
+    /// Returns:
+    ///     Tree action that switches focus to the first, or the last node.
+    ///     You can use `.then` on the returned action to run a callback the moment the focus
+    ///     switches.
+    final FocusSearchAction focusFirst() {
+        // TODO cache this, or integrate into OrderedFocusAction?
+        return focusRecurseChildren(cast(Node) this);
+    }
+
+    /// ditto
+    final FocusSearchAction focusLast() {
+        auto action = focusRecurseChildren(cast(Node) this);
+        action.isReverse = true;
+        return action;
+    }
+
+    @(FluidInputAction.focusNext)
+    final bool focusNext(FluidInputAction) {
+        focusNext();
+        return true;
+    }
+
+    @(FluidInputAction.focusPrevious)
+    final bool focusPrevious(FluidInputAction) {
+        focusPrevious();
+        return true;
+    }
+
+}
+
+/// A ready implementation of positional focus for `FocusIO`, enabling switching between nodes
+/// using (usually) arrow keys. Used by subclassing in the focus I/O system.
+///
+/// This interface expects to be provided `positionalFocusAction`, which will be used to locate
+/// the target. `lastFocusBox` should be updated with the current focus box every frame; this can
+/// be achieved using the `FindFocusBox` branch action.
+///
+/// This interface exposes a few input actions, which if enabled using `mixin enableInputActions`,
+/// will enable navigation using standard Fluid input actions.
+///
+/// Implementing positional focus using this class requires three overrides in total:
+///
+/// ---
+/// override protected Optional!Rectangle lastFocusBox() const;
+/// override protected inout(PositionalFocusAction) positionalFocusAction() inout;
+/// override protected void focusInDirection(FluidInputAction actionType) { }
+/// ---
+///
+/// The last overload is necessary to avoid conflicts with the old backend system. It will stop
+/// being available in Fluid 0.8.0.
+interface WithPositionalFocus : WithFocus {
+
+    import fluid.node;
+    import fluid.style : Style;
+    import fluid.actions;
+    import fluid.future.action;
+
+    /// To provide a reference for positional focus, the bounding box of the focused node.
+    /// Returns:
+    ///     Last known focus box of the focused node. May be out of date if the focused node
+    ///     has changed since last fetched.
+    protected Optional!Rectangle lastFocusBox() const;
+
+    /// Returns:
+    ///     An instance of PositionalFocusAction.
+    protected inout(PositionalFocusAction) positionalFocusAction() inout;
+
+    /// Positional focus: Switch focus from the currently focused node to another based on screen
+    /// position.
+    ///
+    /// This launches a tree action that will find a candidate node and switch focus to it during
+    /// the next frame. Nodes that are the closest semantically (are in the same container node,
+    /// or overall close in the tree) will be chosen first; screen distance will be used when two
+    /// nodes have the same weight.
+    ///
+    /// Returns:
+    ///     The launched tree action. You can use `.then` to attach a callback that will run as
+    ///     soon as the node is found.
+    final FocusSearchAction focusAbove() {
+        return focusDirection(Style.Side.top);
+    }
+
+    /// ditto
+    final FocusSearchAction focusBelow() {
+        return focusDirection(Style.Side.bottom);
+    }
+
+    /// ditto
+    final FocusSearchAction focusToLeft() {
+        return focusDirection(Style.Side.left);
+    }
+
+    /// ditto
+    final FocusSearchAction focusToRight() {
+        return focusDirection(Style.Side.right);
+    }
+
+    /// ditto
+    final FocusSearchAction focusDirection(Style.Side side) {
+        return lastFocusBox.match!(
+            (Rectangle focusBox) {
+
+                auto reference = cast(Node) currentFocus;
+
+                // No focus, no action to launch
+                if (reference is null) return null;
+
+                auto self = cast(Node) this;
+
+                positionalFocusAction.reset(reference, focusBox, side);
+                self.startAction(positionalFocusAction);
+
+                return positionalFocusAction;
+
+            },
+            () => PositionalFocusAction.init,
+        );
+    }
+
+    @(FluidInputAction.focusUp)
+    final bool focusUp() {
+        focusAbove();
+        return true;
+    }
+
+    @(FluidInputAction.focusDown)
+    final bool focusDown() {
+        focusBelow();
+        return true;
+    }
+
+    @(FluidInputAction.focusLeft)
+    final bool focusLeft() {
+        focusToLeft();
+        return true;
+    }
+
+    @(FluidInputAction.focusRight)
+    final bool focusRight() {
+        focusToRight();
+        return true;
     }
 
 }
