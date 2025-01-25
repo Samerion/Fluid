@@ -72,8 +72,6 @@ auto cropViewport(bool enabled = true) {
 /// This node allows automatically testing if other nodes draw their contents as expected.
 class TestSpace : Space, CanvasIO, DebugSignalIO {
 
-    // TODO DPI tests
-
     public {
 
         /// If true, test space will set the default crop area to its own viewport size.

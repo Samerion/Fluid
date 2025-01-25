@@ -314,12 +314,15 @@ struct Image {
         return Vector2(width, height);
     }
 
-    /// Get texture size as a vector.
+    /// Returns:
+    ///     Size of the image in dots. This is the factual size of the image.
     Vector2 canvasSize() const pure nothrow {
         return Vector2(width, height);
     }
 
-    /// Get the size the texture will occupy within the viewport.
+    /// Returns:
+    ///     Size of the image in pixels (not dots). This is the space the image will occupy
+    ///     in the viewport.
     Vector2 viewportSize() const pure nothrow {
         return Vector2(
             width * 96 / dpiX,
