@@ -288,25 +288,84 @@ unittest {
     root.draw();
 
     // Forwards
-    focus.focusNext()
-        .thenAssertEquals(button2)
-        .runWhileDrawing(root, 1);
-    focus.focusNext()
-        .thenAssertEquals(button3)
-        .runWhileDrawing(root, 1);
-    focus.focusNext()
-        .thenAssertEquals(button1)
-        .runWhileDrawing(root, 1);
+    focus.runInputAction!(FluidInputAction.focusNext);
+    root.draw();
+    assert(popup.FocusIO.isFocused(button2));
+
+    focus.runInputAction!(FluidInputAction.focusNext);
+    root.draw();
+    assert(popup.FocusIO.isFocused(button3));
+
+    focus.runInputAction!(FluidInputAction.focusNext);
+    root.draw();
+    assert(popup.FocusIO.isFocused(button1));
 
     // Backwards
-    focus.focusPrevious()
-        .thenAssertEquals(button3)
-        .runWhileDrawing(root, 1);
-    focus.focusPrevious()
-        .thenAssertEquals(button2)
-        .runWhileDrawing(root, 1);
-    focus.focusPrevious()
-        .thenAssertEquals(button1)
-        .runWhileDrawing(root, 1);
+    focus.runInputAction!(FluidInputAction.focusPrevious);
+    root.draw();
+    assert(popup.FocusIO.isFocused(button3));
+
+    focus.runInputAction!(FluidInputAction.focusPrevious);
+    root.draw();
+    assert(popup.FocusIO.isFocused(button2));
+
+    focus.runInputAction!(FluidInputAction.focusPrevious);
+    root.draw();
+    assert(popup.FocusIO.isFocused(button1));
+
+
+}
+
+@("PopupFrame implements positional focus")
+unittest {
+
+    Button button1, button2, button3;
+
+    auto overlay = overlayChain();
+    auto focus = focusChain(overlay);
+    auto root = testSpace(.nullTheme, focus);
+    auto popup = sizeLock!popupFrame(
+        hspace(
+            button1 = button("One", delegate { }),
+            button2 = button("Two", delegate { }),
+        ),
+        button3 = button("Three", delegate { }),
+    );
+    overlay.addPopup(popup, Rectangle(0, 0, 0, 0));
+
+    root.draw();
+
+    // Horizontal
+    focus.runInputAction!(FluidInputAction.focusRight);
+    root.draw();
+    assert(popup.FocusIO.isFocused(button2));
+    root.draw();
+
+    focus.runInputAction!(FluidInputAction.focusLeft);
+    root.draw();
+    assert(popup.FocusIO.isFocused(button1));
+    root.draw();
+
+    focus.runInputAction!(FluidInputAction.focusLeft);
+    root.draw();
+    assert(popup.FocusIO.isFocused(button1));
+    root.draw();
+
+    // Vertical
+    focus.runInputAction!(FluidInputAction.focusDown);
+    root.draw();
+    assert(popup.FocusIO.isFocused(button3));
+    root.draw();
+
+    focus.runInputAction!(FluidInputAction.focusDown);
+    root.draw();
+    assert(popup.FocusIO.isFocused(button3));
+    root.draw();
+
+    focus.runInputAction!(FluidInputAction.focusUp);
+    root.draw();
+    assert(popup.FocusIO.isFocused(button1));
+    root.draw();
+
 
 }

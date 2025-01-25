@@ -1,5 +1,7 @@
 module fluid.popup_frame;
 
+import optional;
+
 import std.traits;
 import std.algorithm;
 
@@ -16,6 +18,7 @@ import fluid.io.focus;
 import fluid.io.action;
 import fluid.io.overlay;
 
+import fluid.future.action;
 import fluid.future.context;
 
 @safe:
@@ -79,7 +82,7 @@ void addPopup(OverlayIO overlayIO, PopupFrame popup, Rectangle anchor) {
 
 /// This is an override of Frame to simplify creating popups: if clicked outside of it, it will disappear from
 /// the node tree.
-class PopupFrame : InputNode!Frame, FocusIO, Overlayable {
+class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, WithPositionalFocus {
 
     mixin makeHoverable;
     mixin enableInputActions;
@@ -108,6 +111,11 @@ class PopupFrame : InputNode!Frame, FocusIO, Overlayable {
         Rectangle _anchor;
         Vector2 _anchorVec;
         Focusable _currentFocus;
+        Optional!Rectangle _lastFocusBox;
+
+        OrderedFocusAction _orderedFocusAction;
+        PositionalFocusAction _positionalFocusAction;
+        FindFocusBoxAction _findFocusBoxAction;
 
         bool childHasFocus;
 
@@ -119,7 +127,25 @@ class PopupFrame : InputNode!Frame, FocusIO, Overlayable {
 
         super(nodes);
         this.layout = layout!"fill";
+        this._orderedFocusAction    = new OrderedFocusAction;
+        this._positionalFocusAction = new PositionalFocusAction;
+        this._findFocusBoxAction    = new FindFocusBoxAction(this);
 
+        _findFocusBoxAction
+            .then((Optional!Rectangle result) => _lastFocusBox = result);
+
+    }
+
+    Optional!Rectangle lastFocusBox() const {
+        return _lastFocusBox;
+    }
+
+    inout(OrderedFocusAction) orderedFocusAction() inout {
+        return _orderedFocusAction;
+    }
+
+    inout(PositionalFocusAction) positionalFocusAction() inout {
+        return _positionalFocusAction;
     }
 
     /// Returns:
@@ -282,6 +308,7 @@ class PopupFrame : InputNode!Frame, FocusIO, Overlayable {
         // Clear directional focus data; give the popup a separate context
         tree.focusDirection = FocusDirection(tree.focusDirection.lastFocusBox);
 
+        auto actions = this.startBranchAction(_findFocusBoxAction);
         super.drawImpl(outer, inner);
 
         // Forcibly register previous & next focus if missing
