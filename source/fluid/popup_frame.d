@@ -66,7 +66,10 @@ void spawnChildPopup(PopupFrame parent, PopupFrame popup) {
 
 }
 
-/// Spawn a new popup using `OverlayIO`.
+/// Spawn a popup using `OverlayIO`.
+///
+/// This function can be used to add new popups, or to open them again after they have been
+/// closed.
 ///
 /// Params:
 ///     overlayIO = `OverlayIO` instance to control to popup.
@@ -78,6 +81,26 @@ void addPopup(OverlayIO overlayIO, PopupFrame popup, Rectangle anchor) {
     popup.anchor = anchor;
     popup.toTakeFocus = true;
     overlayIO.addOverlay(popup, OverlayIO.types.context);
+}
+
+/// Spawn a new child popup using `OverlayIO`.
+///
+/// Regular popups are mutually exclusive; only one can be open at a time. A child popup can
+/// coexist with its parent. As long as the parent is open, so is the child. The child can be
+/// closed without closing the parent popup, but closing the parent popup will close the child.
+///
+/// Params:
+///     overlayIO = `OverlayIO` instance to control to popup.
+///     parent    = Parent popup.
+///     popup     = Popup to draw.
+///     anchor    = Box to attach the frame to;
+///         likely a 0×0 rectangle at the mouse position for hover events,
+///         and the relevant `focusBox` for keyboard events.
+void addChildPopup(OverlayIO overlayIO, PopupFrame parent, PopupFrame popup, Rectangle anchor) {
+    popup.anchor = anchor;
+    popup.toTakeFocus = true;
+    parent.childPopup = popup;
+    overlayIO.addChildOverlay(parent, popup, OverlayIO.types.context);
 }
 
 /// This is an override of Frame to simplify creating popups: if clicked outside of it, it will disappear from
@@ -98,7 +121,22 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
         /// node will take focus again.
         ///
         /// Assigned automatically if `spawnPopup` or `spawnChildPopup` is used, but otherwise not.
+        ///
+        /// Used if `FocusIO` is not available; for old backend only.
+        ///
+        /// See_Also:
+        ///     `previousFocusable`, which is used with the new I/O system.
         FluidFocusable previousFocus;
+
+        /// Node that was focused before the popup was opened. Using `restorePreviousFocus`, it
+        /// can be given focus again, closing the popup. This is the default behavior for the
+        /// escape key while a popup is open.
+        ///
+        /// Used if `FocusIO` is available.
+        ///
+        /// See_Also:
+        ///     `previousFocus`, which is used with the old backend system.
+        Focusable previousFocusable;
 
         /// If true, the frame will claim focus on the next *resize*. This is used to give
         /// the popup focus when it is spawned, respecting currently active `FocusIO`.
@@ -282,6 +320,7 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
 
         // Immediately switch focus to self
         if (focusIO && toTakeFocus) {
+            previousFocusable = focusIO.currentFocus;
             focus();
             toTakeFocus = false;
         }
@@ -296,8 +335,8 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
     ///
     /// Returns:
     ///     True if the `PopupFrame` was marked for removal, or if it has no focus.
-    override bool toRemove() const nothrow {
-        if (!toTakeFocus && focusIO && !focusIO.isFocused(this)) {
+    override bool toRemove() const {
+        if (!toTakeFocus && focusIO && !this.isFocused) {
             return true;
         }
         return super.toRemove;
@@ -314,15 +353,11 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
         // Forcibly register previous & next focus if missing
         // The popup will register itself just after it gets drawn without this — and it'll be better if it doesn't
         if (tree.focusDirection.previous is null) {
-
             tree.focusDirection.previous = tree.focusDirection.last;
-
         }
 
         if (tree.focusDirection.next is null) {
-
             tree.focusDirection.next = tree.focusDirection.first;
-
         }
 
     }
@@ -364,7 +399,10 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
     void restorePreviousFocus() {
 
         // Restore focus if possible
-        if (previousFocus) {
+        if (previousFocusable) {
+            previousFocusable.focus();
+        }
+        else if (previousFocus) {
             previousFocus.focus();
         }
 

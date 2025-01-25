@@ -90,7 +90,7 @@ unittest {
     );
 
     Button innerButton, outerButton;
-    auto popup = sizeLock!popupFrame(
+    auto popup = popupFrame(
         hspace(
             innerButton = button("Foo", delegate { }),
         ),
@@ -147,7 +147,7 @@ unittest {
     );
 
     Button btn;
-    auto popup = sizeLock!popupFrame(
+    auto popup = popupFrame(
         btn = button("Bar", delegate { }),
     );
     overlay.addPopup(popup, Rectangle(0, 0, 0, 0));
@@ -173,7 +173,7 @@ unittest {
     );
 
     Button btn;
-    auto popup = sizeLock!popupFrame(
+    auto popup = popupFrame(
         btn = button("Bar", delegate { }),
     );
     overlay.addPopup(popup, Rectangle(0, 0, 0, 0));
@@ -203,7 +203,7 @@ unittest {
 
     Button button1, button2;
     int pressed1, pressed2;
-    auto popup = sizeLock!popupFrame(
+    auto popup = popupFrame(
         button1 = button("Foo", delegate {
             pressed1++;
         }),
@@ -247,9 +247,7 @@ unittest {
     );
 
     auto tracker = focusTracker();
-    auto popup = sizeLock!popupFrame(
-        tracker,
-    );
+    auto popup = popupFrame(tracker);
     overlay.addPopup(popup, Rectangle(0, 0, 0, 0));
 
     // TODO This focus call shouldn't be necessary;
@@ -278,7 +276,7 @@ unittest {
     auto overlay = overlayChain();
     auto focus = focusChain(overlay);
     auto root = testSpace(.nullTheme, focus);
-    auto popup = sizeLock!popupFrame(
+    auto popup = popupFrame(
         button1 = button("One", delegate { }),
         button2 = button("Two", delegate { }),
         button3 = button("Three", delegate { }),
@@ -324,7 +322,7 @@ unittest {
     auto overlay = overlayChain();
     auto focus = focusChain(overlay);
     auto root = testSpace(.nullTheme, focus);
-    auto popup = sizeLock!popupFrame(
+    auto popup = popupFrame(
         hspace(
             button1 = button("One", delegate { }),
             button2 = button("Two", delegate { }),
@@ -367,5 +365,102 @@ unittest {
     assert(popup.FocusIO.isFocused(button1));
     root.draw();
 
+}
+
+@("PopupFrame can open child popups")
+unittest {
+
+    auto overlay = overlayChain();
+    auto focus = focusChain(overlay);
+    auto root = testSpace(.nullTheme, focus);
+
+    auto popup1 = popupFrame();
+    overlay.addPopup(popup1, Rectangle(0, 0, 0, 0));
+
+    auto popup2 = popupFrame();
+    overlay.addChildPopup(popup1, popup2, Rectangle(0, 0, 0, 0));
+
+    root.draw();
+    assert( focus.isFocused(popup2));
+    assert(!focus.isFocused(popup1));
+    assert(popup2.isFocused);
+    assert(popup1.isFocused);
+
+    root.drawAndAssert(
+        popup1.isDrawn,
+        popup2.isDrawn,
+    );
+    root.drawAndAssert(
+        popup1.isDrawn,
+        popup2.isDrawn,
+    );
+
+    popup1.focus();
+    root.drawAndAssert(
+        popup1.isDrawn,
+    );
+
+}
+
+@("Using `cancel` in a child PopupFrame returns to the main popup")
+unittest {
+
+    auto overlay = overlayChain();
+    auto focus = focusChain(overlay);
+    auto root = testSpace(.nullTheme, focus);
+
+    auto popup1 = popupFrame();
+    overlay.addPopup(popup1, Rectangle(0, 0, 0, 0));
+    auto popup2 = popupFrame();
+    overlay.addChildPopup(popup1, popup2, Rectangle(0, 0, 0, 0));
+
+    root.drawAndAssert(
+        popup1.isDrawn,
+        popup2.isDrawn,
+    );
+    assert(popup1.previousFocusable is null);
+    assert(popup2.previousFocusable.opEquals(popup1));
+    assert(focus.isFocused(popup2));
+
+    focus.runInputAction!(FluidInputAction.cancel);
+    root.drawAndAssert(
+        popup1.isDrawn,
+    );
+    root.drawAndAssertFailure(
+        popup2.isDrawn,
+    );
+    assert(focus.isFocused(popup1));
+
+}
+
+@("PopupFrame restores focus to what was focused when it is opened")
+unittest {
+
+    auto btn = button("One", delegate { });
+    auto overlay = overlayChain(btn);
+    auto focus = focusChain(overlay);
+    auto root = testSpace(.nullTheme, focus);
+
+    focus.currentFocus = btn;
+    root.drawAndAssert(
+        btn.isDrawn,
+    );
+    assert(btn.isFocused);
+
+    auto popup = popupFrame();
+    overlay.addPopup(popup, Rectangle(0, 0, 0, 0));
+
+    root.drawAndAssert(
+        btn.isDrawn,
+        popup.isDrawn,
+    );
+    assert(!btn.isFocused);
+    assert( popup.isFocused);
+
+    popup.restorePreviousFocus();
+    assert( btn.isFocused);
+    assert(!popup.isFocused);
+    root.drawAndAssert(btn.isDrawn);
+    root.drawAndAssertFailure(popup.isDrawn);
 
 }
