@@ -167,7 +167,14 @@ class FocusChain : NodeChain, FocusIO {
             || (isFrameAction && isFocusActionable && currentFocus.focusImpl());
 
         // Mark as handled, if so
-        _wasInputHandled = _wasInputHandled || handled;
+        if (handled) {
+            _wasInputHandled = true;
+
+            // Cancel action events
+            if (actionIO) {
+                actionIO.emitEvent(ActionIO.noopEvent, 0, &runInputAction);
+            }
+        }
 
         // Clear the input buffer after frame action
         if (isFrameAction) {
