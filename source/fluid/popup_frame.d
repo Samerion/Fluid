@@ -13,7 +13,10 @@ import fluid.actions;
 import fluid.backend;
 
 import fluid.io.focus;
+import fluid.io.action;
 import fluid.io.overlay;
+
+import fluid.future.context;
 
 @safe:
 
@@ -297,14 +300,26 @@ class PopupFrame : InputNode!Frame, FocusIO, Overlayable {
 
     }
 
+    protected override bool actionImpl(IO io, int number, immutable InputActionID actionID,
+        bool isActive)
+    do {
+
+        // Pass input events to whatever node is currently focused
+        if (_currentFocus && _currentFocus.actionImpl(this, 0, actionID, isActive)) {
+            return true;
+        }
+
+        // Handle events locally otherwise
+        return this.runInputActionHandler(io, number, actionID, isActive);
+
+    }
+
     protected override void mouseImpl() {
 
     }
 
     protected override bool focusImpl() {
-
-        return false;
-
+        return _currentFocus && _currentFocus.focusImpl();
     }
 
     override void focus() {

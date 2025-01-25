@@ -185,3 +185,86 @@ unittest {
     root.drawAndAssertFailure(popup.isDrawn);
 
 }
+
+@("PopupFrame children can accept focus and input")
+unittest {
+
+    auto overlay = overlayChain();
+    auto focus = focusChain();
+    auto root = testSpace(
+        .nullTheme,
+        chain(
+            inputMapChain(),
+            focus,
+            overlay
+        ),
+    );
+
+    Button button1, button2;
+    int pressed1, pressed2;
+    auto popup = sizeLock!popupFrame(
+        button1 = button("Foo", delegate {
+            pressed1++;
+        }),
+        button2 = button("Bar", delegate {
+            pressed2++;
+        }),
+    );
+    overlay.addPopup(popup, Rectangle(0, 0, 0, 0));
+
+    root.draw();
+    assert( button1.isFocused);
+    assert(!button2.isFocused);
+    assert( popup.isFocused);
+    button2.focus();
+    assert(!button1.isFocused);
+    assert( button2.isFocused);
+    assert( popup.isFocused);
+
+    assert(pressed1 == 0);
+    assert(pressed2 == 0);
+    focus.runInputAction!(FluidInputAction.press);
+    assert(pressed1 == 0);
+    assert(pressed2 == 1);
+
+}
+
+@("PopupFrame triggers focusImpl")
+unittest {
+
+    import nodes.focus_chain : focusTracker;
+
+    auto overlay = overlayChain();
+    auto focus = focusChain();
+    auto root = testSpace(
+        .nullTheme,
+        chain(
+            inputMapChain(),
+            focus,
+            overlay
+        ),
+    );
+
+    auto tracker = focusTracker();
+    auto popup = sizeLock!popupFrame(
+        tracker,
+    );
+    overlay.addPopup(popup, Rectangle(0, 0, 0, 0));
+
+    // TODO This focus call shouldn't be necessary;
+    //      focusRecurse currently requires FluidFocusable
+    root.draw();
+    tracker.focus();
+
+    root.draw();
+    assert(popup.isFocused);
+    assert(tracker.isFocused);
+    assert(tracker.focusImplCalls == 1);
+    root.draw();
+    assert(tracker.focusImplCalls == 2);
+    focus.runInputAction!(FluidInputAction.press);
+    root.draw();
+    assert(tracker.pressCalls == 1);
+    assert(tracker.focusImplCalls == 2);
+
+}
