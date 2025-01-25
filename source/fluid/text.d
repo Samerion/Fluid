@@ -67,6 +67,11 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         /// Text bounding box size, in dots.
         Vector2 _sizeDots;
 
+        /// DPI used in the text.
+        ///
+        /// This is basically a workaround around `Text`'s bad design to make the new I/O work.
+        Vector2 _dpi;
+
         /// If true, text will be wrapped if it doesn't fit available space.
         bool _wrap;
 
@@ -156,11 +161,9 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     /// Get the size of the text.
     Vector2 size() const {
 
-        const scale = backend.hidpiScale;
-
         return Vector2(
-            _sizeDots.x / scale.x,
-            _sizeDots.y / scale.y,
+            _sizeDots.x * 96f / _dpi.x,
+            _sizeDots.y * 96f / _dpi.y,
         );
 
     }
@@ -174,6 +177,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         auto typeface = style.getTypeface;
         const dpi = backend.dpi;
         const scale = backend.hidpiScale;
+        _dpi = dpi;
 
         style.setDPI(dpi);
         typeface.indentWidth = cast(int) (indentWidth * scale.x);
@@ -192,6 +196,43 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         auto typeface = style.getTypeface;
         const dpi = backend.dpi;
         const scale = backend.hidpiScale;
+        _dpi = dpi;
+
+        // Apply DPI
+        style.setDPI(dpi);
+        typeface.indentWidth = cast(int) (indentWidth * scale.x);
+        space.x *= scale.x;
+        space.y *= scale.y;
+
+        // Update the size
+        _sizeDots = style.getTypeface.measure!splitter(space, value, wrap);
+        _wrap = wrap;
+        clearTextures();
+
+    }
+
+    /// Set new bounding box for the text.
+    void resize(CanvasIO canvasIO) {
+        if (canvasIO) {
+            return resize(canvasIO, Vector2.init, false);
+        }
+        else {
+            return resize();
+        }
+    }
+
+    /// Set new bounding box for the text; wrap the text if it doesn't fit in boundaries.
+    void resize(alias splitter = Typeface.defaultWordChunks)(CanvasIO canvasIO, Vector2 space, bool wrap = true) {
+
+        if (!canvasIO) {
+            return resize!splitter(space, wrap);
+        }
+
+        auto style = node.pickStyle;
+        auto typeface = style.getTypeface;
+        const dpi = canvasIO.dpi;
+        const scale = canvasIO.toDots(Vector2(1, 1));
+        _dpi = dpi;
 
         // Apply DPI
         style.setDPI(dpi);
@@ -906,7 +947,6 @@ struct CompositeTexture {
     /// Draw onscreen parts of the texture using the new backend.
     void drawAlign(CanvasIO canvasIO, Rectangle rectangle, Color tint = Color(0xff, 0xff, 0xff, 0xff)) {
 
-        const dpi = canvasIO.dpi;
         const area = canvasIO.cropArea;
 
         auto chosenChunks = area.empty
@@ -918,8 +958,6 @@ struct CompositeTexture {
 
             // Set parameters
             chunks[index].image.palette = palette;
-            chunks[index].image.dpiX = cast(int) dpi.x;
-            chunks[index].image.dpiY = cast(int) dpi.y;
 
             const start = rectangle.start + chunkPosition(index);
             const size = chunks[index].image.viewportSize;
