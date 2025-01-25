@@ -689,6 +689,11 @@ class FreetypeTypeface : Typeface {
         // Ignore if there's no change
         if (dpiX == _dpiX && dpiY == _dpiY && size == _size) return;
 
+        // Purge cache if DPI changed
+        if (dpiX != _dpiX || dpiY != _dpiY) {
+            advanceCache.clear();
+        }
+
         _dpiX = dpiX;
         _dpiY = dpiY;
         _size = size;
@@ -715,7 +720,7 @@ class FreetypeTypeface : Typeface {
         }
 
     }
-    
+
     Vector2 advance(dchar glyph) @trusted {
 
         assert(_dpiX && _dpiY, "Font DPI hasn't been set");
@@ -792,7 +797,7 @@ class FreetypeTypeface : Typeface {
                 }
 
             }
-            
+
             // Advance pen positon
             penPosition += Vector2(face.glyph.advance.tupleof) / 64;
 
