@@ -112,9 +112,8 @@ class FocusChain : NodeChain, FocusIO {
 
     override void beforeDraw(Rectangle, Rectangle) {
 
-        auto frame = controlBranchAction(findFocusBoxAction);
-        frame.start();
-        frame.release();
+        controlBranchAction(findFocusBoxAction)
+            .startAndRelease();
 
         _wasInputHandled = false;
 
@@ -122,11 +121,8 @@ class FocusChain : NodeChain, FocusIO {
 
     override void afterDraw(Rectangle outer, Rectangle inner) {
 
-        // If positional focus action is running, it is about to finish;
-        // Read the focus box it found
-        if (positionalFocusAction.result && !positionalFocusAction.toStop) {
-            lastFocusBox = positionalFocusAction.resultFocusBox;
-        }
+        controlBranchAction(findFocusBoxAction)
+            .stop();
 
         // Send a frame event to trigger focusImpl
         if (actionIO) {
