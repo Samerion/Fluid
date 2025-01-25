@@ -26,23 +26,14 @@ alias focusChain = nodeBuilder!FocusChain;
 /// For hover-based nodes like mouse, see `HoverChain`.
 ///
 /// `FocusChain` only works with nodes compatible with the new I/O system introduced in Fluid 0.7.2.
-class FocusChain : NodeChain, FocusIO {
+class FocusChain : NodeChain, FocusIO, WithOrderedFocus, WithPositionalFocus {
 
     ActionIO actionIO;
 
     protected {
 
-        /// Last known focus box, if any.
-        Optional!Rectangle lastFocusBox;
-
         /// Focus box tracking action.
         FindFocusBoxAction findFocusBoxAction;
-
-        /// Action used to switch focus by tabbing between nodes.
-        OrderedFocusAction orderedFocusAction;
-
-        /// Action used for directional focus switching, usually with arrow keys.
-        PositionalFocusAction positionalFocusAction;
 
     }
 
@@ -51,6 +42,9 @@ class FocusChain : NodeChain, FocusIO {
         Focusable _focus;
         bool _wasInputHandled;
         Appender!(char[]) _buffer;
+        PositionalFocusAction _positionalFocusAction;
+        OrderedFocusAction _orderedFocusAction;
+        Optional!Rectangle _lastFocusBox;
 
     }
 
@@ -61,13 +55,13 @@ class FocusChain : NodeChain, FocusIO {
     this(Node next) {
 
         super(next);
-        findFocusBoxAction    = new FindFocusBoxAction(this);
-        orderedFocusAction    = new OrderedFocusAction;
-        positionalFocusAction = new PositionalFocusAction;
+        findFocusBoxAction     = new FindFocusBoxAction(this);
+        _orderedFocusAction    = new OrderedFocusAction;
+        _positionalFocusAction = new PositionalFocusAction;
 
         // Track the current focus box
         findFocusBoxAction
-            .then((Optional!Rectangle rect) => lastFocusBox = rect);
+            .then((Optional!Rectangle rect) => _lastFocusBox = rect);
 
     }
 
@@ -83,6 +77,18 @@ class FocusChain : NodeChain, FocusIO {
 
         return _wasInputHandled;
 
+    }
+
+    override protected Optional!Rectangle lastFocusBox() const {
+        return _lastFocusBox;
+    }
+
+    override protected inout(OrderedFocusAction) orderedFocusAction() inout {
+        return _orderedFocusAction;
+    }
+
+    override protected inout(PositionalFocusAction) positionalFocusAction() inout {
+        return _positionalFocusAction;
     }
 
     override inout(Focusable) currentFocus() inout {
@@ -112,9 +118,8 @@ class FocusChain : NodeChain, FocusIO {
 
     override void beforeDraw(Rectangle, Rectangle) {
 
-        auto frame = controlBranchAction(findFocusBoxAction);
-        frame.start();
-        frame.release();
+        controlBranchAction(findFocusBoxAction)
+            .startAndRelease();
 
         _wasInputHandled = false;
 
@@ -122,11 +127,8 @@ class FocusChain : NodeChain, FocusIO {
 
     override void afterDraw(Rectangle outer, Rectangle inner) {
 
-        // If positional focus action is running, it is about to finish;
-        // Read the focus box it found
-        if (positionalFocusAction.result && !positionalFocusAction.toStop) {
-            lastFocusBox = positionalFocusAction.resultFocusBox;
-        }
+        controlBranchAction(findFocusBoxAction)
+            .stop();
 
         // Send a frame event to trigger focusImpl
         if (actionIO) {
@@ -167,7 +169,14 @@ class FocusChain : NodeChain, FocusIO {
             || (isFrameAction && isFocusActionable && currentFocus.focusImpl());
 
         // Mark as handled, if so
-        _wasInputHandled = _wasInputHandled || handled;
+        if (handled) {
+            _wasInputHandled = true;
+
+            // Cancel action events
+            if (actionIO) {
+                actionIO.emitEvent(ActionIO.noopEvent, 0, &runInputAction);
+            }
+        }
 
         // Clear the input buffer after frame action
         if (isFrameAction) {
@@ -204,145 +213,6 @@ class FocusChain : NodeChain, FocusIO {
 
         return runInputActionHandler(this, actionID, isActive);
 
-    }
-
-    /// `focusNext` focuses the next, and `focusPrevious` focuses the previous node, relative to the one
-    /// that is currently focused.
-    ///
-    /// Params:
-    ///     isReverse = Reverse direction; if true, focuses the previous node.
-    /// Returns:
-    ///     Tree action that switches focus to the previous, or next node.
-    ///     If no node is currently focused, returns a tree action to focus the first or the last node, equivalent
-    ///     to `focusFirst` or `focusLast`.
-    ///
-    ///     You can use `.then` on the returned action to run a callback the moment the focus switches.
-    FocusSearchAction focusNext(bool isReverse = false) {
-
-        auto focus = cast(Node) currentFocus;
-
-        if (focus is null) {
-            if (isReverse)
-                return focusLast();
-            else
-                return focusFirst();
-        }
-
-        // Switch focus
-        orderedFocusAction.reset(focus, isReverse);
-        startAction(orderedFocusAction);
-
-        return orderedFocusAction;
-
-    }
-
-    /// ditto
-    FocusSearchAction focusPrevious() {
-
-        return focusNext(true);
-
-    }
-
-    /// Directional focus: Switch focus from the currently focused node to another based on screen position.
-    ///
-    /// This launches a tree action that will find a candidate node and switch focus to it during the next frame.
-    /// Nodes that are the closest semantically (are in the same container node, or overall close in the tree) will
-    /// be chosen first; screen distance will be used when two nodes have the same weight.
-    ///
-    /// Returns:
-    ///     The launched tree action. You can use `.then` to attach a callback that will run as soon as
-    ///     the node is found.
-    FocusSearchAction focusAbove() {
-        return focusDirection(Style.Side.top);
-    }
-
-    /// ditto
-    FocusSearchAction focusBelow() {
-        return focusDirection(Style.Side.bottom);
-    }
-
-    /// ditto
-    FocusSearchAction focusToLeft() {
-        return focusDirection(Style.Side.left);
-    }
-
-    /// ditto
-    FocusSearchAction focusToRight() {
-        return focusDirection(Style.Side.right);
-    }
-
-    /// ditto
-    FocusSearchAction focusDirection(Style.Side side) {
-
-        return lastFocusBox.match!(
-            (Rectangle focusBox) {
-
-                auto reference = cast(Node) currentFocus;
-
-                // No focus, no action to launch
-                if (reference is null) return null;
-
-                positionalFocusAction.reset(reference, focusBox, side);
-                startAction(positionalFocusAction);
-
-                return positionalFocusAction;
-
-            },
-            () => PositionalFocusAction.init,
-        );
-
-    }
-
-    /// Focus the first (`focusFirst`), or the last node (`focusLast`) that exists inside the focus space.
-    /// Returns:
-    ///     Tree action that switches focus to the first, or the last node.
-    ///     You can use `.then` on the returned action to run a callback the moment the focus switches.
-    FocusSearchAction focusFirst() {
-        // TODO cache this, or integrate into OrderedFocusAction?
-        return focusRecurseChildren(this);
-    }
-
-    /// ditto
-    FocusSearchAction focusLast() {
-        auto action = focusRecurseChildren(this);
-        action.isReverse = true;
-        return action;
-    }
-
-    @(FluidInputAction.focusNext)
-    bool focusNext(FluidInputAction) {
-        focusNext();
-        return true;
-    }
-
-    @(FluidInputAction.focusPrevious)
-    bool focusPrevious(FluidInputAction) {
-        focusPrevious();
-        return true;
-    }
-
-    @(FluidInputAction.focusUp)
-    bool focusUp() {
-        focusAbove();
-        return true;
-    }
-
-    @(FluidInputAction.focusDown)
-    bool focusDown() {
-        focusBelow();
-        return true;
-    }
-
-    @(FluidInputAction.focusLeft)
-    bool focusLeft() {
-        focusToLeft();
-        return true;
-    }
-
-    @(FluidInputAction.focusRight)
-    bool focusRight() {
-        focusToRight();
-        return true;
     }
 
     // Disable default focus switching

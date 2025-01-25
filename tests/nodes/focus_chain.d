@@ -330,22 +330,23 @@ unittest {
 
     // Vertical focus
     root.focusBelow().thenAssertEquals(buttons[1])
+        .then(() => root.nextFrame)
         .then(() => root.focusBelow).thenAssertEquals(buttons[4])
+        .then(() => root.nextFrame)
         .then(() => root.focusAbove).thenAssertEquals(buttons[1])
+        .then(() => root.nextFrame)
 
         // Horizontal
-        .then(() => root.focusToRight)
-        .thenAssertEquals(buttons[2])
-        .then(() => root.focusToRight)
-        .thenAssertEquals(buttons[3])
-        .then(() => root.focusToRight)
-        .thenAssertEquals(null)
+        .then(() => root.focusToRight).thenAssertEquals(buttons[2])
+        .then(() => root.nextFrame)
+        .then(() => root.focusToRight).thenAssertEquals(buttons[3])
+        .then(() => root.nextFrame)
+        .then(() => root.focusToRight).thenAssertEquals(null)
         .then(() => assert(root.isFocused(buttons[3])))
 
         // Vertical, again
-        .then(() => root.focusAbove)
-        .thenAssertEquals(buttons[0])
-        .runWhileDrawing(root, 8);
+        .then(() => root.focusAbove).thenAssertEquals(buttons[0])
+        .runWhileDrawing(root, 12);
 
 }
 

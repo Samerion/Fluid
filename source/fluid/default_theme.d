@@ -145,8 +145,15 @@ static this() {
                 border = 1,
                 borderStyle = colorBorder(color("#555a")),
                 children!Button(
-                    backgroundColor = Color.init,
+                    backgroundColor = color("#0000"),
                     margin = 0,
+                    when!"a.isHovered"(backgroundColor = color("#dadada")),
+                    when!"a.isFocused"(backgroundColor = color("#ccc")),
+                    when!"a.isPressed"(backgroundColor = color("#aaa")),
+                    when!"a.isDisabled"(
+                        textColor = color("000a"),
+                        backgroundColor = color("eee5"),
+                    ),
                 ),
             ),
             /*rule!FileInputSuggestion(

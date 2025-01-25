@@ -1133,16 +1133,56 @@ auto isDrawn(Node subject) {
 
     return new class BlackHole!Assert {
 
+        bool isTestingSpaceStart;
+        Vector2 targetSpaceStart;
+        bool isTestingSpaceEnd;
+        Vector2 targetSpaceEnd;
+
         override bool resume(Node node) {
             return node.opEquals(subject).assertNotThrown;
         }
 
-        override bool beforeDraw(Node node, Rectangle, Rectangle, Rectangle) {
+        override bool beforeDraw(Node node, Rectangle space, Rectangle, Rectangle) {
+
+            if (isTestingSpaceStart
+                && equal(space.start.x, targetSpaceStart.x)
+                && equal(space.start.y, targetSpaceStart.y)) {
+                return false;
+            }
+
+            if (isTestingSpaceEnd
+                && equal(space.end.x, targetSpaceEnd.x)
+                && equal(space.end.y, targetSpaceEnd.y)) {
+                return false;
+            }
+
             return node.opEquals(subject).assertNotThrown;
         }
 
+        auto at(Rectangle space) @safe {
+            isTestingSpaceStart = true;
+            targetSpaceStart = space.start;
+            isTestingSpaceEnd = true;
+            targetSpaceEnd = space.end;
+            return this;
+        }
+
+        auto at(float x, float y, float width, float height) @safe {
+            return at(Rectangle(x, y, width, height));
+        }
+
+        auto at(Vector2 start) @safe {
+            isTestingSpaceStart = true;
+            targetSpaceStart = start;
+            return this;
+        }
+
+        auto at(float x, float y) @safe {
+            return at(Vector2(x, y));
+        }
+
         override string toString() const {
-            return format!"%s must be reached"(subject);
+            return format!"%s must be drawn"(subject);
         }
 
     };
@@ -1372,6 +1412,11 @@ auto dumpDraws(Node subject) {
             if (isSubject(node)) {
                 writefln!fmt(arguments).assertNotThrown;
             }
+        }
+
+        override bool beforeDraw(Node node, Rectangle space, Rectangle, Rectangle) nothrow {
+            dump!"node.isDrawn().at(%s, %s, %s, %s)"(node, space.tupleof);
+            return false;
         }
 
         override bool afterDraw(Node node, Rectangle, Rectangle, Rectangle) nothrow {

@@ -79,9 +79,6 @@ abstract class Node {
         /// Breadcrumbs assigned and applicable to this node. Loaded every resize and every draw.
         Breadcrumbs breadcrumbs;
 
-        /// If true, this node will be removed from the tree on the next draw.
-        bool toRemove;
-
         /// If true, mouse focus will be disabled for this node, so mouse signals will "go through" to its parents, as
         /// if the node wasn't there. The node will still detect hover like normal.
         bool ignoreMouse;
@@ -113,6 +110,9 @@ abstract class Node {
 
         /// Check if this node is disabled, or has inherited the status.
         bool _isDisabledInherited;
+
+        /// If true, this node will be removed from the tree on the next draw.
+        bool _toRemove;
 
         /// Theme of this node.
         Theme _theme;
@@ -314,7 +314,24 @@ abstract class Node {
     /// Remove this node from the tree before the next draw.
     final void remove() {
         toRemove = true;
-        updateSize();
+    }
+
+    /// `toRemove` is used to mark nodes for removal. A node marked as such should stop being
+    /// drawn, and should be removed from the tree.
+    /// Params:
+    ///     value = New value to use for the node.
+    /// Returns:
+    ///     True if the node is to be removed from the tree.
+    bool toRemove(bool value) {
+        if (value != _toRemove) {
+            updateSize();
+        }
+        return _toRemove = value;
+    }
+
+    /// ditto
+    bool toRemove() const {
+        return _toRemove;
     }
 
     /// Get the minimum size of this node.
@@ -396,18 +413,23 @@ abstract class Node {
 
     /// Perform a tree action the next time this node is drawn.
     ///
-    /// Tree actions can be used to analyze the node tree and modify its behavior while it runs. Actions can listen
-    /// and respond to hooks like `beforeDraw` and `afterDraw`. They can interact with existing nodes or inject nodes
-    /// in any place of the tree.
+    /// Tree actions can be used to analyze the node tree and modify its behavior while it runs.
+    /// Actions can listen and respond to hooks like `beforeDraw` and `afterDraw`. They can interact
+    /// with existing nodes or inject nodes in any place of the tree.
     ///
-    /// Most usually, a tree action will provide its own function for creating and starting tree actions, so this
-    /// method will not be called directly.
+    /// **Limited scope:** The action will only act on this branch of the tree: `beforeDraw`
+    /// and `afterDraw` hooks will only fire for this node and its children.
     ///
-    /// The action will only act on this branch of the tree: `beforeDraw` and `afterDraw` hooks will only
-    /// fire for this node and its children.
+    /// **Starting actions:** Most usually, a tree actions provides its own function for creating
+    /// and starting, so this method does not need to be called directly. This method may still be
+    /// used if more control is needed, or to implement a such a starter function.
     ///
-    /// Tree actions are responsible for their own lifetime. After a tree action starts, it will decide for itself
-    /// when it should end. This can be overridden by explicitly calling the `TreeAction.stop` method.
+    /// If an action has already started, calling `startAction` again will replace it. Making it
+    /// possible to adjust the action's scope, or restart the action automatically if it stops.
+    ///
+    /// **Lifetime control:** Tree actions are responsible for their own lifetime. After a tree
+    /// action starts, it will decide for itself when it should end. This can be overridden by
+    /// explicitly calling the `TreeAction.stop` method.
     ///
     /// Params:
     ///     action = Action to start.
@@ -517,17 +539,13 @@ abstract class Node {
 
     /// True if this node is pending a resize.
     bool resizePending() const {
-
         return _resizePending;
-
     }
 
     /// Recalculate the window size before next draw.
     final void updateSize() scope nothrow {
-
         if (tree) tree.root._resizePending = true;
         // Tree might be null — if so, the node will be resized regardless
-
     }
 
     /// Draw this node as a root node.
