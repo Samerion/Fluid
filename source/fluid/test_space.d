@@ -4,6 +4,10 @@ version (Fluid_TestSpace):
 
 debug (Fluid_BuildMessages) {
     pragma(msg, "Fluid: Including TestSpace");
+
+    version (Fluid_SVG) {
+        pragma(msg, "Fluid: Including SVG support in TestSpace");
+    }
 }
 
 import core.exception;
@@ -16,6 +20,7 @@ import std.string;
 import std.typecons;
 import std.algorithm;
 import std.exception;
+import std.digest.sha;
 
 import fluid.node;
 import fluid.tree;
@@ -834,6 +839,8 @@ auto drawsImage(Node subject) {
 
         bool isTestingImage;
         Image targetImage;
+        bool isTestingDataHash;
+        ubyte[] targetDataHash;
         bool isTestingStart;
         Vector2 targetStart;
         bool isTestingSize;
@@ -863,6 +870,13 @@ auto drawsImage(Node subject) {
                             node, targetPalette.map!(a => a.toHex), image.palette.map!(a => a.toHex))
                             .assertNotThrown);
                 }
+            }
+
+            if (isTestingDataHash) {
+                assert(targetDataHash == sha256Of(image.data),
+                    format!"%s should draw image with SHA256 hash %(%02x%), but draws %(%02x%)"(
+                        node, targetDataHash, sha256Of(image.data))
+                        .assumeWontThrow);
             }
 
             if (isTestingStart) {
@@ -897,6 +911,22 @@ auto drawsImage(Node subject) {
             scope (exit) targetHint = true;
 
             return drawImage(node, image, rect, color);
+
+        }
+
+        /// Test if the image content (using the format it is stored in) matches the hex-encoded
+        /// SHA256 hash.
+        typeof(this) sha256(string content) @safe {
+
+            import std.conv : to;
+
+            isTestingDataHash = true;
+            targetDataHash = content
+                .chunks(2)
+                .map!(a => a.to!ubyte(16))
+                .array;
+
+            return this;
 
         }
 
@@ -1135,8 +1165,8 @@ auto isDrawn(Node subject) {
 
         bool isTestingSpaceStart;
         Vector2 targetSpaceStart;
-        bool isTestingSpaceEnd;
-        Vector2 targetSpaceEnd;
+        bool isTestingSpaceSize;
+        Vector2 targetSpaceSize;
 
         override bool resume(Node node) {
             return node.opEquals(subject).assertNotThrown;
@@ -1144,16 +1174,14 @@ auto isDrawn(Node subject) {
 
         override bool beforeDraw(Node node, Rectangle space, Rectangle, Rectangle) {
 
-            if (isTestingSpaceStart
-                && equal(space.start.x, targetSpaceStart.x)
-                && equal(space.start.y, targetSpaceStart.y)) {
-                return false;
+            if (isTestingSpaceStart) {
+                if (!equal(space.start.x, targetSpaceStart.x)
+                    || !equal(space.start.y, targetSpaceStart.y)) return false;
             }
 
-            if (isTestingSpaceEnd
-                && equal(space.end.x, targetSpaceEnd.x)
-                && equal(space.end.y, targetSpaceEnd.y)) {
-                return false;
+            if (isTestingSpaceSize) {
+                if (!equal(space.size.x, targetSpaceSize.x)
+                    || !equal(space.size.y, targetSpaceSize.y)) return false;
             }
 
             return node.opEquals(subject).assertNotThrown;
@@ -1162,8 +1190,8 @@ auto isDrawn(Node subject) {
         auto at(Rectangle space) @safe {
             isTestingSpaceStart = true;
             targetSpaceStart = space.start;
-            isTestingSpaceEnd = true;
-            targetSpaceEnd = space.end;
+            isTestingSpaceSize = true;
+            targetSpaceSize = space.size;
             return this;
         }
 
@@ -1182,7 +1210,11 @@ auto isDrawn(Node subject) {
         }
 
         override string toString() const {
-            return format!"%s must be drawn"(subject);
+            return toText(
+                subject, " must be drawn",
+                isTestingSpaceStart ? toText(" at ",        targetSpaceStart) : "",
+                isTestingSpaceSize  ? toText(" with size ", targetSpaceSize)  : "",
+            );
         }
 
     };
@@ -1415,7 +1447,7 @@ auto dumpDraws(Node subject) {
         }
 
         override bool beforeDraw(Node node, Rectangle space, Rectangle, Rectangle) nothrow {
-            dump!"node.isDrawn().at(%s, %s, %s, %s)"(node, space.tupleof);
+            dump!"node.isDrawn().at(%s, %s, %s, %s),"(node, space.tupleof);
             return false;
         }
 
@@ -1553,27 +1585,28 @@ auto dumpDraws(Node subject) {
             return false;
         }
 
-        override bool drawImage(Node node, DrawableImage image, Rectangle area, Color color) nothrow {
-
-            if (isSubject(node)) {
-                dump!`node.drawsImage().at(%s, %s, %s, %s).ofColor("%s"),`
-                    (node, area.tupleof, color.toHex.assumeWontThrow);
-                svgImage(image, area, color);
-            }
-
+        override bool drawImage(Node node, DrawableImage image, Rectangle area, Color color)
+        nothrow {
+            dumpImage(node, image, area, color, false);
             return false;
         }
 
-        override bool drawHintedImage(Node node, DrawableImage image, Rectangle area, Color color) nothrow {
-            if (isSubject(node)) {
-                dump!`node.drawsHintedImage().at(%s, %s, %s, %s).ofColor("%s"),`
-                    (node, area.tupleof, color.toHex.assumeWontThrow);
-                svgImage(image, area, color);
-            }
+        override bool drawHintedImage(Node node, DrawableImage image, Rectangle area, Color color)
+        nothrow {
+            dumpImage(node, image, area, color, true);
             return false;
         }
 
-        private void svgImage(DrawableImage image, Rectangle area, Color tint) nothrow @trusted {
+        private void dumpImage(Node node, DrawableImage image, Rectangle area, Color tint,
+            bool isHinted)
+        nothrow @trusted {
+
+            if (!isSubject(node)) return;
+
+            dump!(`node.draws%sImage().at(%s, %s, %s, %s).ofColor("%s")` ~ "\n"
+                ~ `    .sha256("%(%02x%)"),`)
+                (node, isHinted ? "Hinted" : "", area.tupleof, tint.toHex.assumeWontThrow,
+                sha256Of(image.data)[]);
 
             version (Fluid_SVG) if (generateSVG) {
 
