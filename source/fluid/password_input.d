@@ -47,9 +47,9 @@ class PasswordInput : TextInput {
 
     static class LocalContentLabel : ContentLabel {
 
-        override void resizeImpl(Vector2) {
+        override void resizeImpl(Vector2 available) {
 
-            use(canvasIO);
+            super.resizeImpl(available);
 
             const x = getAdvanceX(io, canvasIO, style);
             const radius = x / 2f;
@@ -126,6 +126,7 @@ class PasswordInput : TextInput {
         drawSelection(innerScrolled);
 
         auto cursor = start(innerScrolled) + Vector2(radius, lineHeight / 2f);
+        auto style = pickStyle;
 
         // Draw a circle for each character
         if (canvasIO) {
