@@ -753,12 +753,19 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     /// Find the closest index to the given position.
     /// Returns: Index of the character. The index may be equal to character length.
-    size_t nearestCharacter(Vector2 needle) {
+    size_t nearestCharacter(Vector2 needlePx) {
 
         import std.math : abs;
 
         auto ruler = textRuler();
         auto typeface = ruler.typeface;
+
+        const needle = canvasIO
+            ? canvasIO.toDots(needlePx)
+            : Vector2(
+                io.hidpiScale.x * needlePx.x,
+                io.hidpiScale.y * needlePx.y,
+            );
 
         struct Position {
             size_t index;
