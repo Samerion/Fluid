@@ -927,7 +927,15 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         // Measure the word itself, and remove it
         caretPosition.x -= typeface.measure(tail[]).x;
 
-        return caretPosition;
+        if (canvasIO) {
+            return canvasIO.fromDots(caretPosition);
+        }
+        else {
+            return Vector2(
+                caretPosition.x / io.hidpiScale.x,
+                caretPosition.y / io.hidpiScale.y,
+            );
+        }
 
     }
 
@@ -999,7 +1007,11 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         // Add a blinking caret
         if (showCaret) {
 
-            const lineHeight = style.getTypeface.lineHeight;
+            const scale = canvasIO
+                ? canvasIO.toDots(Vector2(0, 1)).y
+                : io.hidpiScale.y;
+
+            const lineHeight = style.getTypeface.lineHeight / scale;
             const margin = lineHeight / 10f;
             const relativeCaretPosition = this.caretPosition();
             const caretPosition = start(inner) + relativeCaretPosition;
