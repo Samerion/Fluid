@@ -1777,3 +1777,46 @@ unittest {
     assert(input.selectionStart < input.selectionEnd);
 
 }
+
+@("TextInput selection displays correctly in HiDPI")
+unittest {
+
+    auto node = multilineInput(.testTheme);
+    auto root = testSpace(node);
+
+    // Matsuo Bashō "The Old Pond"
+    node.value = "Old pond...\n"
+        ~ "a frog jumps in\n"
+        ~ "water's sound\n";
+    node.selectSlice(4, 33);
+
+    // 100% scale
+    root.drawAndAssert(
+        node.drawsRectangle(0, 0, 200, 108).ofColor("#ffaaff"),
+        node.cropsTo(0, 0, 200, 108),
+
+        // Selection
+        node.drawsRectangle(33, 0, 59, 27).ofColor("#0022aa"),
+        node.drawsRectangle(0, 27, 128, 27).ofColor("#0022aa"),
+        node.drawsRectangle(0, 54, 50, 27).ofColor("#0022aa"),
+
+        node.contentLabel.isDrawn().at(0, 0, 200, 108),
+        node.contentLabel.drawsHintedImage().at(0, 0, 1024, 1024).ofColor("#ffffff")
+            .sha256("7033f92fce5cf825ab357b1514628504361399d20ce47e2966ed86cacc45cf3a"),
+    );
+
+    // 125% scale
+    root.setScale(1.25);
+    root.drawAndAssert(
+
+        // Selection
+        node.drawsRectangle(33.6, 0, 57.6, 26.4).ofColor("#0022aa"),
+        node.drawsRectangle(0, 26.4, 128.8, 26.4).ofColor("#0022aa"),
+        node.drawsRectangle(0, 52.8, 48.8, 26.4).ofColor("#0022aa"),
+
+        node.contentLabel.isDrawn().at(0, 0, 200, 106),
+        node.contentLabel.drawsHintedImage().at(0, 0, 819.2, 819.2).ofColor("#ffffff")
+            .sha256("2c72029c85ba28479d2089456261828dfb046c1be134b46408740b853e352b90"),
+    );
+
+}
