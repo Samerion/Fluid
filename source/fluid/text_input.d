@@ -296,6 +296,8 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     static class ContentLabel : Label {
 
+        bool isPlaceholder;
+
         this() {
             super("");
         }
@@ -675,6 +677,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         minSize = size;
 
         // Set the label text
+        contentLabel.isPlaceholder = value == "";
         contentLabel.text = value == "" ? placeholder : value;
 
         const isFill = layout.nodeAlign[0] == NodeAlign.fill;

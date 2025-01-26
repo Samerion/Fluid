@@ -196,3 +196,29 @@ unittest {
     );
 
 }
+
+@("PasswordInput draws a placeholder when empty")
+unittest {
+
+    auto node = passwordInput("Placeholder...");
+    auto root = testSpace(.testTheme, node);
+
+    root.drawAndAssert(
+        node.contentLabel.drawsHintedImage().at(0, 0, 121, 27).ofColor("#ffffff")
+            .sha256("b842ed720b325d744e4efb138bc2609667cb6f0b8735375e9ab3f5cde72789c6"),
+    );
+    root.drawAndAssertFailure(
+        node.drawsCircle(),
+    );
+
+    node.value = "a";
+
+    root.drawAndAssertFailure(
+        node.contentLabel.drawsHintedImage().at(0, 0, 121, 27).ofColor("#ffffff")
+            .sha256("b842ed720b325d744e4efb138bc2609667cb6f0b8735375e9ab3f5cde72789c6"),
+    );
+    root.drawAndAssert(
+        node.drawsCircle(),
+    );
+
+}

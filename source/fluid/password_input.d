@@ -47,17 +47,23 @@ class PasswordInput : TextInput {
 
     static class LocalContentLabel : ContentLabel {
 
+        this() {
+            isWrapDisabled = true;
+        }
+
         override void resizeImpl(Vector2 available) {
 
             super.resizeImpl(available);
 
-            const x = getAdvanceX(io, canvasIO, style);
-            const radius = x / 2f;
-            const advance = x * 1.2;
-            minSize = Vector2(
-                advance * value.countCharacters,
-                radius * 2,
-            );
+            if (!isPlaceholder) {
+                const x = getAdvanceX(io, canvasIO, style);
+                const radius = x / 2f;
+                const advance = x * 1.2;
+                minSize = Vector2(
+                    advance * value.countCharacters,
+                    radius * 2,
+                );
+            }
 
         }
 
