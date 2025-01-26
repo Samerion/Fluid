@@ -158,3 +158,41 @@ unittest {
     assert(root.value == "");
 
 }
+
+@("PasswordInput correctly handles large inputs in HiDPI")
+unittest {
+
+    enum textConstant = " one two three four";
+
+    auto node = passwordInput();
+    auto focus = focusChain(node);
+    auto root = testSpace(.testTheme, focus);
+    root.setScale(1.25);
+    focus.currentFocus = node;
+
+    node.push(textConstant);
+    root.draw();
+    root.drawAndAssert(
+        node.cropsTo(0, 0, 200, 27),
+        node.drawsCircle().at(-7.84, 13.2).ofRadius(5.2).ofColor("#000000"),
+        node.drawsCircle().at(4.64, 13.2).ofRadius(5.2).ofColor("#000000"),
+        node.drawsCircle().at(17.12, 13.2).ofRadius(5.2).ofColor("#000000"),
+        // ... more circles...
+        node.drawsCircle().at(179.36, 13.2).ofRadius(5.2).ofColor("#000000"),
+        node.drawsCircle().at(191.84, 13.2).ofRadius(5.2).ofColor("#000000"),
+        node.drawsLine().from(199.12, 2.64).to(199.12, 23.76).ofWidth(1).ofColor("#000000"),
+    );
+
+    node.push(textConstant);
+    root.drawAndAssert(
+        node.cropsTo(0, 0, 200, 27),
+        node.drawsCircle().at(-6.96003, 13.2).ofRadius(5.2).ofColor("#000000"),
+        node.drawsCircle().at(5.51997, 13.2).ofRadius(5.2).ofColor("#000000"),
+        node.drawsCircle().at(18, 13.2).ofRadius(5.2).ofColor("#000000"),
+        // ... more circles...
+        node.drawsCircle().at(180.24, 13.2).ofRadius(5.2).ofColor("#000000"),
+        node.drawsCircle().at(192.72, 13.2).ofRadius(5.2).ofColor("#000000"),
+        node.drawsLine().from(200, 2.64).to(200, 23.76).ofWidth(1).ofColor("#000000"),
+    );
+
+}

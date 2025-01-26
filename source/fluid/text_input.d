@@ -699,8 +699,11 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     }
 
-    /// Get the line height used by this input.
-    private float lineHeight() const {
+    /// Temporary workaround/helper function to get line height in pixels, as opposed to dots
+    /// given by `Typeface`.
+    /// Returns:
+    ///     The line height used by this input, in pixels.
+    protected float lineHeight() const {
 
         const scale = canvasIO
             ? canvasIO.toDots(Vector2(0, 1)).y
