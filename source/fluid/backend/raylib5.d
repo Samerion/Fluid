@@ -532,13 +532,13 @@ class Raylib5Backend : FluidBackend, FluidEntrypointBackend {
 
     void drawCircle(Vector2 center, float radius, Color color) @trusted {
 
-        DrawCircleV(center, radius, color);
+        DrawCircleV(toRaylibCoords(center), radius * hidpiScale.y, multiply(color, tint));
 
     }
 
     void drawCircleOutline(Vector2 center, float radius, Color color) @trusted {
 
-        DrawCircleLinesV(center, radius, color);
+        DrawCircleLinesV(toRaylibCoords(center), radius * hidpiScale.y, multiply(color, tint));
 
     }
 
