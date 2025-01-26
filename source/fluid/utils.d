@@ -317,6 +317,11 @@ Vector2 size(Rectangle r) nothrow {
     return Vector2(r.w, r.h);
 }
 
+/// Get the area of a rectangle.
+float area(Rectangle r) nothrow {
+    return r.w * r.h;
+}
+
 /// Intersect two rectangles
 Rectangle intersect(Rectangle one, Rectangle two) nothrow {
 
