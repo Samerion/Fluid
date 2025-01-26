@@ -188,6 +188,10 @@ class TestSpace : Space, CanvasIO, DebugSignalIO {
         return value;
     }
 
+    void setScale(float value) {
+        dpi = Vector2(96, 96) * value;
+    }
+
     /// Returns:
     ///     The number of times a debug signal has been emitted.
     /// Params:
@@ -1167,7 +1171,9 @@ auto isDrawn(Node subject) {
         Vector2 targetSpaceSize;
 
         override bool resume(Node node) {
-            return node.opEquals(subject).assertNotThrown;
+            return node.opEquals(subject).assertNotThrown
+                && !isTestingSpaceStart
+                && !isTestingSpaceSize;
         }
 
         override bool beforeDraw(Node node, Rectangle space, Rectangle, Rectangle) {
