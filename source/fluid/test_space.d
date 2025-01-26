@@ -1167,7 +1167,9 @@ auto isDrawn(Node subject) {
         Vector2 targetSpaceSize;
 
         override bool resume(Node node) {
-            return node.opEquals(subject).assertNotThrown;
+            return node.opEquals(subject).assertNotThrown
+                && !isTestingSpaceStart
+                && !isTestingSpaceSize;
         }
 
         override bool beforeDraw(Node node, Rectangle space, Rectangle, Rectangle) {
