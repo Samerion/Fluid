@@ -1894,4 +1894,16 @@ unittest {
             .sha256("9fa7e5f27e1ad1d7c21efa837f94ab241b3f4b4401c61841720eb40c5ff859cc"),
     );
 
+    foreach (_; 0..4) {
+        node.push(textConstant);
+    }
+    root.drawAndAssert(
+        node.cropsTo(0, 0, 200, 27),
+        node.contentLabel.isDrawn().at(-1440, 0, 1640, 27),
+        node.contentLabel.drawsHintedImage().at(-620.8, 0, 819.2, 819.2).ofColor("#ffffff")
+            .sha256("e4910bc3700d464f172425e266ea918ec88f6a6c0d42b6cbeed396e9f22fb5df"),
+        node.contentLabel.drawsHintedImage().at(198.4, 0, 819.2, 819.2).ofColor("#ffffff")
+            .sha256("bb017d2518a0b78fe37ba7aa231553806dbb9f6a8aaff8a84fedb8b4b704025d"),
+    );
+
 }

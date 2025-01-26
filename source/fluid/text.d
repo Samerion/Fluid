@@ -395,9 +395,15 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
                         const chunkRect = texture.chunkRectangle(chunkIndex);
 
+                        const wordStartPosition = ruler.caret(currentPenPosition).start;
+                        const wordEndPosition = ruler.caret.end;
+                        const wordRect = Rectangle(
+                            wordStartPosition.tupleof,
+                            (wordEndPosition - wordStartPosition).tupleof
+                        );
+
                         // Ignore chunks this word is not in the bounds of
-                        const relevant = chunkRect.contains(ruler.caret(currentPenPosition).start)
-                            || chunkRect.contains(ruler.caret.end);
+                        const relevant = intersect(chunkRect, wordRect).area > 0;
 
                         if (!relevant) continue;
 
@@ -407,9 +413,6 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
                         // Note: relativePenPosition is passed by ref
                         auto image = texture.chunks[chunkIndex].image;
                         typeface.drawLine(image, relativePenPosition, wordFragment, styleIndex);
-
-                        // Update the pen position; Result of this should be the same for each chunk
-                        penPosition = relativePenPosition + chunkRect.start;
 
                     }
 
