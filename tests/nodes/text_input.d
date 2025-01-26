@@ -11,6 +11,7 @@ Theme testTheme;
 static this() {
     testTheme = nullTheme.derive(
         rule!TextInput(
+            Rule.textColor = color("#000"),
             Rule.backgroundColor = color("#faf"),
             Rule.selectionBackgroundColor = color("#02a"),
             Rule.fontSize = 14.pt,
@@ -1775,5 +1776,134 @@ unittest {
 
     assert(input.selectedValue == "Line two\n");
     assert(input.selectionStart < input.selectionEnd);
+
+}
+
+@("TextInput selection displays correctly in HiDPI")
+unittest {
+
+    auto node = multilineInput(.testTheme);
+    auto root = testSpace(node);
+
+    // Matsuo Bashō "The Old Pond"
+    node.value = "Old pond...\n"
+        ~ "a frog jumps in\n"
+        ~ "water's sound\n";
+    node.selectSlice(4, 33);
+
+    // 100% scale
+    root.drawAndAssert(
+        node.drawsRectangle(0, 0, 200, 108).ofColor("#ffaaff"),
+        node.cropsTo(0, 0, 200, 108),
+
+        // Selection
+        node.drawsRectangle(33, 0, 59, 27).ofColor("#0022aa"),
+        node.drawsRectangle(0, 27, 128, 27).ofColor("#0022aa"),
+        node.drawsRectangle(0, 54, 50, 27).ofColor("#0022aa"),
+
+        node.contentLabel.isDrawn().at(0, 0, 200, 108),
+        node.contentLabel.drawsHintedImage().at(0, 0, 1024, 1024).ofColor("#ffffff")
+            .sha256("7033f92fce5cf825ab357b1514628504361399d20ce47e2966ed86cacc45cf3a"),
+    );
+
+    // 125% scale
+    root.setScale(1.25);
+    root.drawAndAssert(
+
+        // Selection
+        node.drawsRectangle(33.6, 0, 57.6, 26.4).ofColor("#0022aa"),
+        node.drawsRectangle(0, 26.4, 128.8, 26.4).ofColor("#0022aa"),
+        node.drawsRectangle(0, 52.8, 48.8, 26.4).ofColor("#0022aa"),
+
+        node.contentLabel.isDrawn().at(0, 0, 200, 106),
+        node.contentLabel.drawsHintedImage().at(0, 0, 819.2, 819.2).ofColor("#ffffff")
+            .sha256("2c72029c85ba28479d2089456261828dfb046c1be134b46408740b853e352b90"),
+    );
+
+}
+
+@("TextInput pointer position is correctly recognized in HiDPI")
+unittest {
+
+    auto node = multilineInput(.testTheme);
+    auto focus = focusChain(node);
+    auto root = testSpace(focus);
+
+    focus.currentFocus = node;
+
+    // Matsuo Bashō "The Old Pond"
+    node.value = "Old pond...\n"
+        ~ "a frog jumps in\n"
+        ~ "water's sound\n";
+
+    // Warning: There is some kind of precision loss going on here
+    foreach (i, scale; [1.00, 1.25]) {
+        root.setScale(scale);
+        root.draw();
+
+        node.caretTo(Vector2(36, 10));
+        node.updateCaretPosition();
+        assert(node.caretIndex == 4);
+        root.drawAndAssert(
+            i == 0
+                ? node.drawsLine().from(33.0, 2.70).to(33.0, 24.30).ofWidth(1).ofColor("#000000")
+                : node.drawsLine().from(33.6, 2.64).to(33.6, 23.76).ofWidth(1).ofColor("#000000"),
+        );
+
+        node.caretTo(Vector2(47, 66));
+        node.updateCaretPosition();
+        assert(node.caretIndex == 33);
+        root.drawAndAssert(
+            i == 0
+                ? node.drawsLine().from(50.0, 56.70).to(50.0, 78.30).ofWidth(1).ofColor("#000000")
+                : node.drawsLine().from(48.8, 55.44).to(48.8, 76.56).ofWidth(1).ofColor("#000000"),
+        );
+    }
+
+}
+
+@("TextInput scrolling works correctly in HiDPI")
+unittest {
+
+    enum textConstant = " one two three four";
+
+    auto node = lineInput();
+    auto root = testSpace(.testTheme, node);
+    root.setScale(1.25);
+    root.draw();
+
+    node.push(textConstant);
+    root.drawAndAssert(
+        node.isDrawn().at(0, 0, 200, 27),
+        node.drawsRectangle(0, 0, 200, 27).ofColor("#ffaaff"),
+        node.cropsTo(0, 0, 200, 27),
+        node.contentLabel.drawsHintedImage().at(0, 0, 819.2, 819.2).ofColor("#ffffff")
+            .sha256("f8e7558a9641e24bb5cb8bb49c27284d87436789114e2f875e2736b521fe170e"),
+        node.contentLabel.doesNotDraw(),
+    );
+
+    foreach (_; 0..5) {
+        node.push(textConstant);
+    }
+    root.drawAndAssert(
+        node.cropsTo(0, 0, 200, 27),
+        node.contentLabel.isDrawn().at(-784, 0, 984, 27),
+        node.contentLabel.drawsHintedImage().at(-784, 0, 819.2, 819.2).ofColor("#ffffff")
+            .sha256("01f6ca34c8a7cda32d38daac9938031a5b16020e8fed3aca0f4748582c787de8"),
+        node.contentLabel.drawsHintedImage().at(35.2, 0, 819.2, 819.2).ofColor("#ffffff")
+            .sha256("9fa7e5f27e1ad1d7c21efa837f94ab241b3f4b4401c61841720eb40c5ff859cc"),
+    );
+
+    foreach (_; 0..4) {
+        node.push(textConstant);
+    }
+    root.drawAndAssert(
+        node.cropsTo(0, 0, 200, 27),
+        node.contentLabel.isDrawn().at(-1440, 0, 1640, 27),
+        node.contentLabel.drawsHintedImage().at(-620.8, 0, 819.2, 819.2).ofColor("#ffffff")
+            .sha256("e4910bc3700d464f172425e266ea918ec88f6a6c0d42b6cbeed396e9f22fb5df"),
+        node.contentLabel.drawsHintedImage().at(198.4, 0, 819.2, 819.2).ofColor("#ffffff")
+            .sha256("bb017d2518a0b78fe37ba7aa231553806dbb9f6a8aaff8a84fedb8b4b704025d"),
+    );
 
 }

@@ -688,7 +688,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         const minLines = multiline ? 3 : 1;
 
         // Set height to at least the font size, or total text size
-        minSize.y = max(minSize.y, style.getTypeface.lineHeight * minLines, contentLabel.minSize.y);
+        minSize.y = max(minSize.y, lineHeight * minLines, contentLabel.minSize.y);
 
         // Locate the cursor
         updateCaretPosition();
@@ -696,6 +696,17 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         // Horizontal anchor is not set, update it
         if (horizontalAnchor.isNaN)
             horizontalAnchor = caretPosition.x;
+
+    }
+
+    /// Get the line height used by this input.
+    private float lineHeight() const {
+
+        const scale = canvasIO
+            ? canvasIO.toDots(Vector2(0, 1)).y
+            : io.hidpiScale.y;
+
+        return style.getTypeface.lineHeight / scale;
 
     }
 
@@ -753,12 +764,19 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     /// Find the closest index to the given position.
     /// Returns: Index of the character. The index may be equal to character length.
-    size_t nearestCharacter(Vector2 needle) {
+    size_t nearestCharacter(Vector2 needlePx) {
 
         import std.math : abs;
 
         auto ruler = textRuler();
         auto typeface = ruler.typeface;
+
+        const needle = canvasIO
+            ? canvasIO.toDots(needlePx)
+            : Vector2(
+                io.hidpiScale.x * needlePx.x,
+                io.hidpiScale.y * needlePx.y,
+            );
 
         struct Position {
             size_t index;
@@ -920,7 +938,15 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         // Measure the word itself, and remove it
         caretPosition.x -= typeface.measure(tail[]).x;
 
-        return caretPosition;
+        if (canvasIO) {
+            return canvasIO.fromDots(caretPosition);
+        }
+        else {
+            return Vector2(
+                caretPosition.x / io.hidpiScale.x,
+                caretPosition.y / io.hidpiScale.y,
+            );
+        }
 
     }
 
@@ -992,7 +1018,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         // Add a blinking caret
         if (showCaret) {
 
-            const lineHeight = style.getTypeface.lineHeight;
+            const lineHeight = this.lineHeight;
             const margin = lineHeight / 10f;
             const relativeCaretPosition = this.caretPosition();
             const caretPosition = start(inner) + relativeCaretPosition;
@@ -1019,7 +1045,6 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     override Rectangle focusBoxImpl(Rectangle inner) const {
 
-        const lineHeight = style.getTypeface.lineHeight;
         const position = inner.start + caretPosition;
 
         return Rectangle(
@@ -1044,6 +1069,18 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
         const low = selectionLowIndex;
         const high = selectionHighIndex;
+
+        Vector2 scale(Vector2 input) {
+            if (canvasIO) {
+                return canvasIO.fromDots(input);
+            }
+            else {
+                return Vector2(
+                    input.x / io.hidpiScale.x,
+                    input.y / io.hidpiScale.y,
+                );
+            }
+        }
 
         auto style = pickStyle();
         auto typeface = style.getTypeface;
@@ -1072,8 +1109,8 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
                 if (newLine && startIndex > low) {
 
                     const rect = Rectangle(
-                        (inner.start + lineStart).tupleof,
-                        (lineEnd - lineStart).tupleof
+                        (inner.start + scale(lineStart)).tupleof,
+                        scale(lineEnd - lineStart).tupleof
                     );
 
                     lineStart = caret.start;
@@ -1102,8 +1139,8 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
                     const dent = typeface.measure(word[0 .. high - startIndex]);
                     const lineEnd = caret.end + Vector2(dent.x, 0);
                     const rect = Rectangle(
-                        (inner.start + lineStart).tupleof,
-                        (lineEnd - lineStart).tupleof
+                        (inner.start + scale(lineStart)).tupleof,
+                        scale(lineEnd - lineStart).tupleof
                     );
 
                     if (canvasIO) {
@@ -2181,21 +2218,16 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
     @(FluidInputAction.previousLine, FluidInputAction.nextLine)
     protected void previousOrNextLine(FluidInputAction action) {
 
-        auto typeface = style.getTypeface;
         auto search = Vector2(horizontalAnchor, caretPosition.y);
 
         // Next line
         if (action == FluidInputAction.nextLine) {
-
-            search.y += typeface.lineHeight;
-
+            search.y += lineHeight;
         }
 
         // Previous line
         else {
-
-            search.y -= typeface.lineHeight;
-
+            search.y -= lineHeight;
         }
 
         caretTo(search);
