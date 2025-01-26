@@ -188,6 +188,10 @@ class TestSpace : Space, CanvasIO, DebugSignalIO {
         return value;
     }
 
+    void setScale(float value) {
+        dpi = Vector2(96, 96) * value;
+    }
+
     /// Returns:
     ///     The number of times a debug signal has been emitted.
     /// Params:

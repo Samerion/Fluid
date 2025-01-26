@@ -1045,6 +1045,18 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         const low = selectionLowIndex;
         const high = selectionHighIndex;
 
+        Vector2 scale(Vector2 input) {
+            if (canvasIO) {
+                return canvasIO.fromDots(input);
+            }
+            else {
+                return Vector2(
+                    input.x / io.hidpiScale.x,
+                    input.y / io.hidpiScale.y,
+                );
+            }
+        }
+
         auto style = pickStyle();
         auto typeface = style.getTypeface;
         auto ruler = textRuler();
@@ -1072,8 +1084,8 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
                 if (newLine && startIndex > low) {
 
                     const rect = Rectangle(
-                        (inner.start + lineStart).tupleof,
-                        (lineEnd - lineStart).tupleof
+                        (inner.start + scale(lineStart)).tupleof,
+                        scale(lineEnd - lineStart).tupleof
                     );
 
                     lineStart = caret.start;
@@ -1102,8 +1114,8 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
                     const dent = typeface.measure(word[0 .. high - startIndex]);
                     const lineEnd = caret.end + Vector2(dent.x, 0);
                     const rect = Rectangle(
-                        (inner.start + lineStart).tupleof,
-                        (lineEnd - lineStart).tupleof
+                        (inner.start + scale(lineStart)).tupleof,
+                        scale(lineEnd - lineStart).tupleof
                     );
 
                     if (canvasIO) {
