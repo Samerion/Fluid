@@ -47,15 +47,23 @@ class PasswordInput : TextInput {
 
     static class LocalContentLabel : ContentLabel {
 
-        override void resizeImpl(Vector2) {
+        this() {
+            isWrapDisabled = true;
+        }
 
-            const x = getAdvanceX(io, canvasIO, style);
-            const radius = x / 2f;
-            const advance = x * 1.2;
-            minSize = Vector2(
-                advance * value.countCharacters,
-                radius * 2,
-            );
+        override void resizeImpl(Vector2 available) {
+
+            super.resizeImpl(available);
+
+            if (!isPlaceholder) {
+                const x = getAdvanceX(io, canvasIO, style);
+                const radius = x / 2f;
+                const advance = x * 1.2;
+                minSize = Vector2(
+                    advance * value.countCharacters,
+                    radius * 2,
+                );
+            }
 
         }
 
@@ -101,9 +109,21 @@ class PasswordInput : TextInput {
 
     }
 
-    protected override void drawContents(Rectangle inner, Rectangle innerScrolled) {
+    protected override void resizeImpl(Vector2 space) {
 
-        auto typeface = pickStyle.getTypeface;
+        use(canvasIO);
+
+        // Use the "X" character as reference
+        const x = getAdvanceX(io, canvasIO, style);
+
+        radius = x / 2f;
+        advance = x * 1.2;
+
+        super.resizeImpl(space);
+
+    }
+
+    protected override void drawContents(Rectangle inner, Rectangle innerScrolled) {
 
         // Empty, draw the placeholder using regular input
         if (isEmpty) return super.drawContents(inner, innerScrolled);
@@ -111,7 +131,8 @@ class PasswordInput : TextInput {
         // Draw selection
         drawSelection(innerScrolled);
 
-        auto cursor = start(innerScrolled) + Vector2(radius, typeface.lineHeight / 2f);
+        auto cursor = start(innerScrolled) + Vector2(radius, lineHeight / 2f);
+        auto style = pickStyle;
 
         // Draw a circle for each character
         if (canvasIO) {
@@ -169,8 +190,6 @@ class PasswordInput : TextInput {
         // Ignore if selection is empty
         if (selectionStart == selectionEnd) return;
 
-        const typeface = style.getTypeface;
-
         const low = min(selectionStart, selectionEnd);
         const high = max(selectionStart, selectionEnd);
 
@@ -179,7 +198,7 @@ class PasswordInput : TextInput {
 
         const rect = Rectangle(
             (inner.start + Vector2(start, 0)).tupleof,
-            size, typeface.lineHeight,
+            size, lineHeight,
         );
 
         if (canvasIO) {
@@ -192,29 +211,20 @@ class PasswordInput : TextInput {
     }
 
     /// Get the X advance of letter "X."
-    protected static getAdvanceX(FluidBackend io, CanvasIO canvasIO, Style style) {
+    protected static float getAdvanceX(FluidBackend io, CanvasIO canvasIO, Style style) {
+
+        float scale;
 
         if (canvasIO) {
             style.setDPI(canvasIO.dpi);
+            scale = canvasIO.toDots(Vector2(1, 0)).x;
         }
         else {
             style.setDPI(io.dpi);
+            scale = io.hidpiScale.x;
         }
 
-        auto typeface = style.getTypeface;
-        return typeface.advance('X').x;
-
-    }
-
-    protected override void reloadStyles() {
-
-        super.reloadStyles();
-
-        // Use the "X" character as reference
-        const x = getAdvanceX(io, canvasIO, style);
-
-        radius = x / 2f;
-        advance = x * 1.2;
+        return style.getTypeface.advance('X').x / scale;
 
     }
 

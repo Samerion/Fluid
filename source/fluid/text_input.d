@@ -200,6 +200,12 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         /// ditto
         DList!HistoryEntry _redoStack;
 
+        /// The line height used by this input, in pixels.
+        ///
+        /// Temporary workaround/helper function to get line height in pixels, as opposed to dots
+        /// given by `Typeface`.
+        float lineHeight;
+
     }
 
     private {
@@ -289,6 +295,8 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
     }
 
     static class ContentLabel : Label {
+
+        bool isPlaceholder;
 
         this() {
             super("");
@@ -669,6 +677,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         minSize = size;
 
         // Set the label text
+        contentLabel.isPlaceholder = value == "";
         contentLabel.text = value == "" ? placeholder : value;
 
         const isFill = layout.nodeAlign[0] == NodeAlign.fill;
@@ -685,6 +694,12 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         contentLabel.style = pickLabelStyle(style);
         resizeChild(contentLabel, textArea);
 
+        const scale = canvasIO
+            ? canvasIO.toDots(Vector2(0, 1)).y
+            : io.hidpiScale.y;
+
+        lineHeight = style.getTypeface.lineHeight / scale;
+
         const minLines = multiline ? 3 : 1;
 
         // Set height to at least the font size, or total text size
@@ -696,17 +711,6 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         // Horizontal anchor is not set, update it
         if (horizontalAnchor.isNaN)
             horizontalAnchor = caretPosition.x;
-
-    }
-
-    /// Get the line height used by this input.
-    private float lineHeight() const {
-
-        const scale = canvasIO
-            ? canvasIO.toDots(Vector2(0, 1)).y
-            : io.hidpiScale.y;
-
-        return style.getTypeface.lineHeight / scale;
 
     }
 
