@@ -11,6 +11,7 @@ Theme testTheme;
 static this() {
     testTheme = nullTheme.derive(
         rule!TextInput(
+            Rule.textColor = color("#000"),
             Rule.backgroundColor = color("#faf"),
             Rule.selectionBackgroundColor = color("#02a"),
             Rule.fontSize = 14.pt,
@@ -1825,21 +1826,38 @@ unittest {
 unittest {
 
     auto node = multilineInput(.testTheme);
-    auto root = testSpace(node);
+    auto focus = focusChain(node);
+    auto root = testSpace(focus);
+
+    focus.currentFocus = node;
 
     // Matsuo Bashō "The Old Pond"
     node.value = "Old pond...\n"
         ~ "a frog jumps in\n"
         ~ "water's sound\n";
 
-    foreach (scale; [1.00, 1.25]) {
+    // Warning: There is some kind of precision loss going on here
+    foreach (i, scale; [1.00, 1.25]) {
         root.setScale(scale);
         root.draw();
 
         node.caretTo(Vector2(36, 10));
+        node.updateCaretPosition();
         assert(node.caretIndex == 4);
+        root.drawAndAssert(
+            i == 0
+                ? node.drawsLine().from(33.0, 2.70).to(33.0, 24.30).ofWidth(1).ofColor("#000000")
+                : node.drawsLine().from(33.6, 2.64).to(33.6, 23.76).ofWidth(1).ofColor("#000000"),
+        );
+
         node.caretTo(Vector2(47, 66));
+        node.updateCaretPosition();
         assert(node.caretIndex == 33);
+        root.drawAndAssert(
+            i == 0
+                ? node.drawsLine().from(50.0, 56.70).to(50.0, 78.30).ofWidth(1).ofColor("#000000")
+                : node.drawsLine().from(48.8, 55.44).to(48.8, 76.56).ofWidth(1).ofColor("#000000"),
+        );
     }
 
 }
