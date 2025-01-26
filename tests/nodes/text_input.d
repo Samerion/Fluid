@@ -1861,3 +1861,37 @@ unittest {
     }
 
 }
+
+@("TextInput scrolling works correctly in HiDPI")
+unittest {
+
+    enum textConstant = " one two three four";
+
+    auto node = lineInput();
+    auto root = testSpace(.testTheme, node);
+    root.setScale(1.25);
+    root.draw();
+
+    node.push(textConstant);
+    root.drawAndAssert(
+        node.isDrawn().at(0, 0, 200, 27),
+        node.drawsRectangle(0, 0, 200, 27).ofColor("#ffaaff"),
+        node.cropsTo(0, 0, 200, 27),
+        node.contentLabel.drawsHintedImage().at(0, 0, 819.2, 819.2).ofColor("#ffffff")
+            .sha256("f8e7558a9641e24bb5cb8bb49c27284d87436789114e2f875e2736b521fe170e"),
+        node.contentLabel.doesNotDraw(),
+    );
+
+    foreach (_; 0..5) {
+        node.push(textConstant);
+    }
+    root.drawAndAssert(
+        node.cropsTo(0, 0, 200, 27),
+        node.contentLabel.isDrawn().at(-784, 0, 984, 27),
+        node.contentLabel.drawsHintedImage().at(-784, 0, 819.2, 819.2).ofColor("#ffffff")
+            .sha256("01f6ca34c8a7cda32d38daac9938031a5b16020e8fed3aca0f4748582c787de8"),
+        node.contentLabel.drawsHintedImage().at(35.2, 0, 819.2, 819.2).ofColor("#ffffff")
+            .sha256("9fa7e5f27e1ad1d7c21efa837f94ab241b3f4b4401c61841720eb40c5ff859cc"),
+    );
+
+}

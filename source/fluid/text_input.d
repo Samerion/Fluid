@@ -688,7 +688,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         const minLines = multiline ? 3 : 1;
 
         // Set height to at least the font size, or total text size
-        minSize.y = max(minSize.y, style.getTypeface.lineHeight * minLines, contentLabel.minSize.y);
+        minSize.y = max(minSize.y, lineHeight * minLines, contentLabel.minSize.y);
 
         // Locate the cursor
         updateCaretPosition();
@@ -696,6 +696,17 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         // Horizontal anchor is not set, update it
         if (horizontalAnchor.isNaN)
             horizontalAnchor = caretPosition.x;
+
+    }
+
+    /// Get the line height used by this input.
+    private float lineHeight() const {
+
+        const scale = canvasIO
+            ? canvasIO.toDots(Vector2(0, 1)).y
+            : io.hidpiScale.y;
+
+        return style.getTypeface.lineHeight / scale;
 
     }
 
@@ -1007,11 +1018,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         // Add a blinking caret
         if (showCaret) {
 
-            const scale = canvasIO
-                ? canvasIO.toDots(Vector2(0, 1)).y
-                : io.hidpiScale.y;
-
-            const lineHeight = style.getTypeface.lineHeight / scale;
+            const lineHeight = this.lineHeight;
             const margin = lineHeight / 10f;
             const relativeCaretPosition = this.caretPosition();
             const caretPosition = start(inner) + relativeCaretPosition;
@@ -1038,7 +1045,6 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     override Rectangle focusBoxImpl(Rectangle inner) const {
 
-        const lineHeight = style.getTypeface.lineHeight;
         const position = inner.start + caretPosition;
 
         return Rectangle(
@@ -2212,21 +2218,16 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
     @(FluidInputAction.previousLine, FluidInputAction.nextLine)
     protected void previousOrNextLine(FluidInputAction action) {
 
-        auto typeface = style.getTypeface;
         auto search = Vector2(horizontalAnchor, caretPosition.y);
 
         // Next line
         if (action == FluidInputAction.nextLine) {
-
-            search.y += typeface.lineHeight;
-
+            search.y += lineHeight;
         }
 
         // Previous line
         else {
-
-            search.y -= typeface.lineHeight;
-
+            search.y -= lineHeight;
         }
 
         caretTo(search);
