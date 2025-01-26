@@ -1820,3 +1820,26 @@ unittest {
     );
 
 }
+
+@("TextInput pointer position is correctly recognized in HiDPI")
+unittest {
+
+    auto node = multilineInput(.testTheme);
+    auto root = testSpace(node);
+
+    // Matsuo Bashō "The Old Pond"
+    node.value = "Old pond...\n"
+        ~ "a frog jumps in\n"
+        ~ "water's sound\n";
+
+    foreach (scale; [1.00, 1.25]) {
+        root.setScale(scale);
+        root.draw();
+
+        node.caretTo(Vector2(36, 10));
+        assert(node.caretIndex == 4);
+        node.caretTo(Vector2(47, 66));
+        assert(node.caretIndex == 33);
+    }
+
+}
