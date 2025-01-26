@@ -414,6 +414,10 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
                         auto image = texture.chunks[chunkIndex].image;
                         typeface.drawLine(image, relativePenPosition, wordFragment, styleIndex);
 
+                        // Update pen position for subsequent fragments
+                        // Result of this should be the same for each chunk
+                        penPosition = relativePenPosition + chunkRect.start;
+
                     }
 
                     // Update the index
