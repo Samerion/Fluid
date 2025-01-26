@@ -8,6 +8,19 @@ import std.algorithm;
 
 @safe:
 
+Theme testTheme;
+
+static this() {
+    testTheme = nullTheme.derive(
+        rule!TextInput(
+            Rule.textColor = color("#00303f"),
+            Rule.backgroundColor = color("#bfefff"),
+            Rule.selectionBackgroundColor = color("#41d2ff"),
+            Rule.fontSize = 14.pt,
+        ),
+    );
+}
+
 @("CodeInput.lineHomeByIndex returns first non-blank character of the line")
 unittest {
 
@@ -760,7 +773,7 @@ unittest {
 
 }
 
-@("CodeInput supports syntax hgihlighting with CodeHighlighter")
+@("CodeInput supports syntax highlighting with CodeHighlighter")
 unittest {
 
     import std.typecons : BlackHole;
@@ -1207,5 +1220,55 @@ unittest {
     input.caretIndex = input.value.indexOf("x");
     input.paste();
     assert(input.value == "let foo() {\n\tfoo\n\tbar\n\tx\n}");
+
+}
+
+@("CodeInput correctly displays text and selection in HiDPI")
+unittest {
+
+    import std.typecons : BlackHole;
+
+    enum tokenFunction = 1;
+    enum tokenString = 2;
+    auto highlighter = new class BlackHole!CodeHighlighter {
+
+        override CodeSlice query(size_t byteIndex) {
+
+            if (byteIndex <=  4) return CodeSlice( 4,  7, tokenFunction);
+            if (byteIndex <= 14) return CodeSlice(14, 28, tokenString);
+            return CodeSlice.init;
+
+        }
+
+    };
+
+    auto node = codeInput(.testTheme, highlighter);
+    auto root = testSpace(node);
+
+    node.value = "let foo() {\n\t`Hello, World!`\n}";
+    node.selectSlice(4, 19);
+
+    // 100% scale
+    root.drawAndAssert(
+        node.cropsTo(0, 0, 200, 81),
+        node.drawsRectangle(28, 0, 52, 27).ofColor("#41d2ff"),
+        node.drawsRectangle(0, 27, 66, 27).ofColor("#41d2ff"),
+        node.contentLabel.isDrawn().at(0, 0, 200, 81),
+        node.contentLabel.drawsHintedImage().at(0, 0, 1024, 1024).ofColor("#ffffff")
+            .sha256("7d1a992dbe8419432e5c387a88ad8b5117fdd06f9eb51ca80e1c4bb49c6e33a9"),
+        node.resetsCrop(),
+    );
+
+    // 125% scale
+    root.setScale(1.25);
+    root.drawAndAssert(
+        node.cropsTo(0, 0, 200, 80),
+        node.drawsRectangle(28, 0, 51.2, 26.4).ofColor("#41d2ff"),
+        node.drawsRectangle(0, 26.4, 64.8, 26.4).ofColor("#41d2ff"),
+        node.contentLabel.isDrawn().at(0, 0, 200, 80),
+        node.contentLabel.drawsHintedImage().at(0, 0, 819.2, 819.2).ofColor("#ffffff")
+            .sha256("fe98c96e3d23bf446821cc1732361588236d1177fbf298de43be3df7e6c61778"),
+        node.resetsCrop(),
+    );
 
 }
