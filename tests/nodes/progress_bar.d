@@ -4,14 +4,13 @@ import fluid;
 
 @safe:
 
-@("ProgressBar displays values using ProgressBarFill")
-unittest {
+Theme testTheme;
+
+static this() {
 
     import fluid.theme;
 
-    const steps = 24;
-
-    auto theme = nullTheme.derive(
+    testTheme = nullTheme.derive(
         rule!ProgressBar(
             backgroundColor = color("#eee"),
             textColor = color("#000"),
@@ -20,8 +19,20 @@ unittest {
             backgroundColor = color("#17b117"),
         )
     );
+
+}
+
+@("ProgressBar displays values using ProgressBarFill")
+unittest {
+
+    const steps = 24;
+
     auto bar = progressBar(steps);
-    auto root = testSpace(.layout!"fill", theme, bar);
+    auto root = sizeLock!testSpace(
+        .sizeLimit(800, 600),
+        .testTheme,
+        bar
+    );
 
     root.draw();
     assert(bar.text == "0%");
@@ -103,5 +114,38 @@ unittest {
         bar.fill.drawsRectangle(0, 0, 80, 4).ofColor("#17b117"),
     );
     assert(bar.text == "");
+
+}
+
+@("ProgressBar displays correctly in HiDPI")
+unittest {
+
+    const steps = 24;
+
+    auto node = progressBar(steps);
+    auto root = sizeLock!testSpace(
+        .sizeLimit(400, 200),
+        .testTheme,
+        node
+    );
+
+    root.drawAndAssert(
+        node.isDrawn().at(0, 0, 400, 27),
+        node.drawsRectangle(0, 0, 400, 27).ofColor("#eeeeee"),
+        node.fill.isDrawn().at(0, 0, 400, 27),
+        node.fill.drawsRectangle(0, 0, 0, 27).ofColor("#17b117"),
+        node.drawsHintedImage().at(187, 0, 26, 27).ofColor("#ffffff")
+            .sha256("66dd88a8c076bdbc2cf58ab9a2c855e6c155aeae2428494537b2bf45c97e541d"),
+    );
+
+    root.setScale(1.25);
+    root.drawAndAssert(
+        node.isDrawn().at(0, 0, 400, 27),
+        node.drawsRectangle(0, 0, 400, 27).ofColor("#eeeeee"),
+        node.fill.isDrawn().at(0, 0, 400, 27),
+        node.fill.drawsRectangle(0, 0, 0, 27).ofColor("#17b117"),
+        node.drawsHintedImage().at(187.2, 0.3, 25.6, 26.4).ofColor("#ffffff")
+            .sha256("0d527db3ea41c4f1b4b17d4f6b4bf6d1921f640e25b530b949baa78232fa0681"),
+    );
 
 }

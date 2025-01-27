@@ -323,10 +323,25 @@ struct Image {
     /// Returns:
     ///     Size of the image in pixels (not dots). This is the space the image will occupy
     ///     in the viewport.
+    deprecated("`Image.viewportSize()` yields incorrect results. "
+        ~ "Use `Image.viewportSize(Vector2)` instead. "
+        ~ "The original overload will be removed in Fluid 0.8.0.")
     Vector2 viewportSize() const pure nothrow {
         return Vector2(
             width * 96f / dpiX,
             height * 96f / dpiY
+        );
+    }
+
+    /// Params:
+    ///     dpi = DPI of the canvas.
+    /// Returns:
+    ///     Size of the image in pixels (not dots). This is the space the image will occupy
+    ///     in the viewport.
+    Vector2 viewportSize(Vector2 dpi) const pure nothrow {
+        return Vector2(
+            width * dpiX / dpi.x,
+            height * dpiY / dpi.y
         );
     }
 
