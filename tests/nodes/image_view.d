@@ -112,3 +112,38 @@ unittest {
     assert(view.image.height == 480);
 
 }
+
+@("ImageView displays correctly in HiDPI")
+unittest {
+
+    auto view = imageView("icon.png");
+    auto stack = chain(
+        fileChain(),
+        arsdImageChain(),
+        view,
+    );
+    auto root = testSpace(stack);
+
+    // 100% UI scale; image drawn at 96 DPI
+    root.drawAndAssert(
+        view.drawsImage().at(0, 0, 304, 303),
+    );
+    assert(view.image.dpiX == 96);
+    assert(view.image.dpiY == 96);
+
+    // 125% UI scale; image drawn at 96 DPI
+    // Warning: Affected by https://git.samerion.com/Samerion/Fluid/issues/330
+    root.setScale(1.25);
+    root.drawAndAssert(
+        view.drawsImage().at(0.09, 0, 243.80, 243),
+    );
+
+    // 125% UI scale; image drawn at 120 DPI
+    view.image.dpiX = 120;
+    view.image.dpiY = 120;
+    view.updateSize();
+    root.drawAndAssert(
+        view.drawsImage().at(0, 0, 304, 303),
+    );
+
+}

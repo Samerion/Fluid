@@ -237,17 +237,19 @@ class ImageView : Node {
             // Adjust size
             if (isSizeAutomatic) {
 
-                // No texture loaded, shrink to nothingness
+                const viewportSize = image.viewportSize(canvasIO.dpi);
+
+                // No image loaded, shrink to nothingness
                 if (image == Image.init) {
                     minSize = Vector2(0, 0);
                 }
 
                 else if (isAutoExpand) {
-                    minSize = fitInto(texture.viewportSize, space);
+                    minSize = fitInto(viewportSize, space);
                 }
 
                 else {
-                    minSize = image.viewportSize;
+                    minSize = viewportSize;
                 }
 
             }
@@ -296,7 +298,8 @@ class ImageView : Node {
             // Ignore if there is no texture to draw
             if (image == Image.init) return;
 
-            const size     = fitInto(image.viewportSize, inner.size);
+            const size = image.viewportSize(canvasIO.dpi)
+                .fitInto(inner.size);
             const position = center(inner) - size/2;
 
             _targetArea = Rectangle(position.tupleof, size.tupleof);
