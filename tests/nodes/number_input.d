@@ -132,3 +132,71 @@ unittest {
     assert(input.TextInput.value == "11");
 
 }
+
+@("NumberInput correctly scales buttons in HiDPI")
+unittest {
+
+    auto input = intInput();
+    auto root = testSpace(input);
+    auto node = input.spinner;
+
+    // 100% scale
+    root.drawAndAssert(
+        node.drawsRectangle(6, 2, 200, 27).ofColor("#00000000"),
+        node.drawsImage().at(189.125, 2, 16.875, 27).ofColor("#ffffff")
+            .sha256("341d0882a4db03e29bfa6b016d133c6082df3c2d6817978adc82d3678310565e"),
+    );
+
+    // 125% scale, buttons are drawn all the same
+    root.setScale(1.25);
+    root.drawAndAssert(
+        node.drawsRectangle(6, 2, 200, 27).ofColor("#00000000"),
+        node.drawsImage().at(189.125, 2, 16.875, 27).ofColor("#ffffff")
+            .sha256("341d0882a4db03e29bfa6b016d133c6082df3c2d6817978adc82d3678310565e"),
+    );
+
+}
+
+@("NumberInputSpinner correctly maps visual space in HiDPI")
+unittest {
+
+    int ups, downs;
+
+    auto node = new NumberInputSpinner(
+        { ups++; },
+        { downs++; },
+    );
+    auto hover = hoverChain(node);
+    auto root = sizeLock!testSpace(
+        .sizeLimit(100, 100),
+        hover,
+    );
+
+    node.layout = .layout!"fill";
+    hover.layout = .layout!(1, "fill");
+
+    // Scale does not affect hitboxes
+    foreach (scale; [1.00, 1.25]) {
+        ups = 0;
+        downs = 0;
+
+        root.setScale(scale);
+        hover.point(99, 49)
+            .then((a) {
+                a.click();
+                assert(ups   == 1);
+                assert(downs == 0);
+                return a.move(100, 51);
+            })
+            .then((a) {
+                a.click();
+                assert(ups   == 1);
+                assert(downs == 1);
+            })
+            .runWhileDrawing(root);
+    }
+
+    assert(ups   == 1);
+    assert(downs == 1);
+
+}

@@ -435,7 +435,7 @@ class NumberInputSpinner : Node, FluidHoverable, Hoverable {
         if (spinnerImage != Image.init) {
 
             const scale = inner.height / spinnerImage.height;
-            const size = spinnerImage.viewportSize * scale;
+            const size = spinnerImage.size * scale;
             const position = end(inner) - size;
 
             return Rectangle(position.tupleof, size.tupleof);
