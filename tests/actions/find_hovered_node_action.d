@@ -22,8 +22,10 @@ class RectangleBox : Node {
 
     }
 
-    override bool inBoundsImpl(Rectangle, Rectangle, Vector2 position) {
-        return self.contains(position);
+    override IsOpaque inBoundsImpl(Rectangle, Rectangle, Vector2 position) {
+        return self.contains(position)
+            ? IsOpaque.yes
+            : IsOpaque.no;
     }
 
 }
@@ -48,8 +50,10 @@ class CircleBox : Node {
 
     }
 
-    override bool inBoundsImpl(Rectangle, Rectangle, Vector2 position) {
-        return (center.x - position.x)^^2 + (center.y - position.y)^^2 <= radius^^2;
+    override IsOpaque inBoundsImpl(Rectangle, Rectangle, Vector2 position) {
+        return (center.x - position.x)^^2 + (center.y - position.y)^^2 <= radius^^2
+            ? IsOpaque.yes
+            : IsOpaque.no;
     }
 
 }
@@ -188,5 +192,52 @@ unittest {
     root.draw();
     assert(action.result.opEquals(inner));
     assert(action.scrollable.opEquals(outer));
+
+}
+
+@("FindHoveredNodeAction respects Node.isOpaque")
+unittest {
+
+    import std.conv;
+
+    Frame container;
+    RectangleBox[3] boxes;
+
+    auto root = sizeLock!vspace(
+        .sizeLimit(50, 150),
+        container = vframe(
+            .layout!(1, "fill"),
+            boxes[0] = rectangleBox(                   Rectangle(0,   0, 50, 50)),
+            boxes[1] = rectangleBox(IsOpaque.no,       Rectangle(0,  50, 50, 50)),
+            boxes[2] = rectangleBox(IsOpaque.onlySelf, Rectangle(0, 100, 50, 50)),
+        ),
+    );
+
+    auto action = new FindHoveredNodeAction;
+
+    void testSearch(IsOpaque opacity, Vector2 position, Node result) {
+        container.isOpaque = opacity;
+        action.search = position;
+        root.startAction(action);
+        root.draw();
+        if (result is null) {
+            assert(action.result is null, action.result.text);
+        }
+        else {
+            assert(result.opEquals(action.result), action.result.text);
+        }
+    }
+
+    // Children should be selectable for both `yes` and `no` options
+    testSearch(IsOpaque.yes, Vector2(25,  25), boxes[0]);
+    testSearch(IsOpaque.yes, Vector2(25, 125), boxes[2]);
+
+    // `no` on boxes[1] prevents from selecting
+    testSearch(IsOpaque.yes, Vector2(25, 75), container);
+    testSearch(IsOpaque.no,  Vector2(25, 75), null);
+
+    // The remaining options disable children access
+    testSearch(IsOpaque.notInBranch, Vector2(25, 25), null);
+    testSearch(IsOpaque.onlySelf,    Vector2(25, 25), container);
 
 }
