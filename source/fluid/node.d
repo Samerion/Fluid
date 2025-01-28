@@ -79,9 +79,23 @@ abstract class Node {
         /// Breadcrumbs assigned and applicable to this node. Loaded every resize and every draw.
         Breadcrumbs breadcrumbs;
 
-        /// If true, mouse focus will be disabled for this node, so mouse signals will "go through" to its parents, as
-        /// if the node wasn't there. The node will still detect hover like normal.
+        /// If true, mouse focus will be disabled for this node, so mouse signals will "go
+        /// through" to its parents, as if the node wasn't there. The node will still detect hover
+        /// like normal.
+        ///
+        /// In the new I/O system, this has been replaced with `inBoundsFilter`. The system will
+        /// continue to respect `ignoreMouse` until the last of `0.7.x` releases.
         bool ignoreMouse;
+
+        /// Filter to apply to every result of `inBounds`, controlling how the node reacts to
+        /// some events, such as mouse click or a finger touch.
+        ///
+        /// By changing this to `IsOpaque.no`, this can be used to prevent a node from accepting
+        /// hover input, making it "invisible". A value of `IsOpaque.notInBranch` will disable the
+        /// whole branch, including its children. `IsOpaque.onlySelf` will disable input.
+        ///
+        /// The default value allows all events.
+        IsOpaque isOpaque;
 
         /// True if the theme has been assigned explicitly by a direct assignment. If false, the node will instead
         /// inherit themes from the parent.
@@ -1243,37 +1257,45 @@ abstract class Node {
 
     }
 
-    /// Test if the specified point is the node's bounds. This is used to map screen positions to nodes,
-    /// such as when determining which nodes are hovered by mouse.
+    /// Test if the specified point is the node's bounds. This is used to map screen positions to
+    /// nodes, such as when determining which nodes are hovered by mouse. If the node contains
+    /// the point, then it is "opaque," and if not, it is "transparent".
     ///
-    /// While in a typical node this will be true for every pixel inside its padding box — and this
-    /// is the default behavior — some nodes are not of a rectangular shape, or contain largely
-    /// transparent areas.
-    ///
-    /// User-provided implementation should override `inBoundsImpl`; calls testing the node's bounds should
-    /// use `inBounds`.
+    /// User-provided implementation should override `inBoundsImpl`; calls testing the node's
+    /// bounds should use `inBounds`, which automatically applies the `isOpaque` field
+    /// as a filter on the result.
     ///
     /// This is rarely used in nodes built into Fluid. A notable example where this is overridden
-    /// is `Space`, which always returns `false`, expecting children to block occupied areas. This makes
-    /// `Space` very handy for partially transparent overlays.
+    /// is `Space`, which is always transparent, expecting children to block occupied areas. This
+    /// makes `Space` very handy for visually transparent overlays.
     ///
+    /// See_Also:
+    ///     `isOpaque` to filter the return value, making the node or its children transparent.
     /// Params:
     ///     outer    = Padding box of the node.
     ///     inner    = Content box of the node.
     ///     position = Tested position.
     /// Returns:
-    ///     True if the position is in the node's bounds.
-    protected bool inBoundsImpl(Rectangle outer, Rectangle inner, Vector2 position) {
-
-        return hoveredImpl(outer, position);
-
+    ///     Any of the values of `IsOpaque`. In most cases, either `IsOpaque.yes` or `IsOpaque.no`,
+    ///     depending whether the node is opaque or not in the specific point. Children nodes do
+    ///     not contribute to a node's opaqueness.
+    ///
+    ///     If `isOpaque` is set to a non-default value, `inBounds` will use it as a filter,
+    ///     reducing the opaqueness.
+    ///
+    ///     Returning a value of `InBounds.onlySelf` can be used to hijack hover events that
+    ///     would otherwise be handled by the children.
+    protected IsOpaque inBoundsImpl(Rectangle outer, Rectangle inner, Vector2 position) {
+        return hoveredImpl(outer, position)
+            ? IsOpaque.yes
+            : IsOpaque.no;
     }
 
     /// ditto
-    final bool inBounds(Rectangle outer, Rectangle inner, Vector2 position) {
-
-        return !ignoreMouse && inBoundsImpl(outer, inner, position);
-
+    final IsOpaque inBounds(Rectangle outer, Rectangle inner, Vector2 position) {
+        return inBoundsImpl(outer, inner, position)
+            .filter(isOpaque)
+            .filter(ignoreMouse ? IsOpaque.no : IsOpaque.yes);
     }
 
     alias ImplHoveredRect = implHoveredRect;
