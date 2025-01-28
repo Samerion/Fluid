@@ -32,7 +32,7 @@ enum isNodeParam(T, NodeType = Node)
 enum NodeAlign {
 
     start, center, end, fill,
-    
+
     centre = center
 
 }
@@ -218,9 +218,9 @@ template isNodeTag(alias tag) {
         && hasUDA!(tag, NodeTag);
 
     // @NodeTag enum Enum { tag }
-    static if (isType!tag) 
+    static if (isType!tag)
         enum isTagMember = false;
-    else 
+    else
         enum isTagMember
             = is(typeof(tag)== enum)
             && hasUDA!(typeof(tag), NodeTag);
@@ -229,8 +229,8 @@ template isNodeTag(alias tag) {
 
 }
 
-/// Test if the given symbol is an enum, or an enum member. 
-enum isSomeEnum(alias tag) 
+/// Test if the given symbol is an enum, or an enum member.
+enum isSomeEnum(alias tag)
     = is(tag == enum)
     || is(__traits(parent, tag) == enum);
 
@@ -480,7 +480,7 @@ unittest {
 }
 
 /// This node property will disable mouse input on the given node.
-/// 
+///
 /// Params:
 ///     value = If set to false, the effect is reversed and mouse input is instead enabled.
 auto ignoreMouse(bool value = true) {
@@ -528,7 +528,7 @@ unittest {
 }
 
 /// This node property will make the subject hidden, setting the `isHidden` field to true.
-/// 
+///
 /// Params:
 ///     value = If set to false, the effect is reversed and the node is set to be visible instead.
 /// See_Also: `Node.isHidden`
@@ -561,7 +561,7 @@ unittest {
 }
 
 /// This node property will disable the subject, setting the `isHidden` field to true.
-/// 
+///
 /// Params:
 ///     value = If set to false, the effect is reversed and the node is set to be enabled instead.
 /// See_Also: `Node.isDisabled`
@@ -597,3 +597,97 @@ unittest {
 
 
 }
+
+/// `InBounds` is used as a return value of `Node.inBounds`. For most use-cases,
+/// `InBounds.yes` and `InBounds.no` are the most appropriate, specifying that the point in
+/// question is, or is not, in the node's bounds. This defines the way nodes interact with
+/// mouse, touchscreen or other hover events (`fluid.io.hover`).
+///
+/// The node is not normally responsible for the bounds of its children. The node's should
+/// only specify its own bounds, so neither a `yes` or `no` answer prevent children nodes
+/// from overriding the answer.
+///
+/// Despite the above, it is sometimes desirable to keep children from occupying space, for
+/// example to hijack and control mouse input. To specify that children nodes *cannot* be in
+/// bounds, use `InBounds.notInBranch` (to indicate none of the nodes include the point) or
+/// `InBounds.onlySelf` (the node captures all events, including of its children).
+///
+/// See_Also:
+///     `Node.inBounds`.
+enum IsOpaque : IsOpaqueMask {
+
+    /// The point is in bounds of this node.
+    yes         = IsOpaqueMask(0),
+
+    /// The point is *not* in bounds of this node.
+    no          = IsOpaqueMask(1),
+
+    /// The point is in bounds, but not in the bounds of any of the children nodes.
+    onlySelf    = IsOpaqueMask(2),
+
+    /// Indicates that the point is *not* in bounds of any of the nodes in the branch; neither
+    /// of self, nor any of the children nodes.
+    notInBranch = IsOpaqueMask(3),
+}
+
+/// This bitmask defines whether a node contains a point in its boundaries.
+///
+/// To allow this to default to `InBounds.yes` while being
+/// [zero-initialized](https://dlang.org/spec/traits.html#isZeroInit), each bit is inverted;
+/// i.e. `0` means *yes, in bounds* and `1` means, *no, not in bounds*.
+///
+/// See_Also:
+///     `InBounds` for all possible values of this bitmask.
+///     `Node.inBounds` for a function returning this value.
+struct IsOpaqueMask {
+    int bitmask;
+
+    /// Returns:
+    ///     True if the queried point can be found in the node itself.
+    bool inSelf() const {
+        return (bitmask & 1) == 0;
+    }
+
+    /// Returns:
+    ///     True if the queried point may or may not be found in the children of the node.
+    ///     A false value indicates that the point will not be in any of the children nodes,
+    ///     and that children nodes should not be tested.
+    bool inChildren() const {
+        return (bitmask & 2) == 0;
+    }
+
+    /// Create a value that combines the restrictions of both masks. It can be said that either
+    /// of the masks acts as a "filter", hence the name.
+    ///
+    /// For example, combining `IsOpaque.yes` with `IsOpaque.no` returns `IsOpaque.no`.
+    /// Combining `IsOpaque.no` with `IsOpaque.onlySelf` returns `IsOpaque.notInBranch`.
+    ///
+    /// Params:
+    ///     other = Mask to combine with.
+    /// Returns:
+    ///     A mask with `inSelf == false` if false for either of the masks,
+    ///     and similarly `inChildren == false` if false for either of the values.
+    IsOpaque filter(IsOpaqueMask other) const {
+        return cast(IsOpaque) IsOpaqueMask((bitmask | other.bitmask) & 3);
+    }
+
+    /// Set the node's opacity filter. This can be used as a node property — an opacity mask
+    /// can be passed to a node builder.
+    /// Params:
+    ///     node = Node to change.
+    void apply(Node node) {
+        node.isOpaque = cast(IsOpaque) IsOpaqueMask(bitmask & 3);
+    }
+}
+
+static assert(IsOpaque.init == IsOpaque.yes);
+static assert(!IsOpaque.no.inSelf);
+static assert( IsOpaque.no.inChildren);
+static assert( IsOpaque.yes.inSelf);
+static assert( IsOpaque.yes.inChildren);
+static assert(!IsOpaque.notInBranch.inSelf);
+static assert(!IsOpaque.notInBranch.inChildren);
+static assert( IsOpaque.onlySelf.inSelf);
+static assert(!IsOpaque.onlySelf.inChildren);
+static assert(IsOpaque.yes.filter(IsOpaque.no) == IsOpaque.no);
+static assert(IsOpaque.no.filter(IsOpaque.onlySelf) == IsOpaque.notInBranch);
