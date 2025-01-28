@@ -496,6 +496,10 @@ final class FindHoveredNodeAction : BranchAction {
 
     }
 
+    private {
+        int _transparentDepth;
+    }
+
     this(Vector2 search = Vector2.init, Vector2 scroll = Vector2.init) {
         this.search = search;
         this.scroll = scroll;
@@ -505,19 +509,32 @@ final class FindHoveredNodeAction : BranchAction {
         super.started();
         this.result = null;
         this.scrollable = null;
+        this._transparentDepth = 0;
     }
 
-    /// Test if the searched position is within the bounds of this node, and set it as the result if so.
-    /// Any previously found result is overridden.
+    /// Test if the searched position is within the bounds of this node, and set it as the result
+    /// if so. Any previously found result is overridden.
     ///
     /// If a node is found, `scrollable` is cleared. A new one will be found in `afterDraw`.
     ///
-    /// Because of how layering works in Fluid, the last node in bounds will be the result. This action cannot quit
-    /// early as any node can override the current hover.
+    /// Because of how layering works in Fluid, the last node in bounds will be the result. This
+    /// action cannot quit early as any node can override the current hover.
     override void beforeDraw(Node node, Rectangle, Rectangle outer, Rectangle inner) {
 
+        if (_transparentDepth) {
+            _transparentDepth++;
+            return;
+        }
+
+        const inBounds = node.inBounds(outer, inner, search);
+
+        // Children cannot be hovered
+        if (!inBounds.inChildren) {
+            _transparentDepth++;
+        }
+
         // Check if the position is in bounds of the node
-        if (!node.inBounds(outer, inner, search)) return;
+        if (!inBounds.inSelf) return;
 
         // Save the result
         result = node;
@@ -529,7 +546,8 @@ final class FindHoveredNodeAction : BranchAction {
 
     }
 
-    /// Find a matching scrollable for the node. The topmost ancestor of `result` (the chosen node) will be used.
+    /// Find a matching scrollable for the node. The topmost ancestor of `result` (the chosen
+    /// node) will be used.
     override void afterDraw(Node node, Rectangle) {
 
         // A result is required and no scrollable could have matched already
@@ -538,6 +556,10 @@ final class FindHoveredNodeAction : BranchAction {
 
         // Try to match this node
         scrollable = node.castIfAcceptsScroll(scroll);
+
+        if (_transparentDepth) {
+            _transparentDepth--;
+        }
 
     }
 

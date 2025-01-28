@@ -440,7 +440,7 @@ class DragAction : TreeAction {
         // Find all hovered droppable nodes
         if (!droppable) return;
         // TODO modal support?
-        if (!node.inBounds(outer, inner, pointerPosition)) return;
+        if (!node.inBounds(outer, inner, pointerPosition).inSelf) return;
 
         // Make sure this slot can be dropped in
         if (!droppable.canDrop(slot)) return;

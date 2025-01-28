@@ -21,7 +21,8 @@ unittest {
     root.draw();
 
     assert(!input.isFocused);
-    assert(slot.inBounds(Rectangle(0, 0, 800, 600), Rectangle(0, 0, 800, 600), Vector2(200, 200)));
+    assert(slot.inBounds(Rectangle(0, 0, 800, 600), Rectangle(0, 0, 800, 600), Vector2(200, 200))
+        == IsOpaque.yes);
     assert(input.focusIO && input.focusIO.opEquals(focus));
 
     // In this case, clicking anywhere should give the textInput focus

@@ -22,8 +22,8 @@ class Resizable : Node {
 
     }
 
-    override bool inBoundsImpl(Rectangle, Rectangle, Vector2) {
-        return false;
+    override IsOpaque inBoundsImpl(Rectangle, Rectangle, Vector2) {
+        return IsOpaque.no;
     }
 
 }
