@@ -606,29 +606,64 @@ final class FindHoveredNodeAction : BranchAction {
 
 }
 
-/// Create a virtual Hover I/O pointer for testing, and place it at the given position. Interactions on the pointer
-/// are asynchronous and should be performed by `then` chains, see `fluid.future.pipe`.
+/// Create a virtual Hover I/O pointer for testing, and place it at the given position.
+/// Interactions on the pointer are asynchronous and should be performed by `then` chains, see
+/// `fluid.future.pipe`.
 ///
-/// The pointer is disabled after every interaction, but it will be automatically re-enabled after every movement.
+/// The pointer is disabled after every interaction, but it will be automatically re-enabled after
+/// every movement.
 ///
+/// See_Also:
+///     `pointAndClick`
 /// Params:
 ///     hoverIO  = Hover I/O system to target.
 ///     position = Position to place the pointer at.
+///     x        = X position to place the pointer at.
+///     y        = Y position to place the pointer at.
+/// Returns:
+///     An instance of `HoverPointerAction`.
 HoverPointerAction point(HoverIO hoverIO, Vector2 position) {
-
-    import fluid.node;
-
     auto action = new HoverPointerAction(hoverIO);
     action.move(position);
     return action;
-
 }
 
 /// ditto
 HoverPointerAction point(HoverIO hoverIO, float x, float y) {
-
     return point(hoverIO, Vector2(x, y));
+}
 
+/// Create a virtual Hover I/O pointer and use it to click a given position. This is a helper
+/// wrapping `point`.
+///
+/// "Clicking" is equivalent to sending a `FluidInputAction.press` event.
+///
+/// See_Also:
+///     `point`
+/// Params;
+///     hoverIO    = Hover I/O system to target.
+///     position   = Position to click.
+///     x          = X position to click.
+///     y          = Y position to click.
+///     isActive   = If true (default), sends an active event.
+///     clickCount = If set to 2, imitate a double click, if 3, a triple click and so on.
+/// Returns:
+///     A `Publisher` that produces `HoverPointerAction`.
+Publisher!HoverPointerAction pointAndClick(HoverIO hoverIO, Vector2 position,
+    bool isActive = true, int clickCount = 1)
+do {
+    return hoverIO.point(position)
+        .then((a) {
+            a.click(isActive, clickCount);
+            return a;
+        });
+}
+
+/// ditto
+Publisher!HoverPointerAction pointAndClick(HoverIO hoverIO, float x, float y,
+    bool isActive = true, int clickCount = 1)
+do {
+    return pointAndClick(hoverIO, Vector2(x, y), isActive, clickCount);
 }
 
 /// Virtual Hover I/O pointer, for testing.
