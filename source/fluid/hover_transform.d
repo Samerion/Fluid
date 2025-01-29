@@ -16,6 +16,15 @@ class HoverTransform : NodeChain, HoverIO {
 
     HoverIO hoverIO;
 
+    public {
+
+        /// By default, the destination rectangle is automatically updated to match the padding
+        /// box of `HoverTransform`. If toggled on, it is instead static, and can be manually
+        /// updated.
+        bool isDestinationManual;
+
+    }
+
     private {
 
         Rectangle _sourceRectangle;
@@ -27,9 +36,19 @@ class HoverTransform : NodeChain, HoverIO {
     }
 
     /// Params:
-    ///     sourceRectangle = Rectangle the input is expected to fit in.
+    ///     sourceRectangle      = Rectangle the input is expected to fit in.
+    ///     destinationRectangle = Rectangle to map the input to. If omitted, chosen automatically
+    ///         so that input is remapped to the content of this node.
     this(Rectangle sourceRectangle) {
         this._sourceRectangle = sourceRectangle;
+        this.isDestinationManual = false;
+    }
+
+    /// ditto
+    this(Rectangle sourceRectangle, Rectangle destinationRectangle) {
+        this._sourceRectangle = sourceRectangle;
+        this._destinationRectangle = destinationRectangle;
+        this.isDestinationManual = true;
     }
 
     /// Returns:
@@ -45,12 +64,12 @@ class HoverTransform : NodeChain, HoverIO {
     /// Returns:
     ///     Same value as passed.
     Rectangle sourceRectangle(Rectangle newValue) {
-        _sourceRectangle = newValue;
-        return newValue;
+        return _sourceRectangle = newValue;
     }
 
     /// Returns:
-    ///     Rectangle for output.
+    ///     Rectangle for output. By default, this should match the padding box of this node,
+    ///     unless explicitly changed to something else.
     Rectangle destinationRectangle() const {
         if (tree)
             return _destinationRectangle;
@@ -58,12 +77,24 @@ class HoverTransform : NodeChain, HoverIO {
             return sourceRectangle;
     }
 
+    /// Change the destination rectangle, disabling automatic destination selection.
+    ///
+    /// Changing destination rectangle sets `isDestinationManual` to `true`. Set it to false if
+    /// you want the destination rectangle to match the node's padding box instead.
+    ///
+    /// See_Also:
+    ///     `isDestinationManual`
+    Rectangle destinationRectangle(Rectangle newValue) {
+        isDestinationManual = true;
+        return _destinationRectangle = newValue;
+    }
+
     /// Transform a point in `sourceRectangle` onto `destinationRectangle`.
     /// Params:
     ///     point = Point to transform.
     /// Returns:
     ///     Transformed point.
-    Vector2 transformPoint(Vector2 point) {
+    Vector2 transformPoint(Vector2 point) const {
         return point.viewportTransform(sourceRectangle, destinationRectangle);
     }
 
@@ -76,16 +107,15 @@ class HoverTransform : NodeChain, HoverIO {
     ///     pointer = Pointer to transform.
     /// Returns:
     ///     Transformed pointer.
-    HoverPointer transformPointer(HoverPointer pointer) {
+    inout(HoverPointer) transformPointer(inout HoverPointer pointer) inout @trusted {
         assert(pointer.system, "Hover pointer must be loaded");
         assert(pointer.system.opEquals(cast(const Object) hoverIO),
             "Pointer must come from the host HoverIO system");
 
         HoverPointer result;
-        result.load(this, pointer.id);
         result.update(pointer);
         result.position = transformPoint(pointer.position);
-        return result;
+        return cast(inout) result.loadCopy(this, pointer.id);
     }
 
     override void beforeResize(Vector2) {
@@ -102,7 +132,9 @@ class HoverTransform : NodeChain, HoverIO {
     /// matching nodes.
     override void beforeDraw(Rectangle outer, Rectangle inner) {
 
-        _destinationRectangle = outer;
+        if (!isDestinationManual) {
+            _destinationRectangle = outer;
+        }
 
         _pointers.clear();
         foreach (HoverPointer pointer; hoverIO) {
@@ -116,7 +148,8 @@ class HoverTransform : NodeChain, HoverIO {
     }
 
     inout(HoverPointer) fetch(int number) inout {
-        assert(false, "TODO");
+        auto pointer = hoverIO.fetch(number);
+        return transformPointer(pointer);
     }
 
     void emitEvent(HoverPointer pointer, InputEvent event) {
