@@ -132,11 +132,11 @@ class ImageView : Node {
 
         }
 
-        Image texture(Image image) @system {
+        Image texture(Image image) {
 
             clear();
-            _texture = tree.io.loadTexture(image);
-            _isOwner = true;
+            updateSize();
+            this.image = image;
 
             return image;
         }
@@ -148,7 +148,7 @@ class ImageView : Node {
 
             _texturePath = filename;
 
-            if (tree) {
+            if (tree && !canvasIO) {
 
                 clear();
                 _texture = tree.io.loadTexture(filename);
@@ -193,6 +193,10 @@ class ImageView : Node {
 
         // Remove the texture
         _texture = texture.init;
+        _texturePath = null;
+
+        // Remove the image
+        image = Image.init;
 
     }
 
@@ -223,7 +227,7 @@ class ImageView : Node {
         // New I/O system
         if (canvasIO) {
 
-            // Load an image from the filesystem, if no image is already loaded
+            // Load an image from the filesystem if no image is already loaded
             if (image == Image.init && _texturePath != "" && fileIO && imageLoadIO) {
 
                 auto file = fileIO.loadFile(_texturePath);
@@ -261,10 +265,12 @@ class ImageView : Node {
 
             // Lazy-load the texture if the backend wasn't present earlier
             if (_texture == _texture.init && _texturePath) {
-
                 _texture = tree.io.loadTexture(_texturePath);
                 _isOwner = true;
-
+            }
+            else if (_texture == texture.init && image != Image.init) {
+                _texture = tree.io.loadTexture(image);
+                _isOwner = true;
             }
 
             // Adjust size
