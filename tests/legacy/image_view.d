@@ -27,3 +27,18 @@ import legacy;
 
 }
 
+@("ImageView can load images")
+unittest {
+
+    auto io = new HeadlessBackend(Vector2(100, 100));
+    auto image = generateColorImage(100, 100, color("#f00"));
+    auto root = imageView(.nullTheme, image);
+    assert(root.texture == Texture.init);
+
+    root.io = io;
+    root.draw();
+    assert(root.texture != Texture.init);
+
+    io.assertTexture(root.texture, Vector2(0, 0), color!"#fff");
+
+}
