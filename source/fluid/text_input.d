@@ -1552,7 +1552,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
     /// A single click+hold will use per-character selection. A double click+hold will select whole words,
     /// and a triple click+hold will select entire lines.
     @(FluidInputAction.press)
-    protected void press(Pointer pointer) {
+    protected void press(HoverPointer pointer) {
 
         enum maxDistance = 5;
 
@@ -1574,7 +1574,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     /// Update selection using the mouse.
     @(FluidInputAction.press, WhileHeld)
-    protected void pressAndHold(Pointer pointer) {
+    protected void pressAndHold(HoverPointer pointer) {
 
         // Move the caret with the mouse
         caretToPointer(pointer);
@@ -1617,7 +1617,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
                 return;
             }
 
-            Pointer pointer;
+            HoverPointer pointer;
             pointer.position = io.mousePosition;
             pointer.clickCount = _clickCount + 1;
 
@@ -2033,7 +2033,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     /// Open the input's context menu.
     @(FluidInputAction.contextMenu)
-    void openContextMenu(Pointer pointer) {
+    void openContextMenu(HoverPointer pointer) {
 
         // Move the caret to the pointer's position
         if (!isSelecting)
@@ -2259,7 +2259,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
     }
 
     /// ditto
-    void caretToPointer(Pointer pointer) {
+    void caretToPointer(HoverPointer pointer) {
 
         caretTo(pointer.position - _inner.start);
         updateCaretPosition(false);

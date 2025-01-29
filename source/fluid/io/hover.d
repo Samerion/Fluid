@@ -30,20 +30,21 @@ public import fluid.io.action : InputEvent, InputEventCode;
 /// hover a single node.
 interface HoverIO : IO {
 
-    /// Load a pointer (mouse cursor, finger) and place it at the position currently indicated in the struct.
-    /// Update the pointer's position if already loaded.
+    /// Load a hover pointer (mouse cursor, finger) and place it at the position currently
+    /// indicated in the struct. Update the pointer's position if already loaded.
     ///
-    /// It is expected `load` will be called after every pointer motion in order to keep its position up to date.
+    /// It is expected `load` will be called after every pointer motion in order to keep its
+    /// position up to date.
     ///
-    /// A pointer is considered loaded until the next resize. If the `load` call for a pointer isn't repeated
-    /// during a resize, the pointer is invalidated. Pointers do not have to be loaded while resizing; they can
-    /// also be loaded while drawing.
+    /// A pointer is considered loaded until the next resize. If the `load` call for a pointer
+    /// isn't repeated during a resize, the pointer is invalidated. Pointers do not have to be
+    /// loaded while resizing; they can also be loaded while drawing.
     ///
     /// An example implementation of a pointer device, from inside of a node, could look like:
     ///
     /// ---
     /// HoverIO hoverIO;
-    /// Pointer pointer;
+    /// HoverPointer pointer;
     ///
     /// override void resizeImpl(Vector2) {
     ///     require(hoverIO);
@@ -51,7 +52,6 @@ interface HoverIO : IO {
     /// }
     ///
     /// override void drawImpl(Rectangle, Rectangle) {
-    ///
     ///     pointer.device = this;
     ///     pointer.number = 0;
     ///     pointer.position = mousePosition();
@@ -59,7 +59,6 @@ interface HoverIO : IO {
     ///     if (clicked) {
     ///         mouseIO.emitEvent(pointer, MouseIO.createEvent(MouseIO.Button.left, true));
     ///     }
-    ///
     /// }
     /// ---
     ///
@@ -70,10 +69,10 @@ interface HoverIO : IO {
     ///         if multiple pointers are to be used.
     /// Returns:
     ///     An ID the `HoverIO` system will use to recognize the pointer.
-    int load(Pointer pointer);
+    int load(HoverPointer pointer);
 
-    /// Fetch a pointer from a number assigned to it by this I/O. This is used by `Actionable` nodes to find
-    /// `Pointer` data corresponding to fired input action events.
+    /// Fetch a pointer from a number assigned to it by this I/O. This is used by `Actionable`
+    /// nodes to find `HoverPointer` data corresponding to fired input action events.
     ///
     /// The pointer, and the matching number, must be valid.
     ///
@@ -81,32 +80,34 @@ interface HoverIO : IO {
     ///     number = Number assigned to the pointer by this I/O.
     /// Returns:
     ///     The pointer.
-    inout(Pointer) fetch(int number) inout;
+    inout(HoverPointer) fetch(int number) inout;
 
-    /// Read an input event from an input device. Input devices will call this function every frame
-    /// if an input event (such as a button press) occurs. Moving a mouse does not qualify as an input event.
+    /// Read an input event from an input device. Input devices will call this function every
+    /// frame if an input event (such as a button press) occurs. Moving a mouse does not qualify
+    /// as an input event.
     ///
-    /// The pointer emitting the event must have been loaded earlier (using `load`) during the same frame
-    /// for the action to work.
+    /// The hover pointer emitting the event must have been loaded earlier (using `load`) during
+    /// the same frame for the action to work.
     ///
-    /// `HoverIO` will usually pass these down to an `ActionIO` system. It is up to `HoverIO` to decide how
-    /// the input and the resulting input actions is handled, though the node hovered by the pointer will most
-    /// often receive them.
+    /// `HoverIO` will usually pass these down to an `ActionIO` system. It is up to `HoverIO` to
+    /// decide how the input and the resulting input actions is handled, though the node hovered
+    /// by the pointer will most often receive them.
     ///
     /// Params:
     ///     pointer = Pointer that emitted the event.
     ///     event   = Input event the system should emit.
-    ///         The event is usually considered "active" during the frame the action is "released". For example,
-    ///         user stops holding a mouse button, or a finger stops touching the screen.
-    void emitEvent(Pointer pointer, InputEvent event);
+    ///         The event is usually considered "active" during the frame the action is
+    ///         "released". For example, user stops holding a mouse button, or a finger stops
+    ///         touching the screen.
+    void emitEvent(HoverPointer pointer, InputEvent event);
 
     /// Params:
     ///     pointer = Pointer to query. The pointer must be loaded.
     /// Returns:
-    ///     Node hovered by the pointer.
+    ///     Node hovered by the hover pointer.
     /// See_Also:
     ///     `scrollOf` to get the current scrollable node.
-    inout(Hoverable) hoverOf(Pointer pointer) inout;
+    inout(Hoverable) hoverOf(HoverPointer pointer) inout;
 
     /// Params:
     ///     pointer = Pointer to query. The pointer must be loaded.
@@ -114,7 +115,7 @@ interface HoverIO : IO {
     ///     Scrollable ancestor for the currently hovered node.
     /// See_Also:
     ///     `hoverOf` to get the currently hovered node.
-    inout(HoverScrollable) scrollOf(Pointer pointer) inout;
+    inout(HoverScrollable) scrollOf(HoverPointer pointer) inout;
 
     /// Returns:
     ///     True if the node is hovered.
@@ -211,7 +212,7 @@ do {
 ///
 /// See_Also:
 ///     `HoverIO`, `HoverIO.load`
-struct Pointer {
+struct HoverPointer {
 
     /// I/O system that represents the device controlling the pointer.
     IO device;
@@ -223,21 +224,22 @@ struct Pointer {
     /// Position in the window the pointer is pointing at.
     Vector2 position;
 
-    /// Current scroll value. For a mouse, this indicates mouse wheel movement, for other devices like touchpad or
-    /// touchscreen, this will be translated from its movement.
+    /// Current scroll value. For a mouse, this indicates mouse wheel movement, for other devices
+    /// like touchpad or touchscreen, this will be translated from its movement.
     ///
-    /// This value indicates the distance and direction in window space that the scroll should result in covering.
-    /// This means that on the X axis negative values move left and positive values move right, while on the Y axis
-    /// negative values go upwards and positive values go downwards.
-    /// For example, a scroll value of `(0, 20)` scrolls 20 pixels down vertically, while `(0, -10)` scrolls 10 pixels
-    /// up.
+    /// This value indicates the distance and direction in window space that the scroll should
+    /// result in covering. This means that on the X axis negative values move left and positive
+    /// values move right, while on the Y axis negative values go upwards and positive values go
+    /// downwards. For example, a scroll value of `(0, 20)` scrolls 20 pixels down vertically,
+    /// while `(0, -10)` scrolls 10 pixels up.
     ///
-    /// While it is possible to read scroll of the `Pointer` data received in an input action handler,
-    /// it is recommended to implement scroll through `Scrollable.scrollImpl`.
+    /// While it is possible to read scroll of the `HoverPointer` data received in an input action
+    /// handler, it is recommended to implement scroll through `Scrollable.scrollImpl`.
     ///
-    /// Scroll is exposed for both the horizontal and vertical axis. While a typical mouse wheel only supports
-    /// vertical movement, touchscreens, touchpads, trackpads or more advanced mouses do support horizontal movement.
-    /// It is also possible for a device to perform both horizontal and vertical movement at once.
+    /// Scroll is exposed for both the horizontal and vertical axis. While a basic mouse wheel
+    /// only supports vertical movement, touchscreens, touchpads, trackpads or more advanced
+    /// mouses do support horizontal movement. It is also possible for a device to perform both
+    /// horizontal and vertical movement at once.
     Vector2 scroll;
 
     /// True if the pointer is not currently pointing, like a finger that stopped touching the screen.
@@ -267,16 +269,17 @@ struct Pointer {
     /// ID of the pointer assigned by the `HoverIO` system.
     private int _id;
 
-    /// If the given system is a Hover I/O system, fetch a pointer.
+    /// If the given system is a Hover I/O system, fetch a hover pointer.
     ///
-    /// Given data must be valid; the I/O must be a `HoverIO` instance and the number must be a valid pointer number.
+    /// Given data must be valid; the I/O must be a `HoverIO` instance and the number must be a
+    /// valid pointer number.
     ///
     /// Params:
     ///     io     = I/O system to use.
     ///     number = Valid pointer number assigned by the I/O system.
     /// Returns:
-    ///     Pointer under given number.
-    static Optional!Pointer fetch(IO io, int number) {
+    ///     Hover pointer under given number.
+    static Optional!HoverPointer fetch(IO io, int number) {
 
         import std.format;
 
@@ -289,13 +292,14 @@ struct Pointer {
 
     }
 
-    /// Compare two pointers. All publicly exposed fields (`device`, `number`, `position`, `isDisabled`)
-    /// must be equal. To check if the two pointers have the same origin (device and number), use `isSame`.
+    /// Compare two pointers. All publicly exposed fields (`device`, `number`, `position`,
+    /// `isDisabled`) must be equal. To check if the two pointers have the same origin (device and
+    /// number), use `isSame`.
     /// Params:
     ///     other = Pointer to compare against.
     /// Returns:
     ///     True if the pointer is the same as the other pointer and has the same state.
-    bool opEquals(const Pointer other) const {
+    bool opEquals(const HoverPointer other) const {
 
         // Do not compare I/O metadata
         return isSame(other)
@@ -309,7 +313,7 @@ struct Pointer {
     ///     other = Pointer to compare against.
     /// Returns:
     ///     True if the pointers have the same device and pointer number.
-    bool isSame(const Pointer other) const {
+    bool isSame(const HoverPointer other) const {
 
         if (device is null) {
             return other.device is null
@@ -335,7 +339,7 @@ struct Pointer {
     /// Update a pointer in place using data of another pointer.
     /// Params:
     ///     other = Pointer to copy data from.
-    void update(Pointer other) {
+    void update(HoverPointer other) {
         this.position     = other.position;
         this.scroll       = other.scroll;
         this.isScrollHeld = other.isScrollHeld;
@@ -573,32 +577,32 @@ final class FindHoveredNodeAction : BranchAction {
 /// Params:
 ///     hoverIO  = Hover I/O system to target.
 ///     position = Position to place the pointer at.
-PointerAction point(HoverIO hoverIO, Vector2 position) {
+HoverPointerAction point(HoverIO hoverIO, Vector2 position) {
 
     import fluid.node;
 
-    auto action = new PointerAction(hoverIO);
+    auto action = new HoverPointerAction(hoverIO);
     action.move(position);
     return action;
 
 }
 
 /// ditto
-PointerAction point(HoverIO hoverIO, float x, float y) {
+HoverPointerAction point(HoverIO hoverIO, float x, float y) {
 
     return point(hoverIO, Vector2(x, y));
 
 }
 
 /// Virtual Hover I/O pointer, for testing.
-class PointerAction : TreeAction, Publisher!PointerAction, IO {
+class HoverPointerAction : TreeAction, Publisher!HoverPointerAction, IO {
 
     import fluid.node;
 
     public {
 
         /// Pointer this action operates on.
-        Pointer pointer;
+        HoverPointer pointer;
 
     }
 
@@ -610,12 +614,12 @@ class PointerAction : TreeAction, Publisher!PointerAction, IO {
         /// Hover I/O casted to a node
         Node _node;
 
-        Event!PointerAction _onInteraction;
+        Event!HoverPointerAction _onInteraction;
 
     }
 
     alias then = typeof(super).then;
-    alias then = Publisher!PointerAction.then;
+    alias then = Publisher!HoverPointerAction.then;
 
     this(HoverIO hoverIO) {
 
@@ -634,7 +638,7 @@ class PointerAction : TreeAction, Publisher!PointerAction, IO {
         return hoverIO.treeContext;
     }
 
-    void subscribe(Subscriber!PointerAction subscriber) {
+    void subscribe(Subscriber!HoverPointerAction subscriber) {
         _onInteraction ~= subscriber;
     }
 
@@ -673,7 +677,7 @@ class PointerAction : TreeAction, Publisher!PointerAction, IO {
 
     /// Don't move the pointer, but keep it active.
     /// Returns: This action, for chaining.
-    PointerAction stayIdle() return {
+    HoverPointerAction stayIdle() return {
 
         clearSubscribers();
         _node.startAction(this);
@@ -691,7 +695,7 @@ class PointerAction : TreeAction, Publisher!PointerAction, IO {
     ///     position = Position to move the pointer to.
     /// Returns:
     ///     This action, for chaining.
-    PointerAction move(Vector2 position) return {
+    HoverPointerAction move(Vector2 position) return {
 
         clearSubscribers();
         _node.startAction(this);
@@ -706,7 +710,7 @@ class PointerAction : TreeAction, Publisher!PointerAction, IO {
     }
 
     /// ditto
-    PointerAction move(float x, float y) return {
+    HoverPointerAction move(float x, float y) return {
 
         return move(Vector2(x, y));
 
@@ -720,7 +724,7 @@ class PointerAction : TreeAction, Publisher!PointerAction, IO {
     ///     motion = Distance to scroll.
     /// Returns:
     ///     This action, for chaining.
-    PointerAction scroll(Vector2 motion) return {
+    HoverPointerAction scroll(Vector2 motion) return {
 
         clearSubscribers();
         _node.startAction(this);
@@ -735,7 +739,7 @@ class PointerAction : TreeAction, Publisher!PointerAction, IO {
     }
 
     /// ditto
-    PointerAction scroll(float x, float y) return {
+    HoverPointerAction scroll(float x, float y) return {
 
         return scroll(Vector2(x, y));
 

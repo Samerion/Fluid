@@ -79,7 +79,7 @@ class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable {
 
     /// Drag the node.
     @(FluidInputAction.press, .WhileDown)
-    void drag(Pointer pointer)
+    void drag(HoverPointer pointer)
     in (tree)
     do {
 
@@ -115,7 +115,7 @@ class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable {
 
         // Polyfill for old backend-based I/O
         if (!hoverIO) {
-            Pointer pointer;
+            HoverPointer pointer;
             pointer.position = io.mousePosition;
             drag(pointer);
         }

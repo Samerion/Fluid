@@ -35,15 +35,15 @@ class HoverChain : NodeChain, HoverIO {
 
     private {
 
-        struct HoverPointer {
+        struct Pointer {
 
             /// The stored pointer. This is the last pointer assigned by `load`, as given by the device node.
             /// Event handlers are given `armedValue` instead.
-            Pointer value;
+            HoverPointer value;
 
             /// Pointer passed to event handlers. Associated with a negative ID, i.e. if the pointer's ID is `0`,
             /// the ID of `armedValue` is `-1`, if the main ID is `1`, the ID of `armedValue` is `-2` and so on.
-            Pointer armedValue;
+            HoverPointer armedValue;
 
             /// Branch action associated with the pointer; finds the associated node.
             FindHoveredNodeAction action;
@@ -68,13 +68,13 @@ class HoverChain : NodeChain, HoverIO {
             /// If true, the pointer already handled incoming input events.
             bool isHandled;
 
-            bool opEquals(const Pointer pointer) const {
+            bool opEquals(const HoverPointer pointer) const {
                 return this.value.isSame(pointer);
             }
 
         }
 
-        ResourceArena!HoverPointer _pointers;
+        ResourceArena!Pointer _pointers;
 
     }
 
@@ -86,7 +86,7 @@ class HoverChain : NodeChain, HoverIO {
         super(next);
     }
 
-    /// Each `Pointer` loaded into `HoverChain` has two values, under two different ID numbers.
+    /// Each `HoverPointer` loaded into `HoverChain` has two values, under two different ID numbers.
     /// This function converts either number into the original one.
     ///
     /// Since the IDs are assigned in a consistent, deterministic manner,
@@ -135,7 +135,7 @@ class HoverChain : NodeChain, HoverIO {
 
     }
 
-    override int load(Pointer pointer)
+    override int load(HoverPointer pointer)
     out(r) {
         import std.format;
         debug assert(_pointers.allResources.count(pointer) == 1,
@@ -147,7 +147,7 @@ class HoverChain : NodeChain, HoverIO {
 
         // No such pointer
         if (index == -1) {
-            HoverPointer newPointer;
+            Pointer newPointer;
             newPointer.value = pointer;
             newPointer.armedValue.isDisabled = true;
             newPointer.action = new FindHoveredNodeAction;
@@ -181,7 +181,7 @@ class HoverChain : NodeChain, HoverIO {
     ///     `normalizedPointerID` and `armedPointerID` for converting between pointer IDs.
     /// Returns:
     ///     Pointer associated with the node.
-    override inout(Pointer) fetch(int number) inout {
+    override inout(HoverPointer) fetch(int number) inout {
 
         // Armed variant
         if (number < 0) {
@@ -198,7 +198,7 @@ class HoverChain : NodeChain, HoverIO {
 
     }
 
-    override void emitEvent(Pointer pointer, InputEvent event) {
+    override void emitEvent(HoverPointer pointer, InputEvent event) {
 
         const id = normalizePointerID(pointer.id);
 
@@ -360,13 +360,13 @@ class HoverChain : NodeChain, HoverIO {
 
     }
 
-    override inout(Hoverable) hoverOf(Pointer pointer) inout {
+    override inout(Hoverable) hoverOf(HoverPointer pointer) inout {
         const id = normalizePointerID(pointer.id);
         debug assert(_pointers.isActive(id), "Given pointer wasn't loaded");
         return _pointers[id].heldNode.castIfAcceptsInput!Hoverable;
     }
 
-    override inout(HoverScrollable) scrollOf(Pointer pointer) inout {
+    override inout(HoverScrollable) scrollOf(HoverPointer pointer) inout {
         const id = normalizePointerID(pointer.id);
         debug assert(_pointers.isActive(id), "Given pointer wasn't loaded");
         return _pointers[id].scrollable;
@@ -380,7 +380,7 @@ class HoverChain : NodeChain, HoverIO {
     ///     isActive = If true, the action has been activated during this frame.
     /// Returns:
     ///     True if the input action was handled.
-    bool runInputAction(Pointer pointer, InputActionID actionID, bool isActive = true) {
+    bool runInputAction(HoverPointer pointer, InputActionID actionID, bool isActive = true) {
 
         const id = normalizePointerID(pointer.id);
         const armedID = -id - 1;
@@ -415,7 +415,7 @@ class HoverChain : NodeChain, HoverIO {
     }
 
     /// ditto
-    bool runInputAction(alias action)(Pointer pointer, bool isActive = true) {
+    bool runInputAction(alias action)(HoverPointer pointer, bool isActive = true) {
 
         const id = inputActionID!action;
 
@@ -438,7 +438,9 @@ class HoverChain : NodeChain, HoverIO {
     ///     isActive = If true, the action has been activated during this frame.
     /// Returns:
     ///     True if the action was handled, false if not.
-    protected bool runLocalInputActions(Pointer pointer, InputActionID actionID, bool isActive = true) {
+    protected bool runLocalInputActions(HoverPointer pointer, InputActionID actionID,
+        bool isActive = true)
+    do {
 
         return false;
 

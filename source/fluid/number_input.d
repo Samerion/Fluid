@@ -457,7 +457,7 @@ class NumberInputSpinner : Node, FluidHoverable, Hoverable {
     }
 
     @(FluidInputAction.press)
-    void press(Pointer pointer) {
+    void press(HoverPointer pointer) {
 
         // Above center (increment)
         if (pointer.position.y < center(_lastRectangle).y) {
@@ -476,7 +476,7 @@ class NumberInputSpinner : Node, FluidHoverable, Hoverable {
 
         // Polyfill for old I/O
         if (!hoverIO) {
-            Pointer pointer;
+            HoverPointer pointer;
             pointer.position = io.mousePosition;
             press(pointer);
         }

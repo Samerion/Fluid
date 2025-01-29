@@ -193,7 +193,7 @@ abstract class AbstractSlider : InputNode!Node {
     }
 
     @(FluidInputAction.press, WhileHeld)
-    protected void press(Pointer pointer) {
+    protected void press(HoverPointer pointer) {
 
         // Get mouse position relative to the first step
         const offset = pointer.position.x - firstStepX + stepDistance/2;
@@ -220,7 +220,7 @@ abstract class AbstractSlider : InputNode!Node {
         // The new I/O system will call the other overload.
         // Call it as a polyfill for the old system.
         if (!hoverIO) {
-            Pointer pointer;
+            HoverPointer pointer;
             pointer.position = io.mousePosition;
             press(pointer);
         }

@@ -35,12 +35,13 @@ interface ActionIO : IO {
         frameEvent,
     }
 
-    /// Create an input event which should never activate any input action. For propagation purposes, this event
-    /// always counts as handled.
+    /// Create an input event which should never activate any input action. For propagation
+    /// purposes, this event always counts as handled.
     ///
-    /// The usual purpose of this event is to prevent input actions from running, assuming the `ActionIO` system's
-    /// logic stops once an event is handled. For example, `fluid.io.hover.PointerAction` emits this event when
-    /// it is ordered to run an input action, effectively overriding `ActionIO`'s response.
+    /// The usual purpose of this event is to prevent input actions from running, assuming
+    /// the `ActionIO` system's logic stops once an event is handled. For example,
+    /// `fluid.io.hover.HoverPointerAction` emits this event when it is ordered to run an input
+    /// action, effectively overriding `ActionIO`'s response.
     ///
     /// See_Also:
     ///     `frameEvent`
