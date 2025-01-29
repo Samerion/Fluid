@@ -16,25 +16,76 @@ class HoverTransform : NodeChain, HoverIO {
 
     HoverIO hoverIO;
 
-    public {
-
-        /// Rectangle for hover input. This input will be transformed to
-        /// the rectangle spanned by this system.
-        Rectangle sourceRectangle;
-
-    }
-
     private {
 
+        Rectangle _sourceRectangle;
+        Rectangle _destinationRectangle;
+
         /// Pointers received from the host.
-        Appender!(Pointer[]) pointers;
+        Appender!(Pointer[]) _pointers;
 
     }
 
     /// Params:
     ///     sourceRectangle = Rectangle the input is expected to fit in.
     this(Rectangle sourceRectangle) {
-        this.sourceRectangle = sourceRectangle;
+        this._sourceRectangle = sourceRectangle;
+    }
+
+    /// Returns:
+    ///     Rectangle for hover input. This input will be transformed to match
+    ///     `destinationRectangle`.
+    Rectangle sourceRectangle() const {
+        return _sourceRectangle;
+    }
+
+    /// Change the source rectangle.
+    /// Params:
+    ///     newValue = New value for the rectangle.
+    /// Returns:
+    ///     Same value as passed.
+    Rectangle sourceRectangle(Rectangle newValue) {
+        _sourceRectangle = newValue;
+        return newValue;
+    }
+
+    /// Returns:
+    ///     Rectangle for output.
+    Rectangle destinationRectangle() const {
+        if (tree)
+            return _destinationRectangle;
+        else
+            return sourceRectangle;
+    }
+
+    /// Transform a point in `sourceRectangle` onto `destinationRectangle`.
+    /// Params:
+    ///     point = Point to transform.
+    /// Returns:
+    ///     Transformed point.
+    Vector2 transformPoint(Vector2 point) {
+        return point.viewportTransform(sourceRectangle, destinationRectangle);
+    }
+
+    /// Transform a pointer into a new position.
+    ///
+    /// This will convert the pointer into a pointer within this node. The pointer *must*
+    /// be loaded in the host `HoverIO`.
+    ///
+    /// Params:
+    ///     pointer = Pointer to transform.
+    /// Returns:
+    ///     Transformed pointer.
+    HoverPointer transformPointer(HoverPointer pointer) {
+        assert(pointer.system, "Hover pointer must be loaded");
+        assert(pointer.system.opEquals(cast(const Object) hoverIO),
+            "Pointer must come from the host HoverIO system");
+
+        HoverPointer result;
+        result.load(this, pointer.id);
+        result.update(pointer);
+        result.position = transformPoint(pointer.position);
+        return result;
     }
 
     override void beforeResize(Vector2) {
@@ -51,9 +102,11 @@ class HoverTransform : NodeChain, HoverIO {
     /// matching nodes.
     override void beforeDraw(Rectangle outer, Rectangle inner) {
 
-        pointers.clear();
+        _destinationRectangle = outer;
+
+        _pointers.clear();
         foreach (HoverPointer pointer; hoverIO) {
-            pointers ~= Pointer(pointer);
+            _pointers ~= Pointer();
         }
 
     }
@@ -83,7 +136,15 @@ class HoverTransform : NodeChain, HoverIO {
     }
 
     int opApply(int delegate(HoverPointer) @safe yield) {
-        assert(false, "TODO");
+        foreach (HoverPointer pointer; hoverIO) {
+
+            auto transformed = transformPointer(pointer);
+            if (auto result = yield(transformed)) {
+                return result;
+            }
+
+        }
+        return 0;
     }
 
     int opApply(int delegate(Hoverable) @safe yield) {
@@ -93,8 +154,5 @@ class HoverTransform : NodeChain, HoverIO {
 }
 
 private struct Pointer {
-
-    /// Pointer given by the hover transform.
-    HoverPointer source;
 
 }

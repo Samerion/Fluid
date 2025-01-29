@@ -342,6 +342,11 @@ struct HoverPointer {
         return this._id;
     }
 
+    /// Returns: The I/O system owning the pointer.
+    inout(HoverIO) system() inout nothrow {
+        return this._hoverIO;
+    }
+
     /// Load the pointer into the system.
     void load(HoverIO hoverIO, int id) nothrow {
         this._hoverIO = hoverIO;
