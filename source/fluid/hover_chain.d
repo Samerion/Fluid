@@ -100,7 +100,7 @@ class HoverChain : NodeChain, HoverIO {
     /// Returns:
     ///     The normalized, non-negative pointer number.
     ///     Returns the same ID as given if it was already normalized.
-    int normalizePointerID(int number) const {
+    int normalizedPointerID(int number) const {
 
         if (number < 0) {
             return -number - 1;
@@ -111,14 +111,14 @@ class HoverChain : NodeChain, HoverIO {
 
     }
 
-    /// Performs the opposite of `normalizePointerID`; gets the ID of the armed pointer, the one made available
+    /// Performs the opposite of `normalizedPointerID`; gets the ID of the armed pointer, the one made available
     /// to event handling nodes.
     ///
     /// Since the IDs are assigned in a consistent, deterministic manner,
     /// the pointer does not need to be loaded for this function to work.
     ///
     /// See_Also:
-    ///     `normalizePointerID`
+    ///     `normalizedPointerID`
     /// Params:
     ///     number = ID of the pointer, either negative or not.
     /// Returns:
@@ -151,6 +151,7 @@ class HoverChain : NodeChain, HoverIO {
             newPointer.value = pointer;
             newPointer.armedValue.isDisabled = true;
             newPointer.action = new FindHoveredNodeAction;
+            newPointer.action.stop();  // Temporarily mark as inactive
 
             const newIndex = _pointers.load(newPointer);
             _pointers[newIndex].value.load(this, newIndex);
@@ -185,7 +186,7 @@ class HoverChain : NodeChain, HoverIO {
 
         // Armed variant
         if (number < 0) {
-            const trueNumber = normalizePointerID(number);
+            const trueNumber = normalizedPointerID(number);
             assert(_pointers.isActive(trueNumber), "Pointer is not active");
             return _pointers[trueNumber].armedValue;
         }
@@ -200,7 +201,7 @@ class HoverChain : NodeChain, HoverIO {
 
     override void emitEvent(HoverPointer pointer, InputEvent event) {
 
-        const id = normalizePointerID(pointer.id);
+        const id = normalizedPointerID(pointer.id);
 
         assert(_pointers.isActive(id), "Pointer is not active");
 
@@ -234,14 +235,22 @@ class HoverChain : NodeChain, HoverIO {
 
     /// List all active pointers controlled by this `HoverChain`.
     ///
-    /// A copy of each pointer is maintained to pass to event handlers. Those copies are *not*
-    /// included when iterating.
+    /// A copy of each pointer is maintained to pass to event handlers. While iterating,
+    /// only one version will be passed of each pointer: if while drawing,
+    /// the "armed" copy is used, otherwise the regular versions will be returned.
+    ///
+    /// The above distinction makes it possible for nodes to process the same pointers
+    /// as they're given in event handlers, while outsiders are given the usual versions.
     override int opApply(int delegate(HoverPointer) @safe yield) {
 
         foreach (pointer; _pointers.activeResources) {
 
+            auto value = pointer.action.toStop
+                ? pointer.value
+                : pointer.armedValue;
+
             // List each pointer
-            if (auto result = yield(pointer.value)) {
+            if (auto result = yield(value)) {
                 return result;
             }
 
@@ -380,13 +389,13 @@ class HoverChain : NodeChain, HoverIO {
     }
 
     override inout(Hoverable) hoverOf(HoverPointer pointer) inout {
-        const id = normalizePointerID(pointer.id);
+        const id = normalizedPointerID(pointer.id);
         debug assert(_pointers.isActive(id), "Given pointer wasn't loaded");
         return _pointers[id].heldNode.castIfAcceptsInput!Hoverable;
     }
 
     override inout(HoverScrollable) scrollOf(HoverPointer pointer) inout {
-        const id = normalizePointerID(pointer.id);
+        const id = normalizedPointerID(pointer.id);
         debug assert(_pointers.isActive(id), "Given pointer wasn't loaded");
         return _pointers[id].scrollable;
     }
@@ -401,7 +410,7 @@ class HoverChain : NodeChain, HoverIO {
     ///     True if the input action was handled.
     bool runInputAction(HoverPointer pointer, InputActionID actionID, bool isActive = true) {
 
-        const id = normalizePointerID(pointer.id);
+        const id = normalizedPointerID(pointer.id);
         const armedID = -id - 1;
 
         auto hover = hoverOf(pointer);

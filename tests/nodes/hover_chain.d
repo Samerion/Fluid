@@ -61,6 +61,7 @@ class HoverTracker : Node, Hoverable {
     int pressCount;
 
     HoverPointer lastPointer;
+    Appender!(HoverPointer[]) pointers;
 
     override void resizeImpl(Vector2) {
         require(hoverIO);
@@ -68,7 +69,10 @@ class HoverTracker : Node, Hoverable {
     }
 
     override void drawImpl(Rectangle, Rectangle) {
-
+        pointers.clear();
+        foreach (HoverPointer pointer; hoverIO) {
+            pointers ~= pointer;
+        }
     }
 
     override bool blocksInput() const {
@@ -981,6 +985,26 @@ unittest {
             assert(pointer != action1.pointer);
             assert(pointer == action2.pointer);
         }
+    }
+
+}
+
+@("HoverChain's HoverPointer iterator uses armed pointers when used while drawing")
+unittest {
+
+    auto tracker = hoverTracker();
+    auto hover = hoverChain(tracker);
+    auto action1 = hover.point(10, 20);
+    auto action2 = hover.point(20, 10);
+
+    hover.draw();
+
+    assert(tracker.pointers[][0].id == hover.armedPointerID(action1.pointer.id));
+    assert(tracker.pointers[][1].id == hover.armedPointerID(action2.pointer.id));
+
+    foreach (HoverPointer pointer; hover) {
+        assert(pointer.id == hover.normalizedPointerID(pointer.id));
+        assert(pointer.id != hover.armedPointerID(pointer.id));
     }
 
 }
