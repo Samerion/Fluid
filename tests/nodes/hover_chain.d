@@ -963,3 +963,24 @@ unittest {
     assert(tracker.totalScroll.y == 3);
 
 }
+
+@("HoverChain exposes all active pointers")
+unittest {
+
+    auto hover = hoverChain();
+    auto action1 = hover.point(10, 20);
+    auto action2 = hover.point(20, 10);
+
+    size_t index;
+    foreach (HoverPointer pointer; hover) {
+        if (index++ == 0) {
+            assert(pointer == action1.pointer);
+            assert(pointer != action2.pointer);
+        }
+        else {
+            assert(pointer != action1.pointer);
+            assert(pointer == action2.pointer);
+        }
+    }
+
+}
