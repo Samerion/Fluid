@@ -125,6 +125,9 @@ interface HoverIO : IO {
 
     /// List all active hover pointer, namely all pointers that have been loaded since the last
     /// resize.
+    ///
+    /// Pointers do not need to be sorted.
+    ///
     /// Params:
     ///     yield = A delegate to be called for every active node.
     ///         Disabled nodes should be included.
@@ -136,6 +139,9 @@ interface HoverIO : IO {
     int opApply(int delegate(HoverPointer) @safe yield);
 
     /// List all currently hovered nodes.
+    ///
+    /// Nodes do not need to be sorted.
+    ///
     /// Params:
     ///     yield = A delegate to be called for every hovered node.
     ///         This should include nodes that block input, but are hovered.
@@ -353,10 +359,24 @@ struct HoverPointer {
         this._id = id;
     }
 
+    inout(HoverPointer) loadCopy(inout HoverIO hoverIO, int id) inout {
+        return inout HoverPointer(
+            this.device,
+            this.number,
+            this.position,
+            this.scroll,
+            this.isDisabled,
+            this.clickCount,
+            this.isScrollHeld,
+            hoverIO,
+            id,
+        );
+    }
+
     /// Update a pointer in place using data of another pointer.
     /// Params:
     ///     other = Pointer to copy data from.
-    void update(HoverPointer other) {
+    void update(const HoverPointer other) {
         this.position     = other.position;
         this.scroll       = other.scroll;
         this.isScrollHeld = other.isScrollHeld;

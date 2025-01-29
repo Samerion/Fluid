@@ -2,6 +2,8 @@ module nodes.hover_transform;
 
 import fluid;
 
+import nodes.hover_chain;
+
 @safe:
 
 @("HoverTransform yields transformed pointers when iterated")
@@ -43,5 +45,24 @@ unittest {
             assert(pointer.scroll == Vector2(0, 0));
         }
     }
+
+}
+
+@("HoverTransform can fetch and transform nodes")
+unittest {
+
+    auto transform = hoverTransform(
+        Rectangle(  50,   50, 100, 100),
+        Rectangle(-100, -100, 100, 100),
+    );
+    auto hover = hoverChain(transform);
+
+    hover.draw();
+
+    auto action = hover.point(56, 56).scroll(2, 3);
+    auto pointer = transform.fetch(action.pointer.id);
+    assert(pointer.id       == action.pointer.id);
+    assert(pointer.position == Vector2(-94, -94));
+    assert(pointer.scroll   == Vector2(  2,   3));
 
 }
