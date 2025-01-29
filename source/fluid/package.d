@@ -45,6 +45,7 @@ public import
     fluid.grid,
     fluid.hover_button,
     fluid.hover_chain,
+    fluid.hover_transform,
     fluid.image_view,
     fluid.input,
     fluid.input_map_chain,
