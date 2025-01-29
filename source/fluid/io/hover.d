@@ -123,11 +123,23 @@ interface HoverIO : IO {
     ///     hoverable = True if this node is hovered.
     bool isHovered(const Hoverable hoverable) const;
 
+    /// List all active hover pointer, namely all pointers that have been loaded since the last
+    /// resize.
+    /// Params:
+    ///     yield = A delegate to be called for every active node.
+    ///         Disabled nodes should be included.
+    ///         If the delegate returns a non-zero value, it should immediately break out
+    ///         of the loop and return this value.
+    /// Returns:
+    ///     If `yield` returned a non-zero value, it should be returned;
+    ///     if `yield` wasn't called, or has only returned zeroes, a zero is returned.
+    int opApply(int delegate(HoverPointer) @safe yield);
+
     /// List all currently hovered nodes.
     /// Params:
     ///     yield = A delegate to be called for every hovered node.
     ///         This should include nodes that block input, but are hovered.
-    ///         If the delegate returns a non-zero value, the value should be returned.
+    ///         If the delegate returns a non-zero value, the value should be immediately returned.
     /// Returns:
     ///     If `yield` returned a non-zero value, this is the value it returned;
     ///     if `yield` wasn't called, or has only returned zeroes, a zero is returned.
@@ -142,7 +154,7 @@ interface HoverIO : IO {
 ///     hoverable = Node that HoverIO is expected to hover.
 bool hovers(HoverIO hoverIO) {
 
-    foreach (_; hoverIO) {
+    foreach (Hoverable _; hoverIO) {
         return true;
     }
     return false;
@@ -152,7 +164,7 @@ bool hovers(HoverIO hoverIO) {
 /// ditto
 bool hovers(HoverIO hoverIO, const Hoverable hoverable) {
 
-    foreach (hovered; hoverIO) {
+    foreach (Hoverable hovered; hoverIO) {
         if (hovered.opEquals(cast(const Object) hoverable)) return true;
     }
 
@@ -173,7 +185,7 @@ do {
 
     import std.algorithm : canFind;
 
-    foreach (hovered; hoverIO) {
+    foreach (Hoverable hovered; hoverIO) {
 
         // A node is hovered, but not in the known list
         if (!hoverables.canFind!((a, b) => a.opEquals(cast(const Object) b))(hovered)) {

@@ -232,6 +232,25 @@ class HoverChain : NodeChain, HoverIO {
 
     }
 
+    /// List all active pointers controlled by this `HoverChain`.
+    ///
+    /// A copy of each pointer is maintained to pass to event handlers. Those copies are *not*
+    /// included when iterating.
+    override int opApply(int delegate(HoverPointer) @safe yield) {
+
+        foreach (pointer; _pointers.activeResources) {
+
+            // List each pointer
+            if (auto result = yield(pointer.value)) {
+                return result;
+            }
+
+        }
+
+        return 0;
+
+    }
+
     override int opApply(int delegate(Hoverable) @safe yield) {
 
         foreach (pointer; _pointers.activeResources) {
