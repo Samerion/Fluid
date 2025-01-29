@@ -72,12 +72,12 @@ interface PreferenceIO : IO {
 /// }
 ///
 /// @(FluidInputAction.press, WhileHeld)
-/// override bool hold(Pointer pointer) {
+/// override bool hold(HoverPointer pointer) {
 ///     sensor.hold(timeIO, preferenceIO, pointer);
 /// }
 ///
 /// @(FluidInputAction.press)
-/// override bool press(Pointer) {
+/// override bool press(HoverPointer) {
 ///     sensor.activate();
 /// }
 /// ---
@@ -111,7 +111,7 @@ struct MultipleClickSensor {
     ///     preferenceIO    = User preferences I/O system.
     ///     pointer         = Pointer emitting the event.
     ///     pointerPosition = Alternatively to `pointer`, just the pointer's position.
-    void hold(TimeIO timeIO, PreferenceIO preferenceIO, Pointer pointer) {
+    void hold(TimeIO timeIO, PreferenceIO preferenceIO, HoverPointer pointer) {
         return hold(
             timeIO.now,
             preferenceIO.doubleClickInterval,
