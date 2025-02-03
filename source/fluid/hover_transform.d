@@ -210,11 +210,19 @@ class HoverTransform : NodeChain, HoverIO, Hoverable {
     }
 
     override inout(Hoverable) hoverOf(HoverPointer pointer) inout {
-        return getPointerData(pointer.id).heldNode.castIfAcceptsInput!Hoverable;
+        return hoverOf(pointer.id);
+    }
+
+    inout(Hoverable) hoverOf(int pointerID) inout {
+        return getPointerData(pointerID).heldNode.castIfAcceptsInput!Hoverable;
     }
 
     override inout(HoverScrollable) scrollOf(HoverPointer pointer) inout {
-        return getPointerData(pointer.id).scrollable;
+        return scrollOf(pointer.id);
+    }
+
+    inout(HoverScrollable) scrollOf(int pointerID) inout {
+        return getPointerData(pointerID).scrollable;
     }
 
     override bool isHovered(const Hoverable hoverable) const {
@@ -246,13 +254,17 @@ class HoverTransform : NodeChain, HoverIO, Hoverable {
         return isDisabled || isDisabledInherited;
     }
 
-    override bool actionImpl(IO io, int number, immutable InputActionID action, bool isActive) {
+    override bool actionImpl(IO io, int pointerID, immutable InputActionID action, bool isActive) {
+        if (auto target = hoverOf(pointerID)) {
+            return target.actionImpl(this, pointerID, action, isActive);
+        }
         return false;
     }
 
     override bool hoverImpl(HoverPointer pointer) {
         if (auto target = hoverOf(pointer)) {
-            return target.hoverImpl(pointer);
+            auto transformed = transformPointer(pointer);
+            return target.hoverImpl(transformed);
         }
         return false;
     }
