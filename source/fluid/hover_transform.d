@@ -6,7 +6,10 @@ import std.algorithm;
 import fluid.node;
 import fluid.types;
 import fluid.utils;
+import fluid.structs;
 import fluid.node_chain;
+
+import fluid.future.context;
 
 import fluid.io.hover;
 import fluid.io.action;
@@ -15,7 +18,7 @@ import fluid.io.action;
 
 alias hoverTransform = nodeBuilder!HoverTransform;
 
-class HoverTransform : NodeChain, HoverIO {
+class HoverTransform : NodeChain, HoverIO, Hoverable {
 
     HoverIO hoverIO;
 
@@ -183,12 +186,12 @@ class HoverTransform : NodeChain, HoverIO {
         assert(false, "TODO");
     }
 
-    inout(HoverPointer) fetch(int number) inout {
+    override inout(HoverPointer) fetch(int number) inout {
         auto pointer = hoverIO.fetch(number);
         return transformPointer(pointer);
     }
 
-    void emitEvent(HoverPointer pointer, InputEvent event) {
+    override void emitEvent(HoverPointer pointer, InputEvent event) {
         assert(false, "TODO");
     }
 
@@ -202,15 +205,15 @@ class HoverTransform : NodeChain, HoverIO {
         }
     }
 
-    inout(Hoverable) hoverOf(HoverPointer pointer) inout {
+    override inout(Hoverable) hoverOf(HoverPointer pointer) inout {
         return getPointerData(pointer.id).heldNode.castIfAcceptsInput!Hoverable;
     }
 
-    inout(HoverScrollable) scrollOf(HoverPointer pointer) inout {
+    override inout(HoverScrollable) scrollOf(HoverPointer pointer) inout {
         return getPointerData(pointer.id).scrollable;
     }
 
-    bool isHovered(const Hoverable hoverable) const {
+    override bool isHovered(const Hoverable hoverable) const {
         foreach (pointer; _pointers[]) {
             if (hoverable.opEquals(pointer.heldNode)) {
                 return true;
@@ -219,7 +222,7 @@ class HoverTransform : NodeChain, HoverIO {
         return false;
     }
 
-    int opApply(int delegate(HoverPointer) @safe yield) {
+    override int opApply(int delegate(HoverPointer) @safe yield) {
         foreach (HoverPointer pointer; hoverIO) {
 
             auto transformed = transformPointer(pointer);
@@ -231,8 +234,31 @@ class HoverTransform : NodeChain, HoverIO {
         return 0;
     }
 
-    int opApply(int delegate(Hoverable) @safe yield) {
+    override int opApply(int delegate(Hoverable) @safe yield) {
         assert(false, "TODO");
+    }
+
+    override bool blocksInput() const {
+        return isDisabled || isDisabledInherited;
+    }
+
+    override bool actionImpl(IO io, int number, immutable InputActionID action, bool isActive) {
+        return false;
+    }
+
+    override bool hoverImpl() {
+        return false;
+    }
+
+    override IsOpaque inBoundsImpl(Rectangle outer, Rectangle inner, Vector2 position) {
+        if (super.inBoundsImpl(outer, inner, position).inSelf) {
+            return IsOpaque.onlySelf;
+        }
+        return IsOpaque.no;
+    }
+
+    override bool isHovered() const {
+        return hoverIO.isHovered(this);
     }
 
 }
