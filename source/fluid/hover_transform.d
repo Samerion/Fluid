@@ -1,12 +1,15 @@
 module fluid.hover_transform;
 
 import std.array;
+import std.algorithm;
 
+import fluid.node;
 import fluid.types;
 import fluid.utils;
 import fluid.node_chain;
 
 import fluid.io.hover;
+import fluid.io.action;
 
 @safe:
 
@@ -32,6 +35,9 @@ class HoverTransform : NodeChain, HoverIO {
 
         /// Pointers received from the host.
         Appender!(Pointer[]) _pointers;
+
+        /// Pool of actions that are used to find matching nodes.
+        FindHoveredNodeAction[] _actions;
 
     }
 
@@ -137,10 +143,40 @@ class HoverTransform : NodeChain, HoverIO {
         }
 
         _pointers.clear();
+        size_t index;
         foreach (HoverPointer pointer; hoverIO) {
-            _pointers ~= Pointer();
+            scope (exit) index++;
+            if (pointer.isDisabled) continue;
+
+            _pointers ~= Pointer(pointer.id);
+
+            // Allocate a branch action for each pointer
+            if (index >= _actions.length) {
+                _actions.length = index + 1;
+                _actions[index] = new FindHoveredNodeAction;
+            }
+
+            _actions[index].search = pointer.position;
+            _actions[index].scroll = pointer.scroll;
+            controlBranchAction(_actions[index]).startAndRelease();
         }
 
+    }
+
+    override void afterDraw(Rectangle outer, Rectangle inner) {
+        foreach (index, ref pointer; _pointers[]) {
+            auto action = _actions[index];
+            controlBranchAction(_actions[index]).stop();
+
+            // Read the result of each action into the local pointer
+            pointer.hoveredNode = action.result;
+            if (!pointer.isHeld) {
+                pointer.heldNode = pointer.hoveredNode;
+            }
+            if (!pointer.isScrollHeld) {
+                pointer.scrollable = action.scrollable;
+            }
+        }
     }
 
     override int load(HoverPointer pointer) {
@@ -156,16 +192,31 @@ class HoverTransform : NodeChain, HoverIO {
         assert(false, "TODO");
     }
 
+    private inout(Pointer) getPointerData(int id) inout {
+        auto result = _pointers[].find!"a.id == b"(id);
+        if (result.empty) {
+            return Pointer.init;
+        }
+        else {
+            return result.front;
+        }
+    }
+
     inout(Hoverable) hoverOf(HoverPointer pointer) inout {
-        assert(false, "TODO");
+        return getPointerData(pointer.id).heldNode.castIfAcceptsInput!Hoverable;
     }
 
     inout(HoverScrollable) scrollOf(HoverPointer pointer) inout {
-        assert(false, "TODO");
+        return getPointerData(pointer.id).scrollable;
     }
 
     bool isHovered(const Hoverable hoverable) const {
-        assert(false, "TODO");
+        foreach (pointer; _pointers[]) {
+            if (hoverable.opEquals(pointer.heldNode)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     int opApply(int delegate(HoverPointer) @safe yield) {
@@ -187,5 +238,10 @@ class HoverTransform : NodeChain, HoverIO {
 }
 
 private struct Pointer {
-
+    int id;
+    Node heldNode;
+    Node hoveredNode;
+    HoverScrollable scrollable;
+    bool isHeld;
+    bool isScrollHeld;
 }
