@@ -411,9 +411,11 @@ interface Hoverable : Actionable {
     ///
     /// Do not call this method if the `blocksInput` is true.
     ///
+    /// Params:
+    ///     pointer = Pointer to handle this input.
     /// Returns:
     ///     True if hover was handled, false if it was ignored.
-    bool hoverImpl()
+    bool hoverImpl(HoverPointer pointer)
     in (!blocksInput, "This node currently doesn't accept input.");
 
     /// Returns:

@@ -238,7 +238,7 @@ class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable {
 
     }
 
-    bool hoverImpl() {
+    bool hoverImpl(HoverPointer) {
         return false;
     }
 

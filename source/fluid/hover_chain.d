@@ -334,7 +334,7 @@ class HoverChain : NodeChain, HoverIO {
         // Update hover data
         foreach (resource; _pointers.activeResources) {
 
-            const pointer = resource.armedValue;
+            auto pointer = resource.armedValue;
 
             // Ignore disabled pointers
             if (pointer.isDisabled) continue;
@@ -381,7 +381,7 @@ class HoverChain : NodeChain, HoverIO {
                 actionIO.emitEvent(ActionIO.frameEvent, armedID, &runInputAction);
             }
             else if (auto hoverable = resource.heldNode.castIfAcceptsInput!Hoverable) {
-                resource.isHandled = hoverable.hoverImpl();
+                resource.isHandled = hoverable.hoverImpl(pointer);
             }
 
         }
@@ -433,7 +433,8 @@ class HoverChain : NodeChain, HoverIO {
             || runLocalInputActions(pointer, actionID, isActive)
 
             // Run hoverImpl as a last resort
-            || (actionID == inputActionID!(ActionIO.CoreAction.frame) && hover && hover.hoverImpl());
+            || (actionID == inputActionID!(ActionIO.CoreAction.frame)
+                && hover && hover.hoverImpl(pointer));
 
         // Mark as handled, if so
         _pointers[id].isHandled = meta.isHandled || handled;

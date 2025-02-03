@@ -108,7 +108,7 @@ class FieldSlot(T : Node) : T, FluidHoverable, Hoverable, Focusable {
         return isDisabled || isDisabledInherited;
     }
 
-    override bool hoverImpl() {
+    override bool hoverImpl(HoverPointer) {
         return false;
     }
 

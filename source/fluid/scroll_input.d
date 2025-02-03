@@ -389,18 +389,13 @@ class ScrollInputHandle : Node, FluidHoverable, Hoverable {
     }
 
     protected override void mouseImpl() {
-
-        hoverImpl();
-
+        hoverImpl(HoverPointer.init);
     }
 
-    protected override bool hoverImpl() {
-
+    protected override bool hoverImpl(HoverPointer) {
         justPressed = false;
         _isPressed = false;
-
         return false;
-
     }
 
 }
