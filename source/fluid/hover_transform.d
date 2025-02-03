@@ -25,8 +25,8 @@ class HoverTransform : NodeChain, HoverIO, Hoverable {
     public {
 
         /// By default, the destination rectangle is automatically updated to match the padding
-        /// box of `HoverTransform`. If toggled on, it is instead static, and can be manually
-        /// updated.
+        /// box of the transform's child node. If toggled on, it is instead static, and can be
+        /// manually updated.
         bool isDestinationManual;
 
     }
@@ -48,16 +48,19 @@ class HoverTransform : NodeChain, HoverIO, Hoverable {
     ///     sourceRectangle      = Rectangle the input is expected to fit in.
     ///     destinationRectangle = Rectangle to map the input to. If omitted, chosen automatically
     ///         so that input is remapped to the content of this node.
-    this(Rectangle sourceRectangle) {
+    ///     next                 = Node to be affected by the transform.
+    this(Rectangle sourceRectangle, Node next = null) {
         this._sourceRectangle = sourceRectangle;
         this.isDestinationManual = false;
+        super(next);
     }
 
     /// ditto
-    this(Rectangle sourceRectangle, Rectangle destinationRectangle) {
+    this(Rectangle sourceRectangle, Rectangle destinationRectangle, Node next = null) {
         this._sourceRectangle = sourceRectangle;
         this._destinationRectangle = destinationRectangle;
         this.isDestinationManual = true;
+        super(next);
     }
 
     /// Returns:
@@ -141,8 +144,8 @@ class HoverTransform : NodeChain, HoverIO, Hoverable {
     /// matching nodes.
     override void beforeDraw(Rectangle outer, Rectangle inner) {
 
-        if (!isDestinationManual) {
-            _destinationRectangle = outer;
+        if (!isDestinationManual && next) {
+            _destinationRectangle = next.paddingBoxForSpace(inner);
         }
 
         _pointers.clear();
