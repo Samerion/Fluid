@@ -66,3 +66,41 @@ unittest {
     assert(pointer.scroll   == Vector2(  2,   3));
 
 }
+
+@("HoverTransform affects child nodes")
+unittest {
+
+    // Target's actual position is the first 50×50 rectangle
+    // Transform takes events from the 50×50 rectangle next to it.
+    auto tracker = sizeLock!hoverTracker(
+        .sizeLimit(50, 50),
+    );
+    auto transform = hoverTransform(Rectangle(50, 0, 50, 50));
+    auto hover = hoverChain();
+    auto root = chain(
+        hover,
+        transform,
+        tracker,
+    );
+
+    hover.point(75, 50)
+        .then((a) {
+            assert(tracker.hoverImplCount == 1);
+            assert(tracker.pressHeldCount == 0);
+            a.press(false);
+            return a;
+        })
+        .then((a) {
+            assert(tracker.hoverImplCount == 1);
+            assert(tracker.pressHeldCount == 1);
+            assert(tracker.pressCount == 0);
+            a.press(true);
+            return a;
+        })
+        .runWhileDrawing(root);
+
+    assert(tracker.hoverImplCount == 1);
+    assert(tracker.pressHeldCount == 1);
+    assert(tracker.pressCount == 1);
+
+}

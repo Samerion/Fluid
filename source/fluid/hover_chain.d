@@ -380,7 +380,7 @@ class HoverChain : NodeChain, HoverIO {
             if (actionIO) {
                 actionIO.emitEvent(ActionIO.frameEvent, armedID, &runInputAction);
             }
-            else if (auto hoverable = resource.node.castIfAcceptsInput!Hoverable) {
+            else if (auto hoverable = resource.heldNode.castIfAcceptsInput!Hoverable) {
                 resource.isHandled = hoverable.hoverImpl();
             }
 
