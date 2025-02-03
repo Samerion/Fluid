@@ -549,9 +549,9 @@ unittest {
     // Nothing pressed, action not activated
     assert(!tree.isDown!(FluidInputAction.backspaceWord));
 
-    version (OSX) 
+    version (OSX)
         io.press(KeyboardKey.leftOption);
-    else 
+    else
         io.press(KeyboardKey.leftControl);
     io.press(KeyboardKey.backspace);
     tree.poll();
@@ -1000,10 +1000,8 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable, Focusable, Hov
 
     }
 
-    override bool hoverImpl() {
-
+    override bool hoverImpl(HoverPointer) {
         return false;
-
     }
 
     /// Handle keyboard and gamepad input if no input action did.
@@ -1015,9 +1013,7 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable, Focusable, Hov
     ///
     /// Returns: True if the input was handled, false if not.
     override bool focusImpl() {
-
         return keyboardImpl();
-
     }
 
     /// Check if the node is being pressed. Performs action lookup.
@@ -1110,7 +1106,7 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable, Focusable, Hov
 
             if (focusIO) {
                 return focusIO.isFocused(this);
-            } 
+            }
             else {
                 return tree.focus is this;
             }
@@ -1125,7 +1121,7 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable, Focusable, Hov
 
                 if (focusIO) {
                     focusIO.currentFocus = null;
-                } 
+                }
                 else {
                     tree.focus = null;
                 }

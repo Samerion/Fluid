@@ -79,7 +79,7 @@ class HoverTracker : Node, Hoverable {
         return isDisabled || isDisabledInherited;
     }
 
-    override bool hoverImpl() {
+    override bool hoverImpl(HoverPointer) {
         assert(!blocksInput);
         hoverImplCount++;
         return false;

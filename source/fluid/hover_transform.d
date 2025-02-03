@@ -152,6 +152,7 @@ class HoverTransform : NodeChain, HoverIO, Hoverable {
             if (pointer.isDisabled) continue;
 
             _pointers ~= Pointer(pointer.id);
+            const transformed = transformPointer(pointer);
 
             // Allocate a branch action for each pointer
             if (index >= _actions.length) {
@@ -159,8 +160,8 @@ class HoverTransform : NodeChain, HoverIO, Hoverable {
                 _actions[index] = new FindHoveredNodeAction;
             }
 
-            _actions[index].search = pointer.position;
-            _actions[index].scroll = pointer.scroll;
+            _actions[index].search = transformed.position;
+            _actions[index].scroll = transformed.scroll;
             controlBranchAction(_actions[index]).startAndRelease();
         }
 
@@ -246,7 +247,10 @@ class HoverTransform : NodeChain, HoverIO, Hoverable {
         return false;
     }
 
-    override bool hoverImpl() {
+    override bool hoverImpl(HoverPointer pointer) {
+        if (auto target = hoverOf(pointer)) {
+            return target.hoverImpl(pointer);
+        }
         return false;
     }
 
