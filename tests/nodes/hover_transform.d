@@ -9,13 +9,18 @@ import nodes.hover_chain;
 @("HoverTransform yields transformed pointers when iterated")
 unittest {
 
-    auto transform = hoverTransform(Rectangle(50, 50, 100, 100));
+    auto content = sizeLock!vspace(
+        .sizeLimit(500, 500),
+    );
+    auto transform = hoverTransform(
+        Rectangle(50, 50, 100, 100),
+        content
+    );
     auto hover = hoverChain(
         .layout!(1, "fill"),
         transform,
     );
-    auto root = sizeLock!testSpace(
-        .sizeLimit(500, 500),
+    auto root = testSpace(
         hover
     );
 
@@ -78,26 +83,27 @@ unittest {
     auto transform = hoverTransform(Rectangle(50, 0, 50, 50));
     auto hover = hoverChain();
     auto root = chain(
+        inputMapChain(.layout!"fill"),
         hover,
         transform,
         tracker,
     );
 
-    hover.point(75, 50)
+    hover.point(75, 25)
         .then((a) {
             assert(tracker.hoverImplCount == 1);
             assert(tracker.pressHeldCount == 0);
             a.press(false);
-            return a;
+            return a.stayIdle;
         })
         .then((a) {
             assert(tracker.hoverImplCount == 1);
             assert(tracker.pressHeldCount == 1);
             assert(tracker.pressCount == 0);
             a.press(true);
-            return a;
+            return a.stayIdle;
         })
-        .runWhileDrawing(root);
+        .runWhileDrawing(root, 2);
 
     assert(tracker.hoverImplCount == 1);
     assert(tracker.pressHeldCount == 1);

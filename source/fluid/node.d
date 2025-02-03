@@ -782,6 +782,8 @@ abstract class Node {
         const spaceV = Vector2(space.width, space.height);
 
         // Get parameters
+        // Note: this has been moved to `paddingBoxFromSpace`
+        //       at the moment paddingBox is also required
         const size = Vector2(
             layout.nodeAlign[0] == NodeAlign.fill ? space.width  : min(space.width,  minSize.x),
             layout.nodeAlign[1] == NodeAlign.fill ? space.height : min(space.height, minSize.y),
@@ -926,6 +928,24 @@ abstract class Node {
 
         }
 
+    }
+
+    /// Get the node's padding box (outer box) for set available space.
+    /// Params:
+    ///     space = Space rectangle given to the node.
+    /// Returns:
+    ///     The padding box calculate from the given space rectangle.
+    Rectangle paddingBoxForSpace(Rectangle space) const {
+        const size = Vector2(
+            layout.nodeAlign[0] == NodeAlign.fill ? space.width  : min(space.width,  minSize.x),
+            layout.nodeAlign[1] == NodeAlign.fill ? space.height : min(space.height, minSize.y),
+        );
+        const position = position(space, size);
+
+        // Calculate the boxes
+        const marginBox  = Rectangle(position.tupleof, size.tupleof);
+        const borderBox  = style.cropBox(marginBox, style.margin);
+        return style.cropBox(borderBox, style.border);
     }
 
     /// Prepare a child for use. This is automatically called by `resizeChild` and only meant for advanced usage.
