@@ -853,6 +853,9 @@ class HoverPointerAction : TreeAction, Publisher!HoverPointerAction, IO {
     }
 
     /// Run an input action on the currently hovered node, if any.
+    ///
+    /// For this to work, `HoverIO` this pointer operates on must also support `ActionHoverIO`.
+    ///
     /// Params:
     ///     actionID   = ID of the action to run.
     ///     isActive   = "Active" status of the action.
@@ -863,18 +866,15 @@ class HoverPointerAction : TreeAction, Publisher!HoverPointerAction, IO {
         hoverIO.loadTo(pointer);
         auto hoverable = hoverIO.hoverOf(pointer);
 
-        // Emit a matching, fake hover event, to inform HoverIO of this
+        auto actionHoverIO = cast(ActionHoverIO) hoverIO;
+        assert(actionHoverIO, "This HoverIO does not support dispatching input actions.");
+
+        // Emit a matching, fake hover event
         // If HoverIO uses ActionIO, ActionIO should recognize and prioritize this event
         const event = ActionIO.noopEvent(isActive);
         hoverIO.emitEvent(pointer, event);
 
-        // No hoverable
-        if (!hoverable) return false;
-
-        // Can't run the action
-        if (hoverable.blocksInput) return false;
-
-        return hoverable.actionImpl(hoverIO, pointer.id, actionID, isActive);
+        return actionHoverIO.runInputAction(pointer, actionID, isActive);
 
     }
 
