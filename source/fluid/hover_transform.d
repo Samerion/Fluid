@@ -9,6 +9,7 @@ import fluid.utils;
 import fluid.structs;
 import fluid.node_chain;
 
+import fluid.future.arena;
 import fluid.future.context;
 
 import fluid.io.hover;
@@ -37,7 +38,7 @@ class HoverTransform : NodeChain, HoverIO, Hoverable {
         Rectangle _destinationRectangle;
 
         /// Pointers received from the host.
-        Appender!(Pointer[]) _pointers;
+        ResourceArena!Pointer _pointers;
 
         /// Pool of actions that are used to find matching nodes.
         FindHoveredNodeAction[] _actions;
@@ -133,6 +134,7 @@ class HoverTransform : NodeChain, HoverIO, Hoverable {
     override void beforeResize(Vector2) {
         require(hoverIO);
         this.controlIO().startAndRelease();
+        _pointers.startCycle();
     }
 
     override void afterResize(Vector2) {
@@ -148,41 +150,55 @@ class HoverTransform : NodeChain, HoverIO, Hoverable {
             _destinationRectangle = next.paddingBoxForSpace(inner);
         }
 
-        _pointers.clear();
-        size_t index;
+        size_t actionIndex;
+
         foreach (HoverPointer pointer; hoverIO) {
-            scope (exit) index++;
             if (pointer.isDisabled) continue;
 
-            _pointers ~= Pointer(pointer.id);
             const transformed = transformPointer(pointer);
+            const localID = cast(int) _pointers.allResources.countUntil(pointer.id);
 
             // Allocate a branch action for each pointer
-            if (index >= _actions.length) {
-                _actions.length = index + 1;
-                _actions[index] = new FindHoveredNodeAction;
+            if (actionIndex >= _actions.length) {
+                _actions.length = actionIndex + 1;
+                _actions[actionIndex] = new FindHoveredNodeAction;
             }
 
-            _actions[index].search = transformed.position;
-            _actions[index].scroll = transformed.scroll;
-            controlBranchAction(_actions[index]).startAndRelease();
+            auto action = _actions[actionIndex++];
+            action.search = transformed.position;
+            action.scroll = transformed.scroll;
+            controlBranchAction(action).startAndRelease();
+
+            // Create or update pointer entries
+            if (localID == -1) {
+                const newLocalID = _pointers.load(Pointer(pointer.id, 0, action));
+                _pointers[newLocalID].localID = newLocalID;
+            }
+            else {
+                auto resource = _pointers[localID];
+                resource.action = action;
+                resource.localID = localID;
+                _pointers.reload(localID, resource);
+            }
         }
 
     }
 
     override void afterDraw(Rectangle outer, Rectangle inner) {
-        foreach (index, ref pointer; _pointers[]) {
-            auto action = _actions[index];
-            controlBranchAction(_actions[index]).stop();
+        foreach (pointer; _pointers.activeResources) {
+            controlBranchAction(pointer.action).stop();
 
             // Read the result of each action into the local pointer
-            pointer.hoveredNode = action.result;
+            pointer.hoveredNode = pointer.action.result;
+
             if (!pointer.isHeld) {
                 pointer.heldNode = pointer.hoveredNode;
             }
             if (!pointer.isScrollHeld) {
-                pointer.scrollable = action.scrollable;
+                pointer.scrollable = pointer.action.scrollable;
             }
+
+            _pointers[pointer.localID] = pointer;
         }
     }
 
@@ -199,14 +215,10 @@ class HoverTransform : NodeChain, HoverIO, Hoverable {
         assert(false, "TODO");
     }
 
-    private inout(Pointer) getPointerData(int id) inout {
-        auto result = _pointers[].find!"a.id == b"(id);
-        if (result.empty) {
-            return Pointer.init;
-        }
-        else {
-            return result.front;
-        }
+    private int hostToLocalID(int id) const {
+        const localID = cast(int) _pointers.allResources.countUntil(id);
+        assert(localID >= 0, "Pointer isn't loaded");
+        return localID;
     }
 
     override inout(Hoverable) hoverOf(HoverPointer pointer) inout {
@@ -214,7 +226,8 @@ class HoverTransform : NodeChain, HoverIO, Hoverable {
     }
 
     inout(Hoverable) hoverOf(int pointerID) inout {
-        return getPointerData(pointerID).heldNode.castIfAcceptsInput!Hoverable;
+        const localID = hostToLocalID(pointerID);
+        return _pointers[localID].heldNode.castIfAcceptsInput!Hoverable;
     }
 
     override inout(HoverScrollable) scrollOf(HoverPointer pointer) inout {
@@ -222,11 +235,11 @@ class HoverTransform : NodeChain, HoverIO, Hoverable {
     }
 
     inout(HoverScrollable) scrollOf(int pointerID) inout {
-        return getPointerData(pointerID).scrollable;
+        return _pointers[pointerID].scrollable;
     }
 
     override bool isHovered(const Hoverable hoverable) const {
-        foreach (pointer; _pointers[]) {
+        foreach (pointer; _pointers.activeResources) {
             if (hoverable.opEquals(pointer.heldNode)) {
                 return true;
             }
@@ -254,11 +267,33 @@ class HoverTransform : NodeChain, HoverIO, Hoverable {
         return isDisabled || isDisabledInherited;
     }
 
-    override bool actionImpl(IO io, int pointerID, immutable InputActionID action, bool isActive) {
-        if (auto target = hoverOf(pointerID)) {
-            return target.actionImpl(this, pointerID, action, isActive);
+    override bool actionImpl(IO io, int hostID, immutable InputActionID actionID, bool isActive) {
+
+        const localID = hostToLocalID(hostID);
+        auto resource = _pointers[localID];
+        const isFrameAction = actionID == inputActionID!(ActionIO.CoreAction.frame);
+
+        // Active input actions can only fire if `heldNode` is still hovered
+        if (isActive) {
+            const isNotHovered = resource.hoveredNode is null
+                || !resource.hoveredNode.opEquals(resource.heldNode);
+
+            if (isNotHovered) {
+                return false;
+            }
+        }
+
+        // Mark pointer as held
+        if (!isFrameAction) {
+            _pointers[localID].isHeld = true;
+        }
+
+        // Dispatch the event
+        if (auto target = resource.heldNode.castIfAcceptsInput!Hoverable) {
+            return target.actionImpl(this, hostID, actionID, isActive);
         }
         return false;
+
     }
 
     override bool hoverImpl(HoverPointer pointer) {
@@ -283,10 +318,17 @@ class HoverTransform : NodeChain, HoverIO, Hoverable {
 }
 
 private struct Pointer {
-    int id;
+    int hostID;
+    int localID;
+    FindHoveredNodeAction action;
     Node heldNode;
     Node hoveredNode;
     HoverScrollable scrollable;
     bool isHeld;
     bool isScrollHeld;
+
+    /// Find a pointer by its host ID
+    bool opEquals(int id) const {
+        return this.hostID == id;
+    }
 }

@@ -217,21 +217,12 @@ class HoverChain : NodeChain, ActionHoverIO {
     }
 
     override bool isHovered(const Hoverable hoverable) const {
-
         foreach (pointer; _pointers.activeResources) {
-
-            // Skip disabled pointers
-            if (pointer.value.isDisabled) continue;
-
-            // Check for matches
-            if (hoverable.opEquals(pointer.node)) {
+            if (hoverable.opEquals(pointer.heldNode)) {
                 return true;
             }
-
         }
-
         return false;
-
     }
 
     /// List all active pointers controlled by this `HoverChain`.
@@ -407,6 +398,7 @@ class HoverChain : NodeChain, ActionHoverIO {
 
         const id = normalizedPointerID(pointer.id);
         const armedID = -id - 1;
+        const isFrameAction = actionID == inputActionID!(ActionIO.CoreAction.frame);
 
         auto hover = hoverOf(pointer);
         auto meta = _pointers[id];
@@ -416,6 +408,11 @@ class HoverChain : NodeChain, ActionHoverIO {
             if (meta.node is null || !meta.node.opEquals(meta.heldNode)) {
                 return false;
             }
+        }
+
+        // Mark pointer as held
+        if (!isFrameAction) {
+            _pointers[id].isHeld = true;
         }
 
         // Try to handle the action
@@ -428,8 +425,7 @@ class HoverChain : NodeChain, ActionHoverIO {
             || runLocalInputActions(pointer, actionID, isActive)
 
             // Run hoverImpl as a last resort
-            || (actionID == inputActionID!(ActionIO.CoreAction.frame)
-                && hover && hover.hoverImpl(pointer));
+            || (isFrameAction && hover && hover.hoverImpl(pointer));
 
         // Mark as handled, if so
         _pointers[id].isHandled = meta.isHandled || handled;
