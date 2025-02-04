@@ -103,10 +103,10 @@ unittest {
             a.press(true);
             return a.stayIdle;
         })
-        .runWhileDrawing(root, 2);
+        .runWhileDrawing(root, 3);
 
     assert(tracker.hoverImplCount == 1);
-    assert(tracker.pressHeldCount == 1);
+    assert(tracker.pressHeldCount == 2);
     assert(tracker.pressCount == 1);
 
 }

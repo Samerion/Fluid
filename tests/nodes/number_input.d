@@ -186,7 +186,7 @@ unittest {
                 a.click();
                 assert(ups   == 1);
                 assert(downs == 0);
-                return a.move(100, 51);
+                return a.move(99, 51);
             })
             .then((a) {
                 a.click();

@@ -163,6 +163,7 @@ class HoverChain : NodeChain, ActionHoverIO {
             auto updatedPointer = _pointers[index];
             updatedPointer.value.update(pointer);
             updatedPointer.value.load(this, index);
+            updatedPointer.armedValue.clickCount = pointer.clickCount;
             _pointers.reload(index, updatedPointer);
             return index;
         }
