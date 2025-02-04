@@ -110,3 +110,57 @@ unittest {
     assert(tracker.pressCount == 1);
 
 }
+
+@("HoverTransform doesn't trigger active events when outside")
+unittest {
+
+    auto tracker = sizeLock!hoverTracker(
+        .sizeLimit(50, 50),
+    );
+    auto transform = hoverTransform(Rectangle(50, 0, 50, 50));
+    auto hover = hoverChain();
+    auto root = chain(
+        inputMapChain(.layout!"fill"),
+        hover,
+        transform,
+        tracker,
+    );
+
+    root.draw();
+
+    // Holding and clicking works inside
+    hover.point(75, 25)
+        .then((a) {
+            assert(hover.isHovered(transform));
+            assert(transform.isHovered(tracker));
+            assert(tracker.hoverImplCount == 1);
+            a.press();
+            assert(tracker.pressHeldCount == 1);
+            assert(tracker.pressCount == 1);
+            return a.stayIdle;
+        })
+        .then((a) {
+            a.press(false);
+            assert(tracker.pressHeldCount == 2);
+            assert(tracker.pressCount == 1);
+            return a.move(25, 25);
+        })
+
+        // Outside the node, only holding works
+        .then((a) {
+            a.press(false);
+            assert(hover.isHovered(transform));
+            assert(transform.isHovered(tracker));
+            assert(tracker.pressHeldCount == 3);
+            assert(tracker.pressCount == 1);
+            return a.stayIdle;
+        })
+        .then((a) {
+            a.press(true);
+            assert(tracker.pressHeldCount == 3);
+            assert(tracker.pressCount == 1);
+            assert(tracker.hoverImplCount == 1);
+        })
+        .runWhileDrawing(root, 5);
+
+}
