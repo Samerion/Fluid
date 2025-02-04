@@ -153,6 +153,28 @@ interface HoverIO : IO {
 
 }
 
+/// An extension of `HoverIO` that enables support for dispatching and running input actions.
+interface ActionHoverIO : HoverIO {
+
+    /// Handle an input action associated with a pointer.
+    /// Params:
+    ///     pointer  = Pointer to send the input action. It must be loaded.
+    ///         The input action will be loaded by the node the pointer points at.
+    ///     actionID = ID of the input action.
+    ///     isActive = If true, the action has been activated during this frame.
+    /// Returns:
+    ///     True if the input action was handled.
+    bool runInputAction(HoverPointer pointer, immutable InputActionID actionID,
+        bool isActive = true);
+
+    /// ditto
+    bool runInputAction(alias action)(HoverPointer pointer, bool isActive = true) {
+        const id = inputActionID!action;
+        return runInputAction(pointer, id, isActive);
+    }
+
+}
+
 /// Returns:
 ///     True if the `hoverIO` is hovering some node.
 /// Params:

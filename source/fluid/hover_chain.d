@@ -28,7 +28,7 @@ alias hoverChain = nodeBuilder!HoverChain;
 /// For focus-based nodes like keyboard and gamepad, see `FocusChain`.
 ///
 /// `HoverChain` only works with nodes compatible with the new I/O system introduced in Fluid 0.7.2.
-class HoverChain : NodeChain, HoverIO {
+class HoverChain : NodeChain, ActionHoverIO {
 
     ActionIO actionIO;
     FocusIO focusIO;
@@ -400,15 +400,9 @@ class HoverChain : NodeChain, HoverIO {
         return _pointers[id].scrollable;
     }
 
-    /// Handle an input action associated with a pointer.
-    /// Params:
-    ///     pointer  = Pointer to send the input action. It must be loaded.
-    ///         The input action will be loaded by the node the pointer points at.
-    ///     actionID = ID of the input action.
-    ///     isActive = If true, the action has been activated during this frame.
-    /// Returns:
-    ///     True if the input action was handled.
-    bool runInputAction(HoverPointer pointer, InputActionID actionID, bool isActive = true) {
+    override bool runInputAction(HoverPointer pointer, immutable InputActionID actionID,
+        bool isActive = true)
+    do {
 
         const id = normalizedPointerID(pointer.id);
         const armedID = -id - 1;
@@ -445,11 +439,8 @@ class HoverChain : NodeChain, HoverIO {
 
     /// ditto
     bool runInputAction(alias action)(HoverPointer pointer, bool isActive = true) {
-
         const id = inputActionID!action;
-
         return runInputAction(pointer, id, isActive);
-
     }
 
     /// ditto
