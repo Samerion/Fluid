@@ -308,8 +308,7 @@ class HoverChain : NodeChain, ActionHoverIO {
             if (resource.value.isDisabled) continue;
 
             // Start the tree action
-            resource.action.search = resource.value.position;
-            resource.action.scroll = resource.value.scroll;
+            resource.action.pointer = resource.armedValue;
             auto frame = controlBranchAction(resource.action);
             frame.start();
             frame.release();
@@ -361,7 +360,7 @@ class HoverChain : NodeChain, ActionHoverIO {
                 resource.scrollable = resource.action.scrollable;
             }
             if (resource.scrollable) {
-                resource.scrollable.scrollImpl(pointer.scroll);
+                resource.scrollable.scrollImpl(pointer);
             }
 
             // Reset state

@@ -164,3 +164,34 @@ unittest {
         .runWhileDrawing(root, 5);
 
 }
+
+@("HoverTransform supports scrolling")
+unittest {
+
+    auto tracker = sizeLock!scrollTracker(
+        .sizeLimit(50, 50),
+    );
+    auto transform = hoverTransform(Rectangle(50, 0, 50, 50));
+    auto hover = hoverChain();
+    auto root = chain(
+        inputMapChain(.layout!"fill"),
+        hover,
+        transform,
+        tracker,
+    );
+
+    hover.point(75, 25).scroll(0, 40)
+        .then((a) {
+            assert(tracker.lastScroll == Vector2(0, 40));
+            assert(tracker.totalScroll == Vector2(0, 40));
+        })
+        .runWhileDrawing(root, 2);
+
+    hover.point(25, 25).scroll(0, 60)
+        .then((a) {
+            assert(tracker.lastScroll == Vector2(0, 40));
+            assert(tracker.totalScroll == Vector2(0, 40));
+        })
+        .runWhileDrawing(root, 2);
+
+}

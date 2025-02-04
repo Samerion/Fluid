@@ -456,35 +456,36 @@ interface HoverScrollable {
 
     import fluid.node;
 
-    /// Controls whether this node can accept scroll input and the input can have visible effect. This is usually
-    /// determined by the node's position; for example a container node already scrolled to the bottom cannot accept
-    /// further vertical movement down.
+    /// Determines whether this node can accept scroll input and if the input can have visible
+    /// effect. This is usually determined by the node's position; for example a container node
+    /// already scrolled to the bottom cannot accept further vertical movement down.
     ///
-    /// This property is used to determine which node should be used to accept scroll. If there's a scrollable
-    /// container nested in another scrollable node, it will be chosen for scrolling only if the scroll motion
-    /// can still be performed. On the other hand, if the intent is specifically to block scroll motion (like in
-    /// a modal window), this method should always return true.
+    /// This property is used to determine which node should be used to accept scroll. If there's
+    /// a scrollable container nested in another scrollable node, it will be chosen for scrolling
+    /// only if the scroll motion can still be performed. On the other hand, if the intent is
+    /// specifically to block scroll motion (like in a modal window), this method should always
+    /// return true.
     ///
-    /// Note that a node "can scroll" even if it can only accept part of the motion. If the scroll would have
-    /// the node scroll beyond its maximum value, but the node is not already at its maximum, it should accept
-    /// the input and clamp the value.
+    /// Note that a node "can scroll" even if it can only accept part of the motion. If the scroll
+    /// would have the node scroll beyond its maximum value, but the node is not already at its
+    /// maximum, it should accept the input and clamp the value.
     ///
     /// Params:
-    ///     value = Input scroll value for both X and Y axis. This corresponds to the screen distance the scroll
-    ///         motion should cover.
+    ///     pointer = `HoverPointer` used to perform the action. Its most important property
+    ///         is the `scroll` field, but some nodes may also filter based on the pointer's
+    ///         state.
     /// Returns:
     ///     True if the node can accept the scroll value in part or in whole,
     ///     false if the motion would have no effect.
-    bool canScroll(Vector2 value) const;
+    bool canScroll(HoverPointer pointer) const;
 
     /// Perform a scroll motion, moving the node's contents by the specified distance.
     ///
-    /// At the moment this function returns `void` for backwards compatibility. This will change in the future
-    /// into a boolean value, indicating if the motion was handled or not.
-    ///
     /// Params:
-    ///     value = Value to scroll the contents by.
-    void scrollImpl(Vector2 value);
+    ///     pointer = Pointer to use to perform the scroll.
+    /// Returns:
+    ///     True if the motion was handled, or false if not.
+    bool scrollImpl(HoverPointer pointer);
 
     /// Scroll towards a specified child node, trying to get it into view.
     ///
@@ -507,21 +508,24 @@ interface HoverScrollable {
 
 /// Cast the node to given type if it accepts scroll.
 ///
-/// In addition to performing a dynamic cast, this checks if the node can handle a specified scroll value
-/// according to its `HoverScrollable.canScroll` method.
-/// If it doesn't, it will fail the cast.
+/// In addition to performing a dynamic cast, this checks if the node can handle a specified
+/// scroll value according to its `HoverScrollable.canScroll` method. If it doesn't, it will fail
+/// the cast.
 ///
 /// Params:
-///     node = Node to cast.
+///     node    = Node to cast.
+///     pointer = Pointer used for scrolling. Different values may be accepted depending on the
+///         scroll value or position.
 /// Returns:
-///     Node casted to `Scrollable`, or null if the node can't be casted, or the motion would not have effect.
-inout(HoverScrollable) castIfAcceptsScroll(inout Object node, Vector2 value) {
+///     Node casted to `Scrollable`, or null if the node can't be casted, or the motion would
+///     not have effect.
+inout(HoverScrollable) castIfAcceptsScroll(inout Object node, HoverPointer pointer) {
 
     // Perform the cast
     if (auto scrollable = cast(inout HoverScrollable) node) {
 
         // Node must accept scroll
-        if (scrollable.canScroll(value)) {
+        if (scrollable.canScroll(pointer)) {
             return scrollable;
         }
 
@@ -531,15 +535,16 @@ inout(HoverScrollable) castIfAcceptsScroll(inout Object node, Vector2 value) {
 
 }
 
-/// Find the topmost node that occupies the given position on the screen.
+/// Find the topmost node that occupies the given position on the screen, along with its scrollable.
 ///
 /// The result may change while the search runs; the final result is available once the action stops.
-/// On top of finding the node at specified position, a scroll value can be passed so this action will also find
-/// any `Scrollable` ancestor present in the branch, if one can handle the motion.
-/// If the resulting node is scrollable, it may be returned.
 ///
-/// For backwards compatibility, this node is not currently registered as a `NodeSearchAction` and does not emit
-/// a node when done.
+/// On top of finding the node at specified position, a scroll value can be passed through the
+/// pointer so this action will also find any `Scrollable` ancestor present in the branch, if one
+/// can handle the motion. The hovered node and the scrollable node can be the same.
+///
+/// For backwards compatibility, this node is not currently registered as a `NodeSearchAction` and
+/// does not emit a node when done.
 final class FindHoveredNodeAction : BranchAction {
 
     import fluid.node;
@@ -552,12 +557,9 @@ final class FindHoveredNodeAction : BranchAction {
         /// Topmost scrollable ancestor of `result` (the chosen node).
         HoverScrollable scrollable;
 
-        /// Position that is looked up.
-        Vector2 search;
-
-        /// Scroll value to test `scrollable` against. If the scroll motion with this value would not have effect
-        /// on a scrollable, it will not be chosen.
-        Vector2 scroll;
+        /// Position to use for the lookup. The pointer determines the current position and scroll
+        /// value of interest.
+        HoverPointer pointer;
 
     }
 
@@ -565,9 +567,8 @@ final class FindHoveredNodeAction : BranchAction {
         int _transparentDepth;
     }
 
-    this(Vector2 search = Vector2.init, Vector2 scroll = Vector2.init) {
-        this.search = search;
-        this.scroll = scroll;
+    this(HoverPointer pointer = HoverPointer.init) {
+        this.pointer = pointer;
     }
 
     override void started() {
@@ -591,7 +592,7 @@ final class FindHoveredNodeAction : BranchAction {
             return;
         }
 
-        const inBounds = node.inBounds(outer, inner, search);
+        const inBounds = node.inBounds(outer, inner, pointer.position);
 
         // Children cannot be hovered
         if (!inBounds.inChildren) {
@@ -619,12 +620,14 @@ final class FindHoveredNodeAction : BranchAction {
         if (result is null) return;
         if (scrollable) return;
 
-        // Try to match this node
-        scrollable = node.castIfAcceptsScroll(scroll);
-
+        // Reduce _transparentDepth, skip unless the node that started it
         if (_transparentDepth) {
             _transparentDepth--;
+            if (_transparentDepth) return;
         }
+
+        // Try to match this node
+        scrollable = node.castIfAcceptsScroll(pointer);
 
     }
 

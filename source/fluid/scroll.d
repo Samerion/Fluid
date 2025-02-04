@@ -303,9 +303,7 @@ class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable, Ho
 
     bool canScroll(Vector2 valueVec) const {
 
-        const speed = hoverIO
-            ? 1
-            : scrollBar.scrollSpeed;
+        const speed = scrollBar.scrollSpeed;
         const value = isHorizontal
             ? valueVec.x
             : valueVec.y;
@@ -319,9 +317,7 @@ class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable, Ho
 
     void scrollImpl(Vector2 valueVec) {
 
-        const speed = hoverIO
-            ? 1
-            : scrollBar.scrollSpeed;
+        const speed = scrollBar.scrollSpeed;
         const value = isHorizontal
             ? valueVec.x
             : valueVec.y;
@@ -330,6 +326,26 @@ class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable, Ho
 
         scrollBar.setScroll(scroll + move);
 
+    }
+
+    bool canScroll(HoverPointer pointer) const {
+
+        const value = isHorizontal
+            ? pointer.scroll.x
+            : pointer.scroll.y;
+        const maxMoveBackward = -scroll;
+        const maxMoveForward  = maxScroll - scroll;
+
+        return value.clamp(maxMoveBackward, maxMoveForward) != 0;
+
+    }
+
+    bool scrollImpl(HoverPointer pointer) {
+        const value = isHorizontal
+            ? pointer.scroll.x
+            : pointer.scroll.y;
+        scrollBar.setScroll(scroll + value);
+        return true;
     }
 
 }
