@@ -449,6 +449,10 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     }
 
+    final bool canScroll(HoverPointer pointer) const {
+        return canScroll(pointer.scroll);
+    }
+
     /// Get the current style for the label.
     /// Params:
     ///     style = Current style of the TextInput.
@@ -1810,6 +1814,11 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
         scroll = scroll + move;
 
+    }
+
+    protected override bool scrollImpl(HoverPointer pointer) {
+        scroll = scroll + pointer.scroll.x;
+        return true;
     }
 
     Rectangle shallowScrollTo(const(Node) child, Rectangle parentBox, Rectangle childBox) {

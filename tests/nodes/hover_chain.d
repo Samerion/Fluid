@@ -129,7 +129,7 @@ class ScrollTracker : Frame, HoverScrollable {
         return super.opEquals(other);
     }
 
-    override bool canScroll(Vector2) const {
+    override bool canScroll(HoverPointer) const {
         return !disableScroll;
     }
 
@@ -137,9 +137,10 @@ class ScrollTracker : Frame, HoverScrollable {
         return childBox;
     }
 
-    override void scrollImpl(Vector2 scroll) {
-        totalScroll += scroll;
-        lastScroll   = scroll;
+    override bool scrollImpl(HoverPointer pointer) {
+        totalScroll += pointer.scroll;
+        lastScroll   = pointer.scroll;
+        return true;
     }
 
 }

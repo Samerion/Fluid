@@ -1,6 +1,7 @@
 module fluid.hover_transform;
 
 import std.array;
+import std.string;
 import std.algorithm;
 
 import fluid.node;
@@ -19,7 +20,7 @@ import fluid.io.action;
 
 alias hoverTransform = nodeBuilder!HoverTransform;
 
-class HoverTransform : NodeChain, HoverIO, Hoverable {
+class HoverTransform : NodeChain, HoverIO, Hoverable, HoverScrollable {
 
     HoverIO hoverIO;
 
@@ -155,7 +156,7 @@ class HoverTransform : NodeChain, HoverIO, Hoverable {
         foreach (HoverPointer pointer; hoverIO) {
             if (pointer.isDisabled) continue;
 
-            const transformed = transformPointer(pointer);
+            auto transformed = transformPointer(pointer);
             const localID = cast(int) _pointers.allResources.countUntil(pointer.id);
 
             // Allocate a branch action for each pointer
@@ -165,8 +166,7 @@ class HoverTransform : NodeChain, HoverIO, Hoverable {
             }
 
             auto action = _actions[actionIndex++];
-            action.search = transformed.position;
-            action.scroll = transformed.scroll;
+            action.pointer = transformed;
             controlBranchAction(action).startAndRelease();
 
             // Create or update pointer entries
@@ -190,7 +190,6 @@ class HoverTransform : NodeChain, HoverIO, Hoverable {
 
             // Read the result of each action into the local pointer
             pointer.hoveredNode = pointer.action.result;
-
             if (!pointer.isHeld) {
                 pointer.heldNode = pointer.hoveredNode;
             }
@@ -217,7 +216,7 @@ class HoverTransform : NodeChain, HoverIO, Hoverable {
 
     private int hostToLocalID(int id) const {
         const localID = cast(int) _pointers.allResources.countUntil(id);
-        assert(localID >= 0, "Pointer isn't loaded");
+        assert(localID >= 0, format!"Pointer %s isn't loaded"(id));
         return localID;
     }
 
@@ -235,7 +234,8 @@ class HoverTransform : NodeChain, HoverIO, Hoverable {
     }
 
     inout(HoverScrollable) scrollOf(int pointerID) inout {
-        return _pointers[pointerID].scrollable;
+        const localID = hostToLocalID(pointerID);
+        return _pointers[localID].scrollable;
     }
 
     override bool isHovered(const Hoverable hoverable) const {
@@ -313,6 +313,30 @@ class HoverTransform : NodeChain, HoverIO, Hoverable {
 
     override bool isHovered() const {
         return hoverIO.isHovered(this);
+    }
+
+    override bool canScroll(HoverPointer pointer) const {
+        if (auto scroll = scrollOf(pointer)) {
+            return scroll.canScroll(pointer);
+        }
+        return false;
+    }
+
+    override bool scrollImpl(HoverPointer pointer) {
+        if (auto scroll = scrollOf(pointer)) {
+            return scroll.scrollImpl(pointer);
+        }
+        else return false;
+    }
+
+    override Rectangle shallowScrollTo(const(Node) child, Rectangle parentBox, Rectangle childBox) {
+        // TODO ???
+        assert(false, "TODO");
+    }
+
+    alias opEquals = typeof(super).opEquals;
+    override bool opEquals(const Object other) const {
+        return super.opEquals(other);
     }
 
 }
