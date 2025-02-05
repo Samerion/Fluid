@@ -1,6 +1,7 @@
 module nodes.hover_transform;
 
 import fluid;
+import fluid.future.pipe;
 
 import nodes.hover_chain;
 
@@ -259,3 +260,57 @@ unittest {
 
 }
 
+@("HoverTransform supports iterating on hovered items")
+unittest {
+
+    auto tracker1 = sizeLock!hoverTracker(
+        .sizeLimit(50, 50),
+    );
+    auto tracker2 = sizeLock!hoverTracker(
+        .sizeLimit(50, 50),
+    );
+    auto tracker3 = sizeLock!hoverTracker(
+        .sizeLimit(50, 50),
+    );
+    auto transform = hoverTransform(Rectangle(50, 0, 200, 50));
+    auto hover = hoverChain();
+    auto root = chain(
+        inputMapChain(.layout!"fill"),
+        hover,
+        transform,
+        hspace(
+            tracker1,
+            sizeLock!vspace(
+                .sizeLimit(50, 50)
+            ),
+            tracker2,
+            tracker3,
+        ),
+    );
+
+    auto action1 = hover.point( 75, 25);
+    auto action2 = hover.point(125, 25);
+    auto action3 = hover.point(175, 25);
+
+    join(action1, action2, action3)
+        .runWhileDrawing(root, 2);
+
+    assert(action1.isHovered(transform));
+    assert(action2.isHovered(transform));
+    assert(action3.isHovered(transform));
+    action1.stayIdle;  // tracker1
+    action2.stayIdle;  // blank space
+    action3.stayIdle;  // tracker2
+
+    int matched1, matched2;
+
+    foreach (Hoverable hoverable; transform) {
+        if (hoverable.opEquals(tracker1)) matched1++;
+        else if (hoverable.opEquals(tracker2)) matched2++;
+        else assert(false);
+    }
+
+    assert(matched1 == 1);
+    assert(matched2 == 1);
+
+}
