@@ -251,5 +251,11 @@ unittest {
     assert(hover.hoverOf(innerPointer).opEquals(transform));
     assert(transform.hoverOf(innerPointer).opEquals(tracker2));
 
+    // Press the inner device
+    innerDevice.emit(0, MouseIO.press.left);
+    root.draw();
+    assert(tracker1.pressCount == 0);
+    assert(tracker2.pressCount == 1);
+
 }
 
