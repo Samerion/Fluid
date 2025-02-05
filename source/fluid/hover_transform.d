@@ -239,7 +239,8 @@ class HoverTransform : NodeChain, HoverIO, Hoverable, HoverScrollable {
     }
 
     override void emitEvent(HoverPointer pointer, InputEvent event) {
-        assert(false, "TODO");
+        auto hostPointer = pointerToHost(pointer);
+        hoverIO.emitEvent(hostPointer, event);
     }
 
     private int hostToLocalID(int id) const {
