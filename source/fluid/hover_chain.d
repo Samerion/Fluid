@@ -261,7 +261,7 @@ class HoverChain : NodeChain, ActionHoverIO {
             if (pointer.value.isDisabled) continue;
 
             // List each hoverable
-            if (auto hoverable = cast(Hoverable) pointer.node) {
+            if (auto hoverable = cast(Hoverable) pointer.heldNode) {
                 if (auto result = yield(hoverable)) {
                     return result;
                 }

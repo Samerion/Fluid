@@ -289,7 +289,14 @@ class HoverTransform : NodeChain, HoverIO, Hoverable, HoverScrollable {
     }
 
     override int opApply(int delegate(Hoverable) @safe yield) {
-        assert(false, "TODO");
+        foreach (pointer; _pointers.activeResources) {
+            if (auto hoverable = cast(Hoverable) pointer.heldNode) {
+                if (auto result = yield(hoverable)) {
+                    return result;
+                }
+            }
+        }
+        return 0;
     }
 
     override bool blocksInput() const {
