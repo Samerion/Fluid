@@ -21,19 +21,20 @@ alias arsdImageChain = nodeBuilder!ARSDImageChain;
 /// An implementation of the `ImageLoadIO` API based on the `arsd-official:image-files` package available on DUB.
 class ARSDImageChain : NodeChain, ImageLoadIO {
 
+    private {
+        typeof(controlIO!ImageLoadIO()) _ioFrame;
+    }
+
     this(Node node = null) {
         super(node);
     }
 
     override void beforeResize(Vector2) {
-        auto io = this.controlIO();
-        io.start();
-        io.release();
+        _ioFrame = controlIO!ImageLoadIO().startAndRelease();
     }
 
     override void afterResize(Vector2) {
-        auto io = this.controlIO();
-        io.stop();
+        _ioFrame.stop();
     }
 
     Image loadImage(const(ubyte)[] data) @trusted {

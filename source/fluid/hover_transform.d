@@ -44,6 +44,8 @@ class HoverTransform : NodeChain, HoverIO, Hoverable, HoverScrollable {
         /// Pool of actions that are used to find matching nodes.
         FindHoveredNodeAction[] _actions;
 
+        typeof(controlIO!HoverIO()) _ioFrame;
+
     }
 
     /// Params:
@@ -134,12 +136,11 @@ class HoverTransform : NodeChain, HoverIO, Hoverable, HoverScrollable {
 
     override void beforeResize(Vector2) {
         require(hoverIO);
-        this.controlIO().startAndRelease();
-        _pointers.startCycle();
+        _ioFrame = controlIO!HoverIO().startAndRelease();
     }
 
     override void afterResize(Vector2) {
-        this.controlIO().stop();
+        _ioFrame.stop;
     }
 
     /// `HoverTransform` saves all the pointers it receives from the host `HoverIO`

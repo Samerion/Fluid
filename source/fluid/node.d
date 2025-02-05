@@ -1207,6 +1207,12 @@ abstract class Node {
             IOArray ios;
             bool isStarted;
 
+            void opAssign(IOControl value) {
+                this.node = value.node;
+                this.ios = value.ios;
+                this.isStarted = value.isStarted;
+            }
+
             void start() {
                 this.isStarted = true;
                 static foreach (i, IO; IOs) {
@@ -1218,9 +1224,10 @@ abstract class Node {
                 this.isStarted = false;
             }
 
-            void startAndRelease() {
+            IOControl startAndRelease() return {
                 start();
                 release();
+                return this;
             }
 
             void stop() {
