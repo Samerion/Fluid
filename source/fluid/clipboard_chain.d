@@ -21,6 +21,7 @@ class ClipboardChain : NodeChain, ClipboardIO {
 
     private {
         string _value;
+        typeof(controlIO!ClipboardIO()) _ioFrame;
     }
 
     this(Node next = null) {
@@ -43,14 +44,11 @@ class ClipboardChain : NodeChain, ClipboardIO {
     }
 
     override void beforeResize(Vector2) {
-        auto io = controlIO!ClipboardChain();
-        io.start();
-        io.release();
+        _ioFrame = controlIO!ClipboardIO().startAndRelease();
     }
 
     override void afterResize(Vector2) {
-        auto io = controlIO!ClipboardChain();
-        io.stop();
+        _ioFrame.stop();
     }
 
     override bool writeClipboard(string text) {

@@ -44,18 +44,23 @@ class OverlayChain : NodeChain, OverlayIO {
 
     }
 
+    private {
+        typeof(controlIO!OverlayIO()) _ioFrame;
+    }
+
     this(Node next = null) {
         super(next);
     }
 
     override void beforeResize(Vector2) {
-        this.controlIO().startAndRelease();
+        _ioFrame = controlIO!OverlayIO().startAndRelease();
     }
 
     override void afterResize(Vector2 space) {
         foreach (child; children) {
             resizeChild(child.node, space);
         }
+        _ioFrame.stop();
     }
 
     override void afterDraw(Rectangle, Rectangle inner) {

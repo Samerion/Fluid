@@ -75,6 +75,7 @@ class HoverChain : NodeChain, ActionHoverIO {
         }
 
         ResourceArena!Pointer _pointers;
+        typeof(controlIO!HoverIO()) _ioFrame;
 
     }
 
@@ -273,22 +274,14 @@ class HoverChain : NodeChain, ActionHoverIO {
     }
 
     override void beforeResize(Vector2) {
-
         use(actionIO);
         use(focusIO);
         _pointers.startCycle();
-
-        auto frame = controlIO!HoverIO();
-        frame.start();
-        frame.release();
-
+        _ioFrame = controlIO!HoverIO().startAndRelease();
     }
 
     override void afterResize(Vector2) {
-
-        auto frame = controlIO!HoverIO();
-        frame.stop();
-
+        _ioFrame.stop();
     }
 
     override void beforeDraw(Rectangle outer, Rectangle inner) {
