@@ -195,3 +195,61 @@ unittest {
         .runWhileDrawing(root, 2);
 
 }
+
+@("HoverTransform children can create pointers")
+unittest {
+
+    auto tracker1 = sizeLock!hoverTracker(
+        .sizeLimit(50, 50),
+    );
+    auto tracker2 = sizeLock!hoverTracker(
+        .sizeLimit(50, 50),
+    );
+    auto innerDevice = myHover();
+    auto outerDevice = myHover();
+    auto transform = hoverTransform(
+        .layout!"fill",
+        Rectangle(50, 0, 100, 50),
+        hspace(
+            tracker1,
+            tracker2,
+            innerDevice,
+        ),
+    );
+    auto hover = hoverChain();
+    auto root = chain(
+        inputMapChain(.layout!"fill"),
+        hover,
+        vspace(
+            .layout!"fill",
+            transform,
+            outerDevice,
+        ),
+    );
+
+    // Point both pointers at the same spot
+    outerDevice.pointers = [
+        outerDevice.makePointer(0, Vector2(75, 25)),
+    ];
+    innerDevice.pointers = [
+        innerDevice.makePointer(0, Vector2(75, 25)),
+    ];
+    root.draw();
+    root.draw();  // 1 frame delay; need to wait for draw
+
+    const outerPointerID = hover.armedPointerID(outerDevice.pointers[0].id);
+    const innerPointerID = hover.armedPointerID(innerDevice.pointers[0].id);
+    auto outerPointer = hover.fetch(outerPointerID);
+    auto innerPointer = hover.fetch(innerPointerID);
+
+    // `outerDevice`, just like in other tests, gets transformed and hits `tracker1`.
+    assert(hover.hoverOf(outerPointer).opEquals(transform));
+    assert(transform.hoverOf(outerPointer).opEquals(tracker1));
+
+    // `innerDevice` exists within the transformed coordinate system, so, within the system, its
+    // position will stay unchanged. It should hit `tracker2`
+    assert(hover.hoverOf(innerPointer).opEquals(transform));
+    assert(transform.hoverOf(innerPointer).opEquals(tracker2));
+
+}
+
