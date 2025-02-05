@@ -106,12 +106,25 @@ class HoverTransform : NodeChain, HoverIO, Hoverable, HoverScrollable {
     }
 
     /// Transform a point in `sourceRectangle` onto `destinationRectangle`.
+    /// See_Also:
+    ///     `pointToHost` for the reverse transformation.
     /// Params:
-    ///     point = Point to transform.
+    ///     point = Point, in host space, to transform.
     /// Returns:
-    ///     Transformed point.
-    Vector2 transformPoint(Vector2 point) const {
+    ///     Point transformed into local space.
+    Vector2 pointToLocal(Vector2 point) const {
         return point.viewportTransform(sourceRectangle, destinationRectangle);
+    }
+
+    /// Transform a point in `destinationRectangle` onto `sourceRectangle`.
+    /// See_Also:
+    ///     `pointToLocal` for the reverse transformation.
+    /// Params:
+    ///     point = Point, in local space, to transform.
+    /// Returns:
+    ///     Point transformed into host space.
+    Vector2 pointToHost(Vector2 point) const {
+        return point.viewportTransform(destinationRectangle, sourceRectangle);
     }
 
     /// Transform a pointer into a new position.
@@ -123,15 +136,28 @@ class HoverTransform : NodeChain, HoverIO, Hoverable, HoverScrollable {
     ///     pointer = Pointer to transform.
     /// Returns:
     ///     Transformed pointer.
-    inout(HoverPointer) transformPointer(inout HoverPointer pointer) inout @trusted {
-        assert(pointer.system, "Hover pointer must be loaded");
-        assert(pointer.system.opEquals(cast(const Object) hoverIO),
-            "Pointer must come from the host HoverIO system");
-
+    inout(HoverPointer) pointerToLocal(inout HoverPointer pointer) inout @trusted {
         HoverPointer result;
         result.update(pointer);
-        result.position = transformPoint(pointer.position);
+        result.position = pointToLocal(pointer.position);
         return cast(inout) result.loadCopy(this, pointer.id);
+    }
+
+    /// Reverse pointer transform. Transform pointers from the local, transformed space, into the
+    /// space of the host.
+    ///
+    /// This is used when loading pointers through `HoverTransform.load`. This way, devices placed
+    /// inside the transform exist within the transformed space.
+    ///
+    /// Params:
+    ///     pointer = Pointer to transform.
+    /// Returns:
+    ///     Transformed pointer.
+    inout(HoverPointer) pointerToHost(inout HoverPointer pointer) inout @trusted {
+        HoverPointer result;
+        result.update(pointer);
+        result.position = pointToHost(pointer.position);
+        return cast(inout) result.loadCopy(hoverIO, pointer.id);
     }
 
     override void beforeResize(Vector2) {
@@ -157,7 +183,7 @@ class HoverTransform : NodeChain, HoverIO, Hoverable, HoverScrollable {
         foreach (HoverPointer pointer; hoverIO) {
             if (pointer.isDisabled) continue;
 
-            auto transformed = transformPointer(pointer);
+            auto transformed = pointerToLocal(pointer);
             const localID = cast(int) _pointers.allResources.countUntil(pointer.id);
 
             // Allocate a branch action for each pointer
@@ -203,12 +229,13 @@ class HoverTransform : NodeChain, HoverIO, Hoverable, HoverScrollable {
     }
 
     override int load(HoverPointer pointer) {
-        assert(false, "TODO");
+        auto hostPointer = pointerToHost(pointer);
+        return hoverIO.load(hostPointer);
     }
 
     override inout(HoverPointer) fetch(int number) inout {
         auto pointer = hoverIO.fetch(number);
-        return transformPointer(pointer);
+        return pointerToLocal(pointer);
     }
 
     override void emitEvent(HoverPointer pointer, InputEvent event) {
@@ -251,7 +278,7 @@ class HoverTransform : NodeChain, HoverIO, Hoverable, HoverScrollable {
     override int opApply(int delegate(HoverPointer) @safe yield) {
         foreach (HoverPointer pointer; hoverIO) {
 
-            auto transformed = transformPointer(pointer);
+            auto transformed = pointerToLocal(pointer);
             if (auto result = yield(transformed)) {
                 return result;
             }
@@ -299,7 +326,7 @@ class HoverTransform : NodeChain, HoverIO, Hoverable, HoverScrollable {
 
     override bool hoverImpl(HoverPointer pointer) {
         if (auto target = hoverOf(pointer)) {
-            auto transformed = transformPointer(pointer);
+            auto transformed = pointerToLocal(pointer);
             return target.hoverImpl(transformed);
         }
         return false;
