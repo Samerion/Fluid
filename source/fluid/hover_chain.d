@@ -136,6 +136,17 @@ class HoverChain : NodeChain, ActionHoverIO {
 
     }
 
+    /// Get the armed variant of the pointer.
+    /// Params:
+    ///     pointer = A regular, or armed pointer.
+    /// Returns:
+    ///     Armed pointer corresponding to the given pointer.
+    ///     If the pointer is already an armed variant, no conversion is performed.
+    inout(HoverPointer) armedPointer(HoverPointer pointer) inout {
+        const armed = armedPointerID(pointer.id);
+        return fetch(armed);
+    }
+
     override int load(HoverPointer pointer)
     out(r) {
         import std.format;
