@@ -45,6 +45,7 @@ class FocusChain : NodeChain, FocusIO, WithOrderedFocus, WithPositionalFocus {
         PositionalFocusAction _positionalFocusAction;
         OrderedFocusAction _orderedFocusAction;
         Optional!Rectangle _lastFocusBox;
+        typeof(controlIO!FocusIO()) _ioFrame;
 
     }
 
@@ -100,20 +101,12 @@ class FocusChain : NodeChain, FocusIO, WithOrderedFocus, WithPositionalFocus {
     }
 
     override void beforeResize(Vector2) {
-
         use(actionIO);
-
-        auto frame = controlIO!FocusChain();
-        frame.start();
-        frame.release();
-
+        _ioFrame = controlIO!FocusIO().startAndRelease();
     }
 
     override void afterResize(Vector2) {
-
-        auto frame = controlIO!FocusChain();
-        frame.stop();
-
+        _ioFrame.stop();
     }
 
     override void beforeDraw(Rectangle, Rectangle) {

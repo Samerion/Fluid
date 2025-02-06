@@ -336,6 +336,47 @@ Rectangle intersect(Rectangle one, Rectangle two) nothrow {
 
 }
 
+/// Create a point that is in the same position relative to the destination rectangle,
+/// as is the input point relative to the source rectangle.
+///
+/// Relation is expressed is in term of a fraction or percentage. If the point is in the center
+/// of the source rectangle, the returned point will be in the center of the destination
+/// rectangle.
+///
+/// Params:
+///     point       = Point to transform.
+///     source      = Original viewport; source point is relative to this viewport.
+///     destination = Viewport used as destination. Resulting point will be relative
+///         to this viewport.
+/// Returns:
+///     A point located in the same place, relative to the other viewport.
+Vector2 viewportTransform(Vector2 point, Rectangle source, Rectangle destination) {
+    point = point - source.start;
+    point = Vector2(
+        point.x * destination.width  / source.width,
+        point.y * destination.height / source.height,
+    );
+    return point + destination.start;
+}
+
+///
+@("Viewport transform example works")
+unittest {
+
+    const source      = Rectangle(100, 100,  50,  50);
+    const destination = Rectangle(100,   0, 100, 100);
+
+    // Corners and center
+    assert(source.start .viewportTransform(source, destination) == destination.start);
+    assert(source.center.viewportTransform(source, destination) == destination.center);
+    assert(source.end   .viewportTransform(source, destination) == destination.end);
+
+    // Arbitrary positions
+    assert(Vector2(125, 100).viewportTransform(source, destination) == Vector2( 150,    0));
+    assert(Vector2(  0,   0).viewportTransform(source, destination) == Vector2(-100, -200));
+
+}
+
 /// Get names of static fields in the given object.
 ///
 /// Ignores deprecated fields.

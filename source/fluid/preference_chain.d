@@ -23,19 +23,18 @@ alias preferenceChain = nodeBuilder!PreferenceChain;
 /// [issue #295](https://git.samerion.com/Samerion/Fluid/issues/295) for more details.
 class PreferenceChain : NodeChain, PreferenceIO {
 
+    private typeof(controlIO!PreferenceIO()) _ioFrame;
+
     this(Node next = null) {
         super(next);
     }
 
     override void beforeResize(Vector2) {
-        auto frame = this.controlIO();
-        frame.start();
-        frame.release();
+        _ioFrame = controlIO!PreferenceIO().startAndRelease();
     }
 
     override void afterResize(Vector2) {
-        auto frame = this.controlIO();
-        frame.stop();
+        _ioFrame.stop();
     }
 
     override Duration doubleClickInterval() const nothrow {

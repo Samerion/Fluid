@@ -27,20 +27,21 @@ class TimeMachine : NodeChain, TimeIO {
         MonoTime time;
     }
 
+    private {
+        typeof(controlIO!TimeIO()) _ioFrame;
+    }
+
     this(Node next = null) {
         super(next);
         this.time = MonoTime.currTime();
     }
 
     override void beforeResize(Vector2) {
-        auto frame = this.controlIO();
-        frame.start();
-        frame.release();
+        _ioFrame = controlIO!TimeIO().startAndRelease();
     }
 
     override void afterResize(Vector2) {
-        auto frame = this.controlIO();
-        frame.stop();
+        _ioFrame.stop();
     }
 
     override MonoTime now() nothrow {

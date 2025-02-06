@@ -36,6 +36,8 @@ class InputMapChain : NodeChain, ActionIO {
         /// All collected input events.
         Stack!ReceivedInputEvent _events;
 
+        typeof(controlIO!ActionIO()) _ioFrame;
+
     }
 
     this(InputMapping map, Node next = null) {
@@ -48,18 +50,11 @@ class InputMapChain : NodeChain, ActionIO {
     }
 
     override void beforeResize(Vector2) {
-
-        auto frame = this.controlIO();
-        frame.start();
-        frame.release();
-
+        _ioFrame = controlIO!ActionIO().startAndRelease();
     }
 
     override void afterResize(Vector2) {
-
-        auto frame = this.controlIO();
-        frame.stop();
-
+        _ioFrame.stop();
     }
 
     override void afterDraw(Rectangle, Rectangle) {

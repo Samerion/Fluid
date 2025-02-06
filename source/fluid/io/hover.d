@@ -30,20 +30,21 @@ public import fluid.io.action : InputEvent, InputEventCode;
 /// hover a single node.
 interface HoverIO : IO {
 
-    /// Load a pointer (mouse cursor, finger) and place it at the position currently indicated in the struct.
-    /// Update the pointer's position if already loaded.
+    /// Load a hover pointer (mouse cursor, finger) and place it at the position currently
+    /// indicated in the struct. Update the pointer's position if already loaded.
     ///
-    /// It is expected `load` will be called after every pointer motion in order to keep its position up to date.
+    /// It is expected `load` will be called after every pointer motion in order to keep its
+    /// position up to date.
     ///
-    /// A pointer is considered loaded until the next resize. If the `load` call for a pointer isn't repeated
-    /// during a resize, the pointer is invalidated. Pointers do not have to be loaded while resizing; they can
-    /// also be loaded while drawing.
+    /// A pointer is considered loaded until the next resize. If the `load` call for a pointer
+    /// isn't repeated during a resize, the pointer is invalidated. Pointers do not have to be
+    /// loaded while resizing; they can also be loaded while drawing.
     ///
     /// An example implementation of a pointer device, from inside of a node, could look like:
     ///
     /// ---
     /// HoverIO hoverIO;
-    /// Pointer pointer;
+    /// HoverPointer pointer;
     ///
     /// override void resizeImpl(Vector2) {
     ///     require(hoverIO);
@@ -51,7 +52,6 @@ interface HoverIO : IO {
     /// }
     ///
     /// override void drawImpl(Rectangle, Rectangle) {
-    ///
     ///     pointer.device = this;
     ///     pointer.number = 0;
     ///     pointer.position = mousePosition();
@@ -59,7 +59,6 @@ interface HoverIO : IO {
     ///     if (clicked) {
     ///         mouseIO.emitEvent(pointer, MouseIO.createEvent(MouseIO.Button.left, true));
     ///     }
-    ///
     /// }
     /// ---
     ///
@@ -70,10 +69,10 @@ interface HoverIO : IO {
     ///         if multiple pointers are to be used.
     /// Returns:
     ///     An ID the `HoverIO` system will use to recognize the pointer.
-    int load(Pointer pointer);
+    int load(HoverPointer pointer);
 
-    /// Fetch a pointer from a number assigned to it by this I/O. This is used by `Actionable` nodes to find
-    /// `Pointer` data corresponding to fired input action events.
+    /// Fetch a pointer from a number assigned to it by this I/O. This is used by `Actionable`
+    /// nodes to find `HoverPointer` data corresponding to fired input action events.
     ///
     /// The pointer, and the matching number, must be valid.
     ///
@@ -81,32 +80,34 @@ interface HoverIO : IO {
     ///     number = Number assigned to the pointer by this I/O.
     /// Returns:
     ///     The pointer.
-    inout(Pointer) fetch(int number) inout;
+    inout(HoverPointer) fetch(int number) inout;
 
-    /// Read an input event from an input device. Input devices will call this function every frame
-    /// if an input event (such as a button press) occurs. Moving a mouse does not qualify as an input event.
+    /// Read an input event from an input device. Input devices will call this function every
+    /// frame if an input event (such as a button press) occurs. Moving a mouse does not qualify
+    /// as an input event.
     ///
-    /// The pointer emitting the event must have been loaded earlier (using `load`) during the same frame
-    /// for the action to work.
+    /// The hover pointer emitting the event must have been loaded earlier (using `load`) during
+    /// the same frame for the action to work.
     ///
-    /// `HoverIO` will usually pass these down to an `ActionIO` system. It is up to `HoverIO` to decide how
-    /// the input and the resulting input actions is handled, though the node hovered by the pointer will most
-    /// often receive them.
+    /// `HoverIO` will usually pass these down to an `ActionIO` system. It is up to `HoverIO` to
+    /// decide how the input and the resulting input actions is handled, though the node hovered
+    /// by the pointer will most often receive them.
     ///
     /// Params:
     ///     pointer = Pointer that emitted the event.
     ///     event   = Input event the system should emit.
-    ///         The event is usually considered "active" during the frame the action is "released". For example,
-    ///         user stops holding a mouse button, or a finger stops touching the screen.
-    void emitEvent(Pointer pointer, InputEvent event);
+    ///         The event is usually considered "active" during the frame the action is
+    ///         "released". For example, user stops holding a mouse button, or a finger stops
+    ///         touching the screen.
+    void emitEvent(HoverPointer pointer, InputEvent event);
 
     /// Params:
     ///     pointer = Pointer to query. The pointer must be loaded.
     /// Returns:
-    ///     Node hovered by the pointer.
+    ///     Node hovered by the hover pointer.
     /// See_Also:
     ///     `scrollOf` to get the current scrollable node.
-    inout(Hoverable) hoverOf(Pointer pointer) inout;
+    inout(Hoverable) hoverOf(HoverPointer pointer) inout;
 
     /// Params:
     ///     pointer = Pointer to query. The pointer must be loaded.
@@ -114,7 +115,7 @@ interface HoverIO : IO {
     ///     Scrollable ancestor for the currently hovered node.
     /// See_Also:
     ///     `hoverOf` to get the currently hovered node.
-    inout(HoverScrollable) scrollOf(Pointer pointer) inout;
+    inout(HoverScrollable) scrollOf(HoverPointer pointer) inout;
 
     /// Returns:
     ///     True if the node is hovered.
@@ -122,15 +123,55 @@ interface HoverIO : IO {
     ///     hoverable = True if this node is hovered.
     bool isHovered(const Hoverable hoverable) const;
 
+    /// List all active hover pointer, namely all pointers that have been loaded since the last
+    /// resize.
+    ///
+    /// Pointers do not need to be sorted.
+    ///
+    /// Params:
+    ///     yield = A delegate to be called for every active node.
+    ///         Disabled nodes should be included.
+    ///         If the delegate returns a non-zero value, it should immediately break out
+    ///         of the loop and return this value.
+    /// Returns:
+    ///     If `yield` returned a non-zero value, it should be returned;
+    ///     if `yield` wasn't called, or has only returned zeroes, a zero is returned.
+    int opApply(int delegate(HoverPointer) @safe yield);
+
     /// List all currently hovered nodes.
+    ///
+    /// Nodes do not need to be sorted.
+    ///
     /// Params:
     ///     yield = A delegate to be called for every hovered node.
     ///         This should include nodes that block input, but are hovered.
-    ///         If the delegate returns a non-zero value, the value should be returned.
+    ///         If the delegate returns a non-zero value, the value should be immediately returned.
     /// Returns:
     ///     If `yield` returned a non-zero value, this is the value it returned;
     ///     if `yield` wasn't called, or has only returned zeroes, a zero is returned.
     int opApply(int delegate(Hoverable) @safe yield);
+
+}
+
+/// An extension of `HoverIO` that enables support for dispatching and running input actions.
+interface ActionHoverIO : HoverIO {
+
+    /// Handle an input action associated with a pointer.
+    /// Params:
+    ///     pointer  = Pointer to send the input action. It must be loaded.
+    ///         The input action will be loaded by the node the pointer points at.
+    ///     actionID = ID of the input action.
+    ///     isActive = If true, the action has been activated during this frame.
+    /// Returns:
+    ///     True if the input action was handled.
+    bool runInputAction(HoverPointer pointer, immutable InputActionID actionID,
+        bool isActive = true);
+
+    /// ditto
+    bool runInputAction(alias action)(HoverPointer pointer, bool isActive = true) {
+        const id = inputActionID!action;
+        return runInputAction(pointer, id, isActive);
+    }
 
 }
 
@@ -141,7 +182,7 @@ interface HoverIO : IO {
 ///     hoverable = Node that HoverIO is expected to hover.
 bool hovers(HoverIO hoverIO) {
 
-    foreach (_; hoverIO) {
+    foreach (Hoverable _; hoverIO) {
         return true;
     }
     return false;
@@ -151,7 +192,7 @@ bool hovers(HoverIO hoverIO) {
 /// ditto
 bool hovers(HoverIO hoverIO, const Hoverable hoverable) {
 
-    foreach (hovered; hoverIO) {
+    foreach (Hoverable hovered; hoverIO) {
         if (hovered.opEquals(cast(const Object) hoverable)) return true;
     }
 
@@ -172,7 +213,7 @@ do {
 
     import std.algorithm : canFind;
 
-    foreach (hovered; hoverIO) {
+    foreach (Hoverable hovered; hoverIO) {
 
         // A node is hovered, but not in the known list
         if (!hoverables.canFind!((a, b) => a.opEquals(cast(const Object) b))(hovered)) {
@@ -211,7 +252,11 @@ do {
 ///
 /// See_Also:
 ///     `HoverIO`, `HoverIO.load`
-struct Pointer {
+struct HoverPointer {
+
+    // As a workaround for a DMD codegen bug on Windows, HoverPointer must not be zero initialized.
+    // See https://git.samerion.com/Samerion/Fluid/pulls/357#issuecomment-3309 for more details.
+    static assert(!__traits(isZeroInit, HoverPointer));
 
     /// I/O system that represents the device controlling the pointer.
     IO device;
@@ -223,21 +268,22 @@ struct Pointer {
     /// Position in the window the pointer is pointing at.
     Vector2 position;
 
-    /// Current scroll value. For a mouse, this indicates mouse wheel movement, for other devices like touchpad or
-    /// touchscreen, this will be translated from its movement.
+    /// Current scroll value. For a mouse, this indicates mouse wheel movement, for other devices
+    /// like touchpad or touchscreen, this will be translated from its movement.
     ///
-    /// This value indicates the distance and direction in window space that the scroll should result in covering.
-    /// This means that on the X axis negative values move left and positive values move right, while on the Y axis
-    /// negative values go upwards and positive values go downwards.
-    /// For example, a scroll value of `(0, 20)` scrolls 20 pixels down vertically, while `(0, -10)` scrolls 10 pixels
-    /// up.
+    /// This value indicates the distance and direction in window space that the scroll should
+    /// result in covering. This means that on the X axis negative values move left and positive
+    /// values move right, while on the Y axis negative values go upwards and positive values go
+    /// downwards. For example, a scroll value of `(0, 20)` scrolls 20 pixels down vertically,
+    /// while `(0, -10)` scrolls 10 pixels up.
     ///
-    /// While it is possible to read scroll of the `Pointer` data received in an input action handler,
-    /// it is recommended to implement scroll through `Scrollable.scrollImpl`.
+    /// While it is possible to read scroll of the `HoverPointer` data received in an input action
+    /// handler, it is recommended to implement scroll through `Scrollable.scrollImpl`.
     ///
-    /// Scroll is exposed for both the horizontal and vertical axis. While a typical mouse wheel only supports
-    /// vertical movement, touchscreens, touchpads, trackpads or more advanced mouses do support horizontal movement.
-    /// It is also possible for a device to perform both horizontal and vertical movement at once.
+    /// Scroll is exposed for both the horizontal and vertical axis. While a basic mouse wheel
+    /// only supports vertical movement, touchscreens, touchpads, trackpads or more advanced
+    /// mouses do support horizontal movement. It is also possible for a device to perform both
+    /// horizontal and vertical movement at once.
     Vector2 scroll;
 
     /// True if the pointer is not currently pointing, like a finger that stopped touching the screen.
@@ -265,18 +311,19 @@ struct Pointer {
     private HoverIO _hoverIO;
 
     /// ID of the pointer assigned by the `HoverIO` system.
-    private int _id;
+    private int _id = -1;
 
-    /// If the given system is a Hover I/O system, fetch a pointer.
+    /// If the given system is a Hover I/O system, fetch a hover pointer.
     ///
-    /// Given data must be valid; the I/O must be a `HoverIO` instance and the number must be a valid pointer number.
+    /// Given data must be valid; the I/O must be a `HoverIO` instance and the number must be a
+    /// valid pointer number.
     ///
     /// Params:
     ///     io     = I/O system to use.
     ///     number = Valid pointer number assigned by the I/O system.
     /// Returns:
-    ///     Pointer under given number.
-    static Optional!Pointer fetch(IO io, int number) {
+    ///     Hover pointer under given number.
+    static Optional!HoverPointer fetch(IO io, int number) {
 
         import std.format;
 
@@ -289,13 +336,14 @@ struct Pointer {
 
     }
 
-    /// Compare two pointers. All publicly exposed fields (`device`, `number`, `position`, `isDisabled`)
-    /// must be equal. To check if the two pointers have the same origin (device and number), use `isSame`.
+    /// Compare two pointers. All publicly exposed fields (`device`, `number`, `position`,
+    /// `isDisabled`) must be equal. To check if the two pointers have the same origin (device and
+    /// number), use `isSame`.
     /// Params:
     ///     other = Pointer to compare against.
     /// Returns:
     ///     True if the pointer is the same as the other pointer and has the same state.
-    bool opEquals(const Pointer other) const {
+    bool opEquals(const HoverPointer other) const {
 
         // Do not compare I/O metadata
         return isSame(other)
@@ -309,7 +357,7 @@ struct Pointer {
     ///     other = Pointer to compare against.
     /// Returns:
     ///     True if the pointers have the same device and pointer number.
-    bool isSame(const Pointer other) const {
+    bool isSame(const HoverPointer other) const {
 
         if (device is null) {
             return other.device is null
@@ -326,16 +374,35 @@ struct Pointer {
         return this._id;
     }
 
+    /// Returns: The I/O system owning the pointer.
+    inout(HoverIO) system() inout nothrow {
+        return this._hoverIO;
+    }
+
     /// Load the pointer into the system.
     void load(HoverIO hoverIO, int id) nothrow {
         this._hoverIO = hoverIO;
         this._id = id;
     }
 
+    inout(HoverPointer) loadCopy(inout HoverIO hoverIO, int id) inout {
+        return inout HoverPointer(
+            this.device,
+            this.number,
+            this.position,
+            this.scroll,
+            this.isDisabled,
+            this.clickCount,
+            this.isScrollHeld,
+            hoverIO,
+            id,
+        );
+    }
+
     /// Update a pointer in place using data of another pointer.
     /// Params:
     ///     other = Pointer to copy data from.
-    void update(Pointer other) {
+    void update(const HoverPointer other) {
         this.position     = other.position;
         this.scroll       = other.scroll;
         this.isScrollHeld = other.isScrollHeld;
@@ -370,9 +437,11 @@ interface Hoverable : Actionable {
     ///
     /// Do not call this method if the `blocksInput` is true.
     ///
+    /// Params:
+    ///     pointer = Pointer to handle this input.
     /// Returns:
     ///     True if hover was handled, false if it was ignored.
-    bool hoverImpl()
+    bool hoverImpl(HoverPointer pointer)
     in (!blocksInput, "This node currently doesn't accept input.");
 
     /// Returns:
@@ -391,40 +460,42 @@ interface HoverScrollable {
 
     import fluid.node;
 
-    /// Controls whether this node can accept scroll input and the input can have visible effect. This is usually
-    /// determined by the node's position; for example a container node already scrolled to the bottom cannot accept
-    /// further vertical movement down.
+    /// Determines whether this node can accept scroll input and if the input can have visible
+    /// effect. This is usually determined by the node's position; for example a container node
+    /// already scrolled to the bottom cannot accept further vertical movement down.
     ///
-    /// This property is used to determine which node should be used to accept scroll. If there's a scrollable
-    /// container nested in another scrollable node, it will be chosen for scrolling only if the scroll motion
-    /// can still be performed. On the other hand, if the intent is specifically to block scroll motion (like in
-    /// a modal window), this method should always return true.
+    /// This property is used to determine which node should be used to accept scroll. If there's
+    /// a scrollable container nested in another scrollable node, it will be chosen for scrolling
+    /// only if the scroll motion can still be performed. On the other hand, if the intent is
+    /// specifically to block scroll motion (like in a modal window), this method should always
+    /// return true.
     ///
-    /// Note that a node "can scroll" even if it can only accept part of the motion. If the scroll would have
-    /// the node scroll beyond its maximum value, but the node is not already at its maximum, it should accept
-    /// the input and clamp the value.
+    /// Note that a node "can scroll" even if it can only accept part of the motion. If the scroll
+    /// would have the node scroll beyond its maximum value, but the node is not already at its
+    /// maximum, it should accept the input and clamp the value.
     ///
     /// Params:
-    ///     value = Input scroll value for both X and Y axis. This corresponds to the screen distance the scroll
-    ///         motion should cover.
+    ///     pointer = `HoverPointer` used to perform the action. Its most important property
+    ///         is the `scroll` field, but some nodes may also filter based on the pointer's
+    ///         state.
     /// Returns:
     ///     True if the node can accept the scroll value in part or in whole,
     ///     false if the motion would have no effect.
-    bool canScroll(Vector2 value) const;
+    bool canScroll(const HoverPointer pointer) const;
 
     /// Perform a scroll motion, moving the node's contents by the specified distance.
     ///
-    /// At the moment this function returns `void` for backwards compatibility. This will change in the future
-    /// into a boolean value, indicating if the motion was handled or not.
-    ///
     /// Params:
-    ///     value = Value to scroll the contents by.
-    void scrollImpl(Vector2 value);
+    ///     pointer = Pointer to use to perform the scroll.
+    /// Returns:
+    ///     True if the motion was handled, or false if not.
+    bool scrollImpl(HoverPointer pointer);
 
     /// Scroll towards a specified child node, trying to get it into view.
     ///
     /// Params:
-    ///     child     = Target node, a child of this node. Ideally, this node should appear on screen as a consequence.
+    ///     child     = Target node, a child of this node. Ideally, this node should appear on
+    ///         screen as a consequence of this action.
     ///     parentBox = Padding box of this node, the node performing the scroll.
     ///     childBox  = Known padding box of the target child node.
     /// Returns:
@@ -442,21 +513,24 @@ interface HoverScrollable {
 
 /// Cast the node to given type if it accepts scroll.
 ///
-/// In addition to performing a dynamic cast, this checks if the node can handle a specified scroll value
-/// according to its `HoverScrollable.canScroll` method.
-/// If it doesn't, it will fail the cast.
+/// In addition to performing a dynamic cast, this checks if the node can handle a specified
+/// scroll value according to its `HoverScrollable.canScroll` method. If it doesn't, it will fail
+/// the cast.
 ///
 /// Params:
-///     node = Node to cast.
+///     node    = Node to cast.
+///     pointer = Pointer used for scrolling. Different values may be accepted depending on the
+///         scroll value or position.
 /// Returns:
-///     Node casted to `Scrollable`, or null if the node can't be casted, or the motion would not have effect.
-inout(HoverScrollable) castIfAcceptsScroll(inout Object node, Vector2 value) {
+///     Node casted to `Scrollable`, or null if the node can't be casted, or the motion would
+///     not have effect.
+inout(HoverScrollable) castIfAcceptsScroll(inout Object node, HoverPointer pointer) {
 
     // Perform the cast
     if (auto scrollable = cast(inout HoverScrollable) node) {
 
         // Node must accept scroll
-        if (scrollable.canScroll(value)) {
+        if (scrollable.canScroll(pointer)) {
             return scrollable;
         }
 
@@ -466,15 +540,16 @@ inout(HoverScrollable) castIfAcceptsScroll(inout Object node, Vector2 value) {
 
 }
 
-/// Find the topmost node that occupies the given position on the screen.
+/// Find the topmost node that occupies the given position on the screen, along with its scrollable.
 ///
 /// The result may change while the search runs; the final result is available once the action stops.
-/// On top of finding the node at specified position, a scroll value can be passed so this action will also find
-/// any `Scrollable` ancestor present in the branch, if one can handle the motion.
-/// If the resulting node is scrollable, it may be returned.
 ///
-/// For backwards compatibility, this node is not currently registered as a `NodeSearchAction` and does not emit
-/// a node when done.
+/// On top of finding the node at specified position, a scroll value can be passed through the
+/// pointer so this action will also find any `Scrollable` ancestor present in the branch, if one
+/// can handle the motion. The hovered node and the scrollable node can be the same.
+///
+/// For backwards compatibility, this node is not currently registered as a `NodeSearchAction` and
+/// does not emit a node when done.
 final class FindHoveredNodeAction : BranchAction {
 
     import fluid.node;
@@ -487,22 +562,27 @@ final class FindHoveredNodeAction : BranchAction {
         /// Topmost scrollable ancestor of `result` (the chosen node).
         HoverScrollable scrollable;
 
-        /// Position that is looked up.
-        Vector2 search;
-
-        /// Scroll value to test `scrollable` against. If the scroll motion with this value would not have effect
-        /// on a scrollable, it will not be chosen.
-        Vector2 scroll;
+        /// Position to use for the lookup. The pointer determines the current position and scroll
+        /// value of interest.
+        HoverPointer pointer;
 
     }
 
     private {
         int _transparentDepth;
+
+        /// Incremented for every beforeDraw, decremented in afterDraw; never negative. Reset to
+        /// zero as soon as a new `result` is found, so that all ancestors have a zero value.
+        /// Non-zero for every sibling node of `result` or siblings of its ancestors.
+        ///
+        /// Used to find `scrollable`: scrollable nodes are only checked if _siblingDepth is
+        /// zero.
+        int _siblingDepth;
+        invariant(_siblingDepth >= 0);
     }
 
-    this(Vector2 search = Vector2.init, Vector2 scroll = Vector2.init) {
-        this.search = search;
-        this.scroll = scroll;
+    this(HoverPointer pointer = HoverPointer.init) {
+        this.pointer = pointer;
     }
 
     override void started() {
@@ -521,12 +601,14 @@ final class FindHoveredNodeAction : BranchAction {
     /// action cannot quit early as any node can override the current hover.
     override void beforeDraw(Node node, Rectangle, Rectangle outer, Rectangle inner) {
 
+        _siblingDepth++;
+
         if (_transparentDepth) {
             _transparentDepth++;
             return;
         }
 
-        const inBounds = node.inBounds(outer, inner, search);
+        const inBounds = node.inBounds(outer, inner, pointer.position);
 
         // Children cannot be hovered
         if (!inBounds.inChildren) {
@@ -541,6 +623,7 @@ final class FindHoveredNodeAction : BranchAction {
 
         // Clear scrollable
         scrollable = null;
+        _siblingDepth = 0;
 
         // Do not stop; the result may be overridden
 
@@ -550,55 +633,99 @@ final class FindHoveredNodeAction : BranchAction {
     /// node) will be used.
     override void afterDraw(Node node, Rectangle) {
 
+        if (_siblingDepth != 0) {
+            _siblingDepth--;
+        }
+
         // A result is required and no scrollable could have matched already
         if (result is null) return;
         if (scrollable) return;
 
-        // Try to match this node
-        scrollable = node.castIfAcceptsScroll(scroll);
-
-        if (_transparentDepth) {
+        // Reduce _transparentDepth, skip unless the node that started it
+        if (_transparentDepth != 0) {
             _transparentDepth--;
+            if (_transparentDepth != 0) return;
         }
+
+        // Ignore if in a sibling node
+        if (_siblingDepth != 0) return;
+
+        // Try to match this node
+        scrollable = node.castIfAcceptsScroll(pointer);
 
     }
 
 }
 
-/// Create a virtual Hover I/O pointer for testing, and place it at the given position. Interactions on the pointer
-/// are asynchronous and should be performed by `then` chains, see `fluid.future.pipe`.
+/// Create a virtual Hover I/O pointer for testing, and place it at the given position.
+/// Interactions on the pointer are asynchronous and should be performed by `then` chains, see
+/// `fluid.future.pipe`.
 ///
-/// The pointer is disabled after every interaction, but it will be automatically re-enabled after every movement.
+/// The pointer is disabled after every interaction, but it will be automatically re-enabled after
+/// every movement.
 ///
+/// See_Also:
+///     `pointAndClick`
 /// Params:
 ///     hoverIO  = Hover I/O system to target.
 ///     position = Position to place the pointer at.
-PointerAction point(HoverIO hoverIO, Vector2 position) {
-
-    import fluid.node;
-
-    auto action = new PointerAction(hoverIO);
+///     x        = X position to place the pointer at.
+///     y        = Y position to place the pointer at.
+/// Returns:
+///     An instance of `HoverPointerAction`.
+HoverPointerAction point(HoverIO hoverIO, Vector2 position) {
+    auto action = new HoverPointerAction(hoverIO);
     action.move(position);
     return action;
-
 }
 
 /// ditto
-PointerAction point(HoverIO hoverIO, float x, float y) {
-
+HoverPointerAction point(HoverIO hoverIO, float x, float y) {
     return point(hoverIO, Vector2(x, y));
+}
 
+/// Create a virtual Hover I/O pointer and use it to click a given position. This is a helper
+/// wrapping `point`.
+///
+/// "Clicking" is equivalent to sending a `FluidInputAction.press` event.
+///
+/// See_Also:
+///     `point`
+/// Params;
+///     hoverIO    = Hover I/O system to target.
+///     position   = Position to click.
+///     x          = X position to click.
+///     y          = Y position to click.
+///     isActive   = If true (default), sends an active event.
+///     clickCount = If set to 2, imitate a double click, if 3, a triple click and so on.
+/// Returns:
+///     A `Publisher` that produces `HoverPointerAction`.
+Publisher!HoverPointerAction pointAndClick(HoverIO hoverIO, Vector2 position,
+    bool isActive = true, int clickCount = 1)
+do {
+    return hoverIO.point(position)
+        .then((a) {
+            a.click(isActive, clickCount);
+            return a;
+        });
+}
+
+/// ditto
+Publisher!HoverPointerAction pointAndClick(HoverIO hoverIO, float x, float y,
+    bool isActive = true, int clickCount = 1)
+do {
+    return pointAndClick(hoverIO, Vector2(x, y), isActive, clickCount);
 }
 
 /// Virtual Hover I/O pointer, for testing.
-class PointerAction : TreeAction, Publisher!PointerAction, IO {
+class HoverPointerAction : TreeAction, Publisher!HoverPointerAction, IO {
 
     import fluid.node;
 
     public {
 
         /// Pointer this action operates on.
-        Pointer pointer;
+        HoverPointer pointer;
 
     }
 
@@ -610,12 +737,12 @@ class PointerAction : TreeAction, Publisher!PointerAction, IO {
         /// Hover I/O casted to a node
         Node _node;
 
-        Event!PointerAction _onInteraction;
+        Event!HoverPointerAction _onInteraction;
 
     }
 
     alias then = typeof(super).then;
-    alias then = Publisher!PointerAction.then;
+    alias then = Publisher!HoverPointerAction.then;
 
     this(HoverIO hoverIO) {
 
@@ -634,7 +761,7 @@ class PointerAction : TreeAction, Publisher!PointerAction, IO {
         return hoverIO.treeContext;
     }
 
-    void subscribe(Subscriber!PointerAction subscriber) {
+    void subscribe(Subscriber!HoverPointerAction subscriber) {
         _onInteraction ~= subscriber;
     }
 
@@ -673,7 +800,7 @@ class PointerAction : TreeAction, Publisher!PointerAction, IO {
 
     /// Don't move the pointer, but keep it active.
     /// Returns: This action, for chaining.
-    PointerAction stayIdle() return {
+    HoverPointerAction stayIdle() return {
 
         clearSubscribers();
         _node.startAction(this);
@@ -691,7 +818,7 @@ class PointerAction : TreeAction, Publisher!PointerAction, IO {
     ///     position = Position to move the pointer to.
     /// Returns:
     ///     This action, for chaining.
-    PointerAction move(Vector2 position) return {
+    HoverPointerAction move(Vector2 position) return {
 
         clearSubscribers();
         _node.startAction(this);
@@ -706,7 +833,7 @@ class PointerAction : TreeAction, Publisher!PointerAction, IO {
     }
 
     /// ditto
-    PointerAction move(float x, float y) return {
+    HoverPointerAction move(float x, float y) return {
 
         return move(Vector2(x, y));
 
@@ -720,7 +847,7 @@ class PointerAction : TreeAction, Publisher!PointerAction, IO {
     ///     motion = Distance to scroll.
     /// Returns:
     ///     This action, for chaining.
-    PointerAction scroll(Vector2 motion) return {
+    HoverPointerAction scroll(Vector2 motion) return {
 
         clearSubscribers();
         _node.startAction(this);
@@ -735,7 +862,7 @@ class PointerAction : TreeAction, Publisher!PointerAction, IO {
     }
 
     /// ditto
-    PointerAction scroll(float x, float y) return {
+    HoverPointerAction scroll(float x, float y) return {
 
         return scroll(Vector2(x, y));
 
@@ -753,6 +880,9 @@ class PointerAction : TreeAction, Publisher!PointerAction, IO {
     }
 
     /// Run an input action on the currently hovered node, if any.
+    ///
+    /// For this to work, `HoverIO` this pointer operates on must also support `ActionHoverIO`.
+    ///
     /// Params:
     ///     actionID   = ID of the action to run.
     ///     isActive   = "Active" status of the action.
@@ -763,18 +893,15 @@ class PointerAction : TreeAction, Publisher!PointerAction, IO {
         hoverIO.loadTo(pointer);
         auto hoverable = hoverIO.hoverOf(pointer);
 
-        // Emit a matching, fake hover event, to inform HoverIO of this
+        auto actionHoverIO = cast(ActionHoverIO) hoverIO;
+        assert(actionHoverIO, "This HoverIO does not support dispatching input actions.");
+
+        // Emit a matching, fake hover event
         // If HoverIO uses ActionIO, ActionIO should recognize and prioritize this event
         const event = ActionIO.noopEvent(isActive);
         hoverIO.emitEvent(pointer, event);
 
-        // No hoverable
-        if (!hoverable) return false;
-
-        // Can't run the action
-        if (hoverable.blocksInput) return false;
-
-        return hoverable.actionImpl(hoverIO, pointer.id, actionID, isActive);
+        return actionHoverIO.runInputAction(pointer, actionID, isActive);
 
     }
 

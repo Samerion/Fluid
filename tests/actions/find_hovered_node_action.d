@@ -73,11 +73,14 @@ class MyScrollable : Frame, HoverScrollable {
         return super.opEquals(other);
     }
 
-    override bool canScroll(Vector2 value) const {
+    override bool canScroll(const HoverPointer) const {
         return !disableScroll;
     }
 
-    override void scrollImpl(Vector2) { }
+    override bool scrollImpl(HoverPointer) {
+        return true;
+    }
+
     override Rectangle shallowScrollTo(const Node, Rectangle, Rectangle childBox) {
         return childBox;
     }
@@ -96,22 +99,22 @@ unittest {
     );
     auto action = new FindHoveredNodeAction;
 
-    action.search = Vector2(0, 0);
+    action.pointer.position = Vector2(0, 0);
     root.startAction(action);
     root.draw();
     assert(action.result.opEquals(rect1));
 
-    action.search = Vector2(60, 0);
+    action.pointer.position = Vector2(60, 0);
     root.startAction(action);
     root.draw();
     assert(action.result is null);
 
-    action.search = Vector2(60, 50);
+    action.pointer.position = Vector2(60, 50);
     root.startAction(action);
     root.draw();
     assert(action.result.opEquals(circle));
 
-    action.search = Vector2(75, 75);
+    action.pointer.position = Vector2(75, 75);
     root.startAction(action);
     root.draw();
     assert(action.result.opEquals(rect2));
@@ -149,14 +152,14 @@ unittest {
     auto action = new FindHoveredNodeAction;
     assert(root.isHorizontal);
 
-    action.search = Vector2(25, 50);
-    action.scroll = Vector2(0, 10);
+    action.pointer.position = Vector2(25, 50);
+    action.pointer.scroll = Vector2(0, 10);
     root.startAction(action);
     root.draw();
     assert(action.result.opEquals(buttonIn));
     assert(action.scrollable.opEquals(scroll));
 
-    action.search = Vector2(75, 50);
+    action.pointer.position = Vector2(75, 50);
     root.startAction(action);
     root.draw();
     assert(action.result.opEquals(buttonOut));
@@ -180,8 +183,8 @@ unittest {
     );
     auto action = new FindHoveredNodeAction;
 
-    action.search = Vector2(50, 50);
-    action.scroll = Vector2(0, 10);
+    action.pointer.position = Vector2(50, 50);
+    action.pointer.scroll = Vector2(0, 10);
     root.startAction(action);
     root.draw();
     assert(action.result.opEquals(inner));
@@ -217,7 +220,7 @@ unittest {
 
     void testSearch(IsOpaque opacity, Vector2 position, Node result) {
         container.isOpaque = opacity;
-        action.search = position;
+        action.pointer.position = position;
         root.startAction(action);
         root.draw();
         if (result is null) {

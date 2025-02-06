@@ -74,8 +74,7 @@ unittest {
         .then((a) {
             const target = scrollDiff*2;
 
-            a.press();
-
+            a.press(false);
             assert(target-1 <= frame.scroll && frame.scroll <= target+1,
                 "Scrollbar should operate at the same rate, even if the cursor is outside");
 
@@ -83,7 +82,8 @@ unittest {
             return a.move(150, 20);
         })
         .then((a) {
-            assert(a.isHovered(frame.scrollBar.handle), "The scrollbar should retain hover control");
+            assert(a.isHovered(frame.scrollBar.handle),
+                "The scrollbar should retain hover control");
 
             // Release the mouse while it's hovering the button
             return a.stayIdle;

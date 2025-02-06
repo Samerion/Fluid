@@ -164,7 +164,7 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
         int[size_t] _imageIndices;
 
         // I/O
-        Pointer _mousePointer;
+        HoverPointer _mousePointer;
         Appender!(KeyboardKey[]) _heldKeys;
         MultipleClickSensor _multiClickSensor;
 
