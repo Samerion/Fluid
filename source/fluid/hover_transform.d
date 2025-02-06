@@ -1,3 +1,9 @@
+/// Enables transforming the mouse position from one space to another by translating and scaling.
+///
+/// Requires the new I/O system introduced in Fluid 0.7.2 to be used.
+///
+/// History:
+///     * Introduced in Fluid 0.7.2.
 module fluid.hover_transform;
 
 import std.array;
@@ -18,8 +24,43 @@ import fluid.io.action;
 
 @safe:
 
+///
 alias hoverTransform = nodeBuilder!HoverTransform;
 
+/// Implements `HoverIO` by transforming inputs from a "host" Hover I/O system. `HoverTransform`
+/// must be placed as a child of a host I/O system to function.
+///
+/// This node is most useful when Fluid's graphical output is transformed in post-processing.
+/// For example, Raylib users may render the user interface inside a render texture. In such
+/// situation, the mouse input would not match what is seen by the user.
+///
+/// `HoverTransform` creates a barrier between inside — its own children — and nodes outside.
+/// Inputs received from the host are transformed for all of its children, but remain unmodified
+/// outside. On the other hand, inputs created inside are untouched for other transformed nodes,
+/// but are inversely transformed for nodes outside.
+///
+/// ---
+/// hoverChain(
+///     vspace(
+///         .layout!"fill",
+///         button("I receive unmodified inputs", delegate { }),
+///         hoverTransform(
+///             .layout!(1, "fill"),
+///             Rectangle(0, 0, 100, 100),
+///             button("I'm transformed", delegate { })
+///         ),
+///     ),
+/// ),
+/// ---
+///
+/// Instead of managing its own set of `HoverPointer` instances, `HoverTransform` uses the host
+/// Hover I/O system for this task. For every pointer inside the host, a transformed version
+/// exists in this system. Conversely, a pointer created inside `HoverTransform` will have
+/// an inversely transformed version in the host system.
+///
+/// Note that the host system will not know that the transform has taken place. If a transformed
+/// node is hovered, the host will report that the *hover transform* node itself is hovered.
+/// To see which node is hovered, use `HoverTransform`'s `hoverOf`.
 class HoverTransform : NodeChain, HoverIO, Hoverable, HoverScrollable {
 
     HoverIO hoverIO;
