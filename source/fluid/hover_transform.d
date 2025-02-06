@@ -368,8 +368,7 @@ class HoverTransform : NodeChain, HoverIO, Hoverable, HoverScrollable {
     }
 
     override Rectangle shallowScrollTo(const(Node) child, Rectangle parentBox, Rectangle childBox) {
-        // TODO ???
-        assert(false, "TODO");
+        return childBox;
     }
 
     alias opEquals = typeof(super).opEquals;
