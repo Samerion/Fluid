@@ -359,3 +359,55 @@ unittest {
         .runWhileDrawing(root, 3);
 
 }
+
+@("HoverTransform works with scrollIntoView")
+unittest {
+
+    ScrollFrame outerFrame, innerFrame;
+    Button target;
+
+    auto ui = sizeLock!vspace(
+        .sizeLimit(250, 250),
+        .nullTheme,
+        outerFrame = vscrollFrame(
+            .layout!(1, "fill"),
+            sizeLock!vspace(
+                .sizeLimit(250, 250),
+            ),
+            hoverTransform(
+                Rectangle(0, 0, 100, 100),
+                innerFrame = sizeLock!vscrollFrame(
+                    .sizeLimit(250, 250),
+                    sizeLock!vspace(
+                        .sizeLimit(250, 250),
+                    ),
+                    target = button("Make me visible!", delegate { }),
+                    sizeLock!vspace(
+                        .sizeLimit(250, 250),
+                    ),
+                ),
+            ),
+        )
+    );
+
+    auto hover = hoverChain(ui);
+    auto root = testSpace(hover);
+
+    root.drawAndAssert(
+        outerFrame.isDrawn.at(0, 0, 250, 250),
+        innerFrame.isDrawn.at(0, 250),
+        target.isDrawn.at(0, 500),
+    );
+    target.scrollToTop()
+        .runWhileDrawing(root, 1);
+    root.drawAndAssert(
+        outerFrame.isDrawn.at(0, 0, 250, 250),
+        innerFrame.isDrawn.at(0, 0),
+        target.isDrawn.at(0, 0),
+    );
+
+    assert(outerFrame.scroll == 250);
+    assert(innerFrame.scroll == 250);
+
+
+}
