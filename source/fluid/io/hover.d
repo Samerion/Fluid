@@ -254,6 +254,10 @@ do {
 ///     `HoverIO`, `HoverIO.load`
 struct HoverPointer {
 
+    // As a workaround for a DMD codegen bug on Windows, HoverPointer must not be zero initialized.
+    // See https://git.samerion.com/Samerion/Fluid/pulls/357#issuecomment-3309 for more details.
+    static assert(!__traits(isZeroInit, HoverPointer));
+
     /// I/O system that represents the device controlling the pointer.
     IO device;
 
@@ -307,7 +311,7 @@ struct HoverPointer {
     private HoverIO _hoverIO;
 
     /// ID of the pointer assigned by the `HoverIO` system.
-    private int _id;
+    private int _id = -1;
 
     /// If the given system is a Hover I/O system, fetch a hover pointer.
     ///
