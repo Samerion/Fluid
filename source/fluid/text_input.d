@@ -449,7 +449,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     }
 
-    final bool canScroll(HoverPointer pointer) const {
+    final bool canScroll(const HoverPointer pointer) const {
         return canScroll(pointer.scroll);
     }
 
