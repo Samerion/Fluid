@@ -258,7 +258,7 @@ class HoverTransform : NodeChain, HoverIO, Hoverable, HoverScrollable {
         return _pointers[localID].heldNode.castIfAcceptsInput!Hoverable;
     }
 
-    override inout(HoverScrollable) scrollOf(HoverPointer pointer) inout {
+    override inout(HoverScrollable) scrollOf(const HoverPointer pointer) inout {
         return scrollOf(pointer.id);
     }
 
@@ -351,16 +351,18 @@ class HoverTransform : NodeChain, HoverIO, Hoverable, HoverScrollable {
         return hoverIO.isHovered(this);
     }
 
-    override bool canScroll(HoverPointer pointer) const {
+    override bool canScroll(const HoverPointer pointer) const {
         if (auto scroll = scrollOf(pointer)) {
-            return scroll.canScroll(pointer);
+            auto transformed = pointerToLocal(pointer);
+            return scroll.canScroll(transformed);
         }
         return false;
     }
 
     override bool scrollImpl(HoverPointer pointer) {
         if (auto scroll = scrollOf(pointer)) {
-            return scroll.scrollImpl(pointer);
+            auto transformed = pointerToLocal(pointer);
+            return scroll.scrollImpl(transformed);
         }
         else return false;
     }

@@ -129,7 +129,7 @@ class ScrollTracker : Frame, HoverScrollable {
         return super.opEquals(other);
     }
 
-    override bool canScroll(HoverPointer) const {
+    override bool canScroll(const HoverPointer) const {
         return !disableScroll;
     }
 

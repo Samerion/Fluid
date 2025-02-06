@@ -328,7 +328,7 @@ class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable, Ho
 
     }
 
-    bool canScroll(HoverPointer pointer) const {
+    bool canScroll(const HoverPointer pointer) const {
 
         const value = isHorizontal
             ? pointer.scroll.x

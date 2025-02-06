@@ -477,7 +477,7 @@ interface HoverScrollable {
     /// Returns:
     ///     True if the node can accept the scroll value in part or in whole,
     ///     false if the motion would have no effect.
-    bool canScroll(HoverPointer pointer) const;
+    bool canScroll(const HoverPointer pointer) const;
 
     /// Perform a scroll motion, moving the node's contents by the specified distance.
     ///
@@ -490,7 +490,8 @@ interface HoverScrollable {
     /// Scroll towards a specified child node, trying to get it into view.
     ///
     /// Params:
-    ///     child     = Target node, a child of this node. Ideally, this node should appear on screen as a consequence.
+    ///     child     = Target node, a child of this node. Ideally, this node should appear on
+    ///         screen as a consequence of this action.
     ///     parentBox = Padding box of this node, the node performing the scroll.
     ///     childBox  = Known padding box of the target child node.
     /// Returns:
