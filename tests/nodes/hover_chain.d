@@ -10,10 +10,10 @@ alias myHover = nodeBuilder!MyHover;
 class MyHover : Node, MouseIO {
 
     HoverIO hoverIO;
-    Pointer[] pointers;
+    HoverPointer[] pointers;
 
-    inout(Pointer) makePointer(int number, Vector2 position, bool isDisabled = false) inout {
-        return inout Pointer(this, number, position, Vector2(), isDisabled);
+    inout(HoverPointer) makePointer(int number, Vector2 position, bool isDisabled = false) inout {
+        return inout HoverPointer(this, number, position, Vector2(), isDisabled);
     }
 
     void emit(int number, InputEvent event) {
@@ -60,7 +60,8 @@ class HoverTracker : Node, Hoverable {
     int pressHeldCount;
     int pressCount;
 
-    Pointer lastPointer;
+    HoverPointer lastPointer;
+    Appender!(HoverPointer[]) pointers;
 
     override void resizeImpl(Vector2) {
         require(hoverIO);
@@ -68,14 +69,17 @@ class HoverTracker : Node, Hoverable {
     }
 
     override void drawImpl(Rectangle, Rectangle) {
-
+        pointers.clear();
+        foreach (HoverPointer pointer; hoverIO) {
+            pointers ~= pointer;
+        }
     }
 
     override bool blocksInput() const {
         return isDisabled || isDisabledInherited;
     }
 
-    override bool hoverImpl() {
+    override bool hoverImpl(HoverPointer) {
         assert(!blocksInput);
         hoverImplCount++;
         return false;
@@ -92,14 +96,14 @@ class HoverTracker : Node, Hoverable {
     }
 
     @(FluidInputAction.press, WhileHeld)
-    void pressHeld(Pointer pointer) {
+    void pressHeld(HoverPointer pointer) {
         assert(!blocksInput);
         pressHeldCount++;
         lastPointer = pointer;
     }
 
     @(FluidInputAction.press)
-    void press(Pointer pointer) {
+    void press(HoverPointer pointer) {
         assert(!blocksInput);
         pressCount++;
         lastPointer = pointer;
@@ -125,7 +129,7 @@ class ScrollTracker : Frame, HoverScrollable {
         return super.opEquals(other);
     }
 
-    override bool canScroll(Vector2) const {
+    override bool canScroll(const HoverPointer) const {
         return !disableScroll;
     }
 
@@ -133,9 +137,10 @@ class ScrollTracker : Frame, HoverScrollable {
         return childBox;
     }
 
-    override void scrollImpl(Vector2 scroll) {
-        totalScroll += scroll;
-        lastScroll   = scroll;
+    override bool scrollImpl(HoverPointer pointer) {
+        totalScroll += pointer.scroll;
+        lastScroll   = pointer.scroll;
+        return true;
     }
 
 }
@@ -757,12 +762,12 @@ unittest {
     // Resize first
     root.draw();
 
-    Pointer pointer1;
+    HoverPointer pointer1;
     pointer1.number = 1;
     pointer1.position = Vector2(10, 10);
     hover.loadTo(pointer1);
 
-    Pointer pointer2;
+    HoverPointer pointer2;
     pointer2.number = 2;
     pointer2.position = Vector2(20, 20);
     hover.loadTo(pointer2);
@@ -921,7 +926,7 @@ unittest {
     static class IncrementalScroller : Node, MouseIO {
 
         HoverIO hoverIO;
-        Pointer pointer;
+        HoverPointer pointer;
         int value;
 
         override void resizeImpl(Vector2) {
@@ -961,5 +966,46 @@ unittest {
     root.draw();
     assert(tracker.lastScroll.y == 2);
     assert(tracker.totalScroll.y == 3);
+
+}
+
+@("HoverChain exposes all active pointers")
+unittest {
+
+    auto hover = hoverChain();
+    auto action1 = hover.point(10, 20);
+    auto action2 = hover.point(20, 10);
+
+    size_t index;
+    foreach (HoverPointer pointer; hover) {
+        if (index++ == 0) {
+            assert(pointer == action1.pointer);
+            assert(pointer != action2.pointer);
+        }
+        else {
+            assert(pointer != action1.pointer);
+            assert(pointer == action2.pointer);
+        }
+    }
+
+}
+
+@("HoverChain's HoverPointer iterator uses armed pointers when used while drawing")
+unittest {
+
+    auto tracker = hoverTracker();
+    auto hover = hoverChain(tracker);
+    auto action1 = hover.point(10, 20);
+    auto action2 = hover.point(20, 10);
+
+    hover.draw();
+
+    assert(tracker.pointers[][0].id == hover.armedPointerID(action1.pointer.id));
+    assert(tracker.pointers[][1].id == hover.armedPointerID(action2.pointer.id));
+
+    foreach (HoverPointer pointer; hover) {
+        assert(pointer.id == hover.normalizedPointerID(pointer.id));
+        assert(pointer.id != hover.armedPointerID(pointer.id));
+    }
 
 }

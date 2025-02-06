@@ -335,7 +335,7 @@ class ScrollInputHandle : Node, FluidHoverable, Hoverable {
     }
 
     @(FluidInputAction.press, fluid.input.WhileDown)
-    protected bool whileDown(Pointer pointer) @trusted {
+    protected bool whileDown(HoverPointer pointer) @trusted {
 
         const mousePosition = pointer.position;
 
@@ -381,7 +381,7 @@ class ScrollInputHandle : Node, FluidHoverable, Hoverable {
 
         // Call the new overload if new I/O isn't loaded
         if (hoverIO is null) {
-            Pointer pointer;
+            HoverPointer pointer;
             pointer.position = io.mousePosition;
             cast(void) whileDown(pointer);
         }
@@ -389,18 +389,13 @@ class ScrollInputHandle : Node, FluidHoverable, Hoverable {
     }
 
     protected override void mouseImpl() {
-
-        hoverImpl();
-
+        hoverImpl(HoverPointer.init);
     }
 
-    protected override bool hoverImpl() {
-
+    protected override bool hoverImpl(HoverPointer) {
         justPressed = false;
         _isPressed = false;
-
         return false;
-
     }
 
 }

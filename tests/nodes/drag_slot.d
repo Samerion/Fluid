@@ -77,7 +77,7 @@ unittest {
             return a.move(50, -50);
         })
         .then((a) {
-            a.press(true);
+            a.press(false);
             assert(slot.dragAction.offset == Vector2(46, -54));
             return root.nextFrame;
         })
@@ -125,7 +125,7 @@ unittest {
             return a.move(305, 5);
         })
         .then((a) {
-            a.press(true);
+            a.press(false);
             assert(slot.dragAction.offset == Vector2(300, 0));
             assert(content.getMinSize == Vector2(0, 0));
             return root.nextFrame;

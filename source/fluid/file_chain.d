@@ -17,19 +17,20 @@ alias fileChain = nodeBuilder!FileChain;
 /// File I/O implementation based on `std.file`, facilitating the C standard library for file reading.
 class FileChain : NodeChain, FileIO {
 
+    private {
+        typeof(controlIO!FileIO()) _ioFrame;
+    }
+
     this(Node node = null) {
         super(node);
     }
 
     override void beforeResize(Vector2) {
-        auto io = this.controlIO();
-        io.start();
-        io.release();
+        _ioFrame = controlIO!FileIO().startAndRelease();
     }
 
     override void afterResize(Vector2) {
-        auto io = this.controlIO();
-        io.stop();
+        _ioFrame.stop();
     }
 
     override ubyte[] loadFile(string filename) @trusted {
