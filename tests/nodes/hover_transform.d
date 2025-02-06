@@ -314,3 +314,48 @@ unittest {
     assert(matched2 == 1);
 
 }
+
+@("HoverTransform can be nested inside a scrollable")
+unittest {
+
+    auto innerScroll = sizeLock!scrollTracker(
+        .sizeLimit(100, 100),
+    );
+    auto transform = hoverTransform(
+        .layout!"fill",
+        Rectangle(250, 250, 250, 250),
+        innerScroll,
+    );
+    auto outerScroll = sizeLock!scrollTracker(
+        .sizeLimit(500, 500),
+        transform,
+    );
+    auto hover = hoverChain(outerScroll);
+    auto root = hover;
+
+    // outer: (0, 0)–(500, 500)
+    // transform spans the entire area of outer,
+    // accepts input in (250, 250)–(500, 500)
+    // inner: (250, 250)–(350, 350)
+
+    // Scroll in inner
+    hover.point(300, 300).scroll(1, 2)
+        .then((a) {
+            const armed = hover.armedPointer(a.pointer);
+
+            assert(hover.scrollOf(a.pointer).opEquals(transform));
+            assert(transform.scrollOf(armed).opEquals(innerScroll));
+            assert(outerScroll.lastScroll == Vector2(0, 0));
+            assert(innerScroll.lastScroll == Vector2(1, 2));
+
+            // Scroll in outer
+            return a.move(200, 200).scroll(3, 4);
+        })
+        .then((a) {
+            assert(hover.scrollOf(a.pointer).opEquals(outerScroll));
+            assert(outerScroll.lastScroll == Vector2(3, 4));
+            assert(innerScroll.lastScroll == Vector2(1, 2));
+        })
+        .runWhileDrawing(root, 3);
+
+}

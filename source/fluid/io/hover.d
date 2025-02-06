@@ -566,6 +566,15 @@ final class FindHoveredNodeAction : BranchAction {
 
     private {
         int _transparentDepth;
+
+        /// Incremented for every beforeDraw, decremented in afterDraw; never negative. Reset to
+        /// zero as soon as a new `result` is found, so that all ancestors have a zero value.
+        /// Non-zero for every sibling node of `result` or siblings of its ancestors.
+        ///
+        /// Used to find `scrollable`: scrollable nodes are only checked if _siblingDepth is
+        /// zero.
+        int _siblingDepth;
+        invariant(_siblingDepth >= 0);
     }
 
     this(HoverPointer pointer = HoverPointer.init) {
@@ -588,6 +597,8 @@ final class FindHoveredNodeAction : BranchAction {
     /// action cannot quit early as any node can override the current hover.
     override void beforeDraw(Node node, Rectangle, Rectangle outer, Rectangle inner) {
 
+        _siblingDepth++;
+
         if (_transparentDepth) {
             _transparentDepth++;
             return;
@@ -608,6 +619,7 @@ final class FindHoveredNodeAction : BranchAction {
 
         // Clear scrollable
         scrollable = null;
+        _siblingDepth = 0;
 
         // Do not stop; the result may be overridden
 
@@ -617,15 +629,22 @@ final class FindHoveredNodeAction : BranchAction {
     /// node) will be used.
     override void afterDraw(Node node, Rectangle) {
 
+        if (_siblingDepth != 0) {
+            _siblingDepth--;
+        }
+
         // A result is required and no scrollable could have matched already
         if (result is null) return;
         if (scrollable) return;
 
         // Reduce _transparentDepth, skip unless the node that started it
-        if (_transparentDepth) {
+        if (_transparentDepth != 0) {
             _transparentDepth--;
-            if (_transparentDepth) return;
+            if (_transparentDepth != 0) return;
         }
+
+        // Ignore if in a sibling node
+        if (_siblingDepth != 0) return;
 
         // Try to match this node
         scrollable = node.castIfAcceptsScroll(pointer);
