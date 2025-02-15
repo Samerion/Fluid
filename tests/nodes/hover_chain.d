@@ -661,8 +661,7 @@ unittest {
 
                 // Hold the left mouse button
                 a.press(false);
-                a.holdScroll(testHold);
-                return a.move(50, 75).scroll(0, -25);
+                return a.move(50, 75).holdScroll(0, -25, testHold);
 
             })
             .then((a) {
@@ -674,8 +673,7 @@ unittest {
 
                 // Release the mouse button
                 a.press;
-                a.holdScroll(testHold);
-                return a.scroll(0, -25);
+                return a.holdScroll(0, -25, testHold);
 
             })
             .runWhileDrawing(root);
@@ -717,15 +715,13 @@ unittest {
         hover.point(50, 50)
             .then((a) {
                 assert(a.currentScroll.opEquals(innerTracker));
-                a.holdScroll(testHold);
-                return a.scroll(0, -20);
+                return a.holdScroll(0, -20, testHold);
             })
             // Pretend innerTracker has reached its limit for scrolling
             .then((a) {
                 assert(a.currentScroll.opEquals(innerTracker));
-                a.holdScroll(testHold);
                 innerTracker.disableScroll = true;
-                return a.scroll(0, -10);
+                return a.holdScroll(0, -10, testHold);
             })
             .then((a) {
                 if (testHold) {

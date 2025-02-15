@@ -322,7 +322,7 @@ unittest {
         .sizeLimit(100, 100),
     );
     auto transform = hoverTransform(
-        .layout!"fill",
+        .layout!(1, "fill"),
         Rectangle(250, 250, 250, 250),
         innerScroll,
     );
@@ -331,7 +331,7 @@ unittest {
         transform,
     );
     auto hover = hoverChain(outerScroll);
-    auto root = hover;
+    auto root = testSpace(.nullTheme, hover);
 
     // outer: (0, 0)–(500, 500)
     // transform spans the entire area of outer,
@@ -343,6 +343,7 @@ unittest {
         .then((a) {
             const armed = hover.armedPointer(a.pointer);
 
+            assert(hover.hoverOf(a.pointer).opEquals(transform));
             assert(hover.scrollOf(a.pointer).opEquals(transform));
             assert(transform.scrollOf(armed).opEquals(innerScroll));
             assert(outerScroll.lastScroll == Vector2(0, 0));
@@ -409,5 +410,154 @@ unittest {
     assert(outerFrame.scroll == 250);
     assert(innerFrame.scroll == 250);
 
+
+}
+
+@("HoverTransform can switch between targets")
+unittest {
+
+    Button[2] buttons;
+
+    auto content = resolutionOverride!vspace(
+        Vector2(400, 400),
+        buttons[0] = button(.layout!(1, "fill"), "One", delegate { }),
+        buttons[1] = button(.layout!(1, "fill"), "One", delegate { }),
+    );
+    auto transform = hoverTransform(
+        Rectangle(0, 0, 100, 100),
+        content
+    );
+    auto hover = hoverChain(
+        .layout!(1, "fill"),
+        transform,
+    );
+    auto root = testSpace(hover);
+
+    hover.point(25, 25)
+        .then((a) {
+            assert(transform.isHovered(buttons[0]));
+            a.press();
+            return a.stayIdle;
+        })
+        .then((a) => a.move(75, 75))
+        .then((a) {
+            assert(transform.isHovered(buttons[1]));
+            a.press();
+        })
+        .runWhileDrawing(root, 4);
+
+}
+
+@("HoverTransform supports holding scroll")
+unittest {
+
+    auto innerButton = button(.layout!(1, "fill"), "Two", delegate { });
+    auto tracker = scrollTracker(
+        .layout!(1, "fill"),
+        innerButton,
+    );
+    auto content = resolutionOverride!vspace(
+        Vector2(400, 400),
+        button(.layout!(1, "fill"), "One", delegate { }),
+        tracker,
+    );
+    auto transform = hoverTransform(
+        Rectangle(0, 0, 100, 100),
+        content
+    );
+    auto hover = hoverChain(
+        .layout!(1, "fill"),
+        transform,
+    );
+    auto root = testSpace(hover);
+
+    hover.point(75, 75).scroll(0, 25)
+        .then((a) {
+            const pointer = hover.armedPointer(a.pointer);
+            assert(transform.scrollOf(pointer).opEquals(tracker));
+            assert(tracker.lastScroll == Vector2(0, 25));
+            return a.move(25, 25).holdScroll(0, 5);
+        })
+        .then((a) {
+            const pointer = hover.armedPointer(a.pointer);
+            assert(transform.scrollOf(pointer).opEquals(tracker));
+            assert(tracker.lastScroll  == Vector2(0,  5));
+            assert(tracker.totalScroll == Vector2(0, 30));
+            return a.scroll(0, 25);
+        })
+        .runWhileDrawing(root, 4);
+
+    assert(tracker.totalScroll == Vector2(0, 30));
+
+}
+
+@("HoverTransform passes focus on press")
+unittest {
+
+    auto content = resolutionOverride!button(
+        Vector2(400, 400),
+        "One",
+        delegate { },
+    );
+    auto transform = hoverTransform(
+        Rectangle(0, 0, 100, 100),
+        vspace(
+            resolutionOverride!button(  // This button should never be selected by hoverChain
+                Vector2(0, 0),
+                "Zero",
+                delegate {
+                    assert(false);
+                }
+            ),
+            content
+        ),
+    );
+    auto hover = hoverChain(transform);
+    auto focus = focusChain(
+        .layout!(1, "fill"),
+        hover,
+    );
+    auto root = testSpace(focus);
+
+    hover.point(25, 25)
+        .then((a) {
+            a.press();
+            return a.stayIdle();
+        })
+        .then((a) { })
+        .runWhileDrawing(root, 2);
+
+    assert(content.isFocused);
+    assert(focus.isFocused(content));
+
+}
+
+version (TODO)  // https://git.samerion.com/Samerion/Fluid/issues/366
+@("HoverTransform does not block focus")
+unittest {
+
+    Button[4] buttons;
+
+    auto focus = focusChain(
+        vspace(
+            buttons[0] = button("One", delegate { }),
+            hoverTransform(
+                Rectangle(),
+                vspace(
+                    buttons[1] = button("Two", delegate { }),
+                    buttons[2] = button("Three", delegate { }),
+                ),
+            ),
+            buttons[3] = button("Four", delegate { }),
+        ),
+    );
+    auto hover = hoverChain(focus);
+    auto root = hover;
+    focus.currentFocus = buttons[0];
+
+    root.draw();
+    focus.focusNext()
+        .thenAssertEquals(buttons[1])
+        .runWhileDrawing(root, 1);
 
 }
