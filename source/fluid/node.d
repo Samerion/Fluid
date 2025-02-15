@@ -779,23 +779,13 @@ abstract class Node {
         // If hidden, don't draw anything
         if (isHidden) return;
 
-        const spaceV = Vector2(space.width, space.height);
-
-        // Get parameters
-        // Note: this has been moved to `paddingBoxFromSpace`
-        //       at the moment paddingBox is also required
-        const size = Vector2(
-            layout.nodeAlign[0] == NodeAlign.fill ? space.width  : min(space.width,  minSize.x),
-            layout.nodeAlign[1] == NodeAlign.fill ? space.height : min(space.height, minSize.y),
-        );
-        const position = position(space, size);
-
         // Calculate the boxes
-        const marginBox  = Rectangle(position.tupleof, size.tupleof);
+        const marginBox  = marginBoxForSpace(space);
         const borderBox  = style.cropBox(marginBox, style.margin);
-        const paddingBox = style.cropBox(borderBox, style.border);
+        const paddingBox = paddingBoxForSpace(space);
         const contentBox = style.cropBox(paddingBox, style.padding);
         const mainBox    = borderBox;
+        const size = marginBox.size;
 
         // Load breadcrumbs from the tree
         breadcrumbs = tree.breadcrumbs;
@@ -930,21 +920,29 @@ abstract class Node {
 
     }
 
-    /// Get the node's padding box (outer box) for set available space.
+    /// Get the node's margin box for given available space. The margin box, nor the available
+    /// space aren't typically given to a node, but this may be useful for its parent nodes.
     /// Params:
-    ///     space = Space rectangle given to the node.
+    ///     space = Available space box assigned for the node.
     /// Returns:
-    ///     The padding box calculate from the given space rectangle.
-    Rectangle paddingBoxForSpace(Rectangle space) const {
+    ///     The margin box calculated from the given space rectangle.
+    Rectangle marginBoxForSpace(Rectangle space) const {
         const size = Vector2(
             layout.nodeAlign[0] == NodeAlign.fill ? space.width  : min(space.width,  minSize.x),
             layout.nodeAlign[1] == NodeAlign.fill ? space.height : min(space.height, minSize.y),
         );
-        const position = position(space, size);
+        const position = layout.nodeAlign.alignRectangle(space, size);
+        return Rectangle(position.tupleof, size.tupleof);
+    }
 
-        // Calculate the boxes
-        const marginBox  = Rectangle(position.tupleof, size.tupleof);
-        const borderBox  = style.cropBox(marginBox, style.margin);
+    /// Get the node's padding box (outer box) for set available space.
+    /// Params:
+    ///     space = Available space box given to the node.
+    /// Returns:
+    ///     The padding box calculated from the given space rectangle.
+    Rectangle paddingBoxForSpace(Rectangle space) const {
+        const marginBox = marginBoxForSpace(space);
+        const borderBox = style.cropBox(marginBox, style.margin);
         return style.cropBox(borderBox, style.border);
     }
 
@@ -1395,29 +1393,6 @@ abstract class Node {
 
         // Update size
         updateSize();
-
-    }
-
-    /// Get the node's position in its  box.
-    private Vector2 position(Rectangle space, Vector2 usedSpace) const {
-
-        float positionImpl(NodeAlign align_, lazy float spaceLeft) {
-
-            with (NodeAlign)
-            final switch (align_) {
-
-                case start, fill: return 0;
-                case center: return spaceLeft / 2;
-                case end: return spaceLeft;
-
-            }
-
-        }
-
-        return Vector2(
-            space.x + positionImpl(layout.nodeAlign[0], space.width  - usedSpace.x),
-            space.y + positionImpl(layout.nodeAlign[1], space.height - usedSpace.y),
-        );
 
     }
 
