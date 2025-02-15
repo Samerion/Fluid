@@ -491,4 +491,73 @@ unittest {
 
 }
 
-// @("")
+@("HoverTransform passes focus on press")
+unittest {
+
+    auto content = resolutionOverride!button(
+        Vector2(400, 400),
+        "One",
+        delegate { },
+    );
+    auto transform = hoverTransform(
+        Rectangle(0, 0, 100, 100),
+        vspace(
+            resolutionOverride!button(  // This button should never be selected by hoverChain
+                Vector2(0, 0),
+                "Zero",
+                delegate {
+                    assert(false);
+                }
+            ),
+            content
+        ),
+    );
+    auto hover = hoverChain(transform);
+    auto focus = focusChain(
+        .layout!(1, "fill"),
+        hover,
+    );
+    auto root = testSpace(focus);
+
+    hover.point(25, 25)
+        .then((a) {
+            a.press();
+            return a.stayIdle();
+        })
+        .then((a) { })
+        .runWhileDrawing(root, 2);
+
+    assert(content.isFocused);
+    assert(focus.isFocused(content));
+
+}
+
+version (TODO)  // https://git.samerion.com/Samerion/Fluid/issues/366
+@("HoverTransform does not block focus")
+unittest {
+
+    Button[4] buttons;
+
+    auto focus = focusChain(
+        vspace(
+            buttons[0] = button("One", delegate { }),
+            hoverTransform(
+                Rectangle(),
+                vspace(
+                    buttons[1] = button("Two", delegate { }),
+                    buttons[2] = button("Three", delegate { }),
+                ),
+            ),
+            buttons[3] = button("Four", delegate { }),
+        ),
+    );
+    auto hover = hoverChain(focus);
+    auto root = hover;
+    focus.currentFocus = buttons[0];
+
+    root.draw();
+    focus.focusNext()
+        .thenAssertEquals(buttons[1])
+        .runWhileDrawing(root, 1);
+
+}

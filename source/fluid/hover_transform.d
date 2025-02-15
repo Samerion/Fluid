@@ -20,6 +20,7 @@ import fluid.future.arena;
 import fluid.future.context;
 
 import fluid.io.hover;
+import fluid.io.focus;
 import fluid.io.action;
 
 @safe:
@@ -61,9 +62,12 @@ alias hoverTransform = nodeBuilder!HoverTransform;
 /// Note that the host system will not know that the transform has taken place. If a transformed
 /// node is hovered, the host will report that the *hover transform* node itself is hovered.
 /// To see which node is hovered, use `HoverTransform`'s `hoverOf`.
-class HoverTransform : NodeChain, HoverIO, Hoverable, HoverScrollable {
+class HoverTransform : NodeChain, HoverIO, Focusable, Hoverable, HoverScrollable {
+
+    // This node is WAY too complex right now
 
     HoverIO hoverIO;
+    FocusIO focusIO;
 
     public {
 
@@ -203,6 +207,7 @@ class HoverTransform : NodeChain, HoverIO, Hoverable, HoverScrollable {
 
     override void beforeResize(Vector2) {
         require(hoverIO);
+        use(focusIO);
         _ioFrame = controlIO!HoverIO().startAndRelease();
     }
 
@@ -258,8 +263,21 @@ class HoverTransform : NodeChain, HoverIO, Hoverable, HoverScrollable {
 
             // Read the result of each action into the local pointer
             pointer.hoveredNode = pointer.action.result;
+
             if (!pointer.isHeld) {
                 pointer.heldNode = pointer.hoveredNode;
+            }
+
+            // Switch focus if holding
+            else if (focusIO) {
+                if (auto focusable = pointer.heldNode.castIfAcceptsInput!Focusable) {
+                    if (!focusable.isFocused) {
+                        focusable.focus();
+                    }
+                }
+                else {
+                    focusIO.clearFocus();
+                }
             }
             if (!pointer.action.pointer.isScrollHeld) {
                 pointer.scrollable = pointer.action.scrollable;
@@ -411,6 +429,18 @@ class HoverTransform : NodeChain, HoverIO, Hoverable, HoverScrollable {
 
     override Rectangle shallowScrollTo(const(Node) child, Rectangle parentBox, Rectangle childBox) {
         return childBox;
+    }
+
+    override bool focusImpl() {
+        return false;
+    }
+
+    override void focus() {
+        // NOOP, can't focus
+    }
+
+    bool isFocused() const {
+        return false;
     }
 
     alias opEquals = typeof(super).opEquals;
