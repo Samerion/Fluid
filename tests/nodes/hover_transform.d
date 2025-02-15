@@ -322,7 +322,7 @@ unittest {
         .sizeLimit(100, 100),
     );
     auto transform = hoverTransform(
-        .layout!"fill",
+        .layout!(1, "fill"),
         Rectangle(250, 250, 250, 250),
         innerScroll,
     );
@@ -331,7 +331,7 @@ unittest {
         transform,
     );
     auto hover = hoverChain(outerScroll);
-    auto root = hover;
+    auto root = testSpace(.nullTheme, hover);
 
     // outer: (0, 0)–(500, 500)
     // transform spans the entire area of outer,
@@ -343,6 +343,7 @@ unittest {
         .then((a) {
             const armed = hover.armedPointer(a.pointer);
 
+            assert(hover.hoverOf(a.pointer).opEquals(transform));
             assert(hover.scrollOf(a.pointer).opEquals(transform));
             assert(transform.scrollOf(armed).opEquals(innerScroll));
             assert(outerScroll.lastScroll == Vector2(0, 0));
@@ -446,3 +447,48 @@ unittest {
         .runWhileDrawing(root, 4);
 
 }
+
+@("HoverTransform supports holding scroll")
+unittest {
+
+    auto innerButton = button(.layout!(1, "fill"), "Two", delegate { });
+    auto tracker = scrollTracker(
+        .layout!(1, "fill"),
+        innerButton,
+    );
+    auto content = resolutionOverride!vspace(
+        Vector2(400, 400),
+        button(.layout!(1, "fill"), "One", delegate { }),
+        tracker,
+    );
+    auto transform = hoverTransform(
+        Rectangle(0, 0, 100, 100),
+        content
+    );
+    auto hover = hoverChain(
+        .layout!(1, "fill"),
+        transform,
+    );
+    auto root = testSpace(hover);
+
+    hover.point(75, 75).scroll(0, 25)
+        .then((a) {
+            const pointer = hover.armedPointer(a.pointer);
+            assert(transform.scrollOf(pointer).opEquals(tracker));
+            assert(tracker.lastScroll == Vector2(0, 25));
+            return a.move(25, 25).holdScroll(0, 5);
+        })
+        .then((a) {
+            const pointer = hover.armedPointer(a.pointer);
+            assert(transform.scrollOf(pointer).opEquals(tracker));
+            assert(tracker.lastScroll  == Vector2(0,  5));
+            assert(tracker.totalScroll == Vector2(0, 30));
+            return a.scroll(0, 25);
+        })
+        .runWhileDrawing(root, 4);
+
+    assert(tracker.totalScroll == Vector2(0, 30));
+
+}
+
+// @("")

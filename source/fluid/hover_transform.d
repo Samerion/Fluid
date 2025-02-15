@@ -261,7 +261,7 @@ class HoverTransform : NodeChain, HoverIO, Hoverable, HoverScrollable {
             if (!pointer.isHeld) {
                 pointer.heldNode = pointer.hoveredNode;
             }
-            if (!pointer.isScrollHeld) {
+            if (!pointer.action.pointer.isScrollHeld) {
                 pointer.scrollable = pointer.action.scrollable;
             }
 
@@ -428,7 +428,6 @@ private struct Pointer {
     Node hoveredNode;
     HoverScrollable scrollable;
     bool isHeld;
-    bool isScrollHeld;
 
     /// Find a pointer by its host ID
     bool opEquals(int id) const {
