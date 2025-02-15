@@ -9,6 +9,8 @@
 /// you can use `fluid.raylib.RaylibView.scale`.
 module fluid.resolution_override;
 
+import optional;
+
 import fluid.node;
 import fluid.utils;
 import fluid.types;
@@ -26,7 +28,11 @@ alias resolutionOverride(alias base) = nodeBuilder!(ResolutionOverride, base);
 /// was assigned by its parent.
 ///
 /// Works only with the new I/O system introduced in Fluid 0.7.2.
-class ResolutionOverride(T : Node) : T {
+///
+/// `ResolutionOverride` requires an active instance of `CanvasIO` to work. It will locally
+/// override its `dpi` value — with a default of `(96, 96)` —  to make sure the output
+/// is consistent. The DPI value can be changed using the `dpi` method.
+class ResolutionOverride(T : Node) : T, CanvasIO {
 
     CanvasIO canvasIO;
 
@@ -37,6 +43,10 @@ class ResolutionOverride(T : Node) : T {
         /// of the desktop environment.
         Vector2 resolution;
 
+    }
+
+    private {
+        auto _dpi = Vector2(96, 96);
     }
 
     /// Create a node locked to a set resolution.
@@ -51,6 +61,8 @@ class ResolutionOverride(T : Node) : T {
     override void resizeImpl(Vector2) @safe {
         require(canvasIO);
 
+        auto io = this.implementIO();
+
         const size = canvasIO.fromDots(resolution);
         super.resizeImpl(size);
         minSize = size;
@@ -60,6 +72,62 @@ class ResolutionOverride(T : Node) : T {
         const size = canvasIO.fromDots(resolution);
         const position = layout.nodeAlign.alignRectangle(space, size);
         return Rectangle(position.tupleof, size.tupleof);
+    }
+
+    override Vector2 dpi() const nothrow {
+        return _dpi;
+    }
+
+    Vector2 dpi(Vector2 value) nothrow {
+        return _dpi = value;
+    }
+
+    // CanvasIO overrides
+
+    override Optional!Rectangle cropArea() const nothrow {
+        return canvasIO.cropArea();
+    }
+
+    override void cropArea(Rectangle area) nothrow {
+        canvasIO.cropArea(area);
+    }
+
+    override void resetCropArea() nothrow {
+        canvasIO.resetCropArea();
+    }
+
+    override void drawTriangleImpl(Vector2 a, Vector2 b, Vector2 c, Color color) nothrow {
+        canvasIO.drawTriangleImpl(a, b, c, color);
+    }
+
+    override void drawCircleImpl(Vector2 center, float radius, Color color) nothrow {
+        canvasIO.drawCircleImpl(center, radius, color);
+    }
+
+    override void drawCircleOutlineImpl(Vector2 center, float radius, float width, Color color)
+    nothrow {
+        canvasIO.drawCircleOutlineImpl(center, radius, width, color);
+    }
+
+    override void drawRectangleImpl(Rectangle rectangle, Color color) nothrow {
+        canvasIO.drawRectangleImpl(rectangle, color);
+    }
+
+    override void drawLineImpl(Vector2 start, Vector2 end, float width, Color color) nothrow {
+        canvasIO.drawLineImpl(start, end, width, color);
+    }
+
+    override int load(Image image) nothrow {
+        return canvasIO.load(image);
+    }
+
+    override void drawImageImpl(DrawableImage image, Rectangle destination, Color tint) nothrow {
+        canvasIO.drawImageImpl(image, destination, tint);
+    }
+
+    override void drawHintedImageImpl(DrawableImage image, Rectangle destination, Color tint)
+    nothrow {
+        canvasIO.drawHintedImageImpl(image, destination, tint);
     }
 
 }
