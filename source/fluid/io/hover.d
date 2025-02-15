@@ -633,8 +633,10 @@ final class FindHoveredNodeAction : BranchAction {
     /// node) will be used.
     override void afterDraw(Node node, Rectangle) {
 
-        if (_siblingDepth != 0) {
-            _siblingDepth--;
+        scope (exit) {
+            if (_siblingDepth != 0) {
+                _siblingDepth--;
+            }
         }
 
         // A result is required and no scrollable could have matched already
