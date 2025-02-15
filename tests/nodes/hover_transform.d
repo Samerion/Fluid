@@ -411,3 +411,38 @@ unittest {
 
 
 }
+
+@("HoverTransform can switch between targets")
+unittest {
+
+    Button[2] buttons;
+
+    auto content = resolutionOverride!vspace(
+        Vector2(400, 400),
+        buttons[0] = button(.layout!(1, "fill"), "One", delegate { }),
+        buttons[1] = button(.layout!(1, "fill"), "One", delegate { }),
+    );
+    auto transform = hoverTransform(
+        Rectangle(0, 0, 100, 100),
+        content
+    );
+    auto hover = hoverChain(
+        .layout!(1, "fill"),
+        transform,
+    );
+    auto root = testSpace(hover);
+
+    hover.point(25, 25)
+        .then((a) {
+            assert(transform.isHovered(buttons[0]));
+            a.press();
+            return a.stayIdle;
+        })
+        .then((a) => a.move(75, 75))
+        .then((a) {
+            assert(transform.isHovered(buttons[1]));
+            a.press();
+        })
+        .runWhileDrawing(root, 4);
+
+}

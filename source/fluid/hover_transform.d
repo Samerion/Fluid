@@ -265,6 +265,7 @@ class HoverTransform : NodeChain, HoverIO, Hoverable, HoverScrollable {
                 pointer.scrollable = pointer.action.scrollable;
             }
 
+            pointer.isHeld = false;
             _pointers[pointer.localID] = pointer;
         }
     }
