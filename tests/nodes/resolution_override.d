@@ -7,8 +7,10 @@ import fluid;
 @("ResolutionOverride uses fixed size for its marginBox")
 unittest {
 
-    auto child = vspace(.layout!"fill");
-    auto node = resolutionOverride(
+    auto child = vspace(
+        .layout!(1, "fill")
+    );
+    auto node = resolutionOverride!vspace(
         Vector2(1920, 1080),
         child,
     );

@@ -17,14 +17,16 @@ import fluid.hover_transform;
 
 import fluid.io.canvas;
 
-/// Node builder for `ResolutionOverride`.
-alias resolutionOverride = nodeBuilder!ResolutionOverride;
+/// Node builder for `ResolutionOverride`. It is a template, accepting the base node type
+/// (like `resolutionOverride!Frame`) or another node builder (for example
+/// `resolutionOverride!hframe`).
+alias resolutionOverride(alias base) = nodeBuilder!(ResolutionOverride, base);
 
 /// This node sets a static resolution for its content, ignoring (overriding) whatever layout
 /// was assigned by its parent.
 ///
 /// Works only with the new I/O system introduced in Fluid 0.7.2.
-class ResolutionOverride : Node {
+class ResolutionOverride(T : Node) : T {
 
     CanvasIO canvasIO;
 
@@ -35,38 +37,29 @@ class ResolutionOverride : Node {
         /// of the desktop environment.
         Vector2 resolution;
 
-        /// Child node, node to display with this resolution.
-        Node next;
-
     }
 
     /// Create a node locked to a set resolution.
     /// Params:
     ///     resolution = Resolution to use, in dots.
-    ///     next       = Child node; node to draw using this resolution.
-    this(Vector2 resolution, Node next = null) @safe {
+    ///     args       = Arguments to pass to the base node.
+    this(Ts...)(Vector2 resolution, Ts args) @safe {
+        super(args);
         this.resolution = resolution;
-        this.next = next;
     }
 
     override void resizeImpl(Vector2) @safe {
         require(canvasIO);
-        minSize = canvasIO.fromDots(resolution);
-        if (next) {
-            resizeChild(next, minSize);
-        }
+
+        const size = canvasIO.fromDots(resolution);
+        super.resizeImpl(size);
+        minSize = size;
     }
 
     override Rectangle marginBoxForSpace(Rectangle space) const {
         const size = canvasIO.fromDots(resolution);
         const position = layout.nodeAlign.alignRectangle(space, size);
         return Rectangle(position.tupleof, size.tupleof);
-    }
-
-    override void drawImpl(Rectangle, Rectangle inner) @safe {
-        if (next) {
-            drawChild(next, inner);
-        }
     }
 
 }
