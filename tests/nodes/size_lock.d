@@ -54,3 +54,35 @@ unittest {
 
 }
 
+@("SizeLock can use floats as limit")
+unittest {
+
+    auto content = sizeLock!vframe(
+        .nullTheme,
+        .layout!(1, "start"),
+        .sizeLimit(50f, 50f),
+    );
+    auto root = testSpace(content);
+
+    root.drawAndAssert(
+        content.isDrawn().at(0, 0, 50, 50)
+    );
+
+}
+
+@("Limits of SizeLock take priority over minSize")
+unittest {
+
+    auto content = sizeLock!vframe(
+        .nullTheme,
+        .layout!(1, "start"),
+        .sizeLimit(50, 50),
+        label("This label is NOT empty!"),
+    );
+    auto root = testSpace(content);
+
+    root.drawAndAssert(
+        content.isDrawn().at(0, 0, 50, 50)
+    );
+
+}
