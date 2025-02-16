@@ -64,6 +64,7 @@ public import
     fluid.progress_bar,
     fluid.radiobox,
     fluid.raylib_view,
+    fluid.resolution_override,
     fluid.scroll,
     fluid.scroll_input,
     fluid.separator,

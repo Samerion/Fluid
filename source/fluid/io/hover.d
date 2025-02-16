@@ -633,8 +633,10 @@ final class FindHoveredNodeAction : BranchAction {
     /// node) will be used.
     override void afterDraw(Node node, Rectangle) {
 
-        if (_siblingDepth != 0) {
-            _siblingDepth--;
+        scope (exit) {
+            if (_siblingDepth != 0) {
+                _siblingDepth--;
+            }
         }
 
         // A result is required and no scrollable could have matched already
@@ -872,11 +874,14 @@ class HoverPointerAction : TreeAction, Publisher!HoverPointerAction, IO {
     /// moving the cursor, which is commonly the scrolling behavior of touchscreens.
     ///
     /// The hold status will be reset after a frame.
-    void holdScroll(bool value = true) return {
-
+    HoverPointerAction holdScroll(Vector2 motion, bool value = true) return {
         pointer.isScrollHeld = value;
-        hoverIO.loadTo(pointer);
+        return scroll(motion);
+    }
 
+    /// ditto
+    HoverPointerAction holdScroll(float x, float y, bool value = true) return {
+        return holdScroll(Vector2(x, y), value);
     }
 
     /// Run an input action on the currently hovered node, if any.
