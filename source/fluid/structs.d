@@ -5,6 +5,7 @@ import std.conv;
 import std.traits;
 
 import fluid.node;
+import fluid.types;
 
 
 @safe:
@@ -177,6 +178,35 @@ struct Layout {
         }
 
     }
+
+}
+
+/// Place a rectangle inside another based on its specified alignment. This function considers
+/// `NodeAlign.fill` to be equivalent to `NodeAlign.start`.
+///
+/// This function may commonly be used with `Layout.nodeAlign`.
+///
+/// Params:
+///     alignment = Alignment to use for the child rectangle.
+///     space     = Rectangle denoting available space (parent).
+///     size      = Size of the rectangle to place (child).
+/// Returns:
+///     position = Position assigned to the child rectangle.
+Vector2 alignRectangle(NodeAlign[2] alignment, Rectangle space, Vector2 size) {
+
+    float impl(NodeAlign align_, lazy float spaceLeft) {
+        with (NodeAlign)
+        final switch (align_) {
+            case start, fill: return 0;
+            case center:      return spaceLeft / 2;
+            case end:         return spaceLeft;
+        }
+    }
+
+    return Vector2(
+        space.x + impl(alignment[0], space.width  - size.x),
+        space.y + impl(alignment[1], space.height - size.y),
+    );
 
 }
 

@@ -75,7 +75,7 @@ class HoverChain : NodeChain, ActionHoverIO {
         }
 
         ResourceArena!Pointer _pointers;
-        typeof(controlIO!HoverIO()) _ioFrame;
+        typeof(controlIO!ActionHoverIO()) _ioFrame;
 
     }
 
@@ -288,7 +288,7 @@ class HoverChain : NodeChain, ActionHoverIO {
         use(actionIO);
         use(focusIO);
         _pointers.startCycle();
-        _ioFrame = controlIO!HoverIO().startAndRelease();
+        _ioFrame = controlIO!ActionHoverIO().startAndRelease();
     }
 
     override void afterResize(Vector2) {
