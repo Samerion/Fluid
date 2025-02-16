@@ -104,6 +104,8 @@ struct SizeLimit {
 /// The `init` value defaults to no restrictions.
 struct FloatSizeLimit {
 
+    import std.math : isFinite;
+
     /// The imposed limit as a vector. The `x` field is the maximum width,
     /// and `y` is the maximum height. They both default to `infinity`, effectively not
     /// setting any limit.
@@ -116,9 +118,21 @@ struct FloatSizeLimit {
     }
 
     /// Returns:
+    ///     True if there is a limit applied to node width.
+    bool isWidthLimited() const {
+        return isFinite(width);
+    }
+
+    /// Returns:
     ///     The maximum height imposed on the node.
     ref inout(float) height() inout return {
         return limit.y;
+    }
+
+    /// Returns:
+    ///     True, if there is a limit applied to node height.
+    bool isHeightLimited() const {
+        return isFinite(height);
     }
 
     void apply(T)(SizeLock!T node) {
@@ -168,9 +182,13 @@ class SizeLock(T : Node) : T {
 
         // Apply the limit to the resulting value; fill in remaining space if available
         if (limit.x != 0) minSize.x = max(space.x, min(limit.x, minSize.x));
-        else minSize.x = max(space.x, min(sizeLimit.width, minSize.y));
+        else if (sizeLimit.isWidthLimited) {
+            minSize.x = max(space.x, min(sizeLimit.width, minSize.x));
+        }
         if (limit.y != 0) minSize.y = max(space.y, min(limit.y, minSize.y));
-        else minSize.y = max(space.y, min(sizeLimit.height, minSize.y));
+        else if (sizeLimit.isHeightLimited) {
+            minSize.y = max(space.y, min(sizeLimit.height, minSize.y));
+        }
 
     }
 
