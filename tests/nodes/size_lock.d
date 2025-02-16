@@ -86,3 +86,19 @@ unittest {
     );
 
 }
+
+@("SizeLock doesn't affect areas it is not limited in")
+unittest {
+
+    auto content = sizeLock!vframe(
+        .nullTheme,
+        .layout!(1, "start"),
+        .sizeLimitX(100f),
+    );
+    auto root = testSpace(content);
+
+    root.drawAndAssert(
+        content.isDrawn().at(0, 0, 100, 0),  // height MUST be 0
+    );
+
+}
