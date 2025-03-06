@@ -213,6 +213,70 @@ interface Actionable {
 
 }
 
+/// Template with a set of functions for creating input event and input event codes
+/// from an enum. It can be used as a `mixin` in device nodes; see `MouseIO` and `KeyboardIO`
+/// for sample usage.
+template inputEvents(LocalIO, Event)
+if (is(LocalIO : IO) && is(Event == enum)) {
+
+    /// Get the input event code from an enum member.
+    /// Params:
+    ///     event = Code for this event.
+    /// Returns:
+    ///     Input event code that can be used for input event routines.
+    static InputEventCode getCode(Event event) {
+        return InputEventCode(ioID!LocalIO, event);
+    }
+
+    /// A shortcut for getting input event codes that are known at compile time. Handy for
+    /// tests.
+    /// Returns: A struct with event code for each member, corresponding to members of
+    /// `Button`.
+    static codes() {
+        static struct Codes {
+            InputEventCode opDispatch(string name)() {
+                return getCode(__traits(getMember, Event, name));
+            }
+        }
+        return Codes();
+    }
+
+    /// A shortcut for getting input events that are known at compile time. Handy for tests.
+    /// Params:
+    ///     isActive = True if the generated input event should be active. Defaults to `false`
+    ///         for `hold`; is `true` for `click`.
+    /// Returns: A mouse button input event.
+    static click() {
+        return hold(true);
+    }
+
+    /// Create a mouse input event that can be passed to an `ActionIO` handler.
+    ///
+    /// Params:
+    ///     event    = Event type.
+    ///     isActive = True if the event is "active" and should trigger input actions.
+    /// Returns:
+    ///     The created input event.
+    static InputEvent createEvent(Event event, bool isActive = true) {
+        const code = getCode(event);
+        return InputEvent(code, isActive);
+    }
+
+    /// ditto
+    static hold(bool isActive = false) {
+        static struct Codes {
+            bool isActive;
+            InputEvent opDispatch(string name)() {
+                return createEvent(
+                    __traits(getMember, Event, name),
+                    isActive);
+            }
+        }
+        return Codes(isActive);
+    }
+
+}
+
 /// Cast the node to given type if it accepts input using the given method.
 ///
 /// In addition to performing a dynamic cast, this checks if the node currently accepts input.
