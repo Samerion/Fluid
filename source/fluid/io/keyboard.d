@@ -15,30 +15,7 @@ import fluid.io.action;
 /// A `KeyboardIO` system will usually pass events to a `FocusIO` system it is child of.
 interface KeyboardIO : IO {
 
-    /// Get a keyboard input event code.
-    /// Params:
-    ///     key = Key to get the code for.
-    /// Returns:
-    ///     The created input event code.
-    static InputEventCode getCode(Key key) {
-
-        return InputEventCode(ioID!KeyboardIO, key);
-
-    }
-
-    /// A shortcut for getting input event codes that are known at compile time. Handy for tests.
-    /// Returns: A struct with event code for each member, corresponding to members of `Key`.
-    static codes() {
-
-        static struct Codes {
-            static InputEventCode opDispatch(string name)() {
-                return getCode(__traits(getMember, KeyboardIO.Key, name));
-            }
-        }
-
-        return Codes();
-
-    }
+    mixin inputEvents!(KeyboardIO, Key);
 
     ///
     @("KeyboardIO.codes resolves into input event codes")
@@ -49,43 +26,7 @@ interface KeyboardIO : IO {
 
     }
 
-    /// Create a keyboard input event that can be passed to a `FocusIO` or `ActionIO` handler.
-    /// Params:
-    ///     key      = Key that is held down.
-    ///     isActive = True if the key was just pressed.
-    /// Returns:
-    ///     The created input event.
-    static InputEvent createEvent(Key key, bool isActive) {
-
-        const code = getCode(key);
-        return InputEvent(code, isActive);
-
-    }
-
-    /// A shortcut for getting input events that are known at compile time. Handy for tests.
-    /// Params:
-    ///     isActive = True if the generated input event should be active. Defaults to `false` for `hold`,
-    ///         is `true` for `press`.
-    /// Returns: A keyboard key input event.
-    static press() {
-
-        return hold(true);
-
-    }
-
-    /// ditto
-    static hold(bool isActive = false) {
-
-        static struct Codes {
-            bool isActive;
-            InputEvent opDispatch(string name)() {
-                return createEvent(__traits(getMember, KeyboardIO.Key, name), isActive);
-            }
-        }
-
-        return Codes(isActive);
-
-    }
+    alias press = click;
 
     ///
     @("KeyboardIO.hold resolves into input events")
