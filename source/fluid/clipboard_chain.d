@@ -19,9 +19,10 @@ alias clipboardChain = nodeBuilder!ClipboardChain;
 /// This makes this node suitable for testing.
 class ClipboardChain : NodeChain, ClipboardIO {
 
+    mixin controlIO;
+
     private {
         string _value;
-        typeof(controlIO!ClipboardIO()) _ioFrame;
     }
 
     this(Node next = null) {
@@ -44,11 +45,11 @@ class ClipboardChain : NodeChain, ClipboardIO {
     }
 
     override void beforeResize(Vector2) {
-        _ioFrame = controlIO!ClipboardIO().startAndRelease();
+        startIO();
     }
 
     override void afterResize(Vector2) {
-        _ioFrame.stop();
+        stopIO();
     }
 
     override bool writeClipboard(string text) {

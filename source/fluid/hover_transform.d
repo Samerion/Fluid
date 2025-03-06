@@ -66,6 +66,8 @@ class HoverTransform : NodeChain, HoverIO, Focusable, Hoverable, HoverScrollable
 
     // This node is WAY too complex right now
 
+    mixin controlIO;
+
     HoverIO hoverIO;
     FocusIO focusIO;
 
@@ -88,8 +90,6 @@ class HoverTransform : NodeChain, HoverIO, Focusable, Hoverable, HoverScrollable
 
         /// Pool of actions that are used to find matching nodes.
         FindHoveredNodeAction[] _actions;
-
-        typeof(controlIO!HoverIO()) _ioFrame;
 
     }
 
@@ -208,11 +208,11 @@ class HoverTransform : NodeChain, HoverIO, Focusable, Hoverable, HoverScrollable
     override void beforeResize(Vector2) {
         require(hoverIO);
         use(focusIO);
-        _ioFrame = controlIO!HoverIO().startAndRelease();
+        startIO();
     }
 
     override void afterResize(Vector2) {
-        _ioFrame.stop;
+        stopIO();
     }
 
     /// `HoverTransform` saves all the pointers it receives from the host `HoverIO`
