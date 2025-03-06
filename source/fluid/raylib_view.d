@@ -772,6 +772,8 @@ class RaylibStack(RaylibViewVersion raylibVersion) : Node {
     ///     next = Node to draw using the stack.
     this(Node next = null) {
 
+        import fluid.structs : layout;
+
         chain(
             preferenceIO = preferenceChain(),
             timeIO       = timeChain(),
@@ -781,7 +783,9 @@ class RaylibStack(RaylibViewVersion raylibVersion) : Node {
             fileIO       = fileChain(),
             raylibIO     = raylibView(
                 chain(
-                    overlayIO = overlayChain(),
+                    overlayIO = overlayChain(
+                        layout!(1, "fill")
+                    ),
                     next,
                 ),
             ),
