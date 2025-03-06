@@ -46,6 +46,7 @@ import fluid.node_chain;
 import fluid.future.arena;
 
 import fluid.backend.raylib5 : Raylib5Backend, toRaylib;
+import fluid.backend.headless : HeadlessBackend;
 
 import fluid.io.time;
 import fluid.io.canvas;
@@ -767,6 +768,12 @@ class RaylibStack(RaylibViewVersion raylibVersion) : Node {
 
     }
 
+    private {
+
+        HeadlessBackend _headlessBackend;
+
+    }
+
     /// Initialize the stack.
     /// Params:
     ///     next = Node to draw using the stack.
@@ -774,6 +781,7 @@ class RaylibStack(RaylibViewVersion raylibVersion) : Node {
 
         import fluid.structs : layout;
 
+        _headlessBackend = new HeadlessBackend;
         chain(
             preferenceIO = preferenceChain(),
             timeIO       = timeChain(),
@@ -823,6 +831,11 @@ class RaylibStack(RaylibViewVersion raylibVersion) : Node {
     override void resizeImpl(Vector2 space) {
         resizeChild(root, space);
         minSize = root.minSize;
+
+        // If RaylibStack is used as the root, disable the legacy backend
+        if (tree.root == this) {
+            this.backend = _headlessBackend;
+        }
     }
 
     override void drawImpl(Rectangle, Rectangle inner) {
