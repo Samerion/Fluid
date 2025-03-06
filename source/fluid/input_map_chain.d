@@ -18,6 +18,8 @@ alias inputMapChain  = nodeBuilder!InputMapChain;
 
 class InputMapChain : NodeChain, ActionIO {
 
+    mixin controlIO;
+
     private struct ReceivedInputEvent {
         InputEvent event;
         int number;
@@ -36,8 +38,6 @@ class InputMapChain : NodeChain, ActionIO {
         /// All collected input events.
         Stack!ReceivedInputEvent _events;
 
-        typeof(controlIO!ActionIO()) _ioFrame;
-
     }
 
     this(InputMapping map, Node next = null) {
@@ -50,11 +50,11 @@ class InputMapChain : NodeChain, ActionIO {
     }
 
     override void beforeResize(Vector2) {
-        _ioFrame = controlIO!ActionIO().startAndRelease();
+        startIO();
     }
 
     override void afterResize(Vector2) {
-        _ioFrame.stop();
+        stopIO();
     }
 
     override void afterDraw(Rectangle, Rectangle) {

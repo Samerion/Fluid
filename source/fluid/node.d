@@ -1190,6 +1190,35 @@ abstract class Node {
 
     }
 
+    mixin template controlIO() {
+
+        import std.meta : AliasSeq, Filter, NoDuplicates;
+        import std.traits : InterfacesTuple;
+        import fluid.future.context : isIO, IO, ioID;
+
+        private {
+
+            alias Interfaces = Filter!(isIO, InterfacesTuple!(typeof(this)), typeof(this));
+            alias IOs = NoDuplicates!Interfaces;
+
+            IO[Interfaces.length] _hostIOs;
+
+            void startIO() {
+                static foreach (i, IO; IOs) {
+                    _hostIOs[i] = treeContext.io.replace(ioID!IO, this);
+                }
+            }
+
+            void stopIO() {
+                static foreach (i, IO; IOs) {
+                    treeContext.io.replace(ioID!IO, _hostIOs[i]);
+                }
+            }
+
+        }
+
+    }
+
     protected auto controlIO(this This)() {
 
         import std.meta : AliasSeq, Filter;

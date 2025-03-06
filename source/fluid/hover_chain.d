@@ -30,6 +30,8 @@ alias hoverChain = nodeBuilder!HoverChain;
 /// `HoverChain` only works with nodes compatible with the new I/O system introduced in Fluid 0.7.2.
 class HoverChain : NodeChain, ActionHoverIO {
 
+    mixin controlIO;
+
     ActionIO actionIO;
     FocusIO focusIO;
 
@@ -75,7 +77,6 @@ class HoverChain : NodeChain, ActionHoverIO {
         }
 
         ResourceArena!Pointer _pointers;
-        typeof(controlIO!ActionHoverIO()) _ioFrame;
 
     }
 
@@ -288,11 +289,11 @@ class HoverChain : NodeChain, ActionHoverIO {
         use(actionIO);
         use(focusIO);
         _pointers.startCycle();
-        _ioFrame = controlIO!ActionHoverIO().startAndRelease();
+        startIO();
     }
 
     override void afterResize(Vector2) {
-        _ioFrame.stop();
+        stopIO();
     }
 
     override void beforeDraw(Rectangle outer, Rectangle inner) {
