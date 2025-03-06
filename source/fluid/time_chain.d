@@ -20,20 +20,18 @@ alias timeChain = nodeBuilder!TimeChain;
 ///     `core.time.MonoTime`, `fluid.io.time.TimeIO`
 class TimeChain : NodeChain, TimeIO {
 
-    private {
-        typeof(controlIO!TimeIO()) _ioFrame;
-    }
+    mixin controlIO;
 
     this(Node next = null) {
         super(next);
     }
 
     override void beforeResize(Vector2) {
-        _ioFrame = controlIO!TimeIO().startAndRelease();
+        startIO();
     }
 
     override void afterResize(Vector2) {
-        _ioFrame.stop();
+        stopIO();
     }
 
     override MonoTime now() nothrow {

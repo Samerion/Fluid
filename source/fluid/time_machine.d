@@ -23,12 +23,10 @@ alias timeMachine = nodeBuilder!TimeMachine;
 ///     `core.time.MonoTime`, `fluid.io.time.TimeIO`
 class TimeMachine : NodeChain, TimeIO {
 
+    mixin controlIO;
+
     public {
         MonoTime time;
-    }
-
-    private {
-        typeof(controlIO!TimeIO()) _ioFrame;
     }
 
     this(Node next = null) {
@@ -37,11 +35,11 @@ class TimeMachine : NodeChain, TimeIO {
     }
 
     override void beforeResize(Vector2) {
-        _ioFrame = controlIO!TimeIO().startAndRelease();
+        startIO();
     }
 
     override void afterResize(Vector2) {
-        _ioFrame.stop();
+        stopIO();
     }
 
     override MonoTime now() nothrow {
