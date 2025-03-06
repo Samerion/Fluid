@@ -31,6 +31,8 @@ alias overlayChain = nodeBuilder!OverlayChain;
 /// * Position is relative to the window, not to the node.
 class OverlayChain : NodeChain, OverlayIO {
 
+    mixin controlIO;
+
     protected struct Child {
         Node node;
         Overlayable overlayable;
@@ -44,23 +46,19 @@ class OverlayChain : NodeChain, OverlayIO {
 
     }
 
-    private {
-        typeof(controlIO!OverlayIO()) _ioFrame;
-    }
-
     this(Node next = null) {
         super(next);
     }
 
     override void beforeResize(Vector2) {
-        _ioFrame = controlIO!OverlayIO().startAndRelease();
+        startIO();
     }
 
     override void afterResize(Vector2 space) {
         foreach (child; children) {
             resizeChild(child.node, space);
         }
-        _ioFrame.stop();
+        stopIO();
     }
 
     override void afterDraw(Rectangle, Rectangle inner) {

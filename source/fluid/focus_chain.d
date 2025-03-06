@@ -28,6 +28,8 @@ alias focusChain = nodeBuilder!FocusChain;
 /// `FocusChain` only works with nodes compatible with the new I/O system introduced in Fluid 0.7.2.
 class FocusChain : NodeChain, FocusIO, WithOrderedFocus, WithPositionalFocus {
 
+    mixin controlIO;
+
     ActionIO actionIO;
 
     protected {
@@ -45,7 +47,6 @@ class FocusChain : NodeChain, FocusIO, WithOrderedFocus, WithPositionalFocus {
         PositionalFocusAction _positionalFocusAction;
         OrderedFocusAction _orderedFocusAction;
         Optional!Rectangle _lastFocusBox;
-        typeof(controlIO!FocusIO()) _ioFrame;
 
     }
 
@@ -102,11 +103,11 @@ class FocusChain : NodeChain, FocusIO, WithOrderedFocus, WithPositionalFocus {
 
     override void beforeResize(Vector2) {
         use(actionIO);
-        _ioFrame = controlIO!FocusIO().startAndRelease();
+        startIO();
     }
 
     override void afterResize(Vector2) {
-        _ioFrame.stop();
+        stopIO();
     }
 
     override void beforeDraw(Rectangle, Rectangle) {
