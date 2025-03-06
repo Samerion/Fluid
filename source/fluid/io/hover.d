@@ -345,10 +345,10 @@ struct HoverPointer {
     ///     True if the pointer is the same as the other pointer and has the same state.
     bool opEquals(const HoverPointer other) const {
 
-        // Do not compare I/O metadata
-        return isSame(other)
-            && position   == other.position
-            && isDisabled == other.isDisabled;
+        // Do not compare I/O metadata last two fields
+        // Do not compare device (for old compilers), use isSame instead
+        return this.tupleof[1..$-2] == other.tupleof[1..$-2]
+            && isSame(other);
 
     }
 
