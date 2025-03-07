@@ -1,3 +1,8 @@
+/// Module for testing Fluid nodes using the new I/O system.
+///
+/// Bugs:
+///     `auto` functions may generate incorrect mangling. This is worked-around
+///     with `pragma(mangle)`.
 module fluid.test_space;
 
 version (Fluid_TestSpace):
@@ -473,11 +478,13 @@ interface Assert {
 }
 
 ///
+pragma(mangle, "fluid__test_space_cropsTo_R_tuple")
 auto cropsTo(Node subject, typeof(Rectangle.tupleof) rectangle) {
     return cropsTo(subject, Rectangle(rectangle));
 }
 
 /// ditto
+pragma(mangle, "fluid__test_space_cropsTo_R")
 auto cropsTo(Node subject, Rectangle rectangle) {
     auto result = crops(subject);
     result.isTestingArea = true;
@@ -486,6 +493,7 @@ auto cropsTo(Node subject, Rectangle rectangle) {
 }
 
 /// ditto
+pragma(mangle, "fluid__test_space_crops")
 auto crops(Node subject) {
 
     return new class BlackHole!Assert {
@@ -516,6 +524,7 @@ auto crops(Node subject) {
 }
 
 ///
+pragma(mangle, "fluid__test_space_resetsCrop")
 auto resetsCrop(Node subject) {
 
     return new class BlackHole!Assert {
@@ -533,11 +542,13 @@ auto resetsCrop(Node subject) {
 }
 
 ///
+pragma(mangle, "fluid__test_space_drawsRectangle_R_tuple")
 auto drawsRectangle(Node subject, typeof(Rectangle.tupleof) rectangle) {
     return drawsRectangle(subject, Rectangle(rectangle));
 }
 
 /// ditto
+pragma(mangle, "fluid__test_space_drawsRectangle_R")
 auto drawsRectangle(Node subject, Rectangle rectangle) {
     auto result = drawsRectangle(subject);
     result.isTestingArea = true;
@@ -545,6 +556,7 @@ auto drawsRectangle(Node subject, Rectangle rectangle) {
     return result;
 }
 
+pragma(mangle, "fluid__test_space_drawsRectangle")
 auto drawsRectangle(Node subject) {
 
     return new class BlackHole!Assert {
@@ -597,6 +609,7 @@ auto drawsRectangle(Node subject) {
 }
 
 /// Test if the subject draws a line.
+pragma(mangle, "fluid__test_space_drawsLine")
 auto drawsLine(Node subject) {
 
     return new class BlackHole!Assert {
@@ -692,6 +705,7 @@ auto drawsLine(Node subject) {
 }
 
 /// Test if the subject draws a circle outline.
+pragma(mangle, "fluid__test_space_drawsCircleOutline")
 auto drawsCircleOutline(Node subject) {
     auto a = drawsCircle(subject);
     a.isOutline = true;
@@ -699,6 +713,7 @@ auto drawsCircleOutline(Node subject) {
 }
 
 /// ditto
+pragma(mangle, "fluid__test_space_drawsCircleOutline_float")
 auto drawsCircleOutline(Node subject, float width) {
     auto a = drawsCircleOutline(subject);
     a.isTestingOutlineWidth = true;
@@ -707,6 +722,7 @@ auto drawsCircleOutline(Node subject, float width) {
 }
 
 /// Test if the subject draws a circle.
+pragma(mangle, "fluid__test_space_drawsCircle")
 auto drawsCircle(Node subject) {
 
     return new class BlackHole!Assert {
@@ -809,6 +825,7 @@ auto drawsCircle(Node subject) {
 ///     subject = Test if this subject draws an image.
 /// Returns:
 ///     An `Assert` that can be passed to `TestSpace.drawAndAssert` to test if a node draws an image.
+pragma(mangle, "fluid__test_space_drawsImage_I")
 auto drawsImage(Node subject, Image image) {
     auto test = drawsImage(subject);
     test.isTestingImage = true;
@@ -819,6 +836,7 @@ auto drawsImage(Node subject, Image image) {
 }
 
 /// ditto
+pragma(mangle, "fluid__test_space_drawsHintedImage_I")
 auto drawsHintedImage(Node subject, Image image) {
     auto test = drawsImage(subject, image);
     test.isTestingHint = true;
@@ -827,6 +845,7 @@ auto drawsHintedImage(Node subject, Image image) {
 }
 
 /// ditto
+pragma(mangle, "fluid__test_space_drawsHintedImage")
 auto drawsHintedImage(Node subject) {
     auto test = drawsImage(subject);
     test.isTestingHint = true;
@@ -835,6 +854,7 @@ auto drawsHintedImage(Node subject) {
 }
 
 /// ditto
+pragma(mangle, "fluid__test_space_drawsImage")
 auto drawsImage(Node subject) {
 
     return new class BlackHole!Assert {
@@ -1007,6 +1027,7 @@ auto drawsImage(Node subject) {
 /// Params:
 ///     parent = Parent node, subject of the test.
 ///     child  = Child to test. Must be drawn directly.
+pragma(mangle, "fluid__test_space_drawsChild")
 auto drawsChild(Node parent, Node child = null) {
 
     return new class BlackHole!Assert {
@@ -1118,6 +1139,7 @@ unittest {
 }
 
 /// Make sure the parent does not draw any children.
+pragma(mangle, "fluid__test_space_doesNotDrawChildren")
 auto doesNotDrawChildren(Node parent) {
 
     return new class BlackHole!Assert {
@@ -1161,6 +1183,7 @@ auto doesNotDrawChildren(Node parent) {
 
 /// Assert true if a node is attempted to be drawn,
 /// but the node does not need to draw anything for the assert to succeed.
+pragma(mangle, "fluid__test_space_isDrawn")
 auto isDrawn(Node subject) {
 
     return new class BlackHole!Assert {
@@ -1227,6 +1250,7 @@ auto isDrawn(Node subject) {
 }
 
 /// Make sure the selected node draws, but doesn't matter what.
+pragma(mangle, "fluid__test_space_draws")
 auto draws(Node subject) {
 
     return drawsWildcard!((node, methodName) {
@@ -1288,6 +1312,7 @@ auto doesNotDraw(alias predicate = `a.startsWith("draw")`)(Node subject) {
 alias doesNotDrawImages = doesNotDraw!`a.among("drawImage", "drawHintedImage")`;
 
 /// Ensure the node emits a debug signal.
+pragma(mangle, "fluid__test_space_emits")
 auto emits(Node subject, string name) {
 
     return new class BlackHole!Assert {
@@ -1387,6 +1412,7 @@ auto drawsWildcard(alias dg)(lazy string message) {
 ///     filename = Path to save the SVG output to. Requires version `Fluid_SVG` to be set, ignored otherwise.
 /// Returns:
 ///     An assert object to pass to `TestSpace.drawAndAssert`.
+pragma(mangle, "fluid__test_space_dumpDrawsToSVG")
 auto dumpDrawsToSVG(Node subject, string filename = null) {
     auto a = dumpDraws(subject);
     a.generateSVG = true;
@@ -1395,6 +1421,7 @@ auto dumpDrawsToSVG(Node subject, string filename = null) {
 }
 
 /// ditto
+pragma(mangle, "fluid__test_space_dumpDraws")
 auto dumpDraws(Node subject) {
 
     import std.stdio;
