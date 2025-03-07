@@ -1612,6 +1612,8 @@ auto dumpDraws(Node subject) {
                 (node, isHinted ? "Hinted" : "", area.tupleof, tint.toHex.assumeWontThrow,
                 sha256Of(image.data)[]);
 
+            if (image.area == 0) return;
+
             version (Fluid_SVG) if (generateSVG) {
 
                 import std.base64;
