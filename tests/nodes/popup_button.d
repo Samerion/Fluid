@@ -115,3 +115,62 @@ unittest {
     );
 
 }
+
+@("PopupButton works with hover input")
+unittest {
+
+    int onePressed, twoPressed;
+
+    auto btn2 =
+        popupButton(
+            "Second level",
+            button("two", delegate { twoPressed++; }),
+        );
+    auto btn =
+        sizeLock!popupButton(
+            .sizeLimit(250, 250),
+            "First level",
+            button("one", delegate { onePressed++; }),
+            btn2,
+        );
+    auto overlay = overlayChain();
+    auto hover = hoverChain();
+    auto focus = focusChain();
+    auto root = testSpace(
+        .nullTheme,
+        chain(focus, hover, overlay, btn),
+    );
+
+    root.drawAndAssertFailure(
+        overlay.drawsChild(btn.popup),
+    );
+
+    hover.point(100, 100)
+        .then((a) {
+            a.click;
+            return a.stayIdle;
+        })
+        .runWhileDrawing(root, 2);
+    root.drawAndAssert(
+        overlay.drawsChild(btn.popup),
+    );
+    root.drawAndAssertFailure(
+        overlay.drawsChild(btn2.popup),
+    );
+    focus.findFocusBox()
+        .then((box) {
+            return hover.point(box.front.center);
+        })
+        .then((a) {
+            a.click;
+            return a.stayIdle;
+        })
+        .runWhileDrawing(root, 3);
+    root.drawAndAssert(
+        overlay.drawsChild(btn.popup),
+    );
+    root.drawAndAssert(
+        overlay.drawsChild(btn2.popup),
+    );
+
+}
