@@ -32,6 +32,8 @@ class PopupButton : ButtonImpl!Label {
         PopupFrame popup;
 
         /// Popup this button belongs to, if any. Set automatically if the popup is spawned with `spawnPopup`.
+        ///
+        /// This field will be removed in Fluid 0.8.0.
         PopupFrame parentPopup;
 
     }
@@ -39,6 +41,10 @@ class PopupButton : ButtonImpl!Label {
     private {
 
         Rectangle _inner;
+
+        // workaround for https://git.samerion.com/Samerion/Fluid/issues/401
+        // could be fixed with https://git.samerion.com/Samerion/Fluid/issues/399
+        bool _justOpened;
 
     }
 
@@ -67,6 +73,8 @@ class PopupButton : ButtonImpl!Label {
                     overlayIO.addPopup(popup, anchor);
                 }
 
+                _justOpened = true;
+
             }
 
             // Parent popup active
@@ -91,6 +99,14 @@ class PopupButton : ButtonImpl!Label {
     override void drawImpl(Rectangle outer, Rectangle inner) {
         _inner = inner;
         super.drawImpl(outer, inner);
+        if (hoverIO && !hoverIO.isHovered(this)) {
+            _justOpened = false;
+        }
+    }
+
+    override void focus() {
+        if (hoverIO && _justOpened) return;
+        super.focus();
     }
 
     override string toString() const {
