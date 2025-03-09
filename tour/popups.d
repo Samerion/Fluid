@@ -7,8 +7,6 @@ import fluid.tour;
 
 
 @safe:
-version (none):
-
 
 Space popupExample() {
 
@@ -28,11 +26,6 @@ Space popupExample() {
                 button("btn6", delegate { }),
             ),
         ),
-        button("Pick a file", delegate {
-            root.tree.spawnPopup(
-                fileInput("Open a file", delegate { })
-            );
-        }),
     );
 
 }
