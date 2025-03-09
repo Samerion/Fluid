@@ -113,7 +113,7 @@ class Frame : Space, FluidDroppable {
         super.resizeImpl(availableSpace);
 
         // Hovered by a dragged node
-        if (_queuedDrop) {
+        if (_queuedDrop || isDropHovered) {
 
             // Apply queued changes
             dropSize = _queuedDropSize;
@@ -127,7 +127,9 @@ class Frame : Space, FluidDroppable {
         }
 
         // Clear the drop size
-        else dropSize = Vector2();
+        else {
+            dropSize = Vector2();
+        }
 
     }
 
@@ -138,10 +140,8 @@ class Frame : Space, FluidDroppable {
 
         // Clear dropSize if dropping stopped
         if (!isDropHovered && dropSize != Vector2()) {
-
             _queuedDrop = false;
             updateSize();
-
         }
 
         _dropIndex = 0;
@@ -204,9 +204,9 @@ class Frame : Space, FluidDroppable {
 
     }
 
-    /// Returns: 
+    /// Returns:
     ///     True if the given node can be dropped into this frame.
-    /// 
+    ///
     ///     No node can be dropped into a frame that is disabled.
     bool canDrop(Node node) {
 
