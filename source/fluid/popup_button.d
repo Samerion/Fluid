@@ -32,6 +32,8 @@ class PopupButton : ButtonImpl!Label {
         PopupFrame popup;
 
         /// Popup this button belongs to, if any. Set automatically if the popup is spawned with `spawnPopup`.
+        ///
+        /// This field will be removed in Fluid 0.8.0.
         PopupFrame parentPopup;
 
     }

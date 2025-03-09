@@ -20,6 +20,7 @@ import fluid.io.overlay;
 
 import fluid.future.action;
 import fluid.future.context;
+import fluid.future.branch_action;
 
 @safe:
 
@@ -154,6 +155,7 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
         OrderedFocusAction _orderedFocusAction;
         PositionalFocusAction _positionalFocusAction;
         FindFocusBoxAction _findFocusBoxAction;
+        MarkPopupButtonsAction _markPopupButtonsAction;
 
         bool childHasFocus;
 
@@ -165,9 +167,10 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
 
         super(nodes);
         this.layout = layout!"fill";
-        this._orderedFocusAction    = new OrderedFocusAction;
-        this._positionalFocusAction = new PositionalFocusAction;
-        this._findFocusBoxAction    = new FindFocusBoxAction(this);
+        this._orderedFocusAction     = new OrderedFocusAction;
+        this._positionalFocusAction  = new PositionalFocusAction;
+        this._findFocusBoxAction     = new FindFocusBoxAction(this);
+        this._markPopupButtonsAction = new MarkPopupButtonsAction(this);
 
         _findFocusBoxAction
             .then((Optional!Rectangle result) => _lastFocusBox = result);
@@ -347,7 +350,8 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
         // Clear directional focus data; give the popup a separate context
         tree.focusDirection = FocusDirection(tree.focusDirection.lastFocusBox);
 
-        auto actions = this.startBranchAction(_findFocusBoxAction);
+        auto action1 = this.startBranchAction(_findFocusBoxAction);
+        auto action2 = this.startBranchAction(_markPopupButtonsAction);
         super.drawImpl(outer, inner);
 
         // Forcibly register previous & next focus if missing
@@ -572,6 +576,29 @@ class PopupNodeAction : TreeAction {
 
         // Run actions for the popup
         keyboardHandled = popup.runFocusInputActions;
+
+    }
+
+}
+
+/// This tree action will walk the branch to mark PopupButtons with the parent PopupFrame.
+/// This is a temporary workaround to fill `PopupButton.parentPopup` in new I/O; starting with
+/// 0.8.0 popup frames should implement `LayoutIO` to detect child popups.
+private class MarkPopupButtonsAction : BranchAction {
+
+    PopupFrame parent;
+
+    this(PopupFrame parent) {
+        this.parent = parent;
+    }
+
+    override void beforeDraw(Node node, Rectangle) {
+
+        import fluid.popup_button;
+
+        if (auto button = cast(PopupButton) node) {
+            button.parentPopup = parent;
+        }
 
     }
 
