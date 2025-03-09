@@ -24,6 +24,10 @@ Space popupExample() {
                 button("btn4", delegate { }),
                 button("btn5", delegate { }),
                 button("btn6", delegate { }),
+                popupButton(
+                    "Third",
+                    label("Woo!"),
+                ),
             ),
         ),
     );
