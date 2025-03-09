@@ -138,13 +138,15 @@ class Frame : Space, FluidDroppable {
         const style = pickStyle();
         style.drawBackground(tree.io, canvasIO, outer);
 
+        if (isDropHovered) {
+            _dropIndex = 0;
+        }
+
         // Clear dropSize if dropping stopped
-        if (!isDropHovered && dropSize != Vector2()) {
+        else if (dropSize != Vector2()) {
             _queuedDrop = false;
             updateSize();
         }
-
-        _dropIndex = 0;
 
         // Provide offset for the drop item if it's the first node
         auto innerStart = dropOffset(start(inner));
@@ -244,6 +246,7 @@ class Frame : Space, FluidDroppable {
             _dropIndex = children.length;
 
         this.children.insertInPlace(_dropIndex, node);
+        updateSize();
 
     }
 
