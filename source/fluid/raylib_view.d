@@ -465,6 +465,11 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
 
     }
 
+    /// Get a Raylib texture for the corresponding drawable image. The image MUST be loaded.
+    raylib.Texture textureFor(DrawableImage image) nothrow @trusted {
+        return _images[image.id].texture;
+    }
+
     /// Get the shader used for `alpha` images. This shader is loaded on the first resize,
     /// and is not accessible before.
     /// Returns:
@@ -610,7 +615,7 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
         if (IsShaderReady(shader))
             BeginShaderMode(shader);
 
-        auto texture = _images[image.id].texture;
+        auto texture = textureFor(image);
 
         DrawTexturePro(texture, source, destinationRay, Vector2(0, 0), 0, tint);
 
