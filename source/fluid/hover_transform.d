@@ -184,6 +184,8 @@ class HoverTransform : NodeChain, HoverIO, Focusable, Hoverable, HoverScrollable
     inout(HoverPointer) pointerToLocal(inout HoverPointer pointer) inout @trusted {
         HoverPointer result;
         result.update(pointer);
+        result.device = cast() pointer.device;
+        result.number = pointer.number;
         result.position = pointToLocal(pointer.position);
         return cast(inout) result.loadCopy(this, pointer.id);
     }
@@ -201,6 +203,8 @@ class HoverTransform : NodeChain, HoverIO, Focusable, Hoverable, HoverScrollable
     inout(HoverPointer) pointerToHost(inout HoverPointer pointer) inout @trusted {
         HoverPointer result;
         result.update(pointer);
+        result.device = cast() pointer.device;
+        result.number = pointer.number;
         result.position = pointToHost(pointer.position);
         return cast(inout) result.loadCopy(hoverIO, pointer.id);
     }
