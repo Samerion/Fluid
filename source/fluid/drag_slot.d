@@ -448,8 +448,6 @@ class DragAction : TreeAction {
         this.target = droppable;
         this.targetRectangle = rectangle;
 
-        droppable.dropHover(pointerPosition, relativeDragRectangle);
-
     }
 
     /// Tree drawn, draw the node now.
@@ -476,6 +474,9 @@ class DragAction : TreeAction {
         // We should have received a signal from the slot if it is still being dragged
         if (!_stopDragging) {
             _stopDragging = true;
+            if (target) {
+                target.dropHover(pointerPosition, relativeDragRectangle);
+            }
             return;
         }
 
