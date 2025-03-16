@@ -28,6 +28,19 @@ class Resizable : Node {
 
 }
 
+Theme testTheme;
+
+const frameColor = color("#fdc798");
+
+static this() {
+    import fluid.theme;
+    testTheme = nullTheme.derive(
+        rule!Frame(
+            backgroundColor = frameColor,
+        ),
+    );
+}
+
 @("DragSlot ignores gap if the handle is hidden")
 unittest {
 
@@ -200,5 +213,130 @@ unittest {
     assert(slot.canvasIO.opEquals(root));
     assert(tracker.hoverIO.opEquals(hover));
     assert(tracker.canvasIO.opEquals(root));
+
+}
+
+@("Droppable nodes can be nested")
+unittest {
+
+    DragSlot slot;
+    Frame inner;
+    Label[2] dummies;
+
+    const targets = [
+        Vector2(0, 450),  // Control sample
+        Vector2(0, 0),    // Drop into outer
+        Vector2(0, 300),  // Drop into inner
+    ];
+
+    foreach (index, dropTarget; targets) {
+
+        auto outer = sizeLock!vframe(
+            .layout!(1, "fill"),
+            .sizeLimit(600, 600),
+            .acceptDrop,
+            dummies[0] = label(
+                .layout!1,
+                "Dummy 1",
+            ),
+            inner = vframe(
+                .layout!(1, "fill"),
+                .acceptDrop,
+                dummies[1] = label(
+                    .layout!1,
+                    "Dummy 2"
+                ),
+                slot = sizeLock!dragSlot(
+                    .layout!1,
+                    .sizeLimit(100, 100),
+                    label(
+                        .ignoreMouse,
+                        "Drag me"
+                    ),
+                ),
+            )
+        );
+        auto overlay = overlayChain(.layout!"fill");
+        auto hover = hoverChain(.testTheme, .layout!"fill");
+        auto root = testSpace(
+            chain(hover, overlay, outer)
+        );
+
+        root.drawAndAssert(
+            slot.isDrawn().at(0, 450),
+        ),
+
+        hover.point(1, 451)
+            .then((a) {
+                a.press(false);
+                return a.move(dropTarget);
+            })
+
+            // Hover over the target
+            .then((a) {
+                a.press(false);  // Wait 1 more frame to trigger `afterKeyboard`
+                root.draw();     // TODO fix this in 0.8.0
+
+                // Control sample
+                a.press(false);
+                if (index == 0) {
+                    root.drawAndAssert(
+                        dummies[0].isDrawn().at(0, 0),
+                        dummies[1].isDrawn().at(0, 300),
+                    );
+                }
+                // Drop into outer
+                else if (index == 1) {
+                    root.drawAndAssert(
+                        dummies[0].isDrawn().at(0, 100),  // TODO correct expanding behavior
+                        dummies[1].isDrawn().at(0, 400),
+                    );
+                }
+                // Drop into inner
+                else if (index == 2) {
+                    root.drawAndAssert(
+                        dummies[0].isDrawn().at(0, 000),
+                        dummies[1].isDrawn().at(0, 400),
+                    );
+                }
+                a.press(false);
+                root.drawAndAssert(
+                    overlay.drawsChild(slot.overlay),
+                );
+                return a.stayIdle;
+            })
+
+            // Drop it
+            .then((a) {
+                a.press(true);
+                root.draw();
+
+                if (index == 0) {
+                    root.drawAndAssert(
+                        dummies[0].isDrawn().at(0,   0),
+                        dummies[1].isDrawn().at(0, 300),
+                        slot      .isDrawn().at(0, 450),
+                    );
+                }
+                // Drop into outer
+                else if (index == 1) {
+                    root.drawAndAssert(
+                        slot      .isDrawn().at(0,   0),
+                        dummies[0].isDrawn().at(0, 200),
+                        dummies[1].isDrawn().at(0, 400),
+                    );
+                }
+                // Drop into inner
+                else if (index == 2) {
+                    root.drawAndAssert(
+                        dummies[0].isDrawn().at(0,   0),
+                        slot      .isDrawn().at(0, 300),
+                        dummies[1].isDrawn().at(0, 450),
+                    );
+                }
+            })
+            .runWhileDrawing(root, 4);
+
+    }
 
 }
