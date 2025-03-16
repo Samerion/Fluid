@@ -113,7 +113,7 @@ class Frame : Space, FluidDroppable {
         super.resizeImpl(availableSpace);
 
         // Hovered by a dragged node
-        if (_queuedDrop) {
+        if (_queuedDrop || isDropHovered) {
 
             // Apply queued changes
             dropSize = _queuedDropSize;
@@ -127,7 +127,9 @@ class Frame : Space, FluidDroppable {
         }
 
         // Clear the drop size
-        else dropSize = Vector2();
+        else {
+            dropSize = Vector2();
+        }
 
     }
 
@@ -136,15 +138,15 @@ class Frame : Space, FluidDroppable {
         const style = pickStyle();
         style.drawBackground(tree.io, canvasIO, outer);
 
-        // Clear dropSize if dropping stopped
-        if (!isDropHovered && dropSize != Vector2()) {
-
-            _queuedDrop = false;
-            updateSize();
-
+        if (isDropHovered) {
+            _dropIndex = 0;
         }
 
-        _dropIndex = 0;
+        // Clear dropSize if dropping stopped
+        else if (dropSize != Vector2()) {
+            _queuedDrop = false;
+            updateSize();
+        }
 
         // Provide offset for the drop item if it's the first node
         auto innerStart = dropOffset(start(inner));
@@ -204,9 +206,9 @@ class Frame : Space, FluidDroppable {
 
     }
 
-    /// Returns: 
+    /// Returns:
     ///     True if the given node can be dropped into this frame.
-    /// 
+    ///
     ///     No node can be dropped into a frame that is disabled.
     bool canDrop(Node node) {
 
@@ -244,6 +246,7 @@ class Frame : Space, FluidDroppable {
             _dropIndex = children.length;
 
         this.children.insertInPlace(_dropIndex, node);
+        updateSize();
 
     }
 
