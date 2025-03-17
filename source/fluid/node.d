@@ -1007,10 +1007,6 @@ abstract class Node {
         // Load the theme
         reloadStyles();
 
-        // Write breadcrumbs into the tree
-        tree.breadcrumbs ~= _style.breadcrumbs;
-        scope (exit) tree.breadcrumbs = breadcrumbs;
-
         // Queue actions into the tree
         tree.actions ~= _queuedActions;
         foreach (action; _queuedActions) {
@@ -1026,6 +1022,10 @@ abstract class Node {
     in(tree, "Tree for Node.resize() must not be null.")
     in(theme, "Theme for Node.resize() must not be null.")
     do {
+
+        // Write breadcrumbs into the tree
+        tree.breadcrumbs ~= _style.breadcrumbs;
+        scope (exit) tree.breadcrumbs = breadcrumbs;
 
         // The node is hidden, reset size
         if (isHidden) minSize = Vector2(0, 0);
