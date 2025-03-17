@@ -108,7 +108,7 @@ class InputMapChain : NodeChain, ActionIO {
             if (layer.modifiers.any!(a => findEvents(a).empty)) continue;
 
             // Found an active layer, test all bound strokes
-            foreach (binding; layer.bindings) {
+            foreach_reverse (binding; layer.bindings) {
 
                 // Check if any of the events matches this binding
                 foreach (event; findEvents(binding.code)) {
@@ -175,7 +175,8 @@ struct InputMapping {
         /// Modifiers that have to be pressed for this layer to be checked.
         InputEventCode[] modifiers;
 
-        /// Keys and events on this layer.
+        /// Keys and events on this layer. These binding are tested in reverse-order,
+        /// so bindings that come last are tested first, giving them higher priority.
         Trigger[] bindings;
 
         int opCmp(const Layer other) const {
@@ -300,82 +301,76 @@ struct InputMapping {
             auto universalShift = Layer(
                 [KeyboardIO.codes.leftShift],
                 [
-                    bind!entryPrevious(KeyboardIO.codes.tab),
-                    bind!outdent(KeyboardIO.codes.tab),
-                    bind!selectPreviousChar(KeyboardIO.codes.left),
-                    bind!selectNextChar(KeyboardIO.codes.right),
-                    bind!selectPreviousLine(KeyboardIO.codes.up),
-                    bind!selectNextLine(KeyboardIO.codes.down),
-                    bind!selectToLineStart(KeyboardIO.codes.home),
-                    bind!selectToLineEnd(KeyboardIO.codes.end),
-                    bind!breakLine(KeyboardIO.codes.enter),
-                    bind!contextMenu(KeyboardIO.codes.f10),
                     bind!focusPrevious(KeyboardIO.codes.tab),
+                    bind!contextMenu(KeyboardIO.codes.f10),
+                    bind!breakLine(KeyboardIO.codes.enter),
+                    bind!selectToLineEnd(KeyboardIO.codes.end),
+                    bind!selectToLineStart(KeyboardIO.codes.home),
+                    bind!selectNextLine(KeyboardIO.codes.down),
+                    bind!selectPreviousLine(KeyboardIO.codes.up),
+                    bind!selectNextChar(KeyboardIO.codes.right),
+                    bind!selectPreviousChar(KeyboardIO.codes.left),
+                    bind!outdent(KeyboardIO.codes.tab),
+                    bind!entryPrevious(KeyboardIO.codes.tab),
                 ]
             );
             auto universal = Layer(
                 [],
                 [
-                    // Press
-                    bind!press(MouseIO.codes.left),
-                    bind!press(KeyboardIO.codes.enter),
-                    // bind!press(GamepadButton.cross), TODO
+                    // Focus control
+                    // bind!focusDown(GamepadButton.dpadDown), TODO
+                    bind!focusDown(KeyboardIO.codes.down),
+                    // bind!focusUp(GamepadButton.dpadUp), TODO
+                    bind!focusUp(KeyboardIO.codes.up),
+                    // bind!focusRight(GamepadButton.dpadRight), TODO
+                    bind!focusRight(KeyboardIO.codes.right),
+                    // bind!focusLeft(GamepadButton.dpadLeft), TODO
+                    bind!focusLeft(KeyboardIO.codes.left),
+                    // bind!focusNext(GamepadButton.rightButton), TODO
+                    bind!focusNext(KeyboardIO.codes.tab),
+                    // bind!focusPrevious(GamepadButton.leftButton), TODO
 
-                    // Cancel
-                    bind!cancel(KeyboardIO.codes.escape),
-                    // bind!cancel(GamepadButton.circle), TODO
-
-                    // Menu
-                    bind!contextMenu(MouseIO.codes.right),
-                    bind!contextMenu(KeyboardIO.codes.contextMenu),
-
-                    // Text input
-                    bind!backspace(KeyboardIO.codes.backspace),
-                    bind!deleteChar(KeyboardIO.codes.delete_),
-                    bind!breakLine(KeyboardIO.codes.enter),
-                    bind!previousChar(KeyboardIO.codes.left),
-                    bind!nextChar(KeyboardIO.codes.right),
-                    bind!previousLine(KeyboardIO.codes.up),
-                    bind!nextLine(KeyboardIO.codes.down),
-                    bind!entryPrevious(KeyboardIO.codes.up),
-                    // bind!entryPrevious(GamepadButton.dpadUp), TODO
-                    bind!entryNext(KeyboardIO.codes.down),
-                    bind!entryNext(KeyboardIO.codes.tab),
-                    // bind!entryNext(GamepadButton.dpadDown), TODO
-                    bind!toLineStart(KeyboardIO.codes.home),
-                    bind!toLineEnd(KeyboardIO.codes.end),
-                    bind!insertTab(KeyboardIO.codes.tab),
+                    // Scroll
+                    bind!pageDown(KeyboardIO.codes.pageDown),
+                    bind!pageUp(KeyboardIO.codes.pageUp),
+                    // bind!scrollDown(GamepadButton.dpadDown), TODO
+                    bind!scrollDown(KeyboardIO.codes.down),
+                    // bind!scrollUp(GamepadButton.dpadUp), TODO
+                    bind!scrollUp(KeyboardIO.codes.up),
+                    // bind!scrollRight(GamepadButton.dpadRight), TODO
+                    bind!scrollRight(KeyboardIO.codes.right),
+                    // bind!scrollLeft(GamepadButton.dpadLeft), TODO
+                    bind!scrollLeft(KeyboardIO.codes.left),
+                    // bind!submit(GamepadButton.cross), TODO
 
                     // Submit
                     bind!submit(KeyboardIO.codes.enter),
-                    // bind!submit(GamepadButton.cross), TODO
 
-                    // Scrolling
-                    bind!scrollLeft(KeyboardIO.codes.left),
-                    // bind!scrollLeft(GamepadButton.dpadLeft), TODO
-                    bind!scrollRight(KeyboardIO.codes.right),
-                    // bind!scrollRight(GamepadButton.dpadRight), TODO
-                    bind!scrollUp(KeyboardIO.codes.up),
-                    // bind!scrollUp(GamepadButton.dpadUp), TODO
-                    bind!scrollDown(KeyboardIO.codes.down),
-                    // bind!scrollDown(GamepadButton.dpadDown), TODO
-                    bind!pageUp(KeyboardIO.codes.pageUp),
-                    bind!pageDown(KeyboardIO.codes.pageDown),
+                    // Text editing
+                    bind!insertTab(KeyboardIO.codes.tab),
+                    bind!toLineEnd(KeyboardIO.codes.end),
+                    bind!toLineStart(KeyboardIO.codes.home),
+                    // bind!entryNext(GamepadButton.dpadDown), TODO
+                    bind!entryNext(KeyboardIO.codes.tab),
+                    bind!entryNext(KeyboardIO.codes.down),
+                    // bind!entryPrevious(GamepadButton.dpadUp), TODO
+                    bind!entryPrevious(KeyboardIO.codes.up),
+                    bind!nextLine(KeyboardIO.codes.down),
+                    bind!previousLine(KeyboardIO.codes.up),
+                    bind!nextChar(KeyboardIO.codes.right),
+                    bind!previousChar(KeyboardIO.codes.left),
+                    bind!breakLine(KeyboardIO.codes.enter),
+                    bind!deleteChar(KeyboardIO.codes.delete_),
+                    bind!backspace(KeyboardIO.codes.backspace),
 
-                    // Tabbing; index-focus
-                    // bind!focusPrevious(GamepadButton.leftButton), TODO
-                    bind!focusNext(KeyboardIO.codes.tab),
-                    // bind!focusNext(GamepadButton.rightButton), TODO
-
-                    // Directional focus
-                    bind!focusLeft(KeyboardIO.codes.left),
-                    // bind!focusLeft(GamepadButton.dpadLeft), TODO
-                    bind!focusRight(KeyboardIO.codes.right),
-                    // bind!focusRight(GamepadButton.dpadRight), TODO
-                    bind!focusUp(KeyboardIO.codes.up),
-                    // bind!focusUp(GamepadButton.dpadUp), TODO
-                    bind!focusDown(KeyboardIO.codes.down),
-                    // bind!focusDown(GamepadButton.dpadDown), TODO
+                    // Basic actions
+                    bind!contextMenu(KeyboardIO.codes.contextMenu),
+                    bind!contextMenu(MouseIO.codes.right),
+                    // bind!cancel(GamepadButton.circle), TODO
+                    bind!cancel(KeyboardIO.codes.escape),
+                    // bind!press(GamepadButton.cross), TODO
+                    bind!press(KeyboardIO.codes.enter),
+                    bind!press(MouseIO.codes.left),
                 ]
             );
 
@@ -389,11 +384,11 @@ struct InputMapping {
                         [
                             // TODO Command should *expand selection* on macOS instead of current
                             // toLineStart/toLineEnd behavior
-                            bind!selectToLineStart(KeyboardIO.codes.left),
-                            bind!selectToLineEnd(KeyboardIO.codes.right),
-                            bind!selectToStart(KeyboardIO.codes.up),
-                            bind!selectToEnd(KeyboardIO.codes.down),
                             bind!redo(KeyboardIO.codes.z),
+                            bind!selectToEnd(KeyboardIO.codes.down),
+                            bind!selectToStart(KeyboardIO.codes.up),
+                            bind!selectToLineEnd(KeyboardIO.codes.right),
+                            bind!selectToLineStart(KeyboardIO.codes.left),
                         ]
                     ),
 
@@ -401,8 +396,8 @@ struct InputMapping {
                     Layer(
                         [KeyboardIO.codes.leftShift, KeyboardIO.codes.leftAlt],
                         [
-                            bind!selectPreviousWord(KeyboardIO.codes.left),
                             bind!selectNextWord(KeyboardIO.codes.right),
+                            bind!selectPreviousWord(KeyboardIO.codes.left),
                         ]
                     ),
 
@@ -410,17 +405,17 @@ struct InputMapping {
                     Layer(
                         [KeyboardIO.codes.leftSuper],
                         [
-                            bind!toLineStart(KeyboardIO.codes.left),
-                            bind!toLineEnd(KeyboardIO.codes.right),
-                            bind!toStart(KeyboardIO.codes.up),
-                            bind!toEnd(KeyboardIO.codes.down),
-                            bind!selectAll(KeyboardIO.codes.a),
-                            bind!copy(KeyboardIO.codes.c),
-                            bind!cut(KeyboardIO.codes.x),
-                            bind!paste(KeyboardIO.codes.v),
-                            bind!undo(KeyboardIO.codes.z),
-                            bind!redo(KeyboardIO.codes.y),
                             bind!submit(KeyboardIO.codes.enter),
+                            bind!redo(KeyboardIO.codes.y),
+                            bind!undo(KeyboardIO.codes.z),
+                            bind!paste(KeyboardIO.codes.v),
+                            bind!cut(KeyboardIO.codes.x),
+                            bind!copy(KeyboardIO.codes.c),
+                            bind!selectAll(KeyboardIO.codes.a),
+                            bind!toEnd(KeyboardIO.codes.down),
+                            bind!toStart(KeyboardIO.codes.up),
+                            bind!toLineEnd(KeyboardIO.codes.right),
+                            bind!toLineStart(KeyboardIO.codes.left),
                         ]
                     ),
 
@@ -428,10 +423,10 @@ struct InputMapping {
                     Layer(
                         [KeyboardIO.codes.leftAlt],
                         [
-                            bind!deleteWord(KeyboardIO.codes.delete_),
-                            bind!backspaceWord(KeyboardIO.codes.backspace),
-                            bind!previousWord(KeyboardIO.codes.left),
                             bind!nextWord(KeyboardIO.codes.right),
+                            bind!previousWord(KeyboardIO.codes.left),
+                            bind!backspaceWord(KeyboardIO.codes.backspace),
+                            bind!deleteWord(KeyboardIO.codes.delete_),
                         ]
                     ),
 
@@ -439,11 +434,11 @@ struct InputMapping {
                     Layer(
                         [KeyboardIO.codes.leftControl],
                         [
-                            bind!backspaceWord(KeyboardIO.codes.w),  // emacs & vim
-                            bind!entryPrevious(KeyboardIO.codes.k),  // vim
-                            bind!entryPrevious(KeyboardIO.codes.p),  // emacs
-                            bind!entryNext(KeyboardIO.codes.j),  // vim
                             bind!entryNext(KeyboardIO.codes.n),  // emacs
+                            bind!entryNext(KeyboardIO.codes.j),  // vim
+                            bind!entryPrevious(KeyboardIO.codes.p),  // emacs
+                            bind!entryPrevious(KeyboardIO.codes.k),  // vim
+                            bind!backspaceWord(KeyboardIO.codes.w),  // emacs & vim
                         ]
                     ),
 
@@ -456,45 +451,43 @@ struct InputMapping {
                     Layer(
                         [KeyboardIO.codes.leftShift, KeyboardIO.codes.leftControl],
                         [
-                            bind!selectPreviousWord(KeyboardIO.codes.left),
-                            bind!selectNextWord(KeyboardIO.codes.right),
-                            bind!selectToStart(KeyboardIO.codes.home),
-                            bind!selectToEnd(KeyboardIO.codes.end),
                             bind!redo(KeyboardIO.codes.z),
+                            bind!selectToEnd(KeyboardIO.codes.end),
+                            bind!selectToStart(KeyboardIO.codes.home),
+                            bind!selectNextWord(KeyboardIO.codes.right),
+                            bind!selectPreviousWord(KeyboardIO.codes.left),
                         ]
                     ),
 
                     Layer(
                         [KeyboardIO.codes.leftControl],
                         [
-                            bind!deleteWord(KeyboardIO.codes.delete_),
-                            bind!backspaceWord(KeyboardIO.codes.backspace),
-                            bind!backspaceWord(KeyboardIO.codes.w),  // emacs & vim
-                            bind!entryPrevious(KeyboardIO.codes.k),  // vim
-                            bind!entryPrevious(KeyboardIO.codes.p),  // emacs
-                            bind!entryNext(KeyboardIO.codes.j),  // vim
-                            bind!entryNext(KeyboardIO.codes.n),  // emacs
-                            bind!previousWord(KeyboardIO.codes.left),
-                            bind!nextWord(KeyboardIO.codes.right),
-                            bind!selectAll(KeyboardIO.codes.a),
-                            bind!copy(KeyboardIO.codes.c),
-                            bind!cut(KeyboardIO.codes.x),
-                            bind!paste(KeyboardIO.codes.v),
-                            bind!undo(KeyboardIO.codes.z),
-                            bind!redo(KeyboardIO.codes.y),
-                            bind!toStart(KeyboardIO.codes.home),
-                            bind!toEnd(KeyboardIO.codes.end),
-
-                            // Submit with ctrl+enter
                             bind!submit(KeyboardIO.codes.enter),
+                            bind!toEnd(KeyboardIO.codes.end),
+                            bind!toStart(KeyboardIO.codes.home),
+                            bind!redo(KeyboardIO.codes.y),
+                            bind!undo(KeyboardIO.codes.z),
+                            bind!paste(KeyboardIO.codes.v),
+                            bind!cut(KeyboardIO.codes.x),
+                            bind!copy(KeyboardIO.codes.c),
+                            bind!selectAll(KeyboardIO.codes.a),
+                            bind!nextWord(KeyboardIO.codes.right),
+                            bind!previousWord(KeyboardIO.codes.left),
+                            bind!entryNext(KeyboardIO.codes.n),  // emacs
+                            bind!entryNext(KeyboardIO.codes.j),  // vim
+                            bind!entryPrevious(KeyboardIO.codes.p),  // emacs
+                            bind!entryPrevious(KeyboardIO.codes.k),  // vim
+                            bind!backspaceWord(KeyboardIO.codes.w),  // emacs & vim
+                            bind!backspaceWord(KeyboardIO.codes.backspace),
+                            bind!deleteWord(KeyboardIO.codes.delete_),
                         ]
                     ),
 
                     Layer(
                         [KeyboardIO.codes.leftAlt],
                         [
-                            bind!entryUp(KeyboardIO.codes.up),
                             bind!contextMenu(KeyboardIO.codes.f10),
+                            bind!entryUp(KeyboardIO.codes.up),
                         ]
                     ),
 

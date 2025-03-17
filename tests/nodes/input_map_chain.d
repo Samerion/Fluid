@@ -61,9 +61,9 @@ unittest {
     // Create bindings
     auto map = InputMapping();
     map.bindNew!(FluidInputAction.press)(KeyboardIO.codes.space);
-    map.bindNew!(FluidInputAction.submit)(KeyboardIO.codes.leftControl, KeyboardIO.codes.enter);
-    map.bindNew!(FluidInputAction.breakLine)(KeyboardIO.codes.enter);
     map.bindNew!(FluidInputAction.submit)(KeyboardIO.codes.enter);
+    map.bindNew!(FluidInputAction.breakLine)(KeyboardIO.codes.enter);
+    map.bindNew!(FluidInputAction.submit)(KeyboardIO.codes.leftControl, KeyboardIO.codes.enter);
 
     auto tester = actionTester();
     auto root = inputMapChain(map, tester);
@@ -130,5 +130,31 @@ unittest {
     assert(tester.pressed == 0);
     root.draw();
     assert(tester.pressed == 1);
+
+}
+
+@("Bindings are evaluated in a first-in-last-out manner")
+unittest {
+
+    auto map = InputMapping();
+    map.bindNew!(FluidInputAction.press)(KeyboardIO.codes.enter);
+
+    auto tester = actionTester();
+    auto root = inputMapChain(map, tester);
+
+    root.draw();
+    assert(tester.pressed == 0);
+    assert(tester.broken  == 0);
+
+    root.emitEvent(KeyboardIO.press.enter, 0, &tester.runInputAction);
+    root.draw();
+    assert(tester.pressed == 1);
+    assert(tester.broken  == 0);
+
+    map.bindNew!(FluidInputAction.breakLine)(KeyboardIO.codes.enter);
+    root.emitEvent(KeyboardIO.press.enter, 0, &tester.runInputAction);
+    root.draw();
+    assert(tester.pressed == 1);
+    assert(tester.broken  == 1);
 
 }
