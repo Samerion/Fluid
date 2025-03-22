@@ -325,7 +325,7 @@ class TestSpace : Space, CanvasIO, DebugSignalIO {
 
 private class TestProbe : TreeAction {
 
-    import fluid.future.stack;
+    import std.array;
 
     public {
 
@@ -350,7 +350,7 @@ private class TestProbe : TreeAction {
     private {
 
         /// Node draw stack
-        Stack!Node stack;
+        Appender!(Node[]) _stack;
 
     }
 
@@ -391,16 +391,18 @@ private class TestProbe : TreeAction {
     }
 
     override void beforeResize(Node node, Vector2) {
-        stack ~= node;
+        _stack ~= node;
         this.subject = node;
     }
 
     override void afterResize(Node node, Vector2) {
-        stack.pop();
+
+        // Pop last node
+        _stack.shrinkTo(_stack[].length - 1);
 
         // Restore previous subject from the stack
-        if (!stack.empty) {
-            this.subject = stack.top;
+        if (!_stack[].empty) {
+            this.subject = _stack[][$-1];
         }
         else {
             this.subject = null;
@@ -408,19 +410,19 @@ private class TestProbe : TreeAction {
     }
 
     override void beforeDraw(Node node, Rectangle space, Rectangle outer, Rectangle inner) {
-        stack ~= node;
+        _stack ~= node;
         this.subject = node;
         runAssert(a => a.beforeDraw(node, space, outer, inner));
     }
 
     override void afterDraw(Node node, Rectangle space, Rectangle outer, Rectangle inner) {
 
-        stack.pop();
+        _stack.shrinkTo(_stack[].length - 1);
         runAssert(a => a.afterDraw(node, space, outer, inner));
 
         // Restore previous subject from the stack
-        if (!stack.empty) {
-            this.subject = stack.top;
+        if (!_stack[].empty) {
+            this.subject = _stack[][$-1];
         }
         else {
             this.subject = null;
