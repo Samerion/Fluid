@@ -23,6 +23,7 @@ import fluid.structs;
 import fluid.typeface;
 import fluid.popup_frame;
 
+import fluid.io.time;
 import fluid.io.focus;
 import fluid.io.hover;
 import fluid.io.canvas;
@@ -62,6 +63,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     mixin enableInputActions;
 
+    TimeIO timeIO;
     CanvasIO canvasIO;
     ClipboardIO clipboardIO;
     OverlayIO overlayIO;
@@ -76,6 +78,12 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
         /// Time of the last interaction with the input.
         SysTime lastTouch;
+
+        /// Time of last interaction with the input. This field uses the system clock sourced
+        /// from `TimeIO`.
+        ///
+        /// If the new I/O is not in use, the default system `MonoTime` is used.
+        MonoTime lastTouchTime;
 
         /// Reference horizontal (X) position for vertical movement. Relative to the input's top-left corner.
         ///
@@ -336,6 +344,12 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
     void touch() {
 
         lastTouch = Clock.currTime;
+        if (timeIO) {
+            lastTouchTime = timeIO.now();
+        }
+        else {
+            lastTouchTime = MonoTime.currTime;
+        }
         scrollIntoView();
 
     }
@@ -669,6 +683,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
         import std.math : isNaN;
 
+        use(timeIO);
         use(canvasIO);
         use(focusIO);
         use(hoverIO);
@@ -1169,7 +1184,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     protected bool showCaret() {
 
-        auto timeSecs = (Clock.currTime - lastTouch).total!"seconds";
+        auto timeSecs = (MonoTime.currTime - lastTouchTime).total!"seconds";
 
         // Add a blinking caret if there is no selection
         return selectionStart == selectionEnd && timeSecs % 2 == 0;
