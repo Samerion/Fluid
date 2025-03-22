@@ -63,6 +63,10 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     mixin enableInputActions;
 
+    /// An interval in which the text input caret disappears and reappears. The caret will hide
+    /// when half of this time passes, and will show again once the interval ends.
+    enum blinkInterval = 2.seconds;
+
     TimeIO timeIO;
     CanvasIO canvasIO;
     ClipboardIO clipboardIO;
@@ -690,6 +694,11 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         use(overlayIO);
         use(clipboardIO);
 
+        // Initialize touch time
+        if (timeIO && lastTouchTime == MonoTime.init) {
+            lastTouchTime = timeIO.now();
+        }
+
         super.resizeImpl(area);
 
         // Set the size
@@ -1035,11 +1044,8 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     protected void drawCaret(Rectangle inner) {
 
-        // Ignore the rest if the node isn't focused
-        if (!isFocused || isDisabledInherited) return;
-
         // Add a blinking caret
-        if (showCaret) {
+        if (isCaretVisible) {
 
             const lineHeight = this.lineHeight;
             const margin = lineHeight / 10f;
@@ -1182,13 +1188,27 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     }
 
-    protected bool showCaret() {
+    /// Returns:
+    ///     True if the caret should be visible, or false if not.
+    bool isCaretVisible() {
 
-        auto timeSecs = (MonoTime.currTime - lastTouchTime).total!"seconds";
+        // Ignore the rest if the node isn't focused
+        if (!isFocused || blocksInput) return false;
+
+        const now = timeIO
+            ? timeIO.now
+            : MonoTime.currTime;
+        auto blinkProgress = (now - lastTouchTime) % blinkInterval;
 
         // Add a blinking caret if there is no selection
-        return selectionStart == selectionEnd && timeSecs % 2 == 0;
+        return selectionStart == selectionEnd && blinkProgress < blinkInterval/2;
 
+    }
+
+    deprecated("showCaret has been renamed to isCaretVisible, "
+        ~ "and will be removed in Fluid 0.8.0")
+    protected bool showCaret() {
+        return isCaretVisible();
     }
 
     protected override bool keyboardImpl() {

@@ -1907,3 +1907,66 @@ unittest {
     );
 
 }
+
+@("TextInput displays a blinking caret only when focused")
+unittest {
+
+    auto input = textInput();
+    auto time = timeMachine(input);
+    auto focus = focusChain(time);
+    auto root = testSpace(.testTheme, focus);
+
+    root.draw();
+    focus.currentFocus = input;
+
+    foreach (i; 0..4) {
+
+        // First half of the blank interval: caret visible
+        assert( input.isCaretVisible);
+        root.drawAndAssert(
+            input.drawsLine().from(0, 2.7).to(0, 24.3),
+        );
+        time += input.blinkInterval / 4;
+        assert( input.isCaretVisible);
+        root.drawAndAssert(
+            input.drawsLine().from(0, 2.7).to(0, 24.3),
+        );
+        time += input.blinkInterval / 4;
+
+        // Second half of the blank interval: caret hidden
+        assert(!input.isCaretVisible);
+        root.drawAndAssertFailure(
+            input.drawsLine(),
+        );
+        time += input.blinkInterval / 4;
+        assert(!input.isCaretVisible);
+        root.drawAndAssertFailure(
+            input.drawsLine(),
+        );
+        time += input.blinkInterval / 4;
+
+    }
+
+}
+
+@("Caret isn't drawn when TextInput isn't focused")
+unittest {
+
+    auto input = textInput();
+    auto time = timeMachine(input);
+    auto focus = focusChain(time);
+    auto root = testSpace(.testTheme, focus);
+
+    root.draw();
+
+    foreach (i; 0..8) {
+
+        time += input.blinkInterval / 4;
+        root.drawAndAssertFailure(
+            input.drawsLine(),
+        );
+        assert(!input.isCaretVisible);
+
+    }
+
+}
