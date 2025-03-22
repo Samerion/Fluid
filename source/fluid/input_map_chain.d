@@ -1,5 +1,6 @@
 module fluid.input_map_chain;
 
+import std.array;
 import std.algorithm;
 
 import fluid.node;
@@ -9,8 +10,6 @@ import fluid.types;
 import fluid.node_chain;
 
 import fluid.io.action;
-
-import fluid.future.stack;
 
 @safe:
 
@@ -36,7 +35,7 @@ class InputMapChain : NodeChain, ActionIO {
     private {
 
         /// All collected input events.
-        Stack!ReceivedInputEvent _events;
+        Appender!(ReceivedInputEvent[]) _events;
 
     }
 

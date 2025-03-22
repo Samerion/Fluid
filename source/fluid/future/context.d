@@ -5,7 +5,6 @@ import std.traits;
 
 import fluid.types;
 import fluid.tree : TreeAction;
-import fluid.future.stack;
 import fluid.future.static_id;
 
 @safe:
