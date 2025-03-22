@@ -4,6 +4,14 @@
 	],
 	"configurations": [
 		{
+			"name": "default",
+			"targetType": "staticLibrary"
+		},
+		{
+			"name": "source",
+			"targetType": "sourceLibrary"
+		},
+		{
 			"dflags-ldc": [
 				"--link-defaultlib-shared"
 			],
@@ -15,14 +23,6 @@
 				"linux"
 			],
 			"targetType": "dynamicLibrary"
-		},
-		{
-			"name": "default",
-			"targetType": "staticLibrary"
-		},
-		{
-			"name": "source",
-			"targetType": "sourceLibrary"
 		},
 		{
 			"dependencies": {
@@ -172,6 +172,20 @@
 			"targetType": "library",
 			"versions": [
 				"Fluid_ModuleView"
+			],
+			"configurations": [
+				{
+					"name": "linux-dynamic",
+					"platforms": [
+						"linux"
+					],
+					"subConfigurations": {
+						"fluid": "linux-dynamic"
+					}
+				},
+				{
+					"name": "default"
+				}
 			]
 		}
 	],
