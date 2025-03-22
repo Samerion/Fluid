@@ -156,7 +156,7 @@ enum Chapter {
     @("Themes")                     themes,
     @("Margin, padding and border") margins,
     @("Writing forms")              forms,
-    @("moduleView")                 module_view,
+    // @("moduleView")                 module_view,
     // @("Popups")                     popups,
     // @("Drag and drop")              drag_and_drop,
 }
@@ -500,6 +500,7 @@ Space render(Chapter chapter)() @trusted {
     const filename = buildPath(sourceDirectory, name ~ ".d");
 
     // Use moduleView for rendering its module
+    version (With_fluid_module_view)
     if (chapter == Chapter.module_view) {
 
         import std.path;

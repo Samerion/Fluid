@@ -3,9 +3,6 @@
 		"fluid": {
 			"path": ".."
 		},
-		"fluid:module-view": {
-			"path": ".."
-		},
 		"libdparse": "~>0.23.2"
 	},
 	"libs": [
