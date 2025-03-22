@@ -714,12 +714,7 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
         const fileType = identifyImageType(image);
 
         auto imageRay = LoadImageFromMemory(fileType.ptr, image.ptr, cast(int) image.length);
-        auto colors = LoadImageColors(imageRay);
-        scope (exit) UnloadImageColors(colors);
-
-        const size = imageRay.width * imageRay.height;
-
-        return fluid.Image(colors[0 .. size].dup, imageRay.width, imageRay.height);
+        return imageRay.toFluid;
 
     }
 
@@ -1003,6 +998,17 @@ KeyboardIO.Key toFluid(KeyboardKey key) {
         case KEY_VOLUME_DOWN:   return volumeDown;
 
     }
+
+}
+
+fluid.Image toFluid(raylib.Image imageRay) @trusted {
+
+    auto colors = LoadImageColors(imageRay);
+    scope (exit) UnloadImageColors(colors);
+
+    const size = imageRay.width * imageRay.height;
+
+    return fluid.Image(colors[0 .. size].dup, imageRay.width, imageRay.height);
 
 }
 
