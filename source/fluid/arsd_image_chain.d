@@ -36,12 +36,21 @@ class ARSDImageChain : NodeChain, ImageLoadIO {
     }
 
     Image loadImage(const(ubyte)[] data) @trusted {
-        auto image = loadImageFromMemory(data).getAsTrueColorImage();
-        return Image(
-            cast(fluid.types.Color[]) image.imageData.bytes,
-            image.width,
-            image.height
-        );
+        return loadImageFromMemory(data).toFluid();
     }
 
+}
+
+/// Convert an ARSD image to a Fluid `Image`.
+/// Params:
+///     image = An ARSD instance of a `MemoryImage`.
+/// Returns:
+///     A Fluid `Image` struct.
+Image toFluid(MemoryImage image) @trusted {
+    auto trueColorImage = image.getAsTrueColorImage();
+    return Image(
+        cast(fluid.types.Color[]) trueColorImage.imageData.bytes,
+        image.width,
+        image.height
+    );
 }
