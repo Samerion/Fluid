@@ -340,3 +340,30 @@ unittest {
     }
 
 }
+
+@("DragSlot cancels movement if dropped out of area")
+unittest {
+
+    auto slot = dragSlot(
+        label(.ignoreMouse, "Drag me"),
+    );
+    auto hover = hoverChain(vframe(slot));
+    auto root = testSpace(
+        .testTheme,
+        .layout!"fill",
+        overlayChain(hover),
+    );
+
+    hover.point(1, 1)
+        .then((a) {
+            a.click(false);
+            return a.move(100, 100);
+        })
+        .then((a) {
+            assert(slot.isDragged);
+            a.click(true);
+            return a.stayIdle;
+        })
+        .runWhileDrawing(root, 4);
+
+}
