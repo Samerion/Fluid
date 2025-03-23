@@ -491,7 +491,7 @@ class DragAction : TreeAction {
             // Remove it from the original container and wait a frame
             else {
                 slot.toRemove = true;
-                slot.overlay.toRemove = true;
+                slot.overlay.remove();
                 _readyToDrop = true;
                 return;
             }
@@ -500,6 +500,7 @@ class DragAction : TreeAction {
 
         // Stop dragging
         slot.dragAction = null;  // TODO Don't nullify this
+        slot.overlay.remove();
         slot.updateSize();
         stop;
 
