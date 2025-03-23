@@ -200,3 +200,20 @@ unittest {
     assert(downs == 1);
 
 }
+
+@("NumberInput can be updated programmatically")
+unittest {
+
+    auto input = intInput();
+    input.value = 10;
+    assert(input.value == 10);
+    assert(input.TextInput.value == "0");
+    input.updateText();
+    assert(input.TextInput.value == "10");
+
+    input.TextInput.value = "10 + 2";
+    assert(input.value == 10);
+    input.evaluateExpression();
+    assert(input.value == 12);
+
+}

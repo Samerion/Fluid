@@ -74,7 +74,7 @@ class NumberInput(T) : AbstractNumberInput {
 
         super(changed);
         this.value = value;
-        this.update();
+        this.updateText();
 
     }
 
@@ -95,27 +95,29 @@ class NumberInput(T) : AbstractNumberInput {
         if (!isDirty) return;
 
         // Evaluate the expression
-        evaluateImpl();
+        evaluateExpression();
 
         // Update the text
-        update();
+        updateText();
 
         // Call change callback
         if (changed) changed();
 
     }
 
-    private void evaluateImpl() {
+    /// Update the numerical value from input text.
+    void evaluateExpression() {
 
         // TODO handle failure properly, add a warning sign or something, preserve old value
-        this.value = evaluateExpression!T(super.value).value.clamp(minValue, maxValue);
+        this.value = .evaluateExpression!T(super.value).value.clamp(minValue, maxValue);
 
         // Mark as clean
         isDirty = false;
 
     }
 
-    private void update() {
+    /// Update textual value from the number.
+    void updateText() {
 
         import std.conv;
 
@@ -134,9 +136,9 @@ class NumberInput(T) : AbstractNumberInput {
     @(FluidInputAction.scrollUp)
     override void increment() {
 
-        evaluateImpl();
+        evaluateExpression();
         value += step;
-        update();
+        updateText();
         touch();
         focus();
 
@@ -149,9 +151,9 @@ class NumberInput(T) : AbstractNumberInput {
     @(FluidInputAction.scrollDown)
     override void decrement() {
 
-        evaluateImpl();
+        evaluateExpression();
         value -= step;
-        update();
+        updateText();
         touch();
         focus();
 
