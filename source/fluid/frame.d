@@ -23,7 +23,7 @@ import fluid.io.canvas;
 /// cause undefined behavior.
 ///
 /// Params:
-///     Node     = Require dropped nodes to be of given type.
+///     N        = Require dropped nodes to be of given type.
 ///     tags     = Restrict dropped nodes to those that have the given tag.
 ///     selector = Selector to limit nodes that the frame accepts. Optional — Tags are often enough.
 auto acceptDrop(tags...)(Selector selector = Selector.init)

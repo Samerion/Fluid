@@ -32,7 +32,7 @@ class HoverButtonImpl(T : Node = Label) : ButtonImpl!T {
 
     /// Create a new hover button.
     /// Params:
-    ///     pressed = Action to perform when the button is hovered.
+    ///     sup = Parameters to pass to the parent node, such as label text.
     this(T...)(T sup) {
 
         super(sup);

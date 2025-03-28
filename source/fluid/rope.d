@@ -70,7 +70,7 @@ struct Rope {
             this(left);
 
         // Neither is empty, create a new node
-        else 
+        else
             this(new inout RopeNode(left, right));
 
     }
@@ -420,7 +420,7 @@ struct Rope {
 
     }
 
-    /// Returns: 
+    /// Returns:
     ///     True if the rope is fairly balanced.
     /// Params:
     ///     maxDistance = Maximum allowed `depth` difference
@@ -436,14 +436,14 @@ struct Rope {
 
     }
 
-    /// Returns: 
-    ///     If the rope is unbalanced, returns a copy of the rope, optimized to improve reading performance. 
+    /// Returns:
+    ///     If the rope is unbalanced, returns a copy of the rope, optimized to improve reading performance.
     ///     If the rope is already balanced, returns the original rope unmodified.
     /// Params:
     ///     maxDistance = Maximum allowed `depth` difference before rebalancing happens.
-    Rope rebalance() const nothrow
+    Rope rebalance(int maxDistance = 3) const nothrow
     out (r) {
-        assert(r.isBalanced, 
+        assert(r.isBalanced(maxDistance),
             format("rebalance(%s) failed. Depth %s (left %s, right %s)", this, depth, left.depth, right.depth)
                 .assumeWontThrow);
     }
@@ -451,7 +451,7 @@ struct Rope {
 
         import std.array;
 
-        if (isBalanced) return this;
+        if (isBalanced(maxDistance)) return this;
 
         return merge(byNode.array);
 
@@ -1298,7 +1298,7 @@ struct Rope {
 
         // Perform string comparison
         const prefix = commonPrefix(
-            BasicRopeRange(this[]), 
+            BasicRopeRange(this[]),
             BasicRopeRange(other[])).length;
         const suffix = commonPrefix(this[prefix..$].retro, other[prefix..$].retro).length;
 
@@ -1531,7 +1531,7 @@ struct Rope {
     unittest {
 
         import core.stdc.string;
-        
+
         auto input = Rope("Hello, World!");
 
         assert(strlen(input.toStringzMutable) == input.length);
@@ -1595,7 +1595,7 @@ unittest {
 /// `std.utf.codeLength` implementation for Rope.
 alias codeLength(T : Rope) = imported!"std.utf".codeLength!char;
 
-/// A wrapper over Range which disables slicing. Some algorithms assume slicing is faster than regular range access, 
+/// A wrapper over Range which disables slicing. Some algorithms assume slicing is faster than regular range access,
 /// but it's not the case for `Rope`.
 struct BasicRopeRange {
 

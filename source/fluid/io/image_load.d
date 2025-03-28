@@ -18,6 +18,6 @@ interface ImageLoadIO : IO {
     ///     by this I/O system.
     /// Returns:
     ///     Loaded image.
-    Image loadImage(const(ubyte)[] image);
+    Image loadImage(const(ubyte)[] data);
 
 }
