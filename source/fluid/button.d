@@ -40,20 +40,20 @@ import fluid.backend;
 
 /// A [node builder][nodeBuilder] to create a [Button] labelled with text.
 /// It takes a string for the label text, and a delegate describing the effect.
-alias button = simpleConstructor!Button;
+alias button = nodeBuilder!Button;
 
 deprecated("Use vframeButton instead")
-alias frameButton = simpleConstructor!FrameButton;
+alias frameButton = nodeBuilder!FrameButton;
 
 /// A [node builder][nodeBuilder] to create a [FrameButton]. The contents will be aligned
 /// horizontally (for `hframeButton`) or vertically (for `vframeButton`). Pass a delegate to
 /// describe the button's effects as the last argument.
-alias hframeButton = simpleConstructor!(FrameButton, (a) {
+alias hframeButton = nodeBuilder!(FrameButton, (a) {
     a.isHorizontal = true;
 });
 
 /// ditto
-alias vframeButton = simpleConstructor!FrameButton;
+alias vframeButton = nodeBuilder!FrameButton;
 
 /// A [ButtonImpl] based on a [Label]. It will display text.
 ///

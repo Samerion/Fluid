@@ -134,12 +134,12 @@ code span.keyword {
 ul.members {
   padding-left: 3em;
 }
-.members li {
+.members > li {
   position: relative;
   list-style: none;
   margin: 2em 0;
 }
-.members li a.anchor {
+.members > li a.anchor {
   position: absolute;
   top: -1em;
   bottom: 0;
@@ -147,7 +147,7 @@ ul.members {
   width: 4em;
   margin: 0.6em 0;
 }
-.members li a.anchor::after {
+.members > li a.anchor::after {
   content: "";
   position: absolute;
   top: 1em;
@@ -163,7 +163,7 @@ ul.members {
     100% 100%;
   background-repeat: no-repeat;
 }
-.members li:hover > .member > a.anchor::after {
+.members > li:hover > .member > a.anchor::after {
   background:
     linear-gradient(#0057f199, #793ad57a, #793ad500),
     linear-gradient(#0057f133, #793ad528, #793ad500),
@@ -176,7 +176,7 @@ ul.members {
   ul.members ul.members ul.members {
     padding-right: 0;
   }
-  .members li a.anchor {
+  .members > li a.anchor {
     display: block;
     position: static;
     font-size: 1.6em;
@@ -185,18 +185,18 @@ ul.members {
     text-decoration: none;
     opacity: 20%;
   }
-  .members li a.anchor:hover {
+  .members > li a.anchor:hover {
     opacity: 50%;
   }
-  .members li a.anchor::before {
+  .members > li a.anchor::before {
     content: "#";
   }
-  .members li a.anchor::after {
+  .members > li a.anchor::after {
     content: none;
   }
 }
 
-.members li::after {
+.members > li::after {
   content: "";
   display: block;
   height: 1px;
