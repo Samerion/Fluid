@@ -11,6 +11,7 @@ html, body {
 body {
   margin: 0 1em;
   background: radial-gradient(800px 300px at 20% 0, #cbb7e6, #cbb7e655, #cbb7e600);
+  background-repeat: no-repeat;
 }
 nav.main-navigation {
   max-width: 40em;
