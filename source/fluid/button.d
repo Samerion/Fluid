@@ -32,13 +32,14 @@ class ButtonImpl(T : Node = Label) : InputNode!T {
     // Button status
     public {
 
-        // If true, this button is currenly held down.
+        // If true, this button is currently held down.
         bool isPressed;
 
     }
 
     /// Create a new button.
     /// Params:
+    ///     sup     = Parameters to pass to the parent node; for example button text.
     ///     pressed = Action to perform when the button is pressed.
     this(T...)(T sup, void delegate() @trusted pressed) {
 

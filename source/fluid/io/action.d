@@ -241,15 +241,6 @@ if (is(LocalIO : IO) && is(Event == enum)) {
         return Codes();
     }
 
-    /// A shortcut for getting input events that are known at compile time. Handy for tests.
-    /// Params:
-    ///     isActive = True if the generated input event should be active. Defaults to `false`
-    ///         for `hold`; is `true` for `click`.
-    /// Returns: A mouse button input event.
-    static click() {
-        return hold(true);
-    }
-
     /// Create a mouse input event that can be passed to an `ActionIO` handler.
     ///
     /// Params:
@@ -260,6 +251,15 @@ if (is(LocalIO : IO) && is(Event == enum)) {
     static InputEvent createEvent(Event event, bool isActive = true) {
         const code = getCode(event);
         return InputEvent(code, isActive);
+    }
+
+    /// A shortcut for getting input events that are known at compile time. Handy for tests.
+    /// Params:
+    ///     isActive = True if the generated input event should be active. Defaults to `false`
+    ///         for `hold`; is `true` for `click`.
+    /// Returns: A mouse button input event.
+    static click() {
+        return hold(true);
     }
 
     /// ditto
