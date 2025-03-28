@@ -173,7 +173,7 @@ unittest {
 
 }
 
-version (D_Ddoc) {
+version (Fluid_Docs) {
 
     /// ## Input and output
     ///
