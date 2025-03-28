@@ -4,13 +4,26 @@
     local(Ruda);
 }
 
-html, head {
+html, body {
   font-family: sans-serif;
   color: #383e4d;
+}
+body {
+  margin: 1em;
 }
 main {
   max-width: 40em;
   margin: 0 auto;
+}
+@media (max-width: 50em) {
+  main {
+    margin: 0 4em;
+  }
+}
+@media (max-width: 35em) {
+  main {
+    margin: 0;
+  }
 }
 h1, h2, h3 {
   font-family: Ruda;
@@ -103,25 +116,71 @@ code span.keyword {
   font-weight: 500;
 }
 
+ul.members {
+  padding-left: 3em;
+}
 .members li {
   position: relative;
   list-style: none;
   margin: 2em 0;
 }
-.members li::before {
+.members li a.anchor {
+  position: absolute;
+  top: -1em;
+  bottom: 0;
+  left: -6em;
+  width: 4em;
+  margin: 0.6em 0;
+}
+.members li a.anchor::after {
   content: "";
   position: absolute;
-  left: -4em;
-  border-radius: 0.2em;
-  background: linear-gradient(#0057f1, #793ad5);
-  height: 4em;
+  top: 1em;
+  bottom: 0;
+  right: 2em;
   width: 0.4em;
-  margin: 0.6em 0;
-  opacity: 60%;
+  border-radius: 0.2em;
+  background:
+    linear-gradient(#0057f15b, #793ad549, #793ad500),
+    linear-gradient(#0057f11e, #793ad518, #793ad500),
+    #eee;
+  background-size: 100% 100px,
+    100% 100%;
+  background-repeat: no-repeat;
 }
-.members li:hover::before {
-  opacity: 100%;
+.members li:hover > .member > a.anchor::after {
+  background:
+    linear-gradient(#0057f199, #793ad57a, #793ad500),
+    linear-gradient(#0057f133, #793ad528, #793ad500),
+    #eee;
 }
+@media (max-width: 35em) {
+  ul.members ul.members {
+    padding-right: 3em;
+  }
+  ul.members ul.members ul.members {
+    padding-right: 0;
+  }
+  .members li a.anchor {
+    display: block;
+    position: static;
+    font-size: 1.6em;
+    padding: 0.6em 0;
+    margin: 0;
+    text-decoration: none;
+    opacity: 20%;
+  }
+  .members li a.anchor:hover {
+    opacity: 50%;
+  }
+  .members li a.anchor::before {
+    content: "#";
+  }
+  .members li a.anchor::after {
+    content: none;
+  }
+}
+
 .members li::after {
   content: "";
   display: block;
@@ -130,27 +189,12 @@ code span.keyword {
   margin: 2em auto;
   background: #ccc;
 }
-.module-members {
+ul.module-members {
   padding: 0;
 }
-.member-header,
 .declaration {
   margin-left: -2em;
   margin-right: -2em;
-}
-.declaration pre {
-  margin-left: 0;
-  margin-right: 0;
-  border-top: 0;
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
-}
-.member-header {
-  position: relative;
-  padding: 0.6em 2em;
-  background: #f4f4f4;
-  border-top-left-radius: 1em;
-  border-top-right-radius: 1em;
 }
 .member-header::after {
   content: "";
@@ -170,7 +214,9 @@ code span.keyword {
 }
 .declaration pre {
   margin-top: 0;
-  padding: 0.8em 2em;
+  margin-left: 0;
+  margin-right: 0;
+  padding: 0.8em 2rem;
   font-size: 0.90em;
   color: #b6babd;
   white-space: collapse;
