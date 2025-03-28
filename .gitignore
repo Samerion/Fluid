@@ -10,3 +10,4 @@ build/
 /tags
 .DS_Store
 *~
+/docs/source

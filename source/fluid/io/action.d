@@ -189,6 +189,16 @@ interface Actionable {
     bool actionImpl(IO io, int number, immutable InputActionID action, bool isActive)
     in (!blocksInput, "This node currently doesn't accept input.");
 
+    /// A shortcut for invoking specific input actions from code.
+    /// Params:
+    ///     action   = Input action to invoke; an `@InputAction` enum member.
+    ///     isActive = Whether to start an active or "held" input action.
+    /// Returns:
+    ///     True if the node handled the action.
+    final bool runInputAction(alias action)(bool isActive = true) {
+        return actionImpl(null, 0, inputActionID!action, isActive);
+    }
+
     /// Memory safe and `const` object comparison.
     /// Returns:
     ///     True if this, and the other object, are the same object.
