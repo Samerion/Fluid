@@ -41,7 +41,8 @@ div.summary {
   margin: 1em 0;
 }
 
-div.description {
+.module > .sections > div.description,
+.module > .sections > div.example {
   text-align: justify;
 }
 
@@ -51,7 +52,7 @@ div.blank {
 
 pre {
   position: relative;
-  margin: 1.2em 0;
+  margin: 2em 0;
   border: 2px solid #424242;
   border-radius: 1em;
   padding: 1.8em 2em;
@@ -81,7 +82,8 @@ pre.language-d::after {
 }
 
 div > pre {
-  margin: 1.2em -2em;
+  margin-left: -2em;
+  margin-right: 2em;
 }
 
 code {
@@ -99,4 +101,112 @@ code span.string {
 code span.keyword {
   color: #ba87f9;
   font-weight: 500;
+}
+
+.members li {
+  position: relative;
+  list-style: none;
+  margin: 2em 0;
+}
+.members li::before {
+  content: "";
+  position: absolute;
+  left: -4em;
+  border-radius: 0.2em;
+  background: linear-gradient(#0057f1, #793ad5);
+  height: 4em;
+  width: 0.4em;
+  margin: 0.6em 0;
+  opacity: 60%;
+}
+.members li:hover::before {
+  opacity: 100%;
+}
+.members li::after {
+  content: "";
+  display: block;
+  height: 1px;
+  width: 40%;
+  margin: 2em auto;
+  background: #ccc;
+}
+.module-members {
+  padding: 0;
+}
+.member-header,
+.declaration {
+  margin-left: -2em;
+  margin-right: -2em;
+}
+.declaration pre {
+  margin-left: 0;
+  margin-right: 0;
+  border-top: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+.member-header {
+  position: relative;
+  padding: 0.6em 2em;
+  background: #f4f4f4;
+  border-top-left-radius: 1em;
+  border-top-right-radius: 1em;
+}
+.member-header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  height: 0.2em;
+  background: linear-gradient(90deg, #0057f1, #741fbd 90%);
+}
+.member-header h2 {
+  font-size: 1.4em;
+  margin: 0;
+}
+.member-header h2 a {
+  text-decoration: none;
+}
+.declaration pre {
+  margin-top: 0;
+  padding: 0.8em 2em;
+  font-size: 0.90em;
+  color: #b6babd;
+  white-space: collapse;
+}
+.declaration pre .psymbol {
+  color: #45d8f0;
+}
+.declaration pre .template-param-list {
+  color: #adaaff;
+}
+.declaration pre .template-param-list::before {
+  content: "!";
+  color: #b6babd;
+}
+.declaration pre .param {
+  color: #fff;
+}
+.declaration pre .constraint {
+  display: inline-block;
+  padding-left: 4ch;
+  opacity: 40%;
+}
+.declaration pre .constraint:hover {
+  opacity: 100%;
+}
+.declaration pre .overload-separator {
+  display: block;
+  height: 0.4em;
+}
+.declaration pre code {
+  line-height: 1.6;
+}
+
+.params table {
+  padding-left: 2em;
+}
+.params .param-id {
+  color: #000;
 }
