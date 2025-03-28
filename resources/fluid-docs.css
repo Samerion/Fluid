@@ -10,6 +10,7 @@ html, body {
 }
 body {
   margin: 1em;
+  background: radial-gradient(800px 300px at 20% 0, #cbb7e6, #cbb7e655, #cbb7e600);
 }
 main {
   max-width: 40em;
@@ -190,6 +191,7 @@ ul.members {
   background: #ccc;
 }
 ul.module-members {
+  margin-top: 6em;
   padding: 0;
 }
 .declaration {
