@@ -7,6 +7,14 @@
       "buildOptions": ["syntaxOnly"],
       "dflags": ["-Dddocs", "-op", "-X", "-Xf=docs.json"],
       "sourceFiles": ["resources/theme.ddoc"]
+		},
+		"serve-docs": {
+      "buildOptions": ["syntaxOnly"],
+      "dflags": ["-Dddocs", "-op", "-X", "-Xf=docs.json"],
+      "sourceFiles": ["resources/theme.ddoc"],
+      "postBuildCommands": [
+				"$DUB run servefolder -- -d \"$PACKAGE_DIR\""
+      ]
 		}
 	},
 	"configurations": [
