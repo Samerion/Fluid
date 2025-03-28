@@ -9,8 +9,22 @@ html, body {
   color: #383e4d;
 }
 body {
-  margin: 1em;
+  margin: 0 1em;
   background: radial-gradient(800px 300px at 20% 0, #cbb7e6, #cbb7e655, #cbb7e600);
+}
+nav.main-navigation {
+  max-width: 40em;
+  margin: 0 auto;
+  padding: 0 1em;
+  border-bottom: 1px solid #383e4d55;
+  box-sizing: border-box;
+}
+nav a, nav a:visited {
+  display: inline-block;
+  color: #383e4d;
+  text-decoration: none;
+  padding: 1em 3%;
+  margin: 0 1%;
 }
 main {
   max-width: 40em;

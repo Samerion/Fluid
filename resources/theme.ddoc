@@ -33,7 +33,9 @@ LINK = <a href="$0">$0</a>
 LINK2 = <a href="$1">$+</a>
 LINK_TITLE = <a href="$1" title="$2">$3</a>
 SYMBOL_LINK = <a href="$1">$(DDOC_PSYMBOL $+)</a>
+FLUID_WEB = https://libfluid.org/
 PHOBOS_PATH = https://dlang.org/phobos/
+ROOT = /docs/source/fluid
 DOC_ROOT_std = $(PHOBOS_PATH)
 DOC_ROOT_core = $(PHOBOS_PATH)
 DOC_ROOT_etc = $(PHOBOS_PATH)
@@ -72,6 +74,10 @@ DDOC =
     $(STYLESHEET)
   </head>
   <body class="ddoc">
+    <nav class="main-navigation">
+      <a href="$(FLUID_WEB)">Fluid</a>
+      <a href="$(ROOT)/package.html">Reference</a>
+    </nav>
     <main class="module">
       <h1 class="module-name">$(TITLE)</h1>
       $(BODY)
