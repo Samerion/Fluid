@@ -204,7 +204,7 @@ DDOC_HISTORY = <div class="history">
 </div>$(LF)
 
 DDOC_SEE_ALSO = <div class="see-also">
-  <h4>See Also</h4>
+  <h4>See also</h4>
   $0
 </div>$(LF)
 
