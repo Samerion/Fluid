@@ -61,6 +61,17 @@ a:visited {
   color: #501fbd;
 }
 
+blockquote {
+
+  border-left: 4px solid #05789b;
+  padding: 1em;
+  margin: 1em -1em;
+  background: linear-gradient(90deg, #05789b11, #05789b11 40%, #05789b00 100%),
+    radial-gradient(40% 6em at bottom left, #05789b33, #05789b00);
+  background-repeat: no-repeat;
+
+}
+
 h1.module-name {
   margin-top: 2em;
   margin-bottom: 1.4em;
