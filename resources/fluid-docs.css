@@ -204,6 +204,9 @@ ul.members {
   margin: 2em auto;
   background: #ccc;
 }
+.members > li:last-child::after {
+  content: none;
+}
 ul.module-members {
   margin-top: 6em;
   padding: 0;
@@ -268,7 +271,21 @@ ul.module-members {
 
 .params table {
   padding-left: 2em;
+  border-collapse: collapse;
+}
+.params table td {
+  vertical-align: top;
+  padding: 0.5rem 0;
 }
 .params .param-id {
   color: #000;
+  border-right: 2px solid #ccc;
+  padding-right: 1rem;
+  font-size: 0;
+}
+.params .param-id .param {
+  font-size: 1rem;
+}
+.params .param-description {
+  padding-left: 1em;
 }
