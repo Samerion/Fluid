@@ -66,7 +66,8 @@ DDOC =
 <!DOCTYPE html>
 <html>
   <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <title>$(TITLE)</title>
     $(STYLESHEET)
   </head>
@@ -103,13 +104,10 @@ DDOC_MEMBER = <li>
   </section>
 </li>$(LF)
 
-DDOC_MEMBER_HEADER = <div class="member-header">
-  $0
-</div>$(LF)
+DDOC_MEMBER_HEADER = $0
 
-DDOC_HEADER_ANCHOR = <h2 class="anchor">
-  <a href="#.$1" id=".$1"><code>$2</code></a>
-</h2>$(LF)
+DDOC_HEADER_ANCHOR = 
+  <a class="anchor" href="#.$1" id=".$1" title="Link to $2"></a>$(LF)
 
 DDOC_DECL = 
 <div class="declaration">
