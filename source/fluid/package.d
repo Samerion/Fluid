@@ -17,7 +17,7 @@ module fluid;
 
 /// ## General nodes
 ///
-/// In Fluid, most things are accomplished by nodes. This can start with basic tasks such as
+/// In Fluid, most things are accomplished with nodes. The most basic task a node can do is
 /// displaying text or providing interaction.
 ///
 /// * [Label][fluid.label] can be used to display text on the screen.
@@ -25,6 +25,8 @@ module fluid;
 /// * [ImageView][fluid.image_view] displays images.
 /// * [ProgressBar][fluid.progress_bar] shows completion status of an operation.
 /// * [Separator][fluid.separator] draws a line to separate unrelated content.
+///
+/// <!-- -->
 @("Node reference example")
 unittest {
     run(
@@ -50,6 +52,8 @@ unittest {
 /// * [Space][fluid.space] aligns nodes in a column or row.
 /// * [ScrollFrame][fluid.scroll.ScrollFrame] allows scrolling through a lot of content.
 /// * [SwitchSlot][fluid.switch_slot] (experimental) changes layouts for different screen sizes.
+///
+/// <!-- -->
 @("Layout nodes reference example")
 unittest {
     run(
@@ -75,7 +79,9 @@ unittest {
 /// * [SizeLock][fluid.size_lock] restricts maximum size of a node for responsive layouts.
 /// * [Slider][fluid.slider] selects one out of multiple values of a range.
 /// * [TextInput][fluid.text_input] takes text — a single line, or many.
-@("Input node reference")
+///
+/// <!-- -->
+@("Input node reference example")
 unittest {
     TextInput name;
     Checkbox agreement;
@@ -101,6 +107,8 @@ unittest {
 /// * [fluid.style][fluid.style] contains a list of stylable properties.
 /// * [fluid.theme][fluid.theme] offers a declarative way of building stylesheets.
 /// * [fluid.default_theme][fluid.default_theme] defines Fluid's default look.
+///
+/// <!-- -->
 @("Theming example")
 unittest {
 
@@ -196,6 +204,8 @@ version (D_Ddoc) {
     /// * [PreferenceChain][fluid.preference_chain] loads common user preferences.
     /// * [TimeChain][fluid.time_chain] reads time passed with the system clock.
     /// * [TimeMachine][fluid.time_machine] fakes passage of time for testing.
+    ///
+    /// <!-- -->
     @("I/O reference example with Raylib")
     unittest {
         auto root = raylibStack(

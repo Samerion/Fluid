@@ -1,0 +1,102 @@
+@font-face {
+  font-family: "Ruda";
+  src: url(/resources/ruda-regular.ttf),
+    local(Ruda);
+}
+
+html, head {
+  font-family: sans-serif;
+  color: #383e4d;
+}
+main {
+  max-width: 40em;
+  margin: 0 auto;
+}
+h1, h2, h3 {
+  font-family: Ruda;
+  font-weight: normal;
+  margin: 1em 0;
+}
+h1, h2 {
+  margin-top: 1.6em;
+  margin-bottom: 1em;
+}
+h1 { font-size: 2.2em; color: #000000; }
+h2 { font-size: 1.8em; color: #37174d; }
+h3 { font-size: 1.5em; color: #25282f; }
+
+a {
+  color: #004df1;
+}
+a:visited {
+  color: #501fbd;
+}
+
+h1.module-name {
+  margin-top: 2em;
+  margin-bottom: 1.4em;
+}
+
+div.summary {
+  margin: 1em 0;
+}
+
+div.description {
+  text-align: justify;
+}
+
+div.blank {
+  margin-bottom: 1em;
+}
+
+pre {
+  position: relative;
+  margin: 1.2em 0;
+  border: 2px solid #424242;
+  border-radius: 1em;
+  padding: 1.8em 2em;
+  text-indent: 4ch hanging each-line;
+  text-align: left;
+  text-align: start;
+  white-space: break-spaces;
+  background-color: #030e22;
+  color: #fff;
+  overflow-x: auto;
+}
+pre code {
+  line-height: 1.8;
+}
+pre.language-d {
+  border-bottom: none;
+  border-bottom-right-radius: 0;
+}
+pre.language-d::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 0.3em;
+  background: linear-gradient(90deg, #53b7ff00 20%, #6ac1ff 60%, #0057f1 70%, #741fbd 90%);
+}
+
+div > pre {
+  margin: 1.2em -2em;
+}
+
+code {
+  font-size: 1.2em;
+}
+code code {
+  font-size: inherit;
+}
+code span.comment {
+  color: #75c6b6;
+}
+code span.string {
+  color: #28bda8;
+}
+code span.keyword {
+  color: #ba87f9;
+  font-weight: 500;
+}
