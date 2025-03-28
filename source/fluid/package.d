@@ -36,6 +36,8 @@ unittest {
 
 /// ## Layout nodes
 ///
+/// > Note: Documentation for this section is incomplete.
+///
 /// A single node isn't very useful on its own — but nodes can be composed together.
 /// Using handy layout nodes like [Frame] or [Space] you can arrange other nodes on the screen.
 /// Use a [NodeSlot] to quickly switch between displayed nodes.
@@ -65,6 +67,8 @@ unittest {
 }
 
 /// ## Input nodes
+///
+/// > Note: Documentation for this section is incomplete.
 ///
 /// Get information from the user using input nodes.
 ///
@@ -102,6 +106,8 @@ unittest {
 
 /// ## Theming
 ///
+/// > Note: Documentation for this section is incomplete.
+///
 /// Fluid apps can be styled with a stylesheet.
 ///
 /// * [fluid.style][fluid.style] contains a list of stylable properties.
@@ -126,6 +132,8 @@ unittest {
 
 /// ## Tree actions
 ///
+/// > Note: Documentation for this section is incomplete.
+///
 /// Manipulate the node tree: search, modify, interact, automate, test, by hooking into tree
 /// events with Fluid's [tree actions][fluid.tree.TreeAction].
 ///
@@ -146,6 +154,8 @@ unittest {
 }
 
 /// ## Your own nodes
+///
+/// > Note: Documentation for this section is incomplete.
 ///
 /// Extend a class from [Node] or any other Fluid node to extend Fluid's functionality.
 /// See [fluid.node][fluid.node] for a reference.
@@ -176,6 +186,8 @@ unittest {
 version (Fluid_Docs) {
 
     /// ## Input and output
+    ///
+    /// > Note: Documentation for this section is incomplete.
     ///
     /// Fluid does not communicate with the operating system on its own. To display content on the
     /// screen, and to take input from the keyboard and mouse, it uses a set of I/O nodes.
