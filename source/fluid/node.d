@@ -100,7 +100,9 @@ abstract class Node {
         HitFilter hitFilter;
 
         deprecated("`isOpaque` has been renamed to `hitFilter` and will be removed in Fluid 0.8.0")
-            alias isOpaque = hitFilter;
+        final ref inout isOpaque() {
+            return hitFilter;
+        }
 
         /// True if the theme has been assigned explicitly by a direct assignment. If false, the node will instead
         /// inherit themes from the parent.
@@ -1345,15 +1347,15 @@ abstract class Node {
     ///     would otherwise be handled by the children.
     protected HitFilter inBoundsImpl(Rectangle outer, Rectangle inner, Vector2 position) {
         return hoveredImpl(outer, position)
-            ? HitFilter.yes
-            : HitFilter.no;
+            ? HitFilter.hit
+            : HitFilter.miss;
     }
 
     /// ditto
     final HitFilter inBounds(Rectangle outer, Rectangle inner, Vector2 position) {
         return inBoundsImpl(outer, inner, position)
             .filter(hitFilter)
-            .filter(ignoreMouse ? HitFilter.no : HitFilter.yes);
+            .filter(ignoreMouse ? HitFilter.miss : HitFilter.hit);
     }
 
     alias ImplHoveredRect = implHoveredRect;

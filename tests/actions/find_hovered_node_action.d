@@ -22,10 +22,10 @@ class RectangleBox : Node {
 
     }
 
-    override IsOpaque inBoundsImpl(Rectangle, Rectangle, Vector2 position) {
+    override HitFilter inBoundsImpl(Rectangle, Rectangle, Vector2 position) {
         return self.contains(position)
-            ? IsOpaque.yes
-            : IsOpaque.no;
+            ? HitFilter.hit
+            : HitFilter.miss;
     }
 
 }
@@ -50,10 +50,10 @@ class CircleBox : Node {
 
     }
 
-    override IsOpaque inBoundsImpl(Rectangle, Rectangle, Vector2 position) {
+    override HitFilter inBoundsImpl(Rectangle, Rectangle, Vector2 position) {
         return (center.x - position.x)^^2 + (center.y - position.y)^^2 <= radius^^2
-            ? IsOpaque.yes
-            : IsOpaque.no;
+            ? HitFilter.hit
+            : HitFilter.miss;
     }
 
 }
@@ -210,16 +210,16 @@ unittest {
         .sizeLimit(50, 150),
         container = vframe(
             .layout!(1, "fill"),
-            boxes[0] = rectangleBox(                   Rectangle(0,   0, 50, 50)),
-            boxes[1] = rectangleBox(IsOpaque.no,       Rectangle(0,  50, 50, 50)),
-            boxes[2] = rectangleBox(IsOpaque.onlySelf, Rectangle(0, 100, 50, 50)),
+            boxes[0] = rectangleBox(                     Rectangle(0,   0, 50, 50)),
+            boxes[1] = rectangleBox(HitFilter.miss,      Rectangle(0,  50, 50, 50)),
+            boxes[2] = rectangleBox(HitFilter.hitBranch, Rectangle(0, 100, 50, 50)),
         ),
     );
 
     auto action = new FindHoveredNodeAction;
 
-    void testSearch(IsOpaque opacity, Vector2 position, Node result) {
-        container.isOpaque = opacity;
+    void testSearch(HitFilter filter, Vector2 position, Node result) {
+        container.hitFilter = filter;
         action.pointer.position = position;
         root.startAction(action);
         root.draw();
@@ -231,16 +231,16 @@ unittest {
         }
     }
 
-    // Children should be selectable for both `yes` and `no` options
-    testSearch(IsOpaque.yes, Vector2(25,  25), boxes[0]);
-    testSearch(IsOpaque.yes, Vector2(25, 125), boxes[2]);
+    // Children should be selectable for both `hit` and `miss` options
+    testSearch(HitFilter.hit, Vector2(25,  25), boxes[0]);
+    testSearch(HitFilter.hit, Vector2(25, 125), boxes[2]);
 
-    // `no` on boxes[1] prevents from selecting
-    testSearch(IsOpaque.yes, Vector2(25, 75), container);
-    testSearch(IsOpaque.no,  Vector2(25, 75), null);
+    // `miss` on boxes[1] prevents from selecting
+    testSearch(HitFilter.hit,  Vector2(25, 75), container);
+    testSearch(HitFilter.miss, Vector2(25, 75), null);
 
     // The remaining options disable children access
-    testSearch(IsOpaque.notInBranch, Vector2(25, 25), null);
-    testSearch(IsOpaque.onlySelf,    Vector2(25, 25), container);
+    testSearch(HitFilter.missBranch, Vector2(25, 25), null);
+    testSearch(HitFilter.hitBranch,  Vector2(25, 25), container);
 
 }
