@@ -404,11 +404,11 @@ class HoverTransform : NodeChain, HoverIO, Focusable, Hoverable, HoverScrollable
         return false;
     }
 
-    override IsOpaque inBoundsImpl(Rectangle outer, Rectangle inner, Vector2 position) {
+    override HitFilter inBoundsImpl(Rectangle outer, Rectangle inner, Vector2 position) {
         if (super.inBoundsImpl(outer, inner, position).inSelf) {
-            return IsOpaque.onlySelf;
+            return HitFilter.hitBranch;
         }
-        return IsOpaque.no;
+        return HitFilter.miss;
     }
 
     override bool isHovered() const {
