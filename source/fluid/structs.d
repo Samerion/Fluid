@@ -664,10 +664,14 @@ enum HitFilter : HitFilterMask {
     /// of self, nor any of the children nodes.
     missBranch = HitFilterMask(3),
 
-    yes         = hit,
-    no          = miss,
-    onlySelf    = hitBranch,
-    notInBranch = missBranch,
+    deprecated("`yes` has been renamed to `hit`, and will be removed in Fluid 0.8.0")
+        yes         = hit,
+    deprecated("`no` has been renamed to `miss`, and will be removed in Fluid 0.8.0")
+        no          = miss,
+    deprecated("`onlySelf` has been renamed to `hitBranch`, and will be removed in Fluid 0.8.0")
+        onlySelf    = hitBranch,
+    deprecated("`notInBranch` has been renamed to `missBranch`, and will be removed in Fluid 0.8.0")
+        notInBranch = missBranch,
 
 }
 
@@ -700,8 +704,8 @@ struct HitFilterMask {
     /// Create a value that combines the restrictions of both masks. It can be said that either
     /// of the masks acts as a "filter", hence the name.
     ///
-    /// For example, combining `IsOpaque.yes` with `IsOpaque.no` returns `IsOpaque.no`.
-    /// Combining `IsOpaque.no` with `IsOpaque.onlySelf` returns `IsOpaque.notInBranch`.
+    /// For example, combining `HitFilter.hit` with `HitFilter.miss` returns `HitFilter.miss`.
+    /// Combining `HitFilter.miss` with `HitFilter.hitBranch` returns `HitFilter.missBranch`.
     ///
     /// Params:
     ///     other = Mask to combine with.
@@ -712,23 +716,23 @@ struct HitFilterMask {
         return cast(HitFilter) HitFilterMask((bitmask | other.bitmask) & 3);
     }
 
-    /// Set the node's opacity filter. This can be used as a node property — an opacity mask
+    /// Set the node's hit filter. This can be used as a node property — a hit filter
     /// can be passed to a node builder.
     /// Params:
     ///     node = Node to change.
     void apply(Node node) {
-        node.isOpaque = cast(HitFilter) HitFilterMask(bitmask & 3);
+        node.hitFilter = cast(HitFilter) HitFilterMask(bitmask & 3);
     }
 }
 
-static assert(HitFilter.init == HitFilter.yes);
-static assert(!HitFilter.no.inSelf);
-static assert( HitFilter.no.inChildren);
-static assert( HitFilter.yes.inSelf);
-static assert( HitFilter.yes.inChildren);
-static assert(!HitFilter.notInBranch.inSelf);
-static assert(!HitFilter.notInBranch.inChildren);
-static assert( HitFilter.onlySelf.inSelf);
-static assert(!HitFilter.onlySelf.inChildren);
-static assert(HitFilter.yes.filter(HitFilter.no) == HitFilter.no);
-static assert(HitFilter.no.filter(HitFilter.onlySelf) == HitFilter.notInBranch);
+static assert(HitFilter.init == HitFilter.hit);
+static assert(!HitFilter.miss.inSelf);
+static assert( HitFilter.miss.inChildren);
+static assert( HitFilter.hit.inSelf);
+static assert( HitFilter.hit.inChildren);
+static assert(!HitFilter.missBranch.inSelf);
+static assert(!HitFilter.missBranch.inChildren);
+static assert( HitFilter.hitBranch.inSelf);
+static assert(!HitFilter.hitBranch.inChildren);
+static assert(HitFilter.hit.filter(HitFilter.miss) == HitFilter.miss);
+static assert(HitFilter.miss.filter(HitFilter.hitBranch) == HitFilter.missBranch);
