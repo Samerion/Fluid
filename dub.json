@@ -58,6 +58,9 @@
 			"libs": [
 				"raylib"
 			],
+			"dflags": [
+				"-verrors=0"
+			],
 			"name": "unittest",
 			"sourcePaths": [
 				"tests",

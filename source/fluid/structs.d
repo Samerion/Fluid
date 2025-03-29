@@ -628,48 +628,63 @@ unittest {
 
 }
 
-/// `InBounds` is used as a return value of `Node.inBounds`. For most use-cases,
-/// `InBounds.yes` and `InBounds.no` are the most appropriate, specifying that the point in
+deprecated("`IsOpaque` and `IsOpaqueMask` have been renamed to `HitFilter` and `HitFilterMask` "
+    ~ "respectively. They will be removed in Fluid 0.8.0.") {
+    alias IsOpaque = HitFilter;
+    alias IsOpaqueMask = HitFilterMask;
+}
+
+/// `HitFilter` is used as a return value of `Node.inBounds`. For most use-cases,
+/// `HitFilter.hit` and `HitFilter.miss` are the most appropriate, specifying that the point in
 /// question is, or is not, in the node's bounds. This defines the way nodes interact with
 /// mouse, touchscreen or other hover events (`fluid.io.hover`).
 ///
-/// The node is not normally responsible for the bounds of its children. The node's should
-/// only specify its own bounds, so neither a `yes` or `no` answer prevent children nodes
-/// from overriding the answer.
+/// The node is not normally responsible for the bounds of its children. Children nodes specify
+/// their own bounds separately, so the `HitFilter.hit` and `HitFilter.miss` answers do not
+/// affect children.
 ///
-/// Despite the above, it is sometimes desirable to keep children from occupying space, for
-/// example to hijack and control mouse input. To specify that children nodes *cannot* be in
-/// bounds, use `InBounds.notInBranch` (to indicate none of the nodes include the point) or
-/// `InBounds.onlySelf` (the node captures all events, including of its children).
+/// Despite the above, it is sometimes desirable to prevent children from taking input, for
+/// example to perform transforms. To specify that children nodes *cannot* be in bounds,
+/// use `HitFilter.hitBranch` or `HitFilter.missBranch`.
 ///
 /// See_Also:
 ///     `Node.inBounds`.
-enum IsOpaque : IsOpaqueMask {
+enum HitFilter : HitFilterMask {
 
     /// The point is in bounds of this node.
-    yes         = IsOpaqueMask(0),
+    hit        = HitFilterMask(0),
 
     /// The point is *not* in bounds of this node.
-    no          = IsOpaqueMask(1),
+    miss       = HitFilterMask(1),
 
     /// The point is in bounds, but not in the bounds of any of the children nodes.
-    onlySelf    = IsOpaqueMask(2),
+    hitBranch  = HitFilterMask(2),
 
     /// Indicates that the point is *not* in bounds of any of the nodes in the branch; neither
     /// of self, nor any of the children nodes.
-    notInBranch = IsOpaqueMask(3),
+    missBranch = HitFilterMask(3),
+
+    deprecated("`yes` has been renamed to `hit`, and will be removed in Fluid 0.8.0")
+        yes         = hit,
+    deprecated("`no` has been renamed to `miss`, and will be removed in Fluid 0.8.0")
+        no          = miss,
+    deprecated("`onlySelf` has been renamed to `hitBranch`, and will be removed in Fluid 0.8.0")
+        onlySelf    = hitBranch,
+    deprecated("`notInBranch` has been renamed to `missBranch`, and will be removed in Fluid 0.8.0")
+        notInBranch = missBranch,
+
 }
 
 /// This bitmask defines whether a node contains a point in its boundaries.
 ///
-/// To allow this to default to `InBounds.yes` while being
+/// To allow this to default to `HitFilter.hit` while being
 /// [zero-initialized](https://dlang.org/spec/traits.html#isZeroInit), each bit is inverted;
 /// i.e. `0` means *yes, in bounds* and `1` means, *no, not in bounds*.
 ///
 /// See_Also:
-///     `InBounds` for all possible values of this bitmask.
+///     `HitFilter` for all possible values of this bitmask.
 ///     `Node.inBounds` for a function returning this value.
-struct IsOpaqueMask {
+struct HitFilterMask {
     int bitmask;
 
     /// Returns:
@@ -689,35 +704,35 @@ struct IsOpaqueMask {
     /// Create a value that combines the restrictions of both masks. It can be said that either
     /// of the masks acts as a "filter", hence the name.
     ///
-    /// For example, combining `IsOpaque.yes` with `IsOpaque.no` returns `IsOpaque.no`.
-    /// Combining `IsOpaque.no` with `IsOpaque.onlySelf` returns `IsOpaque.notInBranch`.
+    /// For example, combining `HitFilter.hit` with `HitFilter.miss` returns `HitFilter.miss`.
+    /// Combining `HitFilter.miss` with `HitFilter.hitBranch` returns `HitFilter.missBranch`.
     ///
     /// Params:
     ///     other = Mask to combine with.
     /// Returns:
     ///     A mask with `inSelf == false` if false for either of the masks,
     ///     and similarly `inChildren == false` if false for either of the values.
-    IsOpaque filter(IsOpaqueMask other) const {
-        return cast(IsOpaque) IsOpaqueMask((bitmask | other.bitmask) & 3);
+    HitFilter filter(HitFilterMask other) const {
+        return cast(HitFilter) HitFilterMask((bitmask | other.bitmask) & 3);
     }
 
-    /// Set the node's opacity filter. This can be used as a node property — an opacity mask
+    /// Set the node's hit filter. This can be used as a node property — a hit filter
     /// can be passed to a node builder.
     /// Params:
     ///     node = Node to change.
     void apply(Node node) {
-        node.isOpaque = cast(IsOpaque) IsOpaqueMask(bitmask & 3);
+        node.hitFilter = cast(HitFilter) HitFilterMask(bitmask & 3);
     }
 }
 
-static assert(IsOpaque.init == IsOpaque.yes);
-static assert(!IsOpaque.no.inSelf);
-static assert( IsOpaque.no.inChildren);
-static assert( IsOpaque.yes.inSelf);
-static assert( IsOpaque.yes.inChildren);
-static assert(!IsOpaque.notInBranch.inSelf);
-static assert(!IsOpaque.notInBranch.inChildren);
-static assert( IsOpaque.onlySelf.inSelf);
-static assert(!IsOpaque.onlySelf.inChildren);
-static assert(IsOpaque.yes.filter(IsOpaque.no) == IsOpaque.no);
-static assert(IsOpaque.no.filter(IsOpaque.onlySelf) == IsOpaque.notInBranch);
+static assert(HitFilter.init == HitFilter.hit);
+static assert(!HitFilter.miss.inSelf);
+static assert( HitFilter.miss.inChildren);
+static assert( HitFilter.hit.inSelf);
+static assert( HitFilter.hit.inChildren);
+static assert(!HitFilter.missBranch.inSelf);
+static assert(!HitFilter.missBranch.inChildren);
+static assert( HitFilter.hitBranch.inSelf);
+static assert(!HitFilter.hitBranch.inChildren);
+static assert(HitFilter.hit.filter(HitFilter.miss) == HitFilter.miss);
+static assert(HitFilter.miss.filter(HitFilter.hitBranch) == HitFilter.missBranch);

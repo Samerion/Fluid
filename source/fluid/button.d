@@ -21,7 +21,7 @@ unittest {
     import fluid.image_view;
     run(
         hframeButton(
-            IsOpaque.onlySelf,
+            HitFilter.hitBranch,
             imageView("myicon.png"),
             label("Click me!"),
             delegate { }
