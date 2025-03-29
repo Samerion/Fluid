@@ -4,13 +4,17 @@ on:
     branches:
       - main
       - unstable
+      - docs-ci
   release:
-    types: [published]
+    types:
+      - published
 
 jobs:
   build:
     name: Deploy documentation
     runs-on: ubuntu-20.04
+    env:
+      REF_NAME: ${{ github.event.release.tag_name || github.head_ref || github.ref_name }} 
     steps:
       - uses: https://code.forgejo.org/actions/checkout@v4
       - name: Install D compiler
@@ -22,7 +26,8 @@ jobs:
         run: dub -b=docs
       - name: Update links
         shell: bash
-        run: sed -i 's:href="/docs/source/fluid:href="/docs:g' docs/source/fluid/**.html
+        run: |
+          sed -i 's:href="/docs/source/fluid:href="/docs/'$REF_NAME':g' docs/source/fluid/**.html
       - name: Install SSH key
         uses: https://github.com:/shimataro/ssh-key-action@v2
         with:
@@ -32,7 +37,9 @@ jobs:
       - name: Upload documentation
         shell: bash
         run: |
+          echo Uploading to https://libfluid.org/docs/$REF_NAME
           scp resources/ruda-regular.ttf libfluid.org:/srv/http/libfluid.org/resources/
           scp resources/fluid-docs.css libfluid.org:/srv/http/libfluid.org/resources/
-          scp -r docs/source/fluid/* libfluid.org:/srv/http/libfluid.org/docs/
+          scp -pr docs/source/fluid libfluid.org:/srv/http/libfluid.org/docs/$REF_NAME
+          echo Documentation is now online at https://libfluid.org/docs/$REF_NAME
       
