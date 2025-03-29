@@ -212,12 +212,12 @@ abstract class Node {
     ///     newValue = Change the current theme.
     inout(Theme) theme() inout { return _theme; }
 
-    /// Set the theme.
-    Theme theme(Theme value) {
+    /// ditto
+    Theme theme(Theme newValue) {
 
         isThemeExplicit = true;
         updateSize();
-        return _theme = value;
+        return _theme = newValue;
 
     }
 

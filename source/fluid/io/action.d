@@ -189,6 +189,16 @@ interface Actionable {
     bool actionImpl(IO io, int number, immutable InputActionID action, bool isActive)
     in (!blocksInput, "This node currently doesn't accept input.");
 
+    /// A shortcut for invoking specific input actions from code.
+    /// Params:
+    ///     action   = Input action to invoke; an `@InputAction` enum member.
+    ///     isActive = Whether to start an active or "held" input action.
+    /// Returns:
+    ///     True if the node handled the action.
+    final bool runInputAction(alias action)(bool isActive = true) {
+        return actionImpl(null, 0, inputActionID!action, isActive);
+    }
+
     /// Memory safe and `const` object comparison.
     /// Returns:
     ///     True if this, and the other object, are the same object.
@@ -241,15 +251,6 @@ if (is(LocalIO : IO) && is(Event == enum)) {
         return Codes();
     }
 
-    /// A shortcut for getting input events that are known at compile time. Handy for tests.
-    /// Params:
-    ///     isActive = True if the generated input event should be active. Defaults to `false`
-    ///         for `hold`; is `true` for `click`.
-    /// Returns: A mouse button input event.
-    static click() {
-        return hold(true);
-    }
-
     /// Create a mouse input event that can be passed to an `ActionIO` handler.
     ///
     /// Params:
@@ -260,6 +261,15 @@ if (is(LocalIO : IO) && is(Event == enum)) {
     static InputEvent createEvent(Event event, bool isActive = true) {
         const code = getCode(event);
         return InputEvent(code, isActive);
+    }
+
+    /// A shortcut for getting input events that are known at compile time. Handy for tests.
+    /// Params:
+    ///     isActive = True if the generated input event should be active. Defaults to `false`
+    ///         for `hold`; is `true` for `click`.
+    /// Returns: A mouse button input event.
+    static click() {
+        return hold(true);
     }
 
     /// ditto

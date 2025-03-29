@@ -190,7 +190,7 @@ interface FluidBackend {
 
 }
 
-/// To simplify setup in some scenarios, Fluid provides a uniform `run` function to immediately display UI and start 
+/// To simplify setup in some scenarios, Fluid provides a uniform `run` function to immediately display UI and start
 /// the event loop. This function is provided by the backend using this optional interface.
 ///
 /// For `run` to use this backend, it has to be configured as the default backend or be passed explicitly to the `run`
@@ -201,7 +201,7 @@ interface FluidEntrypointBackend : FluidBackend {
 
     /// Start a Fluid GUI app using this backend.
     ///
-    /// This will draw the user interface and respond to input events in a loop, until the root node is marked for 
+    /// This will draw the user interface and respond to input events in a loop, until the root node is marked for
     /// removal (`remove()`).
     ///
     /// See_Also: `fluid.node.run`
@@ -839,6 +839,12 @@ version (unittest) {
 
     debug (Fluid_BuildMessages) {
         pragma(msg, "Fluid: Using headless as the default backend (unittest)");
+    }
+
+    // Set up a no-op mock `run()` for examples
+    static this() {
+        import fluid.node;
+        mockRun((Node node) { });
     }
 
     FluidBackend defaultFluidBackend() {
