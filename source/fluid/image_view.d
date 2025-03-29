@@ -1,5 +1,27 @@
+/// This node displays an image. Accepts either a file path (as a [string]), or an [Image].
 ///
+/// <!-- -->
 module fluid.image_view;
+
+@safe:
+
+/// Give [imageView] a string, and it will load the image from a file.
+@("ImageView string reference")
+unittest {
+    run(
+        imageView("logo.png"),
+    );
+}
+
+/// Or, if you have the image loaded in memory, pass it as an [Image]:
+@("ImageView Image reference")
+unittest {
+    run(
+        imageView(
+            generateColorImage(128, 128, color("#7325dc")),
+        ),
+    );
+}
 
 import fluid.node;
 import fluid.utils;
@@ -10,30 +32,39 @@ import fluid.io.file;
 import fluid.io.canvas;
 import fluid.io.image_load;
 
-@safe:
+/// A [node builder][nodeBuilder] that creates an [ImageView].
+alias imageView = nodeBuilder!ImageView;
 
-alias imageView = simpleConstructor!ImageView;
-
+/// This node property activates the [ImageView.isAutoExpand] field.
+/// Params:
+///     value = If true, activates automatic expanding. On, by default.
+/// Returns:
+///     A node property that can be passed to the [imageView] node builder.
 auto autoExpand(bool value = true) {
-
     static struct AutoExpand {
-
         bool value;
 
         void apply(ImageView node) {
             node.isAutoExpand = value;
         }
-
     }
-
     return AutoExpand(value);
-
 }
 
 /// A node specifically to display images.
 ///
-/// The image will automatically scale to fit available space. It will keep aspect ratio by default and will be
-/// displayed in the middle of the available box.
+/// The image will scale to fit the space it is given. It will keep aspect ratio by default and
+/// will be displayed in the middle of the available box.
+///
+/// Note:
+///     `ImageView` is heavily affected by recent changes to how Fluid handles I/O.
+///
+///     * If you only display images from a file, and don't inspect them from code, you will <!--
+///       --> *not* be impacted.
+///     * The new I/O system *always* uses [Image]. Inspect or change the image using the <!--
+///       --> [image][ImageView.image] field.
+///     * If using the old backend, you will need to use [Texture]. You will need to manually <!--
+///       --> manage its lifetime. Migrating to the new I/O system is highly recommended.
 class ImageView : Node {
 
     CanvasIO canvasIO;
@@ -42,15 +73,19 @@ class ImageView : Node {
 
     public {
 
-        /// Image this node should display, if any. Requires an active `CanvasIO` to display.
+        /// [Image] this node should display, if any. This field only works with the new I/O
+        /// system, and requires [CanvasIO] to work.
+        ///
+        /// See [DrawableImage] for details on how `CanvasIO` handles image drawing.
         DrawableImage image;
 
-        /// If true, size of this imageView is adjusted automatically. Changes made to `minSize` will be reversed on
-        /// size update.
+        /// If true, size of this imageView is adjusted automatically. Changes made to `minSize`
+        /// will be reversed on size update.
         bool isSizeAutomatic;
 
-        /// Experimental. Acquire space from the parent to display the largest image while preserving aspect ratio.
-        /// May not work if there's multiple similarly sized nodes in the same container.
+        /// Experimental. Acquire space from the parent to display the largest image while
+        /// preserving aspect ratio. May not work if there's multiple similarly sized nodes in the
+        /// same container.
         bool isAutoExpand;
 
     }
@@ -71,27 +106,24 @@ class ImageView : Node {
     /// Set to true if the image view owns the texture and manages its ownership.
     private bool _isOwner;
 
-    /// Create an image node from given texture or filename.
+    /// Create an image node from given image or filename.
     ///
-    /// Note, if a string is given, the texture will be loaded when resizing. This ensures a Fluid backend is available
-    /// to load the texture.
+    /// Note:
+    ///     If a filename is given, the image will be loaded on the first resize.
+    ///     This is done to make sure a backend is available to load the image.
     ///
     /// Params:
     ///     source  = `Texture` struct to use, or a filename to load from.
     ///     minSize = Minimum size of the node. Defaults to image size.
     this(T)(T source, Vector2 minSize) {
-
         super.minSize = minSize;
         this.texture = source;
-
     }
 
     /// ditto
     this(T)(T source) {
-
         this.texture = source;
         this.isSizeAutomatic = true;
-
     }
 
     /// Create an image node using given image.
@@ -99,24 +131,18 @@ class ImageView : Node {
     ///     image   = Image to load.
     ///     minSize = Minimum size of the node. Defaults to image size.
     this(Image image, Vector2 minSize) {
-
         super.minSize = minSize;
         this.image = DrawableImage(image);
-
     }
 
     /// ditto
     this(Image image) {
-
         this.image = DrawableImage(image);
         this.isSizeAutomatic = true;
-
     }
 
     ~this() {
-
         clear();
-
     }
 
     @property {
@@ -132,6 +158,7 @@ class ImageView : Node {
 
         }
 
+        /// Change the image displayed by the `ImageView`.
         Image texture(Image image) {
 
             clear();
@@ -162,7 +189,7 @@ class ImageView : Node {
 
         }
 
-        /// Get the current texture.
+        /// Get the current texture. Does not work with the new I/O system.
         const(Texture) texture() const {
 
             return _texture;
@@ -171,9 +198,10 @@ class ImageView : Node {
 
     }
 
-    /// Release ownership over the displayed texture.
+    /// Release ownership over the displayed texture. Does not apply to the new I/O system.
     ///
-    /// Keep the texture alive as long as it's used by this `imageView`, free it manually using the `destroy()` method.
+    /// Keep the texture alive as long as it's used by this `imageView`, free it manually
+    /// using the `destroy()` method.
     Texture release() {
 
         _isOwner = false;
@@ -186,9 +214,7 @@ class ImageView : Node {
 
         // Free the texture
         if (_isOwner) {
-
             _texture.destroy();
-
         }
 
         // Remove the texture
@@ -200,20 +226,19 @@ class ImageView : Node {
 
     }
 
-    /// Minimum size of the image.
+    /// Returns:
+    ///     The minimum size for this node.
     @property
     ref inout(Vector2) minSize() inout {
-
         return super.minSize;
-
     }
 
-    /// Area on the screen the image was last drawn to.
+    /// Returns:
+    ///     Area on the screen the image was last drawn to.
+    ///     Updated only when the node is drawn.
     @property
     Rectangle targetArea() const {
-
         return _targetArea;
-
     }
 
     override protected void resizeImpl(Vector2 space) @trusted {

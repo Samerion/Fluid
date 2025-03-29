@@ -217,7 +217,7 @@ float pt(float points) {
 
 /// Convert pixels to points.
 /// Params:
-///     points = Input value in pixels.
+///     px = Input value in pixels.
 /// Returns: Given value in points.
 float pxToPt(float px) {
 
@@ -264,7 +264,7 @@ bool overlap(Rectangle a, Rectangle b) {
 ///
 /// Params:
 ///     source = String to parse.
-/// Params:
+/// Returns:
 ///     String to load from.
 Vector2 toSizeVector2(string source) {
 
