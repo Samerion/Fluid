@@ -1,0 +1,44 @@
+name: Deploy documentation
+on:
+  push:
+    branches:
+      - main
+      - unstable
+  release:
+    types:
+      - published
+
+jobs:
+  build:
+    name: Deploy documentation
+    runs-on: ubuntu-20.04
+    env:
+      REF_NAME: ${{ github.event.release.tag_name || github.head_ref || github.ref_name }} 
+    steps:
+      - uses: https://code.forgejo.org/actions/checkout@v4
+      - name: Install D compiler
+        uses: https://github.com/dlang-community/setup-dlang@v2
+        with:
+          compiler: dmd
+      - name: Build the documentation
+        shell: bash
+        run: dub -b=docs
+      - name: Update links
+        shell: bash
+        run: |
+          sed -i 's:href="/docs/source/fluid:href="/docs/'$REF_NAME':g' docs/source/fluid/**.html
+      - name: Install SSH key
+        uses: https://github.com:/shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.DOCS_KEY }}
+          known_hosts: ${{ secrets.KNOWN_HOSTS }}
+          config: ${{ secrets.SSH_CONFIG }}
+      - name: Upload documentation
+        shell: bash
+        run: |
+          echo Uploading to https://libfluid.org/docs/$REF_NAME
+          scp resources/ruda-regular.ttf libfluid.org:/srv/http/libfluid.org/resources/
+          scp resources/fluid-docs.css libfluid.org:/srv/http/libfluid.org/resources/
+          scp -pr docs/source/fluid libfluid.org:/srv/http/libfluid.org/docs/$REF_NAME
+          echo Documentation is now online at https://libfluid.org/docs/$REF_NAME
+      
