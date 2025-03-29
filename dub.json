@@ -8,7 +8,7 @@
       "dflags": ["-Dddocs", "-op", "-X", "-Xf=docs.json"],
       "sourceFiles": ["resources/theme.ddoc"],
       "postBuildCommands": [
-				"sed -i 's/href=\"\\([a-zA-Z]\\+[.\/]\\)/href=\"\\/\\1/g' docs/source/fluid/**.html"
+				"sed -i 's:href=\"docs/:href=\"/docs/:g' docs/source/fluid/**.html"
     	],
     	"versions": ["Fluid_Docs"]
 		},
@@ -17,7 +17,7 @@
       "dflags": ["-Dddocs", "-op", "-X", "-Xf=docs.json"],
       "sourceFiles": ["resources/theme.ddoc"],
       "postBuildCommands": [
-				"sed -i 's/href=\"\\([a-zA-Z]\\+[.\/]\\)/href=\"\\/\\1/g' docs/source/fluid/**.html",
+				"sed -i 's:href=\"docs/:href=\"/docs/:g' docs/source/fluid/**.html",
 				"$DUB run servefolder -- -d \"$PACKAGE_DIR\""
       ],
     	"versions": ["Fluid_Docs"]
