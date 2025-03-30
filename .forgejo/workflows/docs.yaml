@@ -40,6 +40,13 @@ jobs:
           scp resources/ruda-regular.ttf libfluid.org:/srv/http/libfluid.org/resources/
           scp resources/fluid-docs.css libfluid.org:/srv/http/libfluid.org/resources/
           mv "docs/source/fluid" "docs/source/$REF_NAME"
-          scp -r "docs/source/$REF_NAME" libfluid.org:/srv/http/libfluid.org/docs/
+          scp -r "docs/source/$REF_NAME" "libfluid.org:/srv/http/libfluid.org/docs/"
           echo "Documentation is now online at https://libfluid.org/docs/$REF_NAME"
-      
+
+          # Documentation must exist, and the "fluid" directory must be omitted
+          wget --spider "https://libfluid.org/docs/$REF_NAME"
+          wget --spider "https://libfluid.org/docs/$REF_NAME/package.html"
+          wget --spider "https://libfluid.org/docs/$REF_NAME/label"
+          wget --spider "https://libfluid.org/docs/$REF_NAME/label.html"
+          ! wget --spider "https://libfluid.org/docs/$REF_NAME/fluid"
+          ! wget --spider "https://libfluid.org/docs/$REF_NAME/fluid/package.html"
