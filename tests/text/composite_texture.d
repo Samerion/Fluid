@@ -10,11 +10,13 @@ import fluid;
 
 unittest {
 
-    auto content = vscrollable!label(
+    auto content = label(
         .nullTheme,
         "One\nTwo\nThree\nFour\nFive\n"
     );
-    auto root = testSpace(content);
+    auto root = testSpace(
+        vscrollFrame(content)
+    );
 
     root.draw();
 
@@ -33,14 +35,15 @@ unittest {
 
     enum chunkSize = CompositeTexture.maxChunkSize;
 
-    auto content = vscrollable!label(
-        .nullTheme,
+    auto content = label(
         "One\nTwo\nThree\nFour\nFive\n"
     );
+    auto viewport = vscrollFrame(content);
     auto root = sizeLock!testSpace(
         .sizeLimit(800, 600),
         .cropViewport,
-        content
+        .nullTheme,
+        viewport
     );
 
     // Add a lot more text
@@ -64,19 +67,23 @@ unittest {
 
     // Scroll just enough so that both chunks should be on screen
     // This should cause the second chunk to generate too
-    content.scroll = chunkSize - 1;
+    viewport.scroll = chunkSize - 1;
     root.draw();
     assert(content.text.texture.chunks[0 .. 2].all!((ref a) => a.isValid));
     assert(content.text.texture.chunks[2 .. $].all!((ref a) => !a.isValid));
 
     root.drawAndAssert(
-        content.drawsImage(content.text.texture.chunks[0].image).at(0, -content.scroll).ofColor("#fff"),
-        content.drawsImage(content.text.texture.chunks[1].image).at(0, -content.scroll + chunkSize).ofColor("#fff"),
+        content.drawsImage(content.text.texture.chunks[0].image)
+            .at(0, -viewport.scroll)
+            .ofColor("#fff"),
+        content.drawsImage(content.text.texture.chunks[1].image)
+            .at(0, -viewport.scroll + chunkSize)
+            .ofColor("#fff"),
         content.doesNotDraw(),
     ),
 
     // Skip to third chunk, force regeneration
-    content.scroll = 2 * chunkSize - 1;
+    viewport.scroll = 2 * chunkSize - 1;
     root.updateSize();
     root.draw();
 
@@ -86,8 +93,12 @@ unittest {
     assert(content.text.texture.chunks[3 .. $].all!((ref a) => !a.isValid));
 
     root.drawAndAssert(
-        content.drawsImage(content.text.texture.chunks[1].image).at(0, -content.scroll + chunkSize).ofColor("#fff"),
-        content.drawsImage(content.text.texture.chunks[2].image).at(0, -content.scroll + chunkSize*2).ofColor("#fff"),
+        content.drawsImage(content.text.texture.chunks[1].image)
+            .at(0, -viewport.scroll + chunkSize)
+            .ofColor("#fff"),
+        content.drawsImage(content.text.texture.chunks[2].image)
+            .at(0, -viewport.scroll + chunkSize*2)
+            .ofColor("#fff"),
         content.doesNotDraw(),
     );
 
