@@ -1,4 +1,4 @@
-module fluid.scroll;
+module fluid.scroll_frame;
 
 import std.meta;
 import std.conv;
@@ -16,25 +16,23 @@ import fluid.structs;
 import fluid.io.hover;
 
 public import fluid.scroll_input;
-public import fluid.scroll_frame;
 
 
 @safe:
-deprecated("Use `ScrollFrame` instead. `Scrollable` will be removed in Fluid 0.8.0."):
 
 
-alias Scrollable(T : Space) = Scrollable!(T, "directionHorizontal");
+/// Create a new vertical scroll frame.
+alias vscrollFrame = simpleConstructor!ScrollFrame;
 
-/// Create a new scrollable node.
-alias vscrollable(alias T) = simpleConstructor!(ApplyRight!(Scrollable, "false"), T);
-
-/// Create a new horizontally scrollable node.
-alias hscrollable(alias T) = simpleConstructor!(ApplyRight!(Scrollable, "true"), T);
+/// Create a new horizontal scroll frame.
+alias hscrollFrame = simpleConstructor!(ScrollFrame, (a) {
+    a.directionHorizontal = true;
+});
 
 /// Implement scrolling for the given node.
 ///
-/// This only supports scrolling in one axis.
-class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable, HoverScrollable {
+/// This node only supports scrolling in one axis.
+class ScrollFrame : Frame, FluidScrollable, HoverScrollable {
 
     HoverIO hoverIO;
 
@@ -66,66 +64,44 @@ class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable, Ho
 
     /// Distance the node is scrolled by.
     ref inout(float) scroll() inout {
-
         return scrollBar.position;
-
     }
 
     float scroll() const {
-
         return scrollBar.position;
-
     }
 
     float scroll(float value) {
-
         setScroll(value);
         return value;
-
-    }
-
-    /// Check if the underlying node is horizontal.
-    private bool isHorizontal() const {
-
-        return mixin(horizontalExpression);
-
     }
 
     /// Scroll to the beginning of the node.
     void scrollStart() {
-
         scroll = 0;
-
     }
 
     /// Scroll to the end of the node, requires the node to be drawn at least once.
     void scrollEnd() {
-
         scroll = scrollMax;
-
     }
 
     /// Set the scroll to a value clamped between start and end.
     void setScroll(float value) {
-
         scrollBar.setScroll(value);
-
     }
 
     /// Get the maximum value this container can be scrolled to. Requires at least one draw.
     float scrollMax() const {
-
         return scrollBar.scrollMax();
-
     }
 
     alias maxScroll = scrollMax;
 
-    deprecated("shallowScrollTo with a Vector2 argument has been deprecated and will be removed in Fluid 0.8.0.")
+    deprecated("shallowScrollTo with a Vector2 argument has been deprecated and will be removed "
+        ~ "in Fluid 0.8.0.")
     Rectangle shallowScrollTo(const Node child, Vector2, Rectangle parentBox, Rectangle childBox) {
-
         return shallowScrollTo(child, parentBox, childBox);
-
     }
 
     /// Scroll to the given node.
@@ -293,7 +269,6 @@ class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable, Ho
     }
 
     bool canScroll(Vector2 valueVec) const {
-
         const speed = scrollBar.scrollSpeed;
         const value = isHorizontal
             ? valueVec.x
@@ -303,11 +278,9 @@ class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable, Ho
         const maxMoveForward  = maxScroll - scroll;
 
         return move.clamp(maxMoveBackward, maxMoveForward) != 0;
-
     }
 
     void scrollImpl(Vector2 valueVec) {
-
         const speed = scrollBar.scrollSpeed;
         const value = isHorizontal
             ? valueVec.x
@@ -316,11 +289,9 @@ class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable, Ho
         // io.deltaTime is irrelevant here
 
         scrollBar.setScroll(scroll + move);
-
     }
 
     bool canScroll(const HoverPointer pointer) const {
-
         const value = isHorizontal
             ? pointer.scroll.x
             : pointer.scroll.y;
@@ -328,7 +299,6 @@ class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable, Ho
         const maxMoveForward  = maxScroll - scroll;
 
         return value.clamp(maxMoveBackward, maxMoveForward) != 0;
-
     }
 
     bool scrollImpl(HoverPointer pointer) {
