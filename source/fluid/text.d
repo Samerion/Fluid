@@ -1051,45 +1051,47 @@ unittest {
     enum chunkSize = CompositeTexture.maxChunkSize;
 
     auto io = new HeadlessBackend;
-    auto root = vscrollable!label(
-        nullTheme.derive(
-            rule!Label(
-                Rule.textColor = color("#000"),
+    auto myLabel =
+        label(
+            nullTheme.derive(
+                rule!Label(
+                    Rule.textColor = color("#000"),
+                ),
             ),
-        ),
-        "One\nTwo\nThree\nFour\nFive\n"
-    );
+            "One\nTwo\nThree\nFour\nFive\n"
+        );
+    auto root = vscrollFrame(myLabel);
 
     root.io = io;
     root.draw();
 
     // One chunk only
-    assert(root.text.texture.chunks.length == 1);
+    assert(myLabel.text.texture.chunks.length == 1);
 
     // This one chunk must have been drawn
-    io.assertTexture(root.text.texture.chunks[0], Vector2(), color("#fff"));
+    io.assertTexture(myLabel.text.texture.chunks[0], Vector2(), color("#fff"));
 
     // Add a lot more text
     io.nextFrame;
-    root.text = root.text.repeat(30).joiner.text;
+    myLabel.text = myLabel.text.repeat(30).joiner.text;
     root.draw();
 
-    const textSize = root.text._sizeDots;
+    const textSize = myLabel.text._sizeDots;
 
     // Make sure assumptions for this test are sound:
     assert(textSize.y > chunkSize * 2, "Generated text must span at least three chunks");
     assert(io.windowSize.y < chunkSize, "Window size must be smaller than chunk size");
 
     // This time, there should be more chunks
-    assert(root.text.texture.chunks.length >= 3);
+    assert(myLabel.text.texture.chunks.length >= 3);
 
     // Only the first one would be drawn, however
-    io.assertTexture(root.text.texture.chunks[0], Vector2(), color("#fff"));
+    io.assertTexture(myLabel.text.texture.chunks[0], Vector2(), color("#fff"));
     assert(io.textures.walkLength == 1);
 
     // And, only the first one should be generated
-    assert(root.text.texture.chunks[0].isValid);
-    assert(root.text.texture.chunks[1 .. $].all!((ref a) => !a.isValid));
+    assert(myLabel.text.texture.chunks[0].isValid);
+    assert(myLabel.text.texture.chunks[1 .. $].all!((ref a) => !a.isValid));
 
     // Scroll just enough so that both chunks should be on screen
     io.nextFrame;
@@ -1097,11 +1099,15 @@ unittest {
     root.draw();
 
     // First two chunks must have been generated and drawn
-    assert(root.text.texture.chunks[0 .. 2].all!((ref a) => a.isValid));
-    assert(root.text.texture.chunks[2 .. $].all!((ref a) => !a.isValid));
+    assert(myLabel.text.texture.chunks[0 .. 2].all!((ref a) => a.isValid));
+    assert(myLabel.text.texture.chunks[2 .. $].all!((ref a) => !a.isValid));
 
-    io.assertTexture(root.text.texture.chunks[0], Vector2(0, -root.scroll), color("#fff"));
-    io.assertTexture(root.text.texture.chunks[1], Vector2(0, -root.scroll + chunkSize), color("#fff"));
+    io.assertTexture(myLabel.text.texture.chunks[0],
+        Vector2(0, -root.scroll),
+        color("#fff"));
+    io.assertTexture(myLabel.text.texture.chunks[1],
+        Vector2(0, -root.scroll + chunkSize),
+        color("#fff"));
     assert(io.textures.walkLength == 2);
 
     // Skip to third chunk, force regeneration
@@ -1111,12 +1117,16 @@ unittest {
     root.draw();
 
     // Because of the resize, the first chunk must have been destroyed
-    assert(root.text.texture.chunks[0 .. 1].all!((ref a) => !a.isValid));
-    assert(root.text.texture.chunks[1 .. 3].all!((ref a) => a.isValid));
-    assert(root.text.texture.chunks[3 .. $].all!((ref a) => !a.isValid));
+    assert(myLabel.text.texture.chunks[0 .. 1].all!((ref a) => !a.isValid));
+    assert(myLabel.text.texture.chunks[1 .. 3].all!((ref a) => a.isValid));
+    assert(myLabel.text.texture.chunks[3 .. $].all!((ref a) => !a.isValid));
 
-    io.assertTexture(root.text.texture.chunks[1], Vector2(0, -root.scroll + chunkSize), color("#fff"));
-    io.assertTexture(root.text.texture.chunks[2], Vector2(0, -root.scroll + chunkSize*2), color("#fff"));
+    io.assertTexture(myLabel.text.texture.chunks[1],
+        Vector2(0, -root.scroll + chunkSize),
+        color("#fff"));
+    io.assertTexture(myLabel.text.texture.chunks[2],
+        Vector2(0, -root.scroll + chunkSize*2),
+        color("#fff"));
     assert(io.textures.walkLength == 2);
 
 }
