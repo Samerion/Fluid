@@ -300,8 +300,7 @@ class Space : Node {
                 // Ignore children that are to be removed
                 if (toRemove) continue;
 
-                position = drawChild(position, child,
-                    size(inner));
+                position = drawNextChild(inner, position, child);
 
                 // Move children if needed
                 if (sourceIndex != destinationIndex) {
@@ -322,25 +321,24 @@ class Space : Node {
 
     }
 
-    alias drawChild = typeof(super).drawChild;
-
     /// Draw a child node and lay it out according to Space's rules.
     ///
     /// This function is only to be called from within `drawImpl` of nodes that inherit
     /// from `Space`. Use this if you're making modifications to `Space`'s behavior.
     ///
     /// Params:
-    ///     start     = Position to draw the child node on; this will be the node's top-left corner.
-    ///     child     = Child node to draw.
-    ///     available = Total available space for the node.
+    ///     inner = Rectangle to draw the children in.
+    ///     start = Position to draw the child node on; this will be the node's top-left corner.
+    ///     child = Child node to draw.
     /// Returns:
     ///     Position of the next node.
-    protected Vector2 drawChild(Vector2 start, Node child, Vector2 available) {
+    protected Vector2 drawNextChild(Rectangle inner, Vector2 start, Node child) {
 
         // Ignore if this child is not visible
         if (child.isHidden) return start;
 
         // Get params
+        const available = size(inner);
         const size = childSpace(child, available, true);
         const rect = Rectangle(start.tupleof, size.tupleof);
 
