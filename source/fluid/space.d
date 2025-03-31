@@ -1,5 +1,70 @@
+/// Spaces create columns or rows of other nodes.
 ///
+/// A space can be either vertical (a column) or horizontal (a row). Use [vspace] to create a
+/// vertical space, and a [hspace] to create a horizontal space.
+///
+/// Spaces are very similar to [Frames][fluid.frame.Frame]. For most purposes, Frames are
+/// sufficient, and [styling tags][fluid.structs.NodeTag] usually fill in the need for `Space`.
+/// Unlike Frames, spaces are "transparent" — that is, their background cannot be styled,
+/// and they don't stop the user from clicking nodes that display underneath the Space. The
+/// distinction exists only because of their commonplace usage; a space can be used to avoid the
+/// consequences that a frame's styling may have on the layout.
 module fluid.space;
+
+@safe:
+
+///
+unittest {
+
+    // A vspace will align all its content in a column
+    vspace(
+        label("First entry"),
+        label("Second entry"),
+        label("Third entry"),
+    );
+
+    // hspace will lay out the nodes in a row
+    hspace(
+        label("One, "),
+        label("Two, "),
+        label("Three!"),
+    );
+
+    // Combine them to quickly build layouts!
+    vspace(
+        label("Are you sure you want to proceed?"),
+        hspace(
+            button("Yes", delegate { }),
+            button("Cancel", delegate { }),
+        ),
+    );
+
+}
+
+/// Use spaces to organize your apps. For example, if you need to insert nodes into a column
+/// on event, you can append them to a `Space`:
+@("Space reference example")
+unittest {
+    import fluid.frame;
+
+    Space shoppingList;
+    TextInput newItem;
+    run(
+        vframe(
+            label("My shopping list:"),
+            shoppingList = vspace(
+                label("Apples"),
+                label("Carrots"),
+            ),
+            hspace(
+                newItem = textInput("Item..."),
+                button("Add item", delegate {
+                    shoppingList ~= label(newItem.value);
+                }),
+            ),
+        ),
+    );
+}
 
 import std.math;
 import std.range;
@@ -13,36 +78,33 @@ import fluid.utils;
 import fluid.backend;
 import fluid.children;
 
-
-@safe:
-
-
-/// This is a space, a basic container for other nodes.
-///
-/// Nodes are laid in a column (`vframe`) or in a row (`hframe`).
-///
-/// Space only acts as a container and doesn't implement styles and doesn't take focus. It's very useful as a helper for
-/// building layout, while `Frame` remains to provide styling.
+/// A [node builder][fluid.utils.nodeBuilder] that creates a vertical (`vspace`) or horizontal
+/// Space (`hspace`).
 alias vspace = simpleConstructor!Space;
 
 /// ditto
 alias hspace = simpleConstructor!(Space, (a) {
-
     a.directionHorizontal = true;
-
 });
 
-/// ditto
+/// A container node that aligns its children in columns or rows.
 class Space : Node {
 
     public {
 
-        /// Children of this frame.
+        /// Nodes this space will align and display. They are contained inside the node.
+        ///
+        /// Adding and removing nodes will change the application's layout, so it is necessary
+        /// to call [updateSize] on the `Space` afterwards.
+        ///
+        /// Because of how `Space` stores the children, it is also impossible to change `children`
+        /// while drawing. Attempts to do so will be detected when compiling in debug mode.
         Children children;
 
-        /// Defines in what directions children of this frame should be placed.
+        /// If true, children are placed horizontally (in a row), if false, vertically
+        /// (in a column).
         ///
-        /// If true, children are placed horizontally, if false, vertically.
+        /// This can be controlled when constructing nodes by using [vspace] or [hspace].
         bool isHorizontal;
 
         alias horizontal = isHorizontal;
@@ -61,27 +123,42 @@ class Space : Node {
     }
 
     /// Create the space and fill it with given nodes.
+    /// Params:
+    ///     nodes = Nodes for the space to control.
     this(Node[] nodes...) {
-
         this.children ~= nodes;
-
     }
 
-    /// Create the space using nodes from the given range.
+    /// Construct `Space` using node builders:
+    @("Space node constructor demo")
+    unittest {
+        run(
+            vspace(
+                label("Node 1"),
+                label("Node 2"),
+            ),
+        );
+    }
+
+    deprecated("There is no sensible way for `Space` to use ranges. "
+        ~ "Instead, explicitly convert them to an array with `std.array.array`. "
+        ~ "This constructor will be removed in Fluid 0.8.0.")
     this(Range)(Range range)
     if (isInputRange!Range)
     do {
-
         this.children ~= range;
-
     }
 
-    /// Add children.
-    pragma(inline, true)
+    /// Append children nodes to this node.
+    ///
+    /// This is the same as `node.children ~= nodes`, except it will automatically trigger
+    /// a resize.
+    ///
+    /// Params:
+    ///     nodes = Nodes to append.
     void opOpAssign(string operator : "~", T)(T nodes) {
-
         children ~= nodes;
-
+        updateSize();
     }
 
     protected override void resizeImpl(Vector2 available) {
@@ -134,7 +211,7 @@ class Space : Node {
 
         }
 
-        const gapSpace 
+        const gapSpace
             = visibleChildren == 0 ? 0
             : isHorizontal ? style.gap.sideX * (visibleChildren - 1u)
             :                style.gap.sideY * (visibleChildren - 1u);
@@ -273,11 +350,12 @@ class Space : Node {
 
     }
 
-    /// Space does not take hover; isHovered is always false.
+    /// `Space` does not take hover. Clicking will always "pass through" the `Space`, activating
+    /// nodes underneath it, if any.
+    /// Returns:
+    ///     False, always.
     protected override bool hoveredImpl(Rectangle, Vector2) {
-
         return false;
-
     }
 
     /// Params:
@@ -319,6 +397,7 @@ class Space : Node {
     /// Params:
     ///     child     = Child to place
     ///     available = Available space
+    ///     stateful  = .
     protected Vector2 childSpace(const Node child, Vector2 available, bool stateful = true) const
     in(
         child.isHidden || child.layout.expand <= denominator,
@@ -372,35 +451,5 @@ class Space : Node {
         }
 
     }
-
-}
-
-///
-unittest {
-
-    import fluid;
-
-    // A vspace will align all its content in a column
-    vspace(
-        label("First entry"),
-        label("Second entry"),
-        label("Third entry"),
-    );
-
-    // hspace will lay out the nodes in a row
-    hspace(
-        label("One, "),
-        label("Two, "),
-        label("Three!"),
-    );
-
-    // Combine them to quickly build layouts!
-    vspace(
-        label("Are you sure you want to proceed?"),
-        hspace(
-            button("Yes", delegate { }),
-            button("Cancel", delegate { }),
-        ),
-    );
 
 }
