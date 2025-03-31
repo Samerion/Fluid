@@ -15,6 +15,8 @@ module fluid.space;
 
 ///
 unittest {
+    import fluid.label;
+    import fluid.button;
 
     // A vspace will align all its content in a column
     vspace(
@@ -45,7 +47,10 @@ unittest {
 /// on event, you can append them to a `Space`:
 @("Space reference example")
 unittest {
+    import fluid.label;
     import fluid.frame;
+    import fluid.button;
+    import fluid.text_input;
 
     Space shoppingList;
     TextInput newItem;
@@ -99,6 +104,7 @@ class Space : Node {
         ///
         /// Because of how `Space` stores the children, it is also impossible to change `children`
         /// while drawing. Attempts to do so will be detected when compiling in debug mode.
+        /// Detection is handled by [Children].
         Children children;
 
         /// If true, children are placed horizontally (in a row), if false, vertically
@@ -132,6 +138,7 @@ class Space : Node {
     /// Construct `Space` using node builders:
     @("Space node constructor demo")
     unittest {
+        import fluid.label;
         run(
             vspace(
                 label("Node 1"),
@@ -252,35 +259,101 @@ class Space : Node {
 
     }
 
-    protected override void drawImpl(Rectangle, Rectangle area) {
+    protected override void drawImpl(Rectangle, Rectangle inner) {
+        drawChildren(inner);
+    }
+
+    /// Draw all of the space's children.
+    ///
+    /// This function is only to be called from within `drawImpl` of nodes that inherit
+    /// from `Space`. Use this if you're making modifications to `Space`'s behavior.
+    ///
+    /// It's illegal to change the children while this function is running. This is because
+    /// any node that is marked for removal will be removed from [children] during iteration.
+    /// This is done in place by shifting all subsequent siblings leftwards.
+    ///
+    /// For example, if node 3 is marked for removal: `[1, 2, 3, 4, 5]`, during iteration
+    /// it will be overridden by a following node: `[1, 2, 4, 5, 5]`. "Leftovers" at the end of
+    /// the array will be removed when the last node is reached: `[1, 2, 4, 5]`.
+    ///
+    /// Params:
+    ///     inner = Rectangle to draw the children in.
+    ///         `Space` normally draws inside the content box (inner).
+    protected void drawChildren(Rectangle inner) {
 
         assertClean(children, "Children were changed without calling updateSize().");
 
-        auto position = start(area);
+        auto position = start(inner);
+        Node[] nodes = children[];
+        size_t destinationIndex = 0;
 
-        foreach (child; filterChildren) {
+        // Prevent modifications while running
+        {
+            children.lock();
+            scope (exit) children.unlock();
 
-            // Ignore if this child is not visible
-            if (child.isHidden) continue;
+            foreach (sourceIndex, child; nodes) {
 
-            // Get params
-            const size = childSpace(child, size(area), true);
-            const rect = Rectangle(
-                position.x, position.y,
-                size.x, size.y
-            );
+                const toRemove = child.toRemove;
+                child.toRemove = false;
 
-            // Draw the child
-            drawChild(child, rect);
+                // Ignore children that are to be removed
+                if (toRemove) continue;
 
-            // Offset position
-            position = childOffset(position, size);
+                position = drawChild(position, child,
+                    size(inner));
 
+                // Move children if needed
+                if (sourceIndex != destinationIndex) {
+                    nodes[destinationIndex] = child;
+                }
+
+                // Set space for next nodes
+                destinationIndex++;
+
+            }
         }
+
+        // Remove leftovers
+        nodes.length = destinationIndex;
+        assertClean(children, "Children were changed without calling updateSize().");
+        children = nodes;
+        children.clearDirty;
 
     }
 
-    /// List children in the space, removing all nodes queued for deletion beforehand.
+    alias drawChild = typeof(super).drawChild;
+
+    /// Draw a child node and lay it out according to Space's rules.
+    ///
+    /// This function is only to be called from within `drawImpl` of nodes that inherit
+    /// from `Space`. Use this if you're making modifications to `Space`'s behavior.
+    ///
+    /// Params:
+    ///     start     = Position to draw the child node on; this will be the node's top-left corner.
+    ///     child     = Child node to draw.
+    ///     available = Total available space for the node.
+    /// Returns:
+    ///     Position of the next node.
+    protected Vector2 drawChild(Vector2 start, Node child, Vector2 available) {
+
+        // Ignore if this child is not visible
+        if (child.isHidden) return start;
+
+        // Get params
+        const size = childSpace(child, available, true);
+        const rect = Rectangle(start.tupleof, size.tupleof);
+
+        // Draw the child
+        drawChild(child, rect);
+
+        // Offset position
+        return childOffset(start, size);
+
+    }
+
+    deprecated("Override `drawChild` or iterate `children` directly. "
+        ~ "`filterChildren` will be removed in Fluid 0.8.0")
     protected auto filterChildren() {
 
         struct ChildIterator {
@@ -308,7 +381,7 @@ class Space : Node {
                 size_t destinationIndex = 0;
                 int end = 0;
 
-                // Iterate through all children. When we come upon ones that are queued for deletion,
+                // Iterate through all children
                 foreach (sourceIndex, child; node.children) {
 
                     const toRemove = child.toRemove;
