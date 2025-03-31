@@ -231,6 +231,15 @@ class GridFrame : Frame {
 
     override void drawImpl(Rectangle outer, Rectangle inner) {
 
+        // Draw the background
+        pickStyle.drawBackground(tree.io, canvasIO, outer);
+
+        drawChildren(inner);
+
+    }
+
+    protected override Vector2 drawNextChild(Rectangle inner, Vector2 start, Node child) {
+
         // TODO WHY is this done here and not in resizeImpl?
         void expand(Node child) {
 
@@ -253,31 +262,21 @@ class GridFrame : Frame {
 
         }
 
-        // Draw the background
-        pickStyle.drawBackground(tree.io, canvasIO, outer);
+        // Get params
+        const rect = Rectangle(
+            inner.x, start.y,
+            inner.width, child.minSize.y
+        );
 
-        // Get the position
-        auto position = inner.y;
+        // Try to expand grid segments
+        expand(child);
 
-        // Draw the rows
-        foreach (child; filterChildren) {
+        // Draw the child
+        drawChild(child, rect);
 
-            // Get params
-            const rect = Rectangle(
-                inner.x, position,
-                inner.width, child.minSize.y
-            );
-
-            // Try to expand grid segments
-            expand(child);
-
-            // Draw the child
-            drawChild(child, rect);
-
-            // Offset position
-            position += child.minSize.y + style.gap.sideY;
-
-        }
+        // Offset position
+        start.y += child.minSize.y + style.gap.sideY;
+        return start;
 
     }
 
