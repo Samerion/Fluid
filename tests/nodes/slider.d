@@ -150,3 +150,40 @@ unittest {
     assert(input2.value == 8);
 
 }
+
+@("Dragging the slider beyond the boundary selects min or max value")
+unittest {
+
+    const size = Vector2(500, 200);
+    const rect = Rectangle(0, 0, size.tupleof);
+
+    auto input = sizeLock!(slider!int)(
+        .sizeLimit(500, 200),
+        iota(1, 10)
+    );
+    auto hover = hoverChain(input);
+    auto root = hover;
+
+    root.draw();
+
+    // Default value
+    assert(input.index == 0);
+    assert(input.value == 1);
+
+    // Press at the center
+    hover.point(center(rect))
+        .then((pointer) {
+            pointer.press(false);
+            assert(input.index == 4);
+            assert(input.value == 5);
+            return pointer.move(size * 2);
+        })
+        .then((pointer) {
+            pointer.press(false);
+        })
+        .runWhileDrawing(root, 2);
+
+    assert(input.index == 8);
+    assert(input.value == 9);
+
+}
