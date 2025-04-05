@@ -195,14 +195,16 @@ abstract class AbstractSlider : InputNode!Node {
     @(FluidInputAction.press, WhileHeld)
     protected void press(HoverPointer pointer) {
 
+        import std.math;
+        import std.algorithm;
+
+        const maxStep = max(length, 1) - 1;
+
         // Get mouse position relative to the first step
         const offset = pointer.position.x - firstStepX + stepDistance/2;
 
         // Get step based on X axis position
-        const step = cast(size_t) (offset / stepDistance);
-
-        // Validate the value
-        if (step >= length) return;
+        const step = cast(size_t) (offset / stepDistance).clamp(0, maxStep);
 
         // Set the index
         if (index != step) {
