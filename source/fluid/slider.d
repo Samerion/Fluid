@@ -34,7 +34,7 @@ class Slider(T) : AbstractSlider {
     this(R)(R range, size_t index, void delegate() @safe changed = null)
     if (is(ElementType!R == T)) {
 
-        this(params, range, changed);
+        this(range, changed);
         this.index = index;
 
     }
