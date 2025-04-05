@@ -48,7 +48,7 @@
 		{
 			"dependencies": {
 				"elemi": "~>1.2.2",
-				"arsd-official:image_files": "~>11.3"
+				"arsd-official:image_files": "~>11.5.3"
 			},
 			"importPaths": [
 				"tests",
@@ -93,7 +93,7 @@
 	"dependencies": {
 		"arsd-official:image_files": {
 			"optional": true,
-			"version": "~>11.3"
+			"version": "~>11.5.3"
 		},
 		"bindbc-freetype": "~>1.1.1",
 		"bindbc-loader": "~>1.1.3",
