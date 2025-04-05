@@ -138,3 +138,15 @@ unittest {
     assert(input.value == "Two");
 
 }
+
+@("Slider can have a default value assigned")
+unittest {
+
+    auto input1 = slider!int([0, 1, 2, 4, 8, 16], 3);
+    assert(input1.index == 3);
+    assert(input1.value == 4);
+    auto input2 = slider!int([0, 1, 2, 4, 8, 16], 4);
+    assert(input2.index == 4);
+    assert(input2.value == 8);
+
+}
