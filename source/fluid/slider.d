@@ -324,7 +324,7 @@ class SliderHandle : Node {
 
     override void drawImpl(Rectangle outer, Rectangle inner) {
 
-        style.drawBackground(io, canvasIO, outer);
+        pickStyle().drawBackground(io, canvasIO, outer);
 
     }
 
