@@ -30,7 +30,8 @@ class FocusChain : NodeChain, FocusIO, WithOrderedFocus, WithPositionalFocus {
 
     mixin controlIO;
 
-    ActionIO actionIO;
+    ActionIOv1 actionIO;
+    ActionIOv2 actionIOv2;
 
     protected {
 
@@ -102,7 +103,7 @@ class FocusChain : NodeChain, FocusIO, WithOrderedFocus, WithPositionalFocus {
     }
 
     override void beforeResize(Vector2) {
-        use(actionIO);
+        use(actionIO).upgrade(actionIOv2);
         startIO();
     }
 
@@ -126,7 +127,7 @@ class FocusChain : NodeChain, FocusIO, WithOrderedFocus, WithPositionalFocus {
 
         // Send a frame event to trigger focusImpl
         if (actionIO) {
-            actionIO.emitEvent(ActionIO.frameEvent, 0, &runInputAction);
+            emitEvent(ActionIO.frameEvent);
         }
         else if (isFocusActionable) {
             _wasInputHandled = currentFocus.focusImpl();
@@ -167,9 +168,7 @@ class FocusChain : NodeChain, FocusIO, WithOrderedFocus, WithPositionalFocus {
             _wasInputHandled = true;
 
             // Cancel action events
-            if (actionIO) {
-                actionIO.emitEvent(ActionIO.noopEvent, 0, &runInputAction);
-            }
+            emitEvent(ActionIO.noopEvent);
         }
 
         // Clear the input buffer after frame action
@@ -241,7 +240,10 @@ class FocusChain : NodeChain, FocusIO, WithOrderedFocus, WithPositionalFocus {
 
     override void emitEvent(InputEvent event) {
 
-        if (actionIO) {
+        if (actionIOv2) {
+            actionIOv2.emitEvent(event, this, 0, &runInputAction);
+        }
+        else if (actionIO) {
             actionIO.emitEvent(event, 0, &runInputAction);
         }
 

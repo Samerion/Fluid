@@ -16,10 +16,17 @@ public import fluid.input;
 /// The job of `ActionIO` is to translate them into more meaningful input actions, which nodes
 /// can set up listeners for.
 ///
-/// `ActionIO` will work on nodes that are its children. That means that any input handling node must be placed
-/// inside as a child will react to these actions. Similarly, nodes representing input devices, also have to be placed
-/// as children.
-interface ActionIO : IO {
+/// `ActionIO` will work on nodes that are its children. That means that any input handling node
+/// must be placed inside as a child will react to these actions. Similarly, nodes representing
+/// input devices, also have to be placed as children.
+///
+/// `ActionIOv2` is currently recommended for new code, but more small updates are also expected
+/// in short-term future.
+///
+/// History:
+///     * [ActionIOv2] was added in Fluid 0.7.6 — it adds an [IO] parameter to [emitAction].
+///     * `ActionIO` was introduced in Fluid 0.7.2.
+interface ActionIOv1 : IO {
 
     /// Basic input actions necessary for input actions to work.
     @InputAction
@@ -81,30 +88,64 @@ interface ActionIO : IO {
 
     }
 
+    /// Callback type for [emitEvent].
+    alias ActionCallback = bool delegate(immutable InputActionID, bool isActive, int number) @safe;
+
     /// Pass an input event to transform into an input map.
     ///
-    /// The `ActionIO` system should withhold all input actions until after its node is drawn. This is when
-    /// all input handling nodes that the system interacts with, like `HoverIO` and `FocusIO`, have been processed
-    /// and are ready to handle the event.
+    /// The `ActionIO` system should withhold all input actions until after its node is drawn.
+    /// This is when all input handling nodes that the system interacts with, like `HoverIO` and
+    /// `FocusIO`, have been processed and are ready to handle the event.
     ///
-    /// Once processing has completed, if the event has triggered an action, the system will trigger the callback that
-    /// was passed along with the event. Events that were saved in the system should be discarded.
+    /// Once processing has completed, if the event has triggered an action, the system will
+    /// trigger the callback that was passed along with the event. Events that were saved in the
+    /// system should be discarded.
     ///
-    /// Note if an event functions as a modifier — for example the "control" key in a "ctrl+c" action — it should not
-    /// trigger the callback. In such case, only the last key, the "C" key in the example, will perform the call.
-    /// This is to make sure the event is handled by the correct handler, and only once.
+    /// Note if an event functions as a modifier — for example the "control" key in a "ctrl+c"
+    /// action — it should not trigger the callback. In such case, only the last key, the "C" key
+    /// in the example, will perform the call. This is to make sure the event is handled by the
+    /// correct handler, and only once.
     ///
     /// Params:
     ///     event    = Input event the system should save.
-    ///     number   = A number that will be passed as-is into the callback. Can be used to distinguish between
-    ///         different action calls without allocating a closure.
-    ///     callback = Function to call if the event has triggered an input action.
-    ///         The ID of the action will be passed as an argument, along with a boolean indicating if it was
-    ///         triggered by an inactive, or active event.
-    ///         The number passed into the `emitEvent` function will be passed as the third argument to this callback.
-    ///         The return value of the callback should indicate if the action was handled or not.
-    void emitEvent(InputEvent event, int number,
-        bool delegate(immutable InputActionID, bool isActive, int number) @safe callback);
+    ///     number   = A number that will be passed as-is into the callback. Can be used to
+    ///         distinguish between different action calls without allocating a closure.
+    ///     callback = Function to call if the event has triggered an input action. The ID of the
+    ///         action will be passed as an argument, along with a boolean indicating if it was
+    ///         triggered by an inactive, or active event. The number passed into the `emitEvent`
+    ///         function will be passed as the third argument to this callback. The return value
+    ///         of the callback should indicate if the action was handled or not.
+    void emitEvent(InputEvent event, int number, ActionCallback callback);
+
+}
+
+///
+interface ActionIO : ActionIOv1 {
+
+    deprecated("Superseded by `ActionIOv2.emitEvent`. The original overload, and `ActionIOv1`, "
+        ~ "will be removed in Fluid 0.8.0. To preserve backwards-compatibility, use "
+        ~ "`Node.use(actionIOv1).upgrade(actionIOv2)`.")
+    alias emitEvent = ActionIOv1.emitEvent;
+
+}
+
+/// An updated version of `ActionIO` that allows the event to be hijacked by an intermediate
+/// `ActionIO` for introspection. This interface can be used to implement, for example, a fallback
+/// handler for all input actions.
+interface ActionIOv2 : ActionIO {
+
+    /// An alternative overload for `ActionIO`, which accepts an `io` parameter.
+    /// Params:
+    ///     event    = Input event the system should save.
+    ///     io       = I/O system that emitted the event. May be null.
+    ///     number   = A number that will be passed as-is into the callback. Can be used to
+    ///         distinguish between different action calls without allocating a closure.
+    ///     callback = Function to call if the event has triggered an input action. The ID of the
+    ///         action will be passed as an argument, along with a boolean indicating if it was
+    ///         triggered by an inactive, or active event. The number passed into the `emitEvent`
+    ///         function will be passed as the third argument to this callback. The return value
+    ///         of the callback should indicate if the action was handled or not.
+    void emitEvent(InputEvent event, IO io, int number, ActionCallback callback);
 
 }
 

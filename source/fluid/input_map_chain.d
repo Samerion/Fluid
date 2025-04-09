@@ -15,14 +15,14 @@ import fluid.io.action;
 
 alias inputMapChain  = nodeBuilder!InputMapChain;
 
-class InputMapChain : NodeChain, ActionIO {
+class InputMapChain : NodeChain, ActionIOv2 {
 
     mixin controlIO;
 
     private struct ReceivedInputEvent {
         InputEvent event;
         int number;
-        bool delegate(InputActionID action, bool isActive, int number) @safe callback;
+        ActionCallback callback;
     }
 
     public {
@@ -64,12 +64,17 @@ class InputMapChain : NodeChain, ActionIO {
 
     }
 
-    override void emitEvent(InputEvent event, int number,
-        bool delegate(InputActionID action, bool isActive, int number) @safe callback)
-    do {
+    override void emitEvent(InputEvent event, int number, ActionCallback callback) {
 
         // Save the event to list
         _events ~= ReceivedInputEvent(event, number, callback);
+
+    }
+
+    override void emitEvent(InputEvent event, IO io, int number, ActionCallback callback) {
+
+        // Save the event to list
+        emitEvent(event, number, callback);
 
     }
 
