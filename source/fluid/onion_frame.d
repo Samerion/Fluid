@@ -46,17 +46,10 @@ class OnionFrame : Frame {
 
     }
 
-    protected override void drawImpl(Rectangle outer, Rectangle inner) {
-
-        const style = pickStyle();
-        style.drawBackground(tree.io, canvasIO, outer);
-
+    protected override void drawChildren(Rectangle inner) {
         foreach (child; filterChildren) {
-
             drawChild(child, inner);
-
         }
-
     }
 
 }

@@ -252,20 +252,20 @@ class MapFrame : Frame {
 
     }
 
+    /// Move the given box to mapFrame bounds
+    private Vector2 moveToBounds(Rectangle inner, Vector2 coords, Vector2 size) {
+
+        // Ignore if no overflow prevention is enabled
+        if (!preventOverflow) return coords;
+
+        return Vector2(
+            coords.x.clamp(inner.x, inner.x + max(0, inner.width - size.x)),
+            coords.y.clamp(inner.y, inner.y + max(0, inner.height - size.y)),
+        );
+
+    }
+
     protected override void drawImpl(Rectangle outer, Rectangle inner) {
-
-        /// Move the given box to mapFrame bounds
-        Vector2 moveToBounds(Vector2 coords, Vector2 size) {
-
-            // Ignore if no overflow prevention is enabled
-            if (!preventOverflow) return coords;
-
-            return Vector2(
-                coords.x.clamp(inner.x, inner.x + max(0, inner.width - size.x)),
-                coords.y.clamp(inner.y, inner.y + max(0, inner.height - size.y)),
-            );
-
-        }
 
         // Drag the current child
         if (_mouseDrag) {
@@ -284,7 +284,7 @@ class MapFrame : Frame {
                 assert(position, "Dragged node is not present in the map");
 
                 // Keep them in bounds
-                position.coords = moveToBounds(position.coords, _mouseDrag.minSize);
+                position.coords = moveToBounds(inner, position.coords, _mouseDrag.minSize);
 
             }
 
@@ -297,6 +297,12 @@ class MapFrame : Frame {
 
         }
 
+        super.drawImpl(outer, inner);
+
+    }
+
+    protected override void drawChildren(Rectangle inner) {
+
         foreach (child; filterChildren) {
 
             const position = positions.require(child, Position.init);
@@ -307,7 +313,7 @@ class MapFrame : Frame {
 
             if (preventOverflow) {
 
-                vec = moveToBounds(vec, child.minSize);
+                vec = moveToBounds(inner, vec, child.minSize);
 
             }
 
