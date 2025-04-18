@@ -135,6 +135,12 @@ class Space : Node {
         this.children ~= nodes;
     }
 
+    /// ditto
+    this(T : Node)(T[] nodes...)
+    if (!is(T[] : Node[])) {
+        this.children ~= nodes;
+    }
+
     /// Construct `Space` using node builders:
     @("Space node constructor demo")
     unittest {
@@ -151,7 +157,7 @@ class Space : Node {
         ~ "Instead, explicitly convert them to an array with `std.array.array`. "
         ~ "This constructor will be removed in Fluid 0.8.0.")
     this(Range)(Range range)
-    if (isInputRange!Range)
+    if (isInputRange!Range && !is(Range : T[], T : Node))
     do {
         this.children ~= range;
     }
@@ -350,8 +356,8 @@ class Space : Node {
 
     }
 
-    deprecated("Override `drawChild` or iterate `children` directly. "
-        ~ "`filterChildren` will be removed in Fluid 0.8.0")
+    // Deliberately left undocumented, it will become obsolete:
+    // https://git.samerion.com/Samerion/Fluid/issues/453
     protected auto filterChildren() {
 
         struct ChildIterator {
