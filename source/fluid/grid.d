@@ -367,11 +367,9 @@ class GridRow : Frame {
 
     }
 
-    override protected void drawImpl(Rectangle outer, Rectangle inner) {
+    override protected void drawChildren(Rectangle inner) {
 
         size_t segment;
-
-        pickStyle.drawBackground(tree.io, canvasIO, outer);
 
         /// Child position.
         auto position = Vector2(inner.x, inner.y);
