@@ -1182,23 +1182,28 @@ auto doesNotDraw(alias predicate = `a.startsWith("draw")`)(Node subject) {
 alias doesNotDrawImages = doesNotDraw!`a.among("drawImage", "drawHintedImage")`;
 
 /// Ensure the node emits a debug signal.
-pragma(mangle, "fluid__test_space_emits")
-auto emits(Node subject, string name) {
+EmitsAssert emits(Node subject, string name) {
+    return new EmitsAssert(subject, name);
+}
 
-    return new class BlackHole!Assert {
+class EmitsAssert : AbstractAssert {
 
-        override bool emitSignal(Node node, string emittedName) {
+    string name;
 
-            return subject.opEquals(node).assertNotThrown
-                && name == emittedName;
+    this(Node subject, string name) {
+        super(subject);
+        this.name = name;
+    }
 
-        }
+    override bool emitSignal(Node node, string emittedName) {
+        return equal(subject, node)
+            && name == emittedName;
 
-        override string toString() const {
-            return format!"%s should emit %s"(subject, name);
-        }
+    }
 
-    };
+    override string toString() const {
+        return toText(subject, " should emit ", name);
+    }
 
 }
 
@@ -1273,24 +1278,25 @@ class WildcardAssert(alias dg) : AbstractAssert {
 
 }
 
-/// Output every draw instruction to stdout (`dumpDraws`), and, optionally, to an SVG file (`dumpDrawsToSVG`).
+/// Output every draw instruction to stdout (`dumpDraws`), and, optionally, to an SVG file
+/// (`dumpDrawsToSVG`).
 ///
-/// Note that `dumpDraws` is equivalent to an `isDrawn` assert. It cannot be mixed with any other asserts on the same
-/// node.
+/// Note that `dumpDraws` is equivalent to an `isDrawn` assert. It cannot be mixed with any other
+/// asserts on the same node.
 ///
-/// SVG support has to be enabled by passing `Fluid_SVG`.
-/// It requires extra dependencies: [elemi](https://code.dlang.org/packages/elemi)
-/// and [arsd-official:image_files](https://code.dlang.org/packages/arsd-official%3Aimage_files).
-/// To create an SVG image, call `dumpDrawsToSVG`.
-/// SVG support is currently incomplete and unstable. Changes can be made to this feature without prior announcement.
+/// SVG support has to be enabled by passing `Fluid_SVG`. It requires
+/// extra dependencies: [elemi](https://code.dlang.org/packages/elemi) and
+/// [arsd-official:image_files](https://code.dlang.org/packages/arsd-official%3Aimage_files). To
+/// create an SVG image, call `dumpDrawsToSVG`. SVG support is currently incomplete and unstable.
+/// Changes can be made to this feature without prior announcement.
 ///
 /// Params:
 ///     subject  = Subject the output of which should be captured.
-///     filename = Path to save the SVG output to. Requires version `Fluid_SVG` to be set, ignored otherwise.
+///     filename = Path to save the SVG output to. Requires version `Fluid_SVG` to be set,
+///         ignored otherwise.
 /// Returns:
 ///     An assert object to pass to `TestSpace.drawAndAssert`.
-pragma(mangle, "fluid__test_space_dumpDrawsToSVG")
-auto dumpDrawsToSVG(Node subject, string filename = null) {
+DumpDrawsAssert dumpDrawsToSVG(Node subject, string filename = null) {
     auto a = dumpDraws(subject);
     a.generateSVG = true;
     a.svgFilename = filename;
@@ -1298,306 +1304,294 @@ auto dumpDrawsToSVG(Node subject, string filename = null) {
 }
 
 /// ditto
-pragma(mangle, "fluid__test_space_dumpDraws")
-auto dumpDraws(Node subject) {
+DumpDrawsAssert dumpDraws(Node subject) {
+    return new DumpDrawsAssert(subject);
+}
 
+class DumpDrawsAssert : AbstractAssert {
     import std.stdio;
 
-    return new class BlackHole!Assert {
+    bool generateSVG;
+    string svgFilename;
 
-        bool generateSVG;
-        string svgFilename;
+    version (Fluid_SVG) {
+        import elemi.xml;
+        Element svg;
+        bool[Color] tints;
+    }
+
+    this(Node subject) {
+        super(subject);
+    }
+
+    version (Fluid_SVG)
+    Element exportSVG() @safe {
+
+        return elems(
+            Element.XMLDeclaration1_0,
+            elem!"svg"(
+                attr("xmlns") = "http://www.w3.org/2000/svg",
+                attr("version") = "1.1",
+                svg,
+            ),
+        );
+
+    }
+
+    void saveSVG() @safe {
+
+        import std.file : write;
 
         version (Fluid_SVG) {
-            import elemi.xml;
-            Element svg;
-            bool[Color] tints;
-        }
-
-        version (Fluid_SVG)
-        Element exportSVG() nothrow @safe {
-
-            return assumeWontThrow(
-                elems(
-                    Element.XMLDeclaration1_0,
-                    elem!"svg"(
-                        attr("xmlns") = "http://www.w3.org/2000/svg",
-                        attr("version") = "1.1",
-                        svg,
-                    ),
-                ),
-            );
-
-        }
-
-        void saveSVG() nothrow @safe {
-
-            import std.file : write;
-
-            version (Fluid_SVG) {
-                if (generateSVG && svgFilename !is null) {
-                    assumeWontThrow(
-                        write(svgFilename, exportSVG)
-                    );
-                }
-            }
-
-        }
-
-        bool isSubject(Node node) nothrow @trusted {
-            return subject is null || node.opEquals(subject).assertNotThrown;
-        }
-
-        void dump(string fmt, Arguments...)(Node node, Arguments arguments) nothrow @trusted {
-            if (isSubject(node)) {
-                writefln!fmt(arguments).assertNotThrown;
+            if (generateSVG && svgFilename !is null) {
+                write(svgFilename, exportSVG);
             }
         }
 
-        override bool beforeDraw(Node node, Rectangle space, Rectangle, Rectangle) nothrow {
-            dump!"node.isDrawn().at(%s, %s, %s, %s),"(node, space.tupleof);
-            return false;
+    }
+
+    bool isSubject(Node node) @trusted {
+        return equal(subject, node);
+    }
+
+    void dump(string fmt, Arguments...)(Node node, Arguments arguments) @trusted {
+        if (isSubject(node)) {
+            writefln!fmt(arguments);
         }
+    }
 
-        override bool afterDraw(Node node, Rectangle, Rectangle, Rectangle) nothrow {
-            if (subject && isSubject(node)) {
-                saveSVG();
-                return true;
-            }
-            return false;
+    override bool beforeDraw(Node node, Rectangle space, Rectangle, Rectangle) {
+        dump!"node.isDrawn().at(%s, %s, %s, %s),"(node, space.tupleof);
+        return false;
+    }
+
+    override bool afterDraw(Node node, Rectangle, Rectangle, Rectangle) {
+        if (subject && isSubject(node)) {
+            saveSVG();
+            return true;
         }
+        return false;
+    }
 
-        override bool cropArea(Node node, Rectangle rectangle) nothrow {
-            dump!"node.cropsTo(%s, %s, %s, %s),"(node, rectangle.tupleof);
-            return false;
-        }
+    override bool cropArea(Node node, Rectangle rectangle) {
+        dump!"node.cropsTo(%s, %s, %s, %s),"(node, rectangle.tupleof);
+        return false;
+    }
 
-        override bool resetCropArea(Node node) nothrow {
-            dump!"node.resetsCrop(),"(node);
-            return false;
-        }
+    override bool resetCropArea(Node node) {
+        dump!"node.resetsCrop(),"(node);
+        return false;
+    }
 
-        override bool emitSignal(Node node, string text) nothrow {
-            dump!"node.emits(%(%s%)),"(node, text.only);
-            return false;
-        }
+    override bool emitSignal(Node node, string text) {
+        dump!"node.emits(%(%s%)),"(node, text.only);
+        return false;
+    }
 
-        override bool drawTriangle(Node node, Vector2 a, Vector2 b, Vector2 c, Color color) nothrow {
+    override bool drawTriangle(Node node, Vector2 a, Vector2 b, Vector2 c, Color color) {
 
-            if (isSubject(node)) {
-                dump!"drawTriangle(%s, %s, %s, %s),"(node, a, b, c, color.toHex.assumeWontThrow);
-
-                version (Fluid_SVG) if (generateSVG) {
-                    assumeWontThrow(
-                        svg ~=  elem!"polygon"(
-                            attr("points") = [
-                                toText(a.x, a.y),
-                                toText(b.x, b.y),
-                                toText(c.x, c.y),
-                            ],
-                            attr("fill") = color.toHex,
-                        ),
-                    );
-                }
-            }
-
-            return false;
-        }
-
-        override bool drawCircle(Node node, Vector2 center, float radius, Color color) nothrow {
-
-            if (isSubject(node)) {
-                dump!`node.drawsCircle().at(%s, %s).ofRadius(%s).ofColor("%s"),`
-                    (node, center.x, center.y, radius, color.toHex.assumeWontThrow);
-
-                version (Fluid_SVG) if (generateSVG) {
-                    assumeWontThrow(
-                        svg ~= elem!"circle"(
-                            attr("cx")   = toText(center.x),
-                            attr("cy")   = toText(center.y),
-                            attr("r")    = toText(radius),
-                            attr("fill") = color.toHex,
-                        ),
-                    );
-                }
-            }
-
-            return false;
-        }
-
-        override bool drawCircleOutline(Node node, Vector2 center, float radius, float width, Color color) nothrow {
-
-            if (isSubject(node)) {
-                dump!`node.drawsCircleOutline().at(%s).ofRadius(%s).ofColor("%s"),`
-                    (node, center, radius, color.toHex.assumeWontThrow);
-
-                version (Fluid_SVG) if (generateSVG) {
-                    assumeWontThrow(
-                        svg ~= elem!"circle"(
-                            attr("cx")           = toText(center.x),
-                            attr("cy")           = toText(center.y),
-                            attr("r")            = toText(radius),
-                            attr("fill")         = "none",
-                            attr("stroke")       = color.toHex,
-                            attr("stroke-width") = toText(width),
-                        ),
-                    );
-                }
-            }
-
-            return false;
-        }
-
-        override bool drawRectangle(Node node, Rectangle area, Color color) nothrow {
-
-            if (isSubject(node)) {
-                dump!`node.drawsRectangle(%s, %s, %s, %s).ofColor("%s"),`
-                    (node, area.tupleof, color.toHex.assumeWontThrow);
-
-                version (Fluid_SVG) if (generateSVG) {
-                    assumeWontThrow(
-                        svg ~= elem!"rect"(
-                            attr("x")      = toText(area.x),
-                            attr("y")      = toText(area.y),
-                            attr("width")  = toText(area.width),
-                            attr("height") = toText(area.height),
-                            attr("fill")   = color.toHex,
-                        ),
-                    );
-                }
-            }
-
-            return false;
-        }
-
-        override bool drawLine(Node node, Vector2 start, Vector2 end, float width, Color color) nothrow {
-
-            if (isSubject(node)) {
-                dump!`node.drawsLine().from(%s, %s).to(%s, %s).ofWidth(%s).ofColor("%s"),`
-                    (node, start.tupleof, end.tupleof, width, color.toHex.assumeWontThrow);
-
-                version (Fluid_SVG) if (generateSVG) {
-                    assumeWontThrow(
-                        svg ~= elem!"line"(
-                            attr("x1") = toText(start.x),
-                            attr("y1") = toText(start.y),
-                            attr("x2") = toText(end.x),
-                            attr("y2") = toText(end.y),
-                            attr("stroke") = color.toHex,
-                            attr("stroke-width") = toText(width),
-                        ),
-                    );
-                }
-            }
-
-            return false;
-        }
-
-        override bool drawImage(Node node, DrawableImage image, Rectangle area, Color color)
-        nothrow {
-            dumpImage(node, image, area, color, false);
-            return false;
-        }
-
-        override bool drawHintedImage(Node node, DrawableImage image, Rectangle area, Color color)
-        nothrow {
-            dumpImage(node, image, area, color, true);
-            return false;
-        }
-
-        private void dumpImage(Node node, DrawableImage image, Rectangle area, Color tint,
-            bool isHinted)
-        nothrow @trusted {
-
-            if (!isSubject(node)) return;
-
-            dump!(`node.draws%sImage().at(%s, %s, %s, %s).ofColor("%s")` ~ "\n"
-                ~ `    .sha256("%(%02x%)"),`)
-                (node, isHinted ? "Hinted" : "", area.tupleof, tint.toHex.assumeWontThrow,
-                sha256Of(image.data)[]);
-
-            if (image.area == 0) return;
+        if (isSubject(node)) {
+            dump!"drawTriangle(%s, %s, %s, %s),"(node, a, b, c, color.toHex);
 
             version (Fluid_SVG) if (generateSVG) {
+                svg ~=  elem!"polygon"(
+                    attr("points") = [
+                        toText(a.x, a.y),
+                        toText(b.x, b.y),
+                        toText(c.x, c.y),
+                    ],
+                    attr("fill") = color.toHex,
+                );
+            }
+        }
 
-                import std.base64;
-                import arsd.png;
-                import arsd.image;
+        return false;
+    }
 
-                ubyte[] data = cast(ubyte[]) image.toRGBA.data;
+    override bool drawCircle(Node node, Vector2 center, float radius, Color color) {
 
-                // Load the image
-                auto arsdImage = new TrueColorImage(image.width, image.height, data);
+        if (isSubject(node)) {
+            dump!`node.drawsCircle().at(%s, %s).ofRadius(%s).ofColor("%s"),`
+                (node, center.x, center.y, radius, color.toHex);
 
-                // Encode as a PNG in a data URL
-                const png = arsdImage.writePngToArray().assumeWontThrow;
-                const string base64 = Base64.encode(png);
-                const url = "data:image/png;base64," ~ base64;
+            version (Fluid_SVG) if (generateSVG) {
+                svg ~= elem!"circle"(
+                    attr("cx")   = toText(center.x),
+                    attr("cy")   = toText(center.y),
+                    attr("r")    = toText(radius),
+                    attr("fill") = color.toHex,
+                );
+            }
+        }
 
+        return false;
+    }
+
+    override bool drawCircleOutline(Node node, Vector2 center, float radius, float width,
+        Color color)
+    do {
+
+        if (isSubject(node)) {
+            dump!`node.drawsCircleOutline().at(%s).ofRadius(%s).ofColor("%s"),`
+                (node, center, radius, color.toHex.assumeWontThrow);
+
+            version (Fluid_SVG) if (generateSVG) {
                 assumeWontThrow(
-                    svg ~= elems(
-                        useTint(tint),
-                        elem!"image"(
-                            attr("x")      = toText(area.x),
-                            attr("y")      = toText(area.y),
-                            attr("width")  = toText(area.width),
-                            attr("height") = toText(area.height),
-                            attr("href")   = url,
-                            attr("style")  = format!"filter:url(#%s)"(tint.toHex!"t"),
-                        ),
+                    svg ~= elem!"circle"(
+                        attr("cx")           = toText(center.x),
+                        attr("cy")           = toText(center.y),
+                        attr("r")            = toText(radius),
+                        attr("fill")         = "none",
+                        attr("stroke")       = color.toHex,
+                        attr("stroke-width") = toText(width),
                     ),
                 );
-
             }
-
         }
 
-        /// Generate a tint filter for the given color
-        version (Fluid_SVG)
-        private Element useTint(Color color) {
+        return false;
+    }
 
-            // Ignore if the given filter already exists
-            if (color in tints) return elems();
+    override bool drawRectangle(Node node, Rectangle area, Color color) {
 
-            tints[color] = true;
+        if (isSubject(node)) {
+            dump!`node.drawsRectangle(%s, %s, %s, %s).ofColor("%s"),`
+                (node, area.tupleof, color.toHex.assumeWontThrow);
 
-            // <pain>
-            return elem!"filter"(
+            version (Fluid_SVG) if (generateSVG) {
+                svg ~= elem!"rect"(
+                    attr("x")      = toText(area.x),
+                    attr("y")      = toText(area.y),
+                    attr("width")  = toText(area.width),
+                    attr("height") = toText(area.height),
+                    attr("fill")   = color.toHex,
+                );
+            }
+        }
 
-                // Use the color as the filter ID, prefixed with "t" instead of "#"
-                attr("id") = color.toHex!"t",
+        return false;
+    }
 
-                // Create a layer full of that color
-                elem!"feFlood"(
-                    attr("x") = "0",
-                    attr("y") = "0",
-                    attr("width") = "100%",
-                    attr("height") = "100%",
-                    attr("flood-color") = color.toHex,
+    override bool drawLine(Node node, Vector2 start, Vector2 end, float width, Color color) {
+
+        if (isSubject(node)) {
+            dump!`node.drawsLine().from(%s, %s).to(%s, %s).ofWidth(%s).ofColor("%s"),`
+                (node, start.tupleof, end.tupleof, width, color.toHex);
+
+            version (Fluid_SVG) if (generateSVG) {
+                svg ~= elem!"line"(
+                    attr("x1") = toText(start.x),
+                    attr("y1") = toText(start.y),
+                    attr("x2") = toText(end.x),
+                    attr("y2") = toText(end.y),
+                    attr("stroke") = color.toHex,
+                    attr("stroke-width") = toText(width),
+                );
+            }
+        }
+
+        return false;
+    }
+
+    override bool drawImage(Node node, DrawableImage image, Rectangle area, Color color) {
+        dumpImage(node, image, area, color, false);
+        return false;
+    }
+
+    override bool drawHintedImage(Node node, DrawableImage image, Rectangle area, Color color) {
+        dumpImage(node, image, area, color, true);
+        return false;
+    }
+
+    private void dumpImage(Node node, DrawableImage image, Rectangle area, Color tint,
+        bool isHinted) @trusted
+    do {
+
+        if (!isSubject(node)) return;
+
+        dump!(`node.draws%sImage().at(%s, %s, %s, %s).ofColor("%s")` ~ "\n"
+            ~ `    .sha256("%(%02x%)"),`)
+            (node, isHinted ? "Hinted" : "", area.tupleof, tint.toHex.assumeWontThrow,
+            sha256Of(image.data)[]);
+
+        if (image.area == 0) return;
+
+        version (Fluid_SVG) if (generateSVG) {
+
+            import std.base64;
+            import arsd.png;
+            import arsd.image;
+
+            ubyte[] data = cast(ubyte[]) image.toRGBA.data;
+
+            // Load the image
+            auto arsdImage = new TrueColorImage(image.width, image.height, data);
+
+            // Encode as a PNG in a data URL
+            const png = arsdImage.writePngToArray().assumeWontThrow;
+            const string base64 = Base64.encode(png);
+            const url = "data:image/png;base64," ~ base64;
+
+            svg ~= elems(
+                useTint(tint),
+                elem!"image"(
+                    attr("x")      = toText(area.x),
+                    attr("y")      = toText(area.y),
+                    attr("width")  = toText(area.width),
+                    attr("height") = toText(area.height),
+                    attr("href")   = url,
+                    attr("style")  = format!"filter:url(#%s)"(tint.toHex!"t"),
                 ),
-
-                // Blend in with the original image
-                elem!"feBlend"(
-                    attr("in2") = "SourceGraphic",
-                    attr("mode") = "multiply",
-                ),
-
-                // Use the source image for opacity
-                elem!"feComposite"(
-                    attr("in2") = "SourceGraphic",
-                    attr("operator") = "in",
-                ),
-
             );
-            // </pain>
 
         }
 
-        override string toString() const {
-            return format!"%s must be reached"(subject);
-        }
+    }
 
-    };
+    /// Generate a tint filter for the given color
+    version (Fluid_SVG)
+    private Element useTint(Color color) {
+
+        // Ignore if the given filter already exists
+        if (color in tints) return elems();
+
+        tints[color] = true;
+
+        // <pain>
+        return elem!"filter"(
+
+            // Use the color as the filter ID, prefixed with "t" instead of "#"
+            attr("id") = color.toHex!"t",
+
+            // Create a layer full of that color
+            elem!"feFlood"(
+                attr("x") = "0",
+                attr("y") = "0",
+                attr("width") = "100%",
+                attr("height") = "100%",
+                attr("flood-color") = color.toHex,
+            ),
+
+            // Blend in with the original image
+            elem!"feBlend"(
+                attr("in2") = "SourceGraphic",
+                attr("mode") = "multiply",
+            ),
+
+            // Use the source image for opacity
+            elem!"feComposite"(
+                attr("in2") = "SourceGraphic",
+                attr("operator") = "in",
+            ),
+
+        );
+        // </pain>
+
+    }
+
+    override string toString() const {
+        return toText(subject, " must be reached");
+    }
 
 }
 
