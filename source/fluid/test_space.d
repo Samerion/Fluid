@@ -327,6 +327,7 @@ private class TestProbe : TreeAction {
 
     import std.array;
     import std.concurrency;
+    import fluid.size_lock;
 
     public {
 
@@ -762,184 +763,121 @@ class DrawsCircleAssert : AbstractAssert {
 ///     subject = Test if this subject draws an image.
 /// Returns:
 ///     An `Assert` that can be passed to `TestSpace.drawAndAssert` to test if a node draws an image.
-pragma(mangle, "fluid__test_space_drawsImage_I")
-auto drawsImage(Node subject, Image image) {
+DrawsImageAssert drawsImage(Node subject, Image image) {
     auto test = drawsImage(subject);
-    test.isTestingImage = true;
     test.targetImage = image;
-    test.isTestingColor = true;
     test.targetColor = color("#fff");
     return test;
 }
 
 /// ditto
-pragma(mangle, "fluid__test_space_drawsHintedImage_I")
-auto drawsHintedImage(Node subject, Image image) {
+DrawsImageAssert drawsHintedImage(Node subject, Image image) {
     auto test = drawsImage(subject, image);
-    test.isTestingHint = true;
     test.targetHint = true;
     return test;
 }
 
 /// ditto
-pragma(mangle, "fluid__test_space_drawsHintedImage")
-auto drawsHintedImage(Node subject) {
+DrawsImageAssert drawsHintedImage(Node subject) {
     auto test = drawsImage(subject);
-    test.isTestingHint = true;
     test.targetHint = true;
     return test;
 }
 
 /// ditto
-pragma(mangle, "fluid__test_space_drawsImage")
-auto drawsImage(Node subject) {
+DrawsImageAssert drawsImage(Node subject) {
+    return new DrawsImageAssert(subject);
+}
 
-    return new class BlackHole!Assert {
+class DrawsImageAssert : AbstractAssert {
 
-        bool isTestingImage;
-        Image targetImage;
-        bool isTestingDataHash;
-        ubyte[] targetDataHash;
-        bool isTestingStart;
-        Vector2 targetStart;
-        bool isTestingSize;
-        Vector2 targetSize;
-        bool isTestingColor;
-        Color targetColor;
-        bool isTestingHint;
-        bool targetHint;
-        bool isTestingPalette;
-        Color[] targetPalette;
+    Nullable!Image targetImage;
+    Nullable!(ubyte[]) targetDataHash;
+    Nullable!Vector2 targetStart;
+    Nullable!Vector2 targetSize;
+    Nullable!Color targetColor;
+    Nullable!bool targetHint;
+    Nullable!(Color[]) targetPalette;
 
-        override bool drawImage(Node node, DrawableImage image, Rectangle rect, Color color) nothrow {
+    this(Node subject) {
+        super(subject);
+    }
 
-            if (!node.opEquals(subject).assertNotThrown) return false;
+    override bool drawImage(Node node, DrawableImage image, Rectangle rect, Color color) {
+        return testImage(node, image, rect, color, false);
+    }
 
-            if (isTestingImage) {
-                const bothEmpty = image.data.empty && targetImage.data.empty;
-                assert(image.format == targetImage.format);
-                assert(bothEmpty || image.data is targetImage.data,
-                    format!"%s should draw image 0x%02x but draws 0x%02x"(
-                        node, cast(size_t) targetImage.data.ptr, cast(size_t) image.data.ptr).assertNotThrown);
+    override bool drawHintedImage(Node node, DrawableImage image, Rectangle rect, Color color) {
+        return testImage(node, image, rect, color, true);
+    }
 
-                if (isTestingPalette) {
-                    assert(image.format == Image.Format.palettedAlpha);
-                    assert(image.palette == targetPalette,
-                        format!"%s should draw image with palette %s but uses %s"(
-                            node, targetPalette.map!(a => a.toHex), image.palette.map!(a => a.toHex))
-                            .assertNotThrown);
-                }
-            }
+    bool testImage(Node node, DrawableImage image, Rectangle rect, Color color, bool hint) {
+        return equal(subject, node)
+            && equal(targetImage, image)
+            && equal(targetDataHash, sha256Of(image.data)[])
+            && equal(targetStart, rect.start)
+            && equal(targetSize, rect.size)
+            && equal(targetColor, color)
+            && equal(targetHint, hint)
+            && equal(targetPalette, image.palette);
+    }
 
-            if (isTestingDataHash) {
-                assert(targetDataHash == sha256Of(image.data),
-                    format!"%s should draw image with SHA256 hash %(%02x%), but draws %(%02x%)"(
-                        node, targetDataHash, sha256Of(image.data))
-                        .assumeWontThrow);
-            }
+    /// Test if the image content (using the format it is stored in) matches the hex-encoded
+    /// SHA256 hash.
+    typeof(this) sha256(string content) @safe {
+        import std.conv : to;
+        targetDataHash = content
+            .chunks(2)
+            .map!(a => a.to!ubyte(16))
+            .array;
+        return this;
+    }
 
-            if (isTestingStart) {
-                assert(equal(targetStart.x, rect.x)
-                    && equal(targetStart.y, rect.y),
-                    format!"%s should draw image at %s, but draws at %s"(node, targetStart, rect.start)
-                        .assertNotThrown);
-            }
+    typeof(this) at(Vector2 position) @safe {
+        targetStart = position;
+        // TODO DPI
+        return this;
+    }
 
-            if (isTestingSize) {
-                assert(equal(targetSize.x, rect.w)
-                    && equal(targetSize.y, rect.h),
-                    format!"%s should draw image of size %s, but draws %s"(node, targetSize, rect.size)
-                        .assertNotThrown);
-            }
+    typeof(this) at(typeof(Vector2.tupleof) position) @safe {
+        return at(Vector2(position));
+    }
 
-            if (isTestingColor) {
-                assert(color == targetColor);
-            }
+    typeof(this) at(Rectangle area) @safe {
+        at(area.start);
+        targetSize = area.size;
+        return this;
+    }
 
-            if (isTestingHint) {
-                assert(!targetHint);
-            }
+    typeof(this) at(typeof(Rectangle.tupleof) area) @safe {
+        return at(Rectangle(area));
+    }
 
-            return true;
+    typeof(this) withPalette(Color[] colors...) @safe {
+        targetPalette = colors.dup;
+        return this;
+    }
 
-        }
+    typeof(this) ofColor(string color) @safe {
+        return ofColor(.color(color));
+    }
 
-        override bool drawHintedImage(Node node, DrawableImage image, Rectangle rect, Color color) nothrow {
+    typeof(this) ofColor(Color color) @safe {
+        targetColor = color;
+        return this;
+    }
 
-            targetHint = false;
-            scope (exit) targetHint = true;
-
-            return drawImage(node, image, rect, color);
-
-        }
-
-        /// Test if the image content (using the format it is stored in) matches the hex-encoded
-        /// SHA256 hash.
-        typeof(this) sha256(string content) @safe {
-
-            import std.conv : to;
-
-            isTestingDataHash = true;
-            targetDataHash = content
-                .chunks(2)
-                .map!(a => a.to!ubyte(16))
-                .array;
-
-            return this;
-
-        }
-
-        typeof(this) at(Vector2 position) @safe {
-            isTestingStart = true;
-            targetStart = position;
-            // TODO DPI
-            return this;
-
-        }
-
-        typeof(this) at(typeof(Vector2.tupleof) position) @safe {
-            return at(Vector2(position));
-        }
-
-        typeof(this) at(Rectangle area) @safe {
-            at(area.start);
-            isTestingSize = true;
-            targetSize = area.size;
-            return this;
-
-        }
-
-        typeof(this) at(typeof(Rectangle.tupleof) area) @safe {
-            return at(Rectangle(area));
-        }
-
-        typeof(this) withPalette(Color[] colors...) @safe {
-            isTestingPalette = true;
-            targetPalette = colors.dup;
-            return this;
-        }
-
-        typeof(this) ofColor(string color) @safe {
-            return ofColor(.color(color));
-        }
-
-        typeof(this) ofColor(Color color) @safe {
-            isTestingColor = true;
-            targetColor = color;
-            return this;
-        }
-
-        override string toString() const {
-            return toText(
-                subject, " should draw an image ",
-                isTestingImage ? toText(targetImage)                     : "",
-                isTestingStart ? toText(" at ", targetStart)             : "",
-                isTestingSize  ? toText(" of size ", targetSize)         : "",
-                isTestingColor ? toText(" of color ", targetColor.toHex) : "",
-            );
-        }
-
-    };
+    override string toString() const {
+        return toText(
+            subject, " should draw an image",
+            describe(" ", targetImage),
+            describe(" with SHA256 ", targetDataHash),
+            describe(" at ", targetStart),
+            describe(" of size ", targetSize),
+            describe(" of color ", targetColor),
+            describe(" with palette ", targetPalette),
+        );
+    }
 
 }
 
@@ -1721,15 +1659,26 @@ private bool equal(Nullable!Rectangle target, Rectangle subject) {
         && equal(targetNN.height, subject.height);
 }
 
-private bool equal(Nullable!Color target, Color subject) {
+private bool equal(Nullable!Image target, Image subject) {
     if (target.isNull) {
         return true;
     }
     auto targetNN = target.get;
-    return equal(targetNN.r, subject.r)
-        && equal(targetNN.g, subject.g)
-        && equal(targetNN.b, subject.b)
-        && equal(targetNN.a, subject.a);
+    const bothEmpty = targetNN.data.empty
+        && subject.data.empty;
+    const sameData = bothEmpty
+        || targetNN.data is subject.data;
+    return targetNN.format == subject.format
+        && sameData
+        && targetNN.width == subject.width
+        && targetNN.height == subject.height;
+}
+
+private bool equal(T)(Nullable!(T) target, T subject) {
+    if (target.isNull) {
+        return true;
+    }
+    return target.get == subject;
 }
 
 private string describe(T : Nullable!E, E)(string prefix, T nullable, string suffix = "") {
@@ -1742,12 +1691,17 @@ private string describe(T : Nullable!E, E)(string prefix, T nullable, string suf
     }
 
     // Describe colors with hex codes
-    else static if (is(E : Color)) {
+    else static if (is(const E : Color)) {
         return toText(prefix, nullable.get.toHex, suffix);
     }
 
+    // Hex-encode binary
+    else static if (is(const E : const(ubyte)[])) {
+        return format!"%s%(%02x%)%s"(prefix, nullable.get, suffix);
+    }
+
     // Remove qualifiers, if allowed: const(Rectangle)(0, 0, 10, 10) -> Rectangle(0, 0, 10, 10)
-    else static if (is(E : Unqual!E)) {
+    else static if (is(const E : Unqual!E)) {
         return toText(prefix, cast() nullable.get, suffix);
     }
     else {

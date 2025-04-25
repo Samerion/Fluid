@@ -646,3 +646,44 @@ unittest {
     );
 
 }
+
+@("TestSpace can handle images")
+unittest {
+
+    auto image = imageView(
+        generateColorImage(10, 10, color("#faa")),
+    );
+    auto root = testSpace(.nullTheme, image);
+
+    root.drawAndAssert(
+        image.drawsImage().at(0, 0, 10, 10).ofColor("#fff")
+            .sha256("f40b77783c8a9ff39b8e2429faf77026c7101ef5f10ec2aeae86cb573ee09f15"),
+    );
+    root.drawAndAssertFailure(
+        image.drawsImage().at(0, 0, 10, 10).ofColor("#fff")
+            .sha256("f40b777FA1Ea9ff39b8e2429faf77026c7101ef5f10ec2aeae86cb573ee09f15"),
+    );
+    root.drawAndAssert(
+        image.drawsImage().at(0, 0, 10, 10).ofColor("#fff"),
+    );
+    root.drawAndAssertFailure(
+        image.drawsImage().at(0, 0, 10, 10).ofColor("#f8f"),
+    );
+    root.drawAndAssertFailure(
+        image.drawsImage().at(1, 0, 10, 10).ofColor("#fff"),
+    );
+    root.drawAndAssertFailure(
+        image.drawsImage().at(1, 0).ofColor("#fff"),
+    );
+
+    assert(image.drawsImage().at(0, 0, 10, 10).ofColor("#fff")
+            .sha256("f40b77783c8a9ff39b8e2429faf77026c7101ef5f10ec2aeae86cb573ee09f15")
+            .toString == image.toString ~ " should draw an image with SHA256 "
+                ~ "f40b77783c8a9ff39b8e2429faf77026c7101ef5f10ec2aeae86cb573ee09f15 "
+                ~ "at Vector2(0, 0) of size Vector2(10, 10) of color #ffffff");
+    assert(image.drawsImage(image.image).at(0, 0, 10, 10).ofColor("#fff")
+            .toString == image.toString ~ " should draw an image "
+                ~ image.image.toString
+                ~ " at Vector2(0, 0) of size Vector2(10, 10) of color #ffffff");
+
+}
