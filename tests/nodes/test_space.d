@@ -583,3 +583,66 @@ unittest {
         == line.toString ~ " should draw a line of width 2");
 
 }
+
+@("TestSpace can test circles and circle outlines")
+unittest {
+
+    class Circle : Node {
+
+        CanvasIO canvasIO;
+
+        override void resizeImpl(Vector2) {
+            require(canvasIO);
+            minSize = Vector2(10, 10);
+        }
+
+        override void drawImpl(Rectangle, Rectangle contentBox) {
+            canvasIO.drawCircle(contentBox.center, contentBox.width / 2, color("#600"));
+        }
+
+    }
+
+    class CircleOutline : Node {
+
+        CanvasIO canvasIO;
+
+        override void resizeImpl(Vector2) {
+            require(canvasIO);
+            minSize = Vector2(10, 10);
+        }
+
+        override void drawImpl(Rectangle, Rectangle contentBox) {
+            canvasIO.drawCircleOutline(contentBox.center, contentBox.width / 2, 1, color("#600"));
+        }
+
+    }
+
+    auto circle = new Circle;
+    auto outline = new CircleOutline;
+    auto root = testSpace(
+        .nullTheme,
+        circle,
+        outline,
+    );
+
+    root.drawAndAssert(
+        circle .drawsCircle()        .at(5,  5).ofRadius(5).ofColor("#600"),
+        outline.drawsCircleOutline(1).at(5, 15).ofRadius(5).ofColor("#600"),
+    );
+    root.drawAndAssertFailure(
+        circle .drawsCircle()        .at(5,  5).ofRadius(5).ofColor("#604"),
+    );
+    root.drawAndAssertFailure(
+        circle .drawsCircle()        .at(5,  5).ofRadius(3).ofColor("#600"),
+    );
+    root.drawAndAssertFailure(
+        outline.drawsCircleOutline(1).at(5, 15).ofRadius(5).ofColor("#604"),
+    );
+    root.drawAndAssertFailure(
+        outline.drawsCircleOutline(1).at(5, 15).ofRadius(9).ofColor("#600"),
+    );
+    root.drawAndAssertFailure(
+        outline.drawsCircleOutline(2).at(5, 15).ofRadius(5).ofColor("#600"),
+    );
+
+}

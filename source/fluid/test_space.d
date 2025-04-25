@@ -603,7 +603,7 @@ class DrawsRectangleAssert : AbstractAssert {
 };
 
 /// Test if the subject draws a line.
-auto drawsLine(Node subject) {
+DrawsLineAssert drawsLine(Node subject) {
     return new DrawsLineAssert(subject);
 
 }
@@ -672,7 +672,6 @@ class DrawsLineAssert : AbstractAssert {
 };
 
 /// Test if the subject draws a circle outline.
-pragma(mangle, "fluid__test_space_drawsCircleOutline")
 auto drawsCircleOutline(Node subject) {
     auto a = drawsCircle(subject);
     a.isOutline = true;
@@ -680,111 +679,82 @@ auto drawsCircleOutline(Node subject) {
 }
 
 /// ditto
-pragma(mangle, "fluid__test_space_drawsCircleOutline_float")
 auto drawsCircleOutline(Node subject, float width) {
     auto a = drawsCircleOutline(subject);
-    a.isTestingOutlineWidth = true;
     a.targetOutlineWidth = width;
     return a;
 }
 
 /// Test if the subject draws a circle.
-pragma(mangle, "fluid__test_space_drawsCircle")
 auto drawsCircle(Node subject) {
+    return new DrawsCircleAssert(subject);
+}
 
-    return new class BlackHole!Assert {
+class DrawsCircleAssert : AbstractAssert {
 
-        bool isOutline;
-        bool isTestingCenter;
-        Vector2 targetCenter;
-        bool isTestingRadius;
-        float targetRadius;
-        bool isTestingColor;
-        Color targetColor;
-        bool isTestingOutlineWidth;
-        float targetOutlineWidth;
+    bool isOutline;
+    Nullable!Vector2 targetCenter;
+    Nullable!float targetRadius;
+    Nullable!Color targetColor;
+    Nullable!float targetOutlineWidth;
 
-        override bool drawCircle(Node node, Vector2 center, float radius, Color color) nothrow {
-            if (isOutline) {
-                return false;
-            }
-            else {
-                return drawTargetCircle(node, center, radius, color);
-            }
-        }
+    this(Node subject) {
+        super(subject);
+    }
 
-        override bool drawCircleOutline(Node node, Vector2 center, float radius, float width, Color color) nothrow {
-            if (isOutline) {
-                if (isTestingOutlineWidth) {
-                    assert(equal(width, targetOutlineWidth),
-                        format!"Expected outline width %s, got %s"(targetOutlineWidth, width).assertNotThrown);
-                }
-                return drawTargetCircle(node, center, radius, color);
-            }
-            else {
-                return false;
-            }
-        }
+    override bool drawCircle(Node node, Vector2 center, float radius, Color color) {
+        return !isOutline
+            && equalCircle(node, center, radius, color);
+    }
 
-        bool drawTargetCircle(Node node, Vector2 center, float radius, Color color) nothrow @safe {
+    override bool drawCircleOutline(Node node, Vector2 center, float radius, float width,
+        Color color)
+    do {
+        return isOutline
+            && equal(targetOutlineWidth, width)
+            && equalCircle(node, center, radius, color);
+    }
 
-            if (!node.opEquals(subject).assertNotThrown) return false;
+    bool equalCircle(Node node, Vector2 center, float radius, Color color) {
+        return equal(subject, node)
+            && equal(targetCenter, center)
+            && equal(targetRadius, radius)
+            && equal(targetColor, color);
+    }
 
-            if (isTestingCenter) {
-                if (!equal(targetCenter.x, center.x)
-                    || !equal(targetCenter.y, center.y)) return false;
-            }
+    typeof(this) at(float x, float y) {
+        return at(Vector2(x, y));
+    }
 
-            if (isTestingRadius) {
-                if (!equal(targetRadius, radius)) return false;
-            }
+    typeof(this) at(Vector2 center) {
+        targetCenter = center;
+        return this;
+    }
 
-            if (isTestingColor) {
-                if (targetColor != color) return false;
-            }
+    typeof(this) ofRadius(float radius) {
+        targetRadius = radius;
+        return this;
+    }
 
-            return true;
+    typeof(this) ofColor(string color) {
+        return ofColor(.color(color));
+    }
 
-        }
+    typeof(this) ofColor(Color color) {
+        targetColor = color;
+        return this;
+    }
 
-        typeof(this) at(float x, float y) @safe {
-            return at(Vector2(x, y));
-        }
-
-        typeof(this) at(Vector2 center) @safe {
-            isTestingCenter = true;
-            targetCenter = center;
-            return this;
-        }
-
-        typeof(this) ofRadius(float radius) @safe {
-            isTestingRadius = true;
-            targetRadius = radius;
-            return this;
-        }
-
-        typeof(this) ofColor(string color) @safe {
-            return ofColor(.color(color));
-        }
-
-        typeof(this) ofColor(Color color) @safe {
-            isTestingColor = true;
-            targetColor = color;
-            return this;
-        }
-
-        override string toString() const {
-            return toText(
-                subject, " should draw a circle",
-                isOutline             ? "outline"                                : "",
-                isTestingCenter       ? toText(" at ", targetCenter)             : "",
-                isTestingRadius       ? toText(" of radius ", targetRadius)      : "",
-                isTestingOutlineWidth ? toText(" of width ", targetOutlineWidth) : "",
-                isTestingColor        ? toText(" of color ", targetColor.toHex)  : "",
-            );
-        }
-
-    };
+    override string toString() const {
+        return toText(
+            subject, " should draw a circle",
+            isOutline ? " outline" : "",
+            describe(" at ", targetCenter),
+            describe(" of radius ", targetRadius),
+            describe(" of width ", targetOutlineWidth),
+            describe(" of color ", targetColor),
+        );
+    }
 
 }
 
