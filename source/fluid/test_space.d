@@ -603,100 +603,73 @@ class DrawsRectangleAssert : AbstractAssert {
 };
 
 /// Test if the subject draws a line.
-pragma(mangle, "fluid__test_space_drawsLine")
 auto drawsLine(Node subject) {
-
-    return new class BlackHole!Assert {
-
-        bool isTestingStart;
-        Vector2 targetStart;
-        bool isTestingEnd;
-        Vector2 targetEnd;
-        bool isTestingWidth;
-        float targetWidth;
-        bool isTestingColor;
-        Color targetColor;
-
-        override bool drawLine(Node node, Vector2 start, Vector2 end, float width, Color color) nothrow {
-
-            // node != subject MAY throw
-            if (!node.opEquals(subject).assertNotThrown) return false;
-
-            if (isTestingStart) {
-                assert(equal(targetStart.x, start.x)
-                    && equal(targetStart.y, start.y),
-                    format!"Expected start %s, got %s"(targetStart, start).assertNotThrown);
-            }
-
-            if (isTestingEnd) {
-                assert(equal(targetEnd.x, end.x)
-                    && equal(targetEnd.y, end.y),
-                    format!"Expected end %s, got %s"(targetEnd, end).assertNotThrown);
-            }
-
-            if (isTestingWidth) {
-                assert(equal(targetWidth, width),
-                    format!"Expected width %s, got %s"(targetWidth, width).assertNotThrown);
-            }
-
-            if (isTestingColor) {
-                assert(targetColor == color,
-                    format!"Expected color %s, got %s"(targetColor, color).assertNotThrown);
-            }
-
-            return true;
-
-        }
-
-        typeof(this) from(float x, float y) @safe {
-            return from(Vector2(x, y));
-        }
-
-        typeof(this) from(Vector2 start) @safe {
-            isTestingStart = true;
-            targetStart = start;
-            return this;
-        }
-
-        typeof(this) to(float x, float y) @safe {
-            return to(Vector2(x, y));
-        }
-
-        typeof(this) to(Vector2 end) @safe {
-            isTestingEnd = true;
-            targetEnd = end;
-            return this;
-        }
-
-        typeof(this) ofWidth(float width) @safe {
-            isTestingWidth = true;
-            targetWidth = width;
-            return this;
-        }
-
-        typeof(this) ofColor(string color) @safe {
-            return ofColor(.color(color));
-        }
-
-        typeof(this) ofColor(Color color) @safe {
-            isTestingColor = true;
-            targetColor = color;
-            return this;
-        }
-
-        override string toString() const {
-            return toText(
-                subject, " should draw a line",
-                isTestingStart ? toText(" from ", targetStart)           : "",
-                isTestingEnd   ? toText(" to ", targetEnd)               : "",
-                isTestingWidth ? toText(" of width ", targetWidth)       : "",
-                isTestingColor ? toText(" of color ", targetColor.toHex) : "",
-            );
-        }
-
-    };
+    return new DrawsLineAssert(subject);
 
 }
+
+class DrawsLineAssert : AbstractAssert {
+
+    Nullable!Vector2 targetStart;
+    Nullable!Vector2 targetEnd;
+    Nullable!float targetWidth;
+    Nullable!Color targetColor;
+
+    this(Node subject) {
+        super(subject);
+    }
+
+    override bool drawLine(Node node, Vector2 start, Vector2 end, float width, Color color) {
+        return equal(subject, node)
+            && equal(targetStart, start)
+            && equal(targetEnd, end)
+            && equal(targetWidth, width)
+            && equal(targetColor, color);
+    }
+
+    typeof(this) from(float x, float y) @safe {
+        return from(Vector2(x, y));
+    }
+
+    typeof(this) from(Vector2 start) @safe {
+        targetStart = start;
+        return this;
+    }
+
+    typeof(this) to(float x, float y) @safe {
+        return to(Vector2(x, y));
+    }
+
+    typeof(this) to(Vector2 end) @safe {
+        targetEnd = end;
+        return this;
+    }
+
+    typeof(this) ofWidth(float width) @safe {
+        targetWidth = width;
+        return this;
+    }
+
+    typeof(this) ofColor(string color) @safe {
+        return ofColor(.color(color));
+    }
+
+    typeof(this) ofColor(Color color) @safe {
+        targetColor = color;
+        return this;
+    }
+
+    override string toString() const {
+        return toText(
+            subject, " should draw a line",
+            describe(" from ", targetStart),
+            describe(" to ", targetEnd),
+            describe(" of width ", targetWidth),
+            describe(" of color ", targetColor),
+        );
+    }
+
+};
 
 /// Test if the subject draws a circle outline.
 pragma(mangle, "fluid__test_space_drawsCircleOutline")
@@ -1742,6 +1715,27 @@ private bool equal(Node a, Node b) nothrow {
     // Neither is null, use opEquals
     return a.opEquals(b).assumeWontThrow;
 
+}
+
+/// Returns:
+///     True if both floats are the same, or the target is null/unspecified.
+private bool equal(Nullable!float target, float subject) {
+    if (target.isNull) {
+        return true;
+    }
+    auto targetNN = target.get;
+    return equal(targetNN, subject);
+}
+
+/// Returns:
+///     True if both vectors are the same, or the target is null/unspecified.
+private bool equal(Nullable!Vector2 target, Vector2 subject) {
+    if (target.isNull) {
+        return true;
+    }
+    auto targetNN = target.get;
+    return equal(targetNN.x, subject.x)
+        && equal(targetNN.y, subject.y);
 }
 
 /// Returns:

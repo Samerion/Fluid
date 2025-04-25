@@ -510,5 +510,76 @@ unittest {
 
     assert(node.drawsRectangle(0, 0, 10, 10).ofColor("#f524").toString
         == node.toString ~ " should draw a rectangle Rectangle(0, 0, 10, 10) of color #ff552244");
+    assert(node.drawsRectangle().ofColor("#f524").toString
+        == node.toString ~ " should draw a rectangle of color #ff552244");
+    assert(node.drawsRectangle().toString
+        == node.toString ~ " should draw a rectangle");
+
+}
+
+@("TestSpace can test line drawing")
+unittest {
+
+    class Line : Node {
+
+        CanvasIO canvasIO;
+
+        override void resizeImpl(Vector2) {
+            require(canvasIO);
+            minSize = Vector2(10, 10);
+        }
+
+        override void drawImpl(Rectangle, Rectangle contentBox) {
+            canvasIO.drawLine(contentBox.start, contentBox.end, 2, color("#a90"));
+        }
+
+    }
+
+    auto line = new Line;
+    auto root = testSpace(.nullTheme, line);
+
+    root.drawAndAssert(
+        line.drawsLine().from(0, 0).to(10, 10).ofWidth(2).ofColor("#a90"),
+    );
+    root.drawAndAssertFailure(  // different color
+        line.drawsLine().from(0, 0).to(10, 10).ofWidth(2).ofColor("#500"),
+    );
+    root.drawAndAssertFailure(  // different width
+        line.drawsLine().from(0, 0).to(10, 10).ofWidth(9).ofColor("#a90"),
+    );
+    root.drawAndAssertFailure(  // different end
+        line.drawsLine().from(0, 0).to(50, 50).ofWidth(2).ofColor("#a90"),
+    );
+    root.drawAndAssertFailure(  // different start
+        line.drawsLine().from(2, 2).to(10, 10).ofWidth(2).ofColor("#a90"),
+    );
+
+    root.drawAndAssert(
+        line.drawsLine().to(10, 10).ofWidth(2).ofColor("#a90"),
+    );
+    root.drawAndAssert(
+        line.drawsLine().from(0, 0).ofWidth(2).ofColor("#a90"),
+    );
+    root.drawAndAssert(
+        line.drawsLine().from(0, 0).to(10, 10).ofColor("#a90"),
+    );
+    root.drawAndAssert(
+        line.drawsLine().from(0, 0).to(10, 10).ofWidth(2),
+    );
+    root.drawAndAssert(
+        line.drawsLine().from(0, 0).to(10, 10),
+    );
+    root.drawAndAssertFailure(
+        line.drawsLine().from(0, 0).to(10, 50),
+    );
+    root.drawAndAssertFailure(
+        line.drawsLine().ofColor("#999"),
+    );
+
+    assert(line.drawsLine().from(0, 0).to(10, 10).ofWidth(2).ofColor("#a90").toString
+        == line.toString ~ " should draw a line from Vector2(0, 0) to Vector2(10, 10) "
+        ~ "of width 2 of color #aa9900");
+    assert(line.drawsLine().ofWidth(2).toString
+        == line.toString ~ " should draw a line of width 2");
 
 }
