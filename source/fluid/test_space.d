@@ -882,6 +882,10 @@ class DrawsImageAssert : AbstractAssert {
 }
 
 /// Assert true if the node draws a child.
+///
+/// `drawsChild` will eventually be replaced by a more appropriate test. See
+/// https://git.samerion.com/Samerion/Fluid/issues/346 for details.
+///
 /// Bugs:
 ///     If testing with a specific child, it will not detect the action if resumed inside of a sibling node.
 ///     In other words, this will fail:
@@ -1014,6 +1018,9 @@ unittest {
 }
 
 /// Make sure the parent does not draw any children.
+///
+/// `doesNotDrawChildren` will eventually be replaced by a more appropriate test. See
+/// https://git.samerion.com/Samerion/Fluid/issues/347 for details.
 pragma(mangle, "fluid__test_space_doesNotDrawChildren")
 auto doesNotDrawChildren(Node parent) {
 
@@ -1058,69 +1065,59 @@ auto doesNotDrawChildren(Node parent) {
 
 /// Assert true if a node is attempted to be drawn,
 /// but the node does not need to draw anything for the assert to succeed.
-pragma(mangle, "fluid__test_space_isDrawn")
-auto isDrawn(Node subject) {
+IsDrawnAssert isDrawn(Node subject) {
+    return new IsDrawnAssert(subject);
 
-    return new class BlackHole!Assert {
 
-        bool isTestingSpaceStart;
-        Vector2 targetSpaceStart;
-        bool isTestingSpaceSize;
-        Vector2 targetSpaceSize;
+}
 
-        override bool resume(Node node) {
-            return node.opEquals(subject).assertNotThrown
-                && !isTestingSpaceStart
-                && !isTestingSpaceSize;
-        }
+class IsDrawnAssert : AbstractAssert {
 
-        override bool beforeDraw(Node node, Rectangle space, Rectangle, Rectangle) {
+    Nullable!Vector2 targetSpaceStart;
+    Nullable!Vector2 targetSpaceSize;
 
-            if (isTestingSpaceStart) {
-                if (!equal(space.start.x, targetSpaceStart.x)
-                    || !equal(space.start.y, targetSpaceStart.y)) return false;
-            }
+    this(Node node) {
+        super(node);
+    }
 
-            if (isTestingSpaceSize) {
-                if (!equal(space.size.x, targetSpaceSize.x)
-                    || !equal(space.size.y, targetSpaceSize.y)) return false;
-            }
+    override bool resume(Node node) {
+        return equal(subject, node)
+            && targetSpaceStart.isNull
+            && targetSpaceSize.isNull;
+    }
 
-            return node.opEquals(subject).assertNotThrown;
-        }
+    override bool beforeDraw(Node node, Rectangle space, Rectangle, Rectangle) {
+        return equal(subject, node)
+            && equal(targetSpaceStart, space.start)
+            && equal(targetSpaceSize, space.size);
+    }
 
-        auto at(Rectangle space) @safe {
-            isTestingSpaceStart = true;
-            targetSpaceStart = space.start;
-            isTestingSpaceSize = true;
-            targetSpaceSize = space.size;
-            return this;
-        }
+    auto at(Rectangle space) @safe {
+        targetSpaceStart = space.start;
+        targetSpaceSize = space.size;
+        return this;
+    }
 
-        auto at(float x, float y, float width, float height) @safe {
-            return at(Rectangle(x, y, width, height));
-        }
+    auto at(float x, float y, float width, float height) @safe {
+        return at(Rectangle(x, y, width, height));
+    }
 
-        auto at(Vector2 start) @safe {
-            isTestingSpaceStart = true;
-            targetSpaceStart = start;
-            return this;
-        }
+    auto at(Vector2 start) @safe {
+        targetSpaceStart = start;
+        return this;
+    }
 
-        auto at(float x, float y) @safe {
-            return at(Vector2(x, y));
-        }
+    auto at(float x, float y) @safe {
+        return at(Vector2(x, y));
+    }
 
-        override string toString() const {
-            return toText(
-                subject, " must be drawn",
-                isTestingSpaceStart ? toText(" at ",        targetSpaceStart) : "",
-                isTestingSpaceSize  ? toText(" with size ", targetSpaceSize)  : "",
-            );
-        }
-
-    };
-
+    override string toString() const {
+        return toText(
+            subject, " must be drawn",
+            describe(" at ", targetSpaceStart),
+            describe(" with size ", targetSpaceSize),
+        );
+    }
 
 }
 
