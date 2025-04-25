@@ -1067,8 +1067,6 @@ auto doesNotDrawChildren(Node parent) {
 /// but the node does not need to draw anything for the assert to succeed.
 IsDrawnAssert isDrawn(Node subject) {
     return new IsDrawnAssert(subject);
-
-
 }
 
 class IsDrawnAssert : AbstractAssert {
@@ -1124,19 +1122,18 @@ class IsDrawnAssert : AbstractAssert {
 /// Make sure the selected node draws, but doesn't matter what.
 pragma(mangle, "fluid__test_space_draws")
 auto draws(Node subject) {
-
     return drawsWildcard!((node, methodName) {
-
-        return node.opEquals(subject).assertNotThrown
+        return equal(subject, node)
             && methodName.startsWith("draw");
 
     })(format!"%s should draw"(subject));
-
 }
 
 /// Make sure the selected node doesn't draw anything until another node does.
+///
+/// `doesNotDraw` will eventually be replaced by a more appropriate test. See
+/// https://git.samerion.com/Samerion/Fluid/issues/347 for details.
 auto doesNotDraw(alias predicate = `a.startsWith("draw")`)(Node subject) {
-
     import std.functional : unaryFun;
 
     bool matched;
@@ -1149,7 +1146,7 @@ auto doesNotDraw(alias predicate = `a.startsWith("draw")`)(Node subject) {
         // Test failed, skip checks
         if (failedName) return false;
 
-        const isSubject = node.opEquals(subject).assertNotThrown;
+        const isSubject = equal(subject, node);
 
         // Make sure the node is reached
         if (!matched) {
@@ -1178,9 +1175,10 @@ auto doesNotDraw(alias predicate = `a.startsWith("draw")`)(Node subject) {
 
     })(matched ? format!"%s shouldn't draw, but calls %s"(subject, failedName)
                : format!"%s should be reached"(subject));
-
 }
 
+// `doesNotDrawImages` will eventually be replaced by a more appropriate test. See
+// https://git.samerion.com/Samerion/Fluid/issues/347 for details.
 alias doesNotDrawImages = doesNotDraw!`a.among("drawImage", "drawHintedImage")`;
 
 /// Ensure the node emits a debug signal.
@@ -1204,67 +1202,74 @@ auto emits(Node subject, string name) {
 
 }
 
-auto drawsWildcard(alias dg)(lazy string message) {
+auto drawsWildcard(alias dg)(string message) {
+    return new WildcardAssert!dg(null, message);
+}
 
-    return new class Assert {
+class WildcardAssert(alias dg) : AbstractAssert {
 
-        override bool resume(Node node) nothrow {
-            return dg(node, "resume");
-        }
+    string message;
 
-        override bool beforeDraw(Node node, Rectangle, Rectangle, Rectangle) nothrow {
-            return dg(node, "beforeDraw");
-        }
+    this(Node subject, string message) {
+        super(subject);
+        this.message = message;
+    }
 
-        override bool afterDraw(Node node, Rectangle, Rectangle, Rectangle) nothrow {
-            return dg(node, "afterDraw");
-        }
+    override bool resume(Node node) {
+        return dg(node, "resume");
+    }
 
-        override bool cropArea(Node node, Rectangle) nothrow {
-            return dg(node, "cropArea");
-        }
+    override bool beforeDraw(Node node, Rectangle, Rectangle, Rectangle) {
+        return dg(node, "beforeDraw");
+    }
 
-        override bool resetCropArea(Node node) nothrow {
-            return dg(node, "resetCropArea");
-        }
+    override bool afterDraw(Node node, Rectangle, Rectangle, Rectangle) {
+        return dg(node, "afterDraw");
+    }
 
-        override bool emitSignal(Node node, string) nothrow {
-            return dg(node, "emitSignal");
-        }
+    override bool cropArea(Node node, Rectangle) {
+        return dg(node, "cropArea");
+    }
 
-        override bool drawTriangle(Node node, Vector2, Vector2, Vector2, Color) nothrow {
-            return dg(node, "drawTriangle");
-        }
+    override bool resetCropArea(Node node) {
+        return dg(node, "resetCropArea");
+    }
 
-        override bool drawCircle(Node node, Vector2, float, Color) nothrow {
-            return dg(node, "drawCircle");
-        }
+    override bool emitSignal(Node node, string) {
+        return dg(node, "emitSignal");
+    }
 
-        override bool drawCircleOutline(Node node, Vector2, float, float, Color) nothrow {
-            return dg(node, "drawCircleOutline");
-        }
+    override bool drawTriangle(Node node, Vector2, Vector2, Vector2, Color) {
+        return dg(node, "drawTriangle");
+    }
 
-        override bool drawRectangle(Node node, Rectangle, Color) nothrow {
-            return dg(node, "drawRectangle");
-        }
+    override bool drawCircle(Node node, Vector2, float, Color) {
+        return dg(node, "drawCircle");
+    }
 
-        override bool drawLine(Node node, Vector2, Vector2, float, Color) nothrow {
-            return dg(node, "drawLine");
-        }
+    override bool drawCircleOutline(Node node, Vector2, float, float, Color) {
+        return dg(node, "drawCircleOutline");
+    }
 
-        override bool drawImage(Node node, DrawableImage, Rectangle, Color) nothrow {
-            return dg(node, "drawImage");
-        }
+    override bool drawRectangle(Node node, Rectangle, Color) {
+        return dg(node, "drawRectangle");
+    }
 
-        override bool drawHintedImage(Node node, DrawableImage, Rectangle, Color) nothrow {
-            return dg(node, "drawHintedImage");
-        }
+    override bool drawLine(Node node, Vector2, Vector2, float, Color) {
+        return dg(node, "drawLine");
+    }
 
-        override string toString() const {
-            return message;
-        }
+    override bool drawImage(Node node, DrawableImage, Rectangle, Color) {
+        return dg(node, "drawImage");
+    }
 
-    };
+    override bool drawHintedImage(Node node, DrawableImage, Rectangle, Color) {
+        return dg(node, "drawHintedImage");
+    }
+
+    override string toString() const {
+        return message;
+    }
 
 }
 
