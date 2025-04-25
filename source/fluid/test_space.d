@@ -552,71 +552,55 @@ class ResetCropAssert : AbstractAssert {
 };
 
 ///
-pragma(mangle, "fluid__test_space_drawsRectangle_R_tuple")
-auto drawsRectangle(Node subject, typeof(Rectangle.tupleof) rectangle) {
-    return drawsRectangle(subject, Rectangle(rectangle));
+DrawsRectangleAssert drawsRectangle(Node subject, typeof(Rectangle.tupleof) rectangle) {
+    return drawsRectangle(subject,
+        Rectangle(rectangle));
 }
 
 /// ditto
-pragma(mangle, "fluid__test_space_drawsRectangle_R")
 auto drawsRectangle(Node subject, Rectangle rectangle) {
     auto result = drawsRectangle(subject);
-    result.isTestingArea = true;
     result.targetArea = rectangle;
     return result;
 }
 
-pragma(mangle, "fluid__test_space_drawsRectangle")
 auto drawsRectangle(Node subject) {
-
-    return new class BlackHole!Assert {
-
-        bool isTestingArea;
-        Rectangle targetArea;
-        bool isTestingColor;
-        Color targetColor;
-
-        override bool drawRectangle(Node node, Rectangle rect, Color color) nothrow {
-
-            // node != subject MAY throw
-            if (!node.opEquals(subject).assertNotThrown) return false;
-
-            if (isTestingArea) {
-                if (!equal(targetArea.x, rect.x)
-                    || !equal(targetArea.y, rect.y)
-                    || !equal(targetArea.width, rect.width)
-                    || !equal(targetArea.height, rect.height)) return false;
-            }
-
-            if (isTestingColor) {
-                if (color != targetColor) return false;
-            }
-
-            return true;
-
-        }
-
-        typeof(this) ofColor(string color) @safe {
-            return ofColor(.color(color));
-        }
-
-        typeof(this) ofColor(Color color) @safe {
-            isTestingColor = true;
-            targetColor = color;
-            return this;
-        }
-
-        override string toString() const {
-            return toText(
-                subject, " should draw a rectangle",
-                isTestingArea  ? toText(" ", targetArea)                 : "",
-                isTestingColor ? toText(" of color ", targetColor.toHex) : "",
-            );
-        }
-
-    };
-
+    return new DrawsRectangleAssert(subject);
 }
+
+class DrawsRectangleAssert : AbstractAssert {
+
+    Nullable!Rectangle targetArea;
+    Nullable!Color targetColor;
+
+    this(Node subject) {
+        super(subject);
+    }
+
+    override bool drawRectangle(Node node, Rectangle area, Color color) {
+        return equal(node, subject)
+            && equal(targetArea, area)
+            && equal(targetColor, color);
+    }
+
+    typeof(this) ofColor(string color) @safe {
+        return ofColor(.color(color));
+    }
+
+    typeof(this) ofColor(Color color) @safe {
+        targetColor = color;
+        return this;
+    }
+
+    override string toString() const {
+        return toText(
+            subject, " should draw a rectangle",
+            describe(" ", targetArea),
+            describe(" of color ", targetColor),
+        );
+    }
+
+};
 
 /// Test if the subject draws a line.
 pragma(mangle, "fluid__test_space_drawsLine")
@@ -1773,10 +1757,34 @@ private bool equal(Nullable!Rectangle target, Rectangle subject) {
         && equal(targetNN.height, subject.height);
 }
 
+private bool equal(Nullable!Color target, Color subject) {
+    if (target.isNull) {
+        return true;
+    }
+    auto targetNN = target.get;
+    return equal(targetNN.r, subject.r)
+        && equal(targetNN.g, subject.g)
+        && equal(targetNN.b, subject.b)
+        && equal(targetNN.a, subject.a);
+}
+
 private string describe(T : Nullable!E, E)(string prefix, T nullable, string suffix = "") {
 
+    import std.traits : Unqual;
+
+    // Empty strings if this test is disabled
     if (nullable.isNull) {
         return null;
+    }
+
+    // Describe colors with hex codes
+    else static if (is(E : Color)) {
+        return toText(prefix, nullable.get.toHex, suffix);
+    }
+
+    // Remove qualifiers, if allowed: const(Rectangle)(0, 0, 10, 10) -> Rectangle(0, 0, 10, 10)
+    else static if (is(E : Unqual!E)) {
+        return toText(prefix, cast() nullable.get, suffix);
     }
     else {
         return toText(prefix, nullable.get, suffix);
