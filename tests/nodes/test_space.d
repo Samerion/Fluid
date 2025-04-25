@@ -477,3 +477,38 @@ unittest {
     );
 
 }
+
+@("TestSpace's asserts describe colors in hex")
+unittest {
+
+    auto theme = nullTheme.derive(
+        rule!Frame(
+            Rule.backgroundColor = color("#f524"),
+        ),
+    );
+
+    auto node = sizeLock!vframe(
+        .sizeLimit(10, 10),
+    );
+    auto root = testSpace(theme, node);
+
+    root.drawAndAssert(
+        node.drawsRectangle(0, 0, 10, 10).ofColor("#f524"),
+    );
+    root.drawAndAssertFailure(
+        node.drawsRectangle(0, 0, 10, 10).ofColor("#f523"),
+    );
+    root.drawAndAssert(
+        node.drawsRectangle(0, 0, 10, 10)
+    );
+    root.drawAndAssert(
+        node.drawsRectangle().ofColor("#f524")
+    );
+    root.drawAndAssertFailure(
+        node.drawsRectangle().ofColor("#0000")
+    );
+
+    assert(node.drawsRectangle(0, 0, 10, 10).ofColor("#f524").toString
+        == node.toString ~ " should draw a rectangle Rectangle(0, 0, 10, 10) of color #ff552244");
+
+}
