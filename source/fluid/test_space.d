@@ -326,6 +326,7 @@ class TestSpace : Space, CanvasIO, DebugSignalIO {
 private class TestProbe : TreeAction {
 
     import std.array;
+    import std.concurrency;
 
     public {
 
@@ -357,13 +358,13 @@ private class TestProbe : TreeAction {
     /// Check an assertion in the `asserts` queue.
     /// Params:
     ///     dg      = Function to run the assert. Returns true if the assert succeeds.
-    protected void runAssert(bool delegate(Assert a) @safe nothrow dg) nothrow {
+    protected void runAssert(bool delegate(Assert a) @safe dg) nothrow {
 
         // No tests remain
         if (asserts.empty) return;
 
         // Test passed, continue to the next one
-        if (dg(asserts.front)) {
+        if (dg(asserts.front).assumeWontThrow) {
             nextAssert();
         }
 
@@ -379,7 +380,7 @@ private class TestProbe : TreeAction {
         }
 
         // Call `resume` on the next item. Continue while tests pass
-        while (!asserts.empty && asserts.front.resume(subject));
+        while (!asserts.empty && asserts.front.resume(subject).assumeWontThrow);
 
     }
 
@@ -454,94 +455,101 @@ interface Assert {
     /// After another test passes and this test is chosen, `resume` will be called to let the test
     /// know the current position in the tree. This is important in situations where `resume` is immediately
     /// followed by `beforeDraw`; the node passed to `resume` will be the parent of the one passed to `beforeDraw`.
-    bool resume(Node node) nothrow;
+    bool resume(Node node);
 
     // Tree
-    bool beforeDraw(Node node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) nothrow;
-    bool afterDraw(Node node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) nothrow;
+    bool beforeDraw(Node node, Rectangle space, Rectangle paddingBox, Rectangle contentBox);
+    bool afterDraw(Node node, Rectangle space, Rectangle paddingBox, Rectangle contentBox);
 
     // DebugSignalIO
-    bool emitSignal(Node node, string name) nothrow;
+    bool emitSignal(Node node, string name);
 
     // CanvasIO
-    bool cropArea(Node node, Rectangle area) nothrow;
-    bool resetCropArea(Node node) nothrow;
-    bool drawTriangle(Node node, Vector2 a, Vector2 b, Vector2 c, Color color) nothrow;
-    bool drawCircle(Node node, Vector2 center, float radius, Color color) nothrow;
-    bool drawCircleOutline(Node node, Vector2 center, float radius, float width, Color color) nothrow;
-    bool drawRectangle(Node node, Rectangle rectangle, Color color) nothrow;
-    bool drawLine(Node node, Vector2 start, Vector2 end, float width, Color color) nothrow;
-    bool drawImage(Node node, DrawableImage image, Rectangle destination, Color tint) nothrow;
-    bool drawHintedImage(Node node, DrawableImage image, Rectangle destination, Color tint) nothrow;
+    bool cropArea(Node node, Rectangle area);
+    bool resetCropArea(Node node);
+    bool drawTriangle(Node node, Vector2 a, Vector2 b, Vector2 c, Color color);
+    bool drawCircle(Node node, Vector2 center, float radius, Color color);
+    bool drawCircleOutline(Node node, Vector2 center, float radius, float width, Color color);
+    bool drawRectangle(Node node, Rectangle rectangle, Color color);
+    bool drawLine(Node node, Vector2 start, Vector2 end, float width, Color color);
+    bool drawImage(Node node, DrawableImage image, Rectangle destination, Color tint);
+    bool drawHintedImage(Node node, DrawableImage image, Rectangle destination, Color tint);
 
     // Meta
     string toString() const;
 
 }
 
+abstract class AbstractAssert : BlackHole!Assert {
+
+    Node subject;
+
+    this(Node subject) {
+        this.subject = subject;
+    }
+
+}
+
 ///
-pragma(mangle, "fluid__test_space_cropsTo_R_tuple")
-auto cropsTo(Node subject, typeof(Rectangle.tupleof) rectangle) {
-    return cropsTo(subject, Rectangle(rectangle));
+CropAssert cropsTo(Node subject, typeof(Rectangle.tupleof) rectangle) {
+    return cropsTo(subject,
+        Rectangle(rectangle));
 }
 
 /// ditto
-pragma(mangle, "fluid__test_space_cropsTo_R")
-auto cropsTo(Node subject, Rectangle rectangle) {
+CropAssert cropsTo(Node subject, Rectangle rectangle) {
     auto result = crops(subject);
-    result.isTestingArea = true;
     result.targetArea = rectangle;
     return result;
 }
 
 /// ditto
-pragma(mangle, "fluid__test_space_crops")
-auto crops(Node subject) {
+CropAssert crops(Node subject) {
+    return new CropAssert(subject);
+}
 
-    return new class BlackHole!Assert {
+class CropAssert : AbstractAssert {
 
-        bool isTestingArea;
-        Rectangle targetArea;
+    Nullable!Rectangle targetArea;
 
-        override bool cropArea(Node node, Rectangle area) nothrow {
+    this(Node subject) {
+        super(subject);
+    }
 
-            if (isTestingArea) {
-                if (!equal(area.x, targetArea.x)
-                    || !equal(area.y, targetArea.y)
-                    || !equal(area.w, targetArea.w)
-                    || !equal(area.h, targetArea.h)) return false;
-            }
+    override bool cropArea(Node node, Rectangle area) {
+        return equal(subject, node)
+            && equal(targetArea, area);
+    }
 
-            return subject.opEquals(node).assumeWontThrow;
-
-        }
-
-        override string toString() const {
-            return toText(subject, " should set crop area")
-                ~ (isTestingArea ? toText(" to ", targetArea) : "");
-        }
-
-    };
+    override string toString() const {
+        return toText(
+            subject, " should set crop area",
+            describe(" to ", targetArea)
+        );
+    }
 
 }
 
 ///
-pragma(mangle, "fluid__test_space_resetsCrop")
-auto resetsCrop(Node subject) {
-
-    return new class BlackHole!Assert {
-
-        override bool resetCropArea(Node node) nothrow {
-            return subject.opEquals(node).assumeWontThrow;
-        }
-
-        override string toString() const {
-            return toText(subject, " should reset crop area");
-        }
-
-    };
-
+ResetCropAssert resetsCrop(Node subject) {
+    return new ResetCropAssert(subject);
 }
+
+class ResetCropAssert : AbstractAssert {
+
+    this(Node subject) {
+        super(subject);
+    }
+
+    override bool resetCropArea(Node node) {
+        return equal(subject, node);
+    }
+
+    override string toString() const {
+        return toText(subject, " should reset crop area");
+    }
+
+};
 
 ///
 pragma(mangle, "fluid__test_space_drawsRectangle_R_tuple")
@@ -1734,3 +1742,45 @@ private bool equal(float a, float b) nothrow {
         && diff <= +0.01;
 
 }
+
+private bool equal(Node a, Node b) nothrow {
+
+    // Exact same object, or both are nulls
+    if (a is b) {
+        return true;
+    }
+
+    // Either is null (except if both, handled previously)
+    if (a is null || b is null) {
+        return false;
+    }
+
+    // Neither is null, use opEquals
+    return a.opEquals(b).assumeWontThrow;
+
+}
+
+/// Returns:
+///     True if both rectangles are the same, or the target is null/unspecified.
+private bool equal(Nullable!Rectangle target, Rectangle subject) {
+    if (target.isNull) {
+        return true;
+    }
+    auto targetNN = target.get;
+    return equal(targetNN.x, subject.x)
+        && equal(targetNN.y, subject.y)
+        && equal(targetNN.width, subject.width)
+        && equal(targetNN.height, subject.height);
+}
+
+private string describe(T : Nullable!E, E)(string prefix, T nullable, string suffix = "") {
+
+    if (nullable.isNull) {
+        return null;
+    }
+    else {
+        return toText(prefix, nullable.get, suffix);
+    }
+
+}
+
