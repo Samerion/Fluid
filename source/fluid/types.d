@@ -550,16 +550,14 @@ struct Image {
     }
 
     string toString() const pure {
-
         import std.array;
 
         Appender!(char[]) text;
         toString(text);
         return text[];
-
     }
 
-    void toString(Writer)(Writer writer) const {
+    void toString(Writer)(ref Writer writer) const {
 
         import std.conv;
         import std.range;
