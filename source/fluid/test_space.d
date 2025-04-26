@@ -1,8 +1,4 @@
 /// Module for testing Fluid nodes using the new I/O system.
-///
-/// Bugs:
-///     `auto` functions may generate incorrect mangling. This is worked-around
-///     with `pragma(mangle)`.
 module fluid.test_space;
 
 version (Fluid_TestSpace):
@@ -326,6 +322,8 @@ class TestSpace : Space, CanvasIO, DebugSignalIO {
 private class TestProbe : TreeAction {
 
     import std.array;
+    import std.concurrency;
+    import fluid.size_lock;
 
     public {
 
@@ -357,13 +355,13 @@ private class TestProbe : TreeAction {
     /// Check an assertion in the `asserts` queue.
     /// Params:
     ///     dg      = Function to run the assert. Returns true if the assert succeeds.
-    protected void runAssert(bool delegate(Assert a) @safe nothrow dg) nothrow {
+    protected void runAssert(bool delegate(Assert a) @safe dg) nothrow {
 
         // No tests remain
         if (asserts.empty) return;
 
         // Test passed, continue to the next one
-        if (dg(asserts.front)) {
+        if (dg(asserts.front).assumeWontThrow) {
             nextAssert();
         }
 
@@ -379,7 +377,7 @@ private class TestProbe : TreeAction {
         }
 
         // Call `resume` on the next item. Continue while tests pass
-        while (!asserts.empty && asserts.front.resume(subject));
+        while (!asserts.empty && asserts.front.resume(subject).assumeWontThrow);
 
     }
 
@@ -454,260 +452,223 @@ interface Assert {
     /// After another test passes and this test is chosen, `resume` will be called to let the test
     /// know the current position in the tree. This is important in situations where `resume` is immediately
     /// followed by `beforeDraw`; the node passed to `resume` will be the parent of the one passed to `beforeDraw`.
-    bool resume(Node node) nothrow;
+    bool resume(Node node);
 
     // Tree
-    bool beforeDraw(Node node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) nothrow;
-    bool afterDraw(Node node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) nothrow;
+    bool beforeDraw(Node node, Rectangle space, Rectangle paddingBox, Rectangle contentBox);
+    bool afterDraw(Node node, Rectangle space, Rectangle paddingBox, Rectangle contentBox);
 
     // DebugSignalIO
-    bool emitSignal(Node node, string name) nothrow;
+    bool emitSignal(Node node, string name);
 
     // CanvasIO
-    bool cropArea(Node node, Rectangle area) nothrow;
-    bool resetCropArea(Node node) nothrow;
-    bool drawTriangle(Node node, Vector2 a, Vector2 b, Vector2 c, Color color) nothrow;
-    bool drawCircle(Node node, Vector2 center, float radius, Color color) nothrow;
-    bool drawCircleOutline(Node node, Vector2 center, float radius, float width, Color color) nothrow;
-    bool drawRectangle(Node node, Rectangle rectangle, Color color) nothrow;
-    bool drawLine(Node node, Vector2 start, Vector2 end, float width, Color color) nothrow;
-    bool drawImage(Node node, DrawableImage image, Rectangle destination, Color tint) nothrow;
-    bool drawHintedImage(Node node, DrawableImage image, Rectangle destination, Color tint) nothrow;
+    bool cropArea(Node node, Rectangle area);
+    bool resetCropArea(Node node);
+    bool drawTriangle(Node node, Vector2 a, Vector2 b, Vector2 c, Color color);
+    bool drawCircle(Node node, Vector2 center, float radius, Color color);
+    bool drawCircleOutline(Node node, Vector2 center, float radius, float width, Color color);
+    bool drawRectangle(Node node, Rectangle rectangle, Color color);
+    bool drawLine(Node node, Vector2 start, Vector2 end, float width, Color color);
+    bool drawImage(Node node, DrawableImage image, Rectangle destination, Color tint);
+    bool drawHintedImage(Node node, DrawableImage image, Rectangle destination, Color tint);
 
     // Meta
     string toString() const;
 
 }
 
+abstract class AbstractAssert : BlackHole!Assert {
+
+    Node subject;
+
+    this(Node subject) {
+        this.subject = subject;
+    }
+
+}
+
 ///
-pragma(mangle, "fluid__test_space_cropsTo_R_tuple")
-auto cropsTo(Node subject, typeof(Rectangle.tupleof) rectangle) {
-    return cropsTo(subject, Rectangle(rectangle));
+CropAssert cropsTo(Node subject, typeof(Rectangle.tupleof) rectangle) {
+    return cropsTo(subject,
+        Rectangle(rectangle));
 }
 
 /// ditto
-pragma(mangle, "fluid__test_space_cropsTo_R")
-auto cropsTo(Node subject, Rectangle rectangle) {
+CropAssert cropsTo(Node subject, Rectangle rectangle) {
     auto result = crops(subject);
-    result.isTestingArea = true;
     result.targetArea = rectangle;
     return result;
 }
 
 /// ditto
-pragma(mangle, "fluid__test_space_crops")
-auto crops(Node subject) {
+CropAssert crops(Node subject) {
+    return new CropAssert(subject);
+}
 
-    return new class BlackHole!Assert {
+class CropAssert : AbstractAssert {
 
-        bool isTestingArea;
-        Rectangle targetArea;
+    Nullable!Rectangle targetArea;
 
-        override bool cropArea(Node node, Rectangle area) nothrow {
+    this(Node subject) {
+        super(subject);
+    }
 
-            if (isTestingArea) {
-                if (!equal(area.x, targetArea.x)
-                    || !equal(area.y, targetArea.y)
-                    || !equal(area.w, targetArea.w)
-                    || !equal(area.h, targetArea.h)) return false;
-            }
+    override bool cropArea(Node node, Rectangle area) {
+        return equal(subject, node)
+            && equal(targetArea, area);
+    }
 
-            return subject.opEquals(node).assumeWontThrow;
-
-        }
-
-        override string toString() const {
-            return toText(subject, " should set crop area")
-                ~ (isTestingArea ? toText(" to ", targetArea) : "");
-        }
-
-    };
+    override string toString() const {
+        return toText(
+            subject, " should set crop area",
+            describe(" to ", targetArea)
+        );
+    }
 
 }
 
 ///
-pragma(mangle, "fluid__test_space_resetsCrop")
-auto resetsCrop(Node subject) {
-
-    return new class BlackHole!Assert {
-
-        override bool resetCropArea(Node node) nothrow {
-            return subject.opEquals(node).assumeWontThrow;
-        }
-
-        override string toString() const {
-            return toText(subject, " should reset crop area");
-        }
-
-    };
-
+ResetCropAssert resetsCrop(Node subject) {
+    return new ResetCropAssert(subject);
 }
 
+class ResetCropAssert : AbstractAssert {
+
+    this(Node subject) {
+        super(subject);
+    }
+
+    override bool resetCropArea(Node node) {
+        return equal(subject, node);
+    }
+
+    override string toString() const {
+        return toText(subject, " should reset crop area");
+    }
+
+};
+
 ///
-pragma(mangle, "fluid__test_space_drawsRectangle_R_tuple")
-auto drawsRectangle(Node subject, typeof(Rectangle.tupleof) rectangle) {
-    return drawsRectangle(subject, Rectangle(rectangle));
+DrawsRectangleAssert drawsRectangle(Node subject, typeof(Rectangle.tupleof) rectangle) {
+    return drawsRectangle(subject,
+        Rectangle(rectangle));
 }
 
 /// ditto
-pragma(mangle, "fluid__test_space_drawsRectangle_R")
 auto drawsRectangle(Node subject, Rectangle rectangle) {
     auto result = drawsRectangle(subject);
-    result.isTestingArea = true;
     result.targetArea = rectangle;
     return result;
 }
 
-pragma(mangle, "fluid__test_space_drawsRectangle")
 auto drawsRectangle(Node subject) {
-
-    return new class BlackHole!Assert {
-
-        bool isTestingArea;
-        Rectangle targetArea;
-        bool isTestingColor;
-        Color targetColor;
-
-        override bool drawRectangle(Node node, Rectangle rect, Color color) nothrow {
-
-            // node != subject MAY throw
-            if (!node.opEquals(subject).assertNotThrown) return false;
-
-            if (isTestingArea) {
-                if (!equal(targetArea.x, rect.x)
-                    || !equal(targetArea.y, rect.y)
-                    || !equal(targetArea.width, rect.width)
-                    || !equal(targetArea.height, rect.height)) return false;
-            }
-
-            if (isTestingColor) {
-                if (color != targetColor) return false;
-            }
-
-            return true;
-
-        }
-
-        typeof(this) ofColor(string color) @safe {
-            return ofColor(.color(color));
-        }
-
-        typeof(this) ofColor(Color color) @safe {
-            isTestingColor = true;
-            targetColor = color;
-            return this;
-        }
-
-        override string toString() const {
-            return toText(
-                subject, " should draw a rectangle",
-                isTestingArea  ? toText(" ", targetArea)                 : "",
-                isTestingColor ? toText(" of color ", targetColor.toHex) : "",
-            );
-        }
-
-    };
-
+    return new DrawsRectangleAssert(subject);
 }
+
+class DrawsRectangleAssert : AbstractAssert {
+
+    Nullable!Rectangle targetArea;
+    Nullable!Color targetColor;
+
+    this(Node subject) {
+        super(subject);
+    }
+
+    override bool drawRectangle(Node node, Rectangle area, Color color) {
+        return equal(node, subject)
+            && equal(targetArea, area)
+            && equal(targetColor, color);
+    }
+
+    typeof(this) ofColor(string color) @safe {
+        return ofColor(.color(color));
+    }
+
+    typeof(this) ofColor(Color color) @safe {
+        targetColor = color;
+        return this;
+    }
+
+    override string toString() const {
+        return toText(
+            subject, " should draw a rectangle",
+            describe(" ", targetArea),
+            describe(" of color ", targetColor),
+        );
+    }
+
+};
 
 /// Test if the subject draws a line.
-pragma(mangle, "fluid__test_space_drawsLine")
-auto drawsLine(Node subject) {
-
-    return new class BlackHole!Assert {
-
-        bool isTestingStart;
-        Vector2 targetStart;
-        bool isTestingEnd;
-        Vector2 targetEnd;
-        bool isTestingWidth;
-        float targetWidth;
-        bool isTestingColor;
-        Color targetColor;
-
-        override bool drawLine(Node node, Vector2 start, Vector2 end, float width, Color color) nothrow {
-
-            // node != subject MAY throw
-            if (!node.opEquals(subject).assertNotThrown) return false;
-
-            if (isTestingStart) {
-                assert(equal(targetStart.x, start.x)
-                    && equal(targetStart.y, start.y),
-                    format!"Expected start %s, got %s"(targetStart, start).assertNotThrown);
-            }
-
-            if (isTestingEnd) {
-                assert(equal(targetEnd.x, end.x)
-                    && equal(targetEnd.y, end.y),
-                    format!"Expected end %s, got %s"(targetEnd, end).assertNotThrown);
-            }
-
-            if (isTestingWidth) {
-                assert(equal(targetWidth, width),
-                    format!"Expected width %s, got %s"(targetWidth, width).assertNotThrown);
-            }
-
-            if (isTestingColor) {
-                assert(targetColor == color,
-                    format!"Expected color %s, got %s"(targetColor, color).assertNotThrown);
-            }
-
-            return true;
-
-        }
-
-        typeof(this) from(float x, float y) @safe {
-            return from(Vector2(x, y));
-        }
-
-        typeof(this) from(Vector2 start) @safe {
-            isTestingStart = true;
-            targetStart = start;
-            return this;
-        }
-
-        typeof(this) to(float x, float y) @safe {
-            return to(Vector2(x, y));
-        }
-
-        typeof(this) to(Vector2 end) @safe {
-            isTestingEnd = true;
-            targetEnd = end;
-            return this;
-        }
-
-        typeof(this) ofWidth(float width) @safe {
-            isTestingWidth = true;
-            targetWidth = width;
-            return this;
-        }
-
-        typeof(this) ofColor(string color) @safe {
-            return ofColor(.color(color));
-        }
-
-        typeof(this) ofColor(Color color) @safe {
-            isTestingColor = true;
-            targetColor = color;
-            return this;
-        }
-
-        override string toString() const {
-            return toText(
-                subject, " should draw a line",
-                isTestingStart ? toText(" from ", targetStart)           : "",
-                isTestingEnd   ? toText(" to ", targetEnd)               : "",
-                isTestingWidth ? toText(" of width ", targetWidth)       : "",
-                isTestingColor ? toText(" of color ", targetColor.toHex) : "",
-            );
-        }
-
-    };
+DrawsLineAssert drawsLine(Node subject) {
+    return new DrawsLineAssert(subject);
 
 }
 
+class DrawsLineAssert : AbstractAssert {
+
+    Nullable!Vector2 targetStart;
+    Nullable!Vector2 targetEnd;
+    Nullable!float targetWidth;
+    Nullable!Color targetColor;
+
+    this(Node subject) {
+        super(subject);
+    }
+
+    override bool drawLine(Node node, Vector2 start, Vector2 end, float width, Color color) {
+        return equal(subject, node)
+            && equal(targetStart, start)
+            && equal(targetEnd, end)
+            && equal(targetWidth, width)
+            && equal(targetColor, color);
+    }
+
+    typeof(this) from(float x, float y) @safe {
+        return from(Vector2(x, y));
+    }
+
+    typeof(this) from(Vector2 start) @safe {
+        targetStart = start;
+        return this;
+    }
+
+    typeof(this) to(float x, float y) @safe {
+        return to(Vector2(x, y));
+    }
+
+    typeof(this) to(Vector2 end) @safe {
+        targetEnd = end;
+        return this;
+    }
+
+    typeof(this) ofWidth(float width) @safe {
+        targetWidth = width;
+        return this;
+    }
+
+    typeof(this) ofColor(string color) @safe {
+        return ofColor(.color(color));
+    }
+
+    typeof(this) ofColor(Color color) @safe {
+        targetColor = color;
+        return this;
+    }
+
+    override string toString() const {
+        return toText(
+            subject, " should draw a line",
+            describe(" from ", targetStart),
+            describe(" to ", targetEnd),
+            describe(" of width ", targetWidth),
+            describe(" of color ", targetColor),
+        );
+    }
+
+};
+
 /// Test if the subject draws a circle outline.
-pragma(mangle, "fluid__test_space_drawsCircleOutline")
 auto drawsCircleOutline(Node subject) {
     auto a = drawsCircle(subject);
     a.isOutline = true;
@@ -715,111 +676,82 @@ auto drawsCircleOutline(Node subject) {
 }
 
 /// ditto
-pragma(mangle, "fluid__test_space_drawsCircleOutline_float")
 auto drawsCircleOutline(Node subject, float width) {
     auto a = drawsCircleOutline(subject);
-    a.isTestingOutlineWidth = true;
     a.targetOutlineWidth = width;
     return a;
 }
 
 /// Test if the subject draws a circle.
-pragma(mangle, "fluid__test_space_drawsCircle")
 auto drawsCircle(Node subject) {
+    return new DrawsCircleAssert(subject);
+}
 
-    return new class BlackHole!Assert {
+class DrawsCircleAssert : AbstractAssert {
 
-        bool isOutline;
-        bool isTestingCenter;
-        Vector2 targetCenter;
-        bool isTestingRadius;
-        float targetRadius;
-        bool isTestingColor;
-        Color targetColor;
-        bool isTestingOutlineWidth;
-        float targetOutlineWidth;
+    bool isOutline;
+    Nullable!Vector2 targetCenter;
+    Nullable!float targetRadius;
+    Nullable!Color targetColor;
+    Nullable!float targetOutlineWidth;
 
-        override bool drawCircle(Node node, Vector2 center, float radius, Color color) nothrow {
-            if (isOutline) {
-                return false;
-            }
-            else {
-                return drawTargetCircle(node, center, radius, color);
-            }
-        }
+    this(Node subject) {
+        super(subject);
+    }
 
-        override bool drawCircleOutline(Node node, Vector2 center, float radius, float width, Color color) nothrow {
-            if (isOutline) {
-                if (isTestingOutlineWidth) {
-                    assert(equal(width, targetOutlineWidth),
-                        format!"Expected outline width %s, got %s"(targetOutlineWidth, width).assertNotThrown);
-                }
-                return drawTargetCircle(node, center, radius, color);
-            }
-            else {
-                return false;
-            }
-        }
+    override bool drawCircle(Node node, Vector2 center, float radius, Color color) {
+        return !isOutline
+            && equalCircle(node, center, radius, color);
+    }
 
-        bool drawTargetCircle(Node node, Vector2 center, float radius, Color color) nothrow @safe {
+    override bool drawCircleOutline(Node node, Vector2 center, float radius, float width,
+        Color color)
+    do {
+        return isOutline
+            && equal(targetOutlineWidth, width)
+            && equalCircle(node, center, radius, color);
+    }
 
-            if (!node.opEquals(subject).assertNotThrown) return false;
+    bool equalCircle(Node node, Vector2 center, float radius, Color color) {
+        return equal(subject, node)
+            && equal(targetCenter, center)
+            && equal(targetRadius, radius)
+            && equal(targetColor, color);
+    }
 
-            if (isTestingCenter) {
-                if (!equal(targetCenter.x, center.x)
-                    || !equal(targetCenter.y, center.y)) return false;
-            }
+    typeof(this) at(float x, float y) {
+        return at(Vector2(x, y));
+    }
 
-            if (isTestingRadius) {
-                if (!equal(targetRadius, radius)) return false;
-            }
+    typeof(this) at(Vector2 center) {
+        targetCenter = center;
+        return this;
+    }
 
-            if (isTestingColor) {
-                if (targetColor != color) return false;
-            }
+    typeof(this) ofRadius(float radius) {
+        targetRadius = radius;
+        return this;
+    }
 
-            return true;
+    typeof(this) ofColor(string color) {
+        return ofColor(.color(color));
+    }
 
-        }
+    typeof(this) ofColor(Color color) {
+        targetColor = color;
+        return this;
+    }
 
-        typeof(this) at(float x, float y) @safe {
-            return at(Vector2(x, y));
-        }
-
-        typeof(this) at(Vector2 center) @safe {
-            isTestingCenter = true;
-            targetCenter = center;
-            return this;
-        }
-
-        typeof(this) ofRadius(float radius) @safe {
-            isTestingRadius = true;
-            targetRadius = radius;
-            return this;
-        }
-
-        typeof(this) ofColor(string color) @safe {
-            return ofColor(.color(color));
-        }
-
-        typeof(this) ofColor(Color color) @safe {
-            isTestingColor = true;
-            targetColor = color;
-            return this;
-        }
-
-        override string toString() const {
-            return toText(
-                subject, " should draw a circle",
-                isOutline             ? "outline"                                : "",
-                isTestingCenter       ? toText(" at ", targetCenter)             : "",
-                isTestingRadius       ? toText(" of radius ", targetRadius)      : "",
-                isTestingOutlineWidth ? toText(" of width ", targetOutlineWidth) : "",
-                isTestingColor        ? toText(" of color ", targetColor.toHex)  : "",
-            );
-        }
-
-    };
+    override string toString() const {
+        return toText(
+            subject, " should draw a circle",
+            isOutline ? " outline" : "",
+            describe(" at ", targetCenter),
+            describe(" of radius ", targetRadius),
+            describe(" of width ", targetOutlineWidth),
+            describe(" of color ", targetColor),
+        );
+    }
 
 }
 
@@ -827,188 +759,129 @@ auto drawsCircle(Node subject) {
 ///     subject = Test if this subject draws an image.
 /// Returns:
 ///     An `Assert` that can be passed to `TestSpace.drawAndAssert` to test if a node draws an image.
-pragma(mangle, "fluid__test_space_drawsImage_I")
-auto drawsImage(Node subject, Image image) {
+DrawsImageAssert drawsImage(Node subject, Image image) {
     auto test = drawsImage(subject);
-    test.isTestingImage = true;
     test.targetImage = image;
-    test.isTestingColor = true;
     test.targetColor = color("#fff");
     return test;
 }
 
 /// ditto
-pragma(mangle, "fluid__test_space_drawsHintedImage_I")
-auto drawsHintedImage(Node subject, Image image) {
+DrawsImageAssert drawsHintedImage(Node subject, Image image) {
     auto test = drawsImage(subject, image);
-    test.isTestingHint = true;
     test.targetHint = true;
     return test;
 }
 
 /// ditto
-pragma(mangle, "fluid__test_space_drawsHintedImage")
-auto drawsHintedImage(Node subject) {
+DrawsImageAssert drawsHintedImage(Node subject) {
     auto test = drawsImage(subject);
-    test.isTestingHint = true;
     test.targetHint = true;
     return test;
 }
 
 /// ditto
-pragma(mangle, "fluid__test_space_drawsImage")
-auto drawsImage(Node subject) {
+DrawsImageAssert drawsImage(Node subject) {
+    return new DrawsImageAssert(subject);
+}
 
-    return new class BlackHole!Assert {
+class DrawsImageAssert : AbstractAssert {
 
-        bool isTestingImage;
-        Image targetImage;
-        bool isTestingDataHash;
-        ubyte[] targetDataHash;
-        bool isTestingStart;
-        Vector2 targetStart;
-        bool isTestingSize;
-        Vector2 targetSize;
-        bool isTestingColor;
-        Color targetColor;
-        bool isTestingHint;
-        bool targetHint;
-        bool isTestingPalette;
-        Color[] targetPalette;
+    Nullable!Image targetImage;
+    Nullable!(ubyte[]) targetDataHash;
+    Nullable!Vector2 targetStart;
+    Nullable!Vector2 targetSize;
+    Nullable!Color targetColor;
+    Nullable!bool targetHint;
+    Nullable!(Color[]) targetPalette;
 
-        override bool drawImage(Node node, DrawableImage image, Rectangle rect, Color color) nothrow {
+    this(Node subject) {
+        super(subject);
+    }
 
-            if (!node.opEquals(subject).assertNotThrown) return false;
+    override bool drawImage(Node node, DrawableImage image, Rectangle rect, Color color) {
+        return testImage(node, image, rect, color, false);
+    }
 
-            if (isTestingImage) {
-                const bothEmpty = image.data.empty && targetImage.data.empty;
-                assert(image.format == targetImage.format);
-                assert(bothEmpty || image.data is targetImage.data,
-                    format!"%s should draw image 0x%02x but draws 0x%02x"(
-                        node, cast(size_t) targetImage.data.ptr, cast(size_t) image.data.ptr).assertNotThrown);
+    override bool drawHintedImage(Node node, DrawableImage image, Rectangle rect, Color color) {
+        return testImage(node, image, rect, color, true);
+    }
 
-                if (isTestingPalette) {
-                    assert(image.format == Image.Format.palettedAlpha);
-                    assert(image.palette == targetPalette,
-                        format!"%s should draw image with palette %s but uses %s"(
-                            node, targetPalette.map!(a => a.toHex), image.palette.map!(a => a.toHex))
-                            .assertNotThrown);
-                }
-            }
+    bool testImage(Node node, DrawableImage image, Rectangle rect, Color color, bool hint) {
+        return equal(subject, node)
+            && equal(targetImage, image)
+            && equal(targetDataHash, sha256Of(image.data)[])
+            && equal(targetStart, rect.start)
+            && equal(targetSize, rect.size)
+            && equal(targetColor, color)
+            && equal(targetHint, hint)
+            && equal(targetPalette, image.palette);
+    }
 
-            if (isTestingDataHash) {
-                assert(targetDataHash == sha256Of(image.data),
-                    format!"%s should draw image with SHA256 hash %(%02x%), but draws %(%02x%)"(
-                        node, targetDataHash, sha256Of(image.data))
-                        .assumeWontThrow);
-            }
+    /// Test if the image content (using the format it is stored in) matches the hex-encoded
+    /// SHA256 hash.
+    typeof(this) sha256(string content) @safe {
+        import std.conv : to;
+        targetDataHash = content
+            .chunks(2)
+            .map!(a => a.to!ubyte(16))
+            .array;
+        return this;
+    }
 
-            if (isTestingStart) {
-                assert(equal(targetStart.x, rect.x)
-                    && equal(targetStart.y, rect.y),
-                    format!"%s should draw image at %s, but draws at %s"(node, targetStart, rect.start)
-                        .assertNotThrown);
-            }
+    typeof(this) at(Vector2 position) @safe {
+        targetStart = position;
+        // TODO DPI
+        return this;
+    }
 
-            if (isTestingSize) {
-                assert(equal(targetSize.x, rect.w)
-                    && equal(targetSize.y, rect.h),
-                    format!"%s should draw image of size %s, but draws %s"(node, targetSize, rect.size)
-                        .assertNotThrown);
-            }
+    typeof(this) at(typeof(Vector2.tupleof) position) @safe {
+        return at(Vector2(position));
+    }
 
-            if (isTestingColor) {
-                assert(color == targetColor);
-            }
+    typeof(this) at(Rectangle area) @safe {
+        at(area.start);
+        targetSize = area.size;
+        return this;
+    }
 
-            if (isTestingHint) {
-                assert(!targetHint);
-            }
+    typeof(this) at(typeof(Rectangle.tupleof) area) @safe {
+        return at(Rectangle(area));
+    }
 
-            return true;
+    typeof(this) withPalette(Color[] colors...) @safe {
+        targetPalette = colors.dup;
+        return this;
+    }
 
-        }
+    typeof(this) ofColor(string color) @safe {
+        return ofColor(.color(color));
+    }
 
-        override bool drawHintedImage(Node node, DrawableImage image, Rectangle rect, Color color) nothrow {
+    typeof(this) ofColor(Color color) @safe {
+        targetColor = color;
+        return this;
+    }
 
-            targetHint = false;
-            scope (exit) targetHint = true;
-
-            return drawImage(node, image, rect, color);
-
-        }
-
-        /// Test if the image content (using the format it is stored in) matches the hex-encoded
-        /// SHA256 hash.
-        typeof(this) sha256(string content) @safe {
-
-            import std.conv : to;
-
-            isTestingDataHash = true;
-            targetDataHash = content
-                .chunks(2)
-                .map!(a => a.to!ubyte(16))
-                .array;
-
-            return this;
-
-        }
-
-        typeof(this) at(Vector2 position) @safe {
-            isTestingStart = true;
-            targetStart = position;
-            // TODO DPI
-            return this;
-
-        }
-
-        typeof(this) at(typeof(Vector2.tupleof) position) @safe {
-            return at(Vector2(position));
-        }
-
-        typeof(this) at(Rectangle area) @safe {
-            at(area.start);
-            isTestingSize = true;
-            targetSize = area.size;
-            return this;
-
-        }
-
-        typeof(this) at(typeof(Rectangle.tupleof) area) @safe {
-            return at(Rectangle(area));
-        }
-
-        typeof(this) withPalette(Color[] colors...) @safe {
-            isTestingPalette = true;
-            targetPalette = colors.dup;
-            return this;
-        }
-
-        typeof(this) ofColor(string color) @safe {
-            return ofColor(.color(color));
-        }
-
-        typeof(this) ofColor(Color color) @safe {
-            isTestingColor = true;
-            targetColor = color;
-            return this;
-        }
-
-        override string toString() const {
-            return toText(
-                subject, " should draw an image ",
-                isTestingImage ? toText(targetImage)                     : "",
-                isTestingStart ? toText(" at ", targetStart)             : "",
-                isTestingSize  ? toText(" of size ", targetSize)         : "",
-                isTestingColor ? toText(" of color ", targetColor.toHex) : "",
-            );
-        }
-
-    };
+    override string toString() const {
+        return toText(
+            subject, " should draw an image",
+            describe(" ", targetImage),
+            describe(" with SHA256 ", targetDataHash),
+            describe(" at ", targetStart),
+            describe(" of size ", targetSize),
+            describe(" of color ", targetColor),
+            describe(" with palette ", targetPalette),
+        );
+    }
 
 }
 
 /// Assert true if the node draws a child.
+///
+/// `drawsChild` will eventually be replaced by a more appropriate test. See
+/// https://git.samerion.com/Samerion/Fluid/issues/346 for details.
+///
 /// Bugs:
 ///     If testing with a specific child, it will not detect the action if resumed inside of a sibling node.
 ///     In other words, this will fail:
@@ -1029,57 +902,64 @@ auto drawsImage(Node subject) {
 /// Params:
 ///     parent = Parent node, subject of the test.
 ///     child  = Child to test. Must be drawn directly.
-pragma(mangle, "fluid__test_space_drawsChild")
-auto drawsChild(Node parent, Node child = null) {
+DrawsChildAssert drawsChild(Node parent, Node child = null) {
+    return new DrawsChildAssert(parent, child);
 
-    return new class BlackHole!Assert {
+}
 
-        // 0 outside of parent, 1 inside, 2 in child, 3 in grandchild, etc.
-        int parentDepth;
+class DrawsChildAssert : AbstractAssert {
 
-        override bool resume(Node node) {
-            if (parent.opEquals(node).assertNotThrown) {
-                parentDepth = 1;
-            }
-            return false;
+    Node child;
+
+    // 0 outside of parent, 1 inside, 2 in child, 3 in grandchild, etc.
+    int parentDepth;
+
+    this(Node subject, Node child) {
+        super(subject);
+        this.child = child;
+    }
+
+    override bool resume(Node node) {
+        if (equal(subject, node)) {
+            parentDepth = 1;
+        }
+        return false;
+    }
+
+    override bool beforeDraw(Node node, Rectangle, Rectangle, Rectangle) {
+
+        // Found the parent
+        if (equal(subject, node)) {
+            parentDepth = 1;
         }
 
-        override bool beforeDraw(Node node, Rectangle, Rectangle, Rectangle) {
-
-            // Found the parent
-            if (parent.opEquals(node).assertNotThrown) {
-                parentDepth = 1;
+        // Parent drew a child, great! End the test if the child meets expectations.
+        else if (parentDepth) {
+            if (parentDepth++ == 1) {
+                return child is null || equal(node, child);
             }
-
-            // Parent drew a child, great! End the test if the child meets expectations.
-            else if (parentDepth) {
-                if (parentDepth++ == 1) {
-                    return child is null || node.opEquals(child).assertNotThrown;
-                }
-            }
-
-            return false;
-
         }
 
-        override bool afterDraw(Node node, Rectangle, Rectangle, Rectangle) {
+        return false;
 
-            if (parentDepth) {
-                parentDepth--;
-            }
+    }
 
-            return false;
+    override bool afterDraw(Node node, Rectangle, Rectangle, Rectangle) {
 
+        if (parentDepth) {
+            parentDepth--;
         }
 
-        override string toString() const {
-            if (child)
-                return format!"%s must draw %s"(parent, child);
-            else
-                return format!"%s must draw a child"(parent);
-        }
+        return false;
 
-    };
+    }
+
+    override string toString() const {
+        if (child)
+            return format!"%s must draw %s"(subject, child);
+        else
+            return format!"%s must draw a child"(subject);
+    }
 
 }
 
@@ -1141,132 +1021,125 @@ unittest {
 }
 
 /// Make sure the parent does not draw any children.
-pragma(mangle, "fluid__test_space_doesNotDrawChildren")
+///
+/// `doesNotDrawChildren` will eventually be replaced by a more appropriate test. See
+/// https://git.samerion.com/Samerion/Fluid/issues/347 for details.
 auto doesNotDrawChildren(Node parent) {
+    return new DoesNotDrawChildrenAssert(parent);
 
-    return new class BlackHole!Assert {
+}
 
-        bool inParent;
+class DoesNotDrawChildrenAssert : AbstractAssert {
 
-        override bool resume(Node node) {
-            if (parent.opEquals(node).assertNotThrown) {
-                inParent =  true;
-            }
-            return false;
+    bool inParent;
+
+    this(Node subject) {
+        super(subject);
+    }
+
+    override bool resume(Node node) {
+        if (equal(subject, node)) {
+            inParent =  true;
+        }
+        return false;
+    }
+
+    override bool beforeDraw(Node node, Rectangle, Rectangle, Rectangle) {
+
+        // Found the parent
+        if (equal(subject, node)) {
+            inParent = true;
         }
 
-        override bool beforeDraw(Node node, Rectangle, Rectangle, Rectangle) {
-
-            // Found the parent
-            if (parent.opEquals(node).assertNotThrown) {
-                inParent = true;
-            }
-
-            // Parent drew a child
-            else if (inParent) {
-                assert(false, format!"%s must not draw children"(parent).assertNotThrown);
-            }
-
-            return false;
-
+        // Parent drew a child
+        else if (inParent) {
+            assert(false, format!"%s must not draw children"(subject));
         }
 
-        override bool afterDraw(Node node, Rectangle, Rectangle, Rectangle) {
-            return parent.opEquals(node).assertNotThrown;
-        }
+        return false;
 
-        override string toString() const {
-            return format!"%s must not draw children"(parent).assertNotThrown;
-        }
+    }
 
-    };
+    override bool afterDraw(Node node, Rectangle, Rectangle, Rectangle) {
+        return equal(subject, node);
+    }
+
+    override string toString() const {
+        return format!"%s must not draw children"(subject);
+    }
 
 }
 
 /// Assert true if a node is attempted to be drawn,
 /// but the node does not need to draw anything for the assert to succeed.
-pragma(mangle, "fluid__test_space_isDrawn")
-auto isDrawn(Node subject) {
+IsDrawnAssert isDrawn(Node subject) {
+    return new IsDrawnAssert(subject);
+}
 
-    return new class BlackHole!Assert {
+class IsDrawnAssert : AbstractAssert {
 
-        bool isTestingSpaceStart;
-        Vector2 targetSpaceStart;
-        bool isTestingSpaceSize;
-        Vector2 targetSpaceSize;
+    Nullable!Vector2 targetSpaceStart;
+    Nullable!Vector2 targetSpaceSize;
 
-        override bool resume(Node node) {
-            return node.opEquals(subject).assertNotThrown
-                && !isTestingSpaceStart
-                && !isTestingSpaceSize;
-        }
+    this(Node node) {
+        super(node);
+    }
 
-        override bool beforeDraw(Node node, Rectangle space, Rectangle, Rectangle) {
+    override bool resume(Node node) {
+        return equal(subject, node)
+            && targetSpaceStart.isNull
+            && targetSpaceSize.isNull;
+    }
 
-            if (isTestingSpaceStart) {
-                if (!equal(space.start.x, targetSpaceStart.x)
-                    || !equal(space.start.y, targetSpaceStart.y)) return false;
-            }
+    override bool beforeDraw(Node node, Rectangle space, Rectangle, Rectangle) {
+        return equal(subject, node)
+            && equal(targetSpaceStart, space.start)
+            && equal(targetSpaceSize, space.size);
+    }
 
-            if (isTestingSpaceSize) {
-                if (!equal(space.size.x, targetSpaceSize.x)
-                    || !equal(space.size.y, targetSpaceSize.y)) return false;
-            }
+    auto at(Rectangle space) @safe {
+        targetSpaceStart = space.start;
+        targetSpaceSize = space.size;
+        return this;
+    }
 
-            return node.opEquals(subject).assertNotThrown;
-        }
+    auto at(float x, float y, float width, float height) @safe {
+        return at(Rectangle(x, y, width, height));
+    }
 
-        auto at(Rectangle space) @safe {
-            isTestingSpaceStart = true;
-            targetSpaceStart = space.start;
-            isTestingSpaceSize = true;
-            targetSpaceSize = space.size;
-            return this;
-        }
+    auto at(Vector2 start) @safe {
+        targetSpaceStart = start;
+        return this;
+    }
 
-        auto at(float x, float y, float width, float height) @safe {
-            return at(Rectangle(x, y, width, height));
-        }
+    auto at(float x, float y) @safe {
+        return at(Vector2(x, y));
+    }
 
-        auto at(Vector2 start) @safe {
-            isTestingSpaceStart = true;
-            targetSpaceStart = start;
-            return this;
-        }
-
-        auto at(float x, float y) @safe {
-            return at(Vector2(x, y));
-        }
-
-        override string toString() const {
-            return toText(
-                subject, " must be drawn",
-                isTestingSpaceStart ? toText(" at ",        targetSpaceStart) : "",
-                isTestingSpaceSize  ? toText(" with size ", targetSpaceSize)  : "",
-            );
-        }
-
-    };
-
+    override string toString() const {
+        return toText(
+            subject, " must be drawn",
+            describe(" at ", targetSpaceStart),
+            describe(" with size ", targetSpaceSize),
+        );
+    }
 
 }
 
 /// Make sure the selected node draws, but doesn't matter what.
-pragma(mangle, "fluid__test_space_draws")
 auto draws(Node subject) {
-
     return drawsWildcard!((node, methodName) {
-
-        return node.opEquals(subject).assertNotThrown
+        return equal(subject, node)
             && methodName.startsWith("draw");
 
     })(format!"%s should draw"(subject));
-
 }
 
 /// Make sure the selected node doesn't draw anything until another node does.
+///
+/// `doesNotDraw` will eventually be replaced by a more appropriate test. See
+/// https://git.samerion.com/Samerion/Fluid/issues/347 for details.
 auto doesNotDraw(alias predicate = `a.startsWith("draw")`)(Node subject) {
-
     import std.functional : unaryFun;
 
     bool matched;
@@ -1279,7 +1152,7 @@ auto doesNotDraw(alias predicate = `a.startsWith("draw")`)(Node subject) {
         // Test failed, skip checks
         if (failedName) return false;
 
-        const isSubject = node.opEquals(subject).assertNotThrown;
+        const isSubject = equal(subject, node);
 
         // Make sure the node is reached
         if (!matched) {
@@ -1308,114 +1181,128 @@ auto doesNotDraw(alias predicate = `a.startsWith("draw")`)(Node subject) {
 
     })(matched ? format!"%s shouldn't draw, but calls %s"(subject, failedName)
                : format!"%s should be reached"(subject));
-
 }
 
+// `doesNotDrawImages` will eventually be replaced by a more appropriate test. See
+// https://git.samerion.com/Samerion/Fluid/issues/347 for details.
 alias doesNotDrawImages = doesNotDraw!`a.among("drawImage", "drawHintedImage")`;
 
 /// Ensure the node emits a debug signal.
-pragma(mangle, "fluid__test_space_emits")
-auto emits(Node subject, string name) {
+EmitsAssert emits(Node subject, string name) {
+    return new EmitsAssert(subject, name);
+}
 
-    return new class BlackHole!Assert {
+class EmitsAssert : AbstractAssert {
 
-        override bool emitSignal(Node node, string emittedName) {
+    string name;
 
-            return subject.opEquals(node).assertNotThrown
-                && name == emittedName;
+    this(Node subject, string name) {
+        super(subject);
+        this.name = name;
+    }
 
-        }
+    override bool emitSignal(Node node, string emittedName) {
+        return equal(subject, node)
+            && name == emittedName;
 
-        override string toString() const {
-            return format!"%s should emit %s"(subject, name);
-        }
+    }
 
-    };
+    override string toString() const {
+        return toText(subject, " should emit ", name);
+    }
 
 }
 
-auto drawsWildcard(alias dg)(lazy string message) {
+auto drawsWildcard(alias dg)(string message) {
+    return new WildcardAssert!dg(null, message);
+}
 
-    return new class Assert {
+class WildcardAssert(alias dg) : AbstractAssert {
 
-        override bool resume(Node node) nothrow {
-            return dg(node, "resume");
-        }
+    string message;
 
-        override bool beforeDraw(Node node, Rectangle, Rectangle, Rectangle) nothrow {
-            return dg(node, "beforeDraw");
-        }
+    this(Node subject, string message) {
+        super(subject);
+        this.message = message;
+    }
 
-        override bool afterDraw(Node node, Rectangle, Rectangle, Rectangle) nothrow {
-            return dg(node, "afterDraw");
-        }
+    override bool resume(Node node) {
+        return dg(node, "resume");
+    }
 
-        override bool cropArea(Node node, Rectangle) nothrow {
-            return dg(node, "cropArea");
-        }
+    override bool beforeDraw(Node node, Rectangle, Rectangle, Rectangle) {
+        return dg(node, "beforeDraw");
+    }
 
-        override bool resetCropArea(Node node) nothrow {
-            return dg(node, "resetCropArea");
-        }
+    override bool afterDraw(Node node, Rectangle, Rectangle, Rectangle) {
+        return dg(node, "afterDraw");
+    }
 
-        override bool emitSignal(Node node, string) nothrow {
-            return dg(node, "emitSignal");
-        }
+    override bool cropArea(Node node, Rectangle) {
+        return dg(node, "cropArea");
+    }
 
-        override bool drawTriangle(Node node, Vector2, Vector2, Vector2, Color) nothrow {
-            return dg(node, "drawTriangle");
-        }
+    override bool resetCropArea(Node node) {
+        return dg(node, "resetCropArea");
+    }
 
-        override bool drawCircle(Node node, Vector2, float, Color) nothrow {
-            return dg(node, "drawCircle");
-        }
+    override bool emitSignal(Node node, string) {
+        return dg(node, "emitSignal");
+    }
 
-        override bool drawCircleOutline(Node node, Vector2, float, float, Color) nothrow {
-            return dg(node, "drawCircleOutline");
-        }
+    override bool drawTriangle(Node node, Vector2, Vector2, Vector2, Color) {
+        return dg(node, "drawTriangle");
+    }
 
-        override bool drawRectangle(Node node, Rectangle, Color) nothrow {
-            return dg(node, "drawRectangle");
-        }
+    override bool drawCircle(Node node, Vector2, float, Color) {
+        return dg(node, "drawCircle");
+    }
 
-        override bool drawLine(Node node, Vector2, Vector2, float, Color) nothrow {
-            return dg(node, "drawLine");
-        }
+    override bool drawCircleOutline(Node node, Vector2, float, float, Color) {
+        return dg(node, "drawCircleOutline");
+    }
 
-        override bool drawImage(Node node, DrawableImage, Rectangle, Color) nothrow {
-            return dg(node, "drawImage");
-        }
+    override bool drawRectangle(Node node, Rectangle, Color) {
+        return dg(node, "drawRectangle");
+    }
 
-        override bool drawHintedImage(Node node, DrawableImage, Rectangle, Color) nothrow {
-            return dg(node, "drawHintedImage");
-        }
+    override bool drawLine(Node node, Vector2, Vector2, float, Color) {
+        return dg(node, "drawLine");
+    }
 
-        override string toString() const {
-            return message;
-        }
+    override bool drawImage(Node node, DrawableImage, Rectangle, Color) {
+        return dg(node, "drawImage");
+    }
 
-    };
+    override bool drawHintedImage(Node node, DrawableImage, Rectangle, Color) {
+        return dg(node, "drawHintedImage");
+    }
+
+    override string toString() const {
+        return message;
+    }
 
 }
 
-/// Output every draw instruction to stdout (`dumpDraws`), and, optionally, to an SVG file (`dumpDrawsToSVG`).
+/// Output every draw instruction to stdout (`dumpDraws`), and, optionally, to an SVG file
+/// (`dumpDrawsToSVG`).
 ///
-/// Note that `dumpDraws` is equivalent to an `isDrawn` assert. It cannot be mixed with any other asserts on the same
-/// node.
+/// Note that `dumpDraws` is equivalent to an `isDrawn` assert. It cannot be mixed with any other
+/// asserts on the same node.
 ///
-/// SVG support has to be enabled by passing `Fluid_SVG`.
-/// It requires extra dependencies: [elemi](https://code.dlang.org/packages/elemi)
-/// and [arsd-official:image_files](https://code.dlang.org/packages/arsd-official%3Aimage_files).
-/// To create an SVG image, call `dumpDrawsToSVG`.
-/// SVG support is currently incomplete and unstable. Changes can be made to this feature without prior announcement.
+/// SVG support has to be enabled by passing `Fluid_SVG`. It requires
+/// extra dependencies: [elemi](https://code.dlang.org/packages/elemi) and
+/// [arsd-official:image_files](https://code.dlang.org/packages/arsd-official%3Aimage_files). To
+/// create an SVG image, call `dumpDrawsToSVG`. SVG support is currently incomplete and unstable.
+/// Changes can be made to this feature without prior announcement.
 ///
 /// Params:
 ///     subject  = Subject the output of which should be captured.
-///     filename = Path to save the SVG output to. Requires version `Fluid_SVG` to be set, ignored otherwise.
+///     filename = Path to save the SVG output to. Requires version `Fluid_SVG` to be set,
+///         ignored otherwise.
 /// Returns:
 ///     An assert object to pass to `TestSpace.drawAndAssert`.
-pragma(mangle, "fluid__test_space_dumpDrawsToSVG")
-auto dumpDrawsToSVG(Node subject, string filename = null) {
+DumpDrawsAssert dumpDrawsToSVG(Node subject, string filename = null) {
     auto a = dumpDraws(subject);
     a.generateSVG = true;
     a.svgFilename = filename;
@@ -1423,306 +1310,294 @@ auto dumpDrawsToSVG(Node subject, string filename = null) {
 }
 
 /// ditto
-pragma(mangle, "fluid__test_space_dumpDraws")
-auto dumpDraws(Node subject) {
+DumpDrawsAssert dumpDraws(Node subject) {
+    return new DumpDrawsAssert(subject);
+}
 
+class DumpDrawsAssert : AbstractAssert {
     import std.stdio;
 
-    return new class BlackHole!Assert {
+    bool generateSVG;
+    string svgFilename;
 
-        bool generateSVG;
-        string svgFilename;
+    version (Fluid_SVG) {
+        import elemi.xml;
+        Element svg;
+        bool[Color] tints;
+    }
+
+    this(Node subject) {
+        super(subject);
+    }
+
+    version (Fluid_SVG)
+    Element exportSVG() @safe {
+
+        return elems(
+            Element.XMLDeclaration1_0,
+            elem!"svg"(
+                attr("xmlns") = "http://www.w3.org/2000/svg",
+                attr("version") = "1.1",
+                svg,
+            ),
+        );
+
+    }
+
+    void saveSVG() @safe {
+
+        import std.file : write;
 
         version (Fluid_SVG) {
-            import elemi.xml;
-            Element svg;
-            bool[Color] tints;
-        }
-
-        version (Fluid_SVG)
-        Element exportSVG() nothrow @safe {
-
-            return assumeWontThrow(
-                elems(
-                    Element.XMLDeclaration1_0,
-                    elem!"svg"(
-                        attr("xmlns") = "http://www.w3.org/2000/svg",
-                        attr("version") = "1.1",
-                        svg,
-                    ),
-                ),
-            );
-
-        }
-
-        void saveSVG() nothrow @safe {
-
-            import std.file : write;
-
-            version (Fluid_SVG) {
-                if (generateSVG && svgFilename !is null) {
-                    assumeWontThrow(
-                        write(svgFilename, exportSVG)
-                    );
-                }
-            }
-
-        }
-
-        bool isSubject(Node node) nothrow @trusted {
-            return subject is null || node.opEquals(subject).assertNotThrown;
-        }
-
-        void dump(string fmt, Arguments...)(Node node, Arguments arguments) nothrow @trusted {
-            if (isSubject(node)) {
-                writefln!fmt(arguments).assertNotThrown;
+            if (generateSVG && svgFilename !is null) {
+                write(svgFilename, exportSVG);
             }
         }
 
-        override bool beforeDraw(Node node, Rectangle space, Rectangle, Rectangle) nothrow {
-            dump!"node.isDrawn().at(%s, %s, %s, %s),"(node, space.tupleof);
-            return false;
+    }
+
+    bool isSubject(Node node) @trusted {
+        return equal(subject, node);
+    }
+
+    void dump(string fmt, Arguments...)(Node node, Arguments arguments) @trusted {
+        if (isSubject(node)) {
+            writefln!fmt(arguments);
         }
+    }
 
-        override bool afterDraw(Node node, Rectangle, Rectangle, Rectangle) nothrow {
-            if (subject && isSubject(node)) {
-                saveSVG();
-                return true;
-            }
-            return false;
+    override bool beforeDraw(Node node, Rectangle space, Rectangle, Rectangle) {
+        dump!"node.isDrawn().at(%s, %s, %s, %s),"(node, space.tupleof);
+        return false;
+    }
+
+    override bool afterDraw(Node node, Rectangle, Rectangle, Rectangle) {
+        if (subject && isSubject(node)) {
+            saveSVG();
+            return true;
         }
+        return false;
+    }
 
-        override bool cropArea(Node node, Rectangle rectangle) nothrow {
-            dump!"node.cropsTo(%s, %s, %s, %s),"(node, rectangle.tupleof);
-            return false;
-        }
+    override bool cropArea(Node node, Rectangle rectangle) {
+        dump!"node.cropsTo(%s, %s, %s, %s),"(node, rectangle.tupleof);
+        return false;
+    }
 
-        override bool resetCropArea(Node node) nothrow {
-            dump!"node.resetsCrop(),"(node);
-            return false;
-        }
+    override bool resetCropArea(Node node) {
+        dump!"node.resetsCrop(),"(node);
+        return false;
+    }
 
-        override bool emitSignal(Node node, string text) nothrow {
-            dump!"node.emits(%(%s%)),"(node, text.only);
-            return false;
-        }
+    override bool emitSignal(Node node, string text) {
+        dump!"node.emits(%(%s%)),"(node, text.only);
+        return false;
+    }
 
-        override bool drawTriangle(Node node, Vector2 a, Vector2 b, Vector2 c, Color color) nothrow {
+    override bool drawTriangle(Node node, Vector2 a, Vector2 b, Vector2 c, Color color) {
 
-            if (isSubject(node)) {
-                dump!"drawTriangle(%s, %s, %s, %s),"(node, a, b, c, color.toHex.assumeWontThrow);
-
-                version (Fluid_SVG) if (generateSVG) {
-                    assumeWontThrow(
-                        svg ~=  elem!"polygon"(
-                            attr("points") = [
-                                toText(a.x, a.y),
-                                toText(b.x, b.y),
-                                toText(c.x, c.y),
-                            ],
-                            attr("fill") = color.toHex,
-                        ),
-                    );
-                }
-            }
-
-            return false;
-        }
-
-        override bool drawCircle(Node node, Vector2 center, float radius, Color color) nothrow {
-
-            if (isSubject(node)) {
-                dump!`node.drawsCircle().at(%s, %s).ofRadius(%s).ofColor("%s"),`
-                    (node, center.x, center.y, radius, color.toHex.assumeWontThrow);
-
-                version (Fluid_SVG) if (generateSVG) {
-                    assumeWontThrow(
-                        svg ~= elem!"circle"(
-                            attr("cx")   = toText(center.x),
-                            attr("cy")   = toText(center.y),
-                            attr("r")    = toText(radius),
-                            attr("fill") = color.toHex,
-                        ),
-                    );
-                }
-            }
-
-            return false;
-        }
-
-        override bool drawCircleOutline(Node node, Vector2 center, float radius, float width, Color color) nothrow {
-
-            if (isSubject(node)) {
-                dump!`node.drawsCircleOutline().at(%s).ofRadius(%s).ofColor("%s"),`
-                    (node, center, radius, color.toHex.assumeWontThrow);
-
-                version (Fluid_SVG) if (generateSVG) {
-                    assumeWontThrow(
-                        svg ~= elem!"circle"(
-                            attr("cx")           = toText(center.x),
-                            attr("cy")           = toText(center.y),
-                            attr("r")            = toText(radius),
-                            attr("fill")         = "none",
-                            attr("stroke")       = color.toHex,
-                            attr("stroke-width") = toText(width),
-                        ),
-                    );
-                }
-            }
-
-            return false;
-        }
-
-        override bool drawRectangle(Node node, Rectangle area, Color color) nothrow {
-
-            if (isSubject(node)) {
-                dump!`node.drawsRectangle(%s, %s, %s, %s).ofColor("%s"),`
-                    (node, area.tupleof, color.toHex.assumeWontThrow);
-
-                version (Fluid_SVG) if (generateSVG) {
-                    assumeWontThrow(
-                        svg ~= elem!"rect"(
-                            attr("x")      = toText(area.x),
-                            attr("y")      = toText(area.y),
-                            attr("width")  = toText(area.width),
-                            attr("height") = toText(area.height),
-                            attr("fill")   = color.toHex,
-                        ),
-                    );
-                }
-            }
-
-            return false;
-        }
-
-        override bool drawLine(Node node, Vector2 start, Vector2 end, float width, Color color) nothrow {
-
-            if (isSubject(node)) {
-                dump!`node.drawsLine().from(%s, %s).to(%s, %s).ofWidth(%s).ofColor("%s"),`
-                    (node, start.tupleof, end.tupleof, width, color.toHex.assumeWontThrow);
-
-                version (Fluid_SVG) if (generateSVG) {
-                    assumeWontThrow(
-                        svg ~= elem!"line"(
-                            attr("x1") = toText(start.x),
-                            attr("y1") = toText(start.y),
-                            attr("x2") = toText(end.x),
-                            attr("y2") = toText(end.y),
-                            attr("stroke") = color.toHex,
-                            attr("stroke-width") = toText(width),
-                        ),
-                    );
-                }
-            }
-
-            return false;
-        }
-
-        override bool drawImage(Node node, DrawableImage image, Rectangle area, Color color)
-        nothrow {
-            dumpImage(node, image, area, color, false);
-            return false;
-        }
-
-        override bool drawHintedImage(Node node, DrawableImage image, Rectangle area, Color color)
-        nothrow {
-            dumpImage(node, image, area, color, true);
-            return false;
-        }
-
-        private void dumpImage(Node node, DrawableImage image, Rectangle area, Color tint,
-            bool isHinted)
-        nothrow @trusted {
-
-            if (!isSubject(node)) return;
-
-            dump!(`node.draws%sImage().at(%s, %s, %s, %s).ofColor("%s")` ~ "\n"
-                ~ `    .sha256("%(%02x%)"),`)
-                (node, isHinted ? "Hinted" : "", area.tupleof, tint.toHex.assumeWontThrow,
-                sha256Of(image.data)[]);
-
-            if (image.area == 0) return;
+        if (isSubject(node)) {
+            dump!"drawTriangle(%s, %s, %s, %s),"(node, a, b, c, color.toHex);
 
             version (Fluid_SVG) if (generateSVG) {
+                svg ~=  elem!"polygon"(
+                    attr("points") = [
+                        toText(a.x, a.y),
+                        toText(b.x, b.y),
+                        toText(c.x, c.y),
+                    ],
+                    attr("fill") = color.toHex,
+                );
+            }
+        }
 
-                import std.base64;
-                import arsd.png;
-                import arsd.image;
+        return false;
+    }
 
-                ubyte[] data = cast(ubyte[]) image.toRGBA.data;
+    override bool drawCircle(Node node, Vector2 center, float radius, Color color) {
 
-                // Load the image
-                auto arsdImage = new TrueColorImage(image.width, image.height, data);
+        if (isSubject(node)) {
+            dump!`node.drawsCircle().at(%s, %s).ofRadius(%s).ofColor("%s"),`
+                (node, center.x, center.y, radius, color.toHex);
 
-                // Encode as a PNG in a data URL
-                const png = arsdImage.writePngToArray().assumeWontThrow;
-                const string base64 = Base64.encode(png);
-                const url = "data:image/png;base64," ~ base64;
+            version (Fluid_SVG) if (generateSVG) {
+                svg ~= elem!"circle"(
+                    attr("cx")   = toText(center.x),
+                    attr("cy")   = toText(center.y),
+                    attr("r")    = toText(radius),
+                    attr("fill") = color.toHex,
+                );
+            }
+        }
 
+        return false;
+    }
+
+    override bool drawCircleOutline(Node node, Vector2 center, float radius, float width,
+        Color color)
+    do {
+
+        if (isSubject(node)) {
+            dump!`node.drawsCircleOutline().at(%s).ofRadius(%s).ofColor("%s"),`
+                (node, center, radius, color.toHex.assumeWontThrow);
+
+            version (Fluid_SVG) if (generateSVG) {
                 assumeWontThrow(
-                    svg ~= elems(
-                        useTint(tint),
-                        elem!"image"(
-                            attr("x")      = toText(area.x),
-                            attr("y")      = toText(area.y),
-                            attr("width")  = toText(area.width),
-                            attr("height") = toText(area.height),
-                            attr("href")   = url,
-                            attr("style")  = format!"filter:url(#%s)"(tint.toHex!"t"),
-                        ),
+                    svg ~= elem!"circle"(
+                        attr("cx")           = toText(center.x),
+                        attr("cy")           = toText(center.y),
+                        attr("r")            = toText(radius),
+                        attr("fill")         = "none",
+                        attr("stroke")       = color.toHex,
+                        attr("stroke-width") = toText(width),
                     ),
                 );
-
             }
-
         }
 
-        /// Generate a tint filter for the given color
-        version (Fluid_SVG)
-        private Element useTint(Color color) {
+        return false;
+    }
 
-            // Ignore if the given filter already exists
-            if (color in tints) return elems();
+    override bool drawRectangle(Node node, Rectangle area, Color color) {
 
-            tints[color] = true;
+        if (isSubject(node)) {
+            dump!`node.drawsRectangle(%s, %s, %s, %s).ofColor("%s"),`
+                (node, area.tupleof, color.toHex.assumeWontThrow);
 
-            // <pain>
-            return elem!"filter"(
+            version (Fluid_SVG) if (generateSVG) {
+                svg ~= elem!"rect"(
+                    attr("x")      = toText(area.x),
+                    attr("y")      = toText(area.y),
+                    attr("width")  = toText(area.width),
+                    attr("height") = toText(area.height),
+                    attr("fill")   = color.toHex,
+                );
+            }
+        }
 
-                // Use the color as the filter ID, prefixed with "t" instead of "#"
-                attr("id") = color.toHex!"t",
+        return false;
+    }
 
-                // Create a layer full of that color
-                elem!"feFlood"(
-                    attr("x") = "0",
-                    attr("y") = "0",
-                    attr("width") = "100%",
-                    attr("height") = "100%",
-                    attr("flood-color") = color.toHex,
+    override bool drawLine(Node node, Vector2 start, Vector2 end, float width, Color color) {
+
+        if (isSubject(node)) {
+            dump!`node.drawsLine().from(%s, %s).to(%s, %s).ofWidth(%s).ofColor("%s"),`
+                (node, start.tupleof, end.tupleof, width, color.toHex);
+
+            version (Fluid_SVG) if (generateSVG) {
+                svg ~= elem!"line"(
+                    attr("x1") = toText(start.x),
+                    attr("y1") = toText(start.y),
+                    attr("x2") = toText(end.x),
+                    attr("y2") = toText(end.y),
+                    attr("stroke") = color.toHex,
+                    attr("stroke-width") = toText(width),
+                );
+            }
+        }
+
+        return false;
+    }
+
+    override bool drawImage(Node node, DrawableImage image, Rectangle area, Color color) {
+        dumpImage(node, image, area, color, false);
+        return false;
+    }
+
+    override bool drawHintedImage(Node node, DrawableImage image, Rectangle area, Color color) {
+        dumpImage(node, image, area, color, true);
+        return false;
+    }
+
+    private void dumpImage(Node node, DrawableImage image, Rectangle area, Color tint,
+        bool isHinted) @trusted
+    do {
+
+        if (!isSubject(node)) return;
+
+        dump!(`node.draws%sImage().at(%s, %s, %s, %s).ofColor("%s")` ~ "\n"
+            ~ `    .sha256("%(%02x%)"),`)
+            (node, isHinted ? "Hinted" : "", area.tupleof, tint.toHex.assumeWontThrow,
+            sha256Of(image.data)[]);
+
+        if (image.area == 0) return;
+
+        version (Fluid_SVG) if (generateSVG) {
+
+            import std.base64;
+            import arsd.png;
+            import arsd.image;
+
+            ubyte[] data = cast(ubyte[]) image.toRGBA.data;
+
+            // Load the image
+            auto arsdImage = new TrueColorImage(image.width, image.height, data);
+
+            // Encode as a PNG in a data URL
+            const png = arsdImage.writePngToArray().assumeWontThrow;
+            const string base64 = Base64.encode(png);
+            const url = "data:image/png;base64," ~ base64;
+
+            svg ~= elems(
+                useTint(tint),
+                elem!"image"(
+                    attr("x")      = toText(area.x),
+                    attr("y")      = toText(area.y),
+                    attr("width")  = toText(area.width),
+                    attr("height") = toText(area.height),
+                    attr("href")   = url,
+                    attr("style")  = format!"filter:url(#%s)"(tint.toHex!"t"),
                 ),
-
-                // Blend in with the original image
-                elem!"feBlend"(
-                    attr("in2") = "SourceGraphic",
-                    attr("mode") = "multiply",
-                ),
-
-                // Use the source image for opacity
-                elem!"feComposite"(
-                    attr("in2") = "SourceGraphic",
-                    attr("operator") = "in",
-                ),
-
             );
-            // </pain>
 
         }
 
-        override string toString() const {
-            return format!"%s must be reached"(subject);
-        }
+    }
 
-    };
+    /// Generate a tint filter for the given color
+    version (Fluid_SVG)
+    private Element useTint(Color color) {
+
+        // Ignore if the given filter already exists
+        if (color in tints) return elems();
+
+        tints[color] = true;
+
+        // <pain>
+        return elem!"filter"(
+
+            // Use the color as the filter ID, prefixed with "t" instead of "#"
+            attr("id") = color.toHex!"t",
+
+            // Create a layer full of that color
+            elem!"feFlood"(
+                attr("x") = "0",
+                attr("y") = "0",
+                attr("width") = "100%",
+                attr("height") = "100%",
+                attr("flood-color") = color.toHex,
+            ),
+
+            // Blend in with the original image
+            elem!"feBlend"(
+                attr("in2") = "SourceGraphic",
+                attr("mode") = "multiply",
+            ),
+
+            // Use the source image for opacity
+            elem!"feComposite"(
+                attr("in2") = "SourceGraphic",
+                attr("operator") = "in",
+            ),
+
+        );
+        // </pain>
+
+    }
+
+    override string toString() const {
+        return toText(subject, " must be reached");
+    }
 
 }
 
@@ -1734,3 +1609,106 @@ private bool equal(float a, float b) nothrow {
         && diff <= +0.01;
 
 }
+
+private bool equal(Node a, Node b) nothrow {
+
+    // Exact same object, or both are nulls
+    if (a is b) {
+        return true;
+    }
+
+    // Either is null (except if both, handled previously)
+    if (a is null || b is null) {
+        return false;
+    }
+
+    // Neither is null, use opEquals
+    return a.opEquals(b).assumeWontThrow;
+
+}
+
+/// Returns:
+///     True if both floats are the same, or the target is null/unspecified.
+private bool equal(Nullable!float target, float subject) {
+    if (target.isNull) {
+        return true;
+    }
+    auto targetNN = target.get;
+    return equal(targetNN, subject);
+}
+
+/// Returns:
+///     True if both vectors are the same, or the target is null/unspecified.
+private bool equal(Nullable!Vector2 target, Vector2 subject) {
+    if (target.isNull) {
+        return true;
+    }
+    auto targetNN = target.get;
+    return equal(targetNN.x, subject.x)
+        && equal(targetNN.y, subject.y);
+}
+
+/// Returns:
+///     True if both rectangles are the same, or the target is null/unspecified.
+private bool equal(Nullable!Rectangle target, Rectangle subject) {
+    if (target.isNull) {
+        return true;
+    }
+    auto targetNN = target.get;
+    return equal(targetNN.x, subject.x)
+        && equal(targetNN.y, subject.y)
+        && equal(targetNN.width, subject.width)
+        && equal(targetNN.height, subject.height);
+}
+
+private bool equal(Nullable!Image target, Image subject) {
+    if (target.isNull) {
+        return true;
+    }
+    auto targetNN = target.get;
+    const bothEmpty = targetNN.data.empty
+        && subject.data.empty;
+    const sameData = bothEmpty
+        || targetNN.data is subject.data;
+    return targetNN.format == subject.format
+        && sameData
+        && targetNN.width == subject.width
+        && targetNN.height == subject.height;
+}
+
+private bool equal(T)(Nullable!(T) target, T subject) {
+    if (target.isNull) {
+        return true;
+    }
+    return target.get == subject;
+}
+
+private string describe(T : Nullable!E, E)(string prefix, T nullable, string suffix = "") {
+
+    import std.traits : Unqual;
+
+    // Empty strings if this test is disabled
+    if (nullable.isNull) {
+        return null;
+    }
+
+    // Describe colors with hex codes
+    else static if (is(const E : Color)) {
+        return toText(prefix, nullable.get.toHex, suffix);
+    }
+
+    // Hex-encode binary
+    else static if (is(const E : const(ubyte)[])) {
+        return format!"%s%(%02x%)%s"(prefix, nullable.get, suffix);
+    }
+
+    // Remove qualifiers, if allowed: const(Rectangle)(0, 0, 10, 10) -> Rectangle(0, 0, 10, 10)
+    else static if (is(const E : Unqual!E)) {
+        return toText(prefix, cast() nullable.get, suffix);
+    }
+    else {
+        return toText(prefix, nullable.get, suffix);
+    }
+
+}
+
