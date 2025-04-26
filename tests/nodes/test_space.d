@@ -477,3 +477,213 @@ unittest {
     );
 
 }
+
+@("TestSpace's asserts describe colors in hex")
+unittest {
+
+    auto theme = nullTheme.derive(
+        rule!Frame(
+            Rule.backgroundColor = color("#f524"),
+        ),
+    );
+
+    auto node = sizeLock!vframe(
+        .sizeLimit(10, 10),
+    );
+    auto root = testSpace(theme, node);
+
+    root.drawAndAssert(
+        node.drawsRectangle(0, 0, 10, 10).ofColor("#f524"),
+    );
+    root.drawAndAssertFailure(
+        node.drawsRectangle(0, 0, 10, 10).ofColor("#f523"),
+    );
+    root.drawAndAssert(
+        node.drawsRectangle(0, 0, 10, 10)
+    );
+    root.drawAndAssert(
+        node.drawsRectangle().ofColor("#f524")
+    );
+    root.drawAndAssertFailure(
+        node.drawsRectangle().ofColor("#0000")
+    );
+
+    assert(node.drawsRectangle(0, 0, 10, 10).ofColor("#f524").toString
+        == node.toString ~ " should draw a rectangle Rectangle(0, 0, 10, 10) of color #ff552244");
+    assert(node.drawsRectangle().ofColor("#f524").toString
+        == node.toString ~ " should draw a rectangle of color #ff552244");
+    assert(node.drawsRectangle().toString
+        == node.toString ~ " should draw a rectangle");
+
+}
+
+@("TestSpace can test line drawing")
+unittest {
+
+    class Line : Node {
+
+        CanvasIO canvasIO;
+
+        override void resizeImpl(Vector2) {
+            require(canvasIO);
+            minSize = Vector2(10, 10);
+        }
+
+        override void drawImpl(Rectangle, Rectangle contentBox) {
+            canvasIO.drawLine(contentBox.start, contentBox.end, 2, color("#a90"));
+        }
+
+    }
+
+    auto line = new Line;
+    auto root = testSpace(.nullTheme, line);
+
+    root.drawAndAssert(
+        line.drawsLine().from(0, 0).to(10, 10).ofWidth(2).ofColor("#a90"),
+    );
+    root.drawAndAssertFailure(  // different color
+        line.drawsLine().from(0, 0).to(10, 10).ofWidth(2).ofColor("#500"),
+    );
+    root.drawAndAssertFailure(  // different width
+        line.drawsLine().from(0, 0).to(10, 10).ofWidth(9).ofColor("#a90"),
+    );
+    root.drawAndAssertFailure(  // different end
+        line.drawsLine().from(0, 0).to(50, 50).ofWidth(2).ofColor("#a90"),
+    );
+    root.drawAndAssertFailure(  // different start
+        line.drawsLine().from(2, 2).to(10, 10).ofWidth(2).ofColor("#a90"),
+    );
+
+    root.drawAndAssert(
+        line.drawsLine().to(10, 10).ofWidth(2).ofColor("#a90"),
+    );
+    root.drawAndAssert(
+        line.drawsLine().from(0, 0).ofWidth(2).ofColor("#a90"),
+    );
+    root.drawAndAssert(
+        line.drawsLine().from(0, 0).to(10, 10).ofColor("#a90"),
+    );
+    root.drawAndAssert(
+        line.drawsLine().from(0, 0).to(10, 10).ofWidth(2),
+    );
+    root.drawAndAssert(
+        line.drawsLine().from(0, 0).to(10, 10),
+    );
+    root.drawAndAssertFailure(
+        line.drawsLine().from(0, 0).to(10, 50),
+    );
+    root.drawAndAssertFailure(
+        line.drawsLine().ofColor("#999"),
+    );
+
+    assert(line.drawsLine().from(0, 0).to(10, 10).ofWidth(2).ofColor("#a90").toString
+        == line.toString ~ " should draw a line from Vector2(0, 0) to Vector2(10, 10) "
+        ~ "of width 2 of color #aa9900");
+    assert(line.drawsLine().ofWidth(2).toString
+        == line.toString ~ " should draw a line of width 2");
+
+}
+
+@("TestSpace can test circles and circle outlines")
+unittest {
+
+    class Circle : Node {
+
+        CanvasIO canvasIO;
+
+        override void resizeImpl(Vector2) {
+            require(canvasIO);
+            minSize = Vector2(10, 10);
+        }
+
+        override void drawImpl(Rectangle, Rectangle contentBox) {
+            canvasIO.drawCircle(contentBox.center, contentBox.width / 2, color("#600"));
+        }
+
+    }
+
+    class CircleOutline : Node {
+
+        CanvasIO canvasIO;
+
+        override void resizeImpl(Vector2) {
+            require(canvasIO);
+            minSize = Vector2(10, 10);
+        }
+
+        override void drawImpl(Rectangle, Rectangle contentBox) {
+            canvasIO.drawCircleOutline(contentBox.center, contentBox.width / 2, 1, color("#600"));
+        }
+
+    }
+
+    auto circle = new Circle;
+    auto outline = new CircleOutline;
+    auto root = testSpace(
+        .nullTheme,
+        circle,
+        outline,
+    );
+
+    root.drawAndAssert(
+        circle .drawsCircle()        .at(5,  5).ofRadius(5).ofColor("#600"),
+        outline.drawsCircleOutline(1).at(5, 15).ofRadius(5).ofColor("#600"),
+    );
+    root.drawAndAssertFailure(
+        circle .drawsCircle()        .at(5,  5).ofRadius(5).ofColor("#604"),
+    );
+    root.drawAndAssertFailure(
+        circle .drawsCircle()        .at(5,  5).ofRadius(3).ofColor("#600"),
+    );
+    root.drawAndAssertFailure(
+        outline.drawsCircleOutline(1).at(5, 15).ofRadius(5).ofColor("#604"),
+    );
+    root.drawAndAssertFailure(
+        outline.drawsCircleOutline(1).at(5, 15).ofRadius(9).ofColor("#600"),
+    );
+    root.drawAndAssertFailure(
+        outline.drawsCircleOutline(2).at(5, 15).ofRadius(5).ofColor("#600"),
+    );
+
+}
+
+@("TestSpace can handle images")
+unittest {
+
+    auto image = imageView(
+        generateColorImage(10, 10, color("#faa")),
+    );
+    auto root = testSpace(.nullTheme, image);
+
+    root.drawAndAssert(
+        image.drawsImage().at(0, 0, 10, 10).ofColor("#fff")
+            .sha256("f40b77783c8a9ff39b8e2429faf77026c7101ef5f10ec2aeae86cb573ee09f15"),
+    );
+    root.drawAndAssertFailure(
+        image.drawsImage().at(0, 0, 10, 10).ofColor("#fff")
+            .sha256("f40b777FA1Ea9ff39b8e2429faf77026c7101ef5f10ec2aeae86cb573ee09f15"),
+    );
+    root.drawAndAssert(
+        image.drawsImage().at(0, 0, 10, 10).ofColor("#fff"),
+    );
+    root.drawAndAssertFailure(
+        image.drawsImage().at(0, 0, 10, 10).ofColor("#f8f"),
+    );
+    root.drawAndAssertFailure(
+        image.drawsImage().at(1, 0, 10, 10).ofColor("#fff"),
+    );
+    root.drawAndAssertFailure(
+        image.drawsImage().at(1, 0).ofColor("#fff"),
+    );
+
+    assert(image.drawsImage().at(0, 0, 10, 10).ofColor("#fff")
+            .sha256("f40b77783c8a9ff39b8e2429faf77026c7101ef5f10ec2aeae86cb573ee09f15")
+            .toString == image.toString ~ " should draw an image with SHA256 "
+                ~ "f40b77783c8a9ff39b8e2429faf77026c7101ef5f10ec2aeae86cb573ee09f15 "
+                ~ "at Vector2(0, 0) of size Vector2(10, 10) of color #ffffff");
+    assert(image.drawsImage(image.image).at(0, 0, 10, 10).ofColor("#fff")
+            .toString == image.toString ~ " should draw an image "
+                ~ image.image.toString
+                ~ " at Vector2(0, 0) of size Vector2(10, 10) of color #ffffff");
+
+}
