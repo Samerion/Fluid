@@ -1,8 +1,4 @@
 /// Module for testing Fluid nodes using the new I/O system.
-///
-/// Bugs:
-///     `auto` functions may generate incorrect mangling. This is worked-around
-///     with `pragma(mangle)`.
 module fluid.test_space;
 
 version (Fluid_TestSpace):
@@ -906,57 +902,64 @@ class DrawsImageAssert : AbstractAssert {
 /// Params:
 ///     parent = Parent node, subject of the test.
 ///     child  = Child to test. Must be drawn directly.
-pragma(mangle, "fluid__test_space_drawsChild")
-auto drawsChild(Node parent, Node child = null) {
+DrawsChildAssert drawsChild(Node parent, Node child = null) {
+    return new DrawsChildAssert(parent, child);
 
-    return new class BlackHole!Assert {
+}
 
-        // 0 outside of parent, 1 inside, 2 in child, 3 in grandchild, etc.
-        int parentDepth;
+class DrawsChildAssert : AbstractAssert {
 
-        override bool resume(Node node) {
-            if (parent.opEquals(node).assertNotThrown) {
-                parentDepth = 1;
-            }
-            return false;
+    Node child;
+
+    // 0 outside of parent, 1 inside, 2 in child, 3 in grandchild, etc.
+    int parentDepth;
+
+    this(Node subject, Node child) {
+        super(subject);
+        this.child = child;
+    }
+
+    override bool resume(Node node) {
+        if (equal(subject, node)) {
+            parentDepth = 1;
+        }
+        return false;
+    }
+
+    override bool beforeDraw(Node node, Rectangle, Rectangle, Rectangle) {
+
+        // Found the parent
+        if (equal(subject, node)) {
+            parentDepth = 1;
         }
 
-        override bool beforeDraw(Node node, Rectangle, Rectangle, Rectangle) {
-
-            // Found the parent
-            if (parent.opEquals(node).assertNotThrown) {
-                parentDepth = 1;
+        // Parent drew a child, great! End the test if the child meets expectations.
+        else if (parentDepth) {
+            if (parentDepth++ == 1) {
+                return child is null || equal(node, child);
             }
-
-            // Parent drew a child, great! End the test if the child meets expectations.
-            else if (parentDepth) {
-                if (parentDepth++ == 1) {
-                    return child is null || node.opEquals(child).assertNotThrown;
-                }
-            }
-
-            return false;
-
         }
 
-        override bool afterDraw(Node node, Rectangle, Rectangle, Rectangle) {
+        return false;
 
-            if (parentDepth) {
-                parentDepth--;
-            }
+    }
 
-            return false;
+    override bool afterDraw(Node node, Rectangle, Rectangle, Rectangle) {
 
+        if (parentDepth) {
+            parentDepth--;
         }
 
-        override string toString() const {
-            if (child)
-                return format!"%s must draw %s"(parent, child);
-            else
-                return format!"%s must draw a child"(parent);
-        }
+        return false;
 
-    };
+    }
+
+    override string toString() const {
+        if (child)
+            return format!"%s must draw %s"(subject, child);
+        else
+            return format!"%s must draw a child"(subject);
+    }
 
 }
 
@@ -1021,45 +1024,49 @@ unittest {
 ///
 /// `doesNotDrawChildren` will eventually be replaced by a more appropriate test. See
 /// https://git.samerion.com/Samerion/Fluid/issues/347 for details.
-pragma(mangle, "fluid__test_space_doesNotDrawChildren")
 auto doesNotDrawChildren(Node parent) {
+    return new DoesNotDrawChildrenAssert(parent);
 
-    return new class BlackHole!Assert {
+}
 
-        bool inParent;
+class DoesNotDrawChildrenAssert : AbstractAssert {
 
-        override bool resume(Node node) {
-            if (parent.opEquals(node).assertNotThrown) {
-                inParent =  true;
-            }
-            return false;
+    bool inParent;
+
+    this(Node subject) {
+        super(subject);
+    }
+
+    override bool resume(Node node) {
+        if (equal(subject, node)) {
+            inParent =  true;
+        }
+        return false;
+    }
+
+    override bool beforeDraw(Node node, Rectangle, Rectangle, Rectangle) {
+
+        // Found the parent
+        if (equal(subject, node)) {
+            inParent = true;
         }
 
-        override bool beforeDraw(Node node, Rectangle, Rectangle, Rectangle) {
-
-            // Found the parent
-            if (parent.opEquals(node).assertNotThrown) {
-                inParent = true;
-            }
-
-            // Parent drew a child
-            else if (inParent) {
-                assert(false, format!"%s must not draw children"(parent).assertNotThrown);
-            }
-
-            return false;
-
+        // Parent drew a child
+        else if (inParent) {
+            assert(false, format!"%s must not draw children"(subject));
         }
 
-        override bool afterDraw(Node node, Rectangle, Rectangle, Rectangle) {
-            return parent.opEquals(node).assertNotThrown;
-        }
+        return false;
 
-        override string toString() const {
-            return format!"%s must not draw children"(parent).assertNotThrown;
-        }
+    }
 
-    };
+    override bool afterDraw(Node node, Rectangle, Rectangle, Rectangle) {
+        return equal(subject, node);
+    }
+
+    override string toString() const {
+        return format!"%s must not draw children"(subject);
+    }
 
 }
 
@@ -1120,7 +1127,6 @@ class IsDrawnAssert : AbstractAssert {
 }
 
 /// Make sure the selected node draws, but doesn't matter what.
-pragma(mangle, "fluid__test_space_draws")
 auto draws(Node subject) {
     return drawsWildcard!((node, methodName) {
         return equal(subject, node)
