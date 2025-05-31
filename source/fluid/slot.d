@@ -91,18 +91,6 @@ class NodeSlot(T : Node) : Node {
 
     }
 
-    protected override bool hoveredImpl(Rectangle rect, Vector2 position) {
-
-        if (!value) return false;
-
-        // If the child has ignoreMouse set, we should ignore it as well
-        if (value.ignoreMouse) return false;
-
-        // hoveredImpl may be private... uhhh
-        return (cast(Node) value).hoveredImpl(rect, position);
-
-    }
-
     /// Swap contents of the two slots.
     void swapSlots(Slot : Node)(Slot other) {
 
