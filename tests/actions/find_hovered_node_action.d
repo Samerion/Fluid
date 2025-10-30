@@ -87,6 +87,20 @@ class MyScrollable : Frame, HoverScrollable {
 
 }
 
+alias weight = nodeBuilder!Weight;
+
+class Weight : Node {
+
+    override void resizeImpl(Vector2) {
+        minSize = Vector2(400, 400);
+    }
+
+    override void drawImpl(Rectangle, Rectangle) {
+
+    }
+
+}
+
 @("FindHoveredNodeAction can find any node by screen position")
 unittest {
 
@@ -242,5 +256,49 @@ unittest {
     // The remaining options disable children access
     testSearch(HitFilter.missBranch, Vector2(25, 25), null);
     testSearch(HitFilter.hitBranch,  Vector2(25, 25), container);
+
+}
+
+@("Scrollables are located correctly among nodes with HitFilter.hitBranch")
+unittest {
+    // https://git.samerion.com/Samerion/Fluid/issues/482
+    // As a bug, finding a scrollable before hitBranch prevented the branch from ending
+
+    ScrollFrame firstFrame;
+    ScrollFrame secondFrame;
+
+    auto root = sizeLock!onionFrame(
+        .sizeLimit(100, 100),
+
+        // Bug condition:
+        firstFrame = vscrollFrame(
+            .layout!"fill",
+            weight(),
+        ),
+        vframe(
+            .layout!"fill",
+            .HitFilter.missBranch,
+        ),
+
+        // Check:
+        secondFrame = vscrollFrame(
+            .layout!"fill",
+            weight(),
+        ),
+    );
+
+    auto action = new FindHoveredNodeAction;
+    action.pointer.position = Vector2(50, 50);
+    action.pointer.scroll = Vector2(0, 50);
+    root.startAction(action);
+    root.draw();
+
+    // Condition:
+    assert(firstFrame.canScroll(action.pointer.scroll));
+    assert(secondFrame.canScroll(action.pointer.scroll));
+
+    // Check
+    assert(action.scrollable !is firstFrame);
+    assert(action.scrollable  is secondFrame);
 
 }
