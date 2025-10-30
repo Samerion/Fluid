@@ -639,15 +639,15 @@ final class FindHoveredNodeAction : BranchAction {
             }
         }
 
-        // A result is required and no scrollable could have matched already
-        if (result is null) return;
-        if (scrollable) return;
-
         // Reduce _transparentDepth, skip unless the node that started it
         if (_transparentDepth != 0) {
             _transparentDepth--;
             if (_transparentDepth != 0) return;
         }
+
+        // A result is required and no scrollable could have matched already
+        if (result is null) return;
+        if (scrollable) return;
 
         // Ignore if in a sibling node
         if (_siblingDepth != 0) return;
