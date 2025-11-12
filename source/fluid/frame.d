@@ -1,5 +1,64 @@
+/// Frames place other nodes in a column or row.
 ///
+/// A Frame can either be vertical and form a column, or horizontal and form a row. Use [vframe]
+/// to create a vertical frame, or [hframe] to create a horizontal frame.
+///
+/// `Frame` extends on, and adds functionality to otherwise very similar [Space].
+/// See [fluid.space] for discussion of their differences.
 module fluid.frame;
+
+@safe:
+
+///
+@("Frame reference example")  // Example copied from space.d
+unittest {
+    import fluid.label;
+    import fluid.button;
+
+    // A vframe will align all its content in a column
+    vframe(
+        label("First entry"),
+        label("Second entry"),
+        label("Third entry"),
+    );
+
+    // hframe will lay out the nodes in a row
+    hframe(
+        label("One, "),
+        label("Two, "),
+        label("Three!"),
+    );
+
+    // Combine them to quickly build layouts!
+    vframe(
+        label("Are you sure you want to proceed?"),
+        hframe(
+            button("Yes", delegate { }),
+            button("Cancel", delegate { }),
+        ),
+    );
+}
+
+/// [layout] can be used to divide a Frame into proportional segments.
+@("Frame+layout example")
+unittest {
+    import fluid.label;
+    run(
+        // The sum of layout values is the denominator: 1+2 = 3
+        hframe(
+            label(
+                // 1/(1+2) = 1/3
+                .layout!1,
+                "One third"
+            ),
+            label(
+                // 2/(1+2) = 2/3
+                .layout!2,
+                "Two thirds"
+            ),
+        )
+    );
+}
 
 import std.meta;
 
@@ -12,10 +71,6 @@ import fluid.structs;
 import fluid.backend;
 
 import fluid.io.canvas;
-
-
-@safe:
-
 
 /// Make a Frame node accept nodes via drag & drop.
 ///
