@@ -154,16 +154,25 @@ class Frame : Space, FluidDroppable {
 
     public {
 
-        /// If true, a drag & drop node hovers this frame.
+        /// Drag-and-drop. This is set to true when the user hovers the frame while holding
+        /// a node that can be dropped into this frame.
+        ///
+        /// This property can be used in styling to hint the player that whatever node they're
+        /// dragging can be released and placed.
         bool isDropHovered;
 
-        /// Selector (same as in themes) used to decide which nodes can be dropped inside, defaults to none.
+        /// Drag-and-drop. [Selector][fluid.theme.Selector] used to decide which nodes can be
+        /// dropped inside the frame. The default value is `none`: no node can be dropped into
+        /// this frame.
         Selector dropSelector = Selector.none;
 
-        /// Position of the cursor, indicating the area of the drop.
+        /// Drag-and-drop. If Frame is drop hovered ([isDropHovered]), `dropCursor` is the
+        /// position of the hovering pointer, and is used to calculate where. Position is
+        /// specified in screen coordinates (`(0, 0)` is the top-left corner of the window).
         Vector2 dropCursor;
 
-        /// Size of the droppable area.
+        /// Drag-and-drop. If Frame is drop hovered ([isDropHovered]), this property is set to the
+        /// size of the node hanging above the frame.
         Vector2 dropSize;
 
     }
@@ -258,7 +267,13 @@ class Frame : Space, FluidDroppable {
 
     }
 
-    /// Drag and drop implementation: Offset nodes to provide space for the dropped node.
+    /// Drag-and-drop. Add offset to child nodes to make space for dragged node.
+    /// This is called from [childOffset].
+    ///
+    /// Params:
+    ///     offset = Original offset applied to the child, in screen space.
+    /// Returns:
+    ///     Position, either exactly as given, or offset by [dropSize] on one axis.
     protected Vector2 dropOffset(Vector2 offset) {
 
         // Ignore if nothing is dropped
@@ -287,7 +302,7 @@ class Frame : Space, FluidDroppable {
     }
 
     /// Returns:
-    ///     True if the given node can be dropped into this frame.
+    ///     `true` if the given node can be dropped into this frame.
     ///
     ///     No node can be dropped into a frame that is disabled.
     bool canDrop(Node node) {
