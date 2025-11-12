@@ -117,15 +117,33 @@ if (is(N : Node) && allSatisfy!(isNodeTag, tags)) {
 
 }
 
-/// Make a new vertical frame.
-alias vframe = simpleConstructor!Frame;
+/// Make a new vertical frame. A vertical frame aligns child nodes in a column.
+alias vframe = nodeBuilder!Frame;
 
-/// Make a new horizontal frame.
-alias hframe = simpleConstructor!(Frame, (a) {
+/// A vframe places nodes vertically, so they appear on top of each other.
+@("vframe example")
+unittest {
+    import fluid.label;
 
+    vframe(
+        label("Top node"),
+        label("Middle node"),
+        label("Bottom node"),
+    );
+}
+
+/// Make a new horizontal frame. A horizontal frame aligns child nodes in a row.
+alias hframe = nodeBuilder!(Frame, (a) {
     a.directionHorizontal = true;
-
 });
+
+/// A hframe places nodes horizontally, so they appear next to each other.
+@("hframe example")
+unittest {
+    import fluid.label;
+
+    hframe(label("Left node"), label("Center node"), label("Right node"));
+}
 
 /// This is a frame, a stylized container for other nodes.
 ///
