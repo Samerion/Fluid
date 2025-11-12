@@ -130,8 +130,22 @@ div > pre {
   margin-right: -2em;
 }
 
-code {
+code.inline {
+  display: inline-block;
+  padding: 2px 4px;
+  margin: 0 -2px;
+  border-radius: 4px;
   font-size: 1.2em;
+  background-color: #eef3f9;
+  color: inherit;
+}
+a code.inline {
+  color: #31466c;
+  text-decoration: underline;
+  background: linear-gradient(135deg, #eef3f9 40%, #dfedff)
+}
+a:visited code.inline {
+  color: #54316c;
 }
 code code {
   font-size: inherit;
@@ -294,9 +308,12 @@ ul.module-members {
   padding: 0.5rem 0;
 }
 .params .param-id {
-  color: #000;
+  color: #572d8a;
   border-right: 2px solid #ccc;
   padding-right: 1rem;
+}
+.params .param-id:has(.param) {
+  color: #000;
   font-size: 0;
 }
 .params .param-id .param {

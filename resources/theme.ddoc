@@ -32,7 +32,7 @@ HR = <hr/>
 LINK = <a href="$0">$0</a>
 LINK2 = <a href="$1">$+</a>
 LINK_TITLE = <a href="$1" title="$2">$3</a>
-SYMBOL_LINK = <a href="$1">$(DDOC_PSYMBOL $+)</a>
+SYMBOL_LINK = <a href="$1"><code class="psymbol inline">$+</code></a>
 FLUID_WEB = https://libfluid.org/
 PHOBOS_PATH = https://dlang.org/phobos/
 ROOT = /docs/source/fluid
@@ -51,7 +51,7 @@ D_CODE = $(OTHER_CODE d, $0)
 OTHER_CODE =
 <pre class="language-$1"><code>$+</code></pre>
 
-D_INLINECODE = <code>$0</code>
+D_INLINECODE = <code class="inline">$0</code>
 DDOC_BACKQUOTED = $(D_INLINECODE $0)
 D_COMMENT = <span class="comment">$0</span>
 D_STRING = <span class="string">$0</span>
@@ -159,7 +159,7 @@ DDOC_PARAM_ROW = <tr>
 </tr>$(LF)
 
 DDOC_PARAM_ID = <td class="param-id">
-  <code>
+  <code class="inline">
     <em>$0</em>
   </code>
 </td>$(LF)
