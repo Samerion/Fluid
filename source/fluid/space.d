@@ -1,14 +1,21 @@
 /// Spaces create columns or rows of other nodes.
 ///
-/// A space can be either vertical (a column) or horizontal (a row). Use [vspace] to create a
-/// vertical space, and a [hspace] to create a horizontal space.
+/// A Space can be either vertical (a column) or horizontal (a row). Use [vspace] to create a
+/// vertical Space, and a [hspace] to create a horizontal Space.
 ///
 /// Spaces are very similar to [Frames][fluid.frame.Frame]. For most purposes, Frames are
-/// sufficient, and [styling tags][fluid.structs.NodeTag] usually fill in the need for `Space`.
-/// Unlike Frames, spaces are "transparent" — that is, their background cannot be styled,
-/// and they don't stop the user from clicking nodes that display underneath the Space. The
-/// distinction exists only because of their commonplace usage; a space can be used to avoid the
-/// consequences that a frame's styling may have on the layout.
+/// sufficient, but Space offers a shorthand:
+///
+/// * Spaces have no background,
+/// * Spaces cannot be "clicked through": if a Space is drawn over other nodes, the nodes can
+///   still be clicked,
+///
+/// Spaces are thus convenient to avoid some of Frame's side effects when only intended for
+/// layout purposes.
+///
+/// On top of the above, Spaces currently do not support drag-and-drop, but Frames
+/// do. A future update [will move drag-and-drop functionality into a separate
+/// node](https://git.samerion.com/Samerion/Fluid/issues/297).
 module fluid.space;
 
 @safe:

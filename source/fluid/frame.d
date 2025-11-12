@@ -1,5 +1,66 @@
+/// Frames place other nodes in a column or row.
 ///
+/// A Frame can either be vertical and form a column, or horizontal and form a row. Use [vframe]
+/// to create a vertical frame, or [hframe] to create a horizontal frame.
+///
+/// Frame can be made a target for drag-and-drop nodes using [acceptDrop].
+///
+/// `Frame` extends on, and adds functionality to otherwise very similar [Space].
+/// See [fluid.space] for discussion of their differences.
 module fluid.frame;
+
+@safe:
+
+///
+@("Frame reference example")  // Example copied from space.d
+unittest {
+    import fluid.label;
+    import fluid.button;
+
+    // A vframe will align all its content in a column
+    vframe(
+        label("First entry"),
+        label("Second entry"),
+        label("Third entry"),
+    );
+
+    // hframe will lay out the nodes in a row
+    hframe(
+        label("One, "),
+        label("Two, "),
+        label("Three!"),
+    );
+
+    // Combine them to quickly build layouts!
+    vframe(
+        label("Are you sure you want to proceed?"),
+        hframe(
+            button("Yes", delegate { }),
+            button("Cancel", delegate { }),
+        ),
+    );
+}
+
+/// [layout] can be used to divide a Frame into proportional segments.
+@("Frame+layout example")
+unittest {
+    import fluid.label;
+    run(
+        // The sum of layout values is the denominator: 1+2 = 3
+        hframe(
+            label(
+                // 1/(1+2) = 1/3
+                .layout!1,
+                "One third"
+            ),
+            label(
+                // 2/(1+2) = 2/3
+                .layout!2,
+                "Two thirds"
+            ),
+        )
+    );
+}
 
 import std.meta;
 
@@ -13,14 +74,15 @@ import fluid.backend;
 
 import fluid.io.canvas;
 
-
-@safe:
-
-
-/// Make a Frame node accept nodes via drag & drop.
+/// Make a [Frame] node accept nodes via drag & drop.
 ///
-/// Note: Currently, not all Frames support drag & drop. Using it for nodes that doesn't explicitly state support might
-/// cause undefined behavior.
+/// Note:
+///     Fluid features other nodes that extend from Frame, but don't support drag & drop.
+///     Using `acceptDrop` for nodes that doesn't explicitly state support might cause
+///     undefined behavior.
+///
+///     Note that in the future, this functionality [will be moved to a separate
+///     node](https://git.samerion.com/Samerion/Fluid/issues/297) to avoid this issue.
 ///
 /// Params:
 ///     N        = Require dropped nodes to be of given type.
@@ -28,62 +90,80 @@ import fluid.io.canvas;
 ///     selector = Selector to limit nodes that the frame accepts. Optional — Tags are often enough.
 auto acceptDrop(tags...)(Selector selector = Selector.init)
 if (allSatisfy!(isNodeTag, tags)) {
-
     struct AcceptDrop {
-
         Selector selector;
 
         void apply(Frame frame) {
-
             frame.dropSelector = selector;
-
         }
-
     }
 
     return AcceptDrop(selector.addTags!tags);
-
 }
 
 /// ditto
 auto acceptDrop(N, tags...)()
 if (is(N : Node) && allSatisfy!(isNodeTag, tags)) {
-
     auto selector = Selector(typeid(N));
-
     return acceptDrop!(tags)(selector);
-
 }
 
-/// Make a new vertical frame.
-alias vframe = simpleConstructor!Frame;
+/// Make a new vertical frame. A vertical frame aligns child nodes in a column.
+alias vframe = nodeBuilder!Frame;
 
-/// Make a new horizontal frame.
-alias hframe = simpleConstructor!(Frame, (a) {
+/// A vframe places nodes vertically, so they appear on top of each other.
+@("vframe example")
+unittest {
+    import fluid.label;
 
+    vframe(
+        label("Top node"),
+        label("Middle node"),
+        label("Bottom node"),
+    );
+}
+
+/// Make a new horizontal frame. A horizontal frame aligns child nodes in a row.
+alias hframe = nodeBuilder!(Frame, (a) {
     a.directionHorizontal = true;
-
 });
+
+/// A hframe places nodes horizontally, so they appear next to each other.
+@("hframe example")
+unittest {
+    import fluid.label;
+
+    hframe(label("Left node"), label("Center node"), label("Right node"));
+}
 
 /// This is a frame, a stylized container for other nodes.
 ///
-/// Frame supports drag & drop via `acceptDrop`.
+/// Frame supports drag & drop via [acceptDrop].
 class Frame : Space, FluidDroppable {
 
     CanvasIO canvasIO;
 
     public {
 
-        /// If true, a drag & drop node hovers this frame.
+        /// Drag-and-drop. This is set to true when the user hovers the frame while holding
+        /// a node that can be dropped into this frame.
+        ///
+        /// This property can be used in styling to hint the player that whatever node they're
+        /// dragging can be released and placed.
         bool isDropHovered;
 
-        /// Selector (same as in themes) used to decide which nodes can be dropped inside, defaults to none.
+        /// Drag-and-drop. [Selector][fluid.theme.Selector] used to decide which nodes can be
+        /// dropped inside the frame. The default value is `none`: no node can be dropped into
+        /// this frame.
         Selector dropSelector = Selector.none;
 
-        /// Position of the cursor, indicating the area of the drop.
+        /// Drag-and-drop. If Frame is drop hovered ([isDropHovered]), `dropCursor` is the
+        /// position of the hovering pointer, and is used to calculate where. Position is
+        /// specified in screen coordinates (`(0, 0)` is the top-left corner of the window).
         Vector2 dropCursor;
 
-        /// Size of the droppable area.
+        /// Drag-and-drop. If Frame is drop hovered ([isDropHovered]), this property is set to the
+        /// size of the node hanging above the frame.
         Vector2 dropSize;
 
     }
@@ -101,15 +181,11 @@ class Frame : Space, FluidDroppable {
     }
 
     this(T...)(T args) {
-
         super(args);
-
     }
 
     protected override void resizeImpl(Vector2 availableSpace) {
-
         use(canvasIO);
-
         super.resizeImpl(availableSpace);
 
         // Hovered by a dragged node
@@ -130,11 +206,9 @@ class Frame : Space, FluidDroppable {
         else {
             dropSize = Vector2();
         }
-
     }
 
     protected override void drawImpl(Rectangle outer, Rectangle inner) {
-
         const style = pickStyle();
         style.drawBackground(tree.io, canvasIO, outer);
 
@@ -158,30 +232,28 @@ class Frame : Space, FluidDroppable {
 
         // Clear dropHovered status
         isDropHovered = false;
-
     }
 
     protected override bool hoveredImpl(Rectangle rect, Vector2 mousePosition) {
-
         import fluid.node;
-
         return Node.hoveredImpl(rect, mousePosition);
-
     }
 
     protected override Vector2 childOffset(Vector2 currentOffset, Vector2 childSpace) {
-
         const newOffset = super.childOffset(currentOffset, childSpace);
 
         // Take drop nodes into account
         return dropOffset(newOffset);
-
     }
 
-    /// Drag and drop implementation: Offset nodes to provide space for the dropped node.
+    /// Drag-and-drop. Add offset to child nodes to make space for dragged node.
+    /// This is called from [childOffset].
+    ///
+    /// Params:
+    ///     offset = Original offset applied to the child, in screen space.
+    /// Returns:
+    ///     Position, either exactly as given, or offset by [dropSize] on one axis.
     protected Vector2 dropOffset(Vector2 offset) {
-
-        // Ignore if nothing is dropped
         if (!isDropHovered) return offset;
 
         const dropsHere = isHorizontal
@@ -190,10 +262,8 @@ class Frame : Space, FluidDroppable {
 
         // Not dropping here
         if (!dropsHere && children.length) {
-
             _dropIndex++;
             return offset;
-
         }
 
         // Finish the drop event
@@ -203,22 +273,18 @@ class Frame : Space, FluidDroppable {
         return isHorizontal
             ? offset + Vector2(dropSize.x, 0)
             : offset + Vector2(0, dropSize.y);
-
     }
 
     /// Returns:
-    ///     True if the given node can be dropped into this frame.
+    ///     `true` if the given node can be dropped into this frame.
     ///
     ///     No node can be dropped into a frame that is disabled.
     bool canDrop(Node node) {
-
         return dropSelector.test(node)
             && !isDisabledInherited;
-
     }
 
     void dropHover(Vector2 position, Rectangle rectangle) {
-
         import std.math;
 
         isDropHovered = true;
@@ -233,11 +299,9 @@ class Frame : Space, FluidDroppable {
 
         // Updated
         if (!same) updateSize();
-
     }
 
     void drop(Vector2 position, Rectangle rectangle, Node node) {
-
         import std.array;
 
         // Prevent overflow
@@ -247,7 +311,6 @@ class Frame : Space, FluidDroppable {
 
         this.children.insertInPlace(_dropIndex, node);
         updateSize();
-
     }
 
 }
