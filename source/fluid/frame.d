@@ -90,31 +90,22 @@ import fluid.io.canvas;
 ///     selector = Selector to limit nodes that the frame accepts. Optional — Tags are often enough.
 auto acceptDrop(tags...)(Selector selector = Selector.init)
 if (allSatisfy!(isNodeTag, tags)) {
-
     struct AcceptDrop {
-
         Selector selector;
 
         void apply(Frame frame) {
-
             frame.dropSelector = selector;
-
         }
-
     }
 
     return AcceptDrop(selector.addTags!tags);
-
 }
 
 /// ditto
 auto acceptDrop(N, tags...)()
 if (is(N : Node) && allSatisfy!(isNodeTag, tags)) {
-
     auto selector = Selector(typeid(N));
-
     return acceptDrop!(tags)(selector);
-
 }
 
 /// Make a new vertical frame. A vertical frame aligns child nodes in a column.
@@ -190,15 +181,11 @@ class Frame : Space, FluidDroppable {
     }
 
     this(T...)(T args) {
-
         super(args);
-
     }
 
     protected override void resizeImpl(Vector2 availableSpace) {
-
         use(canvasIO);
-
         super.resizeImpl(availableSpace);
 
         // Hovered by a dragged node
@@ -219,11 +206,9 @@ class Frame : Space, FluidDroppable {
         else {
             dropSize = Vector2();
         }
-
     }
 
     protected override void drawImpl(Rectangle outer, Rectangle inner) {
-
         const style = pickStyle();
         style.drawBackground(tree.io, canvasIO, outer);
 
@@ -247,24 +232,18 @@ class Frame : Space, FluidDroppable {
 
         // Clear dropHovered status
         isDropHovered = false;
-
     }
 
     protected override bool hoveredImpl(Rectangle rect, Vector2 mousePosition) {
-
         import fluid.node;
-
         return Node.hoveredImpl(rect, mousePosition);
-
     }
 
     protected override Vector2 childOffset(Vector2 currentOffset, Vector2 childSpace) {
-
         const newOffset = super.childOffset(currentOffset, childSpace);
 
         // Take drop nodes into account
         return dropOffset(newOffset);
-
     }
 
     /// Drag-and-drop. Add offset to child nodes to make space for dragged node.
@@ -275,8 +254,6 @@ class Frame : Space, FluidDroppable {
     /// Returns:
     ///     Position, either exactly as given, or offset by [dropSize] on one axis.
     protected Vector2 dropOffset(Vector2 offset) {
-
-        // Ignore if nothing is dropped
         if (!isDropHovered) return offset;
 
         const dropsHere = isHorizontal
@@ -285,10 +262,8 @@ class Frame : Space, FluidDroppable {
 
         // Not dropping here
         if (!dropsHere && children.length) {
-
             _dropIndex++;
             return offset;
-
         }
 
         // Finish the drop event
@@ -298,7 +273,6 @@ class Frame : Space, FluidDroppable {
         return isHorizontal
             ? offset + Vector2(dropSize.x, 0)
             : offset + Vector2(0, dropSize.y);
-
     }
 
     /// Returns:
@@ -306,14 +280,11 @@ class Frame : Space, FluidDroppable {
     ///
     ///     No node can be dropped into a frame that is disabled.
     bool canDrop(Node node) {
-
         return dropSelector.test(node)
             && !isDisabledInherited;
-
     }
 
     void dropHover(Vector2 position, Rectangle rectangle) {
-
         import std.math;
 
         isDropHovered = true;
@@ -328,11 +299,9 @@ class Frame : Space, FluidDroppable {
 
         // Updated
         if (!same) updateSize();
-
     }
 
     void drop(Vector2 position, Rectangle rectangle, Node node) {
-
         import std.array;
 
         // Prevent overflow
@@ -342,7 +311,6 @@ class Frame : Space, FluidDroppable {
 
         this.children.insertInPlace(_dropIndex, node);
         updateSize();
-
     }
 
 }
