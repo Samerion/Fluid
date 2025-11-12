@@ -3,6 +3,8 @@
 /// A Frame can either be vertical and form a column, or horizontal and form a row. Use [vframe]
 /// to create a vertical frame, or [hframe] to create a horizontal frame.
 ///
+/// Frame can be made a target for drag-and-drop nodes using [acceptDrop].
+///
 /// `Frame` extends on, and adds functionality to otherwise very similar [Space].
 /// See [fluid.space] for discussion of their differences.
 module fluid.frame;
@@ -72,10 +74,15 @@ import fluid.backend;
 
 import fluid.io.canvas;
 
-/// Make a Frame node accept nodes via drag & drop.
+/// Make a [Frame] node accept nodes via drag & drop.
 ///
-/// Note: Currently, not all Frames support drag & drop. Using it for nodes that doesn't explicitly state support might
-/// cause undefined behavior.
+/// Note:
+///     Fluid features other nodes that extend from Frame, but don't support drag & drop.
+///     Using `acceptDrop` for nodes that doesn't explicitly state support might cause
+///     undefined behavior.
+///
+///     Note that in the future, this functionality [will be moved to a separate
+///     node](https://git.samerion.com/Samerion/Fluid/issues/297) to avoid this issue.
 ///
 /// Params:
 ///     N        = Require dropped nodes to be of given type.
@@ -122,7 +129,7 @@ alias hframe = simpleConstructor!(Frame, (a) {
 
 /// This is a frame, a stylized container for other nodes.
 ///
-/// Frame supports drag & drop via `acceptDrop`.
+/// Frame supports drag & drop via [acceptDrop].
 class Frame : Space, FluidDroppable {
 
     CanvasIO canvasIO;
