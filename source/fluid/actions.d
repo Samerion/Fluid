@@ -298,7 +298,7 @@ unittest {
     // viewport which probably isn't appropriate in case *like this* where it should reveal the top of the node.
     auto texture1 = io.textures.front;
     assert(isClose(texture1.position.y + texture1.height, viewportHeight));
-    assert(isClose(root.scroll, (root.scrollMax + 10) * 2/3 - 10));
+    assert(isClose(root.scroll, (root.maxScroll + 10) * 2/3 - 10));
 
     io.nextFrame;
     root.draw();
