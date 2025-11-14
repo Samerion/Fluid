@@ -49,7 +49,7 @@ unittest {
 
     // auto texture1 = io.textures.front;
     // assert(isClose(texture1.position.y + texture1.height, viewportHeight));
-    assert(isClose(frame.scroll, (frame.scrollMax + 10) * 2/3 - 10));
+    assert(isClose(frame.scroll, (frame.maxScroll + 10) * 2/3 - 10));
 
     // TODO more tests. Scrolling while already in the viewport, scrolling while partially out of the view, etc.
 
