@@ -72,31 +72,40 @@ class ScrollFrame : Frame, FluidScrollable, HoverScrollable {
     }
 
     float scroll(float value) {
-        setScroll(value);
+        scrollBar.scroll = value;
         return value;
     }
 
+    deprecated("`scrollStart` was renamed to `scrollToStart` and will be removed in Fluid 0.8.0")
+    alias scrollStart = scrollToStart;
+
+    deprecated("`scrollEnd` was renamed to `scrollToEnd` and will be removed in Fluid 0.8.0")
+    alias scrollEnd = scrollToEnd;
+
+    deprecated("`scrollMax` was renamed to `maxScroll` and will be removed in Fluid 0.8.0")
+    alias scrollMax = maxScroll;
+
     /// Scroll to the beginning of the node.
-    void scrollStart() {
+    void scrollToStart() {
         scroll = 0;
     }
 
     /// Scroll to the end of the node, requires the node to be drawn at least once.
-    void scrollEnd() {
-        scroll = scrollMax;
+    void scrollToEnd() {
+        scroll = maxScroll;
     }
 
     /// Set the scroll to a value clamped between start and end.
+    deprecated("Instead of `setScroll(value)` use `scroll = value`. `setScroll` will be removed "
+        ~ "in Fluid 0.8.0")
     void setScroll(float value) {
         scrollBar.setScroll(value);
     }
 
     /// Get the maximum value this container can be scrolled to. Requires at least one draw.
-    float scrollMax() const {
-        return scrollBar.scrollMax();
+    float maxScroll() const {
+        return scrollBar.maxScroll();
     }
-
-    alias maxScroll = scrollMax;
 
     deprecated("shallowScrollTo with a Vector2 argument has been deprecated and will be removed "
         ~ "in Fluid 0.8.0.")
@@ -143,7 +152,7 @@ class ScrollFrame : Frame, FluidScrollable, HoverScrollable {
             : 0;
 
         // Perform the scroll
-        setScroll(scroll + offset);
+        this.scroll = scroll + offset;
 
         // Adjust the offset
         offset = scroll - scrollBefore;
@@ -288,7 +297,7 @@ class ScrollFrame : Frame, FluidScrollable, HoverScrollable {
         const move = speed * value;
         // io.deltaTime is irrelevant here
 
-        scrollBar.setScroll(scroll + move);
+        this.scroll = scroll + move;
     }
 
     bool canScroll(const HoverPointer pointer) const {
@@ -305,7 +314,7 @@ class ScrollFrame : Frame, FluidScrollable, HoverScrollable {
         const value = isHorizontal
             ? pointer.scroll.x
             : pointer.scroll.y;
-        scrollBar.setScroll(scroll + value);
+        this.scroll = scroll + value;
         return true;
     }
 
