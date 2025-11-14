@@ -87,7 +87,7 @@ unittest {
          frame.resetsCrop(),
     );
 
-    frame.scrollEnd();
+    frame.scrollToEnd();
     root.drawAndAssert(
          frame.cropsTo(0, 0, 390, 250),
          frame.drawsRectangle(0, 0, 390, 250).ofColor("#555555"),
@@ -309,7 +309,7 @@ unittest {
 
     // Scroll into view should yield a different result when scrolling
     // from the bottom than from the top.
-    frame.scrollEnd();
+    frame.scrollToEnd();
     boxes[2]
         .scrollIntoView()
         .runWhileDrawing(root);
