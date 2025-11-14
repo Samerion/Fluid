@@ -102,22 +102,35 @@ class ScrollInput : InputNode!Node {
 
     }
 
-    /// Set the scroll to a value clamped between start and end. Doesn't trigger the `changed` event.
+    deprecated("`setScroll` was renamed to `scroll` and will be removed in Fluid 0.8.0. "
+        ~ "You can use it as a setter: `scroll = value`.")
     void setScroll(float value) {
-
-        assert(scrollMax.isFinite);
-
-        position = value.clamp(0, scrollMax);
-
-        assert(position.isFinite);
-
+        cast(void) (this.scroll = value);
     }
 
-    /// Get the maximum value this container can be scrolled to. Requires at least one draw.
-    float scrollMax() const {
+    deprecated("`scrollMax` was renamed to `maxScroll` and will be removed in Fluid 0.8.0.")
+    alias scrollMax = maxScroll;
 
+    /// Returns:
+    ///     Offset, in pixels, from the start of the container to current scroll position.
+    float scroll() const {
+        return position;
+    }
+
+    /// Set a new scroll value. The value will be clamped to be between 0 and [maxScroll].
+    /// Returns:
+    ///     Newly set scroll value.
+    float scroll(float value) {
+        assert(maxScroll.isFinite);
+        position = value.clamp(0, maxScroll);
+        assert(position.isFinite);
+        return position;
+    }
+
+    /// Returns:
+    ///     Maximum value for [scroll]; the end of the container.
+    float maxScroll() const {
         return max(0, availableSpace - pageLength);
-
     }
 
     /// Set the total size of the scrollbar. Will always fill the available space in the target direction.
@@ -148,13 +161,13 @@ class ScrollInput : InputNode!Node {
         const style = pickStyle();
 
         // Clamp the values first
-        setScroll(position);
+        this.scroll = position;
 
         // Draw the background
         style.drawBackground(tree.io, canvasIO, paddingBox);
 
         // Ignore if we can't scroll
-        if (scrollMax == 0) return;
+        if (maxScroll == 0) return;
 
         // Calculate the size of the scrollbar
         length = isHorizontal ? contentBox.width : contentBox.height;
@@ -162,7 +175,7 @@ class ScrollInput : InputNode!Node {
             ? max(handle.minimumLength, length^^2 / availableSpace)
             : 0;
 
-        const handlePosition = (length - handle.length) * position / scrollMax;
+        const handlePosition = (length - handle.length) * position / maxScroll;
 
         // Now create a rectangle for the handle
         auto handleRect = contentBox;
@@ -234,7 +247,7 @@ class ScrollInput : InputNode!Node {
         if (move == 0) return;
 
         // Update scroll
-        setScroll(position + move);
+        this.scroll = position + move;
 
         // Run the callback
         if (changed) changed();
@@ -358,7 +371,7 @@ class ScrollInputHandle : Node, FluidHoverable, Hoverable {
             ? mousePosition.x - startMousePosition.x
             : mousePosition.y - startMousePosition.y;
 
-        const scrollDifference = totalMove * parent.scrollMax / (parent.length - length);
+        const scrollDifference = totalMove * parent.maxScroll / (parent.length - length);
 
         assert(totalMove.isFinite);
         assert(parent.length.isFinite);
@@ -367,7 +380,7 @@ class ScrollInputHandle : Node, FluidHoverable, Hoverable {
         assert(scrollDifference.isFinite);
 
         // Move the scrollbar
-        parent.setScroll(startScrollPosition + scrollDifference);
+        parent.scroll = startScrollPosition + scrollDifference;
 
         // Emit signal
         if (parent.changed) parent.changed();
