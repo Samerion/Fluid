@@ -109,7 +109,9 @@ class ScrollInput : InputNode!Node {
     }
 
     deprecated("`scrollMax` was renamed to `maxScroll` and will be removed in Fluid 0.8.0.")
-    alias scrollMax = maxScroll;
+    float scrollMax() const {
+        return maxScroll;
+    }
 
     /// Returns:
     ///     Offset, in pixels, from the start of the container to current scroll position.
