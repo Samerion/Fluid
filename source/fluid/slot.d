@@ -29,6 +29,52 @@ unittest {
     );
 }
 
+/// For example, [NodeSlot] can be used to implement tabs
+@("NodeSlot tab")
+unittest {
+    import std.range;
+    import fluid.label;
+    import fluid.button;
+    import fluid.frame;
+    import fluid.slider;
+    import fluid.number_input;
+
+    auto audio = vframe(
+        hframe(
+            label(     .layout!1, "Music volume"),
+            slider!int(.layout!1, iota(0, 101)),
+        ),
+        hframe(
+            label(     .layout!1, "Sound effects volume"),
+            slider!int(.layout!1, iota(0, 101)),
+        ),
+    );
+    auto video = vframe(
+        hframe(
+            label(.layout!2, "Resolution"),
+            intInput(.layout!(1, "fill"), 800),
+            intInput(.layout!(1, "fill"), 600),
+        ),
+    );
+
+    NodeSlot!Frame currentTab;
+    run(
+        vframe(
+            // Tab bar
+            hframe(
+                button("Audio", delegate {
+                    currentTab.value = audio;
+                }),
+                button("Video", delegate {
+                    currentTab.value = video;
+                }),
+            ),
+            // Tab contents
+            currentTab = nodeSlot!Frame(audio),
+        ),
+    );
+}
+
 import std.traits;
 
 import fluid.node;
