@@ -1,4 +1,33 @@
+/// A [NodeSlot] acts as a wrapper, it holds and displays a single other node.
 module fluid.slot;
+
+@safe:
+
+/// The main use of slots is to replace nodes inside the tree.
+@("NodeSlot example")
+unittest {
+    import fluid.label;
+    import fluid.frame;
+    import fluid.button;
+
+    NodeSlot!Label currentLabel;
+
+    run(
+        vframe(
+            currentLabel = nodeSlot!Label(
+                label("Hello, World!"),
+            ),
+
+            // Click the button to replace the label with another
+            button(
+                "Replace text",
+                delegate {
+                    currentLabel.value = label("Goodbye, World!");
+                }
+            ),
+        ),
+    );
+}
 
 import std.traits;
 
@@ -9,8 +38,6 @@ import fluid.backend;
 import fluid.structs;
 
 import fluid.io.canvas;
-
-@safe:
 
 
 /// A "node slot" node, which displays the node given to it. Allows safely swapping nodes in the layout by reference,
