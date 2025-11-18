@@ -86,13 +86,54 @@ import fluid.structs;
 import fluid.io.canvas;
 
 
-/// A "node slot" node, which displays the node given to it. Allows safely swapping nodes in the layout by reference,
-/// even during drawing. Useful for creating tabs and menus.
-///
-/// Because NodeSlot does not inherit from T, it uses the single-parameter overload of simpleConstructor.
+/// Creates a [NodeSlot] which accepts a single node of type `T` as a child.
 alias nodeSlot(alias T) = simpleConstructor!(NodeSlot!T);
 
-/// ditto
+///
+@("nodeSlot builder example")
+unittest {
+    import fluid.button;
+    import fluid.frame;
+    import fluid.label;
+
+    // The template parameter restricts which nodes can be placed in the slot
+    nodeSlot!Button();  // This node slot accepts buttons
+    nodeSlot!Frame();   // This slot accepts frames
+    nodeSlot!Node();    // Any node can fit
+
+    // You can place a node in the slot immediately.
+    nodeSlot!Label(
+        label("Hello, World!"),
+    );
+}
+
+/// Layout has to be set on `NodeSlot` to be functional.
+@("nodeSlot builder layout example")
+unittest {
+    import fluid.label;
+
+    // This label will be centered:
+    nodeSlot!Label(
+        .layout!"center",
+        label("Hello, World!"),
+    );
+}
+
+/// To use `layout!"fill"`, set it on both the slot, and the child node
+unittest {
+    import fluid.button;
+
+    nodeSlot!Button(
+        .layout!(1, "fill"),
+        button(
+            .layout!"fill",
+            "This button fills the slot, and the slot fills available space",
+            delegate { }
+        ),
+    );
+}
+
+///
 class NodeSlot(T : Node) : Node {
 
     CanvasIO canvasIO;
