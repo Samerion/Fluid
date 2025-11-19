@@ -133,14 +133,20 @@ unittest {
     );
 }
 
+/// `NodeSlot` is a container node that holds and displays up to one other node.
 ///
+/// The child node can be optionally passed into the constructor, or assigned via the [value]
+/// field.
+///
+/// The child node is always given all of the available space (therefore the child's `expand`
+/// field has no effect).
 class NodeSlot(T : Node) : Node {
 
     CanvasIO canvasIO;
 
     public {
 
-        /// Node placed in the slot.
+        /// Node placed in the slot; child node.
         T value;
 
     }
