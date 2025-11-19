@@ -136,7 +136,7 @@ unittest {
 /// `NodeSlot` is a container node that holds and displays up to one other node.
 ///
 /// The child node can be optionally passed into the constructor, or assigned via the
-/// [value](#.NodeSlot.value) field.
+/// [`value`](#.NodeSlot.value) field.
 ///
 /// The child node is always given all of the available space (the child's `expand` field has
 /// no effect).
@@ -163,6 +163,9 @@ class NodeSlot(T : Node) : Node {
     ///
     /// The slot will be [marked for resize][Node.updateSize].
     ///
+    /// Note:
+    ///     It might be generally preferable to use [`value`](#.NodeSlot.value) directly, as it
+    ///     makes the intent more clear.
     /// Params:
     ///     value = Node to place in the slot.
     ///         If null, child node will be removed.
@@ -180,6 +183,20 @@ class NodeSlot(T : Node) : Node {
     void clear() {
         value = null;
         updateSize();
+    }
+
+    ///
+    @("NodeSlot.clear example")
+    unittest {
+        import fluid.label;
+
+        Label child;
+        auto slot = nodeSlot!Label(
+            child = label("The node slot contains a label"),
+        );
+        assert(slot.value is child);
+        slot.clear();
+        assert(slot.value is null);
     }
 
     /// Swap contents of two node slots.
@@ -233,6 +250,25 @@ class NodeSlot(T : Node) : Node {
 
         }
         else static assert(false, "The other item is not a NodeSlot");
+    }
+
+    ///
+    @("NodeSlot.swapSlots usage example")
+    unittest {
+        import fluid.label;
+
+        // Box of apples, bucket of oranges
+        auto box = nodeSlot!Label(
+            label("Apples"),
+        );
+        auto bucket = nodeSlot!Label(
+            label("Oranges"),
+        );
+
+        // Swap them: put apples in the bucket, oranges in the box
+        box.swapSlots(bucket);
+        assert(box.value.text == "Oranges");
+        assert(bucket.value.text == "Apples");
     }
 
     protected override void resizeImpl(Vector2 space) {
