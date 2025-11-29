@@ -800,8 +800,8 @@ unittest {
             assert(a.isHovered(button1));
             assert(focus.currentFocus is null);
 
-            // Press to change focus (inactive)
-            a.press(false);
+            // Press to change focus
+            a.press();
             return a.stayIdle;
         })
         .then((a) {
@@ -809,7 +809,7 @@ unittest {
             assert(focus.isFocused(button1));
 
             // Move onto the other button, focus should stay the same
-            a.press(false);
+            a.press();
             return a.move(50, 75);
         })
         .then((a) {
@@ -853,8 +853,8 @@ unittest {
             assert(!a.isHovered(targetButton));
             assert(focus.currentFocus.opEquals(targetButton));
 
-            // Press to change focus (inactive)
-            a.press(false);
+            // Press to change focus
+            a.press();
             return a.stayIdle;
         })
         .then((a) {
@@ -862,7 +862,7 @@ unittest {
             assert(focus.currentFocus is null);
 
             // Move onto the button, focus should remain empty
-            a.press(false);
+            a.press();
             return a.move(50, 75);
         })
         .then((a) {
