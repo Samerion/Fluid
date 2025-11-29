@@ -487,6 +487,175 @@ abstract class AbstractAssert : BlackHole!Assert {
 
 }
 
+/// Returns:
+///     Assert to pass to [TestSpace.drawAndAssert] which runs all given asserts inside `subject`.
+///
+///     All the asserts must pass sequentially. The first test is started whenever `subject`
+///     starts being drawn (on `beforeDraw`), and all tests must pass before `subject` drawing
+///     stops (on `afterDraw`).
+/// Params:
+///     subject = Node to run the tests in.
+///     asserts = Asserts to run. All of them must pass for this assert to pass.
+ContainsAssert contains(Node subject, Assert[] asserts...) {
+    return new ContainsAssert(subject, asserts.dup);
+}
+
+///
+@("ContainsAssert works as expected")
+unittest {
+    import fluid.label;
+
+    Space groupOrange;
+    Space groupBrown;
+    Label sentinelRust;
+    Label sentinelWood;
+    auto root = testSpace(
+        groupOrange = vspace(
+            sentinelRust = label("Rust is orange"),
+            groupBrown = vspace(
+                sentinelWood = label("Wood is brown, and brown is orange"),
+            ),
+        ),
+    );
+
+    // Contain tests can be nested
+    root.drawAndAssert(
+        groupOrange.contains(
+            sentinelRust.isDrawn(),
+            groupBrown.contains(
+                sentinelWood.isDrawn(),
+            ),
+        ),
+    );
+
+    // Contain tests don't have to be direct
+    root.drawAndAssert(
+        groupOrange.contains(
+            sentinelRust.isDrawn(),
+            sentinelWood.isDrawn(),
+        ),
+    );
+
+    // Brown doesn't contain rust
+    root.drawAndAssertFailure(
+        groupBrown.contains(
+            sentinelRust.isDrawn(),
+        ),
+    );
+    // Rust doesn't contain brown
+    root.drawAndAssertFailure(
+        sentinelRust.contains(
+            groupBrown.isDrawn(),
+        ),
+    );
+    // Brown doesn't contain orange
+    root.drawAndAssertFailure(
+        groupBrown.contains(
+            groupOrange.isDrawn(),
+        ),
+    );
+}
+
+class ContainsAssert : AbstractAssert {
+
+    bool inBranch;
+    size_t testsPassed;
+    Assert[] asserts;
+
+    this(Node subject, Assert[] asserts) {
+        super(subject);
+        this.asserts = asserts;
+    }
+
+    private bool runAssert(alias method, Ts...)(Ts args) {
+        if (!inBranch) return false;
+        if (testsPassed < asserts.length) {
+            auto test = asserts[testsPassed];
+            const passed = __traits(child, test, method)(args);
+            if (passed) {
+                testsPassed++;
+            }
+        }
+        return testsPassed >= asserts.length;
+    }
+
+    override {
+
+        // Switch to the node
+        bool resume(Node node) {
+            inBranch = node is subject;
+            return false;
+        }
+        bool beforeDraw(Node node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) {
+            if (node is subject) {
+                inBranch = true;
+            }
+            return runAssert!(Assert.beforeDraw)(node, space, paddingBox, contentBox);
+        }
+        bool afterDraw(Node node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) {
+            runAssert!(Assert.afterDraw)(node, space, paddingBox, contentBox);
+            if (node is subject) {
+                inBranch = false;
+            }
+            return testsPassed >= asserts.length;
+        }
+
+        // DebugSignalIO
+        bool emitSignal(Node node, string name) {
+            return runAssert!(Assert.emitSignal)(node, name);
+        }
+
+        // CanvasIO
+        bool cropArea(Node node, Rectangle area) {
+            return runAssert!(Assert.cropArea)(node, area);
+        }
+
+        bool resetCropArea(Node node) {
+            return runAssert!(Assert.resetCropArea)(node);
+        }
+
+        bool drawTriangle(Node node, Vector2 a, Vector2 b, Vector2 c, Color color) {
+            return runAssert!(Assert.drawTriangle)(node, a, b, c, color);
+        }
+
+        bool drawCircle(Node node, Vector2 center, float radius, Color color) {
+            return runAssert!(Assert.drawCircle)(node, center, radius, color);
+        }
+
+        bool drawCircleOutline(Node node, Vector2 center, float radius, float width, Color color) {
+            return runAssert!(Assert.drawCircleOutline)(node, center, radius, width, color);
+        }
+
+        bool drawRectangle(Node node, Rectangle rectangle, Color color) {
+            return runAssert!(Assert.drawRectangle)(node, rectangle, color);
+        }
+
+        bool drawLine(Node node, Vector2 start, Vector2 end, float width, Color color) {
+            return runAssert!(Assert.drawLine)(node, start, end, width, color);
+        }
+
+        bool drawImage(Node node, DrawableImage image, Rectangle destination, Color tint) {
+            return runAssert!(Assert.drawImage)(node, image, destination, tint);
+        }
+
+        bool drawHintedImage(Node node, DrawableImage image, Rectangle destination, Color tint) {
+            return runAssert!(Assert.drawHintedImage)(node, image, destination, tint);
+        }
+
+        // Meta
+        string toString() const {
+            if (testsPassed >= asserts.length) {
+                return "All tests passed";
+            }
+            else {
+                return asserts[testsPassed].toString;
+            }
+        }
+
+    }
+
+}
+
 ///
 CropAssert cropsTo(Node subject, typeof(Rectangle.tupleof) rectangle) {
     return cropsTo(subject,
@@ -879,33 +1048,45 @@ class DrawsImageAssert : AbstractAssert {
 
 /// Assert true if the node draws a child.
 ///
-/// `drawsChild` will eventually be replaced by a more appropriate test. See
-/// https://git.samerion.com/Samerion/Fluid/issues/346 for details.
-///
-/// Bugs:
-///     If testing with a specific child, it will not detect the action if resumed inside of a sibling node.
-///     In other words, this will fail:
+/// Notes:
+///     If testing with a specific child, it will not detect the action if resumed inside of a
+///     sibling node. In other words, this will fail:
 ///
 ///     ---
-///     // tree
 ///     parent = vspace(
 ///         sibling = label("Sibling"),
 ///         child = label("Target"),
-///     )
-///     // test
+///     );
 ///     drawAndAssert(
 ///         sibling.isDrawn,
 ///         parent.drawsChild(child),
-///     ),
+///     );
+///     ---
+///
+///     You can instead use [contains]:
+///
+///     ---
+///     drawAndAssert(
+///         parent.contains(
+///             sibling.isDrawn,
+///             child.isDrawn,
+///         ),
+///     );
 ///     ---
 ///
 /// Params:
 ///     parent = Parent node, subject of the test.
-///     child  = Child to test. Must be drawn directly.
+///     child  = Child to test.
+///         The child must be nested directly in the parent, but this behavior will
+///         eventually change, see https://git.samerion.com/Samerion/Fluid/issues/493.
+///         If you prefer to stick to current behavior, use [drawsChildDirectly].
 DrawsChildAssert drawsChild(Node parent, Node child = null) {
     return new DrawsChildAssert(parent, child);
-
 }
+
+/// At the present moment, this is an alias to [drawsChild]. In a future update, however,
+/// the other function will not require direct nesting. See [drawsChild] for details.
+alias drawsChildDirectly = drawsChild;
 
 class DrawsChildAssert : AbstractAssert {
 
