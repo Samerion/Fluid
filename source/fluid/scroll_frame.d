@@ -1,3 +1,16 @@
+/// [ScrollFrame] is a container node that can be "scrolled" to display content that
+/// can't normally fit in view. It extends from [Frame] and otherwise acts like one.
+///
+/// `ScrollFrame` can be created using either [vscrollFrame] to create a vertical frame (column)
+/// or [hscrollFrame] to create a horizontal frame (row).
+///
+/// Contents can be scrolled using mouse wheel or the included scroll bar (see
+/// [ScrollFrame.scrollBar]). Keyboard users may be able to tab into the scrollbar and use arrow,
+/// page up, and page down keys to scroll.
+///
+/// You can use [fluid.actions.scrollToTop] or [fluid.actions.scrollIntoView] to move child nodes
+/// into view by calculating the right offsets. The two functions work even if multiple scroll
+/// frames (and other scrollable nodes) are nested.
 module fluid.scroll_frame;
 
 import std.meta;
