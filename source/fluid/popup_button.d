@@ -1,5 +1,9 @@
+/// [PopupButton] is a shorthand for a [Button] that opens a [PopupFrame].
 ///
+/// Such buttons can be built using [popupButton].
 module fluid.popup_button;
+
+@safe:
 
 import fluid.node;
 import fluid.utils;
@@ -11,10 +15,34 @@ import fluid.popup_frame;
 
 import fluid.io.overlay;
 
-@safe:
+///
+unittest {
 
-/// A button made to open popups.
-alias popupButton = simpleConstructor!PopupButton;
+    auto myButton = popupButton("Options",
+        button("Edit", delegate { }),
+        button("Copy", delegate { }),
+        popupButton("Share",
+            button("SMS", delegate { }),
+            button("Via e-mail", delegate { }),
+            button("Send to device", delegate { }),
+        ),
+    );
+
+}
+
+/// [nodeBuilder] for [PopupButton]. The button can be given a label, followed by nodes to place
+/// inside the popup.
+alias popupButton = nodeBuilder!PopupButton;
+
+///
+@("popupButton builder example")
+unittest {
+    popupButton("Open shopping list",
+        label("Apples"),
+        label("Flour"),
+        label("Eggs"),
+    );
+}
 
 // For no known reason, this will not compile (producing the most misleading error of the century) if extending directly
 // from Button.
@@ -115,20 +143,5 @@ class PopupButton : ButtonImpl!Label {
         return format!"popupButton(%s)"(text);
 
     }
-
-}
-
-///
-unittest {
-
-    auto myButton = popupButton("Options",
-        button("Edit", delegate { }),
-        button("Copy", delegate { }),
-        popupButton("Share",
-            button("SMS", delegate { }),
-            button("Via e-mail", delegate { }),
-            button("Send to device", delegate { }),
-        ),
-    );
 
 }
