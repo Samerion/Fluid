@@ -44,11 +44,16 @@ unittest {
     );
 }
 
-// For no known reason, this will not compile (producing the most misleading error of the century) if extending directly
-// from Button.
 
-/// ditto
+/// `PopupButton` is a [Button] programmed to open a [PopupFrame] when clicked.
+///
+/// The popup frame will be constructed the moment the button is built, and will be reused
+/// whenever it is clicked again.
+///
+/// `PopupButton` can be nested inside `PopupFrame`, making it convenient for creating submenus.
 class PopupButton : ButtonImpl!Label {
+    // ↑ For no known reason, this will not compile (producing the most misleading error of the
+    // century) if extending directly from Button.
 
     mixin enableInputActions;
 
