@@ -85,10 +85,11 @@ class PopupButton : ButtonImpl!Label {
 
     }
 
-    /// Create a new button.
+    /// Create a new button, and build the popup that will appear whenever the button is clicked.
     /// Params:
-    ///     text          = Text for the button.
-    ///     popupChildren = Children to appear within the button.
+    ///     text          = Text for the button. See [Label.text][fluid.label.Label.text].
+    ///     popupChildren = Children to place in the popup. They will be grouped together inside
+    ///         a [PopupFrame] and displayed when the button is clicked.
     this(string text, Node[] popupChildren...) {
 
         // Craft the popup
@@ -147,10 +148,8 @@ class PopupButton : ButtonImpl!Label {
     }
 
     override string toString() const {
-
         import std.format;
         return format!"popupButton(%s)"(text);
-
     }
 
 }
