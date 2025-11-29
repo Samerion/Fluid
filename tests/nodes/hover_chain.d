@@ -1005,3 +1005,40 @@ unittest {
     }
 
 }
+
+@("Buttons can change focus when pressed https://git.samerion.com/Samerion/Fluid/issues/451")
+unittest {
+    auto otherButton = button("Focusable", delegate { });
+    auto targetButton = sizeLock!button(
+        .sizeLimit(100, 100),
+        "Hello",
+        delegate {
+            otherButton.focus();
+        }
+    );
+    auto hover = hoverChain(
+        vspace(
+            targetButton,
+            otherButton,
+        ),
+    );
+    auto focus = focusChain(hover);
+    auto root = testSpace(focus);
+
+    hover
+        .point(50, 50)
+        .then((action) {
+            assert(hover.isHovered(targetButton));
+            action.press();
+            return action.stayIdle;
+        })
+        .then((action) {
+            assert(hover.isHovered(targetButton));
+            assert(focus.isFocused(otherButton));
+            return action.stayIdle;
+        })
+        .runWhileDrawing(root);
+
+    assert(hover.isHovered(targetButton));
+    assert(focus.isFocused(otherButton));
+}
