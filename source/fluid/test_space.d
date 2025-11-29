@@ -487,6 +487,80 @@ abstract class AbstractAssert : BlackHole!Assert {
 
 }
 
+ContainsAssert contains(Node subject, Assert[] asserts...) {
+    return new ContainsAssert(subject, asserts.dup);
+}
+
+class ContainsAssert : AbstractAssert {
+
+    bool inBranch;
+    bool failed;
+    size_t testsPassed;
+    Assert[] asserts;
+
+    this(Node subject, Assert[] asserts) {
+        super(subject, assets);
+    }
+
+    private bool runAssert(alias method, Ts...)(Ts args) {
+        if (!inBranch) return false;
+        if (testsPassed < asserts.length) {
+            auto test = asserts[testsPassed];
+            const passed = __traits(child, test, method)(args);
+            if (passed) {
+                testsPassed++;
+            }
+        }
+        return testsPassed >= asserts.length;
+    }
+
+    // Switch to the node
+    bool resume(Node node) {
+        inBranch = node is subject;
+        return false;
+    }
+    bool beforeDraw(Node node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) {
+        if (node is subject) {
+            inBranch = true;
+        }
+        return runAssert!(Assert.beforeDraw)(node, space, paddingBox, contentBox);
+    }
+    bool afterDraw(Node node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) {
+        runAssert!(Assert.afterDraw)(node, space, paddingBox, contentBox);
+        if (node is subject) {
+            inBranch = false;
+        }
+        return testsPassed >= asserts.length;
+    }
+
+    // DebugSignalIO
+    bool emitSignal(Node node, string name) {
+        return runAssert!(Assert.emitSignal)(node, name);
+    }
+
+    // CanvasIO
+    bool cropArea(Node node, Rectangle area);
+    bool resetCropArea(Node node);
+    bool drawTriangle(Node node, Vector2 a, Vector2 b, Vector2 c, Color color);
+    bool drawCircle(Node node, Vector2 center, float radius, Color color);
+    bool drawCircleOutline(Node node, Vector2 center, float radius, float width, Color color);
+    bool drawRectangle(Node node, Rectangle rectangle, Color color);
+    bool drawLine(Node node, Vector2 start, Vector2 end, float width, Color color);
+    bool drawImage(Node node, DrawableImage image, Rectangle destination, Color tint);
+    bool drawHintedImage(Node node, DrawableImage image, Rectangle destination, Color tint);
+
+    // Meta
+    string toString() const {
+        if (testsPassed >= asserts.length) {
+            return "All tests passed";
+        }
+        else {
+            return asserts[testsPassed].toString;
+        }
+    }
+
+}
+
 ///
 CropAssert cropsTo(Node subject, typeof(Rectangle.tupleof) rectangle) {
     return cropsTo(subject,
