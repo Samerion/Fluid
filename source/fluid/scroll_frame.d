@@ -56,8 +56,21 @@ class ScrollFrame : Frame, FluidScrollable, HoverScrollable {
 
     public {
 
-        /// Scrollbar for the frame. Can be replaced with a customized one.
+        /// Scrollbar node used by the frame. The scrollbar shows how far the frame has been
+        /// scrolled and can be used to control the frame.
+        ///
+        /// A scrollbar will be provided by default but can be replaced with another [ScrollInput]
+        /// node.
+        ///
+        /// Bugs:
+        ///     The scrollbar is internally used by the frame to perform calculations.
+        ///     The frame will malfunction if the scrollbar is hidden.
+        ///     See https://git.samerion.com/Samerion/Fluid/issues/495
+        ///
+        ///     This can be worked around by setting `scrollBar.width` to `0`.
         ScrollInput scrollBar;
+
+        alias scrollbar = scrollBar;
 
     }
 
