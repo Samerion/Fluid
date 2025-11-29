@@ -122,6 +122,8 @@ void addChildPopup(OverlayIO overlayIO, PopupFrame parent, PopupFrame popup, Rec
 ///
 /// `PopupFrame` will close when clicked outside (for [HoverIO] events). It tracks focus
 /// separately from host [FocusIO], so it cannot be escaped with tab or arrow keys.
+///
+/// Popup needs [OverlayIO] to function, so it is an instance of [Overlayable].
 class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, WithPositionalFocus {
 
     mixin makeHoverable;
@@ -191,8 +193,12 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
 
     }
 
+    /// Create a PopupFrame. Takes an array of nodes to use as children.
+    /// See [Frame] for details on how the children will be laid out.
+    ///
+    /// Params:
+    ///     nodes = Child nodes of the frame.
     this(Node[] nodes...) {
-
         import fluid.structs : layout;
 
         super(nodes);
@@ -204,18 +210,46 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
 
         _findFocusBoxAction
             .then((Optional!Rectangle result) => _lastFocusBox = result);
-
     }
 
-    Optional!Rectangle lastFocusBox() const {
+    /// Set a new rectangular anchor.
+    ///
+    /// The anchor is used to specify the popup's position. The popup may appear below the
+    /// `anchor`, above, next to it, or it may cover the anchor. The exact behavior depends
+    /// on the [OverlayIO] system drawing the frame. Usually the direction is covered by the
+    /// [layout][Node.layout] node property.
+    ///
+    /// For backwards compatibility, getting the rectangular anchor is currently done using
+    /// [getAnchor].
+    ///
+    /// See_Also:
+    ///     [getAnchor] to get the current anchor value.
+    ///     [Overlayable.getAnchor] for information about how overlay anchors work in Fluid.
+    /// Params:
+    ///     value = Anchor to set.
+    /// Returns:
+    ///     Newly set anchor; same as passed in.
+    Rectangle anchor(Rectangle value) nothrow {
+        return _anchor = value;
+    }
+
+    /// Returns:
+    ///     Currently set rectangular anchor.
+    /// See_Also:
+    ///     [anchor] for more information.
+    final Rectangle getAnchor() const nothrow {
+        return _anchor;
+    }
+
+    override Optional!Rectangle lastFocusBox() const {
         return _lastFocusBox;
     }
 
-    inout(OrderedFocusAction) orderedFocusAction() inout {
+    override inout(OrderedFocusAction) orderedFocusAction() inout {
         return _orderedFocusAction;
     }
 
-    inout(PositionalFocusAction) positionalFocusAction() inout {
+    override inout(PositionalFocusAction) positionalFocusAction() inout {
         return _positionalFocusAction;
     }
 
@@ -228,41 +262,12 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
         return _anchorVec;
     }
 
-    /// Set a new rectangular anchor.
-    ///
-    /// The popup is used to specify the popup's position. The popup may appear below the `anchor`,
-    /// above, next to it, or it may cover the anchor. The exact behavior depends on the `OverlayIO`
-    /// system drawing the frame. Usually the direction is covered by the `layout` node property.
-    ///
-    /// For backwards compatibility, to getting the rectangular anchor is currently done using
-    /// `getAnchor`.
-    ///
-    /// See_Also:
-    ///     `getAnchor` to get the current anchor value.
-    ///     `fluid.io.overlay` for information about how overlays and popups work in Fluid.
-    /// Params:
-    ///     value = Anchor to set.
-    /// Returns:
-    ///     Newly set anchor; same as passed in.
-    Rectangle anchor(Rectangle value) nothrow {
-        return _anchor = value;
-    }
-
-    /// Returns:
-    ///     Currently set rectangular anchor.
-    /// See_Also:
-    ///     `anchor` for more information.
-    final Rectangle getAnchor() const nothrow {
-        return _anchor;
-    }
-
     override final Rectangle getAnchor(Rectangle) const nothrow {
         return getAnchor;
     }
 
-    /// ditto
+    // Intentionally left undocumented
     void drawAnchored(Node parent) {
-
         const rect = Rectangle(
             anchoredStartCorner.tupleof,
             minSize.tupleof
@@ -270,7 +275,6 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
 
         // Draw the node within the defined rectangle
         parent.drawChild(this, rect);
-
     }
 
     private void resizeInternal(Node parent, Vector2 space) {
