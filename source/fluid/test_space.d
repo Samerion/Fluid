@@ -1048,33 +1048,45 @@ class DrawsImageAssert : AbstractAssert {
 
 /// Assert true if the node draws a child.
 ///
-/// `drawsChild` will eventually be replaced by a more appropriate test. See
-/// https://git.samerion.com/Samerion/Fluid/issues/346 for details.
-///
-/// Bugs:
-///     If testing with a specific child, it will not detect the action if resumed inside of a sibling node.
-///     In other words, this will fail:
+/// Notes:
+///     If testing with a specific child, it will not detect the action if resumed inside of a
+///     sibling node. In other words, this will fail:
 ///
 ///     ---
-///     // tree
 ///     parent = vspace(
 ///         sibling = label("Sibling"),
 ///         child = label("Target"),
-///     )
-///     // test
+///     );
 ///     drawAndAssert(
 ///         sibling.isDrawn,
 ///         parent.drawsChild(child),
-///     ),
+///     );
+///     ---
+///
+///     You can instead use [contains]:
+///
+///     ---
+///     drawAndAssert(
+///         parent.contains(
+///             sibling.isDrawn,
+///             child.isDrawn,
+///         ),
+///     );
 ///     ---
 ///
 /// Params:
 ///     parent = Parent node, subject of the test.
-///     child  = Child to test. Must be drawn directly.
+///     child  = Child to test.
+///         The child must be nested directly in the parent, but this behavior will
+///         eventually change, see https://git.samerion.com/Samerion/Fluid/issues/493.
+///         If you prefer to stick to current behavior, use [drawsChildDirectly].
 DrawsChildAssert drawsChild(Node parent, Node child = null) {
     return new DrawsChildAssert(parent, child);
-
 }
+
+/// At the present moment, this is an alias to [drawsChild]. In a future update, however,
+/// the other function will not require direct nesting. See [drawsChild] for details.
+alias drawsChildDirectly = drawsChild;
 
 class DrawsChildAssert : AbstractAssert {
 
