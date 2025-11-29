@@ -1,3 +1,7 @@
+/// A [PopupFrame] displays above other nodes, and disappears when clicked outside. It can be
+/// used to create context menus and tooltips.
+///
+/// Use [popupFrame] to build, and [spawnPopup] or [spawnChildPopup] to display.
 module fluid.popup_frame;
 
 import optional;
@@ -24,12 +28,16 @@ import fluid.future.branch_action;
 
 @safe:
 
-
-alias popupFrame = simpleConstructor!PopupFrame;
-
-/// Spawn a new popup attached to the given tree.
+/// [nodeBuilder] for [PopupFrame]. Creates a vertical popup frame: its children will be laid out
+/// in a column.
 ///
-/// The popup automatically gains focus.
+/// Once created, use [spawnPopup] to display, or [spawnChildPopup] if nested inside another
+/// popup.
+alias popupFrame = nodeBuilder!PopupFrame;
+
+/// Spawn a new popup attached to the given tree. The popup automatically gains focus.
+///
+/// This is a legacy function. For new I/O, use [addPopup].
 void spawnPopup(LayoutTree* tree, PopupFrame popup) {
 
     popup.tree = tree;
@@ -47,9 +55,10 @@ void spawnPopup(LayoutTree* tree, PopupFrame popup) {
 
 }
 
-/// Spawn a new popup, as a child of another. While the child is active, the parent will also remain so.
+/// Spawn a new popup as a child of another. While the child is active, the parent will also
+/// remain as such. The newly spawned popup automatically gains focus.
 ///
-/// The newly spawned popup automatically gains focus.
+/// This is a legacy function. For new I/O, use [addChildPopup].
 void spawnChildPopup(PopupFrame parent, PopupFrame popup) {
 
     auto tree = parent.tree;
@@ -67,36 +76,41 @@ void spawnChildPopup(PopupFrame parent, PopupFrame popup) {
 
 }
 
-/// Spawn a popup using `OverlayIO`.
+/// Spawn a popup using [OverlayIO]. Popups have to be spawned
 ///
 /// This function can be used to add new popups, or to open them again after they have been
 /// closed.
 ///
 /// Params:
 ///     overlayIO = `OverlayIO` instance to control to popup.
-///     popup     = Popup to draw.
+///     popup     = Popup frame to spawn.
 ///     anchor    = Box to attach the frame to;
-///         likely a 0×0 rectangle at the mouse position for hover events,
+///         likely a 0×0 rectangle at the mouse position for hover (mouse) events,
 ///         and the relevant `focusBox` for keyboard events.
+///
+///         For example, if the event was triggered by a button, through a keyboard key, then
+///         the button's padding box ("outer box") will be the appropriate anchor.
+/// See_Also:
+///     [addChildPopup]
 void addPopup(OverlayIO overlayIO, PopupFrame popup, Rectangle anchor) {
     popup.anchor = anchor;
     popup.toTakeFocus = true;
     overlayIO.addOverlay(popup, OverlayIO.types.context);
 }
 
-/// Spawn a new child popup using `OverlayIO`.
+/// Spawn a new child popup using [OverlayIO].
 ///
 /// Regular popups are mutually exclusive; only one can be open at a time. A child popup can
-/// coexist with its parent. As long as the parent is open, so is the child. The child can be
+/// coexist with its parent. As long as the parent is open, so can be the child. The child can be
 /// closed without closing the parent popup, but closing the parent popup will close the child.
 ///
 /// Params:
 ///     overlayIO = `OverlayIO` instance to control to popup.
 ///     parent    = Parent popup.
-///     popup     = Popup to draw.
-///     anchor    = Box to attach the frame to;
-///         likely a 0×0 rectangle at the mouse position for hover events,
-///         and the relevant `focusBox` for keyboard events.
+///     popup     = Popup frame to spawn.
+///     anchor    = Box to attach the popup frame to.
+/// See_Also:
+///     [addPopup] for spawning popups without a parent.
 void addChildPopup(OverlayIO overlayIO, PopupFrame parent, PopupFrame popup, Rectangle anchor) {
     popup.anchor = anchor;
     popup.toTakeFocus = true;
@@ -104,8 +118,12 @@ void addChildPopup(OverlayIO overlayIO, PopupFrame parent, PopupFrame popup, Rec
     overlayIO.addChildOverlay(parent, popup, OverlayIO.types.context);
 }
 
-/// This is an override of Frame to simplify creating popups: if clicked outside of it, it will disappear from
-/// the node tree.
+/// A [Frame] which can be drawn in arbitrary position above other nodes.
+///
+/// `PopupFrame` will close when clicked outside (for [HoverIO] events). It tracks focus
+/// separately from host [FocusIO], so it cannot be escaped with tab or arrow keys.
+///
+/// Popup needs [OverlayIO] to function, so it is an instance of [Overlayable].
 class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, WithPositionalFocus {
 
     mixin makeHoverable;
@@ -113,34 +131,48 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
 
     public {
 
-        /// A child popup will keep this focus alive while focused.
-        /// Typically, child popups are spawned as a result of actions within the popup itself, for example in context
-        /// menus, an action can spawn a submenu. Use `spawnChildPopup` to spawn child popups.
-        PopupFrame childPopup;
-
-        /// Node that had focus before `popupFrame` took over. When the popup is closed using a keyboard shortcut, this
-        /// node will take focus again.
+        /// A child popup will keep this popup frame alive while it stays focused.
         ///
-        /// Assigned automatically if `spawnPopup` or `spawnChildPopup` is used, but otherwise not.
-        ///
-        /// Used if `FocusIO` is not available; for old backend only.
+        /// Child popups can be spawned using [addChildPopup]. This allows both the parent and the
+        /// child node to exist simultaneously! The typical usecase of this is to create submenus
+        /// inside context menus.
         ///
         /// See_Also:
-        ///     `previousFocusable`, which is used with the new I/O system.
+        ///     https://xkcd.com/1975/
+        PopupFrame childPopup;
+
+        /// Node that had focus before the popup frame took over. When the popup is closed using
+        /// a [FluidInputAction.cancel] focus event, such as a keyboard shortcut, this node will
+        /// take focus again.
+        ///
+        /// `previousFocus` is used only in the old backend, if [FocusIO] isn't available.
+        /// See [previousFocusable] for the new I/O system.
+        ///
+        /// The [restorePreviousFocus] method can be used to bring this node back to focus.
+        ///
+        /// `previousFocus` is assigned automatically if [spawnPopup] or [spawnChildPopup] is
+        /// used.
+        ///
+        /// See_Also:
+        ///     [previousFocusable], which is used with the new I/O system.
         FluidFocusable previousFocus;
 
-        /// Node that was focused before the popup was opened. Using `restorePreviousFocus`, it
+        /// Node that was focused before the popup was opened. Using [restorePreviousFocus], it
         /// can be given focus again, closing the popup. This is the default behavior for the
         /// escape key while a popup is open.
         ///
-        /// Used if `FocusIO` is available.
+        /// Used if [FocusIO] is available.
         ///
         /// See_Also:
-        ///     `previousFocus`, which is used with the old backend system.
+        ///     [previousFocus], which is used with the old backend system.
         Focusable previousFocusable;
 
-        /// If true, the frame will claim focus on the next *resize*. This is used to give
-        /// the popup focus when it is spawned, respecting currently active `FocusIO`.
+        /// If true, the frame will claim focus on the next [resize][Node.updateSize]. This is
+        /// used by the frame to gain focus when it is spawned, while respecting currently active
+        /// `FocusIO`.
+        ///
+        /// This is automatically set to true by [addPopup] and [addChildPopup], and then set to
+        /// false once used.
         bool toTakeFocus;
 
     }
@@ -161,8 +193,12 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
 
     }
 
+    /// Create a PopupFrame. Takes an array of nodes to use as children.
+    /// See [Frame] for details on how the children will be laid out.
+    ///
+    /// Params:
+    ///     nodes = Child nodes of the frame.
     this(Node[] nodes...) {
-
         import fluid.structs : layout;
 
         super(nodes);
@@ -174,18 +210,108 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
 
         _findFocusBoxAction
             .then((Optional!Rectangle result) => _lastFocusBox = result);
+    }
+
+    /// Set a new rectangular anchor.
+    ///
+    /// The anchor is used to specify the popup's position. The popup may appear below the
+    /// `anchor`, above, next to it, or it may cover the anchor. The exact behavior depends
+    /// on the [OverlayIO] system drawing the frame. Usually the direction is covered by the
+    /// [layout][Node.layout] node property.
+    ///
+    /// For backwards compatibility, getting the rectangular anchor is currently done using
+    /// [getAnchor].
+    ///
+    /// See_Also:
+    ///     [getAnchor] to get the current anchor value.
+    ///     [Overlayable.getAnchor] for information about how overlay anchors work in Fluid.
+    /// Params:
+    ///     value = Anchor to set.
+    /// Returns:
+    ///     Newly set anchor; same as passed in.
+    Rectangle anchor(Rectangle value) nothrow {
+        return _anchor = value;
+    }
+
+    /// Returns:
+    ///     Currently set rectangular anchor.
+    /// See_Also:
+    ///     [anchor] for more information.
+    final Rectangle getAnchor() const nothrow {
+        return _anchor;
+    }
+
+    /// [PopupFrame] will automatically be marked for removal if not focused.
+    ///
+    /// For the new I/O, this is done by overriding the `toRemove` getter; the old backend does
+    /// this from a tree action.
+    ///
+    /// Returns:
+    ///     True if the `PopupFrame` has no focus (in new I/O only), or was manually marked
+    ///     for removal.
+    override bool toRemove() const {
+        if (!toTakeFocus && usingFocusIO && !this.isFocused) {
+            return true;
+        }
+        return super.toRemove;
+    }
+
+    /// Set [focus][FocusIO.currentFocus] to this frame, or to the first focusable child, if one
+    /// exists.
+    ///
+    /// Note that [PopupFrame] tracks focus separately from the host [FocusIO]. The popup frame
+    /// will become focused in the host, while the child will be focused in the popup frame.
+    override void focus() {
+
+        // Set focus to self
+        super.focus();
+
+        // Prefer if children get it, though
+        this.focusRecurseChildren();
 
     }
 
-    Optional!Rectangle lastFocusBox() const {
+    /// Give focus to whatever node had [focus][FocusIO.currentFocus] before this one.
+    ///
+    /// In new I/O, gives focus to [previousFocusable], and in the old backend, gives focus to
+    /// [previousFocus]. If no node was focused, [clears focus][FocusIO.clearFocus].
+    @(FluidInputAction.cancel)
+    void restorePreviousFocus() {
+
+        // Restore focus if possible
+        if (previousFocusable) {
+            previousFocusable.focus();
+        }
+        else if (previousFocus) {
+            previousFocus.focus();
+        }
+
+        // Clear focus
+        else if (usingFocusIO) {
+            focusIO.clearFocus();
+        }
+        else tree.focus = null;
+
+    }
+
+    /// Returns:
+    ///     True, if this popup (or its child) is currently focused.
+    @property
+    override bool isFocused() const {
+        return childHasFocus
+            || super.isFocused
+            || (childPopup && childPopup.isFocused);
+    }
+
+    override Optional!Rectangle lastFocusBox() const {
         return _lastFocusBox;
     }
 
-    inout(OrderedFocusAction) orderedFocusAction() inout {
+    override inout(OrderedFocusAction) orderedFocusAction() inout {
         return _orderedFocusAction;
     }
 
-    inout(PositionalFocusAction) positionalFocusAction() inout {
+    override inout(PositionalFocusAction) positionalFocusAction() inout {
         return _positionalFocusAction;
     }
 
@@ -198,41 +324,12 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
         return _anchorVec;
     }
 
-    /// Set a new rectangular anchor.
-    ///
-    /// The popup is used to specify the popup's position. The popup may appear below the `anchor`,
-    /// above, next to it, or it may cover the anchor. The exact behavior depends on the `OverlayIO`
-    /// system drawing the frame. Usually the direction is covered by the `layout` node property.
-    ///
-    /// For backwards compatibility, to getting the rectangular anchor is currently done using
-    /// `getAnchor`.
-    ///
-    /// See_Also:
-    ///     `getAnchor` to get the current anchor value.
-    ///     `fluid.io.overlay` for information about how overlays and popups work in Fluid.
-    /// Params:
-    ///     value = Anchor to set.
-    /// Returns:
-    ///     Newly set anchor; same as passed in.
-    Rectangle anchor(Rectangle value) nothrow {
-        return _anchor = value;
-    }
-
-    /// Returns:
-    ///     Currently set rectangular anchor.
-    /// See_Also:
-    ///     `anchor` for more information.
-    final Rectangle getAnchor() const nothrow {
-        return _anchor;
-    }
-
     override final Rectangle getAnchor(Rectangle) const nothrow {
         return getAnchor;
     }
 
-    /// ditto
+    // Intentionally left undocumented
     void drawAnchored(Node parent) {
-
         const rect = Rectangle(
             anchoredStartCorner.tupleof,
             minSize.tupleof
@@ -240,18 +337,14 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
 
         // Draw the node within the defined rectangle
         parent.drawChild(this, rect);
-
     }
 
     private void resizeInternal(Node parent, Vector2 space) {
-
         parent.resizeChild(this, space);
-
     }
 
-    /// Get start (top-left) corner of the popup if `drawAnchored` is to be used.
+    // Intentionally left undocumented
     Vector2 anchoredStartCorner() {
-
         const viewportSize = io.windowSize;
 
         // This method is very similar to MapSpace.getStartCorner, but simplified to handle the "automatic" case
@@ -306,7 +399,7 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
 
     protected override void resizeImpl(Vector2 space) {
 
-        // Load the parent's `focusIO`
+        // Load FocusIO if available
         if (auto focusIO = use(this.focusIO)) {
 
             {
@@ -318,7 +411,7 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
             this.focusIO = focusIO;
         }
 
-        // No `focusIO` in use
+        // No FocusIO in use
         else super.resizeImpl(space);
 
         // Immediately switch focus to self
@@ -330,20 +423,6 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
     }
 
     alias toRemove = typeof(super).toRemove;
-
-    /// `PopupFrame` will automatically be marked for removal if not focused.
-    ///
-    /// For the new I/O, this is done by overriding the `toRemove` mark; the old backend does this
-    /// from the tree action.
-    ///
-    /// Returns:
-    ///     True if the `PopupFrame` was marked for removal, or if it has no focus.
-    override bool toRemove() const {
-        if (!toTakeFocus && usingFocusIO && !this.isFocused) {
-            return true;
-        }
-        return super.toRemove;
-    }
 
     protected override void drawImpl(Rectangle outer, Rectangle inner) {
 
@@ -388,46 +467,7 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
         return _currentFocus && _currentFocus.focusImpl();
     }
 
-    override void focus() {
-
-        // Set focus to self
-        super.focus();
-
-        // Prefer if children get it, though
-        this.focusRecurseChildren();
-
-    }
-
-    /// Give focus to whatever node had focus before this one.
-    @(FluidInputAction.cancel)
-    void restorePreviousFocus() {
-
-        // Restore focus if possible
-        if (previousFocusable) {
-            previousFocusable.focus();
-        }
-        else if (previousFocus) {
-            previousFocus.focus();
-        }
-
-        // Clear focus
-        else if (usingFocusIO) {
-            focusIO.clearFocus();
-        }
-        else tree.focus = null;
-
-    }
-
     alias isFocused = typeof(super).isFocused;
-
-    @property
-    override bool isFocused() const {
-
-        return childHasFocus
-            || super.isFocused
-            || (childPopup && childPopup.isFocused);
-
-    }
 
     alias opEquals = typeof(super).opEquals;
 
@@ -470,7 +510,7 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
 
 }
 
-/// Tree action displaying a popup.
+/// Tree action displaying a popup. This only applies to the legacy backend.
 class PopupNodeAction : TreeAction {
 
     public {
