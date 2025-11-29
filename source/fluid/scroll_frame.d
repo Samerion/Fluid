@@ -1,3 +1,16 @@
+/// [ScrollFrame] is a container node that can be "scrolled" to display content that
+/// can't normally fit in view.
+///
+/// `ScrollFrame` can be created using either [vscrollFrame] to create a vertical frame (column)
+/// or [hscrollFrame] to create a horizontal frame (row).
+///
+/// Contents can be scrolled using mouse wheel or the included scroll bar (see
+/// [ScrollFrame.scrollBar]). Keyboard users may be able to tab into the scrollbar and use arrow,
+/// page up, and page down keys to scroll.
+///
+/// You can use [fluid.actions.scrollToTop] or [fluid.actions.scrollIntoView] to move child nodes
+/// into view by calculating the right offsets. The two functions work even if multiple scroll
+/// frames (and other scrollable nodes) are nested.
 module fluid.scroll_frame;
 
 import std.meta;
@@ -21,15 +34,20 @@ public import fluid.scroll_input;
 @safe:
 
 
-/// Create a new vertical scroll frame.
+/// Create a new vertical [ScrollFrame] node. The frame will display its contents in a column.
 alias vscrollFrame = simpleConstructor!ScrollFrame;
 
-/// Create a new horizontal scroll frame.
+/// Create a new horizontal [ScrollFrame] node. The frame will display its contents in a row.
 alias hscrollFrame = simpleConstructor!(ScrollFrame, (a) {
     a.directionHorizontal = true;
 });
 
-/// Implement scrolling for the given node.
+/// The `ScrollFrame` is a [Frame] that can be scrolled to display content that would not normally
+/// fit into the frame.
+///
+/// The frame features a [scrollBar][ScrollFrame.scrollBar] on the side that can be used to
+/// control the frame using a mouse or keyboard. The frame can also be scrolled using a mouse
+/// wheel through the [HoverScrollable] interface.
 ///
 /// This node only supports scrolling in one axis.
 class ScrollFrame : Frame, FluidScrollable, HoverScrollable {
@@ -38,8 +56,21 @@ class ScrollFrame : Frame, FluidScrollable, HoverScrollable {
 
     public {
 
-        /// Scrollbar for the frame. Can be replaced with a customized one.
+        /// Scrollbar node used by the frame. The scrollbar shows how far the frame has been
+        /// scrolled and can be used to control the frame.
+        ///
+        /// A scrollbar will be provided by default but can be replaced with another [ScrollInput]
+        /// node.
+        ///
+        /// Bugs:
+        ///     The scrollbar is internally used by the frame to perform calculations.
+        ///     The frame will malfunction if the scrollbar is hidden.
+        ///     See https://git.samerion.com/Samerion/Fluid/issues/495
+        ///
+        ///     This can be worked around by setting `scrollBar.width` to `0`.
         ScrollInput scrollBar;
+
+        alias scrollbar = scrollBar;
 
     }
 
@@ -51,10 +82,8 @@ class ScrollFrame : Frame, FluidScrollable, HoverScrollable {
     }
 
     this(T...)(T args) {
-
         super(args);
         this.scrollBar = .vscrollInput(.layout!(1, "fill"));
-
     }
 
     alias opEquals = Node.opEquals;
@@ -62,15 +91,26 @@ class ScrollFrame : Frame, FluidScrollable, HoverScrollable {
         return super.opEquals(other);
     }
 
-    /// Distance the node is scrolled by.
+    /// Returns:
+    ///     Distance in pixels the node is scrolled by. For `vscrollFrame`, this is distance from
+    ///     the top of the frame, and from the left for `hscrollFrame`.
+    ///
+    ///     The value of `0` means the frame is currently scrolled to the very top or the very
+    ///     left.
     ref inout(float) scroll() inout {
         return scrollBar.position;
     }
 
+    /// ditto
     float scroll() const {
         return scrollBar.position;
     }
 
+    /// Set the scroll offset for the frame.
+    /// Params:
+    ///     value = New scroll offset to set.
+    /// Returns:
+    ///     The distance as passed.
     float scroll(float value) {
         scrollBar.scroll = value;
         return value;
@@ -85,12 +125,13 @@ class ScrollFrame : Frame, FluidScrollable, HoverScrollable {
     deprecated("`scrollMax` was renamed to `maxScroll` and will be removed in Fluid 0.8.0")
     alias scrollMax = maxScroll;
 
-    /// Scroll to the beginning of the node.
+    /// Scroll to the beginning of the node, that is, set [scroll] to `0`.
     void scrollToStart() {
         scroll = 0;
     }
 
-    /// Scroll to the end of the node, requires the node to be drawn at least once.
+    /// Scroll to the end of the node, changing [scroll] to [maxScroll]. The frame must have
+    /// been [resized][Node.updateSize] at least once for this to work.
     void scrollToEnd() {
         scroll = maxScroll;
     }
@@ -102,7 +143,10 @@ class ScrollFrame : Frame, FluidScrollable, HoverScrollable {
         scrollBar.setScroll(value);
     }
 
-    /// Get the maximum value this container can be scrolled to. Requires at least one draw.
+    /// Returns:
+    ///     The maximum value this container can be scrolled to. The frame must have been
+    ///     [resized][Node.updateSize] at least once for this to return a correct value, otherwise
+    ///     it will return `0`.
     float maxScroll() const {
         return scrollBar.maxScroll();
     }
@@ -113,7 +157,6 @@ class ScrollFrame : Frame, FluidScrollable, HoverScrollable {
         return shallowScrollTo(child, parentBox, childBox);
     }
 
-    /// Scroll to the given node.
     Rectangle shallowScrollTo(const Node, Rectangle parentBox, Rectangle childBox) {
 
         struct Position {

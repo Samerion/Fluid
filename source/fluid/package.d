@@ -52,7 +52,7 @@ unittest {
 /// * [PopupButton][fluid.popup_button] is a handy shortcut for building dropdown menus.
 /// * [PopupFrame][fluid.popup_frame] displays outside of regular layout flow.
 /// * [Space][fluid.space] aligns nodes in a column or row.
-/// * [ScrollFrame][fluid.scroll.ScrollFrame] allows scrolling through a lot of content.
+/// * [ScrollFrame][fluid.scroll_frame] allows scrolling through a lot of content.
 /// * [SwitchSlot][fluid.switch_slot] (experimental) changes layouts for different screen sizes.
 ///
 /// <!-- -->
