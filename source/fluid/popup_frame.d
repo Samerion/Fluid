@@ -1,3 +1,7 @@
+/// A [PopupFrame] displays above other nodes, and disappears when clicked outside. It can be
+/// used to create context menus and tooltips.
+///
+/// Use [popupFrame] to build, and [spawnPopup] or [spawnChildPopup] to display.
 module fluid.popup_frame;
 
 import optional;
@@ -24,12 +28,16 @@ import fluid.future.branch_action;
 
 @safe:
 
-
-alias popupFrame = simpleConstructor!PopupFrame;
-
-/// Spawn a new popup attached to the given tree.
+/// [nodeBuilder] for [PopupFrame]. Creates a vertical popup frame: its children will be laid out
+/// in a column.
 ///
-/// The popup automatically gains focus.
+/// Once created, use [spawnPopup] to display, or [spawnChildPopup] if nested inside another
+/// popup.
+alias popupFrame = nodeBuilder!PopupFrame;
+
+/// Spawn a new popup attached to the given tree. The popup automatically gains focus.
+///
+/// This is a legacy function. For new I/O, use [addPopup].
 void spawnPopup(LayoutTree* tree, PopupFrame popup) {
 
     popup.tree = tree;
@@ -47,9 +55,10 @@ void spawnPopup(LayoutTree* tree, PopupFrame popup) {
 
 }
 
-/// Spawn a new popup, as a child of another. While the child is active, the parent will also remain so.
+/// Spawn a new popup as a child of another. While the child is active, the parent will also
+/// remain as such. The newly spawned popup automatically gains focus.
 ///
-/// The newly spawned popup automatically gains focus.
+/// This is a legacy function. For new I/O, use [addChildPopup].
 void spawnChildPopup(PopupFrame parent, PopupFrame popup) {
 
     auto tree = parent.tree;
@@ -67,36 +76,41 @@ void spawnChildPopup(PopupFrame parent, PopupFrame popup) {
 
 }
 
-/// Spawn a popup using `OverlayIO`.
+/// Spawn a popup using [OverlayIO]. Popups have to be spawned
 ///
 /// This function can be used to add new popups, or to open them again after they have been
 /// closed.
 ///
 /// Params:
 ///     overlayIO = `OverlayIO` instance to control to popup.
-///     popup     = Popup to draw.
+///     popup     = Popup frame to draw.
 ///     anchor    = Box to attach the frame to;
-///         likely a 0×0 rectangle at the mouse position for hover events,
+///         likely a 0×0 rectangle at the mouse position for hover (mouse) events,
 ///         and the relevant `focusBox` for keyboard events.
+///
+///         For example, if the event was triggered by a button, through a keyboard key, then
+///         the button's padding box ("outer box") will be the appropriate anchor.
+/// See_Also:
+///     [addChildPopup]
 void addPopup(OverlayIO overlayIO, PopupFrame popup, Rectangle anchor) {
     popup.anchor = anchor;
     popup.toTakeFocus = true;
     overlayIO.addOverlay(popup, OverlayIO.types.context);
 }
 
-/// Spawn a new child popup using `OverlayIO`.
+/// Spawn a new child popup using [OverlayIO].
 ///
 /// Regular popups are mutually exclusive; only one can be open at a time. A child popup can
-/// coexist with its parent. As long as the parent is open, so is the child. The child can be
+/// coexist with its parent. As long as the parent is open, so can be the child. The child can be
 /// closed without closing the parent popup, but closing the parent popup will close the child.
 ///
 /// Params:
 ///     overlayIO = `OverlayIO` instance to control to popup.
 ///     parent    = Parent popup.
-///     popup     = Popup to draw.
-///     anchor    = Box to attach the frame to;
-///         likely a 0×0 rectangle at the mouse position for hover events,
-///         and the relevant `focusBox` for keyboard events.
+///     popup     = Popup frame to draw.
+///     anchor    = Box to attach the popup frame to.
+/// See_Also:
+///     [addPopup] for spawning popups without a parent.
 void addChildPopup(OverlayIO overlayIO, PopupFrame parent, PopupFrame popup, Rectangle anchor) {
     popup.anchor = anchor;
     popup.toTakeFocus = true;
@@ -104,8 +118,10 @@ void addChildPopup(OverlayIO overlayIO, PopupFrame parent, PopupFrame popup, Rec
     overlayIO.addChildOverlay(parent, popup, OverlayIO.types.context);
 }
 
-/// This is an override of Frame to simplify creating popups: if clicked outside of it, it will disappear from
-/// the node tree.
+/// A [Frame] which can be drawn in arbitrary position above other nodes.
+///
+/// `PopupFrame` will close when clicked outside (for [HoverIO] events). It tracks focus
+/// separately from host [FocusIO], so it cannot be escaped with tab or arrow keys.
 class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, WithPositionalFocus {
 
     mixin makeHoverable;
