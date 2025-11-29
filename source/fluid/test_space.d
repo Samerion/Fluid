@@ -487,8 +487,73 @@ abstract class AbstractAssert : BlackHole!Assert {
 
 }
 
+/// Returns:
+///     Assert to pass to [TestSpace.drawAndAssert] which runs all given asserts inside `subject`.
+///
+///     All the asserts must pass sequentially. The first test is started whenever `subject`
+///     starts being drawn (on `beforeDraw`), and all tests must pass before `subject` drawing
+///     stops (on `afterDraw`).
+/// Params:
+///     subject = Node to run the tests in.
+///     asserts = Asserts to run. All of them must pass for this assert to pass.
 ContainsAssert contains(Node subject, Assert[] asserts...) {
     return new ContainsAssert(subject, asserts.dup);
+}
+
+///
+@("ContainsAssert works as expected")
+unittest {
+    import fluid.label;
+
+    Space groupOrange;
+    Space groupBrown;
+    Label sentinelRust;
+    Label sentinelWood;
+    auto root = testSpace(
+        groupOrange = vspace(
+            sentinelRust = label("Rust is orange"),
+            groupBrown = vspace(
+                sentinelWood = label("Wood is brown, and brown is orange"),
+            ),
+        ),
+    );
+
+    // Contain tests can be nested
+    root.drawAndAssert(
+        groupOrange.contains(
+            sentinelRust.isDrawn(),
+            groupBrown.contains(
+                sentinelWood.isDrawn(),
+            ),
+        ),
+    );
+
+    // Contain tests don't have to be direct
+    root.drawAndAssert(
+        groupOrange.contains(
+            sentinelRust.isDrawn(),
+            sentinelWood.isDrawn(),
+        ),
+    );
+
+    // Brown doesn't contain rust
+    root.drawAndAssertFailure(
+        groupBrown.contains(
+            sentinelRust.isDrawn(),
+        ),
+    );
+    // Rust doesn't contain brown
+    root.drawAndAssertFailure(
+        sentinelRust.contains(
+            groupBrown.isDrawn(),
+        ),
+    );
+    // Brown doesn't contain orange
+    root.drawAndAssertFailure(
+        groupBrown.contains(
+            groupOrange.isDrawn(),
+        ),
+    );
 }
 
 class ContainsAssert : AbstractAssert {
