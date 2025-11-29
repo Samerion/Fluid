@@ -61,10 +61,14 @@ class PopupButton : ButtonImpl!Label {
 
     public {
 
-        /// Popup enabled by this button.
+        /// [PopupFrame] that will be opened by this popup.
+        ///
+        /// The popup will be constructed by the [PopupButton] from the nodes it is initially
+        /// given.
         PopupFrame popup;
 
-        /// Popup this button belongs to, if any. Set automatically if the popup is spawned with `spawnPopup`.
+        /// Popup this button is placed in, if any. Set automatically if the popup is spawned
+        /// with `spawnPopup`.
         ///
         /// This field will be removed in Fluid 0.8.0.
         PopupFrame parentPopup;
