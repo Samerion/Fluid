@@ -125,12 +125,13 @@ class ScrollFrame : Frame, FluidScrollable, HoverScrollable {
     deprecated("`scrollMax` was renamed to `maxScroll` and will be removed in Fluid 0.8.0")
     alias scrollMax = maxScroll;
 
-    /// Scroll to the beginning of the node.
+    /// Scroll to the beginning of the node, that is, set [scroll] to `0`.
     void scrollToStart() {
         scroll = 0;
     }
 
-    /// Scroll to the end of the node, requires the node to be drawn at least once.
+    /// Scroll to the end of the node, changing [scroll] to [maxScroll]. The frame must have
+    /// been [resized][Node.updateSize] at least once for this to work.
     void scrollToEnd() {
         scroll = maxScroll;
     }
@@ -142,7 +143,10 @@ class ScrollFrame : Frame, FluidScrollable, HoverScrollable {
         scrollBar.setScroll(value);
     }
 
-    /// Get the maximum value this container can be scrolled to. Requires at least one draw.
+    /// Returns:
+    ///     The maximum value this container can be scrolled to. The frame must have been
+    ///     [resized][Node.updateSize] at least once for this to return a correct value, otherwise
+    ///     it will return `0`.
     float maxScroll() const {
         return scrollBar.maxScroll();
     }
@@ -153,7 +157,6 @@ class ScrollFrame : Frame, FluidScrollable, HoverScrollable {
         return shallowScrollTo(child, parentBox, childBox);
     }
 
-    /// Scroll to the given node.
     Rectangle shallowScrollTo(const Node, Rectangle parentBox, Rectangle childBox) {
 
         struct Position {
