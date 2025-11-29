@@ -32,31 +32,21 @@ unittest {
 class OnionFrame : Frame {
 
     this(T...)(T args) {
-
         super(args);
-
     }
 
     protected override void resizeImpl(Vector2 available) {
-
         import std.algorithm : max;
 
         use(canvasIO);
-
         minSize = Vector2(0, 0);
 
         // Check each child
         foreach (child; children) {
-
-            // Resize the child
             resizeChild(child, available);
-
-            // Update minSize
             minSize.x = max(minSize.x, child.minSize.x);
             minSize.y = max(minSize.y, child.minSize.y);
-
         }
-
     }
 
     protected override void drawChildren(Rectangle inner) {
