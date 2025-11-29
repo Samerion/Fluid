@@ -123,6 +123,11 @@ void addChildPopup(OverlayIO overlayIO, PopupFrame parent, PopupFrame popup, Rec
 /// `PopupFrame` will close when clicked outside (for [HoverIO] events). It tracks focus
 /// separately from host [FocusIO], so it cannot be escaped with tab or arrow keys.
 ///
+/// This is a building block for other nodes, and may be difficult to use as a standalone node.
+/// It requires an instance of [OverlayIO], which must be obtained with [Node.require]. For some
+/// simpler cases, you can use [PopupButton][fluid.popup_button]: a button which will create and
+/// operate a `PopupFrame` for you.
+///
 /// Popup needs [OverlayIO] to function, so it is an instance of [Overlayable].
 class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, WithPositionalFocus {
 
