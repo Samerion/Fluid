@@ -1,49 +1,52 @@
+/// [OnionFrame] draws its children one on another, in layers. It is used to draw one node in
+/// front of another.
 ///
+/// Use [onionFrame] to build.
 module fluid.onion_frame;
 
 import fluid.frame;
 import fluid.utils;
 import fluid.style;
+import fluid.structs;
 import fluid.backend;
-
 
 @safe:
 
+/// [nodeBuilder] for [OnionFrame]. `OnionFrame` accepts any amount of child nodes, ordered from
+/// bottom (first) to top (last).
+alias onionFrame = nodeBuilder!OnionFrame;
 
-/// An onion frame places its children as layers, drawing one on top of the other, instead of on the side.
 ///
-/// Children are placed in order of drawing — the last child will be drawn last, and so, will appear on top.
-alias onionFrame = simpleConstructor!OnionFrame;
+@("onionFrame builder example")
+unittest {
+    import fluid.label;
+    onionFrame(
+        label("Drawn at the bottom, behind other nodes"),
+        label("Drawn in the middle, in between other nodes"),
+        label("Drawn at the top, in front of other nodes"),
+    );
+}
 
-/// ditto
+/// This [Frame] draws nodes in a stack, in the same assigned space. It layers them, so each node
+/// appears in front of the last.
 class OnionFrame : Frame {
 
     this(T...)(T args) {
-
         super(args);
-
     }
 
     protected override void resizeImpl(Vector2 available) {
-
         import std.algorithm : max;
 
         use(canvasIO);
-
         minSize = Vector2(0, 0);
 
         // Check each child
         foreach (child; children) {
-
-            // Resize the child
             resizeChild(child, available);
-
-            // Update minSize
             minSize.x = max(minSize.x, child.minSize.x);
             minSize.y = max(minSize.y, child.minSize.y);
-
         }
-
     }
 
     protected override void drawChildren(Rectangle inner) {
@@ -56,20 +59,21 @@ class OnionFrame : Frame {
 
 ///
 unittest {
-
     import fluid;
 
     auto myFrame = onionFrame(
 
         // Draw an image
-        imageView("logo.png"),
+        imageView(
+            .layout!"fill",
+            "logo.png"
+        ),
 
-        // Draw a label in the middle of the frame
+        // Draw a label on top of the image, in the middle
         label(
-            layout!(1, "center"),
+            .layout!"center",
             "Hello, Fluid!"
         ),
 
     );
-
 }
