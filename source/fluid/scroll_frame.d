@@ -1,5 +1,5 @@
 /// [ScrollFrame] is a container node that can be "scrolled" to display content that
-/// can't normally fit in view. It extends from [Frame] and otherwise acts like one.
+/// can't normally fit in view.
 ///
 /// `ScrollFrame` can be created using either [vscrollFrame] to create a vertical frame (column)
 /// or [hscrollFrame] to create a horizontal frame (row).
@@ -34,15 +34,20 @@ public import fluid.scroll_input;
 @safe:
 
 
-/// Create a new vertical scroll frame.
+/// Create a new vertical [ScrollFrame] node. The frame will display its contents in a column.
 alias vscrollFrame = simpleConstructor!ScrollFrame;
 
-/// Create a new horizontal scroll frame.
+/// Create a new horizontal [ScrollFrame] node. The frame will display its contents in a row.
 alias hscrollFrame = simpleConstructor!(ScrollFrame, (a) {
     a.directionHorizontal = true;
 });
 
-/// Implement scrolling for the given node.
+/// The `ScrollFrame` is a [Frame] that can be scrolled to display content that would not normally
+/// fit into the frame.
+///
+/// The frame features a [scrollBar][ScrollFrame.scrollBar] on the side that can be used to
+/// control the frame using a mouse or keyboard. The frame can also be scrolled using a mouse
+/// wheel through the [HoverScrollable] interface.
 ///
 /// This node only supports scrolling in one axis.
 class ScrollFrame : Frame, FluidScrollable, HoverScrollable {
