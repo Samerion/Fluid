@@ -494,12 +494,12 @@ ContainsAssert contains(Node subject, Assert[] asserts...) {
 class ContainsAssert : AbstractAssert {
 
     bool inBranch;
-    bool failed;
     size_t testsPassed;
     Assert[] asserts;
 
     this(Node subject, Assert[] asserts) {
-        super(subject, assets);
+        super(subject);
+        this.asserts = asserts;
     }
 
     private bool runAssert(alias method, Ts...)(Ts args) {
@@ -514,49 +514,79 @@ class ContainsAssert : AbstractAssert {
         return testsPassed >= asserts.length;
     }
 
-    // Switch to the node
-    bool resume(Node node) {
-        inBranch = node is subject;
-        return false;
-    }
-    bool beforeDraw(Node node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) {
-        if (node is subject) {
-            inBranch = true;
-        }
-        return runAssert!(Assert.beforeDraw)(node, space, paddingBox, contentBox);
-    }
-    bool afterDraw(Node node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) {
-        runAssert!(Assert.afterDraw)(node, space, paddingBox, contentBox);
-        if (node is subject) {
-            inBranch = false;
-        }
-        return testsPassed >= asserts.length;
-    }
+    override {
 
-    // DebugSignalIO
-    bool emitSignal(Node node, string name) {
-        return runAssert!(Assert.emitSignal)(node, name);
-    }
-
-    // CanvasIO
-    bool cropArea(Node node, Rectangle area);
-    bool resetCropArea(Node node);
-    bool drawTriangle(Node node, Vector2 a, Vector2 b, Vector2 c, Color color);
-    bool drawCircle(Node node, Vector2 center, float radius, Color color);
-    bool drawCircleOutline(Node node, Vector2 center, float radius, float width, Color color);
-    bool drawRectangle(Node node, Rectangle rectangle, Color color);
-    bool drawLine(Node node, Vector2 start, Vector2 end, float width, Color color);
-    bool drawImage(Node node, DrawableImage image, Rectangle destination, Color tint);
-    bool drawHintedImage(Node node, DrawableImage image, Rectangle destination, Color tint);
-
-    // Meta
-    string toString() const {
-        if (testsPassed >= asserts.length) {
-            return "All tests passed";
+        // Switch to the node
+        bool resume(Node node) {
+            inBranch = node is subject;
+            return false;
         }
-        else {
-            return asserts[testsPassed].toString;
+        bool beforeDraw(Node node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) {
+            if (node is subject) {
+                inBranch = true;
+            }
+            return runAssert!(Assert.beforeDraw)(node, space, paddingBox, contentBox);
         }
+        bool afterDraw(Node node, Rectangle space, Rectangle paddingBox, Rectangle contentBox) {
+            runAssert!(Assert.afterDraw)(node, space, paddingBox, contentBox);
+            if (node is subject) {
+                inBranch = false;
+            }
+            return testsPassed >= asserts.length;
+        }
+
+        // DebugSignalIO
+        bool emitSignal(Node node, string name) {
+            return runAssert!(Assert.emitSignal)(node, name);
+        }
+
+        // CanvasIO
+        bool cropArea(Node node, Rectangle area) {
+            return runAssert!(Assert.cropArea)(node, area);
+        }
+
+        bool resetCropArea(Node node) {
+            return runAssert!(Assert.resetCropArea)(node);
+        }
+
+        bool drawTriangle(Node node, Vector2 a, Vector2 b, Vector2 c, Color color) {
+            return runAssert!(Assert.drawTriangle)(node, a, b, c, color);
+        }
+
+        bool drawCircle(Node node, Vector2 center, float radius, Color color) {
+            return runAssert!(Assert.drawCircle)(node, center, radius, color);
+        }
+
+        bool drawCircleOutline(Node node, Vector2 center, float radius, float width, Color color) {
+            return runAssert!(Assert.drawCircleOutline)(node, center, radius, width, color);
+        }
+
+        bool drawRectangle(Node node, Rectangle rectangle, Color color) {
+            return runAssert!(Assert.drawRectangle)(node, rectangle, color);
+        }
+
+        bool drawLine(Node node, Vector2 start, Vector2 end, float width, Color color) {
+            return runAssert!(Assert.drawLine)(node, start, end, width, color);
+        }
+
+        bool drawImage(Node node, DrawableImage image, Rectangle destination, Color tint) {
+            return runAssert!(Assert.drawImage)(node, image, destination, tint);
+        }
+
+        bool drawHintedImage(Node node, DrawableImage image, Rectangle destination, Color tint) {
+            return runAssert!(Assert.drawHintedImage)(node, image, destination, tint);
+        }
+
+        // Meta
+        string toString() const {
+            if (testsPassed >= asserts.length) {
+                return "All tests passed";
+            }
+            else {
+                return asserts[testsPassed].toString;
+            }
+        }
+
     }
 
 }
