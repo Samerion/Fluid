@@ -83,7 +83,7 @@ void spawnChildPopup(PopupFrame parent, PopupFrame popup) {
 ///
 /// Params:
 ///     overlayIO = `OverlayIO` instance to control to popup.
-///     popup     = Popup frame to draw.
+///     popup     = Popup frame to spawn.
 ///     anchor    = Box to attach the frame to;
 ///         likely a 0×0 rectangle at the mouse position for hover (mouse) events,
 ///         and the relevant `focusBox` for keyboard events.
@@ -107,7 +107,7 @@ void addPopup(OverlayIO overlayIO, PopupFrame popup, Rectangle anchor) {
 /// Params:
 ///     overlayIO = `OverlayIO` instance to control to popup.
 ///     parent    = Parent popup.
-///     popup     = Popup frame to draw.
+///     popup     = Popup frame to spawn.
 ///     anchor    = Box to attach the popup frame to.
 /// See_Also:
 ///     [addPopup] for spawning popups without a parent.
@@ -129,34 +129,48 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
 
     public {
 
-        /// A child popup will keep this focus alive while focused.
-        /// Typically, child popups are spawned as a result of actions within the popup itself, for example in context
-        /// menus, an action can spawn a submenu. Use `spawnChildPopup` to spawn child popups.
-        PopupFrame childPopup;
-
-        /// Node that had focus before `popupFrame` took over. When the popup is closed using a keyboard shortcut, this
-        /// node will take focus again.
+        /// A child popup will keep this popup frame alive while it stays focused.
         ///
-        /// Assigned automatically if `spawnPopup` or `spawnChildPopup` is used, but otherwise not.
-        ///
-        /// Used if `FocusIO` is not available; for old backend only.
+        /// Child popups can be spawned using [addChildPopup]. This allows both the parent and the
+        /// child node to exist simultaneously! The typical usecase of this is to create submenus
+        /// inside context menus.
         ///
         /// See_Also:
-        ///     `previousFocusable`, which is used with the new I/O system.
+        ///     https://xkcd.com/1975/
+        PopupFrame childPopup;
+
+        /// Node that had focus before the popup frame took over. When the popup is closed using
+        /// a [FluidInputAction.cancel] focus event, such as a keyboard shortcut, this node will
+        /// take focus again.
+        ///
+        /// `previousFocus` is used only in the old backend, if [FocusIO] isn't available.
+        /// See [previousFocusable] for the new I/O system.
+        ///
+        /// The [restorePreviousFocus] method can be used to bring this node back to focus.
+        ///
+        /// `previousFocus` is assigned automatically if [spawnPopup] or [spawnChildPopup] is
+        /// used.
+        ///
+        /// See_Also:
+        ///     [previousFocusable], which is used with the new I/O system.
         FluidFocusable previousFocus;
 
-        /// Node that was focused before the popup was opened. Using `restorePreviousFocus`, it
+        /// Node that was focused before the popup was opened. Using [restorePreviousFocus], it
         /// can be given focus again, closing the popup. This is the default behavior for the
         /// escape key while a popup is open.
         ///
-        /// Used if `FocusIO` is available.
+        /// Used if [FocusIO] is available.
         ///
         /// See_Also:
-        ///     `previousFocus`, which is used with the old backend system.
+        ///     [previousFocus], which is used with the old backend system.
         Focusable previousFocusable;
 
-        /// If true, the frame will claim focus on the next *resize*. This is used to give
-        /// the popup focus when it is spawned, respecting currently active `FocusIO`.
+        /// If true, the frame will claim focus on the next [resize][Node.updateSize]. This is
+        /// used by the frame to gain focus when it is spawned, while respecting currently active
+        /// `FocusIO`.
+        ///
+        /// This is automatically set to true by [addPopup] and [addChildPopup], and then set to
+        /// false once used.
         bool toTakeFocus;
 
     }
