@@ -82,10 +82,8 @@ class ScrollFrame : Frame, FluidScrollable, HoverScrollable {
     }
 
     this(T...)(T args) {
-
         super(args);
         this.scrollBar = .vscrollInput(.layout!(1, "fill"));
-
     }
 
     alias opEquals = Node.opEquals;
@@ -93,15 +91,26 @@ class ScrollFrame : Frame, FluidScrollable, HoverScrollable {
         return super.opEquals(other);
     }
 
-    /// Distance the node is scrolled by.
+    /// Returns:
+    ///     Distance in pixels the node is scrolled by. For `vscrollFrame`, this is distance from
+    ///     the top of the frame, and from the left for `hscrollFrame`.
+    ///
+    ///     The value of `0` means the frame is currently scrolled to the very top or the very
+    ///     left.
     ref inout(float) scroll() inout {
         return scrollBar.position;
     }
 
+    /// ditto
     float scroll() const {
         return scrollBar.position;
     }
 
+    /// Set the scroll offset for the frame.
+    /// Params:
+    ///     value = New scroll offset to set.
+    /// Returns:
+    ///     The distance as passed.
     float scroll(float value) {
         scrollBar.scroll = value;
         return value;
