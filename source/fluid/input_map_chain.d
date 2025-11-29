@@ -368,10 +368,11 @@ struct InputMapping {
                     bind!backspace(KeyboardIO.codes.backspace),
 
                     // Basic actions
-                    bind!contextMenu(KeyboardIO.codes.contextMenu),
-                    bind!contextMenu(MouseIO.codes.right),
                     // bind!cancel(GamepadButton.circle), TODO
                     bind!cancel(KeyboardIO.codes.escape),
+                    bind!cancel(KeyboardIO.codes.right),
+                    bind!contextMenu(KeyboardIO.codes.contextMenu),
+                    bind!contextMenu(MouseIO.codes.right),
                     // bind!press(GamepadButton.cross), TODO
                     bind!press(KeyboardIO.codes.enter),
                     bind!press(MouseIO.codes.left),
