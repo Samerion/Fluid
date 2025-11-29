@@ -241,6 +241,68 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
         return _anchor;
     }
 
+    /// [PopupFrame] will automatically be marked for removal if not focused.
+    ///
+    /// For the new I/O, this is done by overriding the `toRemove` getter; the old backend does
+    /// this from a tree action.
+    ///
+    /// Returns:
+    ///     True if the `PopupFrame` has no focus (in new I/O only), or was manually marked
+    ///     for removal.
+    override bool toRemove() const {
+        if (!toTakeFocus && usingFocusIO && !this.isFocused) {
+            return true;
+        }
+        return super.toRemove;
+    }
+
+    /// Set [focus][FocusIO.currentFocus] to this frame, or to the first focusable child, if one
+    /// exists.
+    ///
+    /// Note that [PopupFrame] tracks focus separately from the host [FocusIO]. The popup frame
+    /// will become focused in the host, while the child will be focused in the popup frame.
+    override void focus() {
+
+        // Set focus to self
+        super.focus();
+
+        // Prefer if children get it, though
+        this.focusRecurseChildren();
+
+    }
+
+    /// Give focus to whatever node had [focus][FocusIO.currentFocus] before this one.
+    ///
+    /// In new I/O, gives focus to [previousFocusable], and in the old backend, gives focus to
+    /// [previousFocus]. If no node was focused, [clears focus][FocusIO.clearFocus].
+    @(FluidInputAction.cancel)
+    void restorePreviousFocus() {
+
+        // Restore focus if possible
+        if (previousFocusable) {
+            previousFocusable.focus();
+        }
+        else if (previousFocus) {
+            previousFocus.focus();
+        }
+
+        // Clear focus
+        else if (usingFocusIO) {
+            focusIO.clearFocus();
+        }
+        else tree.focus = null;
+
+    }
+
+    /// Returns:
+    ///     True, if this popup (or its child) is currently focused.
+    @property
+    override bool isFocused() const {
+        return childHasFocus
+            || super.isFocused
+            || (childPopup && childPopup.isFocused);
+    }
+
     override Optional!Rectangle lastFocusBox() const {
         return _lastFocusBox;
     }
@@ -278,14 +340,11 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
     }
 
     private void resizeInternal(Node parent, Vector2 space) {
-
         parent.resizeChild(this, space);
-
     }
 
-    /// Get start (top-left) corner of the popup if `drawAnchored` is to be used.
+    // Intentionally left undocumented
     Vector2 anchoredStartCorner() {
-
         const viewportSize = io.windowSize;
 
         // This method is very similar to MapSpace.getStartCorner, but simplified to handle the "automatic" case
@@ -340,7 +399,7 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
 
     protected override void resizeImpl(Vector2 space) {
 
-        // Load the parent's `focusIO`
+        // Load FocusIO if available
         if (auto focusIO = use(this.focusIO)) {
 
             {
@@ -352,7 +411,7 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
             this.focusIO = focusIO;
         }
 
-        // No `focusIO` in use
+        // No FocusIO in use
         else super.resizeImpl(space);
 
         // Immediately switch focus to self
@@ -364,20 +423,6 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
     }
 
     alias toRemove = typeof(super).toRemove;
-
-    /// `PopupFrame` will automatically be marked for removal if not focused.
-    ///
-    /// For the new I/O, this is done by overriding the `toRemove` mark; the old backend does this
-    /// from the tree action.
-    ///
-    /// Returns:
-    ///     True if the `PopupFrame` was marked for removal, or if it has no focus.
-    override bool toRemove() const {
-        if (!toTakeFocus && usingFocusIO && !this.isFocused) {
-            return true;
-        }
-        return super.toRemove;
-    }
 
     protected override void drawImpl(Rectangle outer, Rectangle inner) {
 
@@ -422,46 +467,7 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
         return _currentFocus && _currentFocus.focusImpl();
     }
 
-    override void focus() {
-
-        // Set focus to self
-        super.focus();
-
-        // Prefer if children get it, though
-        this.focusRecurseChildren();
-
-    }
-
-    /// Give focus to whatever node had focus before this one.
-    @(FluidInputAction.cancel)
-    void restorePreviousFocus() {
-
-        // Restore focus if possible
-        if (previousFocusable) {
-            previousFocusable.focus();
-        }
-        else if (previousFocus) {
-            previousFocus.focus();
-        }
-
-        // Clear focus
-        else if (usingFocusIO) {
-            focusIO.clearFocus();
-        }
-        else tree.focus = null;
-
-    }
-
     alias isFocused = typeof(super).isFocused;
-
-    @property
-    override bool isFocused() const {
-
-        return childHasFocus
-            || super.isFocused
-            || (childPopup && childPopup.isFocused);
-
-    }
 
     alias opEquals = typeof(super).opEquals;
 
@@ -504,7 +510,7 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
 
 }
 
-/// Tree action displaying a popup.
+/// Tree action displaying a popup. This only applies to the legacy backend.
 class PopupNodeAction : TreeAction {
 
     public {
