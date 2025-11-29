@@ -352,18 +352,6 @@ class HoverChain : NodeChain, ActionHoverIO {
                 resource.heldNode = resource.node;
             }
 
-            // Switch focus to hovered node if holding
-            else if (focusIO) {
-                if (auto focusable = resource.heldNode.castIfAcceptsInput!Focusable) {
-                    if (!focusable.isFocused) {
-                        focusable.focus();
-                    }
-                }
-                else {
-                    focusIO.clearFocus();
-                }
-            }
-
             // Update scroll and send new events
             if (!pointer.isScrollHeld) {
                 resource.scrollable = resource.action.scrollable;
@@ -414,11 +402,27 @@ class HoverChain : NodeChain, ActionHoverIO {
         auto hover = hoverOf(pointer);
         auto meta = _pointers[id];
 
-        // Active input actions can only fire if `heldNode` is still hovered
         if (isActive) {
+
+            // Switch focus to hovered node
+            if (focusIO) {
+                auto node = cast(Node) hover;
+                if (auto focusable = node.castIfAcceptsInput!Focusable) {
+                    if (!focusable.isFocused) {
+                        focusable.focus();
+                    }
+                }
+                else {
+                    focusIO.clearFocus();
+                }
+            }
+
+
+            // Active input actions can only fire if `heldNode` is still hovered
             if (meta.node is null || !meta.node.opEquals(meta.heldNode)) {
                 return false;
             }
+
         }
 
         // Mark pointer as held
