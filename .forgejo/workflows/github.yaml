@@ -1,5 +1,8 @@
 name: Verify test status
-on: [push]
+on:
+  push:
+    branches-ignore:
+      - main
 
 jobs:
   verify:
