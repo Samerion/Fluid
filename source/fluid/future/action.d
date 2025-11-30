@@ -211,7 +211,7 @@ PositionalFocusAction focusDirection(Node node, Rectangle focusBox, Style.Side d
 
 }
 
-final class PositionalFocusAction : FocusSearchAction {
+final class PositionalFocusAction : FocusSearchAction, Publisher!Rectangle {
 
     public {
 
@@ -226,6 +226,9 @@ final class PositionalFocusAction : FocusSearchAction {
 
         /// Focus box of the located node.
         Rectangle resultFocusBox;
+
+        /// Event emitted whenever the action focuses a node, returning its focus box.
+        Event!Rectangle onFocusBox;
 
     }
 
@@ -269,6 +272,15 @@ final class PositionalFocusAction : FocusSearchAction {
         this.direction = direction;
         this.resultFocusBox = focusBox;
         clearSubscribers();
+    }
+
+    override void clearSubscribers() {
+        super.clearSubscribers();
+        onFocusBox.clearSubscribers();
+    }
+
+    override void subscribe(Subscriber!Rectangle subscriber) {
+        onFocusBox ~= subscriber;
     }
 
     override void beforeTree(Node node, Rectangle rectangle) {
@@ -337,6 +349,7 @@ final class PositionalFocusAction : FocusSearchAction {
 
         if (auto focusable = cast(Focusable) result) {
             focusable.focus();
+            onFocusBox(resultFocusBox);
         }
 
         super.stopped();
