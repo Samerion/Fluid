@@ -14,6 +14,7 @@ Fluid does not currently have a dedicated space for questions, but you can direc
 maintainers:
 
 * [Send an e-mail to Artha][mail]
+* [On the issue tracker][issues]
 * [Ask on the D programming Discord](https://discord.gg/MZ9eB37Uta)
 * [Ask on the Samerion Discord](https://discord.gg/cMbuRKxHP8)
 
