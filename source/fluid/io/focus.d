@@ -490,7 +490,7 @@ interface WithPositionalFocus : WithFocus {
                 auto self = cast(Node) this;
 
                 positionalFocusAction.reset(reference, focusBox, side);
-                positionalFocusAction.onFocusBox ~= pipe((Rectangle box) {
+                positionalFocusAction.then((Rectangle box) {
                     lastFocusBox = Optional!Rectangle(box);
                 });
                 self.startAction(positionalFocusAction);
