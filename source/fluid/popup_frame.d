@@ -312,6 +312,10 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
         return _lastFocusBox;
     }
 
+    override protected Optional!Rectangle lastFocusBox(Optional!Rectangle newFocusBox) {
+        return _lastFocusBox = newFocusBox;
+    }
+
     override inout(OrderedFocusAction) orderedFocusAction() inout {
         return _orderedFocusAction;
     }

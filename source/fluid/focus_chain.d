@@ -86,6 +86,10 @@ class FocusChain : NodeChain, FocusIO, WithOrderedFocus, WithPositionalFocus {
         return _lastFocusBox;
     }
 
+    override protected Optional!Rectangle lastFocusBox(Optional!Rectangle newFocusBox) {
+        return _lastFocusBox = newFocusBox;
+    }
+
     override protected inout(OrderedFocusAction) orderedFocusAction() inout {
         return _orderedFocusAction;
     }

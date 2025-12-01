@@ -440,6 +440,9 @@ interface WithPositionalFocus : WithFocus {
     ///     has changed since last fetched.
     protected Optional!Rectangle lastFocusBox() const;
 
+    /// Update focus box after it was changed.
+    protected Optional!Rectangle lastFocusBox(Optional!Rectangle newFocusBox);
+
     /// Returns:
     ///     An instance of PositionalFocusAction.
     protected inout(PositionalFocusAction) positionalFocusAction() inout;
@@ -487,6 +490,9 @@ interface WithPositionalFocus : WithFocus {
                 auto self = cast(Node) this;
 
                 positionalFocusAction.reset(reference, focusBox, side);
+                positionalFocusAction.onFocusBox ~= pipe((Rectangle box) {
+                    lastFocusBox = Optional!Rectangle(box);
+                });
                 self.startAction(positionalFocusAction);
 
                 return positionalFocusAction;
