@@ -256,6 +256,9 @@ final class PositionalFocusAction : FocusSearchAction, Publisher!Rectangle {
 
     }
 
+    alias then = typeof(super).then;
+    alias then = Publisher!Rectangle.then;
+
     this() {
 
     }
