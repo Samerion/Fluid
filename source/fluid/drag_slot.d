@@ -76,8 +76,16 @@ class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable {
 
     public {
 
-        ///
+        /// An instance of [DragHandle] to indicate to the user that the node is draggable;
+        /// the handle also provides safe space for the user to drag the node.
         DragHandle handle;
+
+        /// In many cases the handle is not desirable, but it can be hidden or replaced.
+        @("Hiding DragHandle")
+        unittest {
+            auto slot = dragSlot();
+            slot.handle.hide();
+        }
 
         /// Current drag action, if applicable.
         DragAction dragAction;
