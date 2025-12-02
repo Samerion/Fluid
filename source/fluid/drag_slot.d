@@ -1,3 +1,7 @@
+/// [DragSlot] is a node that can be dragged by the user, and then dropped into another location
+/// in the node tree.
+///
+/// It can be constructed using [dragSlot] node builder.
 module fluid.drag_slot;
 
 import std.array;
@@ -11,6 +15,7 @@ import fluid.utils;
 import fluid.style;
 import fluid.backend;
 import fluid.structs;
+import fluid.frame : acceptDrop;
 
 import fluid.io.hover;
 import fluid.io.canvas;
@@ -20,10 +25,25 @@ import fluid.future.context;
 
 @safe:
 
-/// A drag slot is a node slot providing drag & drop functionality.
-alias dragSlot = simpleConstructor!DragSlot;
+/// [Node builder][nodeBuilder] for [DragSlot]. The constructor accepts a single but optional
+/// node to place inside the slot.
+alias dragSlot = nodeBuilder!DragSlot;
 
-/// ditto
+/// [NodeSlot] variant that can be dragged by the user and dropped into another node.
+///
+/// A handle is added inside which provides space for the user to drag, but it can be hidden;
+/// any space in the slot, unless blocked by a child, can be used to drag the node. See
+/// [handle][DragSlot.handle] for more information.
+///
+/// While dragged, `DragSlot` is moved into [OverlayIO] and remains there until dropped.
+/// `DragSlot` can be dropped into [FluidDroppable] nodes if it fulfills the node's conditions;
+/// see [fluid.frame.acceptDrop] for using [Frame][fluid.frame] as a drag & drop target.
+///
+/// Note that drag & drop can only be controlled using mouse or other hover devices; alternative
+/// controls should be provided for keyboard and gamepad controls.
+///
+/// `DragSlot` is a bit out of date in terms of common practices in Fluid, and doesn't serve
+/// as a good example of how nodes can be written, but should remain useful as a standalone node.
 class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable {
 
     mixin makeHoverable;
@@ -35,6 +55,7 @@ class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable {
 
     public {
 
+        ///
         DragHandle handle;
 
         /// Current drag action, if applicable.
