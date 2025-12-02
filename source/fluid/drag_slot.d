@@ -1,4 +1,31 @@
+/// [DragSlot] is a node that can be dragged by the user, and then dropped into another location
+/// in the node tree.
+///
+/// It can be constructed using [dragSlot] node builder.
 module fluid.drag_slot;
+
+@safe:
+
+///
+@("DragSlot usage example")
+unittest {
+    import fluid;
+
+    vframe(
+        .layout!"fill",
+        vframe(
+            .acceptDrop,
+            .layout!(1, "fill"),
+            dragSlot(
+                label("Drag me!"),
+            ),
+        ),
+        vframe(
+            .acceptDrop,
+            .layout!(1, "fill"),
+        ),
+    );
+}
 
 import std.array;
 import std.range;
@@ -11,6 +38,7 @@ import fluid.utils;
 import fluid.style;
 import fluid.backend;
 import fluid.structs;
+import fluid.frame : acceptDrop;
 
 import fluid.io.hover;
 import fluid.io.canvas;
@@ -18,12 +46,25 @@ import fluid.io.overlay;
 
 import fluid.future.context;
 
-@safe:
+/// [Node builder][nodeBuilder] for [DragSlot]. The constructor accepts a single but optional
+/// node to place inside the slot.
+alias dragSlot = nodeBuilder!DragSlot;
 
-/// A drag slot is a node slot providing drag & drop functionality.
-alias dragSlot = simpleConstructor!DragSlot;
-
-/// ditto
+/// [NodeSlot] variant that can be dragged by the user and dropped into another node.
+///
+/// A handle is added inside which provides space for the user to drag, but it can be hidden;
+/// any space in the slot, unless blocked by a child, can be used to drag the node. See
+/// [handle][DragSlot.handle] for more information.
+///
+/// While dragged, `DragSlot` is moved into [OverlayIO] and remains there until dropped.
+/// `DragSlot` can be dropped into [FluidDroppable] nodes if it fulfills the node's conditions;
+/// see [fluid.frame.acceptDrop] for using [Frame][fluid.frame] as a drag & drop target.
+///
+/// Note that drag & drop can only be controlled using mouse or other hover devices; alternative
+/// controls should be provided for keyboard and gamepad controls.
+///
+/// `DragSlot` is a bit out of date in terms of common practices in Fluid, and doesn't serve
+/// as a good example of how nodes can be written, but should remain useful as a standalone node.
 class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable {
 
     mixin makeHoverable;
@@ -35,12 +76,30 @@ class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable {
 
     public {
 
+        /// An instance of [DragHandle] to indicate to the user that the node is draggable;
+        /// the handle also provides safe space for the user to drag the node.
         DragHandle handle;
 
-        /// Current drag action, if applicable.
+        /// In many cases the handle is not desirable, but it can be hidden or replaced.
+        @("Hiding DragHandle")
+        unittest {
+            auto slot = dragSlot();
+            slot.handle.hide();
+        }
+
+        /// [DragAction] is a [tree action][TreeAction] that controls the node while it is being
+        /// dragged.
+        ///
+        /// The action is set to `null` while the slot is idle, and created whenever the slot
+        /// it being dragged.
         DragAction dragAction;
 
-        /// If used with `OverlayIO`, this node wraps the drag slot to provide the overlay.
+        /// If used with [OverlayIO], a wrapper node is used to distinguish between the node's
+        /// original parent, and the overlay.
+        ///
+        /// The overlay is created with the slot.
+        ///
+        /// See [DragSlotOverlay] for details.
         DragSlotOverlay overlay;
 
     }
@@ -58,26 +117,28 @@ class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable {
     }
 
     /// Create a new drag slot and place a node inside of it.
+    /// Params:
+    ///     node = Node to place in the slot; optional, can be null.
     this(Node node = null) {
-
         super(node);
         this.handle = dragHandle(.layout!"fill");
         this.overlay = new DragSlotOverlay(this);
-
     }
 
-    override bool blocksInput() const {
-        return isDisabled || isDisabledInherited;
-    }
-
-    /// If true, this node is currently being dragged.
+    /// Returns:
+    ///     If true, this node is currently being dragged.
+    ///     This is equivalent to a null check on [dragAction].
     bool isDragged() const {
-
         return dragAction !is null;
-
     }
 
-    /// Drag the node.
+    /// Input event handler for hover input, activated every frame while the node
+    /// is grabbed/dragged.
+    ///
+    /// Activated on [FluidInputAction.press] events in [WhileDown] mode.
+    ///
+    /// Params:
+    ///     pointer = (New I/O only) Pointer performing the drag motion.
     @(FluidInputAction.press, .WhileDown)
     void drag(HoverPointer pointer)
     in (tree)
@@ -107,7 +168,7 @@ class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable {
 
     }
 
-    /// Drag the node.
+    /// ditto
     @(FluidInputAction.press, .WhileDown)
     void drag()
     in (tree)
@@ -122,24 +183,11 @@ class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable {
 
     }
 
-    private Rectangle dragRectangle(Vector2 offset) const nothrow {
-        const position = _staticPosition + offset;
-        return Rectangle(position.tupleof, _size.tupleof);
-    }
-
-    private void drawDragged(Node parent, Rectangle rect) {
-
-        _drawDragged = true;
-        minSize = _size;
-        scope (exit) _drawDragged = false;
-        scope (exit) minSize = Vector2(0, 0);
-
-        parent.drawChild(this, rect);
-
-    }
-
     alias isHidden = typeof(super).isHidden;
 
+    /// `DragSlot` hides itself from its parent node while its drawn.
+    /// Returns:
+    ///     True while the drag slot is set to hidden or while its being dragged.
     @property
     override bool isHidden() const scope {
 
@@ -152,8 +200,25 @@ class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable {
 
     }
 
-    override void resizeImpl(Vector2 available) {
+    override bool blocksInput() const {
+        return isDisabled || isDisabledInherited;
+    }
 
+    private Rectangle dragRectangle(Vector2 offset) const nothrow {
+        const position = _staticPosition + offset;
+        return Rectangle(position.tupleof, _size.tupleof);
+    }
+
+    private void drawDragged(Node parent, Rectangle rect) {
+        _drawDragged = true;
+        minSize = _size;
+        scope (exit) _drawDragged = false;
+        scope (exit) minSize = Vector2(0, 0);
+
+        parent.drawChild(this, rect);
+    }
+
+    override void resizeImpl(Vector2 available) {
         use(hoverIO);
         use(overlayIO);
 
@@ -173,11 +238,9 @@ class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable {
             }
 
         }
-
     }
 
     private void resizeInternal(Node parent, Vector2 space) {
-
         _drawDragged = true;
         scope (exit) _drawDragged = false;
 
@@ -185,11 +248,9 @@ class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable {
 
         // Save the size
         _size = minSize;
-
     }
 
     override void drawImpl(Rectangle outer, Rectangle inner) {
-
         const handleWidth = handle.minSize.y;
 
         auto style = pickStyle;
@@ -219,26 +280,21 @@ class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable {
 
         // Draw the handle
         drawChild(handle, handleRect);
-
     }
 
     protected override bool hoveredImpl(Rectangle rect, Vector2 position) {
-
         return Node.hoveredImpl(rect, position);
-
     }
 
     override bool isHovered() const {
-
         return this is tree.hover || super.isHovered();
+    }
+
+    override void mouseImpl() {
 
     }
 
-    void mouseImpl() {
-
-    }
-
-    bool hoverImpl(HoverPointer) {
+    override bool hoverImpl(HoverPointer) {
         return false;
     }
 
@@ -250,19 +306,24 @@ class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable {
 
 }
 
-/// Wraps the `DragSlot` while it is being dragged.
+/// Wraps [DragSlot] while the slot is being dragged. It implements [Overlayable] so it can be
+/// used by [OverlayIO].
 ///
-/// This is used to detect when `DragSlot` is drawn as an overlay or not. The `DragSlotOverlay`
-/// is passed to `OverlayIO`, so it is known that if drawn, `DragSlotOverlay` functions
-/// as an overlay.
+/// While dragged, the slot remains seated inside the same parent it was in, except
+/// hidden to the parent. The `DragSlotOverlay` node provides a mechanism for the slot to
+/// distinguish between its original parent, and the `OverlayIO` node.
 ///
 /// **`DragSlotOverlay` does not offer a stable interface.** It may only be a temporary solution
 /// for the detection problem, before a more general option is added for `OverlayIO`.
 class DragSlotOverlay : Node, Overlayable {
 
+    /// [DragSlot] the overlay is associated with.
     DragSlot next;
 
-    this(DragSlot next = null) {
+    /// Constructor for the wrapper.
+    /// Params:
+    ///     next = Drag slot node wrapped by the overlay.
+    this(DragSlot next) {
         this.next = next;
     }
 
@@ -298,55 +359,76 @@ class DragSlotOverlay : Node, Overlayable {
 
 }
 
-/// Draggable handle.
-alias dragHandle = simpleConstructor!DragHandle;
+/// Node builder for [DragHandle].
+alias dragHandle = nodeBuilder!DragHandle;
 
-/// ditto
+/// `DragHandle` takes no constructor arguments, but its [layout] should usually be set to
+/// [fill][NodeAlign.fill] mode.
+unittest {
+    dragHandle(
+        .layout!"fill",
+    );
+}
+
+/// Node to act as a visual cue that it can be dragged.
+///
+/// The handle is displayed as a bar with rounded ends. The color for the bar can be set using
+/// [Style.lineColor].
 class DragHandle : Node {
 
     CanvasIO canvasIO;
 
-    /// Additional features available for drag handle styling
+    /// Provides additional styling features for the Handle.
     static class Extra : typeof(super).Extra {
 
-        /// Width of the draggable bar
+        /// Width of the `DragHandle`'s bar
         float width;
 
+        /// Params:
+        ///     width = Specify the bar's width.
         this(float width) {
-
             this.width = width;
-
         }
 
     }
 
-    /// Get the width of the bar.
-    float width() const {
+    ///
+    @("DragHandle theming example")
+    unittest {
+        import fluid.theme;
 
+        // Use a 6 pixel wide faded teal bar
+        auto myTheme = Theme(
+            rule!DragHandle(
+                lineColor = color("#6b8577"),
+                extra = new DragHandle.Extra(6),
+            ),
+        );
+    }
+
+    /// Returns:
+    ///     Width of the bar to use.
+    ///     If [Extra] is provided in the theme, loads the width it has specified.
+    ///     Otherwise, defaults to zero.
+    float width() const {
         const extra = cast(const Extra) style.extra;
 
         if (extra)
             return extra.width;
         else
             return 0;
-
     }
 
     override bool hoveredImpl(Rectangle, Vector2) {
-
         return false;
-
     }
 
     override void resizeImpl(Vector2 available) {
-
         use(canvasIO);
         minSize = Vector2(width * 2, width);
-
     }
 
     override void drawImpl(Rectangle outer, Rectangle inner) {
-
         const width = this.width;
 
         const radius = width / 2f;
@@ -364,21 +446,32 @@ class DragHandle : Node {
             io.drawCircle(end(inner) - circleVec, radius, color);
             io.drawRectangle(fill, color);
         }
-
     }
 
 }
 
+/// This [TreeAction] controls [DragSlot] while it is dragged. It is automatically created
+/// whenever a dragging motion starts. It applies both to legacy backend and new I/O.
 class DragAction : TreeAction {
 
     public {
 
+        /// [DragSlot] controlled by the action. Set only at the start of the motion.
         DragSlot slot;
+
+        /// [HoverPointer][HoverPointer] position at the start of the motion. Set only at the
+        /// start of the motion.
         Vector2 mouseStart;
+
+        /// Currently hovered [FluidDroppable] drop target. Cleared
+        /// in [beforeTree][TreeAction.beforeTree] and updated in
+        /// [beforeDraw][TreeAction.beforeDraw].
         FluidDroppable target;
+
+        /// Available space box of [target].
         Rectangle targetRectangle;
 
-        /// Current position of the pointer seen by the action.
+        /// Current position of the hover pointer performing the action.
         Vector2 pointerPosition;
 
     }
@@ -394,39 +487,37 @@ class DragAction : TreeAction {
         this(slot, slot.io.mousePosition);
     }
 
+    /// Params:
+    ///     slot            = Slot moved by this action.
+    ///     pointerPosition = Initial position of the pointer controlling the node.
     this(DragSlot slot, Vector2 pointerPosition) {
         this.slot = slot;
         this.pointerPosition = pointerPosition;
         this.mouseStart = pointerPosition;
     }
 
+    /// Returns:
+    ///     Mouse offset; difference between [pointerPosition] and [mouseStart].
     Vector2 offset() const {
-
         return pointerPosition - mouseStart;
-
     }
 
-    Rectangle relativeDragRectangle() {
-
+    private Rectangle relativeDragRectangle() {
         const rect = slot.dragRectangle(offset);
 
         return Rectangle(
             (rect.start - targetRectangle.start).tupleof,
             rect.size.tupleof,
         );
-
     }
 
     override void beforeTree(Node, Rectangle) {
-
-        // Clear the target
         target = null;
-
     }
 
     override void beforeResize(Node node, Vector2 space) {
 
-        // Reside only if OverlayIO is not in use
+        // Resize only if OverlayIO is not in use
         if (slot.overlayIO is null && node is node.tree.root) {
             slot.resizeInternal(node, space);
         }
@@ -434,7 +525,6 @@ class DragAction : TreeAction {
     }
 
     override void beforeDraw(Node node, Rectangle rectangle, Rectangle outer, Rectangle inner) {
-
         auto droppable = cast(FluidDroppable) node;
 
         // Find all hovered droppable nodes
@@ -447,28 +537,19 @@ class DragAction : TreeAction {
 
         this.target = droppable;
         this.targetRectangle = rectangle;
-
     }
 
-    /// Tree drawn, draw the node now.
     override void afterTree() {
-
-        if (slot.overlayIO is null ) {
+        if (slot.overlayIO is null) {
             drawSlot(slot.tree.root);
         }
-
     }
 
-    void drawSlot(Node parent) {
-
+    private void drawSlot(Node parent) {
         const rect = slot.dragRectangle(offset);
-
-        // Draw the slot
         slot.drawDragged(parent, rect);
-
     }
 
-    /// Process input.
     override void afterInput(ref bool focusHandled) {
 
         // We should have received a signal from the slot if it is still being dragged
