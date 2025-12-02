@@ -92,3 +92,46 @@ unittest {
     assert(siblingBefore.scroll == 500);
     assert(siblingAfter.scroll == 500);
 }
+
+@("ScrollIntoViewAction works recursively")
+unittest {
+    ScrollFrame[3] ancestors;
+    Frame target;
+    auto root = sizeLock!testSpace(
+        ancestors[0] = sizeLock!vscrollFrame(
+            .sizeLimit(100, 100),
+            tallBox(),
+            ancestors[1] = sizeLock!vscrollFrame(
+                .sizeLimit(100, 100),
+                tallBox(),
+                ancestors[2] = sizeLock!vscrollFrame(
+                    .sizeLimit(100, 100),
+                    tallBox(),
+                    target = sizeLock!vframe(
+                        .sizeLimit(20, 100),
+                    ),
+                ),
+            ),
+        ),
+    );
+
+    root.theme = Theme(
+        rule!Frame(
+            Rule.backgroundColor = color("#f00"),
+        ),
+    );
+
+    root.draw();
+    target
+        .scrollIntoView()
+        .runWhileDrawing(root);
+
+    assert(ancestors[0].scroll == 5250);
+    assert(ancestors[1].scroll == 5250);
+    assert(ancestors[2].scroll == 5250);
+
+    root.drawAndAssert(
+        target.isDrawn.at(0, 0),
+        target.drawsRectangle(0, 0, 20, 100),
+    );
+}
