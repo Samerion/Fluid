@@ -87,7 +87,11 @@ class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable {
             slot.handle.hide();
         }
 
-        /// Current drag action, if applicable.
+        /// [DragAction] is a [tree action][TreeAction] that controls the node while it is being
+        /// dragged.
+        ///
+        /// The action is set to `null` while the slot is idle, and created whenever the slot
+        /// it being dragged.
         DragAction dragAction;
 
         /// If used with `OverlayIO`, this node wraps the drag slot to provide the overlay.
@@ -108,26 +112,28 @@ class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable {
     }
 
     /// Create a new drag slot and place a node inside of it.
+    /// Params:
+    ///     node = Node to place in the slot; optional, can be null.
     this(Node node = null) {
-
         super(node);
         this.handle = dragHandle(.layout!"fill");
         this.overlay = new DragSlotOverlay(this);
-
     }
 
-    override bool blocksInput() const {
-        return isDisabled || isDisabledInherited;
-    }
-
-    /// If true, this node is currently being dragged.
+    /// Returns:
+    ///     If true, this node is currently being dragged.
+    ///     This is equivalent to a null check on [dragAction].
     bool isDragged() const {
-
         return dragAction !is null;
-
     }
 
-    /// Drag the node.
+    /// Input event handler for hover input, activated every frame while the node
+    /// is grabbed/dragged.
+    ///
+    /// Activated on [FluidInputAction.press] events in [WhileDown] mode.
+    ///
+    /// Params:
+    ///     pointer = (New I/O only) Pointer performing the drag motion.
     @(FluidInputAction.press, .WhileDown)
     void drag(HoverPointer pointer)
     in (tree)
@@ -157,7 +163,7 @@ class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable {
 
     }
 
-    /// Drag the node.
+    /// ditto
     @(FluidInputAction.press, .WhileDown)
     void drag()
     in (tree)
@@ -172,24 +178,11 @@ class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable {
 
     }
 
-    private Rectangle dragRectangle(Vector2 offset) const nothrow {
-        const position = _staticPosition + offset;
-        return Rectangle(position.tupleof, _size.tupleof);
-    }
-
-    private void drawDragged(Node parent, Rectangle rect) {
-
-        _drawDragged = true;
-        minSize = _size;
-        scope (exit) _drawDragged = false;
-        scope (exit) minSize = Vector2(0, 0);
-
-        parent.drawChild(this, rect);
-
-    }
-
     alias isHidden = typeof(super).isHidden;
 
+    /// `DragSlot` hides itself from its parent node while its drawn.
+    /// Returns:
+    ///     True while the drag slot is set to hidden or while its being dragged.
     @property
     override bool isHidden() const scope {
 
@@ -202,8 +195,25 @@ class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable {
 
     }
 
-    override void resizeImpl(Vector2 available) {
+    override bool blocksInput() const {
+        return isDisabled || isDisabledInherited;
+    }
 
+    private Rectangle dragRectangle(Vector2 offset) const nothrow {
+        const position = _staticPosition + offset;
+        return Rectangle(position.tupleof, _size.tupleof);
+    }
+
+    private void drawDragged(Node parent, Rectangle rect) {
+        _drawDragged = true;
+        minSize = _size;
+        scope (exit) _drawDragged = false;
+        scope (exit) minSize = Vector2(0, 0);
+
+        parent.drawChild(this, rect);
+    }
+
+    override void resizeImpl(Vector2 available) {
         use(hoverIO);
         use(overlayIO);
 
@@ -223,11 +233,9 @@ class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable {
             }
 
         }
-
     }
 
     private void resizeInternal(Node parent, Vector2 space) {
-
         _drawDragged = true;
         scope (exit) _drawDragged = false;
 
@@ -235,11 +243,9 @@ class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable {
 
         // Save the size
         _size = minSize;
-
     }
 
     override void drawImpl(Rectangle outer, Rectangle inner) {
-
         const handleWidth = handle.minSize.y;
 
         auto style = pickStyle;
@@ -269,26 +275,21 @@ class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable {
 
         // Draw the handle
         drawChild(handle, handleRect);
-
     }
 
     protected override bool hoveredImpl(Rectangle rect, Vector2 position) {
-
         return Node.hoveredImpl(rect, position);
-
     }
 
     override bool isHovered() const {
-
         return this is tree.hover || super.isHovered();
+    }
+
+    override void mouseImpl() {
 
     }
 
-    void mouseImpl() {
-
-    }
-
-    bool hoverImpl(HoverPointer) {
+    override bool hoverImpl(HoverPointer) {
         return false;
     }
 
