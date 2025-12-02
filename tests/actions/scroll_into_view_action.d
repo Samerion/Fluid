@@ -6,6 +6,7 @@ import std.range;
 import std.algorithm;
 
 import fluid;
+import nodes.scroll;
 
 @safe:
 
@@ -53,4 +54,41 @@ unittest {
 
     // TODO more tests. Scrolling while already in the viewport, scrolling while partially out of the view, etc.
 
+}
+
+@("ScrollIntoViewAction doesn't affect siblings of selected node")
+unittest {
+    ScrollFrame parent;
+    ScrollFrame siblingBefore;
+    ScrollFrame siblingAfter;
+    Frame target;
+
+    auto root = sizeLock!testSpace(
+        .sizeLimit(100, 100),
+        parent = vscrollFrame(
+            .layout!(1, "fill"),
+            siblingBefore = sizeLock!vscrollFrame(
+                .sizeLimit(100, 100),
+                tallBox(),
+            ),
+            target = sizeLock!vframe(
+                .sizeLimit(100, 100),
+            ),
+            siblingAfter = sizeLock!vscrollFrame(
+                .sizeLimit(100, 100),
+                tallBox(),
+            ),
+        ),
+    );
+
+    root.draw();
+    siblingBefore.scroll = 500;
+    siblingAfter.scroll = 500;
+    target
+        .scrollIntoView
+        .runWhileDrawing(root);
+
+    assert(parent.scroll == 100);
+    assert(siblingBefore.scroll == 500);
+    assert(siblingAfter.scroll == 500);
 }
