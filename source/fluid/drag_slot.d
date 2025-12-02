@@ -4,6 +4,29 @@
 /// It can be constructed using [dragSlot] node builder.
 module fluid.drag_slot;
 
+@safe:
+
+///
+@("DragSlot usage example")
+unittest {
+    import fluid;
+
+    vframe(
+        .layout!"fill",
+        vframe(
+            .acceptDrop,
+            .layout!(1, "fill"),
+            dragSlot(
+                label("Drag me!"),
+            ),
+        ),
+        vframe(
+            .acceptDrop,
+            .layout!(1, "fill"),
+        ),
+    );
+}
+
 import std.array;
 import std.range;
 
@@ -22,8 +45,6 @@ import fluid.io.canvas;
 import fluid.io.overlay;
 
 import fluid.future.context;
-
-@safe:
 
 /// [Node builder][nodeBuilder] for [DragSlot]. The constructor accepts a single but optional
 /// node to place inside the slot.
