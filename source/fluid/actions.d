@@ -326,6 +326,12 @@ class ScrollIntoViewAction : TreeAction {
         Vector2 viewport;
         Rectangle childBox;
 
+        /// If non-zero, skips nodes. Incremented in beforeDraw once `startNode` is set to null
+        /// and decremented in afterDraw if non-zero.
+        ///
+        /// Other hooks in `afterDraw` only trigger if zero.
+        int _skipDepth;
+
     }
 
     void reset(bool alignToTop = false) {
@@ -335,7 +341,20 @@ class ScrollIntoViewAction : TreeAction {
 
     }
 
+    override void beforeDraw(Node, Rectangle) {
+        if (startNode is null) {
+            _skipDepth++;
+        }
+    }
+
     override void afterDraw(Node node, Rectangle, Rectangle paddingBox, Rectangle contentBox) {
+
+        // This action only affects the chain of ancestors, from root to target node. No sibling
+        // of any of the nodes should be touched.
+        if (_skipDepth > 0) {
+            _skipDepth--;
+            return;
+        }
 
         // Target node was drawn
         if (node is startNode) {
@@ -350,7 +369,6 @@ class ScrollIntoViewAction : TreeAction {
             // Get the node's padding box
             childBox = node.focusBoxImpl(contentBox);
 
-
         }
 
         // Ignore children of the target node
@@ -358,7 +376,6 @@ class ScrollIntoViewAction : TreeAction {
         else if (startNode !is null) return;
 
         // Reached a scroll node
-        // TODO What if the container isn't an ancestor
         else if (auto scrollable = cast(FluidScrollable) node) {
 
             // Perform the scroll
@@ -366,11 +383,8 @@ class ScrollIntoViewAction : TreeAction {
 
             // Aligning to top, make sure the child aligns with the parent
             if (alignToTop && childBox.y > paddingBox.y) {
-
                 const offset = childBox.y - paddingBox.y;
-
                 scrollable.scroll = scrollable.scroll + cast(size_t) offset;
-
             }
 
         }
