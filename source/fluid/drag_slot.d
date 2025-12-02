@@ -450,16 +450,28 @@ class DragHandle : Node {
 
 }
 
+/// This [TreeAction] controls [DragSlot] while it is dragged. It is automatically created
+/// whenever a dragging motion starts. It applies both to legacy backend and new I/O.
 class DragAction : TreeAction {
 
     public {
 
+        /// [DragSlot] controlled by the action. Set only at the start of the motion.
         DragSlot slot;
+
+        /// [HoverPointer][HoverPointer] position at the start of the motion. Set only at the
+        /// start of the motion.
         Vector2 mouseStart;
+
+        /// Currently hovered [FluidDroppable] drop target. Cleared
+        /// in [beforeTree][TreeAction.beforeTree] and updated in
+        /// [beforeDraw][TreeAction.beforeDraw].
         FluidDroppable target;
+
+        /// Available space box of [target].
         Rectangle targetRectangle;
 
-        /// Current position of the pointer seen by the action.
+        /// Current position of the hover pointer performing the action.
         Vector2 pointerPosition;
 
     }
@@ -475,39 +487,37 @@ class DragAction : TreeAction {
         this(slot, slot.io.mousePosition);
     }
 
+    /// Params:
+    ///     slot            = Slot moved by this action.
+    ///     pointerPosition = Initial position of the pointer controlling the node.
     this(DragSlot slot, Vector2 pointerPosition) {
         this.slot = slot;
         this.pointerPosition = pointerPosition;
         this.mouseStart = pointerPosition;
     }
 
+    /// Returns:
+    ///     Mouse offset; difference between [pointerPosition] and [mouseStart].
     Vector2 offset() const {
-
         return pointerPosition - mouseStart;
-
     }
 
-    Rectangle relativeDragRectangle() {
-
+    private Rectangle relativeDragRectangle() {
         const rect = slot.dragRectangle(offset);
 
         return Rectangle(
             (rect.start - targetRectangle.start).tupleof,
             rect.size.tupleof,
         );
-
     }
 
     override void beforeTree(Node, Rectangle) {
-
-        // Clear the target
         target = null;
-
     }
 
     override void beforeResize(Node node, Vector2 space) {
 
-        // Reside only if OverlayIO is not in use
+        // Resize only if OverlayIO is not in use
         if (slot.overlayIO is null && node is node.tree.root) {
             slot.resizeInternal(node, space);
         }
@@ -515,7 +525,6 @@ class DragAction : TreeAction {
     }
 
     override void beforeDraw(Node node, Rectangle rectangle, Rectangle outer, Rectangle inner) {
-
         auto droppable = cast(FluidDroppable) node;
 
         // Find all hovered droppable nodes
@@ -528,28 +537,19 @@ class DragAction : TreeAction {
 
         this.target = droppable;
         this.targetRectangle = rectangle;
-
     }
 
-    /// Tree drawn, draw the node now.
     override void afterTree() {
-
-        if (slot.overlayIO is null ) {
+        if (slot.overlayIO is null) {
             drawSlot(slot.tree.root);
         }
-
     }
 
-    void drawSlot(Node parent) {
-
+    private void drawSlot(Node parent) {
         const rect = slot.dragRectangle(offset);
-
-        // Draw the slot
         slot.drawDragged(parent, rect);
-
     }
 
-    /// Process input.
     override void afterInput(ref bool focusHandled) {
 
         // We should have received a signal from the slot if it is still being dragged
