@@ -359,55 +359,76 @@ class DragSlotOverlay : Node, Overlayable {
 
 }
 
-/// Draggable handle.
-alias dragHandle = simpleConstructor!DragHandle;
+/// Node builder for [DragHandle].
+alias dragHandle = nodeBuilder!DragHandle;
 
-/// ditto
+/// `DragHandle` takes no constructor arguments, but its [layout] should usually be set to
+/// [fill][NodeAlign.fill] mode.
+unittest {
+    dragHandle(
+        .layout!"fill",
+    );
+}
+
+/// Node to act as a visual cue that it can be dragged.
+///
+/// The handle is displayed as a bar with rounded ends. The color for the bar can be set using
+/// [Style.lineColor].
 class DragHandle : Node {
 
     CanvasIO canvasIO;
 
-    /// Additional features available for drag handle styling
+    /// Provides additional styling features for the Handle.
     static class Extra : typeof(super).Extra {
 
-        /// Width of the draggable bar
+        /// Width of the `DragHandle`'s bar
         float width;
 
+        /// Params:
+        ///     width = Specify the bar's width.
         this(float width) {
-
             this.width = width;
-
         }
 
     }
 
-    /// Get the width of the bar.
-    float width() const {
+    ///
+    @("DragHandle theming example")
+    unittest {
+        import fluid.theme;
 
+        // Use a 6 pixel wide faded teal bar
+        auto myTheme = Theme(
+            rule!DragHandle(
+                lineColor = color("#6b8577"),
+                extra = new DragHandle.Extra(6),
+            ),
+        );
+    }
+
+    /// Returns:
+    ///     Width of the bar to use.
+    ///     If [Extra] is provided in the theme, loads the width it has specified.
+    ///     Otherwise, defaults to zero.
+    float width() const {
         const extra = cast(const Extra) style.extra;
 
         if (extra)
             return extra.width;
         else
             return 0;
-
     }
 
     override bool hoveredImpl(Rectangle, Vector2) {
-
         return false;
-
     }
 
     override void resizeImpl(Vector2 available) {
-
         use(canvasIO);
         minSize = Vector2(width * 2, width);
-
     }
 
     override void drawImpl(Rectangle outer, Rectangle inner) {
-
         const width = this.width;
 
         const radius = width / 2f;
@@ -425,7 +446,6 @@ class DragHandle : Node {
             io.drawCircle(end(inner) - circleVec, radius, color);
             io.drawRectangle(fill, color);
         }
-
     }
 
 }
