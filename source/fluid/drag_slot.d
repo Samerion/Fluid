@@ -94,7 +94,12 @@ class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable {
         /// it being dragged.
         DragAction dragAction;
 
-        /// If used with `OverlayIO`, this node wraps the drag slot to provide the overlay.
+        /// If used with [OverlayIO], a wrapper node is used to distinguish between the node's
+        /// original parent, and the overlay.
+        ///
+        /// The overlay is created with the slot.
+        ///
+        /// See [DragSlotOverlay] for details.
         DragSlotOverlay overlay;
 
     }
@@ -301,19 +306,24 @@ class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable {
 
 }
 
-/// Wraps the `DragSlot` while it is being dragged.
+/// Wraps [DragSlot] while the slot is being dragged. It implements [Overlayable] so it can be
+/// used by [OverlayIO].
 ///
-/// This is used to detect when `DragSlot` is drawn as an overlay or not. The `DragSlotOverlay`
-/// is passed to `OverlayIO`, so it is known that if drawn, `DragSlotOverlay` functions
-/// as an overlay.
+/// While dragged, the slot remains seated inside the same parent it was in, except
+/// hidden to the parent. The `DragSlotOverlay` node provides a mechanism for the slot to
+/// distinguish between its original parent, and the `OverlayIO` node.
 ///
 /// **`DragSlotOverlay` does not offer a stable interface.** It may only be a temporary solution
 /// for the detection problem, before a more general option is added for `OverlayIO`.
 class DragSlotOverlay : Node, Overlayable {
 
+    /// [DragSlot] the overlay is associated with.
     DragSlot next;
 
-    this(DragSlot next = null) {
+    /// Constructor for the wrapper.
+    /// Params:
+    ///     next = Drag slot node wrapped by the overlay.
+    this(DragSlot next) {
         this.next = next;
     }
 
