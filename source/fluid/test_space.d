@@ -1538,7 +1538,8 @@ class DumpDrawsAssert : AbstractAssert {
     }
 
     bool isSubject(Node node) @trusted {
-        return equal(subject, node);
+        return subject is null
+            || equal(subject, node);
     }
 
     void dump(string fmt, Arguments...)(Node node, Arguments arguments) @trusted {
