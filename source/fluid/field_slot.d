@@ -85,13 +85,36 @@ class FieldSlot(T : Node) : T, FluidHoverable, Hoverable, Focusable {
     /// to perform action once the focus is set.
     ///
     /// Returns:
-    ///     The [FocusRecurseAction] [tree action][TreeAction] used to search the tree.
+    ///     The [FocusRecurseAction] tree action used to search the tree.
     FocusRecurseAction focusAnd() {
-
         auto action = this.focusRecurseChildren();
         action.then(&setFocusableChild);
         return action;
+    }
 
+    /// `focusAnd` will asynchronously focus an input node inside. `then` can be
+    /// used to perform an action once it the node is found.
+    ///
+    /// Note that the parameter given by `then` can be null.
+    @("Chaining FieldSlot")
+    unittest {
+        import fluid;
+
+        TextInput nameInput;
+
+        auto slot = fieldSlot!hframe(
+            label("Name"),
+            nameInput = textInput(),
+        );
+        auto action = slot
+            .focusAnd()
+            .then((Node target) {
+                assert(target is nameInput);
+            });
+
+        // Run the test
+        auto root = testSpace(slot);
+        action.runWhileDrawing(root);
     }
 
     private void setFocusableChild(Focusable focus) {
