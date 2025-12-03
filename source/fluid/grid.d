@@ -1,4 +1,35 @@
+/// [GridFrame] creates a table composed out of [GridRow] nodes.
+///
+/// They can be created using [gridFrame] and [gridRow] node builders respectively.
+///
+/// Mind that the name "grid" may be misleading, as the node is designed to create a table; a
+/// type grid, surely, but it does not cover usecases commonly expected from grid layout in UI
+/// frameworks.
+///
+/// Note:
+///     Grid code is in a considerably bad state and begs for a rewrite.
+///     https://git.samerion.com/Samerion/Fluid/issues/288
 module fluid.grid;
+
+@safe:
+
+///
+@("gridFrame example")
+unittest {
+    import fluid;
+    gridFrame(
+        [
+            label("Row 1, column 1"),
+            label("Row 1, column 2"),
+            label("Row 1, column 3"),
+        ],
+        [
+            label("Row 2, column 1"),
+            label("Row 2, column 2"),
+            label("Row 2, column 3"),
+        ],
+    );
+}
 
 import std.range;
 import std.algorithm;
@@ -11,9 +42,6 @@ import fluid.utils;
 import fluid.backend;
 import fluid.structs;
 
-@safe:
-
-
 deprecated("`Grid` and `grid` were renamed to `GridFrame` and `gridFrame` respectively. To be removed in 0.8.0.") {
 
     alias grid = simpleConstructor!GridFrame;
@@ -21,8 +49,38 @@ deprecated("`Grid` and `grid` were renamed to `GridFrame` and `gridFrame` respec
 
 }
 
-alias gridFrame = simpleConstructor!GridFrame;
-alias gridRow = simpleConstructor!GridRow;
+/// [Node builder][nodeBuilder] for [GridFrame]. Usually, it will be given arrays of nodes (which
+/// it then converts into [GridRow] nodes), but it can also be given `GridRow` or other nodes
+/// directly.
+///
+/// See_Also:
+///     [gridRow] creates an individual row.
+alias gridFrame = nodeBuilder!GridFrame;
+
+/// #### Examples
+/// `gridFrame` nodes can also be passed [.segments] to create cells that span multiple rows.
+unittest {
+    import fluid;
+    gridFrame(
+        [
+            label(
+                .segments!2,
+                "Row 1, columns 1 and 2"
+            ),
+            label("Row 1, column 3"),
+        ],
+        [
+            label("Row 2, column 1"),
+            label("Row 2, column 2"),
+            label("Row 2, column 3"),
+        ],
+    );
+}
+
+/// Node builder for [GridRow]. It accepts the same arguments as [Frame]: a list of children.
+///
+/// Note that [gridFrame] supports creating `gridRow` by passing an array of nodes instead.
+alias gridRow = nodeBuilder!GridRow;
 
 // TODO rename segments to columns?
 
