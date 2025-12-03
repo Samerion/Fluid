@@ -52,28 +52,40 @@ class FieldSlot(T : Node) : T, FluidHoverable, Hoverable, Focusable {
         Focusable _focusableChild;
     }
 
+    /// Create the field slot
+    ///
+    /// Params:
+    ///     args = Same arguments as required by the base node; `new FieldSlot!T`
+    ///         accepts the same arguments as `new T`. For example, `FieldSlot!Frame` will take
+    ///         a list of children nodes just like `Frame` would.
     this(Args...)(Args args) {
         super(args);
     }
 
-    /// Pass focus to the field contained by this slot and press it.
+    /// Pass focus to the field contained by this slot and then press it. This action will take
+    /// a frame to perform.
+    ///
+    /// This function is the event handler for [FluidInputAction.press].
     @(FluidInputAction.press)
     void press() {
-
         focusAnd.then((Node node) {
             if (auto focusable = cast(FluidFocusable) node) {
                 focusable.runInputAction!(FluidInputAction.press);
             }
         });
-
     }
 
-    /// Pass focus to the field contained by this slot.
+    /// Pass focus to the field contained by this slot and then press it. This action will take
+    /// a frame to perform.
     void focus() {
         cast(void) focusAnd();
     }
 
-    /// ditto
+    /// Pass focus to the field contained by this slot. Unlike [focus], this method can be chained
+    /// to perform action once the focus is set.
+    ///
+    /// Returns:
+    ///     The [FocusRecurseAction] [tree action][TreeAction] used to search the tree.
     FocusRecurseAction focusAnd() {
 
         auto action = this.focusRecurseChildren();
