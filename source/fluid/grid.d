@@ -82,43 +82,39 @@ unittest {
 /// Note that [gridFrame] supports creating `gridRow` by passing an array of nodes instead.
 alias gridRow = nodeBuilder!GridRow;
 
-// TODO rename segments to columns?
-
-/// Segments is used to set the number of columns spanned by a grid item. When applied to a grid, it sets the number of
-/// columns the grid will have.
+/// Segments is used to set the number of columns that a single *grid cell* spans.
+/// When applied to a [GridFrame], it sets the number of columns the grid will have.
 struct Segments {
 
-    /// Number of columns used by a grid item.
+    /// Number of columns to use.
     uint amount = 1;
 
-    /// Set the number of columns present in a grid.
+    /// Set the number of columns relevant to an item.
+    /// Params:
+    ///     grid = Change the number of columns in this [GridFrame].
+    ///     cell = Set the width of a single *grid cell* in terms of columns.
+    ///         Under the hood, this is equivalent to `.layout(n)`: it will set the node's
+    ///         `layout.expand` property.
     void apply(GridFrame grid) {
-
         grid.segmentCount = amount;
-
     }
 
-    /// Set the number of columns used by this node.
-    void apply(Node node) {
-
-        node.layout.expand = amount;
-
+    /// ditto
+    void apply(Node cell) {
+        cell.layout.expand = amount;
     }
 
 }
 
-/// ditto
+/// [Node parameter][nodeBuilder] that sets the width of a *grid cell* in terms of columns, or,
+/// for [GridFrame], it sets the number of columns that should be available in the grid.
 Segments segments(uint columns) {
-
     return Segments(columns);
-
 }
 
 /// ditto
 Segments segments(uint columns)() {
-
     return Segments(columns);
-
 }
 
 /// The GridFrame node will align its children in a 2D grid.
