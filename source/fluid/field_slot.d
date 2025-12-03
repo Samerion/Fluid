@@ -1,5 +1,20 @@
+/// [FieldSlot] wraps an input node, expanding its hitbox to cover other surrounding nodes.
 ///
+/// It can be constructed with the [fieldSlot] node builder.
 module fluid.field_slot;
+
+@safe:
+
+///
+@("fieldSlot example")
+unittest {
+    import fluid;
+
+    fieldSlot!vframe(
+        label("Username"),
+        textInput(),
+    );
+}
 
 import fluid.node;
 import fluid.utils;
@@ -10,25 +25,23 @@ import fluid.backend;
 import fluid.io.hover;
 import fluid.io.focus;
 
-@safe:
-
-
-/// A field slot is a node meant to hold an input node along with associated nodes, like labels. It's functionally
-/// equivalent to the [`<label>` element in HTML](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/label).
+/// Node builder for [FieldSlot].
 ///
-/// Fields expand the interactable (clickable) area of input nodes by other nodes that are placed inside the slot. For
-/// example, in the code snippet below, if the user clicks on the "username" label, the text input underneath will gain
-/// focus.
+/// It accepts a single template parameter to define container type the slot should use:
+/// for example `fieldSlot!vframe` will act like a vertical [Frame][fluid.frame], and a
+/// `fieldSlot!onionFrame` will act like an [OnionFrame][fluid.onion_frame].
 ///
-/// ---
-/// fieldSlot!vframe(
-///     label("Username"),
-///     textInput(),
-/// )
-/// ---
-alias fieldSlot(alias node) = simpleConstructor!(FieldSlot, node);
+/// Other than that, the constructor accepts the same arguments as the node picked;
+/// `fieldSlot!vframe` will take a list of children, just like `vframe` would.
+alias fieldSlot(alias node) = nodeBuilder!(FieldSlot, node);
 
-/// ditto
+/// A field slot is a node meant to hold an input node along with associated
+/// nodes, like labels. It's functionally equivalent to the [`<label>` element in
+/// HTML](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/label).
+///
+/// Fields expand the interactable (clickable) area of input nodes by other nodes that are placed
+/// inside the slot. For example, in the code snippet below, if the user clicks on the "username"
+/// label, the text input underneath will gain focus.
 class FieldSlot(T : Node) : T, FluidHoverable, Hoverable, Focusable {
 
     mixin makeHoverable;
