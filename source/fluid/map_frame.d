@@ -17,8 +17,9 @@ import fluid.utils;
 import fluid.actions;
 import fluid.backend;
 
-/// Node builder for [MapFrame]. The constructor takes a number of child nodes, each optionally
-/// preceded by [MapDropVector], [Vector2], or [MapPosition]. See [MapFrame.this] for more details.
+/// Node builder for [MapFrame]. The constructor takes a number of child nodes, each
+/// optionally preceded by [MapDropVector], [Vector2], or [MapPosition]. See [`MapFrame`
+/// constructor](#.MapFrame.this) for more details.
 alias mapFrame = nodeBuilder!MapFrame;
 
 ///
@@ -161,43 +162,36 @@ class MapFrame : Frame {
 
     }
 
-    /// Construct the space. Arguments are either nodes, or positions/vectors affecting the next node added through
-    /// the constructor.
+    /// Construct the frame.
+    /// Params:
+    ///     children = A sequence of nodes, each optionally preceded by one or more of the
+    ///         following types:
+    ///
+    ///         * [Vector2] specifies the coordinate to assign to the next node in the list,
+    ///         * [MapDropVector] assigns the anchor for the next node in the list,
+    ///         * [MapPosition] assigns both at the same time.
     this(T...)(T children) {
-
         Position position;
-
         static foreach (child; children) {
 
             // Update position
             static if (is(typeof(child) == Position)) {
-
                 position = child;
-
             }
-
             else static if (is(typeof(child) == MapDropVector)) {
-
                 position.drop = child;
-
             }
-
             else static if (is(typeof(child) == Vector2)) {
-
                 position.coords = child;
-
             }
 
             // Add child
             else {
-
                 addChild(child, position);
                 position = Position.init;
-
             }
 
         }
-
     }
 
     /// Add a new child to the space and assign it some position.
