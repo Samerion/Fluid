@@ -117,7 +117,17 @@ struct Segments {
 
 }
 
-/// The GridFrame node will align its children in a 2D grid.
+/// The `GridFrame` is a vertical [Frame] that works with [GridRow] nodes to align their children
+/// into columns.
+///
+/// Each [GridRow] child is a *grid cell*, and is assigned to a column of the grid. The first
+/// cell is assigned to column one, second to column two, and so on, so that no cell in a row
+/// shares a column with another. Cells can span multiple columns by applying the [segments] node
+/// parameter.
+///
+/// The size of each column is calculated separately in `GridFrame` and shared across `GridRow`
+/// rows. The frame will attempt to find optimal size for each column, so that, if possible, each
+/// cell can fit in its assigned column.
 class GridFrame : Frame {
 
     size_t segmentCount;
