@@ -144,11 +144,16 @@ class MapFrame : Frame {
     alias DropVector = MapDropVector;
     alias Position = MapPosition;
 
-    /// Mapping of nodes to their positions.
-    Position[Node] positions;
+    public {
 
-    /// If true, the node will prevent its children from leaving the screen space.
-    bool preventOverflow;
+        /// This associative array maps each node to its position inside the frame.
+        Position[Node] positions;
+
+        /// If true, the node will prevent its children from leaving the frame's assigned space.
+        /// If the position of a node is set out of the frame's bounds, it will be reassigned.
+        bool preventOverflow;
+
+    }
 
     private {
 
