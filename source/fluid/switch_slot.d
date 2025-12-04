@@ -1,23 +1,25 @@
+/// [SwitchSlot] is an **experimental** node that tries nodes from a list, and uses the first that
+/// can fit in available space.
 ///
+/// [switchSlot] is available to use as a node builder.
 module fluid.switch_slot;
+
+@safe:
 
 import fluid.node;
 import fluid.utils;
 import fluid.style;
 import fluid.backend;
 
+/// [nodeBuilder] for [SwitchSlot]. Takes a list of nodes, in order from largest to smallest,
+/// optionally terminated with a `null` to indicate nothing should be displayed if no node fits.
+alias switchSlot = nodeBuilder!SwitchSlot;
 
-@safe:
-
-
-/// A switch slot will try each of its children and pick the first one that fits the available space. If the a node
-/// is too large to fit, it will try the next one in the list until it finds one that matches, or the last node in the
-/// list.
+/// A switch slot will try each of its children and pick the first one that fits the available
+/// space. If the a node is too large to fit, it will try the next one in the list until it finds
+/// one that matches, or the last node in the list.
 ///
-/// `null` is an acceptable value, indicating that no node should be drawn.
-alias switchSlot = simpleConstructor!SwitchSlot;
-
-/// ditto
+/// `null` is an acceptable child for `SwitchSlot`, indicating that no node should be drawn.
 class SwitchSlot : Node {
 
     public {
