@@ -36,8 +36,6 @@ unittest {
 
 /// ## Layout nodes
 ///
-/// > Note: Documentation for this section is incomplete.
-///
 /// A single node isn't very useful on its own — but nodes can be composed together.
 /// Using handy layout nodes like [Frame] or [Space] you can arrange other nodes on the screen.
 /// Use a [NodeSlot] to quickly switch between displayed nodes.
