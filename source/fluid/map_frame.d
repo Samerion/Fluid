@@ -1,3 +1,5 @@
+/// [MapFrame] allows placing nodes in arbitrary locations inside itself.
+/// It can be constructed using the [mapFrame] node builder.
 module fluid.map_frame;
 
 import std.conv;
@@ -17,54 +19,102 @@ import fluid.backend;
 @safe:
 
 
-/// Defines the direction the node is "dropped from", that is, which corner of the object will be the anchor.
-/// Defaults to `start, start`, therefore, the supplied coordinate refers to the top-left of the object.
+/// Defines the direction the node is "dropped from", that is, which corner of the object will be
+/// the anchor. Defaults to `(start, start)`, so the supplied coordinate refers to the top-left of
+/// the object.
 ///
-/// Automatic may be set to make it present common dropdown behavior — top-left by default, but will change if there
-/// is overflow.
+/// `automatic` may be set to make it present common dropdown behavior: top-left by default, but
+/// if available space is limited, changed accordingly.
 enum MapDropDirection {
-
-    start, center, end, automatic,
-
+    start,      /// Left or top edge.
+    center,     /// Middle of the node.
+    end,        /// Right or bottom edge.
+    automatic,  /// Set appropriate edge automatically based on available space.
     centre = center,
-
 }
 
+/// A pair of [MapDropDirection] values, one for the X axis, and another for the Y axis.
 struct MapDropVector {
 
+    ///
     MapDropDirection x, y;
 
 }
 
+/// Assigned node position and edges/corners it is anchored to.
 struct MapPosition {
 
+    /// Position of the node, `(0, 0)` is the top-left of the [MapFrame].
     Vector2 coords;
+
+    /// Anchor of the node for each axis. See [MapDropDirection] and [MapDropVector] for details.
     MapDropVector drop;
 
     alias coords this;
 
 }
 
+/// Returns:
+///     Default [MapDropVector]: `(start, start)`.
 MapDropVector dropVector()() {
-
     return MapDropVector.init;
-
 }
 
+/// Params:
+///     dropXY = [MapDropDirection] value as a string: `start`, `center`, `end` or `automatic`.
+/// Returns:
+///     [MapDropVector] with the same value for both axes.
 MapDropVector dropVector(string dropXY)() {
-
     return dropVector!(dropXY, dropXY);
-
 }
 
-MapDropVector dropVector(string dropX, string dropY)() {
+///
+@("dropVector single axis example")
+unittest {
+    import fluid;
+    mapFrame(
+        dropVector!"start",
+        label("anchored to (start, start)"),
 
+        dropVector!"center",
+        label("anchored to (center, center)"),
+
+        dropVector!"end",
+        label("anchored to (end, end)"),
+
+        dropVector!"automatic",
+        label("anchor chosen automatically on both axes"),
+    );
+}
+
+/// Params:
+///     dropX = X axis [MapDropDirection] value as a string: `start`, `center`, `end` or
+///         `automatic`.
+///     dropY = Y axis value, just like `dropX`.
+/// Returns:
+///     [MapDropVector] with `dropX` for the X axis and `dropY` for the Y axis.
+MapDropVector dropVector(string dropX, string dropY)() {
     enum val(string dropV) = dropV == "auto"
         ? MapDropDirection.automatic
         : dropV.to!MapDropDirection;
 
     return MapDropVector(val!dropX, val!dropY);
+}
 
+///
+@("dropVector dual axis example")
+unittest {
+    import fluid;
+    mapFrame(
+        dropVector!("start", "end"),
+        label("anchored to (start, end)"),
+
+        dropVector!("center", "center"),
+        label("anchored to (center, center)"),
+
+        dropVector!("start", "automatic"),
+        label("horizontal anchor set to left edge, vertical picked automatically"),
+    );
 }
 
 /// MapFrame is a frame where every child node can be placed in an arbitrary location.
