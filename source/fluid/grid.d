@@ -82,6 +82,17 @@ unittest {
 /// Note that [gridFrame] supports creating `gridRow` by passing an array of nodes instead.
 alias gridRow = nodeBuilder!GridRow;
 
+/// [Node parameter][nodeBuilder] that sets the width of a *grid cell* in terms of columns, or,
+/// for [GridFrame], it sets the number of columns that should be available in the grid.
+Segments segments(uint columns) {
+    return Segments(columns);
+}
+
+/// ditto
+Segments segments(uint columns)() {
+    return Segments(columns);
+}
+
 /// Segments is used to set the number of columns that a single *grid cell* spans.
 /// When applied to a [GridFrame], it sets the number of columns the grid will have.
 struct Segments {
@@ -104,17 +115,6 @@ struct Segments {
         cell.layout.expand = amount;
     }
 
-}
-
-/// [Node parameter][nodeBuilder] that sets the width of a *grid cell* in terms of columns, or,
-/// for [GridFrame], it sets the number of columns that should be available in the grid.
-Segments segments(uint columns) {
-    return Segments(columns);
-}
-
-/// ditto
-Segments segments(uint columns)() {
-    return Segments(columns);
 }
 
 /// The GridFrame node will align its children in a 2D grid.
