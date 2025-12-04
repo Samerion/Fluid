@@ -269,9 +269,10 @@ class MapFrame : Frame {
         positions[node].drop = vector;
     }
 
-    deprecated("`MapFrame.mouseDrag` is legacy and will not continue to work with Fluid's new I/O system. "
-        ~ "You can use `moveChildBy` to move nodes, but you need to implement mouse controls yourself. "
-        ~ "Consequently, `mouseDrag` will be removed in Fluid 0.8.0.") {
+    deprecated("`MapFrame.mouseDrag` is legacy and will not continue to work with Fluid's new"
+        ~ " I/O system. You can use `moveChildBy` to move nodes, but you need to implement"
+        ~ " mouse controls yourself. Consequently, `mouseDrag` will be removed in Fluid 0.8.0.")
+    {
 
         Node mouseDrag(Node node) @trusted {
 
@@ -284,14 +285,12 @@ class MapFrame : Frame {
 
         }
 
-        /// Get the node currently affected by mouseDrag.
-        inout(Node) mouseDrag() inout { return _mouseDrag; }
+        inout(Node) mouseDrag() inout {
+            return _mouseDrag;
+        }
 
-        /// Stop current mouse movements
         final void stopMouseDrag() {
-
             _mouseDrag = null;
-
         }
 
     }
