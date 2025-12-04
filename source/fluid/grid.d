@@ -1,4 +1,35 @@
+/// [GridFrame] creates a table composed out of [GridRow] nodes.
+///
+/// They can be created using [gridFrame] and [gridRow] node builders respectively.
+///
+/// Mind that the name "grid" may be misleading, as the node is designed to create a table; a
+/// type grid, surely, but it does not cover usecases commonly expected from grid layout in UI
+/// frameworks.
+///
+/// Note:
+///     Grid code is in a considerably bad state and begs for a rewrite.
+///     https://git.samerion.com/Samerion/Fluid/issues/288
 module fluid.grid;
+
+@safe:
+
+///
+@("gridFrame example")
+unittest {
+    import fluid;
+    gridFrame(
+        [
+            label("Row 1, column 1"),
+            label("Row 1, column 2"),
+            label("Row 1, column 3"),
+        ],
+        [
+            label("Row 2, column 1"),
+            label("Row 2, column 2"),
+            label("Row 2, column 3"),
+        ],
+    );
+}
 
 import std.range;
 import std.algorithm;
@@ -11,9 +42,6 @@ import fluid.utils;
 import fluid.backend;
 import fluid.structs;
 
-@safe:
-
-
 deprecated("`Grid` and `grid` were renamed to `GridFrame` and `gridFrame` respectively. To be removed in 0.8.0.") {
 
     alias grid = simpleConstructor!GridFrame;
@@ -21,52 +49,100 @@ deprecated("`Grid` and `grid` were renamed to `GridFrame` and `gridFrame` respec
 
 }
 
-alias gridFrame = simpleConstructor!GridFrame;
-alias gridRow = simpleConstructor!GridRow;
+/// [Node builder][nodeBuilder] for [GridFrame]. Usually, it will be given arrays of nodes (which
+/// it then converts into [GridRow] nodes), but it can also be given `GridRow` or other nodes
+/// directly.
+///
+/// See_Also:
+///     [gridRow] creates an individual row.
+alias gridFrame = nodeBuilder!GridFrame;
 
-// TODO rename segments to columns?
-
-/// Segments is used to set the number of columns spanned by a grid item. When applied to a grid, it sets the number of
-/// columns the grid will have.
-struct Segments {
-
-    /// Number of columns used by a grid item.
-    uint amount = 1;
-
-    /// Set the number of columns present in a grid.
-    void apply(GridFrame grid) {
-
-        grid.segmentCount = amount;
-
-    }
-
-    /// Set the number of columns used by this node.
-    void apply(Node node) {
-
-        node.layout.expand = amount;
-
-    }
-
+/// #### Examples
+/// `gridFrame` nodes can also be passed [.segments] to create cells that span multiple rows.
+unittest {
+    import fluid;
+    gridFrame(
+        [
+            label(
+                .segments!2,
+                "Row 1, columns 1 and 2"
+            ),
+            label("Row 1, column 3"),
+        ],
+        [
+            label("Row 2, column 1"),
+            label("Row 2, column 2"),
+            label("Row 2, column 3"),
+        ],
+    );
 }
 
-/// ditto
+/// Node builder for [GridRow]. It accepts the same arguments as [Frame]: a list of children.
+///
+/// Note that [gridFrame] supports creating `gridRow` by passing an array of nodes instead.
+alias gridRow = nodeBuilder!GridRow;
+
+/// [Node parameter][nodeBuilder] that sets the width of a *grid cell* in terms of columns, or,
+/// for [GridFrame], it sets the number of columns that should be available in the grid.
 Segments segments(uint columns) {
-
     return Segments(columns);
-
 }
 
 /// ditto
 Segments segments(uint columns)() {
-
     return Segments(columns);
+}
+
+/// Segments is used to set the number of columns that a single *grid cell* spans.
+/// When applied to a [GridFrame], it sets the number of columns the grid will have.
+struct Segments {
+
+    /// Number of columns to use.
+    uint amount = 1;
+
+    /// Set the number of columns relevant to an item.
+    /// Params:
+    ///     grid = Change the number of columns in this [GridFrame].
+    ///     cell = Set the width of a single *grid cell* in terms of columns.
+    ///         Under the hood, this is equivalent to `.layout(n)`: it will set the node's
+    ///         `layout.expand` property.
+    void apply(GridFrame grid) {
+        grid.segmentCount = amount;
+    }
+
+    /// ditto
+    void apply(Node cell) {
+        cell.layout.expand = amount;
+    }
 
 }
 
-/// The GridFrame node will align its children in a 2D grid.
+/// The `GridFrame` is a vertical [Frame] that works with [GridRow] nodes to align their children
+/// into columns.
+///
+/// Each [GridRow] child is a *grid cell*, and is assigned to a column of the grid. The first
+/// cell is assigned to column one, second to column two, and so on, so that no cell in a row
+/// shares a column with another. Cells can span multiple columns by applying the [segments] node
+/// parameter.
+///
+/// The size of each column is calculated separately in `GridFrame` and shared across `GridRow`
+/// rows. The frame will attempt to find optimal size for each column, so that, if possible, each
+/// cell can fit in its assigned column.
+///
+/// Children that are not [GridRow] will be treated just like children of regular `vframe` would:
+/// they will fill the entire width of the frame, unrestricted by columns.
 class GridFrame : Frame {
 
-    size_t segmentCount;
+    public {
+
+        /// Number of columns present in the grid. If `0`, the number will be calculated
+        /// automatically when the frame is resized.
+        ///
+        /// Once set, the number of segments will stay constant unless explicitly set to `0`
+        /// again.
+        size_t segmentCount;
+
+    }
 
     private {
 
@@ -78,6 +154,13 @@ class GridFrame : Frame {
 
     }
 
+    /// Create a grid frame.
+    /// Params:
+    ///     children = Children of this frame.
+    ///
+    ///         Each argument can be an array of nodes, or a node.
+    ///         Arrays will be translated into rows, so an array is just a shorthand for
+    ///         [gridRow]; `[node1, node2]` is equivalent to `gridRow(node1, node2)`.
     this(Ts...)(Ts children) {
 
         this.children.length = children.length;
@@ -103,33 +186,28 @@ class GridFrame : Frame {
 
     }
 
-    /// Add a new row to this grid.
+    /// Add a new row to this grid. Equivalent to `children ~= gridRow(content)`
+    /// Params:
+    ///     content = Child nodes for the row.
     void addRow(Ts...)(Ts content) {
-
         children ~= gridRow(content);
+    }
 
+    /// Returns:
+    ///     An array of numbers indicating the width of each segment in the grid in pixels.
+    const(int)[] segmentSizes() const {
+        return _segmentSizes;
     }
 
     /// Magic to extract return value of extractParams at compile time.
     private struct Number(size_t num) {
-
         enum value = num;
-
     }
 
-    /// Returns:
-    ///     An array of numbers indicating the width of each segment in the grid.
-    const(int)[] segmentSizes() const {
-
-        return _segmentSizes;
-
-    }
-
-    /// Evaluate special parameters and get the index of the first non-special parameter (not Segments, Layout nor
-    /// Theme).
+    /// Evaluate special parameters and get the index of the first non-special parameter (not
+    /// Segments, Layout nor Theme).
     /// Returns: An instance of `Number` with said index as parameter.
     private auto extractParams(Args...)(Args args) {
-
         enum maxInitialArgs = min(args.length, 3);
 
         static foreach (i, arg; args[0..maxInitialArgs]) {
@@ -139,23 +217,17 @@ class GridFrame : Frame {
 
             // Segment count
             else static if (is(typeof(arg) : Segments)) {
-
                 segmentCount = arg.expand;
-
             }
 
             // Layout
             else static if (is(typeof(arg) : Layout)) {
-
                 layout = arg;
-
             }
 
             // Theme
             else static if (is(typeof(arg) : Theme)) {
-
                 theme = arg;
-
             }
 
             // Mark this as the end
@@ -170,17 +242,13 @@ class GridFrame : Frame {
         }
 
         return Number!endIndex();
-
     }
 
     override protected void resizeImpl(Vector2 space) {
-
         import std.numeric;
 
         // Need to recalculate segments
         if (segmentCount == 0) {
-
-            // Increase segment count
             segmentCount = 1;
 
             // Check children
@@ -202,11 +270,9 @@ class GridFrame : Frame {
                 }
 
             }
-
         }
 
         else {
-
             foreach (child; children) {
 
                 // Assign self as parent to all rows
@@ -215,27 +281,17 @@ class GridFrame : Frame {
                 }
 
             }
-
         }
 
         // Reserve the segments
         _segmentSizes = new int[segmentCount];
-
-        // Resize the children
         super.resizeImpl(space);
-
-        // Reset width
         lastWidth = 0;
-
     }
 
     override void drawImpl(Rectangle outer, Rectangle inner) {
-
-        // Draw the background
         pickStyle.drawBackground(tree.io, canvasIO, outer);
-
         drawChildren(inner);
-
     }
 
     protected override Vector2 drawNextChild(Rectangle inner, Vector2 start, Node child) {
@@ -282,37 +338,40 @@ class GridFrame : Frame {
 
 }
 
-/// A single row in a `Grid`.
+/// Represents a single row in a [GridFrame]. Distributes its children so that they fit into
+/// columns assigned by its parent.
+///
+/// `GridRow` must *only* be placed in `GridFrame`.
 class GridRow : Frame {
 
+    /// Parent [GridFrame]. Set automatically by `GridFrame` before resizing.
     GridFrame parent;
+
+    /// Number of columns used by this row. This is the sum of each of the children's column
+    /// span, and may differ from the parent's [segmentCount][GridFrame.segmentCount].
+    ///
+    /// If set to `0`, it will be recalculated during the next resize.
     size_t segmentCount;
 
     /// Params:
     ///     nodes = Children to be placed in the row.
     this(Ts...)(Ts nodes) {
-
         super(nodes);
         this.layout.nodeAlign = NodeAlign.fill;
         this.directionHorizontal = true;
-
     }
 
+    /// Recalculate [segmentCount].
     void calculateSegments() {
-
         segmentCount = 0;
 
         // Count segments used by each child
         foreach (child; children) {
-
             segmentCount += either(child.layout.expand, 1);
-
         }
-
     }
 
     override void resizeImpl(Vector2 space) {
-
         use(canvasIO);
 
         // Reset the size
@@ -320,12 +379,8 @@ class GridRow : Frame {
 
         // Empty row; do nothing
         if (children.length == 0) return;
-
-        // No segments calculated, run now
         if (segmentCount == 0) {
-
             calculateSegments();
-
         }
 
         size_t segment;
@@ -364,11 +419,9 @@ class GridRow : Frame {
             }
 
         }
-
     }
 
     override protected void drawChildren(Rectangle inner) {
-
         size_t segment;
 
         /// Child position.
@@ -391,7 +444,6 @@ class GridRow : Frame {
             position.x += width;
 
         }
-
     }
 
 }
