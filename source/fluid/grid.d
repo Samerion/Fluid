@@ -186,33 +186,28 @@ class GridFrame : Frame {
 
     }
 
-    /// Add a new row to this grid.
+    /// Add a new row to this grid. Equivalent to `children ~= gridRow(content)`
+    /// Params:
+    ///     content = Child nodes for the row.
     void addRow(Ts...)(Ts content) {
-
         children ~= gridRow(content);
+    }
 
+    /// Returns:
+    ///     An array of numbers indicating the width of each segment in the grid in pixels.
+    const(int)[] segmentSizes() const {
+        return _segmentSizes;
     }
 
     /// Magic to extract return value of extractParams at compile time.
     private struct Number(size_t num) {
-
         enum value = num;
-
     }
 
-    /// Returns:
-    ///     An array of numbers indicating the width of each segment in the grid.
-    const(int)[] segmentSizes() const {
-
-        return _segmentSizes;
-
-    }
-
-    /// Evaluate special parameters and get the index of the first non-special parameter (not Segments, Layout nor
-    /// Theme).
+    /// Evaluate special parameters and get the index of the first non-special parameter (not
+    /// Segments, Layout nor Theme).
     /// Returns: An instance of `Number` with said index as parameter.
     private auto extractParams(Args...)(Args args) {
-
         enum maxInitialArgs = min(args.length, 3);
 
         static foreach (i, arg; args[0..maxInitialArgs]) {
@@ -222,23 +217,17 @@ class GridFrame : Frame {
 
             // Segment count
             else static if (is(typeof(arg) : Segments)) {
-
                 segmentCount = arg.expand;
-
             }
 
             // Layout
             else static if (is(typeof(arg) : Layout)) {
-
                 layout = arg;
-
             }
 
             // Theme
             else static if (is(typeof(arg) : Theme)) {
-
                 theme = arg;
-
             }
 
             // Mark this as the end
@@ -253,17 +242,13 @@ class GridFrame : Frame {
         }
 
         return Number!endIndex();
-
     }
 
     override protected void resizeImpl(Vector2 space) {
-
         import std.numeric;
 
         // Need to recalculate segments
         if (segmentCount == 0) {
-
-            // Increase segment count
             segmentCount = 1;
 
             // Check children
@@ -285,11 +270,9 @@ class GridFrame : Frame {
                 }
 
             }
-
         }
 
         else {
-
             foreach (child; children) {
 
                 // Assign self as parent to all rows
@@ -298,27 +281,17 @@ class GridFrame : Frame {
                 }
 
             }
-
         }
 
         // Reserve the segments
         _segmentSizes = new int[segmentCount];
-
-        // Resize the children
         super.resizeImpl(space);
-
-        // Reset width
         lastWidth = 0;
-
     }
 
     override void drawImpl(Rectangle outer, Rectangle inner) {
-
-        // Draw the background
         pickStyle.drawBackground(tree.io, canvasIO, outer);
-
         drawChildren(inner);
-
     }
 
     protected override Vector2 drawNextChild(Rectangle inner, Vector2 start, Node child) {
