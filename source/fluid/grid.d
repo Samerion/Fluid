@@ -130,7 +130,16 @@ struct Segments {
 /// cell can fit in its assigned column.
 class GridFrame : Frame {
 
-    size_t segmentCount;
+    public {
+
+        /// Number of columns present in the grid. If `0`, the number will be calculated
+        /// automatically when the frame is resized.
+        ///
+        /// Once set, the number of segments will stay constant unless explicitly set to `0`
+        /// again.
+        size_t segmentCount;
+
+    }
 
     private {
 
