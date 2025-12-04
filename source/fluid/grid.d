@@ -338,37 +338,40 @@ class GridFrame : Frame {
 
 }
 
-/// A single row in a `Grid`.
+/// Represents a single row in a [GridFrame]. Distributes its children so that they fit into
+/// columns assigned by its parent.
+///
+/// `GridRow` must *only* be placed in `GridFrame`.
 class GridRow : Frame {
 
+    /// Parent [GridFrame]. Set automatically by `GridFrame` before resizing.
     GridFrame parent;
+
+    /// Number of columns used by this row. This is the sum of each of the children's column
+    /// span, and may differ from the parent's [segmentCount][GridFrame.segmentCount].
+    ///
+    /// If set to `0`, it will be recalculated during the next resize.
     size_t segmentCount;
 
     /// Params:
     ///     nodes = Children to be placed in the row.
     this(Ts...)(Ts nodes) {
-
         super(nodes);
         this.layout.nodeAlign = NodeAlign.fill;
         this.directionHorizontal = true;
-
     }
 
+    /// Recalculate [segmentCount].
     void calculateSegments() {
-
         segmentCount = 0;
 
         // Count segments used by each child
         foreach (child; children) {
-
             segmentCount += either(child.layout.expand, 1);
-
         }
-
     }
 
     override void resizeImpl(Vector2 space) {
-
         use(canvasIO);
 
         // Reset the size
@@ -376,12 +379,8 @@ class GridRow : Frame {
 
         // Empty row; do nothing
         if (children.length == 0) return;
-
-        // No segments calculated, run now
         if (segmentCount == 0) {
-
             calculateSegments();
-
         }
 
         size_t segment;
@@ -420,11 +419,9 @@ class GridRow : Frame {
             }
 
         }
-
     }
 
     override protected void drawChildren(Rectangle inner) {
-
         size_t segment;
 
         /// Child position.
@@ -447,7 +444,6 @@ class GridRow : Frame {
             position.x += width;
 
         }
-
     }
 
 }
