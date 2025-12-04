@@ -128,6 +128,9 @@ struct Segments {
 /// The size of each column is calculated separately in `GridFrame` and shared across `GridRow`
 /// rows. The frame will attempt to find optimal size for each column, so that, if possible, each
 /// cell can fit in its assigned column.
+///
+/// Children that are not [GridRow] will be treated just like children of regular `vframe` would:
+/// they will fill the entire width of the frame, unrestricted by columns.
 class GridFrame : Frame {
 
     public {
@@ -151,6 +154,13 @@ class GridFrame : Frame {
 
     }
 
+    /// Create a grid frame.
+    /// Params:
+    ///     children = Children of this frame.
+    ///
+    ///         Each argument can be an array of nodes, or a node.
+    ///         Arrays will be translated into rows, so an array is just a shorthand for
+    ///         [gridRow]; `[node1, node2]` is equivalent to `gridRow(node1, node2)`.
     this(Ts...)(Ts children) {
 
         this.children.length = children.length;
