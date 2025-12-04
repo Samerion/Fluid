@@ -2,6 +2,8 @@
 /// It can be constructed using the [mapFrame] node builder.
 module fluid.map_frame;
 
+@safe:
+
 import std.conv;
 import std.math;
 import std.format;
@@ -15,9 +17,24 @@ import fluid.utils;
 import fluid.actions;
 import fluid.backend;
 
+/// Node builder for [MapFrame]. The constructor takes a number of child nodes, each optionally
+/// preceded by [MapDropVector], [Vector2], or [MapPosition]. See [MapFrame.this] for more details.
+alias mapFrame = nodeBuilder!MapFrame;
 
-@safe:
+///
+@("mapFrame example")
+unittest {
+    import fluid;
+    mapFrame(
+        .Vector2(500, 500),
+        label("This label displays 500 pixels from the left, and 500 pixels from the top"),
 
+        .dropVector!("center", "start"),
+        .Vector2(500, 500),
+        label("The top of this node is centered 500 pixels from the left, 500 pixels from the"
+            ~ " top"),
+    );
+}
 
 /// Defines the direction the node is "dropped from", that is, which corner of the object will be
 /// the anchor. Defaults to `(start, start)`, so the supplied coordinate refers to the top-left of
@@ -117,12 +134,9 @@ unittest {
     );
 }
 
-/// MapFrame is a frame where every child node can be placed in an arbitrary location.
+/// MapFrame is a [Frame] where every child node can be placed in an arbitrary location.
 ///
-/// MapFrame supports drag & drop.
-alias mapFrame = simpleConstructor!MapFrame;
-
-/// ditto
+/// MapFrame is a valid [drag & drop][fluid.drag_slot] target.
 class MapFrame : Frame {
 
     alias DropDirection = MapDropDirection;
