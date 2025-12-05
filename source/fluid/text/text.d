@@ -670,6 +670,11 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         ruler = requireRulerAt(value.length);
         _sizeDots = ruler.textSize;
 
+        // Collapse the text if it's 0 on any axis
+        if (_sizeDots.x == 0 || _sizeDots.y == 0) {
+            _sizeDots = Vector2();
+        }
+
     }
 
     bool isMeasured() const {
