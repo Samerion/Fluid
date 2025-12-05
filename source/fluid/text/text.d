@@ -797,8 +797,18 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     ///     Text ruler with text measurement data from the start of the text to the given character, not including
     ///     queried character. The ruler has an extra `point` field, indicating distance from the start of the text.
     CachedTextRuler rulerAtPosition(Vector2 needle) {
+        return rulerAtPosition(null, needle);
+    }
 
-        return rulerAtPositionDots(backend.scale * needle);
+    /// ditto
+    CachedTextRuler rulerAtPosition(CanvasIO canvasIO, Vector2 needle) {
+        if (canvasIO) {
+            return rulerAtPositionDots(
+                canvasIO.toDots(needle));
+        }
+        else {
+            return rulerAtPositionDots(backend.scale * needle);
+        }
 
     }
 
