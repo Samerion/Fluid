@@ -180,7 +180,7 @@ unittest {
 
     auto root = textInput(.multiline);
 
-    root.push("hello");
+    root.savePush("hello");
     root.runInputAction!(FluidInputAction.breakLine);
     assert(root.value == "hello\n");
 
@@ -219,14 +219,14 @@ unittest {
 
 }
 
-@("breakLine creates history entries")
+@("TextInput.breakLine creates its own history entry")
 unittest {
 
     auto root = textInput(.multiline);
-    root.push("first line");
-    root.breakLine();
-    root.push("second line");
-    root.breakLine();
+    root.savePush("first line");
+    root.runInputAction!(FluidInputAction.breakLine);
+    root.savePush("second line");
+    root.runInputAction!(FluidInputAction.breakLine);
     assert(root.value == "first line\nsecond line\n");
 
     root.undo();
@@ -886,15 +886,15 @@ unittest {
 unittest {
 
     auto root = textInput(.multiline);
-    root.push("Hello, ");
+    root.savePush("Hello, ");
     root.runInputAction!(FluidInputAction.breakLine);
-    root.push("new");
+    root.savePush("new");
     root.runInputAction!(FluidInputAction.breakLine);
-    root.push("line");
-    root.chop;
-    root.chopWord;
-    root.push("few");
-    root.push(" lines");
+    root.savePush("line");
+    root.runInputAction!(FluidInputAction.backspace);
+    root.runInputAction!(FluidInputAction.backspaceWord);
+    root.savePush("few");
+    root.savePush(" lines");
     assert(root.value == "Hello, \nnew\nfew lines");
 
     // Move back to last chop
@@ -908,6 +908,8 @@ unittest {
     assert(root.value == "Hello, \nnew\n");
 
     // Move back through isnerts
+    root.undo();
+    assert(root.value == "Hello, \nnew\nlin");
     root.undo();
     assert(root.value == "Hello, \nnew\nline");
     root.undo();
@@ -931,6 +933,8 @@ unittest {
     root.redo();
     assert(root.value == "Hello, \nnew\nline");
     root.redo();
+    assert(root.value == "Hello, \nnew\nlin");
+    root.redo();
     assert(root.value == "Hello, \nnew\n");
     root.redo();
     assert(root.value == "Hello, \nnew\nfew lines");
@@ -938,7 +942,7 @@ unittest {
     // Navigate and replace "Hello"
     root.caretIndex = 5;
     root.runInputAction!(FluidInputAction.selectPreviousWord);
-    root.push("Hi");
+    root.savePush("Hi");
     assert(root.value == "Hi, \nnew\nfew lines");
     assert(root.valueBeforeCaret == "Hi");
 
@@ -952,26 +956,26 @@ unittest {
 
 }
 
-@("Movement breaks up inserts into separate TextInput history entries")
+@("History entries do not merge if the caret has moved")
 unittest {
 
     auto root = textInput();
 
-    foreach (i; 0..4) {
+    foreach (i; "dcba") {
         root.caretToStart();
-        root.push("a");
+        root.savePush(i);
     }
 
-    assert(root.value == "aaaa");
+    assert(root.value == "abcd");
     assert(root.valueBeforeCaret == "a");
     root.undo();
-    assert(root.value == "aaa");
+    assert(root.value == "bcd");
     assert(root.valueBeforeCaret == "");
     root.undo();
-    assert(root.value == "aa");
+    assert(root.value == "cd");
     assert(root.valueBeforeCaret == "");
     root.undo();
-    assert(root.value == "a");
+    assert(root.value == "d");
     assert(root.valueBeforeCaret == "");
     root.undo();
     assert(root.value == "");
