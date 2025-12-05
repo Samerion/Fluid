@@ -9,6 +9,8 @@ import fluid.style;
 import fluid.backend;
 import fluid.structs;
 
+import fluid.io.hover;
+import fluid.io.canvas;
 
 @safe:
 
@@ -32,7 +34,7 @@ class Slider(T) : AbstractSlider {
     this(R)(R range, size_t index, void delegate() @safe changed = null)
     if (is(ElementType!R == T)) {
 
-        this(params, range, changed);
+        this(range, changed);
         this.index = index;
 
     }
@@ -87,67 +89,13 @@ unittest {
 
 }
 
-unittest {
-
-    const size = Vector2(500, 200);
-    const rect = Rectangle(0, 0, size.tupleof);
-
-    auto io = new HeadlessBackend(size);
-    auto root = slider!int(
-        .layout!("fill", "start"),
-        iota(1, 4)
-    );
-
-    root.io = io;
-    root.draw();
-
-    // Default value
-    assert(root.index == 0);
-    assert(root.value == 1);
-
-    // Press at the center
-    io.mousePosition = center(rect);
-    io.press;
-    root.draw();
-
-    // This should have switched to the second value
-    assert(root.index == 1);
-    assert(root.value == 2);
-
-    // Move the mouse below the bar
-    io.nextFrame;
-    io.mousePosition = Vector2(0, end(rect).y + 100);
-    root.draw();
-
-    // The slider should still be affected
-    assert(root.index == 0);
-    assert(root.value == 1);
-
-    // Release the mouse and move again
-    io.nextFrame;
-    io.release;
-    io.nextFrame;
-    io.mousePosition = Vector2(center(rect).x, end(rect).y + 100);
-    root.draw();
-
-    // No change
-    assert(root.index == 0);
-    assert(root.value == 1);
-
-    // Slider should react to input actions
-    io.nextFrame;
-    root.runInputAction!(FluidInputAction.scrollRight);
-    root.draw();
-
-    assert(root.index == 1);
-    assert(root.value == 2);
-
-}
-
 abstract class AbstractSlider : InputNode!Node {
 
     enum railWidth = 4;
     enum minStepDistance = 10;
+
+    CanvasIO canvasIO;
+    HoverIO hoverIO;
 
     public {
 
@@ -191,7 +139,10 @@ abstract class AbstractSlider : InputNode!Node {
 
     override void resizeImpl(Vector2 space) {
 
-        handle.resize(tree, theme, space);
+        use(canvasIO);
+        use(hoverIO);
+
+        resizeChild(handle, space);
         minSize = handle.minSize;
 
     }
@@ -209,7 +160,7 @@ abstract class AbstractSlider : InputNode!Node {
         _isPressed = checkIsPressed();
 
         // Draw the rail
-        style.drawBackground(io, rail);
+        style.drawBackground(io, canvasIO, rail);
 
         const availableWidth = rail.width - handle.size.x;
         const handleOffset = availableWidth * index / (length - 1f);
@@ -232,26 +183,28 @@ abstract class AbstractSlider : InputNode!Node {
             const start = Vector2(firstStepX + visualStepDistance * step, end(rail).y);
             const end = Vector2(start.x, end(outer).y);
 
-            style.drawLine(io, start, end);
+            style.drawLine(io, canvasIO, start, end);
 
         }
 
         // Draw the handle
-        handle.draw(handleRect);
+        drawChild(handle, handleRect);
 
     }
 
-    @(FluidInputAction.press, WhileDown)
-    protected void press() {
+    @(FluidInputAction.press, WhileHeld)
+    protected void press(HoverPointer pointer) {
+
+        import std.math;
+        import std.algorithm;
+
+        const maxStep = max(length, 1) - 1;
 
         // Get mouse position relative to the first step
-        const offset = io.mousePosition.x - firstStepX + stepDistance/2;
+        const offset = pointer.position.x - firstStepX + stepDistance/2;
 
         // Get step based on X axis position
-        const step = cast(size_t) (offset / stepDistance);
-
-        // Validate the value
-        if (step >= length) return;
+        const step = cast(size_t) (offset / stepDistance).clamp(0, maxStep);
 
         // Set the index
         if (index != step) {
@@ -259,6 +212,19 @@ abstract class AbstractSlider : InputNode!Node {
             index = step;
             if (changed) changed();
 
+        }
+
+    }
+
+    @(FluidInputAction.press, WhileDown)
+    protected void press() {
+
+        // The new I/O system will call the other overload.
+        // Call it as a polyfill for the old system.
+        if (!hoverIO) {
+            HoverPointer pointer;
+            pointer.position = io.mousePosition;
+            press(pointer);
         }
 
     }
@@ -335,6 +301,8 @@ class SliderRangeImpl(T) : SliderRange!(ElementType!T) {
 /// Defines the handle of a slider.
 class SliderHandle : Node {
 
+    CanvasIO canvasIO;
+
     public {
 
         Vector2 size = Vector2(16, 20);
@@ -349,13 +317,14 @@ class SliderHandle : Node {
 
     override void resizeImpl(Vector2 space) {
 
+        use(canvasIO);
         minSize = size;
 
     }
 
     override void drawImpl(Rectangle outer, Rectangle inner) {
 
-        style.drawBackground(io, outer);
+        pickStyle().drawBackground(io, canvasIO, outer);
 
     }
 

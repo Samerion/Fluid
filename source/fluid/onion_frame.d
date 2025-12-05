@@ -1,122 +1,79 @@
+/// [OnionFrame] draws its children one on another, in layers. It is used to draw one node in
+/// front of another.
 ///
+/// Use [onionFrame] to build.
 module fluid.onion_frame;
 
 import fluid.frame;
 import fluid.utils;
 import fluid.style;
+import fluid.structs;
 import fluid.backend;
-
 
 @safe:
 
+/// [nodeBuilder] for [OnionFrame]. `OnionFrame` accepts any amount of child nodes, ordered from
+/// bottom (first) to top (last).
+alias onionFrame = nodeBuilder!OnionFrame;
 
-/// An onion frame places its children as layers, drawing one on top of the other, instead of on the side.
 ///
-/// Children are placed in order of drawing — the last child will be drawn last, and so, will appear on top.
-alias onionFrame = simpleConstructor!OnionFrame;
+@("onionFrame builder example")
+unittest {
+    import fluid.label;
+    onionFrame(
+        label("Drawn at the bottom, behind other nodes"),
+        label("Drawn in the middle, in between other nodes"),
+        label("Drawn at the top, in front of other nodes"),
+    );
+}
 
-/// ditto
+/// This [Frame] draws nodes in a stack, in the same assigned space. It layers them, so each node
+/// appears in front of the last.
 class OnionFrame : Frame {
 
     this(T...)(T args) {
-
         super(args);
-
     }
 
     protected override void resizeImpl(Vector2 available) {
-
         import std.algorithm : max;
 
+        use(canvasIO);
         minSize = Vector2(0, 0);
 
         // Check each child
         foreach (child; children) {
-
-            // Resize the child
-            child.resize(tree, theme, available);
-
-            // Update minSize
+            resizeChild(child, available);
             minSize.x = max(minSize.x, child.minSize.x);
             minSize.y = max(minSize.y, child.minSize.y);
-
         }
-
     }
 
-    protected override void drawImpl(Rectangle outer, Rectangle inner) {
-
-        const style = pickStyle();
-        style.drawBackground(tree.io, outer);
-
+    protected override void drawChildren(Rectangle inner) {
         foreach (child; filterChildren) {
-
-            child.draw(inner);
-
+            drawChild(child, inner);
         }
-
     }
 
 }
 
 ///
 unittest {
-
     import fluid;
 
     auto myFrame = onionFrame(
 
         // Draw an image
-        imageView("logo.png"),
+        imageView(
+            .layout!"fill",
+            "logo.png"
+        ),
 
-        // Draw a label in the middle of the frame
+        // Draw a label on top of the image, in the middle
         label(
-            layout!(1, "center"),
+            .layout!"center",
             "Hello, Fluid!"
         ),
 
     );
-
-}
-
-unittest {
-
-    import fluid.label;
-    import fluid.structs;
-    import fluid.image_view;
-
-    ImageView view;
-    Label[2] labels;
-
-    auto io = new HeadlessBackend(Vector2(1000, 1000));
-    auto root = onionFrame(
-
-        view = imageView("logo.png"),
-
-        labels[0] = label(
-            "Hello, Fluid!"
-        ),
-
-        labels[1] = label(
-            layout!(1, "center"),
-            "Hello, Fluid! This text should fit the image."
-        ),
-
-    );
-
-    with (Rule)
-    root.theme = nullTheme.derive(
-        rule!Label(textColor = color!"000"),
-    );
-    root.io = io;
-    root.draw();
-
-    // imageView
-    io.assertTexture(view.texture, Vector2(0, 0), color!"fff");
-
-    // First label
-    io.assertTexture(labels[0].text.texture.chunks[0], Vector2(0, 0), color("#fff"));
-
-    // TODO onionFrame should perform shrink-expand ordering similarly to `space`. The last label should wrap.
-
 }

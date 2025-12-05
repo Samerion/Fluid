@@ -6,6 +6,9 @@ import fluid.input;
 import fluid.utils;
 import fluid.style;
 import fluid.backend;
+import fluid.image_view;
+
+import fluid.io.canvas;
 
 @safe:
 
@@ -16,6 +19,8 @@ alias checkbox = simpleConstructor!Checkbox;
 class Checkbox : InputNode!Node {
 
     mixin enableInputActions;
+
+    CanvasIO canvasIO;
 
     /// Additional features available for checkbox styling.
     static class Extra : typeof(super).Extra {
@@ -39,6 +44,7 @@ class Checkbox : InputNode!Node {
 
     private {
 
+        DrawableImage _markImage;
         bool _isChecked;
 
     }
@@ -64,19 +70,31 @@ class Checkbox : InputNode!Node {
 
     /// If true, the box is checked.
     bool isChecked() const {
-
         return _isChecked;
 
     }
 
     /// ditto
     bool isChecked(bool value) {
-
+        updateSize();
         return _isChecked = value;
+    }
 
+    /// Get the currently used checkmark image. Requires `CanvasIO`, updated on resize.
+    /// Returns:
+    ///     Active checkmark image.
+    inout(Image) markImage() inout {
+        return _markImage;
     }
 
     protected override void resizeImpl(Vector2 space) {
+
+        use(canvasIO);
+
+        if (canvasIO) {
+            _markImage = getImage(pickStyle());
+            load(canvasIO, _markImage);
+        }
 
         minSize = size;
 
@@ -88,21 +106,35 @@ class Checkbox : InputNode!Node {
 
         auto style = pickStyle();
 
-        style.drawBackground(io, outer);
+        style.drawBackground(io, canvasIO, outer);
+
+        if (canvasIO) {
+
+            const size = _markImage.size.fitInto(inner.size);
+            const position = center(inner) - size/2;
+
+            _markImage.draw(Rectangle(position.tupleof, size.tupleof));
+
+        }
 
         if (auto texture = getTexture(style)) {
 
-            // Get the scale
-            const scale = min(
-                inner.width / texture.width,
-                inner.height / texture.height
-            );
-            const size     = Vector2(texture.width * scale, texture.height * scale);
+            const size = texture.canvasSize.fitInto(inner.size);
             const position = center(inner) - size/2;
 
             texture.draw(Rectangle(position.tupleof, size.tupleof));
 
         }
+
+    }
+
+    /// Get checkmark image used by this checkbox.
+    protected Image getImage(Style style) {
+
+        if (auto extra = cast(Extra) style.extra) {
+            return extra.checkmark;
+        }
+        return Image.init;
 
     }
 
@@ -155,29 +187,5 @@ unittest {
     auto myCheckbox = checkbox();
 
     assert(!myCheckbox.isChecked);
-
-}
-
-unittest {
-
-    int changed;
-
-    auto io = new HeadlessBackend;
-    auto root = checkbox(delegate {
-
-        changed++;
-
-    });
-
-    root.io = io;
-    root.runInputAction!(FluidInputAction.press);
-
-    assert(changed == 1);
-    assert(root.isChecked);
-
-    root.runInputAction!(FluidInputAction.press);
-
-    assert(changed == 2);
-    assert(!root.isChecked);
 
 }

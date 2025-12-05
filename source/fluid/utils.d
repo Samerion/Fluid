@@ -43,7 +43,7 @@ template nodeBuilder(alias T, alias Parent, alias fun = "a") {
         alias initializer = unaryFun!fun;
 
         initializer(a);
-        Parent.initializer(a);
+        Parent.initialize(a);
 
     });
 
@@ -60,7 +60,15 @@ struct NodeBuilder(T, alias fun = "a") {
     import fluid.structs;
 
     alias Type = T;
+
+    deprecated("`NodeBuilder.initializer` is affected by a codegen bug in DMD, "
+        ~ "and has been replaced with `initialize`. "
+        ~ "Please update your code before Fluid 0.8.0")
     alias initializer = unaryFun!fun;
+
+    void initialize(T node) {
+        unaryFun!fun(node);
+    }
 
     Type opCall(Args...)(Args args) {
 
@@ -71,7 +79,7 @@ struct NodeBuilder(T, alias fun = "a") {
         auto result = new Type(args[paramCount..$]);
 
         // Run the initializer
-        initializer(result);
+        initialize(result);
 
         // Apply the parameters
         result.applyAll(args[0..paramCount]);
@@ -124,7 +132,7 @@ unittest {
     assert(yfoo().value == "foo");
 
     auto myFoo = new Foo;
-    yfoo.initializer(myFoo);
+    yfoo.initialize(myFoo);
     assert(myFoo.value == "foo");
 
     static class Bar(T) : T {
@@ -163,7 +171,7 @@ unittest {
 ///     subject    = Subject to modify.
 ///     parameters = Parameters to apply onto the subject;
 /// Returns:
-///     The subject after applying the modifications. 
+///     The subject after applying the modifications.
 ///     If subject is a class, this is the same object as passed.
 Subject applyAll(Subject, Parameters...)(Subject subject, Parameters parameters) {
 
@@ -209,7 +217,7 @@ float pt(float points) {
 
 /// Convert pixels to points.
 /// Params:
-///     points = Input value in pixels.
+///     px = Input value in pixels.
 /// Returns: Given value in points.
 float pxToPt(float px) {
 
@@ -249,26 +257,124 @@ bool overlap(Rectangle a, Rectangle b) {
 
 }
 
+/// Load a two dimensional vector from a string.
+///
+/// The string should either be a single float value, like `1.5`, or two, separated by an `x`
+/// character: `1.5 x 1.2`. If there is only one value, it will be used for both axes.
+///
+/// Params:
+///     source = String to parse.
+/// Returns:
+///     String to load from.
+Vector2 toSizeVector2(string source) {
+
+    import std.conv : to;
+    import std.string : strip;
+    import std.algorithm : findSplit;
+
+    // Load the render scale from environment
+    if (auto pair = source.findSplit("x")) {
+        return Vector2(
+            pair[0].strip.to!float,
+            pair[2].strip.to!float
+        );
+    }
+    else {
+        const value = source.strip.to!float;
+        return Vector2(value, value);
+    }
+
+}
+
+unittest {
+
+    assert("1.5".toSizeVector2 == Vector2(1.5, 1.5));
+    assert("1.5x1.2".toSizeVector2 == Vector2(1.5, 1.2));
+    assert("2.0 x 1.0".toSizeVector2 == Vector2(2.0, 1.0));
+    assert(" 2.0x1.0 ".toSizeVector2 == Vector2(2.0, 1.0));
+
+}
+
 // Extremely useful Rectangle utilities
 
 /// Get the top-left corner of a rectangle.
-Vector2 start(Rectangle r) {
+Vector2 start(Rectangle r) nothrow {
     return Vector2(r.x, r.y);
 }
 
 /// Get the bottom-right corner of a rectangle.
-Vector2 end(Rectangle r) {
+Vector2 end(Rectangle r) nothrow {
     return Vector2(r.x + r.w, r.y + r.h);
 }
 
 /// Get the center of a rectangle.
-Vector2 center(Rectangle r) {
+Vector2 center(Rectangle r) nothrow {
     return Vector2(r.x + r.w/2, r.y + r.h/2);
 }
 
 /// Get the size of a rectangle.
-Vector2 size(Rectangle r) {
+Vector2 size(Rectangle r) nothrow {
     return Vector2(r.w, r.h);
+}
+
+/// Get the area of a rectangle.
+float area(Rectangle r) nothrow {
+    return r.w * r.h;
+}
+
+/// Intersect two rectangles
+Rectangle intersect(Rectangle one, Rectangle two) nothrow {
+
+    import std.algorithm : min, max;
+
+    Rectangle result;
+    result.x = max(one.x, two.x);
+    result.y = max(one.y, two.y);
+    result.w = max(0, min(one.x + one.w, two.x + two.w) - result.x);
+    result.h = max(0, min(one.y + one.h, two.y + two.h) - result.y);
+    return result;
+
+}
+
+/// Create a point that is in the same position relative to the destination rectangle,
+/// as is the input point relative to the source rectangle.
+///
+/// Relation is expressed is in term of a fraction or percentage. If the point is in the center
+/// of the source rectangle, the returned point will be in the center of the destination
+/// rectangle.
+///
+/// Params:
+///     point       = Point to transform.
+///     source      = Original viewport; source point is relative to this viewport.
+///     destination = Viewport used as destination. Resulting point will be relative
+///         to this viewport.
+/// Returns:
+///     A point located in the same place, relative to the other viewport.
+Vector2 viewportTransform(Vector2 point, Rectangle source, Rectangle destination) {
+    point = point - source.start;
+    point = Vector2(
+        point.x * destination.width  / source.width,
+        point.y * destination.height / source.height,
+    );
+    return point + destination.start;
+}
+
+///
+@("Viewport transform example works")
+unittest {
+
+    const source      = Rectangle(100, 100,  50,  50);
+    const destination = Rectangle(100,   0, 100, 100);
+
+    // Corners and center
+    assert(source.start .viewportTransform(source, destination) == destination.start);
+    assert(source.center.viewportTransform(source, destination) == destination.center);
+    assert(source.end   .viewportTransform(source, destination) == destination.end);
+
+    // Arbitrary positions
+    assert(Vector2(125, 100).viewportTransform(source, destination) == Vector2( 150,    0));
+    assert(Vector2(  0,   0).viewportTransform(source, destination) == Vector2(-100, -200));
+
 }
 
 /// Get names of static fields in the given object.

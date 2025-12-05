@@ -37,6 +37,18 @@ unittest {
 
 }
 
+/// Create a color from RGBA values.
+Color color(ubyte r, ubyte g, ubyte b, ubyte a = ubyte.max) pure nothrow {
+
+    Color color;
+    color.r = r;
+    color.g = g;
+    color.b = b;
+    color.a = a;
+    return color;
+
+}
+
 /// Create a color from hex code.
 Color color(string hexCode)() {
 
@@ -112,7 +124,7 @@ unittest {
 }
 
 /// Set the alpha channel for the given color, as a float.
-Color setAlpha(Color color, float alpha) {
+Color setAlpha(Color color, float alpha) pure nothrow {
 
     import std.algorithm : clamp;
 
@@ -121,7 +133,7 @@ Color setAlpha(Color color, float alpha) {
 
 }
 
-Color setAlpha()(Color color, int alpha) {
+Color setAlpha()(Color, int) pure nothrow {
 
     static assert(false, "Overload setAlpha(Color, int). Explicitly choose setAlpha(Color, float) (0...1 range) or "
         ~ "setAlpha(Color, ubyte) (0...255 range)");
@@ -129,7 +141,7 @@ Color setAlpha()(Color color, int alpha) {
 }
 
 /// Set the alpha channel for the given color, as a float.
-Color setAlpha(Color color, ubyte alpha) {
+Color setAlpha(Color color, ubyte alpha) pure nothrow {
 
     color.a = alpha;
     return color;
@@ -140,6 +152,7 @@ Color setAlpha(Color color, ubyte alpha) {
 /// alpha is zero, returns `bottom`.
 ///
 /// BUG: This function is currently broken and returns incorrect results.
+deprecated("alphaBlend is bugged and unused, it will be removed in Fluid 0.8.0")
 Color alphaBlend(Color bottom, Color top) {
 
     auto topA = cast(float) top.a / ubyte.max;
@@ -155,7 +168,7 @@ Color alphaBlend(Color bottom, Color top) {
 }
 
 /// Multiple color values.
-Color multiply(Color a, Color b) {
+Color multiply(Color a, Color b) nothrow {
 
     return Color(
         cast(ubyte) (a.r * b.r / 255.0),
@@ -254,10 +267,21 @@ struct Image {
     /// ignored.
     Color[] palette;
 
+    /// Width and height of the texture, **in dots**. The meaning of a dot is defined by `dpiX` and `dpiY`
     int width, height;
 
+    /// Dots per inch for the X and Y axis. Defaults to 96, thus making a dot in the texture equivalent to a pixel.
+    ///
+    /// Applies only if used via `CanvasIO`.
+    int dpiX = 96, dpiY = 96;
+
+    /// This number should be incremented after editing the image to signal `CanvasIO` that a change has been made.
+    ///
+    /// Edits made using `Image`'s methods will *not* bump this number. It has to be incremented manually.
+    int revisionNumber;
+
     /// Create an RGBA image.
-    this(Color[] rgbaPixels, int width, int height) {
+    this(Color[] rgbaPixels, int width, int height) pure nothrow {
 
         this.format = Format.rgba;
         this.rgbaPixels = rgbaPixels;
@@ -267,7 +291,7 @@ struct Image {
     }
 
     /// Create a paletted image.
-    this(PalettedColor[] palettedAlphaPixels, int width, int height) {
+    this(PalettedColor[] palettedAlphaPixels, int width, int height) pure nothrow {
 
         this.format = Format.palettedAlpha;
         this.palettedAlphaPixels = palettedAlphaPixels;
@@ -277,7 +301,7 @@ struct Image {
     }
 
     /// Create an alpha mask.
-    this(ubyte[] alphaPixels, int width, int height) {
+    this(ubyte[] alphaPixels, int width, int height) pure nothrow {
 
         this.format = Format.alpha;
         this.alphaPixels = alphaPixels;
@@ -286,20 +310,49 @@ struct Image {
 
     }
 
-    Vector2 size() const {
-
+    Vector2 size() const pure nothrow {
         return Vector2(width, height);
-
     }
 
-    int area() const {
+    /// Returns:
+    ///     Size of the image in dots. This is the factual size of the image.
+    Vector2 canvasSize() const pure nothrow {
+        return Vector2(width, height);
+    }
+
+    /// Returns:
+    ///     Size of the image in pixels (not dots). This is the space the image will occupy
+    ///     in the viewport.
+    deprecated("`Image.viewportSize()` yields incorrect results. "
+        ~ "Use `Image.viewportSize(Vector2)` instead. "
+        ~ "The original overload will be removed in Fluid 0.8.0.")
+    Vector2 viewportSize() const pure nothrow {
+        return Vector2(
+            width * 96f / dpiX,
+            height * 96f / dpiY
+        );
+    }
+
+    /// Params:
+    ///     dpi = DPI of the canvas.
+    /// Returns:
+    ///     Size of the image in pixels (not dots). This is the space the image will occupy
+    ///     in the viewport.
+    Vector2 viewportSize(Vector2 dpi) const pure nothrow {
+        return Vector2(
+            width * dpiX / dpi.x,
+            height * dpiY / dpi.y
+        );
+    }
+
+    int area() const nothrow {
 
         return width * height;
 
     }
 
     /// Get a palette entry at given index.
-    Color paletteColor(PalettedColor pixel) const {
+    Color paletteColor(PalettedColor pixel) const pure nothrow {
 
         // Valid index, return the color; Set alpha to match the pixel
         if (pixel.index < palette.length)
@@ -307,12 +360,12 @@ struct Image {
 
         // Invalid index, return white
         else
-            return Color(0xff, 0xff, 0xff, pixel.alpha);
+            return color(0xff, 0xff, 0xff, pixel.alpha);
 
     }
 
     /// Get data of the image in raw form.
-    inout(void)[] data() inout {
+    inout(void)[] data() inout pure nothrow {
 
         final switch (format) {
 
@@ -460,6 +513,70 @@ struct Image {
                 return;
 
         }
+
+    }
+
+    /// Convert to an RGBA image.
+    ///
+    /// Does nothing if the image is already an RGBA image. If it's a paletted image, decodes the colors
+    /// using currently assigned palette. If it's an alpha mask, fills the image with white.
+    ///
+    /// Returns:
+    ///     Self if already in RGBA format, or a newly made image by converting the data.
+    Image toRGBA() pure nothrow {
+
+        final switch (format) {
+
+            case Format.rgba:
+                return this;
+
+            case Format.palettedAlpha:
+                auto colors = new Color[palettedAlphaPixels.length];
+                foreach (i, pixel; palettedAlphaPixels) {
+                    colors[i] = paletteColor(pixel);
+                }
+                return Image(colors, width, height);
+
+            case Format.alpha:
+                auto colors = new Color[alphaPixels.length];
+                foreach (i, pixel; alphaPixels) {
+                    colors[i] = color(0xff, 0xff, 0xff, pixel);
+                }
+                return Image(colors, width, height);
+
+        }
+
+    }
+
+    string toString() const pure {
+        import std.array;
+
+        Appender!(char[]) text;
+        toString(text);
+        return text[];
+    }
+
+    void toString(Writer)(ref Writer writer) const {
+
+        import std.conv;
+        import std.range;
+
+        put(writer, "Image(");
+        put(writer, format.to!string);
+        put(writer, ", 0x");
+        put(writer, (cast(size_t) data.ptr).toChars!16);
+        put(writer, ", ");
+        if (format == Format.palettedAlpha) {
+            put(writer, "palette: ");
+            put(writer, palette.to!string);
+            put(writer, ", ");
+        }
+        put(writer, width.toChars);
+        put(writer, "x");
+        put(writer, height.toChars);
+        put(writer, ", rev ");
+        put(writer, revisionNumber.toChars);
+        put(writer, ")");
 
     }
 

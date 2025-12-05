@@ -1,32 +1,43 @@
+/// [SwitchSlot] is an **experimental** node that tries nodes from a list, and uses the first that
+/// can fit in available space.
 ///
+/// [switchSlot] is available to use as a node builder.
 module fluid.switch_slot;
+
+@safe:
 
 import fluid.node;
 import fluid.utils;
 import fluid.style;
 import fluid.backend;
 
+/// [nodeBuilder] for [SwitchSlot]. Takes a list of nodes, in order from largest to smallest,
+/// optionally terminated with a `null` to indicate nothing should be displayed if no node fits.
+alias switchSlot = nodeBuilder!SwitchSlot;
 
-@safe:
-
-
-/// A switch slot will try each of its children and pick the first one that fits the available space. If the a node
-/// is too large to fit, it will try the next one in the list until it finds one that matches, or the last node in the
-/// list.
+/// A switch slot will try each of its children and pick the first one that fits the available
+/// space. If the a node is too large to fit, it will try the next one in the list until it finds
+/// one that matches, or the last node in the list.
 ///
-/// `null` is an acceptable value, indicating that no node should be drawn.
-alias switchSlot = simpleConstructor!SwitchSlot;
-
-/// ditto
+/// `null` is an acceptable child for `SwitchSlot`, indicating that no node should be drawn.
 class SwitchSlot : Node {
 
     public {
 
+        /// Array of nodes to test, tested in order. The first node that fits inside space
+        /// available to `SwitchSlot` will be chosen.
+        ///
+        /// If no node can fit, the last node on the list will be picked, which may be `null`.
+        /// In case `null` is picked, no node will be displayed.
         Node[] availableNodes;
+
+        /// Node to chosen by the slot to display.
         Node node;
 
-        /// If present, this node will only be drawn in case its principal node is hidden. In case the principal node is
-        /// another `SwitchSlot`, this might be because it failed to match any non-null node.
+        /// If present, this node will only be drawn in case its principal node is hidden.
+        ///
+        /// `SwitchSlot` will be hidden if it picks `null` for a child node. This can be used
+        /// to set another slot as a fallback, given it appears in a later spot in the tree.
         Node principalNode;
 
     }
@@ -42,6 +53,9 @@ class SwitchSlot : Node {
 
         alias isHidden = typeof(super).isHidden;
 
+        /// Returns:
+        ///     True if the slot is marked as [hidden][Node.isHidden], or if it chose
+        ///     `null` as a child among available candidates.
         override bool isHidden() const return {
 
             // Tree is available and resized
@@ -62,30 +76,37 @@ class SwitchSlot : Node {
 
     }
 
+    /// Params:
+    ///     nodes = Array of candidates to use in the slot.
+    ///         The nodes will be tested in order as given, and the first one that matches
+    ///         will be used.
+    /// See_Also:
+    ///     [availableNodes] for more details on how nodes are picked.
     this(Node[] nodes...) {
-
         this.availableNodes ~= nodes;
-
     }
 
-    /// Create a new slot that will only draw if this slot is hidden or ends up with a `null` node.
+    /// Create a new slot that will only draw if this slot is hidden or ends up with a `null`
+    /// node. For this to work, the "retry" slot must appear later in the tree.
+    ///
+    /// Params:
+    ///     args = Arguments to pass to the slot's constructor; candidate nodes.
+    ///         See [constructor](#.SwitchSlot.this).
+    /// Returns:
+    ///     Created slot.
     SwitchSlot retry(Args...)(Args args) {
-
         auto slot = switchSlot(args);
         slot.principalNode = this;
         return slot;
-
     }
 
     override void resizeImpl(Vector2 availableSpace) {
-
         minSize = Vector2();
         this.node = null;
         _availableSpace = availableSpace;
 
         // Try each option
         foreach (i, node; availableNodes) {
-
             this.node = node;
 
             // Null node reached, stop with no minSize
@@ -95,7 +116,7 @@ class SwitchSlot : Node {
             auto previousTheme = node.theme;
             auto previousSize = node.minSize;
 
-            node.resize(tree, theme, availableSpace);
+            resizeChild(node, availableSpace);
 
             // Stop if it fits within available space
             if (node.minSize.x <= availableSpace.x && node.minSize.y <= availableSpace.y) break;
@@ -106,244 +127,22 @@ class SwitchSlot : Node {
                 // Resize the node again to recursively restore old parameters
                 node.tree = null;
                 node.inheritTheme(Theme.init);
-                node.resize(previousTree, previousTheme, previousSize);
+                resizeChild(node, previousSize);
 
             }
-
         }
 
         // Copy minSize
         minSize = node.minSize;
-
     }
 
     override void drawImpl(Rectangle outer, Rectangle inner) {
-
-        // No node to draw, stop
         if (node is null) return;
-
-        // Draw the node
-        node.draw(inner);
-
+        drawChild(node, inner);
     }
 
     override bool hoveredImpl(Rectangle, Vector2) const {
-
         return false;
-
     }
-
-}
-
-@("SwitchSlot works")
-unittest {
-
-    import fluid.frame;
-
-    Frame bigFrame, smallFrame;
-    int bigDrawn, smallDrawn;
-
-    auto io = new HeadlessBackend;
-    auto slot = switchSlot(
-        bigFrame = new class Frame {
-            override void resizeImpl(Vector2) {
-                minSize = Vector2(300, 300);
-            }
-            override void drawImpl(Rectangle outer, Rectangle) {
-                io.drawRectangle(outer, color!"f00");
-                bigDrawn++;
-            }
-        },
-        smallFrame = new class Frame {
-            override void resizeImpl(Vector2) {
-                minSize = Vector2(100, 100);
-            }
-            override void drawImpl(Rectangle outer, Rectangle) {
-                io.drawRectangle(outer, color!"0f0");
-                smallDrawn++;
-            }
-        },
-    );
-
-    slot.io = io;
-
-    // By default, there should be enough space to draw the big frame
-    slot.draw();
-
-    assert(slot.node is bigFrame);
-    assert(bigDrawn == 1);
-    assert(smallDrawn == 0);
-
-    // Reduce the viewport, this time the small frame should be drawn
-    io.nextFrame;
-    io.windowSize = Vector2(200, 200);
-    slot.draw();
-
-    assert(slot.node is smallFrame);
-    assert(bigDrawn == 1);
-    assert(smallDrawn == 1);
-
-    // Do it again, but make it so neither fit
-    io.nextFrame;
-    io.windowSize = Vector2(50, 50);
-    slot.draw();
-
-    // The small one should be drawn regardless
-    assert(slot.node is smallFrame);
-    assert(bigDrawn == 1);
-    assert(smallDrawn == 2);
-
-    // Unless a null node is added
-    io.nextFrame;
-    slot.availableNodes ~= null;
-    slot.updateSize();
-    slot.draw();
-
-    assert(slot.node is null);
-    assert(bigDrawn == 1);
-    assert(smallDrawn == 2);
-
-    // Resize to fit the big node
-    io.nextFrame;
-    io.windowSize = Vector2(400, 400);
-    slot.draw();
-
-    assert(slot.node is bigFrame);
-    assert(bigDrawn == 2);
-    assert(smallDrawn == 2);
-
-}
-
-unittest {
-
-    import fluid.frame;
-    import fluid.structs;
-
-    int principalDrawn, deputyDrawn;
-
-    auto io = new HeadlessBackend;
-    auto principal = switchSlot(
-        layout!(1, "fill"),
-        new class Frame {
-            override void resizeImpl(Vector2) {
-                minSize = Vector2(200, 200);
-            }
-            override void drawImpl(Rectangle outer, Rectangle) {
-                io.drawRectangle(outer, color!"f00");
-                principalDrawn++;
-            }
-        },
-        null
-    );
-    auto deputy = principal.retry(
-        layout!(1, "fill"),
-        new class Frame {
-            override void resizeImpl(Vector2 space) {
-                minSize = Vector2(50, 200);
-            }
-            override void drawImpl(Rectangle outer, Rectangle) {
-                io.drawRectangle(outer, color!"f00");
-                deputyDrawn++;
-            }
-        }
-    );
-    auto root = vframe(
-        layout!(1, "fill"),
-        hframe(
-            layout!(1, "fill"),
-            deputy,
-        ),
-        hframe(
-            layout!(1, "fill"),
-            principal,
-        ),
-    );
-
-    root.io = io;
-
-    // At the default size, the principal should be preferred
-    root.draw();
-
-    assert(principalDrawn == 1);
-    assert(deputyDrawn == 0);
-
-    // Resize the window so that the principal can't fit
-    io.nextFrame;
-    io.windowSize = Vector2(300, 300);
-
-    root.draw();
-
-    assert(principalDrawn == 1);
-    assert(deputyDrawn == 1);
-
-}
-
-unittest {
-
-    import std.algorithm;
-
-    import fluid.space;
-    import fluid.structs;
-
-    SwitchSlot slot;
-
-    auto checker = new class Node {
-
-        Vector2 size;
-        Vector2[] spacesGiven;
-
-        override void resizeImpl(Vector2 space) {
-
-            spacesGiven ~= space;
-            size = minSize = Vector2(500, 200);
-
-        }
-
-        override void drawImpl(Rectangle, Rectangle) {
-
-        }
-
-    };
-
-    auto parentSlot = switchSlot(checker, null);
-    auto childSlot = parentSlot.retry(checker);
-
-    auto root = vspace(
-        layout!"fill",
-        nullTheme,
-
-        // Two slots: child slot that gets resized earlier
-        hspace(
-            layout!"fill",
-            childSlot,
-        ),
-
-        // Parent slot that doesn't give enough space for the child to fit
-        hspace(
-            layout!"fill",
-            vspace(
-                layout!(1, "fill"),
-                parentSlot,
-            ),
-            vspace(
-                layout!(3, "fill"),
-            ),
-        ),
-    );
-
-    root.draw();
-
-    // The principal slot gives the least space, namely the width of the window divided by 4
-    assert(checker.spacesGiven.map!"a.x".minElement == HeadlessBackend.defaultWindowSize.x / 4);
-
-    // The window size that is accepted is equal to its size, as it was assigned by the fallback slot
-    assert(checker.spacesGiven[$-1] == checker.size);
-
-    // A total of three resizes were performed: one by the fallback, one by the parent and one, final, by the parent
-    // using previous parameters
-    assert(checker.spacesGiven.length == 3);
-
-    // The first one (which should be the child's) has the largest width given, equal to the window width
-    assert(checker.spacesGiven[0].x == HeadlessBackend.defaultWindowSize.x);
 
 }

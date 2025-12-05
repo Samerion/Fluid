@@ -2,18 +2,31 @@
 module fluid.node;
 
 import std.math;
+import std.meta;
+import std.range;
 import std.traits;
 import std.string;
 import std.algorithm;
 
-import fluid.backend;
+import fluid.io;
 import fluid.tree;
 import fluid.style;
 import fluid.utils;
 import fluid.input;
 import fluid.actions;
 import fluid.structs;
+import fluid.backend;
 import fluid.theme : Breadcrumbs;
+
+import fluid.future.pipe;
+import fluid.future.context;
+import fluid.future.branch_action;
+
+// mustuse is not available in LDC 1.28
+static if (__traits(compiles, { import core.attribute : mustuse; }))
+    import core.attribute : mustuse;
+else
+    private alias mustuse = AliasSeq!();
 
 
 @safe:
@@ -66,12 +79,30 @@ abstract class Node {
         /// Breadcrumbs assigned and applicable to this node. Loaded every resize and every draw.
         Breadcrumbs breadcrumbs;
 
-        /// If true, this node will be removed from the tree on the next draw.
-        bool toRemove;
-
-        /// If true, mouse focus will be disabled for this node, so mouse signals will "go through" to its parents, as
-        /// if the node wasn't there. The node will still detect hover like normal.
+        /// If true, mouse focus will be disabled for this node, so mouse signals will "go
+        /// through" to its parents, as if the node wasn't there. The node will still detect hover
+        /// like normal.
+        ///
+        /// In the new I/O system, this has been replaced with `inBoundsFilter`. The system will
+        /// continue to respect `ignoreMouse` until the last of `0.7.x` releases.
         bool ignoreMouse;
+
+        /// Filter to apply to every result of `inBounds`, controlling how the node reacts to
+        /// some events, such as mouse click or a finger touch.
+        ///
+        /// By changing this to `HitFilter.miss`, this can be used to prevent a node
+        /// from accepting hover input, making it "invisible" to such input. A value of
+        /// `HitFilter.missBranch` will disable the whole branch, including its children.
+        /// `HitFilter.hitBranch` will only block children from taking input, but retain the
+        /// node's ability to take it.
+        ///
+        /// The default value allows all events.
+        HitFilter hitFilter;
+
+        deprecated("`isOpaque` has been renamed to `hitFilter` and will be removed in Fluid 0.8.0")
+        final ref inout isOpaque() {
+            return hitFilter;
+        }
 
         /// True if the theme has been assigned explicitly by a direct assignment. If false, the node will instead
         /// inherit themes from the parent.
@@ -101,6 +132,9 @@ abstract class Node {
         /// Check if this node is disabled, or has inherited the status.
         bool _isDisabledInherited;
 
+        /// If true, this node will be removed from the tree on the next draw.
+        bool _toRemove;
+
         /// Theme of this node.
         Theme _theme;
 
@@ -112,14 +146,19 @@ abstract class Node {
 
         /// Actions queued for this node; only used for queueing actions before the first `resize`; afterwards, all
         /// actions are queued directly into the tree.
+        ///
+        /// `_queuedAction` queues into `LayoutTree` (legacy), whereas `_queuedActionsNew` queues into `TreeContext`.
         TreeAction[] _queuedActions;
+
+        /// ditto
+        TreeAction[] _queuedActionsNew;
 
     }
 
     @property {
 
         /// Check if the node is hidden.
-        bool isHidden() const return { return _isHidden; }
+        bool isHidden() const return { return _isHidden || toRemove; }
 
         /// Set the visibility
         bool isHidden(bool value) return {
@@ -152,20 +191,45 @@ abstract class Node {
     ///     `fluid.utils.simpleConstructor`
     this() { }
 
-    /// Get the current theme.
-    inout(Theme) theme() inout { return _theme; }
+    /// Returns: True if both nodes are the same node.
+    override bool opEquals(const Object other) const @safe {
 
-    /// Set the theme.
-    Theme theme(Theme value) {
-
-        isThemeExplicit = true;
-        updateSize();
-        return _theme = value;
+        return this is other;
 
     }
 
-    /// Nodes automatically inherit theme from their parent, and the root node implictly inherits the default theme.
-    /// An explicitly-set theme will override any inherited themes recursively, stopping at nodes that also have themes 
+    /// ditto
+    bool opEquals(const Node otherNode) const {
+
+        return this is otherNode;
+
+    }
+
+    /// The theme defines how the node will appear to the user.
+    ///
+    /// Themes affect the node and its children, and can respond to changes in state,
+    /// like values changing or user interaction.
+    ///
+    /// If no theme has been set, a default one will be provided and used automatically.
+    ///
+    /// See `Theme` for more information.
+    ///
+    /// Returns: Currently active theme.
+    /// Params:
+    ///     newValue = Change the current theme.
+    inout(Theme) theme() inout { return _theme; }
+
+    /// ditto
+    Theme theme(Theme newValue) {
+
+        isThemeExplicit = true;
+        updateSize();
+        return _theme = newValue;
+
+    }
+
+    /// Nodes automatically inherit theme from their parent, and the root node implicitly inherits the default theme.
+    /// An explicitly-set theme will override any inherited themes recursively, stopping at nodes that also have themes
     /// set explicitly.
     /// Params:
     ///     value = Theme to inherit.
@@ -177,42 +241,6 @@ abstract class Node {
 
         _theme = value;
         updateSize();
-
-    }
-
-    @("Themes can be changed at runtime https://git.samerion.com/Samerion/Fluid/issues/114")
-    unittest {
-
-        import fluid.frame;
-
-        auto theme1 = nullTheme.derive(
-            rule!Frame(
-                Rule.backgroundColor = color("#000"),
-            ),
-        );
-        auto theme2 = nullTheme.derive(
-            rule!Frame(
-                Rule.backgroundColor = color("#fff"),
-            ),
-        );
-
-        auto deepFrame = vframe();
-        auto blackFrame = vframe(theme1);
-        auto root = vframe(
-            theme1,
-            vframe(
-                vframe(deepFrame),
-            ),
-            vframe(blackFrame),
-        );
-
-        root.draw();
-        assert(deepFrame.pickStyle.backgroundColor == color("#000"));
-        assert(blackFrame.pickStyle.backgroundColor == color("#000"));
-        root.theme = theme2;
-        root.draw();
-        assert(deepFrame.pickStyle.backgroundColor == color("#fff"));
-        assert(blackFrame.pickStyle.backgroundColor == color("#000"));
 
     }
 
@@ -230,18 +258,6 @@ abstract class Node {
     /// Direct changes are discouraged, and are likely to be discarded when reloading themes. Use themes instead.
     ref inout(Style) style() inout { return _style; }
 
-    override bool opEquals(const Object other) const @safe {
-
-        return this is other;
-
-    }
-
-    bool opEquals(const Node otherNode) const {
-
-        return this is otherNode;
-
-    }
-
     /// Show the node.
     This show(this This = Node)() return {
 
@@ -256,36 +272,6 @@ abstract class Node {
 
         isHidden = true;
         return cast(This) this;
-
-    }
-
-    unittest {
-
-        auto io = new HeadlessBackend;
-        auto root = new class Node {
-
-            override void resizeImpl(Vector2) {
-                minSize = Vector2(10, 10);
-            }
-
-            override void drawImpl(Rectangle outer, Rectangle inner) {
-                io.drawRectangle(inner, color!"123");
-            }
-
-        };
-
-        root.io = io;
-        root.theme = nullTheme;
-        root.draw();
-
-        io.assertRectangle(Rectangle(0, 0, 10, 10), color!"123");
-        io.nextFrame;
-
-        // Hide the node now
-        root.hide();
-        root.draw();
-
-        assert(io.rectangles.empty);
 
     }
 
@@ -308,114 +294,13 @@ abstract class Node {
 
     }
 
-    unittest {
+    final inout(TreeContext) treeContext() inout nothrow {
 
-        import fluid.space;
-        import fluid.button;
-        import fluid.text_input;
-
-        int submitted;
-
-        auto io = new HeadlessBackend;
-        auto button = fluid.button.button("Hello!", delegate { submitted++; });
-        auto input = fluid.textInput("Placeholder", delegate { submitted++; });
-        auto root = vspace(button, input);
-
-        root.io = io;
-        root.draw();
-
-        // Press the button
-        {
-            io.nextFrame;
-            io.press(KeyboardKey.enter);
-            button.focus();
-            root.draw();
-
-            assert(submitted == 1);
+        if (tree is null) {
+            return inout TreeContext(null);
         }
-
-        // Press the button while disabled
-        {
-            io.nextFrame;
-            io.press(KeyboardKey.enter);
-            button.disable();
-            root.draw();
-
-            assert(button.isDisabled);
-            assert(submitted == 1, "Button shouldn't trigger again");
-        }
-
-        // Enable the button and hit it again
-        {
-            io.nextFrame;
-            io.press(KeyboardKey.enter);
-            button.enable();
-            root.draw();
-
-            assert(!button.isDisabledInherited);
-            assert(submitted == 2);
-        }
-
-        // Try typing into the input box
-        {
-            io.nextFrame;
-            io.release(KeyboardKey.enter);
-            io.inputCharacter("Hello, ");
-            input.focus();
-            root.draw();
-
-            assert(input.value == "Hello, ");
-        }
-
-        // Disable the box and try typing again
-        {
-            io.nextFrame;
-            io.inputCharacter("World!");
-            input.disable();
-            root.draw();
-
-            assert(input.value == "Hello, ", "Input should remain unchanged");
-        }
-
-        // Attempt disabling the nodes recursively
-        {
-            io.nextFrame;
-            io.press(KeyboardKey.enter);
-            button.focus();
-            input.enable();
-            root.disable();
-            root.draw();
-
-            assert(root.isDisabled);
-            assert(!button.isDisabled);
-            assert(!input.isDisabled);
-            assert(button.isDisabledInherited);
-            assert(input.isDisabledInherited);
-            assert(submitted == 2);
-        }
-
-        // Check the input box
-        {
-            io.nextFrame;
-            io.press(KeyboardKey.enter);
-            io.inputCharacter("World!");
-            input.focus();
-
-            root.draw();
-
-            assert(submitted == 2);
-            assert(input.value == "Hello, ");
-        }
-
-        // Enable input once again
-        {
-            io.nextFrame;
-            io.press(KeyboardKey.enter);
-            root.enable();
-            root.draw();
-
-            assert(submitted == 3);
-            assert(input.value == "Hello, ");
+        else {
+            return inout TreeContext(&tree.context);
         }
 
     }
@@ -444,24 +329,35 @@ abstract class Node {
 
     /// Toggle the node's visibility.
     final void toggleShow() {
-
         isHidden = !isHidden;
-
     }
 
     /// Remove this node from the tree before the next draw.
     final void remove() {
-
-        isHidden = true;
         toRemove = true;
+    }
 
+    /// `toRemove` is used to mark nodes for removal. A node marked as such should stop being
+    /// drawn, and should be removed from the tree.
+    /// Params:
+    ///     value = New value to use for the node.
+    /// Returns:
+    ///     True if the node is to be removed from the tree.
+    bool toRemove(bool value) {
+        if (value != _toRemove) {
+            updateSize();
+        }
+        return _toRemove = value;
+    }
+
+    /// ditto
+    bool toRemove() const {
+        return _toRemove;
     }
 
     /// Get the minimum size of this node.
     final Vector2 getMinSize() const {
-
         return minSize;
-
     }
 
     /// Check if this node is hovered.
@@ -481,7 +377,7 @@ abstract class Node {
     /// This can be used to activate node parameters after the node has been constructed,
     /// or inside of a node constructor.
     ///
-    /// Note: 
+    /// Note:
     ///     Due to language limitations, this function has to be called with the dot operator, like `this.applyAll()`.
     /// Params:
     ///     params = Node parameters to activate.
@@ -509,15 +405,13 @@ abstract class Node {
         }
 
         auto myNode = new MyNode;
-
         assert(myNode.layout == .layout!"fill");
-        
+
     }
 
     /// Queue an action to perform within this node's branch.
     ///
-    /// This is recommended to use over `LayoutTree.queueAction`, as it can be used to limit the action to a specific
-    /// branch, and can also work before the first draw.
+    /// This function is legacy but is kept for backwards compatibility. Use `startAction` instead.
     ///
     /// This function is not safe to use while the tree is being drawn.
     final void queueAction(TreeAction action)
@@ -538,51 +432,129 @@ abstract class Node {
 
     }
 
-    @system unittest {
+    /// Perform a tree action the next time this node is drawn.
+    ///
+    /// Tree actions can be used to analyze the node tree and modify its behavior while it runs.
+    /// Actions can listen and respond to hooks like `beforeDraw` and `afterDraw`. They can interact
+    /// with existing nodes or inject nodes in any place of the tree.
+    ///
+    /// **Limited scope:** The action will only act on this branch of the tree: `beforeDraw`
+    /// and `afterDraw` hooks will only fire for this node and its children.
+    ///
+    /// **Starting actions:** Most usually, a tree actions provides its own function for creating
+    /// and starting, so this method does not need to be called directly. This method may still be
+    /// used if more control is needed, or to implement a such a starter function.
+    ///
+    /// If an action has already started, calling `startAction` again will replace it. Making it
+    /// possible to adjust the action's scope, or restart the action automatically if it stops.
+    ///
+    /// **Lifetime control:** Tree actions are responsible for their own lifetime. After a tree
+    /// action starts, it will decide for itself when it should end. This can be overridden by
+    /// explicitly calling the `TreeAction.stop` method.
+    ///
+    /// Params:
+    ///     action = Action to start.
+    final void startAction(TreeAction action)
+    in (action, "Node.runAction(TreeAction) called with a `null` argument")
+    do {
 
-        import fluid.space;
-
-        Node[4] allNodes;
-        Node[] visitedNodes;
-
-        auto io = new HeadlessBackend;
-        auto root = allNodes[0] = vspace(
-            allNodes[1] = hspace(
-                allNodes[2] = hspace(),
-            ),
-            allNodes[3] = hspace(),
-        );
-        auto action = new class TreeAction {
-
-            override void beforeDraw(Node node, Rectangle) {
-
-                visitedNodes ~= node;
-
-            }
-
-        };
-
-        // Queue the action before creating the tree
-        root.queueAction(action);
-
-        // Assign the backend; note this would create a tree
-        root.io = io;
-
-        root.draw();
-
-        assert(visitedNodes == allNodes);
-
-        // Clear visited nodes
-        io.nextFrame;
-        visitedNodes = [];
+        // Set up the action to run in this branch
+        action.startNode = this;
         action.toStop = false;
 
-        // Queue an action in a branch
-        allNodes[1].queueAction(action);
+        // Insert the action into the context
+        if (treeContext) {
+            treeContext.actions.spawn(action);
+        }
 
-        root.draw();
+        // Hold the action until a resize
+        else {
+            _queuedActionsNew ~= action;
+        }
 
-        assert(visitedNodes[].equal(allNodes[1..3]));
+    }
+
+    /// Start a branch action (or multiple) to run on children of this node.
+    ///
+    /// This should only be used inside `drawImpl`. The action will stop as soon as the return value goes
+    /// out of scope.
+    ///
+    /// Params:
+    ///     action = Branch action to run. A branch action implements a subset of tree action's functionality,
+    ///         guaraneeing correct behavior when combined with this.
+    ///     range = Multiple actions can be launched at once by passing a range of branch actions.
+    /// Returns:
+    ///     A [RAII](https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization) struct
+    ///     that stops all started actions as soon as the struct leaves the scope.
+    protected final auto startBranchAction(BranchAction action)
+    in (action, "Node.runAction(TreeAction) called with a `null` argument")
+    do {
+        return startBranchAction(only(action));
+    }
+
+    /// ditto
+    protected final auto startBranchAction(T)(T range)
+    if (isForwardRange!T && is(ElementType!T : BranchAction))
+    do {
+
+        auto action = controlBranchAction(range);
+        action.start();
+        return action.move;
+
+    }
+
+    protected final auto controlBranchAction(BranchAction action)
+    in (action, "Node.runAction(TreeAction) called with a `null` argument")
+    do {
+        return controlBranchAction(only(action));
+    }
+
+    protected final auto controlBranchAction(T)(T range) {
+
+        @mustuse
+        static struct BranchControl {
+
+            Node node;
+            T range;
+            bool isStarted;
+
+            /// Start the actions.
+            ///
+            /// Clear start nodes for each action so they run immediately.
+            void start() {
+                isStarted = true;
+                foreach (action; range.save) {
+                    node.startAction(action);
+                    action.startNode = null;
+                }
+            }
+
+            /// Prevent the action from stopping automatically as it leaves the scope.
+            void release() {
+                isStarted = false;
+            }
+
+            void startAndRelease() {
+                start();
+                release();
+            }
+
+            void stop() {
+                isStarted = false;
+                foreach (action; range) {
+                    action.stop;
+                }
+            }
+
+            ~this() {
+                if (isStarted) {
+                    stop();
+                }
+            }
+
+        }
+
+        return BranchControl(this, range.move);
 
     }
 
@@ -590,68 +562,13 @@ abstract class Node {
 
     /// Returns: True if this node is to be resized before the next frame.
     bool isResizePending() const {
-
         return _resizePending;
-
     }
 
     /// Recalculate the window size before next draw.
-    final void updateSize() scope {
-
+    final void updateSize() scope nothrow {
         if (tree) tree.root._resizePending = true;
         // Tree might be null — if so, the node will be resized regardless
-
-    }
-
-    unittest {
-
-        int resizes;
-
-        auto io = new HeadlessBackend;
-        auto root = new class Node {
-
-            override void resizeImpl(Vector2) {
-
-                resizes++;
-
-            }
-            override void drawImpl(Rectangle, Rectangle) { }
-
-        };
-
-        root.io = io;
-        assert(resizes == 0);
-
-        // Resizes are only done on request
-        foreach (i; 0..10) {
-
-            root.draw();
-            assert(resizes == 1);
-            io.nextFrame;
-
-        }
-
-        // Perform such a request
-        root.updateSize();
-        assert(resizes == 1);
-
-        // Resize will be done right before next draw
-        root.draw();
-        assert(resizes == 2);
-        io.nextFrame;
-
-        // This prevents unnecessary resizes if multiple things change in a single branch
-        root.updateSize();
-        root.updateSize();
-
-        root.draw();
-        assert(resizes == 3);
-        io.nextFrame;
-
-        // Another draw, no more resizes
-        root.draw();
-        assert(resizes == 3);
-
     }
 
     /// Draw this node as a root node.
@@ -698,7 +615,8 @@ abstract class Node {
         // Resize if required
         if (resizePending) {
 
-            resize(tree, theme, space);
+            prepareInternalImpl(tree, theme);
+            resizeInternalImpl(space);
             _resizePending = false;
 
         }
@@ -706,21 +624,20 @@ abstract class Node {
         /// Area to render on
         const viewport = Rectangle(0, 0, space.x, space.y);
 
-
         // Run beforeTree actions
         foreach (action; tree.filterActions) {
 
-            action.beforeTree(this, viewport);
+            action.beforeTreeImpl(this, viewport);
 
         }
 
         // Draw this node
-        draw(viewport);
+        drawInternalImpl(viewport);
 
         // Run afterTree actions
         foreach (action; tree.filterActions) {
 
-            action.afterTree();
+            action.afterTreeImpl();
 
         }
 
@@ -831,119 +748,18 @@ abstract class Node {
 
     }
 
-    unittest {
+    /// Draw a child node at the specified location inside of this node.
+    ///
+    /// Before drawing a node, it must first be resized. This should be done ahead of time in `resizeImpl`.
+    /// Use `updateSize()` to cause it to be called before the next draw call.
+    ///
+    /// Params:
+    ///     child = Child to draw.
+    ///     space = Space to place the node in.
+    ///         The drawn node will be aligned inside the given box according to its `layout` field.
+    protected void drawChild(Node child, Rectangle space) {
 
-        import fluid.space;
-        import fluid.button;
-
-        auto io = new HeadlessBackend;
-        auto root = vspace(
-            button("1", delegate { }),
-            button("2", delegate { }),
-            button("3", delegate { }),
-        );
-
-        root.io = io;
-
-        root.draw();
-
-        assert(root.tree.focus is null);
-
-        // Autofocus first
-        {
-
-            io.nextFrame;
-            io.press(KeyboardKey.tab);
-            root.draw();
-
-            // Fluid will automatically try to find the first focusable node
-            assert(root.tree.focus.asNode is root.children[0]);
-
-            io.nextFrame;
-            io.release(KeyboardKey.tab);
-            root.draw();
-
-            assert(root.tree.focus.asNode is root.children[0]);
-
-        }
-
-        // Tab into the next node
-        {
-
-            io.nextFrame;
-            io.press(KeyboardKey.tab);
-            root.draw();
-            io.release(KeyboardKey.tab);
-
-            assert(root.tree.focus.asNode is root.children[1]);
-
-        }
-
-        // Autofocus last
-        {
-            root.tree.focus = null;
-
-            io.nextFrame;
-            io.press(KeyboardKey.leftShift);
-            io.press(KeyboardKey.tab);
-            root.draw();
-
-            // If left-shift tab is pressed, the last focusable node will be used
-            assert(root.tree.focus.asNode is root.children[$-1]);
-
-            io.nextFrame;
-            io.release(KeyboardKey.leftShift);
-            io.release(KeyboardKey.tab);
-            root.draw();
-
-            assert(root.tree.focus.asNode is root.children[$-1]);
-
-        }
-
-    }
-
-    /// Switch to the previous or next focused item
-    @(FluidInputAction.focusPrevious,FluidInputAction.focusNext)
-    protected void focusPreviousOrNext(FluidInputAction actionType) {
-
-        auto direction = tree.focusDirection;
-
-        // Get the node to switch to
-        auto node = actionType == FluidInputAction.focusPrevious
-
-            // Requesting previous item
-            ? either(direction.previous, direction.last)
-
-            // Requesting next
-            : either(direction.next, direction.first);
-
-        // Switch focus
-        if (node) node.focus();
-
-    }
-
-    /// Switch focus towards a specified direction.
-    @(FluidInputAction.focusLeft, FluidInputAction.focusRight)
-    @(FluidInputAction.focusUp, FluidInputAction.focusDown)
-    protected void focusInDirection(FluidInputAction action) {
-
-        with (FluidInputAction) {
-
-            // Check which side we're going
-            const side = action.predSwitch(
-                focusLeft,  Style.Side.left,
-                focusRight, Style.Side.right,
-                focusUp,    Style.Side.top,
-                focusDown,  Style.Side.bottom,
-            );
-
-            // Get the node
-            auto node = tree.focusDirection.positional[side];
-
-            // Switch focus to the node
-            if (node !is null) node.focus();
-
-        }
+        child.drawInternalImpl(space);
 
     }
 
@@ -954,7 +770,14 @@ abstract class Node {
     /// Params:
     ///     space = Space the node should be drawn in. It should be limited to space within the parent node.
     ///             If the node can't fit, it will be cropped.
-    final protected void draw(Rectangle space) @trusted {
+    deprecated("`Node.draw` has been replaced with `drawChild(Node, Rectangle)` and will be removed in Fluid 0.8.0.")
+    final protected void draw(Rectangle space) {
+
+        drawInternalImpl(space);
+
+    }
+
+    final private void drawInternalImpl(Rectangle space) @trusted {
 
         import std.range;
 
@@ -965,21 +788,13 @@ abstract class Node {
         // If hidden, don't draw anything
         if (isHidden) return;
 
-        const spaceV = Vector2(space.width, space.height);
-
-        // Get parameters
-        const size = Vector2(
-            layout.nodeAlign[0] == NodeAlign.fill ? space.width  : min(space.width,  minSize.x),
-            layout.nodeAlign[1] == NodeAlign.fill ? space.height : min(space.height, minSize.y),
-        );
-        const position = position(space, size);
-
         // Calculate the boxes
-        const marginBox  = Rectangle(position.tupleof, size.tupleof);
+        const marginBox  = marginBoxForSpace(space);
         const borderBox  = style.cropBox(marginBox, style.margin);
-        const paddingBox = style.cropBox(borderBox, style.border);
+        const paddingBox = paddingBoxForSpace(space);
         const contentBox = style.cropBox(paddingBox, style.padding);
         const mainBox    = borderBox;
+        const size = marginBox.size;
 
         // Load breadcrumbs from the tree
         breadcrumbs = tree.breadcrumbs;
@@ -999,7 +814,9 @@ abstract class Node {
         // Set tint
         auto previousTint = io.tint;
         io.tint = multiply(previousTint, currentStyle.tint);
+        tree.context.tint = io.tint;
         scope (exit) io.tint = previousTint;
+        scope (exit) tree.context.tint = previousTint;
 
         // If there's a border active, draw it
         if (currentStyle.borderStyle) {
@@ -1112,14 +929,81 @@ abstract class Node {
 
     }
 
+    /// Get the node's margin box for given available space. The margin box, nor the available
+    /// space aren't typically given to a node, but this may be useful for its parent nodes.
+    /// Params:
+    ///     space = Available space box assigned for the node.
+    /// Returns:
+    ///     The margin box calculated from the given space rectangle.
+    Rectangle marginBoxForSpace(Rectangle space) const {
+        const size = Vector2(
+            layout.nodeAlign[0] == NodeAlign.fill ? space.width  : min(space.width,  minSize.x),
+            layout.nodeAlign[1] == NodeAlign.fill ? space.height : min(space.height, minSize.y),
+        );
+        const position = layout.nodeAlign.alignRectangle(space, size);
+        return Rectangle(position.tupleof, size.tupleof);
+    }
+
+    /// Get the node's padding box (outer box) for set available space.
+    /// Params:
+    ///     space = Available space box given to the node.
+    /// Returns:
+    ///     The padding box calculated from the given space rectangle.
+    Rectangle paddingBoxForSpace(Rectangle space) const {
+        const marginBox = marginBoxForSpace(space);
+        const borderBox = style.cropBox(marginBox, style.margin);
+        return style.cropBox(borderBox, style.border);
+    }
+
+    /// Prepare a child for use. This is automatically called by `resizeChild` and only meant for advanced usage.
+    ///
+    /// This method is intended to be used when conventional resizing through `resizeImpl` is not desired. This can
+    /// be used to implement an advanced system with a different resizing mechanism, or something like `NodeChain`,
+    /// which changes how children are managed. Be mindful that child nodes must have some preparation mechanism
+    /// available to initialize their I/O systems and resources — normally this is done by `resizeImpl`.
+    ///
+    /// Params:
+    ///     child = Child node to resize.
+    protected void prepareChild(Node child) {
+
+        child.prepareInternalImpl(tree, theme);
+
+    }
+
+    /// Resize a child of this node.
+    /// Params:
+    ///     child = Child node to resize.
+    ///     space = Maximum space available for the child to use.
+    /// Returns:
+    ///     Space allocated by the child node.
+    protected Vector2 resizeChild(Node child, Vector2 space) {
+
+        prepareChild(child);
+        child.resizeInternalImpl(space);
+
+        return child.minSize;
+
+    }
+
     /// Recalculate the minimum node size and update the `minSize` property.
     /// Params:
     ///     tree  = The parent's tree to pass down to this node.
     ///     theme = Theme to inherit from the parent.
     ///     space = Available space.
+    deprecated("`Node.resize` has been replaced with `resizeChild(Node, Vector2)` and will be removed in Fluid 0.8.0.")
     protected final void resize(LayoutTree* tree, Theme theme, Vector2 space)
     in(tree, "Tree for Node.resize() must not be null.")
     in(theme, "Theme for Node.resize() must not be null.")
+    do {
+
+        prepareInternalImpl(tree, theme);
+        resizeInternalImpl(space);
+
+    }
+
+    private final void prepareInternalImpl(LayoutTree* tree, Theme theme)
+    in(tree, "Tree for prepareChild(Node) must not be null.")
+    in(theme, "Theme for prepareChild(Node) must not be null.")
     do {
 
         // Inherit tree and theme
@@ -1132,14 +1016,25 @@ abstract class Node {
         // Load the theme
         reloadStyles();
 
+        // Queue actions into the tree
+        tree.actions ~= _queuedActions;
+        foreach (action; _queuedActions) {
+            action.started();
+        }
+        treeContext.actions.spawn(_queuedActionsNew);
+        _queuedActions = null;
+        _queuedActionsNew = null;
+
+    }
+
+    private final void resizeInternalImpl(Vector2 space)
+    in(tree, "Tree for Node.resize() must not be null.")
+    in(theme, "Theme for Node.resize() must not be null.")
+    do {
+
         // Write breadcrumbs into the tree
         tree.breadcrumbs ~= _style.breadcrumbs;
         scope (exit) tree.breadcrumbs = breadcrumbs;
-
-        // Queue actions into the tree
-        tree.actions ~= _queuedActions;
-        _queuedActions = null;
-
 
         // The node is hidden, reset size
         if (isHidden) minSize = Vector2(0, 0);
@@ -1165,13 +1060,15 @@ abstract class Node {
 
             // Run beforeResize actions
             foreach (action; tree.filterActions) {
-
                 action.beforeResize(this, space);
-
             }
 
             // Resize the node
             resizeImpl(space);
+
+            foreach (action; tree.filterActions) {
+                action.afterResize(this, space);
+            }
 
             assert(
                 minSize.x.isFinite && minSize.y.isFinite,
@@ -1191,8 +1088,203 @@ abstract class Node {
 
     }
 
-    /// Ditto
+    /// Switch to the previous or next focused item
+    @(FluidInputAction.focusPrevious, FluidInputAction.focusNext)
+    protected void focusPreviousOrNext(FluidInputAction actionType) {
+
+        auto direction = tree.focusDirection;
+
+        // Get the node to switch to
+        auto node = actionType == FluidInputAction.focusPrevious
+
+            // Requesting previous item
+            ? either(direction.previous, direction.last)
+
+            // Requesting next
+            : either(direction.next, direction.first);
+
+        // Switch focus
+        if (node) node.focus();
+
+    }
+
+    /// Switch focus towards a specified direction.
+    @(FluidInputAction.focusLeft, FluidInputAction.focusRight)
+    @(FluidInputAction.focusUp, FluidInputAction.focusDown)
+    protected void focusInDirection(FluidInputAction action) {
+
+        with (FluidInputAction) {
+
+            // Check which side we're going
+            const side = action.predSwitch(
+                focusLeft,  Style.Side.left,
+                focusRight, Style.Side.right,
+                focusUp,    Style.Side.top,
+                focusDown,  Style.Side.bottom,
+            );
+
+            // Get the node
+            auto node = tree.focusDirection.positional[side];
+
+            // Switch focus to the node
+            if (node !is null) node.focus();
+
+        }
+
+    }
+
+    /// Connect to an I/O system
+    protected T use(T : IO)()
+    in (tree, "`use()` should only be used inside `resizeImpl`")
+    do {
+        return tree.context.io.get!T();
+    }
+
+    /// ditto
+    protected T use(T : IO)(out T io)
+    in (tree, "`use()` should only be used inside `resizeImpl`")
+    do {
+        return io = use!T();
+    }
+
+    /// Require
+    protected T require(T : IO)()
+    in (tree, "`require()` should only be used inside `resizeImpl`")
+    do {
+        auto io = use!T();
+        assert(io, "require: Requested I/O " ~ T.stringof ~ " is not active");
+        return io;
+    }
+
+    /// ditto
+    protected T require(T : IO)(out T io)
+    in (tree, "`require()` should only be used inside `resizeImpl`")
+    do {
+        return io = require!T();
+    }
+
+    /// Load a resource associated with the given I/O.
     ///
+    /// The resource should be continuously loaded during `resizeImpl`. Even if a resource has already been loaded,
+    /// it has to be declared with `load` so the I/O system knows it is still in use.
+    ///
+    /// ---
+    /// CanvasIO canvasIO;
+    /// DrawableImage image;
+    /// void resizeImpl(Vector2 space) {
+    ///     require(canvasIO);
+    ///     load(canvasIO, image);
+    /// }
+    /// ---
+    ///
+    /// Params:
+    ///     io       = I/O system to use to load the resource.
+    ///     resource = Resource to load.
+    protected void load(T, I : IO)(I io, ref T resource) {
+
+        io.loadTo(resource);
+
+    }
+
+    /// Enable I/O interfaces implemented by this node.
+    // TODO elaborate
+    /// Returns:
+    ///     A [RAII](https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization) struct that disables
+    ///     these interfaces on destruction.
+    protected auto implementIO(this This)() {
+
+        auto frame = controlIO!This();
+        frame.start();
+        return frame.move;
+
+    }
+
+    mixin template controlIO() {
+
+        import std.meta : AliasSeq, Filter, NoDuplicates;
+        import std.traits : InterfacesTuple;
+        import fluid.future.context : isIO, IO, ioID;
+
+        private {
+
+            alias Interfaces = Filter!(isIO, InterfacesTuple!(typeof(this)), typeof(this));
+            alias IOs = NoDuplicates!Interfaces;
+
+            IO[Interfaces.length] _hostIOs;
+
+            void startIO() {
+                static foreach (i, IO; IOs) {
+                    _hostIOs[i] = treeContext.io.replace(ioID!IO, this);
+                }
+            }
+
+            void stopIO() {
+                static foreach (i, IO; IOs) {
+                    treeContext.io.replace(ioID!IO, _hostIOs[i]);
+                }
+            }
+
+        }
+
+    }
+
+    protected auto controlIO(this This)() {
+
+        import std.meta : AliasSeq, Filter;
+
+        alias Interfaces = Filter!(isIO, InterfacesTuple!This, This);
+        alias IOs = NoDuplicates!Interfaces;
+        alias IOArray = IO[IOs.length];
+
+        @mustuse
+        static struct IOControl {
+
+            This node;
+            IOArray ios;
+            bool isStarted;
+
+            void opAssign(IOControl value) {
+                this.node = value.node;
+                this.ios = value.ios;
+                this.isStarted = value.isStarted;
+            }
+
+            void start() {
+                this.isStarted = true;
+                static foreach (i, IO; IOs) {
+                    ios[i] = node.treeContext.io.replace(ioID!IO, node);
+                }
+            }
+
+            void release() {
+                this.isStarted = false;
+            }
+
+            IOControl startAndRelease() return {
+                start();
+                release();
+                return this;
+            }
+
+            void stop() {
+                isStarted = false;
+                static foreach (i, IO; IOs) {
+                    node.treeContext.io.replace(ioID!IO, ios[i]);
+                }
+            }
+
+            ~this() {
+                if (isStarted) {
+                    stop();
+                }
+            }
+
+        }
+
+        return IOControl(cast(This) this);
+
+    }
+
     /// This is the implementation of resizing to be provided by children.
     ///
     /// If style margins/paddings are non-zero, they are automatically subtracted from space, so they are handled
@@ -1212,6 +1304,8 @@ abstract class Node {
 
     /// Check if the node is hovered.
     ///
+    /// This function is currently being phased out in favor of the `obstructs` function.
+    ///
     /// This will be called right before drawImpl for each node in order to determine the which node should handle mouse
     /// input.
     ///
@@ -1226,15 +1320,74 @@ abstract class Node {
 
     }
 
-    /// The focus box defines the *focused* part of the node. This is relevant in nodes which may have a selectable 
-    /// subset, such as a dropdown box, which may be more important at present moment (selected). Scrolling actions 
+    /// Test if the specified point is the node's bounds. This is used to map screen positions to
+    /// nodes, such as when determining which nodes are hovered by mouse. If the node contains
+    /// the point, then it's a "hit," and if not, it's a "miss."
+    ///
+    /// This is rarely used in nodes built into Fluid. A notable example where this is overridden
+    /// is `Space`, which is always transparent, expecting children to block occupied areas. This
+    /// makes `Space` very handy for visually transparent overlays.
+    ///
+    /// User-provided implementation should override `inBoundsImpl`; calls testing the node's
+    /// bounds should use `inBounds`, which automatically applies the `hitFilter` field
+    /// as a filter on the result.
+    ///
+    /// See_Also:
+    ///     `hitFilter` to filter the return value, making the node or its children transparent.
+    /// Params:
+    ///     outer    = Padding box of the node.
+    ///     inner    = Content box of the node.
+    ///     position = Tested position.
+    /// Returns:
+    ///     Any of the values of `HitFilter`. In most cases, either `HitFilter.hit` or
+    ///     `HitFilter.miss`, depending whether the node can be hit or not in the specific point.
+    ///     Children nodes do not contribute to a node's opaqueness.
+    ///
+    ///     The return value of `inBounds` is filtered by the value of `hitFilter`.
+    ///
+    ///     Returning a value of `HitFilter.hitBranch` can be used to hijack hover events that
+    ///     would otherwise be handled by the children.
+    protected HitFilter inBoundsImpl(Rectangle outer, Rectangle inner, Vector2 position) {
+        return hoveredImpl(outer, position)
+            ? HitFilter.hit
+            : HitFilter.miss;
+    }
+
+    /// ditto
+    final HitFilter inBounds(Rectangle outer, Rectangle inner, Vector2 position) {
+        return inBoundsImpl(outer, inner, position)
+            .filter(hitFilter)
+            .filter(ignoreMouse ? HitFilter.miss : HitFilter.hit);
+    }
+
+    alias ImplHoveredRect = implHoveredRect;
+
+    deprecated("implHoveredRect is now the default behavior; implHoveredRect is to be removed in 0.8.0")
+    protected mixin template implHoveredRect() {
+
+        private import fluid.backend : Rectangle, Vector2;
+
+        protected override bool hoveredImpl(Rectangle rect, Vector2 mousePosition) const {
+
+            import fluid.utils : contains;
+
+            return rect.contains(mousePosition);
+
+        }
+
+    }
+
+    /// The focus box defines the *focused* part of the node. This is relevant in nodes which may have a selectable
+    /// subset, such as a dropdown box, which may be more important at present moment (selected). Scrolling actions
     /// like `scrollIntoView` will use the focus box to make sure the selected area is presented to the user.
-    /// Returns: The focus box of the node. 
+    /// Returns: The focus box of the node.
     Rectangle focusBoxImpl(Rectangle inner) const {
 
         return inner;
 
     }
+
+    alias focusBox = focusBoxImpl;
 
     /// Get the current style.
     Style pickStyle() {
@@ -1278,153 +1431,6 @@ abstract class Node {
 
     }
 
-    /// Get the node's position in its  box.
-    private Vector2 position(Rectangle space, Vector2 usedSpace) const {
-
-        float positionImpl(NodeAlign align_, lazy float spaceLeft) {
-
-            with (NodeAlign)
-            final switch (align_) {
-
-                case start, fill: return 0;
-                case center: return spaceLeft / 2;
-                case end: return spaceLeft;
-
-            }
-
-        }
-
-        return Vector2(
-            space.x + positionImpl(layout.nodeAlign[0], space.width  - usedSpace.x),
-            space.y + positionImpl(layout.nodeAlign[1], space.height - usedSpace.y),
-        );
-
-    }
-
-    @system  // catching Error
-    unittest {
-
-        import std.exception;
-        import core.exception;
-        import fluid.frame;
-
-        static class Square : Frame {
-            @safe:
-            Color color;
-            this(Color color) {
-                this.color = color;
-            }
-            override void resizeImpl(Vector2) {
-                minSize = Vector2(100, 100);
-            }
-            override void drawImpl(Rectangle, Rectangle inner) {
-                io.drawRectangle(inner, color);
-            }
-        }
-
-        alias square = simpleConstructor!Square;
-
-        auto io = new HeadlessBackend;
-        auto colors = [
-            color!"7ff0a5",
-            color!"17cccc",
-            color!"a6a415",
-            color!"cd24cf",
-        ];
-        auto root = vframe(
-            .layout!"fill",
-            square(.layout!"start",  colors[0]),
-            square(.layout!"center", colors[1]),
-            square(.layout!"end",    colors[2]),
-            square(.layout!"fill",   colors[3]),
-        );
-
-        root.theme = Theme.init.derive(
-            rule!Frame(Rule.backgroundColor = color!"1c1c1c")
-        );
-        root.io = io;
-
-        // Test the layout
-        {
-
-            root.draw();
-
-            // Each square in order
-            io.assertRectangle(Rectangle(0, 0, 100, 100), colors[0]);
-            io.assertRectangle(Rectangle(350, 100, 100, 100), colors[1]);
-            io.assertRectangle(Rectangle(700, 200, 100, 100), colors[2]);
-
-            // Except the last one, which is turned into a rectangle by "fill"
-            // A proper rectangle class would change its target rectangles to keep aspect ratio
-            io.assertRectangle(Rectangle(0, 300, 800, 100), colors[3]);
-
-        }
-
-        // Now do the same, but expand each node
-        {
-
-            io.nextFrame;
-
-            foreach (child; root.children) {
-                child.layout.expand = 1;
-            }
-
-            root.draw().assertThrown!AssertError;  // Oops, forgot to resize!
-            root.updateSize;
-            root.draw();
-
-            io.assertRectangle(Rectangle(0, 0, 100, 100), colors[0]);
-            io.assertRectangle(Rectangle(350, 175, 100, 100), colors[1]);
-            io.assertRectangle(Rectangle(700, 350, 100, 100), colors[2]);
-            io.assertRectangle(Rectangle(0, 450, 800, 150), colors[3]);
-
-        }
-
-        // Change Y alignment
-        {
-
-            io.nextFrame;
-
-            root.children[0].layout = .layout!(1, "start", "end");
-            root.children[1].layout = .layout!(1, "center", "fill");
-            root.children[2].layout = .layout!(1, "end", "start");
-            root.children[3].layout = .layout!(1, "fill", "center");
-
-            root.updateSize;
-            root.draw();
-
-            io.assertRectangle(Rectangle(0, 50, 100, 100), colors[0]);
-            io.assertRectangle(Rectangle(350, 150, 100, 150), colors[1]);
-            io.assertRectangle(Rectangle(700, 300, 100, 100), colors[2]);
-            io.assertRectangle(Rectangle(0, 475, 800, 100), colors[3]);
-
-        }
-
-        // Try different expand values
-        {
-
-            io.nextFrame;
-
-            root.children[0].layout = .layout!(0, "center", "fill");
-            root.children[1].layout = .layout!(1, "center", "fill");
-            root.children[2].layout = .layout!(2, "center", "fill");
-            root.children[3].layout = .layout!(3, "center", "fill");
-
-            root.updateSize;
-            root.draw();
-
-            // The first rectangle doesn't expand so it should be exactly 100×100 in size
-            io.assertRectangle(Rectangle(350, 0, 100, 100), colors[0]);
-
-            // The remaining space is 500px, so divided into 1+2+3=6 pieces, it should be about 83.33px per piece
-            io.assertRectangle(Rectangle(350, 100.00, 100,  83.33), colors[1]);
-            io.assertRectangle(Rectangle(350, 183.33, 100, 166.66), colors[2]);
-            io.assertRectangle(Rectangle(350, 350.00, 100, 250.00), colors[3]);
-
-        }
-
-    }
-
     private bool isLMBHeld() @trusted {
 
         return tree.io.isDown(MouseButton.left)
@@ -1441,17 +1447,17 @@ abstract class Node {
 }
 
 /// Start a Fluid GUI app.
-/// 
+///
 /// This is meant to be the easiest way to launch a Fluid app. Call this in your `main()` function with the node holding
-/// your user interface, and that's it! The function will not return until the app is closed. 
+/// your user interface, and that's it! The function will not return until the app is closed.
 ///
 /// ---
 /// void main() {
-///     
+///
 ///     run(
 ///         label("Hello, World!"),
 ///     );
-/// 
+///
 /// }
 /// ---
 ///
@@ -1459,9 +1465,9 @@ abstract class Node {
 ///
 /// The exact behavior of this function is defined by the backend in use, so some functionality may vary. Some backends
 /// might not support this.
-/// 
+///
 /// Params:
-///     node = This node will serve as the root of your user interface until closed. If you wish to change it at 
+///     node = This node will serve as the root of your user interface until closed. If you wish to change it at
 ///         runtime, wrap it in a `NodeSlot`.
 void run(Node node) {
 
@@ -1476,7 +1482,7 @@ void run(Node node) {
 
     node.io = backend;
     backend.run(node);
-    
+
 }
 
 /// ditto
@@ -1512,3 +1518,29 @@ ref RunCallback mockRun() {
 
 }
 
+/// Draw the node in a loop until an event happens.
+///
+/// This is useful for testing. A chain of tree actions can be finished off with a call to this function
+/// to ensure it will finish after a frame or few.
+///
+/// Params:
+///     publisher  = Publisher to subscribe to. If the publisher emits an event, drawing will stop and this
+///         function will return.
+///     node       = Node to draw in loop.
+///     frameLimit = Maximum number of frames that may be drawn. Errors if reached.
+/// Returns:
+///     Number of frames that were drawn as a consequence.
+int runWhileDrawing(Publisher!() publisher, Node node, int frameLimit = int.max) {
+
+    int i;
+    bool finished;
+    publisher.then(() => finished = true);
+
+    while (!finished) {
+        node.draw();
+        i++;
+        assert(i < frameLimit || finished, "Frame limit reached");
+    }
+    return i;
+
+}

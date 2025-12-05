@@ -1,46 +1,91 @@
+/// This node displays an image. Accepts either a file path (as a [string]), or an [Image].
 ///
+/// <!-- -->
 module fluid.image_view;
+
+@safe:
+
+/// Give [imageView] a string, and it will load the image from a file.
+@("ImageView string reference")
+unittest {
+    run(
+        imageView("logo.png"),
+    );
+}
+
+/// Or, if you have the image loaded in memory, pass it as an [Image]:
+@("ImageView Image reference")
+unittest {
+    run(
+        imageView(
+            generateColorImage(128, 128, color("#7325dc")),
+        ),
+    );
+}
 
 import fluid.node;
 import fluid.utils;
 import fluid.style;
 import fluid.backend;
 
-@safe:
+import fluid.io.file;
+import fluid.io.canvas;
+import fluid.io.image_load;
 
-alias imageView = simpleConstructor!ImageView;
+/// A [node builder][nodeBuilder] that creates an [ImageView].
+alias imageView = nodeBuilder!ImageView;
 
+/// This node property activates the [ImageView.isAutoExpand] field.
+/// Params:
+///     value = If true, activates automatic expanding. On, by default.
+/// Returns:
+///     A node property that can be passed to the [imageView] node builder.
 auto autoExpand(bool value = true) {
-
     static struct AutoExpand {
-
         bool value;
 
         void apply(ImageView node) {
             node.isAutoExpand = value;
         }
-
     }
-
     return AutoExpand(value);
-    
-
 }
 
 /// A node specifically to display images.
 ///
-/// The image will automatically scale to fit available space. It will keep aspect ratio by default and will be
-/// displayed in the middle of the available box.
+/// The image will scale to fit the space it is given. It will keep aspect ratio by default and
+/// will be displayed in the middle of the available box.
+///
+/// Note:
+///     `ImageView` is heavily affected by recent changes to how Fluid handles I/O.
+///
+///     * If you only display images from a file, and don't inspect them from code, you will <!--
+///       --> *not* be impacted.
+///     * The new I/O system *always* uses [Image]. Inspect or change the image using the <!--
+///       --> [image][ImageView.image] field.
+///     * If using the old backend, you will need to use [Texture]. You will need to manually <!--
+///       --> manage its lifetime. Migrating to the new I/O system is highly recommended.
 class ImageView : Node {
+
+    CanvasIO canvasIO;
+    FileIO fileIO;
+    ImageLoadIO imageLoadIO;
 
     public {
 
-        /// If true, size of this imageView is adjusted automatically. Changes made to `minSize` will be reversed on
-        /// size update.
+        /// [Image] this node should display, if any. This field only works with the new I/O
+        /// system, and requires [CanvasIO] to work.
+        ///
+        /// See [DrawableImage] for details on how `CanvasIO` handles image drawing.
+        DrawableImage image;
+
+        /// If true, size of this imageView is adjusted automatically. Changes made to `minSize`
+        /// will be reversed on size update.
         bool isSizeAutomatic;
 
-        /// Experimental. Acquire space from the parent to display the largest image while preserving aspect ratio.
-        /// May not work if there's multiple similarly sized nodes in the same container.
+        /// Experimental. Acquire space from the parent to display the largest image while
+        /// preserving aspect ratio. May not work if there's multiple similarly sized nodes in the
+        /// same container.
         bool isAutoExpand;
 
     }
@@ -61,33 +106,43 @@ class ImageView : Node {
     /// Set to true if the image view owns the texture and manages its ownership.
     private bool _isOwner;
 
-    /// Create an image node from given texture or filename.
+    /// Create an image node from given image or filename.
     ///
-    /// Note, if a string is given, the texture will be loaded when resizing. This ensures a Fluid backend is available
-    /// to load the texture.
+    /// Note:
+    ///     If a filename is given, the image will be loaded on the first resize.
+    ///     This is done to make sure a backend is available to load the image.
     ///
     /// Params:
     ///     source  = `Texture` struct to use, or a filename to load from.
     ///     minSize = Minimum size of the node. Defaults to image size.
     this(T)(T source, Vector2 minSize) {
-
         super.minSize = minSize;
         this.texture = source;
-
     }
 
     /// ditto
     this(T)(T source) {
-
         this.texture = source;
         this.isSizeAutomatic = true;
+    }
 
+    /// Create an image node using given image.
+    /// Params:
+    ///     image   = Image to load.
+    ///     minSize = Minimum size of the node. Defaults to image size.
+    this(Image image, Vector2 minSize) {
+        super.minSize = minSize;
+        this.image = DrawableImage(image);
+    }
+
+    /// ditto
+    this(Image image) {
+        this.image = DrawableImage(image);
+        this.isSizeAutomatic = true;
     }
 
     ~this() {
-
         clear();
-
     }
 
     @property {
@@ -103,11 +158,12 @@ class ImageView : Node {
 
         }
 
-        Image texture(Image image) @system {
+        /// Change the image displayed by the `ImageView`.
+        Image texture(Image image) {
 
             clear();
-            _texture = tree.io.loadTexture(image);
-            _isOwner = true;
+            updateSize();
+            this.image = image;
 
             return image;
         }
@@ -119,7 +175,7 @@ class ImageView : Node {
 
             _texturePath = filename;
 
-            if (tree) {
+            if (tree && !canvasIO) {
 
                 clear();
                 _texture = tree.io.loadTexture(filename);
@@ -133,26 +189,7 @@ class ImageView : Node {
 
         }
 
-        @system unittest {
-
-            // TODO test for keeping aspect ratio
-            auto io = new HeadlessBackend(Vector2(1000, 1000));
-            auto root = imageView(.nullTheme, "logo.png");
-
-            // The texture will lazy-load
-            assert(root.texture == Texture.init);
-
-            root.io = io;
-            root.draw();
-
-            // Texture should be loaded by now
-            assert(root.texture != Texture.init);
-
-            io.assertTexture(root.texture, Vector2(0, 0), color!"fff");
-
-        }
-
-        /// Get the current texture.
+        /// Get the current texture. Does not work with the new I/O system.
         const(Texture) texture() const {
 
             return _texture;
@@ -161,9 +198,10 @@ class ImageView : Node {
 
     }
 
-    /// Release ownership over the displayed texture.
+    /// Release ownership over the displayed texture. Does not apply to the new I/O system.
     ///
-    /// Keep the texture alive as long as it's used by this `imageView`, free it manually using the `destroy()` method.
+    /// Keep the texture alive as long as it's used by this `imageView`, free it manually
+    /// using the `destroy()` method.
     Texture release() {
 
         _isOwner = false;
@@ -176,76 +214,142 @@ class ImageView : Node {
 
         // Free the texture
         if (_isOwner) {
-
             _texture.destroy();
-
         }
 
         // Remove the texture
         _texture = texture.init;
+        _texturePath = null;
+
+        // Remove the image
+        image = Image.init;
 
     }
 
-    /// Minimum size of the image.
+    /// Returns:
+    ///     The minimum size for this node.
     @property
     ref inout(Vector2) minSize() inout {
-
         return super.minSize;
-
     }
 
-    /// Area on the screen the image was last drawn to.
+    /// Returns:
+    ///     Area on the screen the image was last drawn to.
+    ///     Updated only when the node is drawn.
     @property
     Rectangle targetArea() const {
-
         return _targetArea;
-
     }
-    
+
     override protected void resizeImpl(Vector2 space) @trusted {
 
         import std.algorithm : min;
 
-        // Lazy-load the texture if the backend wasn't present earlier
-        if (_texture == _texture.init && _texturePath) {
+        use(canvasIO);
+        use(fileIO);
+        use(imageLoadIO);
 
-            _texture = tree.io.loadTexture(_texturePath);
-            _isOwner = true;
+        // New I/O system
+        if (canvasIO) {
+
+            // Load an image from the filesystem if no image is already loaded
+            if (image == Image.init && _texturePath != "" && fileIO && imageLoadIO) {
+
+                auto file = fileIO.loadFile(_texturePath);
+                image = imageLoadIO.loadImage(file);
+
+            }
+
+            // Load the image
+            load(canvasIO, image);
+
+            // Adjust size
+            if (isSizeAutomatic) {
+
+                const viewportSize = image.viewportSize(canvasIO.dpi);
+
+                // No image loaded, shrink to nothingness
+                if (image == Image.init) {
+                    minSize = Vector2(0, 0);
+                }
+
+                else if (isAutoExpand) {
+                    minSize = fitInto(viewportSize, space);
+                }
+
+                else {
+                    minSize = viewportSize;
+                }
+
+            }
 
         }
 
-        // Adjust size
-        if (isSizeAutomatic) {
+        // Old backend
+        else {
 
-            // No texture loaded, shrink to nothingness
-            if (_texture is _texture.init) {
-                minSize = Vector2(0, 0);
+            // Lazy-load the texture if the backend wasn't present earlier
+            if (_texture == _texture.init && _texturePath) {
+                _texture = tree.io.loadTexture(_texturePath);
+                _isOwner = true;
+            }
+            else if (_texture == texture.init && image != Image.init) {
+                _texture = tree.io.loadTexture(image);
+                _isOwner = true;
             }
 
-            else if (isAutoExpand) {
-                minSize = fitInto(texture.viewportSize, space);
-            }
+            // Adjust size
+            if (isSizeAutomatic) {
 
-            else {
-                minSize = texture.viewportSize;
+                // No texture loaded, shrink to nothingness
+                if (_texture is _texture.init) {
+                    minSize = Vector2(0, 0);
+                }
+
+                else if (isAutoExpand) {
+                    minSize = fitInto(texture.viewportSize, space);
+                }
+
+                else {
+                    minSize = texture.viewportSize;
+                }
+
             }
 
         }
 
     }
 
-    override protected void drawImpl(Rectangle, Rectangle rect) @trusted {
+    override protected void drawImpl(Rectangle, Rectangle inner) @trusted {
 
         import std.algorithm : min;
 
-        // Ignore if there is no texture to draw
-        if (texture.id <= 0) return;
+        if (canvasIO) {
 
-        const size     = fitInto(texture.viewportSize, rect.size);
-        const position = center(rect) - size/2;
+            // Ignore if there is no texture to draw
+            if (image == Image.init) return;
 
-        _targetArea = Rectangle(position.tupleof, size.tupleof);
-        _texture.draw(_targetArea);
+            const size = image.viewportSize(canvasIO.dpi)
+                .fitInto(inner.size);
+            const position = center(inner) - size/2;
+
+            _targetArea = Rectangle(position.tupleof, size.tupleof);
+            image.draw(_targetArea);
+
+        }
+
+        else {
+
+            // Ignore if there is no texture to draw
+            if (texture.id <= 0) return;
+
+            const size     = fitInto(texture.viewportSize, inner.size);
+            const position = center(inner) - size/2;
+
+            _targetArea = Rectangle(position.tupleof, size.tupleof);
+            _texture.draw(_targetArea);
+
+        }
 
     }
 

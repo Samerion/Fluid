@@ -5,6 +5,7 @@ import std.conv;
 import std.traits;
 
 import fluid.node;
+import fluid.types;
 
 
 @safe:
@@ -32,7 +33,7 @@ enum isNodeParam(T, NodeType = Node)
 enum NodeAlign {
 
     start, center, end, fill,
-    
+
     centre = center
 
 }
@@ -180,6 +181,35 @@ struct Layout {
 
 }
 
+/// Place a rectangle inside another based on its specified alignment. This function considers
+/// `NodeAlign.fill` to be equivalent to `NodeAlign.start`.
+///
+/// This function may commonly be used with `Layout.nodeAlign`.
+///
+/// Params:
+///     alignment = Alignment to use for the child rectangle.
+///     space     = Rectangle denoting available space (parent).
+///     size      = Size of the rectangle to place (child).
+/// Returns:
+///     position = Position assigned to the child rectangle.
+Vector2 alignRectangle(NodeAlign[2] alignment, Rectangle space, Vector2 size) {
+
+    float impl(NodeAlign align_, lazy float spaceLeft) {
+        with (NodeAlign)
+        final switch (align_) {
+            case start, fill: return 0;
+            case center:      return spaceLeft / 2;
+            case end:         return spaceLeft;
+        }
+    }
+
+    return Vector2(
+        space.x + impl(alignment[0], space.width  - size.x),
+        space.y + impl(alignment[1], space.height - size.y),
+    );
+
+}
+
 /// Tags are optional "marks" left on nodes that are used to apply matching styles. Tags closely resemble
 /// [HTML classes](https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/class).
 ///
@@ -218,9 +248,9 @@ template isNodeTag(alias tag) {
         && hasUDA!(tag, NodeTag);
 
     // @NodeTag enum Enum { tag }
-    static if (isType!tag) 
+    static if (isType!tag)
         enum isTagMember = false;
-    else 
+    else
         enum isTagMember
             = is(typeof(tag)== enum)
             && hasUDA!(typeof(tag), NodeTag);
@@ -229,8 +259,8 @@ template isNodeTag(alias tag) {
 
 }
 
-/// Test if the given symbol is an enum, or an enum member. 
-enum isSomeEnum(alias tag) 
+/// Test if the given symbol is an enum, or an enum member.
+enum isSomeEnum(alias tag)
     = is(tag == enum)
     || is(__traits(parent, tag) == enum);
 
@@ -480,7 +510,7 @@ unittest {
 }
 
 /// This node property will disable mouse input on the given node.
-/// 
+///
 /// Params:
 ///     value = If set to false, the effect is reversed and mouse input is instead enabled.
 auto ignoreMouse(bool value = true) {
@@ -528,7 +558,7 @@ unittest {
 }
 
 /// This node property will make the subject hidden, setting the `isHidden` field to true.
-/// 
+///
 /// Params:
 ///     value = If set to false, the effect is reversed and the node is set to be visible instead.
 /// See_Also: `Node.isHidden`
@@ -561,7 +591,7 @@ unittest {
 }
 
 /// This node property will disable the subject, setting the `isHidden` field to true.
-/// 
+///
 /// Params:
 ///     value = If set to false, the effect is reversed and the node is set to be enabled instead.
 /// See_Also: `Node.isDisabled`
@@ -597,3 +627,112 @@ unittest {
 
 
 }
+
+deprecated("`IsOpaque` and `IsOpaqueMask` have been renamed to `HitFilter` and `HitFilterMask` "
+    ~ "respectively. They will be removed in Fluid 0.8.0.") {
+    alias IsOpaque = HitFilter;
+    alias IsOpaqueMask = HitFilterMask;
+}
+
+/// `HitFilter` is used as a return value of `Node.inBounds`. For most use-cases,
+/// `HitFilter.hit` and `HitFilter.miss` are the most appropriate, specifying that the point in
+/// question is, or is not, in the node's bounds. This defines the way nodes interact with
+/// mouse, touchscreen or other hover events (`fluid.io.hover`).
+///
+/// The node is not normally responsible for the bounds of its children. Children nodes specify
+/// their own bounds separately, so the `HitFilter.hit` and `HitFilter.miss` answers do not
+/// affect children.
+///
+/// Despite the above, it is sometimes desirable to prevent children from taking input, for
+/// example to perform transforms. To specify that children nodes *cannot* be in bounds,
+/// use `HitFilter.hitBranch` or `HitFilter.missBranch`.
+///
+/// See_Also:
+///     `Node.inBounds`.
+enum HitFilter : HitFilterMask {
+
+    /// The point is in bounds of this node.
+    hit        = HitFilterMask(0),
+
+    /// The point is *not* in bounds of this node.
+    miss       = HitFilterMask(1),
+
+    /// The point is in bounds, but not in the bounds of any of the children nodes.
+    hitBranch  = HitFilterMask(2),
+
+    /// Indicates that the point is *not* in bounds of any of the nodes in the branch; neither
+    /// of self, nor any of the children nodes.
+    missBranch = HitFilterMask(3),
+
+    deprecated("`yes` has been renamed to `hit`, and will be removed in Fluid 0.8.0")
+        yes         = hit,
+    deprecated("`no` has been renamed to `miss`, and will be removed in Fluid 0.8.0")
+        no          = miss,
+    deprecated("`onlySelf` has been renamed to `hitBranch`, and will be removed in Fluid 0.8.0")
+        onlySelf    = hitBranch,
+    deprecated("`notInBranch` has been renamed to `missBranch`, and will be removed in Fluid 0.8.0")
+        notInBranch = missBranch,
+
+}
+
+/// This bitmask defines whether a node contains a point in its boundaries.
+///
+/// To allow this to default to `HitFilter.hit` while being
+/// [zero-initialized](https://dlang.org/spec/traits.html#isZeroInit), each bit is inverted;
+/// i.e. `0` means *yes, in bounds* and `1` means, *no, not in bounds*.
+///
+/// See_Also:
+///     `HitFilter` for all possible values of this bitmask.
+///     `Node.inBounds` for a function returning this value.
+struct HitFilterMask {
+    int bitmask;
+
+    /// Returns:
+    ///     True if the queried point can be found in the node itself.
+    bool inSelf() const {
+        return (bitmask & 1) == 0;
+    }
+
+    /// Returns:
+    ///     True if the queried point may or may not be found in the children of the node.
+    ///     A false value indicates that the point will not be in any of the children nodes,
+    ///     and that children nodes should not be tested.
+    bool inChildren() const {
+        return (bitmask & 2) == 0;
+    }
+
+    /// Create a value that combines the restrictions of both masks. It can be said that either
+    /// of the masks acts as a "filter", hence the name.
+    ///
+    /// For example, combining `HitFilter.hit` with `HitFilter.miss` returns `HitFilter.miss`.
+    /// Combining `HitFilter.miss` with `HitFilter.hitBranch` returns `HitFilter.missBranch`.
+    ///
+    /// Params:
+    ///     other = Mask to combine with.
+    /// Returns:
+    ///     A mask with `inSelf == false` if false for either of the masks,
+    ///     and similarly `inChildren == false` if false for either of the values.
+    HitFilter filter(HitFilterMask other) const {
+        return cast(HitFilter) HitFilterMask((bitmask | other.bitmask) & 3);
+    }
+
+    /// Set the node's hit filter. This can be used as a node property — a hit filter
+    /// can be passed to a node builder.
+    /// Params:
+    ///     node = Node to change.
+    void apply(Node node) {
+        node.hitFilter = cast(HitFilter) HitFilterMask(bitmask & 3);
+    }
+}
+
+static assert(HitFilter.init == HitFilter.hit);
+static assert(!HitFilter.miss.inSelf);
+static assert( HitFilter.miss.inChildren);
+static assert( HitFilter.hit.inSelf);
+static assert( HitFilter.hit.inChildren);
+static assert(!HitFilter.missBranch.inSelf);
+static assert(!HitFilter.missBranch.inChildren);
+static assert( HitFilter.hitBranch.inSelf);
+static assert(!HitFilter.hitBranch.inChildren);
+static assert(HitFilter.hit.filter(HitFilter.miss) == HitFilter.miss);
+static assert(HitFilter.miss.filter(HitFilter.hitBranch) == HitFilter.missBranch);

@@ -70,7 +70,7 @@ class CodeInput : TextInput {
 
     // 64 spaces of indent ought to be more than anyone should ever need
     static protected const maxIndentTabs = "\t\t\t\t\t\t\t\t";
-    static protected const maxIndentSpaces 
+    static protected const maxIndentSpaces
         = "                                                                ";
     enum maxIndentWidth = maxIndentSpaces.length;
 
@@ -172,10 +172,8 @@ class CodeInput : TextInput {
         Style[256] styles;
 
         this() {
-
             text = typeof(text)(this, "", CodeHighlighterRange.init);
             text.hasFastEdits = true;
-
         }
 
         protected override inout(Rope) value() inout {
@@ -190,9 +188,11 @@ class CodeInput : TextInput {
 
             assert(text.hasFastEdits);
 
+            use(canvasIO);
+
             auto typeface = style.getTypeface;
             typeface.setSize(io.dpi, style.fontSize);
-            
+
             text.indentWidth = indentWidth * typeface.advance(' ').x / io.hidpiScale.x;
             text.resize(available);
             placeholderText.resize(available);
@@ -208,9 +208,9 @@ class CodeInput : TextInput {
 
             const style = pickStyle();
             if (showPlaceholder)
-                placeholderText.draw(styles, inner.start);
+                placeholderText.draw(canvasIO, styles, inner.start);
             else
-                text.draw(styles, inner.start);
+                text.draw(canvasIO, styles, inner.start);
 
         }
 
@@ -270,7 +270,8 @@ class CodeInput : TextInput {
 
     }
 
-    ///
+    /// `indentRope` outputs tabs if .useTabs is set.
+    @("CodeInput.indentRope outputs tabs")
     unittest {
 
         auto root = codeInput(.useTabs);
@@ -281,6 +282,8 @@ class CodeInput : TextInput {
 
     }
 
+    /// `indentRope` outputs series of spaces if spaces are used for indents. This is the default behavior.
+    @("CodeInput.indentRope outputs spaces")
     unittest {
 
         auto root = codeInput();
@@ -291,8 +294,8 @@ class CodeInput : TextInput {
 
     }
 
-    /// Returns: 
-    ///     A range of strings, which if concatenated, would create the requested indent with the current 
+    /// Returns:
+    ///     A range of strings, which if concatenated, would create the requested indent with the current
     ///     indent settings.
     /// Params:
     ///     indentLevel = Number of indent
@@ -310,7 +313,7 @@ class CodeInput : TextInput {
         // Indents are created by slicing either `maxIndentTabs` or `maxIndentSpaces`, which are limited in size.
         // In case an indent is larger than the size of either, it has to be split into multiple parts, which is
         // why this function returns a range of strings, rather than characters.
-        // The `iota` range will count down the number of characters remaining to print, including the count, 
+        // The `iota` range will count down the number of characters remaining to print, including the count,
         // excluding the zero.
         return iota(characterCount, 0, -cast(ptrdiff_t) maxCharacterCount)
 
@@ -318,7 +321,7 @@ class CodeInput : TextInput {
             .map!(a => useTabs
                 ? maxIndentTabs[0 .. min(a, maxIndentTabs.length)]
                 : maxIndentSpaces[0 .. min(a, maxIndentSpaces.length)]);
-        
+
     }
 
     ///
@@ -352,7 +355,7 @@ class CodeInput : TextInput {
         const oldEndInterval = intervalAt(end);
 
         const hasReplaced = super.replace(start, end, added, isMinor);
-        
+
         const newEndInterval = intervalAt(start + added.length);
 
         // Mark the range for reparsing
@@ -504,42 +507,6 @@ class CodeInput : TextInput {
 
     }
 
-    unittest {
-
-        auto root = codeInput();
-        root.value = "a\n    b";
-        root.draw();
-
-        assert(root.lineHomeByIndex(0) == 0);
-        assert(root.lineHomeByIndex(1) == 0);
-        assert(root.lineHomeByIndex(2) == 6);
-        assert(root.lineHomeByIndex(4) == 6);
-        assert(root.lineHomeByIndex(6) == 6);
-        assert(root.lineHomeByIndex(7) == 6);
-
-    }
-
-    unittest {
-
-        auto root = codeInput();
-        root.value = "a\n\tb";
-        root.draw();
-
-        assert(root.lineHomeByIndex(0) == 0);
-        assert(root.lineHomeByIndex(1) == 0);
-        assert(root.lineHomeByIndex(2) == 3);
-        assert(root.lineHomeByIndex(3) == 3);
-        assert(root.lineHomeByIndex(4) == 3);
-
-        root.value = " \t b";
-        foreach (i; 0 .. root.value.length) {
-
-            assert(root.lineHomeByIndex(i) == 3);
-
-        }
-
-    }
-
     /// Get the column the given index (or caret index) is at, but count tabs as however characters they display as.
     ptrdiff_t visualColumn(size_t i) {
 
@@ -655,7 +622,7 @@ class CodeInput : TextInput {
         assert(root.indentLevelByIndex(36) == 2);
 
     }
-    
+
     /// Action handler for the tab key.
     @(FluidInputAction.insertTab)
     void insertTab() {
@@ -860,66 +827,13 @@ class CodeInput : TextInput {
 
     }
 
-    unittest {
-
-        auto root = codeInput();
-        root.value = "a";
-        root.indent();
-        assert(root.value == "    a");
-
-        root.value = "abc\ndef\nghi\njkl";
-        root.selectSlice(4, 9);
-        root.indent();
-        assert(root.value == "abc\n    def\n    ghi\njkl");
-
-        root.indent(2);
-        assert(root.value == "abc\n            def\n            ghi\njkl");
-
-    }
-
-    unittest {
-
-        auto root = codeInput(.useSpaces(3));
-        root.value = "a";
-        root.indent();
-        assert(root.value == "   a");
-
-        root.value = "abc\ndef\nghi\njkl";
-        assert(root.lineByIndex(4) == "def");
-        root.selectSlice(4, 9);
-        root.indent();
-
-        assert(root.value == "abc\n   def\n   ghi\njkl");
-
-        root.indent(2);
-        assert(root.value == "abc\n         def\n         ghi\njkl");
-
-    }
-
-    unittest {
-
-        auto root = codeInput(.useTabs);
-        root.value = "a";
-        root.indent();
-        assert(root.value == "\ta");
-
-        root.value = "abc\ndef\nghi\njkl";
-        root.selectSlice(4, 9);
-        root.indent();
-        assert(root.value == "abc\n\tdef\n\tghi\njkl");
-
-        root.indent(2);
-        assert(root.value == "abc\n\t\t\tdef\n\t\t\tghi\njkl");
-
-    }
-
     @(FluidInputAction.outdent)
     void outdent() {
 
         outdent(1);
 
     }
-    
+
     void outdent(int level) {
 
         const isMinor = true;
@@ -1269,7 +1183,7 @@ class CodeInput : TextInput {
 
     }
 
-    /// Convert indent on a line to use tabs or spaces depending on settings. 
+    /// Convert indent on a line to use tabs or spaces depending on settings.
     void reformatLineByIndex(size_t index) {
 
         import std.math;
@@ -1541,7 +1455,7 @@ class CodeInput : TextInput {
 
         // Step 1: Find the common indent of all lines in the inserted text
         // This data will be needed for subsequent steps
-        
+
         // Skip the first line because it's likely to be without indent when copy-pasting
         auto indentLines = source.byLine.drop(1);
 
@@ -1550,14 +1464,14 @@ class CodeInput : TextInput {
         auto allIndents = indentLines.save
             .map!(a => a
                 .countUntil!(a => !a.among(' ', '\t')));
-        
+
         // Ignore blank lines (no characters other than spaces)
-        auto significantIndents = allIndents.save 
+        auto significantIndents = allIndents.save
             .filter!(a => a != -1);
 
         // Determine the common indent
         // It should be equivalent to the smallest indent of any blank line
-        const commonIndent 
+        const commonIndent
             = !significantIndents.empty ? significantIndents.minElement()
             : !allIndents.empty         ? indentLines.map!"a.length".minElement()
             : 0;
@@ -1568,7 +1482,7 @@ class CodeInput : TextInput {
         foreach (line; source.byLine) {
 
             // Step 2: Remove the common indent
-            // This way the indent in the inserted text will be uniform. It can then be replaced by indent 
+            // This way the indent in the inserted text will be uniform. It can then be replaced by indent
             // matching the text editor or indentor settings
 
             const localIndent = line
@@ -1594,14 +1508,14 @@ class CodeInput : TextInput {
 
             // Every line after the first should be indented relative to the first line. `indentLevel`
             // will be used as a reference. It is the lesser of indent level before and after the insert.
-            // * The push may end up reducing the indent (based on caret position), so indent should be 
+            // * The push may end up reducing the indent (based on caret position), so indent should be
             //   checked after the insert;
             // * Relative indent of each line in the clipboard should be preserved — an *increase* in indent should
             //   be ignored, so `originalIndentLevel` is still used as a reference.
             if (!started) {
                 started = true;
                 indentLevel = min(
-                    originalIndentLevel, 
+                    originalIndentLevel,
                     indentLevelByIndex(lineStart));
             }
 
@@ -1621,91 +1535,65 @@ class CodeInput : TextInput {
     @("Text pasted into CodeInput is reformatted")
     unittest {
 
-        auto io = new HeadlessBackend;
-        auto root = codeInput(.useTabs);
+        import std.typecons;
 
-        io.clipboard = "text";
-        root.io = io;
-        root.insertTab;
-        root.paste();
-        assert(root.value == "\ttext");
+        static abstract class Highlighter : CodeHighlighter {
 
-        root.breakLine;
-        root.paste();
-        assert(root.value == "\ttext\n\ttext");
+            int highlightCount;
 
-        io.clipboard = "text\ntext";
-        root.value = "";
-        root.paste();
-        assert(root.value == "text\ntext");
-
-        root.breakLine;
-        root.insertTab;
-        root.paste();
-        assert(root.value == "text\ntext\n\ttext\n\ttext");
-
-        io.clipboard = "  {\n    text\n  }\n";
-        root.value = "";
-        root.paste();
-        assert(root.value == "{\n  text\n}\n");
-
-        root.value = "\t";
-        root.caretToEnd();
-        root.paste();
-        assert(root.value == "\t{\n\t  text\n\t}\n\t");
-
-        root.value = "\t";
-        root.caretToStart();
-        root.paste();
-        assert(root.value == "{\n  text\n}\n\t");
-
-    }
-
-    unittest {
-
-        auto io = new HeadlessBackend;
-        auto root = codeInput();
-        root.io = io;
-
-        foreach (i, clipboard; ["", "  ", "    ", "\t", "\t\t"]) {
-
-            io.clipboard = clipboard;
-            root.value = "";
-            root.paste();
-            assert(root.value == clipboard,
-                format!"Clipboard preset index %s (%s) not preserved"(i, clipboard));
+            void parse(Rope) {
+                highlightCount++;
+            }
 
         }
 
+        static abstract class Indentor : CodeIndentor {
+
+            int indentCount;
+
+            void parse(Rope) {
+                indentCount++;
+            }
+
+        }
+
+        auto highlighter = new BlackHole!Highlighter;
+        auto root = codeInput(highlighter);
+        root.reparse();
+
+        assert(highlighter.highlightCount == 1);
+
+        auto indentor = new BlackHole!Indentor;
+        root.indentor = indentor;
+        root.reparse();
+
+        // Parse called once for each
+        assert(highlighter.highlightCount == 2);
+        assert(indentor.indentCount == 1);
+
+        static abstract class FullHighlighter : CodeHighlighter, CodeIndentor {
+
+            int highlightCount;
+            int indentCount;
+
+            void parse(Rope) {
+                highlightCount++;
+                indentCount++;
+            }
+
+        }
+
+        auto fullHighlighter = new BlackHole!FullHighlighter;
+        root = codeInput(fullHighlighter);
+        root.reparse();
+
+        // Parse should be called once for the whole class
+        assert(fullHighlighter.highlightCount == 1);
+        assert(fullHighlighter.indentCount == 1);
+
     }
 
-    unittest {
-
-        auto io = new HeadlessBackend;
-        auto root = codeInput(.useTabs);
-
-        io.clipboard = "text\ntext";
-        root.io = io;
-        root.value = "let foo() {\n\tbar\t\tbaz\n}";
-        root.selectSlice(
-            root.value.indexOf("bar"),
-            root.value.indexOf("baz"),
-        );
-        root.paste();
-        assert(root.value == "let foo() {\n\ttext\n\ttextbaz\n}");
-
-        io.clipboard = "\t\ttext\n\ttext";
-        root.value = "let foo() {\n\tbar\t\tbaz\n}";
-        root.selectSlice(
-            root.value.indexOf("bar"),
-            root.value.indexOf("baz"),
-        );
-        root.paste();
-        assert(root.value == "let foo() {\n\t\ttext\n\ttextbaz\n}");
-
-    }
-
-    @("CodeInput: breakLine and paste can be undone")
+    @("Legacy: CodeInput.paste creates a history entry (migrated)")
     unittest {
 
         auto io = new HeadlessBackend;
@@ -1861,7 +1749,7 @@ interface CodeHighlighter {
     /// Parse the given text to use with other functions in the highlighter.
     /// Params:
     ///     text    = New text to highlight.
-    ///     start   = Index of the first character that has changed since last parse. 
+    ///     start   = Index of the first character that has changed since last parse.
     ///         This begins both removed (start .. oldEnd) and inserted (start .. newEnd) fragments.
     ///     oldEnd  = Last index of the fragment that has been replaced.
     ///     newEnd  = Last index of newly inserted fragment.
@@ -2066,7 +1954,7 @@ unittest {
 
     // Even if this is just a single paste, reformatting is bound to take a while.
     // I hope it could be faster in the future, but the current performance seems to be good enough;
-    // I tried the same in IntelliJ and on my machine it's just about the same ~3 seconds, 
+    // I tried the same in IntelliJ and on my machine it's just about the same ~3 seconds,
     // Fluid might even be slightly faster.
     assert(average <= 5.seconds, format!"Too slow: average %s"(average));
     if (average > 1.seconds) {
@@ -2094,5 +1982,5 @@ unittest {
     assert(root.value == `run(`
         ~ `    label("Hello, W!")`
         ~ `);`);
-    
+
 }

@@ -1,42 +1,61 @@
-///
+/// A line to separate unrelated nodes, or to divide content into groups.
 module fluid.separator;
+
+@safe:
+
+/// Use [hseparator] to create horizontal lines, and [vseparator] to create vertical lines.
+@("Separator reference example")
+unittest {
+    import fluid.space;
+    import fluid.label;
+    run(
+        vspace(
+            label("Hello"),
+            hseparator(),
+            label("Goodbye"),
+        ),
+    );
+}
 
 import fluid.node;
 import fluid.utils;
 import fluid.backend;
 import fluid.structs;
 
+import fluid.io.canvas;
 
-@safe:
-
-
-/// A separator node creates a line, used to separate unrelated parts of content.
-alias vseparator = simpleConstructor!(Separator, (a) {
+/// A [node builder][nodeBuilder] for [Separator][Separator]. The `vseparator` creates a vertical
+/// line, while `hseparator` creates a horizontal one.
+enum vseparator = NodeBuilder!(Separator, (a) {
 
     a.isHorizontal = false;
     a.layout = .layout!("center", "fill");
 
-});
+}).init;
 
 /// ditto
-alias hseparator = simpleConstructor!(Separator, (a) {
+enum hseparator = NodeBuilder!(Separator, (a) {
 
     a.isHorizontal = true;
     a.layout = .layout!("fill", "center");
 
-});
+}).init;
 
-/// ditto
+/// A separator node draws a vertical or horizontal line to separate content.
 class Separator : Node {
+
+    CanvasIO canvasIO;
 
     public {
 
+        /// If true, separator draws a horizontal line, otherwise it draws a vertical one.
         bool isHorizontal;
 
     }
 
     override void resizeImpl(Vector2) {
 
+        use(canvasIO);
         minSize = Vector2(1, 1);
 
     }
@@ -45,14 +64,14 @@ class Separator : Node {
 
         auto style = pickStyle();
 
-        style.drawBackground(io, outer);
+        style.drawBackground(io, canvasIO, outer);
 
         if (isHorizontal) {
 
             auto start = Vector2(start(inner).x, center(inner).y);
             auto end = Vector2(end(inner).x, center(inner).y);
 
-            style.drawLine(io, start, end);
+            style.drawLine(io, canvasIO, start, end);
 
         }
 
@@ -61,41 +80,10 @@ class Separator : Node {
             auto start = Vector2(center(inner).x, start(inner).y);
             auto end = Vector2(center(inner).x, end(inner).y);
 
-            style.drawLine(io, start, end);
+            style.drawLine(io, canvasIO, start, end);
 
         }
 
     }
-
-}
-
-unittest {
-
-    import fluid.theme;
-    import fluid.default_theme;
-
-    auto io = new HeadlessBackend(Vector2(100, 100));
-    auto theme = nullTheme.derive(
-        rule!Separator(
-            lineColor = color("#000"),
-        ),
-    );
-
-    // Vertical
-    auto root = vseparator(theme);
-
-    root.backend = io;
-    root.draw();
-
-    io.assertLine(Vector2(50, 0), Vector2(50, 100), color("#000"));
-
-    // Horizontal
-    root = hseparator(theme);
-
-    io.nextFrame;
-    root.backend = io;
-    root.draw();
-
-    io.assertLine(Vector2(0, 50), Vector2(100, 50), color("#000"));
 
 }

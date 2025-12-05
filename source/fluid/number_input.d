@@ -14,6 +14,9 @@ import fluid.backend;
 import fluid.structs;
 import fluid.text_input;
 
+import fluid.io.hover;
+import fluid.io.canvas;
+
 alias numberInput(T) = simpleConstructor!(NumberInput!T);
 alias intInput = simpleConstructor!IntInput;
 alias floatInput = simpleConstructor!FloatInput;
@@ -71,16 +74,14 @@ class NumberInput(T) : AbstractNumberInput {
 
         super(changed);
         this.value = value;
-        this.update();
+        this.updateText();
 
     }
 
     override void drawImpl(Rectangle outer, Rectangle inner) {
 
-        auto style = pickStyle();
-
         super.drawImpl(outer, inner);
-        spinner.draw(inner);
+        drawChild(spinner, inner);
 
         // Re-evaluate the expression if focus was lost
         if (!isFocused) evaluate();
@@ -94,27 +95,29 @@ class NumberInput(T) : AbstractNumberInput {
         if (!isDirty) return;
 
         // Evaluate the expression
-        evaluateImpl();
+        evaluateExpression();
 
         // Update the text
-        update();
+        updateText();
 
         // Call change callback
         if (changed) changed();
 
     }
 
-    private void evaluateImpl() {
+    /// Update the numerical value from input text.
+    void evaluateExpression() {
 
         // TODO handle failure properly, add a warning sign or something, preserve old value
-        this.value = evaluateExpression!T(super.value).value.clamp(minValue, maxValue);
+        this.value = .evaluateExpression!T(super.value).value.clamp(minValue, maxValue);
 
         // Mark as clean
         isDirty = false;
 
     }
 
-    private void update() {
+    /// Update textual value from the number.
+    void updateText() {
 
         import std.conv;
 
@@ -133,9 +136,9 @@ class NumberInput(T) : AbstractNumberInput {
     @(FluidInputAction.scrollUp)
     override void increment() {
 
-        evaluateImpl();
+        evaluateExpression();
         value += step;
-        update();
+        updateText();
         touch();
         focus();
 
@@ -148,9 +151,9 @@ class NumberInput(T) : AbstractNumberInput {
     @(FluidInputAction.scrollDown)
     override void decrement() {
 
-        evaluateImpl();
+        evaluateExpression();
         value -= step;
-        update();
+        updateText();
         touch();
         focus();
 
@@ -200,6 +203,7 @@ unittest {
 
 }
 
+@("Legacy: NumberInput supports math operations (migrated)")
 unittest {
 
     int calls;
@@ -290,28 +294,6 @@ unittest {
 
 }
 
-unittest {
-
-    import std.math;
-
-    auto io = new HeadlessBackend;
-    auto root = floatInput();
-
-    root.io = io;
-
-    io.inputCharacter("10e8");
-    root.focus();
-    root.draw();
-
-    io.nextFrame;
-    io.press(KeyboardKey.enter);
-    root.draw();
-
-    assert(root.value.isClose(10e8));
-    assert(root.TextInput.value.among("1e+9", "1e+09"));
-
-}
-
 abstract class AbstractNumberInput : TextInput {
 
     mixin enableInputActions;
@@ -336,7 +318,7 @@ abstract class AbstractNumberInput : TextInput {
     override void resizeImpl(Vector2 space) {
 
         super.resizeImpl(space);
-        spinner.resize(tree, theme, space);
+        resizeChild(spinner, space);
 
     }
 
@@ -346,9 +328,13 @@ abstract class AbstractNumberInput : TextInput {
 }
 
 /// Increment and decrement buttons that appear on the right of number inputs.
-class NumberInputSpinner : Node, FluidHoverable {
+class NumberInputSpinner : Node, FluidHoverable, Hoverable {
 
-    mixin enableInputActions;
+    mixin FluidHoverable.enableInputActions;
+    mixin Hoverable.enableInputActions;
+
+    CanvasIO canvasIO;
+    HoverIO hoverIO;
 
     /// Additional features available for number input styling
     static class Extra : typeof(super).Extra {
@@ -371,6 +357,12 @@ class NumberInputSpinner : Node, FluidHoverable {
 
     }
 
+    protected {
+
+        DrawableImage spinnerImage;
+
+    }
+
     private {
 
         Rectangle _lastRectangle;
@@ -385,20 +377,29 @@ class NumberInputSpinner : Node, FluidHoverable {
     }
 
     override ref inout(bool) isDisabled() inout {
-
         return super.isDisabled();
+    }
 
+    override bool blocksInput() const {
+        return isDisabled || isDisabledInherited;
     }
 
     override bool isHovered() const {
-
         return super.isHovered();
-
     }
 
     override void resizeImpl(Vector2) {
 
+        use(hoverIO);
+        use(canvasIO);
+
         minSize = Vector2();
+
+        // Load image for the spinner from CanvasIO
+        if (canvasIO) {
+            spinnerImage = getImage(style);
+            load(canvasIO, spinnerImage);
+        }
 
     }
 
@@ -414,21 +415,34 @@ class NumberInputSpinner : Node, FluidHoverable {
 
         auto style = pickStyle();
 
-        style.drawBackground(io, outer);
+        style.drawBackground(io, canvasIO, outer);
+
+        _lastRectangle = buttonsRectangle(style, inner);
+
+        // If using canvasIO, draw the image
+        if (canvasIO) {
+            spinnerImage.draw(_lastRectangle);
+        }
 
         // If there's a texture for buttons, display it
-        if (auto texture = getTexture(style)) {
-
-            _lastRectangle = buttonsRectangle(style, inner);
-
+        else if (auto texture = getTexture(style)) {
             texture.draw(_lastRectangle);
-
         }
 
     }
 
     /// Get rectangle for the buttons
     Rectangle buttonsRectangle(const Style style, Rectangle inner) {
+
+        if (spinnerImage != Image.init) {
+
+            const scale = inner.height / spinnerImage.height;
+            const size = spinnerImage.size * scale;
+            const position = end(inner) - size;
+
+            return Rectangle(position.tupleof, size.tupleof);
+
+        }
 
         if (auto texture = getTexture(style)) {
 
@@ -445,25 +459,47 @@ class NumberInputSpinner : Node, FluidHoverable {
     }
 
     @(FluidInputAction.press)
-    void press() {
+    void press(HoverPointer pointer) {
 
         // Above center (increment)
-        if (io.mousePosition.y < center(_lastRectangle).y) {
-
+        if (pointer.position.y < center(_lastRectangle).y) {
             if (incremented) incremented();
-
         }
 
         // Below center (decrement)
         else {
-
             if (decremented) decremented();
+        }
 
+    }
+
+    @(FluidInputAction.press)
+    void press() {
+
+        // Polyfill for old I/O
+        if (!hoverIO) {
+            HoverPointer pointer;
+            pointer.position = io.mousePosition;
+            press(pointer);
         }
 
     }
 
     void mouseImpl() {
+
+    }
+
+    bool hoverImpl(HoverPointer) {
+        return false;
+    }
+
+    /// Get image used by the spinner.
+    protected Image getImage(Style style) {
+
+        auto extra = cast(Extra) style.extra;
+        if (!extra) return Image.init;
+
+        return extra.buttons;
 
     }
 
@@ -530,6 +566,15 @@ struct ExpressionResult(T) {
 
 }
 
+/// Evaluate a string containing a mathematical expression and return the result.
+///
+/// Supported operations are `+`, `-`, `*` and `/`
+///
+/// Params:
+///     input = A string-like range containing a mathematical expression.
+/// Returns:
+///     Result of the expression. The result will also evaluate to true if it contains a valid number,
+///     or false if the expression does not evaluate to a number.
 ExpressionResult!T evaluateExpression(T, Range)(Range input) {
 
     import std.utf : byDchar;
@@ -543,6 +588,7 @@ ExpressionResult!T evaluateExpression(T, Range)(Range input) {
 
 }
 
+/// Evaluate expression can be used to perform mathematical expressions at runtime.
 unittest {
 
     assert(evaluateExpression!int("0") == 0);
@@ -570,6 +616,7 @@ unittest {
 
 }
 
+/// Evaluate expression can perform floating point operations.
 unittest {
 
     import std.math;
