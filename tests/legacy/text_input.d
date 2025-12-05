@@ -8,7 +8,7 @@ import std.range;
 import std.datetime;
 import std.algorithm;
 
-import nodes.text_input;
+import text.text;
 
 @safe:
 
