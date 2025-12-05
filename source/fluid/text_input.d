@@ -1146,9 +1146,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
     /// Params:
     ///     index = Index of the requested character.
     TextRuler rulerAt(size_t index, bool preferNextLine = false) {
-
         return contentLabel.text.rulerAt(index, preferNextLine);
-
     }
 
     CachedTextRuler rulerAtPosition(Vector2 position) {
