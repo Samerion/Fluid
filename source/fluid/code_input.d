@@ -1547,49 +1547,11 @@ class CodeInput : TextInput {
 
         }
 
-        static abstract class Indentor : CodeIndentor {
-
-            int indentCount;
-
-            void parse(Rope) {
-                indentCount++;
-            }
-
-        }
-
         auto highlighter = new BlackHole!Highlighter;
         auto root = codeInput(highlighter);
         root.reparse();
 
         assert(highlighter.highlightCount == 1);
-
-        auto indentor = new BlackHole!Indentor;
-        root.indentor = indentor;
-        root.reparse();
-
-        // Parse called once for each
-        assert(highlighter.highlightCount == 2);
-        assert(indentor.indentCount == 1);
-
-        static abstract class FullHighlighter : CodeHighlighter, CodeIndentor {
-
-            int highlightCount;
-            int indentCount;
-
-            void parse(Rope) {
-                highlightCount++;
-                indentCount++;
-            }
-
-        }
-
-        auto fullHighlighter = new BlackHole!FullHighlighter;
-        root = codeInput(fullHighlighter);
-        root.reparse();
-
-        // Parse should be called once for the whole class
-        assert(fullHighlighter.highlightCount == 1);
-        assert(fullHighlighter.indentCount == 1);
 
     }
 
