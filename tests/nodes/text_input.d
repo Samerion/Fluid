@@ -3,21 +3,9 @@ module nodes.text_input;
 import std.algorithm;
 
 import fluid;
+import text.text;
 
 @safe:
-
-Theme testTheme;
-
-static this() {
-    testTheme = nullTheme.derive(
-        rule!TextInput(
-            Rule.textColor = color("#000"),
-            Rule.backgroundColor = color("#faf"),
-            Rule.selectionBackgroundColor = color("#02a"),
-            Rule.fontSize = 14.pt,
-        ),
-    );
-}
 
 @("TextInput scrolls when there is too much text to fit in its width")
 unittest {
