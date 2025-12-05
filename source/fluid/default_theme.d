@@ -32,13 +32,6 @@ Theme nullTheme;
 /// the role of each node understandable.
 Theme fluidDefaultTheme;
 
-version (unittest) {
-
-    /// Theme for testing; defines a font and nothing else.
-    package Theme testTheme;
-
-}
-
 @NodeTag
 enum FluidTag {
     warning,
@@ -83,16 +76,6 @@ static this() {
         nullTheme.add(
             rule!Node(),
         );
-
-        version (unittest) {
-
-            testTheme.add(
-                rule!Node(
-                    fontSize = 14.pt,
-                ),
-            );
-
-        }
 
         fluidDefaultTheme.add(
             rule!Node(

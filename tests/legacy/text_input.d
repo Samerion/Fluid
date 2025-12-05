@@ -8,6 +8,8 @@ import std.range;
 import std.datetime;
 import std.algorithm;
 
+import nodes.text_input;
+
 @safe:
 
 @("TextInput accepts text when focused")
@@ -616,12 +618,12 @@ unittest {
 
     // Just by the way, check if the caret position is correct
     root.updateCaretPosition(true);
-    assert(root.caretPosition.x.isClose(0));
-    assert(root.caretPosition.y.isClose(135));
+    assert(root.caretRectangle.x.isClose(0));
+    assert(root.caretRectangle.y.isClose(135));
 
     root.updateCaretPosition(false);
-    assert(root.caretPosition.x.isClose(153));
-    assert(root.caretPosition.y.isClose(108));
+    assert(root.caretRectangle.x.isClose(153));
+    assert(root.caretRectangle.y.isClose(108));
 
     // Try the same with the third line
     root.caretTo(Vector2(200, 148));
@@ -673,7 +675,7 @@ unittest {
     import std.math : isClose;
 
     auto io = new HeadlessBackend;
-    auto root = textInput(.nullTheme, .multiline);
+    auto root = textInput(.testTheme, .multiline);
 
     root.io = io;
     root.size = Vector2(200, 0);
@@ -724,30 +726,31 @@ unittest {
 
     assert(root.valueBeforeCaret.wordBack == "enough ");
     assert(root.valueAfterCaret.wordFront == "to ");
-    assert(root.caretPosition.x.isClose(0));
+    assert(root.caretRectangle.x.isClose(0));
 
     // Move to the previous line
     root.runInputAction!(FluidInputAction.previousLine);
 
     assert(root.valueBeforeCaret.wordBack == ", ");
     assert(root.valueAfterCaret.wordFront == "make ");
-    assert(root.caretPosition.x.isClose(0));
+    assert(root.caretRectangle.x.isClose(0));
 
     // Move to its end — position should be the same as earlier, but the caret should be on the same line
     root.runInputAction!(FluidInputAction.toLineEnd);
 
     assert(root.valueBeforeCaret.wordBack == "enough ");
     assert(root.valueAfterCaret.wordFront == "to ");
-    assert(root.caretPosition.x.isClose(181));
+    assert(root.caretRectangle.x.isClose(181));
 
     // Move to the previous line — again
     root.runInputAction!(FluidInputAction.previousLine);
 
     assert(root.valueBeforeCaret.wordBack == ", ");
     assert(root.valueAfterCaret.wordFront == "make ");
-    assert(root.caretPosition.x.isClose(153));
+    assert(root.caretRectangle.x.isClose(153));
 
 }
+
 
 @("TextInput.cut removes text and puts it in the clipboard")
 @Migrated
@@ -891,7 +894,8 @@ unittest {
 
     const focusBox = input.focusBoxImpl(Rectangle(0, 0, 200, 50));
 
-    assert(focusBox.start == input.caretPosition);
+    assert(focusBox.start == input.caretRectangle.start);
     assert(focusBox.end.y - viewportHeight == root.scroll);
+
 
 }

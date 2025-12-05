@@ -623,7 +623,7 @@ template InputActionHandlers(T) {
             static foreach (i, actionType; __traits(getAttributes, overload)) {
 
                 // Input action — add to the result
-                static if (isInputActionType!actionType) {
+                static if (isInputAction!actionType) {
 
                     Result = AliasSeq!(
                         Result,

@@ -116,7 +116,7 @@ unittest {
     root.updateSize();
     root.draw();
 
-    assert(root.caretPosition.x < 1);
+    assert(root.caretRectangle.x < 1);
     assert(textSize.x < 1);
 
     root.value = "This value exceeds the default size of a text input.";
@@ -124,7 +124,7 @@ unittest {
     root.caretToEnd();
     root.draw();
 
-    assert(root.caretPosition.x > 200);
+    assert(root.caretRectangle.x > 200);
     assert(textSize.x > 200);
     assert(textSize.x > root.size.x);
 
@@ -990,21 +990,22 @@ unittest {
 
 }
 
-@("TextInput.selectToEnd selects until a linea break")
+@("TextInput.selectToEnd selects until a line break")
 unittest {
 
-    auto root = textInput(.nullTheme, .multiline);
-    auto lineHeight = root.style.getTypeface.lineHeight;
+    auto root = textInput(.testTheme, .multiline);
 
     root.value = "First one\nSecond two";
     root.draw();
+
+    auto lineHeight = root.style.getTypeface.lineHeight;
 
     // Navigate to the start and select the whole line
     root.caretToStart();
     root.runInputAction!(FluidInputAction.selectToLineEnd);
 
     assert(root.selectedValue == "First one");
-    assert(root.caretPosition.y < lineHeight);
+    assert(root.caretRectangle.center.y < lineHeight);
 
 }
 
@@ -1218,12 +1219,12 @@ unittest {
 
     // Just by the way, check if the caret position is correct
     root.updateCaretPosition(true);
-    assert(root.caretPosition.x.isClose(0));
-    assert(root.caretPosition.y.isClose(135));
+    assert(root.caretRectangle.x.isClose(0));
+    assert(root.caretRectangle.y.isClose(135));
 
     root.updateCaretPosition(false);
-    assert(root.caretPosition.x.isClose(153));
-    assert(root.caretPosition.y.isClose(108));
+    assert(root.caretRectangle.x.isClose(153));
+    assert(root.caretRectangle.y.isClose(108));
 
     // Try the same with the third line
     root.caretTo(Vector2(200, 148));
@@ -1290,28 +1291,28 @@ unittest {
 
     assert(root.valueBeforeCaret.wordBack == "enough ");
     assert(root.valueAfterCaret.wordFront == "to ");
-    assert(root.caretPosition.x.isClose(0));
+    assert(root.caretRectangle.x.isClose(0));
 
     // Move to the previous line
     root.runInputAction!(FluidInputAction.previousLine);
 
     assert(root.valueBeforeCaret.wordBack == ", ");
     assert(root.valueAfterCaret.wordFront == "make ");
-    assert(root.caretPosition.x.isClose(0));
+    assert(root.caretRectangle.x.isClose(0));
 
     // Move to its end — position should be the same as earlier, but the caret should be on the same line
     root.runInputAction!(FluidInputAction.toLineEnd);
 
     assert(root.valueBeforeCaret.wordBack == "enough ");
     assert(root.valueAfterCaret.wordFront == "to ");
-    assert(root.caretPosition.x.isClose(181));
+    assert(root.caretRectangle.x.isClose(181));
 
     // Move to the previous line — again
     root.runInputAction!(FluidInputAction.previousLine);
 
     assert(root.valueBeforeCaret.wordBack == ", ");
     assert(root.valueAfterCaret.wordFront == "make ");
-    assert(root.caretPosition.x.isClose(153));
+    assert(root.caretRectangle.x.isClose(153));
 
 }
 
@@ -1352,7 +1353,7 @@ unittest {
 
     const focusBox = input.focusBoxImpl(Rectangle(0, 0, viewportWidth, viewportHeight));
 
-    assert(focusBox.start == input.caretPosition);
+    assert(focusBox.start == input.caretRectangle.start);
     assert(focusBox.end.y - viewportHeight == root.scroll);
 
 }
@@ -1633,7 +1634,7 @@ unittest {
     input.caretIndex = "Line one\nLin".length;
     input.updateCaretPosition();
 
-    const middle = input.caretPosition;
+    const middle = input.caretRectangle.start;
     const top    = middle - Vector2(0, lineHeight);
     const blank  = middle + Vector2(0, lineHeight);
     const bottom = middle + Vector2(0, lineHeight * 2);
