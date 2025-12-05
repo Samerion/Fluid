@@ -55,7 +55,7 @@ class PasswordInput : TextInput {
 
             super.resizeImpl(available);
 
-            if (!isPlaceholder) {
+            if (!showPlaceholder) {
                 const x = getAdvanceX(io, canvasIO, style);
                 const radius = x / 2f;
                 const advance = x * 1.2;

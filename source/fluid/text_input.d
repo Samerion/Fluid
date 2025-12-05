@@ -974,10 +974,6 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         // Set the size
         minSize = size;
 
-        // Set the label text
-        contentLabel.isPlaceholder = value == "";
-        contentLabel.text = value == "" ? placeholder : value;
-
         const isFill = layout.nodeAlign[0] == NodeAlign.fill;
 
         _availableWidth = isFill
@@ -1254,7 +1250,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
     protected void drawContents(Rectangle, Rectangle scrolledInner) {
 
         // Draw selection
-        drawSelection(scrolledInner, isMinor);
+        drawSelection(scrolledInner);
 
         // Draw the text
         drawChild(contentLabel, scrolledInner);
@@ -2213,8 +2209,6 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         root.value = "Line one\nLine two\n\nLine four";
         root.focus();
         root.draw();
-
-        auto lineHeight = root.style.getTypeface.lineHeight;
 
         // Move the caret to second line
         root.caretIndex = "Line one\nLin".length;
