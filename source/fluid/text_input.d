@@ -3231,8 +3231,8 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
     protected ref HistoryEntry snapshot() {
 
         const that = this;
-
-        return _snapshot = that.snapshot;
+        _snapshot = that.snapshot;
+        return _snapshot;
 
     }
 

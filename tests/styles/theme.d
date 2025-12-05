@@ -91,7 +91,7 @@ unittest {
             : rule()
     );
 
-    auto myTheme = Theme(
+    auto myTheme = nullTheme.derive(
         rule!Label(
             myRule,
         ),
