@@ -1678,7 +1678,7 @@ unittest {
     input.caretIndex = "Line one\nLin".length;
     input.updateCaretPosition();
 
-    const middle = input.caretPosition;
+    const middle = input.caretRectangle.center;
     const top    = middle - Vector2(0, lineHeight);
     const blank  = middle + Vector2(0, lineHeight);
     const bottom = middle + Vector2(0, lineHeight * 2);
@@ -1735,7 +1735,7 @@ unittest {
     input.caretIndex = "Line one\nLin".length;
     input.updateCaretPosition();
 
-    const middle = input.caretPosition;
+    const middle = input.caretRectangle.center;
     const top    = middle - Vector2(0, lineHeight);
     const blank  = middle + Vector2(0, lineHeight);
     const bottom = middle + Vector2(0, lineHeight * 2);
