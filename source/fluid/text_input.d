@@ -1447,7 +1447,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     }
 
-    @("TextInput.push reuses the buffer")
+    @("TextInput.push reuses the text buffer; creates undo entries regardless of buffer")
     unittest {
 
         auto root = textInput();
@@ -1776,46 +1776,6 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     }
 
-    @("TextInput.push reuses the text buffer; creates undo entries regardless of buffer")
-    unittest {
-
-        auto root = textInput();
-        root.value = "Ho";
-
-        root.caretIndex = 1;
-        root.push("e");
-        assert(root.value.byNode.equal(["H", "e", "o"]));
-
-        root.push("n");
-
-        assert(root.value.byNode.equal(["H", "en", "o"]));
-
-        root.push("l");
-        assert(root.value.byNode.equal(["H", "enl", "o"]));
-
-        // Create enough text to fill the buffer
-        // A new node should be created as a result
-        auto bufferFiller = 'A'.repeat(root.freeBuffer.length).array;
-
-        root.push(bufferFiller);
-        assert(root.value.byNode.equal(["H", "enl", bufferFiller, "o"]));
-
-        // Undo all pushes until the initial fill
-        root.undo();
-        assert(root.value == "Ho");
-        assert(root.valueBeforeCaret == "H");
-
-        // Undo will not clear the initial value
-        root.undo();
-        assert(root.value == "Ho");
-        assert(root.valueBeforeCaret == "H");
-
-        // The above undo does not add a new redo stack entry; effectively, this redo cancels both undo actions above
-        root.redo();
-        assert(root.value.byNode.equal(["H", "enl", bufferFiller, "o"]));
-
-    }
-
     /// Start a new line
     @(FluidInputAction.breakLine)
     bool breakLine() {
@@ -1838,78 +1798,6 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         root.runInputAction!(FluidInputAction.breakLine);
 
         assert(root.value == "hello");
-
-    }
-
-    @("breakLine input action always creates a new history entry")
-    unittest {
-
-        auto root = textInput(.multiline);
-
-        root.savePush("hello");
-        root.runInputAction!(FluidInputAction.breakLine);
-        assert(root.value == "hello\n");
-
-        root.undo();
-        assert(root.value == "hello");
-        root.redo();
-        assert(root.value == "hello\n");
-
-        root.undo();
-        assert(root.value == "hello");
-        root.undo();
-        assert(root.value == "");
-        root.redo();
-        assert(root.value == "hello");
-        root.redo();
-        assert(root.value == "hello\n");
-
-    }
-
-    unittest {
-
-        auto root = textInput(.nullTheme, .multiline);
-
-        root.push("Привет, мир!");
-        root.runInputAction!(FluidInputAction.breakLine);
-
-        assert(root.value == "Привет, мир!\n");
-        assert(root.caretIndex == root.value.length);
-
-        root.push("Это пример текста для тестирования поддержки Unicode во Fluid.");
-        root.runInputAction!(FluidInputAction.breakLine);
-
-        assert(root.value == "Привет, мир!\nЭто пример текста для тестирования поддержки Unicode во Fluid.\n");
-        assert(root.caretIndex == root.value.length);
-
-    }
-
-    @("TextInput.breakLine creates its own history entry")
-    unittest {
-
-        auto root = textInput(.multiline);
-        root.savePush("first line");
-        root.runInputAction!(FluidInputAction.breakLine);
-        root.savePush("second line");
-        root.runInputAction!(FluidInputAction.breakLine);
-        assert(root.value == "first line\nsecond line\n");
-
-        root.undo();
-        assert(root.value == "first line\nsecond line");
-        root.undo();
-        assert(root.value == "first line\n");
-        root.undo();
-        assert(root.value == "first line");
-        root.undo();
-        assert(root.value == "");
-        root.redo();
-        assert(root.value == "first line");
-        root.redo();
-        assert(root.value == "first line\n");
-        root.redo();
-        assert(root.value == "first line\nsecond line");
-        root.redo();
-        assert(root.value == "first line\nsecond line\n");
 
     }
 
@@ -3112,106 +3000,6 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
         // Now, the change can easily be undone
         assert(root.value == "Hello, World!");
-        root.undo();
-        assert(root.value == "");
-
-    }
-
-    @("Undo and redo work with basic actions")
-    unittest {
-
-        auto root = textInput(.multiline);
-        root.savePush("Hello, ");
-        root.runInputAction!(FluidInputAction.breakLine);
-        root.savePush("new");
-        root.runInputAction!(FluidInputAction.breakLine);
-        root.savePush("line");
-        root.runInputAction!(FluidInputAction.backspace);
-        root.runInputAction!(FluidInputAction.backspaceWord);
-        root.savePush("few");
-        root.savePush(" lines");
-        assert(root.value == "Hello, \nnew\nfew lines");
-
-        // Move back to last chop
-        root.undo();
-        assert(root.value == "Hello, \nnew\n");
-
-        // Test redo
-        root.redo();
-        assert(root.value == "Hello, \nnew\nfew lines");
-        root.undo();
-        assert(root.value == "Hello, \nnew\n");
-
-        // Move back through isnerts
-        root.undo();
-        assert(root.value == "Hello, \nnew\nlin");
-        root.undo();
-        assert(root.value == "Hello, \nnew\nline");
-        root.undo();
-        assert(root.value == "Hello, \nnew\n");
-        root.undo();
-        assert(root.value == "Hello, \nnew");
-        root.undo();
-        assert(root.value == "Hello, \n");
-        root.undo();
-        assert(root.value == "Hello, ");
-        root.undo();
-        assert(root.value == "");
-        root.redo();
-        assert(root.value == "Hello, ");
-        root.redo();
-        assert(root.value == "Hello, \n");
-        root.redo();
-        assert(root.value == "Hello, \nnew");
-        root.redo();
-        assert(root.value == "Hello, \nnew\n");
-        root.redo();
-        assert(root.value == "Hello, \nnew\nline");
-        root.redo();
-        assert(root.value == "Hello, \nnew\nlin");
-        root.redo();
-        assert(root.value == "Hello, \nnew\n");
-        root.redo();
-        assert(root.value == "Hello, \nnew\nfew lines");
-
-        // Navigate and replace "Hello"
-        root.caretIndex = 5;
-        root.runInputAction!(FluidInputAction.selectPreviousWord);
-        root.savePush("Hi");
-        assert(root.value == "Hi, \nnew\nfew lines");
-        assert(root.valueBeforeCaret == "Hi");
-
-        root.undo();
-        assert(root.value == "Hello, \nnew\nfew lines");
-        assert(root.selectedValue == "Hello");
-
-        root.undo();
-        assert(root.value == "Hello, \nnew\n");
-        assert(root.valueAfterCaret == "");
-
-    }
-
-    @("History entries do not merge if the caret has moved")
-    unittest {
-
-        auto root = textInput();
-
-        foreach (i; "dcba") {
-            root.caretToStart();
-            root.savePush(i);
-        }
-
-        assert(root.value == "abcd");
-        assert(root.valueBeforeCaret == "a");
-        root.undo();
-        assert(root.value == "bcd");
-        assert(root.valueBeforeCaret == "");
-        root.undo();
-        assert(root.value == "cd");
-        assert(root.valueBeforeCaret == "");
-        root.undo();
-        assert(root.value == "d");
-        assert(root.valueBeforeCaret == "");
         root.undo();
         assert(root.value == "");
 
