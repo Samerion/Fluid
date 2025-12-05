@@ -1676,7 +1676,7 @@ unittest {
 
     io.nextFrame;
     text.resize(space);
-    text.clearTextures();
+    text.clearTextures(io.dpi);
 
     // Now render both at once
     text.generate(only(0, 1));

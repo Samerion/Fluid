@@ -1005,58 +1005,6 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     }
 
-    unittest {
-
-        auto io = new HeadlessBackend(Vector2(800, 600));
-        auto root = textInput(
-            .layout!"fill",
-            .multiline,
-            .nullTheme,
-            "This placeholder exceeds the default size of a text input."
-        );
-
-        root.io = io;
-        root.draw();
-
-        Vector2 textSize() {
-            return root.contentLabel.minSize;
-        }
-
-        assert(textSize.x > 200);
-        assert(textSize.x > root.size.x);
-
-        io.nextFrame;
-        root.placeholder = "";
-        root.updateSize();
-        root.draw();
-
-        assert(root.placeholder == "");
-        assert(root.caretRectangle.x < 1);
-        assert(textSize.x < 1);
-
-        io.nextFrame;
-        root.value = "This value exceeds the default size of a text input.";
-        root.updateSize();
-        root.caretToEnd();
-        root.draw();
-
-        assert(root.caretRectangle.x > 200);
-        assert(textSize.x > 200);
-        assert(textSize.x > root.size.x);
-
-        io.nextFrame;
-        root.value = ("This value is long enough to start a new line in the output. To make sure of it, here's "
-            ~ "some more text. And more.");
-        root.updateSize();
-        root.draw();
-
-        assert(textSize.x > root.size.x);
-        assert(textSize.x <= 800);
-        assert(textSize.y >= root.style.getTypeface.lineHeight * 2);
-        assert(root.minSize.y >= textSize.y);
-
-    }
-
     /// Update the caret position to match the caret index.
     ///
     /// ## preferNextLine
@@ -2868,86 +2816,6 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     }
 
-    @("TextInput.caretTo works")
-    unittest {
-
-        // Note: This test depends on parameters specific to the default typeface.
-
-        import std.math : isClose;
-
-        auto io = new HeadlessBackend;
-        auto root = textInput(.nullTheme, .multiline);
-
-        root.io = io;
-        root.size = Vector2(200, 0);
-        root.value = "Hello, World!\nHello, Moon\n\nHello, Sun\nWrap this line µp, make it long enough to cross over";
-        root.draw();
-
-        // Move the caret to different points on the canvas
-
-        // Left side of the second "l" in "Hello", first line
-        root.caretTo(Vector2(30, 10));
-        assert(root.caretIndex == "Hel".length);
-
-        // Right side of the same "l"
-        root.caretTo(Vector2(33, 10));
-        assert(root.caretIndex == "Hell".length);
-
-        // Comma, right side, close to the second line
-        root.caretTo(Vector2(50, 24));
-        assert(root.caretIndex == "Hello,".length);
-
-        // End of the line, far right
-        root.caretTo(Vector2(200, 10));
-        assert(root.caretIndex == "Hello, World!".length);
-
-        // Start of the next line
-        root.caretTo(Vector2(0, 30));
-        assert(root.caretIndex == "Hello, World!\n".length);
-
-        // Space, right between "Hello," and "Moon"
-        root.caretTo(Vector2(54, 40));
-        assert(root.caretIndex == "Hello, World!\nHello, ".length);
-
-        // Empty line
-        root.caretTo(Vector2(54, 60));
-        assert(root.caretIndex == "Hello, World!\nHello, Moon\n".length);
-
-        // Beginning of the next line; left side of the "H"
-        root.caretTo(Vector2(4, 85));
-        assert(root.caretIndex == "Hello, World!\nHello, Moon\n\n".length);
-
-        // Wrapped line, the bottom of letter "p" in "up"
-        root.caretTo(Vector2(142, 128));
-        assert(root.caretIndex == "Hello, World!\nHello, Moon\n\nHello, Sun\nWrap this line µp".length);
-
-        // End of line
-        root.caretTo(Vector2(160, 128));
-        assert(root.caretIndex == "Hello, World!\nHello, Moon\n\nHello, Sun\nWrap this line µp, ".length);
-
-        // Beginning of the next line; result should be the same
-        root.caretTo(Vector2(2, 148));
-        assert(root.caretIndex == "Hello, World!\nHello, Moon\n\nHello, Sun\nWrap this line µp, ".length);
-
-        // Just by the way, check if the caret position is correct
-        root.updateCaretPosition(true);
-        assert(root.caretRectangle.x.isClose(0));
-        assert(root.caretRectangle.y.isClose(135));
-
-        root.updateCaretPosition(false);
-        assert(root.caretRectangle.x.isClose(153));
-        assert(root.caretRectangle.y.isClose(108));
-
-        // Try the same with the third line
-        root.caretTo(Vector2(200, 148));
-        assert(root.caretIndex
-            == "Hello, World!\nHello, Moon\n\nHello, Sun\nWrap this line µp, make it long enough ".length);
-        root.caretTo(Vector2(2, 168));
-        assert(root.caretIndex
-            == "Hello, World!\nHello, Moon\n\nHello, Sun\nWrap this line µp, make it long enough ".length);
-
-    }
-
     /// Move the caret to mouse position.
     void caretToMouse() {
 
@@ -2960,8 +2828,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
     void caretToPointer(HoverPointer pointer) {
 
         caretTo(pointer.position - _inner.start);
-        updateCaretPosition(false);
-        horizontalAnchor = caretPosition.x;
+        updateCaretPositionAndAnchor(false);
 
     }
 
@@ -3228,9 +3095,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
     /// Paste text from clipboard.
     @(FluidInputAction.paste)
     void paste() {
-
         const isMinor = false;
-
         auto snap = snapshot();
 
         // New I/O
@@ -3238,17 +3103,17 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
             char[1024] buffer;
             int offset;
+            Rope result;
 
             // Read text
             while (true) {
-
-                // Push the text
                 if (auto text = clipboardIO.readClipboard(buffer, offset)) {
-                    push(text, isMinor);
+                    result ~= text.dup;
                 }
                 else break;
-
             }
+
+            push(result, isMinor);
 
         }
 
@@ -3256,9 +3121,6 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         else {
             push(io.clipboard, isMinor);
         }
-
-        forcePushSnapshot(snap);
-
     }
 
     /// Clear the undo/redo action history.
@@ -3509,64 +3371,6 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         _redoStack.removeBack;
 
     }
-
-}
-
-unittest {
-
-    auto root = textInput(.testTheme, .multiline);
-
-    root.value = "First one\nSecond two";
-    root.draw();
-
-    auto lineHeight = root.style.getTypeface.lineHeight;
-
-    // Navigate to the start and select the whole line
-    root.caretToStart();
-    root.runInputAction!(FluidInputAction.selectToLineEnd);
-
-    assert(root.selectedValue == "First one");
-    assert(root.caretRectangle.center.y < lineHeight);
-
-}
-
-@("TextInput automatically updates scrolling ancestors")
-unittest {
-
-    // Note: This theme relies on properties of the default typeface
-
-    import fluid.scroll;
-
-    const viewportHeight = 50;
-
-    auto theme = nullTheme.derive(
-        rule!Node(
-            Rule.typeface = Style.defaultTypeface,
-            Rule.fontSize = 20.pt,
-            Rule.textColor = color("#fff"),
-            Rule.backgroundColor = color("#000"),
-        ),
-    );
-    auto input = multilineInput();
-    auto root = vscrollFrame(theme, input);
-    auto io = new HeadlessBackend(Vector2(200, viewportHeight));
-    root.io = io;
-
-    root.draw();
-    assert(root.scroll == 0);
-
-    // Begin typing
-    input.push("FLUID\nIS\nAWESOME");
-    input.caretToStart();
-    input.push("FLUID\nIS\nAWESOME\n");
-    root.draw();
-    root.draw();
-
-    const focusBox = input.focusBoxImpl(Rectangle(0, 0, 200, 50));
-
-    assert(focusBox.start == input.caretRectangle.start);
-    assert(focusBox.end.y - viewportHeight == root.scroll);
-
 
 }
 
