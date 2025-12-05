@@ -11,6 +11,7 @@ import fluid.node;
 import fluid.style;
 import fluid.utils;
 import fluid.backend;
+import fluid.io.canvas;
 
 import fluid.text.util;
 import fluid.text.rope;
@@ -167,7 +168,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     }
 
     /// Get or the value rendered by this text.
-    /// 
+    ///
     /// If more text is rendered, partial changes should be done through `replace`.
     ///
     /// Params:
@@ -207,8 +208,8 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
     /// Queue reloading text in range. If the range changes length, specify both oldHigh and newHigh.
     ///
-    /// This does NOT perform the action immediately. It updates text intervals in the cache, and marks the 
-    /// area that needs to be remeasurement. Positions will update on the next resize, which is triggered as this 
+    /// This does NOT perform the action immediately. It updates text intervals in the cache, and marks the
+    /// area that needs to be remeasurement. Positions will update on the next resize, which is triggered as this
     /// function is called.
     ///
     /// Params:
@@ -232,7 +233,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
             _updateRangeStart = start.length;
             _updateRangeEnd   = newEnd.length;
-    
+
         }
 
         // Update boundaries of the existing update range
@@ -245,7 +246,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
                 _updateRangeEnd = newEnd.length;
 
         }
-        
+
     }
 
     /// Replace value at a given range with a new value. This is the main, and fastest way to operate on TextInput text.
@@ -266,7 +267,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         _value = _value.replace(start, end, value);
 
         const newInterval = TextInterval(value);
-        
+
         reload(startInterval, oldInterval, newInterval);
 
     }
@@ -278,7 +279,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
     }
 
-    /// Returns: 
+    /// Returns:
     ///     Interval between the start of text and the character at given index. This can be used to determine the line
     ///     and column number of the given character.
     /// Params:
@@ -323,15 +324,9 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     }
 
     Rope opAssign(Rope text) {
-
-        // Identical; no change is to be made
         if (text is value) return text;
-
-        // Request an update
         node.updateSize();
         return value = text;
-
-
     }
 
     const(char)[] opAssign(const(char)[] text) {
@@ -368,7 +363,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     Rope opIndex(size_t[2] index) const nothrow {
 
         return value[index];
-        
+
     }
 
     size_t[2] opSlice(size_t dim : 0)(size_t i, size_t j) const nothrow {
@@ -382,7 +377,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         return value.length;
 
     }
-    
+
     void opOpAssign(string operator : "~")(const(char)[] text) {
 
         replace(value.length, value.length, text);
@@ -416,6 +411,16 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
     }
 
+    /// Set new bounding box for the text.
+    void resize(CanvasIO canvasIO) {
+        if (canvasIO) {
+            return resize(canvasIO, Vector2.init, false);
+        }
+        else {
+            return resize();
+        }
+    }
+
     /// Set new bounding box for the text; wrap the text if it doesn't fit in boundaries.
     /// Params:
     ///     splitter = Function to use to split the text. Currently unsupported.
@@ -437,8 +442,33 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
         /// Minimum pixel change that counts
         measure!splitter(space, wrap);
-        clearTextures();
+        clearTextures(dpi);
 
+    }
+
+    /// Set new bounding box for the text; wrap the text if it doesn't fit in boundaries.
+    void resize(alias splitter = Typeface.defaultWordChunks)(CanvasIO canvasIO, Vector2 space,
+        bool wrap = true)
+    do {
+        if (!canvasIO) {
+            return resize!splitter(space, wrap);
+        }
+
+        auto style = node.pickStyle;
+        auto typeface = style.getTypeface;
+        const dpi = canvasIO.dpi;
+        const scale = canvasIO.toDots(Vector2(1, 1));
+        _dpi = dpi;
+
+        // Apply DPI
+        style.setDPI(dpi);
+        typeface.indentWidth = cast(int) (indentWidth * scale.x);
+        space.x *= scale.x;
+        space.y *= scale.y;
+
+        // Update the size
+        measure!splitter(space, wrap);
+        clearTextures(dpi);
     }
 
     /// Returns: Number of pixels in both directions that may make a notable visual difference.
@@ -448,8 +478,8 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
     }
 
-    /// Test for changes to text properties: typeface, DPI, font size, box width and wrapping. 
-    /// Returns: True if the cache should be purged. 
+    /// Test for changes to text properties: typeface, DPI, font size, box width and wrapping.
+    /// Returns: True if the cache should be purged.
     private bool shouldCacheReset(Vector2 space, bool wrap) {
 
         auto style = node.pickStyle;
@@ -463,7 +493,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
             || typeface !is firstRuler.typeface
             || abs(dpi.x - _dpi.x) >= epsilon.x
             || abs(dpi.y - _dpi.y) >= epsilon.y
-            || abs(style.fontSize - _fontSize) >= epsilon.y 
+            || abs(style.fontSize - _fontSize) >= epsilon.y
             || wrap != _wrap;
 
     }
@@ -476,7 +506,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         auto ruler = TextRuler(typeface, lineWidth);
         ruler.startLine();
         _cache = TextRulerCache(ruler);
-        _dpi = backend 
+        _dpi = backend
             ? backend.dpi
             : Vector2();
         _updateRangeStart = 0;
@@ -484,20 +514,20 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
     }
 
-    /// Measure text size in the update region and update `_sizeDots` to the bounding box of this text. Size is 
+    /// Measure text size in the update region and update `_sizeDots` to the bounding box of this text. Size is
     /// expressed in terms of screen dots.
-    /// 
-    /// The update region is a single continuous area in the `value` that has been written since the last `measure` 
-    /// call. Any changed piece of text will be placed in the update region to be picked up and measured by this 
-    /// function. Because this function cannot distinguish between modifications made in multiple different spots, 
+    ///
+    /// The update region is a single continuous area in the `value` that has been written since the last `measure`
+    /// call. Any changed piece of text will be placed in the update region to be picked up and measured by this
+    /// function. Because this function cannot distinguish between modifications made in multiple different spots,
     /// unmodified text between two edited spots of text will be included in the region as well. This function
     /// resets the update region once it is finished.
     ///
-    /// While measuring text in the update region, "checkpoints" with measurement data are created and written to 
-    /// `_cache`. This makes it possible to find the position of a character in the text afterwards without having to 
-    /// remeasure the entire text. Furthermore, it's used to make subsequent measurements faster as area before the 
+    /// While measuring text in the update region, "checkpoints" with measurement data are created and written to
+    /// `_cache`. This makes it possible to find the position of a character in the text afterwards without having to
+    /// remeasure the entire text. Furthermore, it's used to make subsequent measurements faster as area before the
     /// update region can be skipped, and lines after can be just offset without measuring them again.
-    /// 
+    ///
     /// Params:
     ///     splitter = Function to use to split words.
     ///     space   = Limit for the space of the region the text shouldn't cross, in dots.
@@ -558,8 +588,8 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
                 ruler.point.length = index;
                 ruler.point.column += word.length;
 
-                // If we're in the update range (iterating through newly added text), we need to periodically write 
-                // rulers to cache 
+                // If we're in the update range (iterating through newly added text), we need to periodically write
+                // rulers to cache
                 if (startIndex < _updateRangeEnd) {
 
                     // Delete any outdated checkpoint in the cache
@@ -594,7 +624,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
                     if (index != rulers.front.point.length) {
                         // TODO This should be relaxed in the future for nonbreaking text or user-inserted checkpoints
                         assert(false, format!"Checkpoint found at %s (%s...) in word(%s); word breaks are at %s and %s"(
-                            rulers.front.point.length, value[rulers.front.point.length..$].take(10), 
+                            rulers.front.point.length, value[rulers.front.point.length..$].take(10),
                             word, startIndex, index));
                     }
 
@@ -605,7 +635,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
                         continue;
                     }
 
-                    // Only Y position is different, stop here and save the offset 
+                    // Only Y position is different, stop here and save the offset
                     else if (abs(rulers.front.penPosition.y - ruler.penPosition.y) >= epsilon.y) {
                         yOffset = ruler.penPosition.y - rulers.front.penPosition.y;
                         rulers.front = ruler;
@@ -632,7 +662,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
             rulers.front = thisRuler;
         }
 
-        // Now that the cache is built, we can find out what the position of the last character is so we can get 
+        // Now that the cache is built, we can find out what the position of the last character is so we can get
         // the bounding box
         _updateRangeStart = 0;
         _updateRangeEnd = 0;
@@ -654,7 +684,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     /// Params:
     ///     index = Index of the character in the text.
     /// Returns:
-    ///     Text interval between the start of text and the given index. This is effectively the 0-indexed 
+    ///     Text interval between the start of text and the given index. This is effectively the 0-indexed
     ///     line and column numbers of the character.
     TextInterval intervalAt(size_t index) {
 
@@ -663,14 +693,14 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
     }
 
-    /// `rulerAt` gets measurement data for the given text position. This data can be used to map characters to their 
-    /// screen position or find their size. 
+    /// `rulerAt` gets measurement data for the given text position. This data can be used to map characters to their
+    /// screen position or find their size.
     ///
     /// For this function to work, measurement data must be available; make sure `resize` was called beforehand. This
     /// will be checked at runtime.
     ///
-    /// Returns: 
-    ///     Text ruler with text measurement data from the start of the text to the given character, not including 
+    /// Returns:
+    ///     Text ruler with text measurement data from the start of the text to the given character, not including
     ///     queried character. The ruler has an extra `point` field, indicating distance from the start of the text.
     /// Params:
     ///     index = Index of the requested character.
@@ -758,15 +788,15 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     /// Params:
     ///     needle = Position of the character, starting with the top-left corner of the text.
     ///         `rulerAtPosition` uses pixels (recommended), `rulerAtPositionDots` uses screen dots.
-    /// Returns: 
-    ///     Text ruler with text measurement data from the start of the text to the given character, not including 
+    /// Returns:
+    ///     Text ruler with text measurement data from the start of the text to the given character, not including
     ///     queried character. The ruler has an extra `point` field, indicating distance from the start of the text.
     CachedTextRuler rulerAtPosition(Vector2 needle) {
 
         return rulerAtPositionDots(backend.scale * needle);
 
     }
-    
+
     /// ditto
     CachedTextRuler rulerAtPositionDots(Vector2 needle) {
 
@@ -778,7 +808,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         auto ruler = queryPosition(&_cache, needle.y).front;
 
         const start = ruler.point.length;
-        
+
         // Find the word; find a matching line
         foreach (line; value[start .. $].byLine) {
 
@@ -810,7 +840,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
                 // Passed the line without matching anything
                 if (ruler.caret.start.y > needle.y && lastWord.caret.start.y <= needle.y) return lastWord;
 
-                // Detect when the caret passes the selected word; 
+                // Detect when the caret passes the selected word;
                 // Compare both pen position before the word (wordPosition) and after (ruler.penPosition)
                 // If they're on the opposite side of the needle, we've got a match.
                 const passed = (wordPosition.x <= needle.x && ruler.penPosition.x >= needle.x)
@@ -818,7 +848,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
                 // Search the word for the needle, if it's known it is inside
                 if (passed) return indexAtDotsWord(wordStart, wordEnd.point, needle.x);
-            
+
             }
 
             if (ruler.caret.end.y >= needle.y) return ruler;
@@ -910,11 +940,15 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     }
 
     /// Reset the texture, destroying it and replacing it with a blank.
-    void clearTextures() {
+    void clearTextures(Vector2 dpi) {
+        texture.format = Image.Format.palettedAlpha;
+        texture.resize(_sizeDots, dpi, hasFastEdits);
+    }
 
+    /// Reset the texture, destroying it and replacing it with a blank.
+    deprecated void clearTextures() {
         texture.format = Image.Format.palettedAlpha;
         texture.resize(_sizeDots, hasFastEdits);
-
     }
 
     /// Generate the textures, if not already generated.
@@ -922,9 +956,30 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     /// Params:
     ///     chunks = Indices of chunks that need to be regenerated.
     ///     position = Position of the text; If given, only on-screen chunks will be generated.
+    ///     dpi      = DPI for the texture. Defaults to legacy backend's DPI.
+    ///     canvasIO = Canvas I/O to get DPI and clip area from.
     void generate(Vector2 position) {
 
         generate(texture.visibleChunks(position, backend.windowSize));
+
+    }
+
+    /// ditto
+    void generate(CanvasIO canvasIO, Vector2 position) {
+
+        // Pick relevant chunks based on the crop area
+        const area = canvasIO.cropArea;
+        auto chunks = area.empty
+            ? texture.allChunks
+            : texture.visibleChunks(position - area.front.start, area.front.size);
+
+        // Generate the text
+        generate(chunks.save);
+
+        // Load the updated chunks
+        foreach (chunkIndex; chunks) {
+            texture.upload(canvasIO, chunkIndex, dpi);
+        }
 
     }
 
@@ -1036,12 +1091,12 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
                         // Ignore chunks this word is not in the bounds of
                         const startCaret = ruler.caret(currentPenPosition);
                         const endCaret = ruler.caret();
-                        const relevant = 
+                        const relevant =
                                chunkRect.contains(startCaret.start)
                             || chunkRect.contains(startCaret.end)
                             || chunkRect.contains(endCaret.start)
                             || chunkRect.contains(endCaret.end);
-                            
+
                         if (!relevant) continue;
 
                         // Get pen position relative to this chunk
@@ -1076,11 +1131,8 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
     /// Draw the text.
     void draw(const Style style, Vector2 position) {
-
         scope const Style[1] styles = [style];
-
         draw(styles, position);
-
     }
 
     /// ditto
@@ -1109,6 +1161,46 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
         // Draw the texture if present
         texture.drawAlign(backend, rectangle);
+
+    }
+
+    /// ditto
+    void draw(CanvasIO canvasIO, const Style style, Vector2 position) {
+        scope const Style[1] styles = [style];
+        draw(canvasIO, styles, position);
+    }
+
+    /// ditto
+    void draw(CanvasIO canvasIO, scope const Style[] styles, Vector2 position)
+    in (styles.length >= 1, "At least one style must be passed to draw(Style[], Vector2)")
+    do {
+
+        if (canvasIO is null) {
+            draw(styles, position);
+            return;
+        }
+
+        import std.math;
+        import fluid.utils;
+
+        const rectangle = Rectangle(position.tupleof, size.tupleof);
+        const screen = canvasIO.cropArea;
+
+        // Ignore if offscreen
+        if (!screen.empty && !overlap(rectangle, screen.front)) return;
+
+        // Regenerate visible textures
+        generate(canvasIO, position);
+
+        // Make space in the texture's palette
+        if (texture.palette.length != styles.length)
+            texture.palette.length = styles.length;
+
+        // Fill it with text colors of each of the styles
+        styles.map!"a.textColor".copy(texture.palette);
+
+        // Draw the texture if present
+        texture.drawAlign(canvasIO, rectangle);
 
     }
 
@@ -1160,6 +1252,7 @@ struct TextStyleSlice {
 
 }
 
+@("Legacy: Text coloring works (abandoned)")
 unittest {
 
     import fluid.space;
@@ -1208,6 +1301,7 @@ unittest {
 
 }
 
+@("Legacy: Text coloring works, pt. 2 (abandoned)")
 unittest {
 
     import fluid.space;
@@ -1235,6 +1329,7 @@ unittest {
 
 }
 
+@("Legacy: Text coloring works, pt. 3 (abandoned)")
 unittest {
 
     import fluid.space;
@@ -1263,6 +1358,7 @@ unittest {
 
 }
 
+@("Text can be used with, or without specifying styles")
 unittest {
 
     import fluid.space;
@@ -1430,7 +1526,7 @@ unittest {
     const newEnd = root.text.rulerAt(root.text.length);
 
     assert(newEnd.penPosition.y >= endOfText.penPosition.y);
-    
+
 }
 
 @("Text.measure correctly updates checkpoints on different lines")
@@ -1463,7 +1559,7 @@ unittest {
     const newEnd = root.text.rulerAt(root.text.length);
 
     assert(newEnd.penPosition.y >= endOfText.penPosition.y);
-    
+
 }
 
 @("Overflowing text does not break layout")
@@ -1541,7 +1637,7 @@ unittest {
 
     const source = Rope.merge(Rope("the quick brown fox jumps over the lazy dog. ").repeat(100).array);
     const fontSize = 10;
-    
+
     auto theme = .testTheme.derive(
         rule!Node(
             Rule.fontSize = fontSize,
@@ -1562,13 +1658,13 @@ unittest {
 
     Image[2] backImages;
     Image[2] frontImages;
-    
+
     // Draw the first two textures separately
     foreach_reverse (i, ref chunk; text.texture.chunks[0..2]) {
 
         const position = text.texture.chunkPosition(i);
 
-        text.generate(only(i));        
+        text.generate(only(i));
         text.texture.upload(io, i, io.dpi);
         chunk.texture.draw(position);
 
@@ -1583,7 +1679,7 @@ unittest {
     text.clearTextures();
 
     // Now render both at once
-    text.generate(only(0, 1));        
+    text.generate(only(0, 1));
 
     foreach (i, ref chunk; text.texture.chunks[0..2]) {
 
