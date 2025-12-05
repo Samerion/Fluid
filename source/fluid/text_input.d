@@ -1126,7 +1126,18 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
         const ruler = rulerAt(caretIndex, preferNextLine);
 
-        return ruler.caret;
+        if (canvasIO) {
+            return Rectangle(
+                canvasIO.fromDots(ruler.caret.start).tupleof,
+                canvasIO.fromDots(ruler.caret.size).tupleof);
+        }
+        else {
+            return Rectangle(
+                ruler.caret.x      / io.hidpiScale.x,
+                ruler.caret.y      / io.hidpiScale.y,
+                ruler.caret.width  / io.hidpiScale.x,
+                ruler.caret.height / io.hidpiScale.y);
+        }
 
     }
 
@@ -1141,9 +1152,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
     }
 
     CachedTextRuler rulerAtPosition(Vector2 position) {
-
-        return contentLabel.text.rulerAtPosition(position);
-
+        return contentLabel.text.rulerAtPosition(canvasIO, position);
     }
 
     /// Returns: `TextInterval` measuing all characters between the start of text, and the given index.
