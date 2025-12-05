@@ -1,6 +1,6 @@
 /// This is a simplified stack implementation optimized to reuse the nodes it creates.
 ///
-/// Fluid uses stacks to iterate through tree structures such as `Rope` or `TextRulerCache`. The ability to quickly 
+/// Fluid uses stacks to iterate through tree structures such as `Rope` or `TextRulerCache`. The ability to quickly
 /// create new stack items is crucial to their performance, and as such avoiding allocations is a must. For this reason,
 /// nodes are reused whenever possible, instead of being reclaimed by the GC.
 module fluid.text.stack;
@@ -10,11 +10,11 @@ version (unittest)
 
 /// Implementation of a stack optimized to reduce allocations.
 ///
-/// Removing nodes from the stack using `pop` or `clear` will move them to a global stack of "free" nodes. 
-/// The next time an item is added to the stack, it will reuse one of these previously freed nodes. This recycling 
+/// Removing nodes from the stack using `pop` or `clear` will move them to a global stack of "free" nodes.
+/// The next time an item is added to the stack, it will reuse one of these previously freed nodes. This recycling
 /// mechanism makes it possible to significantly reduce the number of allocations as the program continues.
 ///
-/// If version `Fluid_MemoryStatistics` is set, `Stack` will count the number of total nodes it has allocated per 
+/// If version `Fluid_MemoryStatistics` is set, `Stack` will count the number of total nodes it has allocated per
 /// type and thread and expose then through `totalNodeCount`.
 struct Stack(T) {
 
@@ -46,11 +46,11 @@ struct Stack(T) {
 
     version (Fluid_EnableStackStatistics) {
 
-        /// This special field is only available when version `Fluid_MemoryStatistics` is set. `Stack` will then count 
+        /// This special field is only available when version `Fluid_MemoryStatistics` is set. `Stack` will then count
         /// the number of total nodes it has allocated per type and thread.
-        /// 
+        ///
         /// This count can be reset with `resetNodeCount`.
-        /// 
+        ///
         /// Returns: Total number of nodes allocated by the stack.
         static int totalNodeCount() {
             return _totalNodeCount;
@@ -120,8 +120,16 @@ struct Stack(T) {
     out (; empty)
     do {
 
+        import core.memory : GC;
+
         // Already empty, nothing to do
         if (empty) return;
+
+        // If triggered from the GC, the objects cannot be trashed, as they may not be recyclable anymore
+        if (GC.inFinalizer) {
+            _top = null;
+            return;
+        }
 
         // Trash the bottom
         _bottom.next = _trash;
@@ -140,7 +148,7 @@ struct Stack(T) {
 
     /// Returns:
     ///     A range that allows iterating on the range without removing any items from it. While the range functions,
-    ///     items cannot be removed from the stack, or the range may break, possibly crashing the program. 
+    ///     items cannot be removed from the stack, or the range may break, possibly crashing the program.
     StackRange!T opIndex() @system {
 
         return StackRange!T(_top);
@@ -154,7 +162,8 @@ struct Stack(T) {
             version (Fluid_EnableStackStatistics) {
                 _totalNodeCount++;
             }
-            auto node = new StackNode!T(next, item);
+            auto node = new StackNode!T(
+                StackNode!T(next, item));
             return node;
         }
 
@@ -213,8 +222,8 @@ private struct StackNode(T) {
 version (unittest) {
 
     /// Struct for testing the stack.
-    private struct Test { 
-        int value; 
+    private struct Test {
+        int value;
         alias value this;
     }
 
@@ -246,7 +255,7 @@ unittest {
     assert(stack._trash is null);
     assert(Stack!Test.totalNodeCount == 3);
     Stack!Test.resetNodeCount();
-    
+
 }
 
 @("Stack recycles nodes")
