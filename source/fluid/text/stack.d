@@ -162,8 +162,7 @@ struct Stack(T) {
             version (Fluid_EnableStackStatistics) {
                 _totalNodeCount++;
             }
-            auto node = new StackNode!T(
-                StackNode!T(next, item));
+            auto node = new StackNode!T(next, item);
             return node;
         }
 
@@ -216,6 +215,11 @@ private struct StackNode(T) {
 
     StackNode* next;
     T item;
+
+    this(StackNode* next, T item) {
+        this.next = next;
+        this.item = item;
+    }
 
 }
 
