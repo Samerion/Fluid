@@ -886,16 +886,23 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     ///     Index of a matching character, or the same index + 1 if the point is to its right.
     ///     If pressed out of bounds, returns the closest character of the line, or the last character in the text.
     size_t indexAt(Vector2 needle) {
-
         return indexAtDots(backend.scale * needle);
+    }
 
+    /// ditto
+    size_t indexAt(CanvasIO canvasIO, Vector2 needle) {
+        if (canvasIO) {
+            return indexAtDots(
+                canvasIO.toDots(needle));
+        }
+        else {
+            return indexAt(needle);
+        }
     }
 
     /// ditto
     size_t indexAtDots(Vector2 needle) {
-
         return rulerAtPositionDots(needle).point.length;
-
     }
 
     private CachedTextRuler indexAtDotsWord(CachedTextRuler wordStart, TextInterval wordEndPoint, float needle) {

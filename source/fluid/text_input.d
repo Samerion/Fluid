@@ -1076,7 +1076,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
     /// Returns: Index of the character. The index may be equal to text length.
     size_t nearestCharacter(Vector2 needle) {
 
-        return contentLabel.text.indexAt(needle);
+        return contentLabel.text.indexAt(canvasIO, needle);
 
     }
 
