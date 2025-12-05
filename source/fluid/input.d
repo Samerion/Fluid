@@ -113,24 +113,6 @@ enum FluidInputAction {
 
 }
 
-/// Get the ID of the given input action.
-///
-/// See_Also:
-///     `InputActionID`, `InputAction`
-/// Params:
-///     inputAction = Input action to analyze.
-/// Returns:
-///     ID of the given input action.
-InputActionID inputActionID(alias inputAction)()
-if (isInputAction!inputAction) {
-
-    return InputActionID(
-        cast(size_t) &InputActionID._id!inputAction,
-        fullyQualifiedName!inputAction,
-    );
-
-}
-
 /// ID of an input action.
 ///
 /// Each input action has a unique ID based on its position in the executable binary. You can get the ID
