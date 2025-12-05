@@ -1,0 +1,16 @@
+name: Verify test status
+on:
+  push:
+    branches-ignore:
+      - main
+
+jobs:
+  verify:
+    name: Verify test status
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Get status
+        uses: https://git.samerion.com/Actions/GithubStatus@main
+        with:
+            token: ${{ secrets.GH_TOKEN }}
+            event: push

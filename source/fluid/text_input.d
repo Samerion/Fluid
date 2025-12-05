@@ -26,6 +26,12 @@ import fluid.text.typeface;
 alias wordFront = fluid.text.wordFront;
 alias wordBack  = fluid.text.wordBack;
 
+import fluid.io.time;
+import fluid.io.focus;
+import fluid.io.hover;
+import fluid.io.canvas;
+import fluid.io.overlay;
+import fluid.io.clipboard;
 
 @safe:
 
@@ -56,11 +62,20 @@ alias multilineInput = nodeBuilder!(TextInput, (a) {
 });
 
 /// ditto
-class TextInput : InputNode!Node, FluidScrollable {
+class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     mixin enableInputActions;
 
     enum defaultBufferSize = 512;
+
+    /// An interval in which the text input caret disappears and reappears. The caret will hide
+    /// when half of this time passes, and will show again once the interval ends.
+    enum blinkInterval = 2.seconds;
+
+    TimeIO timeIO;
+    CanvasIO canvasIO;
+    ClipboardIO clipboardIO;
+    OverlayIO overlayIO;
 
     public {
 
@@ -69,6 +84,12 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         /// Time of the last interaction with the input.
         SysTime lastTouch;
+
+        /// Time of last interaction with the input. This field uses the system clock sourced
+        /// from `TimeIO`.
+        ///
+        /// If the new I/O is not in use, the default system `MonoTime` is used.
+        MonoTime lastTouchTime;
 
         /// Reference horizontal (X) position for vertical movement. Relative to the input's top-left corner.
         ///
@@ -115,7 +136,7 @@ class TextInput : InputNode!Node, FluidScrollable {
             /// subtractive.
             ///
             /// See_Also: `setPreviousEntry`, `canMergeWith`
-            bool isAdditive() const { 
+            bool isAdditive() const {
                 return !diff.second.empty;
             }
 
@@ -128,11 +149,11 @@ class TextInput : InputNode!Node, FluidScrollable {
             /// runs of similar actions together, for example when typing a word, the whole word will form a single
             /// entry, instead of creating separate entries per character.
             ///
-            /// Entries will only merge if they are minor, or the text didn't change. Two minor entries can be combined 
+            /// Entries will only merge if they are minor, or the text didn't change. Two minor entries can be combined
             /// if they are:
             ///
-            /// 1. Both additive, and the latter is not subtractive. This combines runs of inserts, including if 
-            ///    the first item in the run replaces some text. However, replacing text will break an existing 
+            /// 1. Both additive, and the latter is not subtractive. This combines runs of inserts, including if
+            ///    the first item in the run replaces some text. However, replacing text will break an existing
             ///    chain of actions.
             /// 2. Both subtractive, and neither is additive.
             ///
@@ -161,7 +182,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         }
 
-        /// If true, current movement action is performed while selecting.
+        /// If true, movement actions select text, as opposed to clearing selection.
         bool selectionMovement;
 
         /// Last padding box assigned to this node, with scroll applied.
@@ -186,6 +207,12 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         }
 
+        /// The line height used by this input, in pixels.
+        ///
+        /// Temporary workaround/helper function to get line height in pixels, as opposed to dots
+        /// given by `Typeface`.
+        float lineHeight;
+
     }
 
     private {
@@ -197,7 +224,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         /// See_Also: `buffer`
         char[] _buffer;
 
-        /// Number of bytes stored in the bufer.
+        /// Number of bytes stored in the buffer.
         size_t _usedBufferSize;
 
         /// Node the buffer is stored in.
@@ -312,16 +339,14 @@ class TextInput : InputNode!Node, FluidScrollable {
             const style = pickStyle();
 
             if (showPlaceholder)
-                placeholderText.draw(style, inner.start);
-            else 
-                text.draw(style, inner.start);
+                placeholderText.draw(canvasIO, style, inner.start);
+            else
+                text.draw(canvasIO, style, inner.start);
 
         }
 
         override void reloadStyles() {
-
             // Do not load styles
-
         }
 
         override Style pickStyle() {
@@ -333,10 +358,21 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
+    alias opEquals = Node.opEquals;
+    override bool opEquals(const Object other) const {
+        return super.opEquals(other);
+    }
+
     /// Mark the text input as modified.
     void touch() {
 
         lastTouch = Clock.currTime;
+        if (timeIO) {
+            lastTouchTime = timeIO.now();
+        }
+        else {
+            lastTouchTime = MonoTime.currTime;
+        }
         scrollIntoView();
 
     }
@@ -371,12 +407,12 @@ class TextInput : InputNode!Node, FluidScrollable {
     }
 
     /// Value written in the input. This will be displayed by the component, and will be editable by the user.
-    /// 
+    ///
     /// To efficiently change a substring of the value, use `replace`. Reassigning via `value` is comparatively slow,
     /// as the entire text will have to be measured again.
     ///
-    /// Note: 
-    ///     At the moment, setting `value` will not affect the undo/redo history, but this is due to change in 
+    /// Note:
+    ///     At the moment, setting `value` will not affect the undo/redo history, but this is due to change in
     ///     a future update. Use `replaceNoHistory` to keep old behavior.
     /// Params:
     ///     newValue = If given, set a new value.
@@ -422,20 +458,20 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     /// Replace value at a given range with a new value. This is the main, and fastest way to operate on TextInput text.
     ///
-    /// There are two ways to use this function: `replace(start, end, "value")` and `replace[start..end] = value`. 
+    /// There are two ways to use this function: `replace(start, end, "value")` and `replace[start..end] = value`.
     /// In a future update, it will be possible to use `value[start..end] = value` directly.
-    /// 
-    /// This function will automatically update caretIndex: if inside the replaced area, it will be moved to the 
+    ///
+    /// This function will automatically update caretIndex: if inside the replaced area, it will be moved to the
     /// end, otherwise it will be adjusted to stay in the same spot in the text.
     ///
-    /// All changes to the value will be noted in the edit history so they can be undone with `undo`. Many small, 
+    /// All changes to the value will be noted in the edit history so they can be undone with `undo`. Many small,
     /// consecutive changes will be merged together they're marked as `minor`.
     ///
     /// Params:
     ///     start    = Low index, inclusive; First index to delete.
     ///     end      = High index, exclusive; First index after the newly inserted fragment.
     ///     newValue = Value to insert.
-    ///     minor    = True if this is a minor change, like inserting a character or deleting a word. Similar minor 
+    ///     minor    = True if this is a minor change, like inserting a character or deleting a word. Similar minor
     ///         changes will be merged together in the edit history.
 
     /// Replace the value without making any changes to edit history.
@@ -470,7 +506,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
             if (oldCaretIndex <= end)
                 caretIndex = start + newValue.length;
-            else 
+            else
                 caretIndex = oldCaretIndex + start + newValue.length - end;
 
             updateCaretPositionAndAnchor();
@@ -495,7 +531,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         return replace(start, end, Rope(newValue), isMinor);
 
     }
-    
+
     /// ditto
     auto replace(bool minor = false) {
 
@@ -626,6 +662,10 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         return clamp(scroll + value.x, 0, _availableWidth) != scroll;
 
+    }
+
+    final bool canScroll(const HoverPointer pointer) const {
+        return canScroll(pointer.scroll);
     }
 
     /// Get the current style for the label.
@@ -771,7 +811,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     /// Returns:
     ///     Visual position of the caret's center, relative to the top-left corner of the input.
-    /// See_Also: 
+    /// See_Also:
     ///     `caretRectangle`
     deprecated("caretPosition has been replaced by caretRectangle and will be removed in Fluid 0.9.0")
     Vector2 caretPosition() const {
@@ -784,7 +824,7 @@ class TextInput : InputNode!Node, FluidScrollable {
     /// The caret is a line used to control keyboard input. Inserted text will be placed right before the caret.
     ///
     /// The caret is formed from a rectangle by connecting its top-right and bottom-left corners. This rectangle will
-    /// be of zero width for regular text. For sloped text, it will be wider to reflect the slope, however this is not 
+    /// be of zero width for regular text. For sloped text, it will be wider to reflect the slope, however this is not
     /// implemented at the moment.
     ///
     /// Returns:
@@ -796,12 +836,12 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
-    /// The position of the caret in the text as an index. Since the caret is placed between characters, 
+    /// The position of the caret in the text as an index. Since the caret is placed between characters,
     /// when the caret is at the end of the text, the index is equal to the text's length.
     ///
     /// Changing the `caretIndex` will mark the last change made to the text as a major change, if it was set to minor.
     /// This means that moving the caret between two changes to the text will separate them in the undo/redo history.
-    /// If this is not desired, use `setCaretIndexNoHistory`. 
+    /// If this is not desired, use `setCaretIndexNoHistory`.
     ///
     /// Returns: Index of the character, byte-wise.
     /// Params:
@@ -825,8 +865,8 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     /// Update the caret index without affecting the history.
     ///
-    /// Multiple minor edits will be merged together in edit history unless the caret index changes in the meantime. 
-    /// This function will move the caret without preventing the edits from merging. 
+    /// Multiple minor edits will be merged together in edit history unless the caret index changes in the meantime.
+    /// This function will move the caret without preventing the edits from merging.
     ///
     /// Params:
     ///     index = Index to move the caret to.
@@ -895,23 +935,6 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
-    unittest {
-
-        auto root = textInput();
-        root.value = "foo bar baz";
-        root.selectSlice(0, 3);
-        assert(root.selectedValue == "foo");
-
-        root.caretIndex = 4;
-        root.selectSlice(4, 7);
-        assert(root.selectedValue == "bar");
-
-        root.caretIndex = 11;
-        root.selectSlice(8, 11);
-        assert(root.selectedValue == "baz");
-
-    }
-
     ///
     void clearSelection() {
 
@@ -934,8 +957,26 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         import std.math : isNaN;
 
+        use(timeIO);
+        use(canvasIO);
+        use(focusIO);
+        use(hoverIO);
+        use(overlayIO);
+        use(clipboardIO);
+
+        // Initialize touch time
+        if (timeIO && lastTouchTime == MonoTime.init) {
+            lastTouchTime = timeIO.now();
+        }
+
+        super.resizeImpl(area);
+
         // Set the size
         minSize = size;
+
+        // Set the label text
+        contentLabel.isPlaceholder = value == "";
+        contentLabel.text = value == "" ? placeholder : value;
 
         const isFill = layout.nodeAlign[0] == NodeAlign.fill;
 
@@ -950,12 +991,18 @@ class TextInput : InputNode!Node, FluidScrollable {
         // Resize the label, and remove the spacing
         contentLabel.showPlaceholder = value == "";
         contentLabel.style = pickLabelStyle(style);
-        contentLabel.resize(tree, theme, textArea);
+        resizeChild(contentLabel, textArea);
+
+        const scale = canvasIO
+            ? canvasIO.toDots(Vector2(0, 1)).y
+            : io.hidpiScale.y;
+
+        lineHeight = style.getTypeface.lineHeight / scale;
 
         const minLines = multiline ? 3 : 1;
 
         // Set height to at least the font size, or total text size
-        minSize.y = max(minSize.y, style.getTypeface.lineHeight * minLines, contentLabel.minSize.y);
+        minSize.y = max(minSize.y, lineHeight * minLines, contentLabel.minSize.y);
 
         // Locate the cursor
         updateCaretPositionAndAnchor();
@@ -1073,7 +1120,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         updateCaretPosition(preferNextLine);
         horizontalAnchor = caretRectangle.x;
- 
+
     }
 
     /// Find the closest index to the given position.
@@ -1137,13 +1184,13 @@ class TextInput : InputNode!Node, FluidScrollable {
     /// Returns: A text ruler measuring text between the start and a chosen character.
     /// See_Also: `Text.rulerAt`
     /// Params:
-    ///     index = Index of the requested character. 
+    ///     index = Index of the requested character.
     TextRuler rulerAt(size_t index, bool preferNextLine = false) {
 
         return contentLabel.text.rulerAt(index, preferNextLine);
 
     }
-    
+
     CachedTextRuler rulerAtPosition(Vector2 position) {
 
         return contentLabel.text.rulerAtPosition(position);
@@ -1164,7 +1211,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         auto style = pickStyle();
 
         // Fill the background
-        style.drawBackground(tree.io, outer);
+        style.drawBackground(tree.io, canvasIO, outer);
 
         // Copy style to the label
         contentLabel.style = pickLabelStyle(style);
@@ -1179,21 +1226,38 @@ class TextInput : InputNode!Node, FluidScrollable {
         // Increase the size of the inner box so that tree doesn't turn on scissors mode on its own
         scrolledInner.w += scroll;
 
-        const lastScissors = tree.pushScissors(outer);
-        scope (exit) tree.popScissors(lastScissors);
+        // New I/O
+        if (canvasIO) {
 
-        // Draw the contents
-        drawContents(inner, scrolledInner);
+            const lastArea = canvasIO.intersectCrop(outer);
+            scope (exit) canvasIO.cropArea = lastArea;
+
+            // Draw the contents
+            drawContents(inner, scrolledInner);
+
+        }
+
+
+        // Old I/O
+        else {
+
+            const lastScissors = tree.pushScissors(outer);
+            scope (exit) tree.popScissors(lastScissors);
+
+            // Draw the contents
+            drawContents(inner, scrolledInner);
+
+        }
 
     }
 
     protected void drawContents(Rectangle, Rectangle scrolledInner) {
 
         // Draw selection
-        drawSelection(scrolledInner);
+        drawSelection(scrolledInner, isMinor);
 
         // Draw the text
-        contentLabel.draw(scrolledInner);
+        drawChild(contentLabel, scrolledInner);
 
         // Draw the caret
         drawCaret(scrolledInner);
@@ -1202,11 +1266,8 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     protected void drawCaret(Rectangle inner) {
 
-        // Ignore the rest if the node isn't focused
-        if (!isFocused || isDisabledInherited) return;
-
         // Add a blinking caret
-        if (showCaret) {
+        if (isCaretVisible) {
 
             const lineHeight = style.getTypeface.lineHeight;
             const caretRect = this.caretRectangle();
@@ -1254,6 +1315,18 @@ class TextInput : InputNode!Node, FluidScrollable {
         auto low = selectionLowIndex;
         const high = selectionHighIndex;
 
+        Vector2 scale(Vector2 input) {
+            if (canvasIO) {
+                return canvasIO.fromDots(input);
+            }
+            else {
+                return Vector2(
+                    input.x / io.hidpiScale.x,
+                    input.y / io.hidpiScale.y,
+                );
+            }
+        }
+
         auto style = pickStyle();
         auto typeface = style.getTypeface;
         auto ruler = rulerAt(low);
@@ -1269,7 +1342,7 @@ class TextInput : InputNode!Node, FluidScrollable {
             }
 
         }
-        
+
         Vector2 lineStart = Vector2(float.nan, float.nan);
         Vector2 lineEnd;
 
@@ -1294,13 +1367,17 @@ class TextInput : InputNode!Node, FluidScrollable {
 
                     // Don't draw if selection starts here
                     if (startIndex != low) {
-
                         const rect = Rectangle(
                             (inner.start + lineStart).tupleof,
                             (lineEnd - lineStart).tupleof
                         );
-                    
-                        io.drawRectangle(rect, style.selectionBackgroundColor);
+
+                        if (canvasIO) {
+                            canvasIO.drawRectangle(rect, style.selectionBackgroundColor);
+                        }
+                        else {
+                            io.drawRectangle(rect, style.selectionBackgroundColor);
+                        }
                     }
 
                     // Restart the line
@@ -1316,11 +1393,16 @@ class TextInput : InputNode!Node, FluidScrollable {
                     const dent = typeface.measure(word[0 .. high - startIndex]);
                     const lineEnd = caret.end + Vector2(dent.x, 0);
                     const rect = Rectangle(
-                        (inner.start + lineStart).tupleof,
-                        (lineEnd - lineStart).tupleof
+                        (inner.start + scale(lineStart)).tupleof,
+                        scale(lineEnd - lineStart).tupleof
                     );
 
-                    io.drawRectangle(rect, style.selectionBackgroundColor);
+                    if (canvasIO) {
+                        canvasIO.drawRectangle(rect, style.selectionBackgroundColor);
+                    }
+                    else {
+                        io.drawRectangle(rect, style.selectionBackgroundColor);
+                    }
                     return;
 
                 }
@@ -1334,13 +1416,27 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
-    protected bool showCaret() {
+    /// Returns:
+    ///     True if the caret should be visible, or false if not.
+    bool isCaretVisible() {
 
-        auto timeSecs = (Clock.currTime - lastTouch).total!"seconds";
+        // Ignore the rest if the node isn't focused
+        if (!isFocused || blocksInput) return false;
+
+        const now = timeIO
+            ? timeIO.now
+            : MonoTime.currTime;
+        auto blinkProgress = (now - lastTouchTime) % blinkInterval;
 
         // Add a blinking caret if there is no selection
-        return selectionStart == selectionEnd && timeSecs % 2 == 0;
+        return selectionStart == selectionEnd && blinkProgress < blinkInterval/2;
 
+    }
+
+    deprecated("showCaret has been renamed to isCaretVisible, "
+        ~ "and will be removed in Fluid 0.8.0")
+    protected bool showCaret() {
+        return isCaretVisible();
     }
 
     protected override bool keyboardImpl() {
@@ -1350,8 +1446,32 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         bool changed;
 
+        // Read text off FocusIO
+        if (focusIO) {
+
+            int offset;
+            char[1024] buffer;
+
+            // Read text
+            while (true) {
+
+                // Push the text
+                if (auto text = focusIO.readText(buffer, offset)) {
+                    push(text);
+                }
+                else break;
+
+            }
+
+            // Mark as changed
+            if (offset != 0) {
+                changed = true;
+            }
+
+        }
+
         // Get pressed key
-        while (true) {
+        else while (true) {
 
             // Read text
             if (const key = io.inputCharacter) {
@@ -1470,7 +1590,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
-    /// Hook into input actions to create matching history entries. 
+    /// Hook into input actions to create matching history entries.
     ///
     /// Operating on `TextInput` contents using exposed methods will not create any history entries:
     ///
@@ -1483,7 +1603,7 @@ class TextInput : InputNode!Node, FluidScrollable {
     /// root.undo();  // does nothing
     /// ---
     ///
-    /// This behavior is different for changes made through input actions, as they directly correspond to changes made 
+    /// This behavior is different for changes made through input actions, as they directly correspond to changes made
     /// by the user.
     ///
     /// ---
@@ -1560,8 +1680,8 @@ class TextInput : InputNode!Node, FluidScrollable {
     /// Write text at the caret position and save the result to history.
     ///
     /// The `savePush` family of functions wraps `push`.
-    /// 
-    /// See_Also: 
+    ///
+    /// See_Also:
     ///     `push`
     /// Params:
     ///     character = The character to insert.
@@ -1624,8 +1744,10 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         auto slice = freeBuffer[0 .. ch.length];
 
-        // Save the data in the buffer
-        slice[] = ch;
+        // Save the data in the buffer, unless they're the same
+        if (slice[] !is ch[]) {
+            slice[] = ch[];
+        }
         _usedBufferSize += ch.length;
 
         // Selection is active, overwrite it
@@ -1682,7 +1804,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         // Insert the text by replacing the old node, if present
         assert(value.isBalanced);
-        
+
         setCaretIndexNoHistory(newCaretIndex);
         updateCaretPositionAndAnchor();
 
@@ -1710,9 +1832,49 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
+    @("TextInput.push reuses the text buffer; creates undo entries regardless of buffer")
+    unittest {
+
+        auto root = textInput();
+        root.value = "Ho";
+
+        root.caretIndex = 1;
+        root.push("e");
+        assert(root.value.byNode.equal(["H", "e", "o"]));
+
+        root.push("n");
+
+        assert(root.value.byNode.equal(["H", "en", "o"]));
+
+        root.push("l");
+        assert(root.value.byNode.equal(["H", "enl", "o"]));
+
+        // Create enough text to fill the buffer
+        // A new node should be created as a result
+        auto bufferFiller = 'A'.repeat(root.freeBuffer.length).array;
+
+        root.push(bufferFiller);
+        assert(root.value.byNode.equal(["H", "enl", bufferFiller, "o"]));
+
+        // Undo all pushes until the initial fill
+        root.undo();
+        assert(root.value == "Ho");
+        assert(root.valueBeforeCaret == "H");
+
+        // Undo will not clear the initial value
+        root.undo();
+        assert(root.value == "Ho");
+        assert(root.valueBeforeCaret == "H");
+
+        // The above undo does not add a new redo stack entry; effectively, this redo cancels both undo actions above
+        root.redo();
+        assert(root.value.byNode.equal(["H", "enl", bufferFiller, "o"]));
+
+    }
+
     /// Start a new line
     @(FluidInputAction.breakLine)
-    protected bool breakLine() {
+    bool breakLine() {
 
         if (!multiline) return false;
 
@@ -1821,92 +1983,6 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
-    unittest {
-
-        int submitted;
-
-        auto io = new HeadlessBackend;
-        TextInput root;
-
-        root = textInput("placeholder", delegate {
-            submitted++;
-            assert(root.value == "Hello World");
-        });
-
-        root.io = io;
-
-        // Type stuff
-        {
-            root.value = "Hello World";
-            root.focus();
-            root.updateSize();
-            root.draw();
-
-            assert(submitted == 0);
-            assert(root.value == "Hello World");
-            assert(root.contentLabel.text == "Hello World");
-        }
-
-        // Submit
-        {
-            io.press(KeyboardKey.enter);
-            root.draw();
-
-            assert(submitted == 1);
-        }
-
-    }
-
-    unittest {
-
-        int submitted;
-        auto io = new HeadlessBackend;
-        auto root = textInput(
-            .multiline,
-            "",
-            delegate {
-                submitted++;
-            }
-        );
-
-        root.io = io;
-        root.push("Hello, World!");
-
-        // Press enter (not focused)
-        io.press(KeyboardKey.enter);
-        root.draw();
-
-        // No effect
-        assert(root.value == "Hello, World!");
-        assert(submitted == 0);
-
-        // Focus for the next frame
-        io.nextFrame();
-        root.focus();
-
-        // Press enter
-        io.press(KeyboardKey.enter);
-        root.draw();
-
-        // A new line should be added
-        assert(root.value == "Hello, World!\n");
-        assert(submitted == 0);
-
-        // Press ctrl+enter
-        io.nextFrame();
-        version (OSX)
-            io.press(KeyboardKey.leftCommand);
-        else 
-            io.press(KeyboardKey.leftControl);
-        io.press(KeyboardKey.enter);
-        root.draw();
-
-        // Input should be submitted
-        assert(root.value == "Hello, World!\n");
-        assert(submitted == 1);
-
-    }
-
     /// Erase last word before the caret, or the first word after.
     ///
     /// Parms:
@@ -1947,35 +2023,6 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
-    unittest {
-
-        auto root = textInput();
-
-        root.push("Это пример текста для тестирования поддержки Unicode во Fluid.");
-        root.chopWord;
-        assert(root.value == "Это пример текста для тестирования поддержки Unicode во Fluid");
-
-        root.chopWord;
-        assert(root.value == "Это пример текста для тестирования поддержки Unicode во ");
-
-        root.chopWord;
-        assert(root.value == "Это пример текста для тестирования поддержки Unicode ");
-
-        root.chopWord;
-        assert(root.value == "Это пример текста для тестирования поддержки ");
-
-        root.chopWord;
-        assert(root.value == "Это пример текста для тестирования ");
-
-        root.caretToStart();
-        root.chopWord(true);
-        assert(root.value == "пример текста для тестирования ");
-
-        root.chopWord(true);
-        assert(root.value == "текста для тестирования ");
-
-    }
-
     /// Remove a word before the caret.
     @(FluidInputAction.backspaceWord)
     void backspaceWord() {
@@ -1985,116 +2032,12 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
-    unittest {
-
-        auto io = new HeadlessBackend;
-        auto root = textInput();
-
-        root.io = io;
-
-        // Type stuff
-        {
-            root.value = "Hello World";
-            root.focus();
-            root.caretToEnd();
-            root.draw();
-
-            assert(root.value == "Hello World");
-            assert(root.contentLabel.text == "Hello World");
-        }
-
-        // Erase a word
-        {
-            io.nextFrame;
-            root.chopWord;
-            root.draw();
-
-            assert(root.value == "Hello ");
-            assert(root.contentLabel.text == "Hello ");
-            assert(root.isFocused);
-        }
-
-        // Erase a word
-        {
-            io.nextFrame;
-            root.chopWord;
-            root.draw();
-
-            assert(root.value == "");
-            assert(root.contentLabel.text == "");
-            assert(root.isEmpty);
-        }
-
-        // Typing should be disabled while erasing
-        {
-            io.press(KeyboardKey.leftControl);
-            io.press(KeyboardKey.w);
-            io.inputCharacter('w');
-
-            root.draw();
-
-            assert(root.value == "");
-            assert(root.contentLabel.text == "");
-            assert(root.isEmpty);
-        }
-
-    }
-
     /// Delete a word in front of the caret.
     @(FluidInputAction.deleteWord)
     void deleteWord() {
 
         chopWord(true);
         touchText();
-
-    }
-
-    unittest {
-
-        auto root = textInput();
-
-        // deleteWord should do nothing, because the caret is at the end
-        root.push("Hello, Wörld");
-        root.runInputAction!(FluidInputAction.deleteWord);
-
-        assert(!root.isSelecting);
-        assert(root.value == "Hello, Wörld");
-        assert(root.caretIndex == "Hello, Wörld".length);
-
-        // Move it to the previous word
-        root.runInputAction!(FluidInputAction.previousWord);
-
-        assert(!root.isSelecting);
-        assert(root.value == "Hello, Wörld");
-        assert(root.caretIndex == "Hello, ".length);
-
-        // Delete the next word
-        root.runInputAction!(FluidInputAction.deleteWord);
-
-        assert(!root.isSelecting);
-        assert(root.value == "Hello, ");
-        assert(root.caretIndex == "Hello, ".length);
-
-        // Move to the start
-        root.runInputAction!(FluidInputAction.toStart);
-
-        assert(!root.isSelecting);
-        assert(root.value == "Hello, ");
-        assert(root.caretIndex == 0);
-
-        // Delete the next word
-        root.runInputAction!(FluidInputAction.deleteWord);
-
-        assert(!root.isSelecting);
-        assert(root.value == ", ");
-        assert(root.caretIndex == 0);
-
-        // Delete the next word
-        root.runInputAction!(FluidInputAction.deleteWord);
-
-        assert(!root.isSelecting);
-        assert(root.value == "");
-        assert(root.caretIndex == 0);
 
     }
 
@@ -2139,47 +2082,7 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
-    unittest {
-
-        auto root = textInput();
-
-        root.push("поддержки во Fluid.");
-        root.chop;
-        assert(root.value == "поддержки во Fluid");
-
-        root.chop;
-        assert(root.value == "поддержки во Flui");
-
-        root.chop;
-        assert(root.value == "поддержки во Flu");
-
-        root.chopWord;
-        assert(root.value == "поддержки во ");
-
-        root.chop;
-        assert(root.value == "поддержки во");
-
-        root.chop;
-        assert(root.value == "поддержки в");
-
-        root.chop;
-        assert(root.value == "поддержки ");
-
-        root.caretToStart();
-        root.chop(true);
-        assert(root.value == "оддержки ");
-
-        root.chop(true);
-        assert(root.value == "ддержки ");
-
-        root.chop(true);
-        assert(root.value == "держки ");
-
-    }
-
     private {
-
-        bool _pressed;
 
         /// Number of clicks performed within short enough time from each other. First click is number 0.
         int _clickCount;
@@ -2192,41 +2095,46 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
-    protected override void mouseImpl() {
+    /// Switch hover selection mode.
+    ///
+    /// A single click+hold will use per-character selection. A double click+hold will select whole words,
+    /// and a triple click+hold will select entire lines.
+    @(FluidInputAction.press)
+    protected void press(HoverPointer pointer) {
 
         enum maxDistance = 5;
 
-        // Pressing with the mouse
-        if (!tree.isMouseDown!(FluidInputAction.press)) return;
+        // To count as repeated, the click must be within the specified double click time, and close enough
+        // to the original location
+        const isRepeated = Clock.currTime - _lastClick < io.doubleClickTime  /* TODO GET RID */
+            && distance(pointer.position, _lastClickPosition) < maxDistance;
 
-        const justPressed = !_pressed;
+        // Count repeated clicks
+        _clickCount = isRepeated
+            ? _clickCount + 1
+            : 0;
 
-        // Just pressed
-        if (justPressed) {
+        // Register the click
+        _lastClick = Clock.currTime;
+        _lastClickPosition = pointer.position;
 
-            const clickPosition = io.mousePosition;
+    }
 
-            // To count as repeated, the click must be within the specified double click time, and close enough
-            // to the original location
-            const isRepeated = Clock.currTime - _lastClick < io.doubleClickTime
-                && distance(clickPosition, _lastClickPosition) < maxDistance;
-
-            // Count repeated clicks
-            _clickCount = isRepeated
-                ? _clickCount + 1
-                : 0;
-
-            // Register the click
-            _lastClick = Clock.currTime;
-            _lastClickPosition = clickPosition;
-
-        }
+    /// Update selection using the mouse.
+    @(FluidInputAction.press, WhileHeld)
+    protected void pressAndHold(HoverPointer pointer) {
 
         // Move the caret with the mouse
-        caretToMouse();
+        caretToPointer(pointer);
         moveOrClearSelection();
 
-        final switch (_clickCount % 3) {
+        // Turn on selection from now on, disable it once released
+        selectionMovement = true;
+
+        // Multi-click not supported
+        if (pointer.clickCount == 0) return;
+
+        final switch ((pointer.clickCount + 2) % 3) {
 
             // First click, merely move the caret while selecting
             case 0: break;
@@ -2243,105 +2151,47 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         }
 
-        // Enable selection mode
-        // Disable it when releasing
-        _pressed = selectionMovement = !tree.isMouseActive!(FluidInputAction.press);
-
     }
 
-    unittest {
+    protected override void mouseImpl() {
 
-        // This test relies on properties of the default typeface
+        // The new I/O system will call the other overload.
+        // Call it as a polyfill for the old system.
+        if (!hoverIO) {
 
-        import std.math : isClose;
-
-        auto io = new HeadlessBackend;
-        auto root = textInput(nullTheme.derive(
-            rule!TextInput(
-                Rule.selectionBackgroundColor = color("#02a"),
-            ),
-        ));
-
-        root.io = io;
-        root.value = "Hello, World! Foo, bar, scroll this input";
-        root.focus();
-        root.caretToEnd();
-        root.draw();
-
-        assert(root.scroll.isClose(127));
-
-        // Select some stuff
-        io.nextFrame;
-        io.mousePosition = Vector2(150, 10);
-        io.press();
-        root.draw();
-
-        io.nextFrame;
-        io.mousePosition = Vector2(65, 10);
-        root.draw();
-
-        assert(root.selectedValue == "scroll this");
-
-        io.nextFrame;
-        root.draw();
-
-        // Match the selection box
-        io.assertRectangle(
-            Rectangle(64, 0, 86, 27),
-            color("#02a")
-        );
-
-    }
-
-    unittest {
-
-        // This test relies on properties of the default typeface
-
-        import std.math : isClose;
-
-        auto io = new HeadlessBackend;
-        auto root = textInput(nullTheme.derive(
-            rule!TextInput(
-                Rule.selectionBackgroundColor = color("#02a"),
-            ),
-        ));
-
-        root.io = io;
-        root.value = "Hello, World! Foo, bar, scroll this input";
-        root.focus();
-        root.caretToEnd();
-        root.draw();
-
-        io.mousePosition = Vector2(150, 10);
-
-        // Double- and triple-click
-        foreach (i; 0..3) {
-
-            io.nextFrame;
-            io.press();
-            root.draw();
-
-            io.nextFrame;
-            io.release();
-            root.draw();
-
-            // Double-clicked
-            if (i == 1) {
-                assert(root.selectedValue == "this");
+            // Not holding, disable selection
+            if (!tree.isMouseDown!(FluidInputAction.press)) {
+                selectionMovement = false;
+                return;
             }
 
-            // Triple-clicked
-            if (i == 2) {
-                assert(root.selectedValue == root.value);
+            HoverPointer pointer;
+            pointer.position = io.mousePosition;
+            pointer.clickCount = _clickCount + 1;
+
+            if (tree.isMouseActive!(FluidInputAction.press)) {
+                press(pointer);
             }
+
+            pointer.clickCount = _clickCount + 1;
+
+            pressAndHold(pointer);
 
         }
 
-        io.nextFrame;
-        root.draw();
+    }
+
+    protected override bool hoverImpl(HoverPointer) {
+
+        // Disable selection when not holding
+        if (hoverIO) {
+            selectionMovement = false;
+        }
+        return false;
 
     }
 
+    @("Legacy: mouse selections works correctly across lines (migrated)")
     unittest {
 
         import std.math : isClose;
@@ -2351,6 +2201,7 @@ class TextInput : InputNode!Node, FluidScrollable {
             rule!TextInput(
                 Rule.fontSize = 14.pt,
                 Rule.selectionBackgroundColor = color("#02a"),
+                Rule.fontSize = 14.pt,
             ),
         );
         auto root = textInput(.multiline, theme);
@@ -2362,6 +2213,8 @@ class TextInput : InputNode!Node, FluidScrollable {
         root.value = "Line one\nLine two\n\nLine four";
         root.focus();
         root.draw();
+
+        auto lineHeight = root.style.getTypeface.lineHeight;
 
         // Move the caret to second line
         root.caretIndex = "Line one\nLin".length;
@@ -2511,6 +2364,11 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
+    protected override bool scrollImpl(HoverPointer pointer) {
+        scroll = scroll + pointer.scroll.x;
+        return true;
+    }
+
     Rectangle shallowScrollTo(const Node, Rectangle, Rectangle childBox) {
 
         return childBox;
@@ -2582,47 +2440,6 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
-    unittest {
-
-        auto root = textInput(.multiline);
-        root.push("foo");
-        root.lineByIndex(0, "foobar");
-        assert(root.value == "foobar");
-        assert(root.valueBeforeCaret == "foobar");
-
-        root.push("\nąąąźź");
-        root.lineByIndex(6, "~");
-        root.caretIndex = root.caretIndex - 2;
-        assert(root.value == "~\nąąąźź");
-        assert(root.valueBeforeCaret == "~\nąąąź");
-
-        root.push("\n\nstuff");
-        assert(root.value == "~\nąąąź\n\nstuffź");
-
-        root.lineByIndex(11, "");
-        assert(root.value == "~\nąąąź\n\nstuffź");
-
-        root.lineByIndex(11, "*");
-        assert(root.value == "~\nąąąź\n*\nstuffź");
-
-    }
-
-    unittest {
-
-        auto root = textInput(.multiline);
-        root.push("óne\nßwo\nßhree");
-        root.selectionStart = 5;
-        root.selectionEnd = 14;
-        root.lineByIndex(5, "[REDACTED]");
-        assert(root.value[root.selectionEnd] == 'e');
-        assert(root.value == "óne\n[REDACTED]\nßhree");
-
-        assert(root.value[root.selectionEnd] == 'e');
-        assert(root.selectionStart == 5);
-        assert(root.selectionEnd == 20);
-
-    }
-
     /// Get the index of the start or end of the line — from index of any character on the same line.
     size_t lineStartByIndex(size_t index) {
 
@@ -2644,34 +2461,6 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
-    unittest {
-
-        auto root = textInput(.multiline);
-        assert(root.caretLine == "");
-        root.push("aąaa");
-        assert(root.caretLine == root.value);
-        root.caretIndex = 0;
-        assert(root.caretLine == root.value);
-        root.push("bbb");
-        assert(root.caretLine == root.value);
-        assert(root.value == "bbbaąaa");
-        root.push("\n");
-        assert(root.value == "bbb\naąaa");
-        assert(root.caretLine == "aąaa");
-        root.caretToEnd();
-        root.push("xx");
-        assert(root.caretLine == "aąaaxx");
-        root.push("\n");
-        assert(root.caretLine == "");
-        root.push("\n");
-        assert(root.caretLine == "");
-        root.caretIndex = root.caretIndex - 1;
-        assert(root.caretLine == "");
-        root.caretToStart();
-        assert(root.caretLine == "bbb");
-
-    }
-
     /// Change the current line. Moves the cursor to the end of the newly created line.
     const(char)[] caretLine(const(char)[] newValue) {
 
@@ -2683,37 +2472,6 @@ class TextInput : InputNode!Node, FluidScrollable {
     Rope caretLine(Rope newValue) {
 
         return lineByIndex(caretIndex, newValue);
-
-    }
-
-    unittest {
-
-        auto root = textInput(.multiline);
-        root.push("a\nbb\nccc\n");
-        assert(root.caretLine == "");
-
-        root.caretIndex = root.caretIndex - 1;
-        assert(root.caretLine == "ccc");
-
-        root.caretLine = "hi";
-        assert(root.value == "a\nbb\nhi\n");
-
-        assert(!root.isSelecting);
-        assert(root.valueBeforeCaret == "a\nbb\nhi");
-
-        root.caretLine = "";
-        assert(root.value == "a\nbb\n\n");
-        assert(root.valueBeforeCaret == "a\nbb\n");
-
-        root.caretLine = "new value";
-        assert(root.value == "a\nbb\nnew value\n");
-        assert(root.valueBeforeCaret == "a\nbb\nnew value");
-
-        root.caretIndex = 0;
-        root.caretLine = "insert";
-        assert(root.value == "insert\nbb\nnew value\n");
-        assert(root.valueBeforeCaret == "insert");
-        assert(root.caretLine == "insert");
 
     }
 
@@ -2734,29 +2492,9 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
-    unittest {
-
-        auto root = textInput(.multiline);
-        assert(root.column!dchar == 0);
-        root.push(" ");
-        assert(root.column!dchar == 1);
-        root.push("a");
-        assert(root.column!dchar == 2);
-        root.push("ąąą");
-        assert(root.column!dchar == 5);
-        assert(root.column!char == 8);
-        root.push("O\n");
-        assert(root.column!dchar == 0);
-        root.push(" ");
-        assert(root.column!dchar == 1);
-        root.push("HHH");
-        assert(root.column!dchar == 4);
-
-    }
-
     /// Iterate on each line in an interval.
     ///
-    /// Warning: Iterating on the line by reference is now deprecated. 
+    /// Warning: Iterating on the line by reference is now deprecated.
     auto eachLineByIndex(ptrdiff_t start, ptrdiff_t end) {
 
         struct LineIterator {
@@ -2850,171 +2588,6 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
-    unittest {
-
-        auto root = textInput(.multiline);
-        root.push("aaaąąą@\r\n#\n##ąąśðą\nĄŚ®ŒĘ¥Ę®\n");
-
-        size_t i;
-        foreach (line; root.eachLineByIndex(4, 18)) {
-
-            if (i == 0) assert(line == "aaaąąą@");
-            if (i == 1) assert(line == "#");
-            if (i == 2) assert(line == "##ąąśðą");
-            assert(i.among(0, 1, 2));
-            i++;
-
-        }
-        assert(i == 3);
-
-        i = 0;
-        foreach (line; root.eachLineByIndex(22, 27)) {
-
-            if (i == 0) assert(line == "##ąąśðą");
-            if (i == 1) assert(line == "ĄŚ®ŒĘ¥Ę®");
-            assert(i.among(0, 1));
-            i++;
-
-        }
-        assert(i == 2);
-
-        i = 0;
-        foreach (line; root.eachLineByIndex(44, 44)) {
-
-            assert(i == 0);
-            assert(line == "");
-            i++;
-
-        }
-        assert(i == 1);
-
-        i = 0;
-        foreach (line; root.eachLineByIndex(1, 1)) {
-
-            assert(i == 0);
-            assert(line == "aaaąąą@");
-            i++;
-
-        }
-        assert(i == 1);
-
-    }
-
-    unittest {
-
-        auto root = textInput(.multiline);
-        root.push("skip\nonë\r\ntwo\r\nthree\n");
-
-        assert(root.lineByIndex(4) == "skip");
-        assert(root.lineByIndex(8) == "onë");
-        assert(root.lineByIndex(12) == "two");
-
-        size_t i;
-        foreach (lineStart, ref line; root.eachLineByIndex(5, root.value.length)) {
-
-            if (i == 0) {
-                assert(line == "onë");
-                assert(lineStart == 5);
-                line = Rope("value");
-            }
-            else if (i == 1) {
-                assert(root.value == "skip\nvalue\r\ntwo\r\nthree\n");
-                assert(lineStart == 12);
-                assert(line == "two");
-                line = Rope("\nbar-bar-bar-bar-bar");
-            }
-            else if (i == 2) {
-                assert(root.value == "skip\nvalue\r\n\nbar-bar-bar-bar-bar\r\nthree\n");
-                assert(lineStart == 34);
-                assert(line == "three");
-                line = Rope.init;
-            }
-            else if (i == 3) {
-                assert(root.value == "skip\nvalue\r\n\nbar-bar-bar-bar-bar\r\n\n");
-                assert(lineStart == root.value.length);
-                assert(line == "");
-            }
-            else assert(false);
-
-            i++;
-
-        }
-
-        assert(i == 4);
-
-    }
-
-    unittest {
-
-        auto root = textInput(.multiline);
-        root.push("Fïrst line\nSëcond line\r\n Third line\n    Fourth line\rFifth line");
-
-        size_t i = 0;
-        foreach (ref line; root.eachLineByIndex(19, 49)) {
-
-            if (i == 0) assert(line == "Sëcond line");
-            else if (i == 1) assert(line == " Third line");
-            else if (i == 2) assert(line == "    Fourth line");
-            else assert(false);
-            i++;
-
-            line = "    " ~ line;
-
-        }
-        assert(i == 3);
-        root.selectionStart = 19;
-        root.selectionEnd = 49;
-
-    }
-
-    unittest {
-
-        auto root = textInput();
-        root.value = "some text, some line, some stuff\ntext";
-
-        foreach (ref line; root.eachLineByIndex(root.value.length, root.value.length)) {
-
-            line = Rope("");
-            line = Rope("woo");
-            line = Rope("n");
-            line = Rope(" ąąą ");
-            line = Rope("");
-
-        }
-
-        assert(root.value == "");
-
-    }
-
-    unittest {
-
-        auto root = textInput();
-        root.value = "test";
-
-        {
-            size_t i;
-            foreach (line; root.eachLineByIndex(1, 4)) {
-
-                assert(i++ == 0);
-                assert(line == "test");
-
-            }
-        }
-
-        {
-            size_t i;
-            foreach (ref line; root.eachLineByIndex(1, 4)) {
-
-                assert(i++ == 0);
-                assert(line == "test");
-                line = "tested";
-
-            }
-            assert(root.value == "tested");
-        }
-
-    }
-
     /// Return each line containing the selection.
     auto eachSelectedLine() {
 
@@ -3022,17 +2595,13 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
-    unittest {
+    /// Open the input's context menu.
+    @(FluidInputAction.contextMenu)
+    void openContextMenu(HoverPointer pointer) {
 
-        auto root = textInput();
-
-        foreach (ref line; root.eachSelectedLine) {
-
-            line = Rope("value");
-
-        }
-
-        assert(root.value == "value");
+        // Move the caret to the pointer's position
+        if (!isSelecting)
+            caretToPointer(pointer);
 
     }
 
@@ -3040,15 +2609,16 @@ class TextInput : InputNode!Node, FluidScrollable {
     @(FluidInputAction.contextMenu)
     void openContextMenu() {
 
-        // Move the caret
-        if (!isSelecting)
-            caretToMouse();
+        const anchor = focusBoxImpl(_inner);
 
-        // Spawn the popup
-        tree.spawnPopup(contextMenu);
-
-        // Anchor to caret position
-        contextMenu.anchor = _inner.start + caretRectangle.end;
+        // Spawn the popup at caret position
+        if (overlayIO) {
+            overlayIO.addPopup(contextMenu, anchor);
+        }
+        else {
+            contextMenu.anchor = anchor;
+            tree.spawnPopup(contextMenu);
+        }
 
     }
 
@@ -3065,59 +2635,6 @@ class TextInput : InputNode!Node, FluidScrollable {
     void deleteChar() {
 
         chop(true);
-
-    }
-
-    unittest {
-
-        auto io = new HeadlessBackend;
-        auto root = textInput();
-
-        root.io = io;
-
-        // Type stuff
-        {
-            root.value = "hello‽";
-            root.focus();
-            root.caretToEnd();
-            root.draw();
-
-            assert(root.value == "hello‽");
-            assert(root.contentLabel.text == "hello‽");
-        }
-
-        // Erase a letter
-        {
-            io.nextFrame;
-            root.chop;
-            root.draw();
-
-            assert(root.value == "hello");
-            assert(root.contentLabel.text == "hello");
-            assert(root.isFocused);
-        }
-
-        // Erase a letter
-        {
-            io.nextFrame;
-            root.chop;
-            root.draw();
-
-            assert(root.value == "hell");
-            assert(root.contentLabel.text == "hell");
-            assert(root.isFocused);
-        }
-
-        // Typing should be disabled while erasing
-        {
-            io.press(KeyboardKey.backspace);
-            io.inputCharacter("o, world");
-
-            root.draw();
-
-            assert(root.value == "hel");
-            assert(root.isFocused);
-        }
 
     }
 
@@ -3224,50 +2741,6 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
-    unittest {
-
-        auto root = textInput();
-        root.push("Привет, мир! Это пример текста для тестирования поддержки Unicode во Fluid.");
-
-        // Select word the caret is touching
-        root.selectWord();
-        assert(root.selectedValue == ".");
-
-        // Expand
-        root.selectWord();
-        assert(root.selectedValue == "Fluid.");
-
-        // Go to start
-        root.caretToStart();
-        assert(!root.isSelecting);
-        assert(root.caretIndex == 0);
-        assert(root.selectedValue == "");
-
-        root.selectWord();
-        assert(root.selectedValue == "Привет");
-
-        root.selectWord();
-        assert(root.selectedValue == "Привет,");
-
-        root.selectWord();
-        assert(root.selectedValue == "Привет,");
-
-        root.runInputAction!(FluidInputAction.nextChar);
-        assert(root.caretIndex == 13);  // Before space
-
-        root.runInputAction!(FluidInputAction.nextChar);  // After space
-        root.runInputAction!(FluidInputAction.nextChar);  // Inside "мир"
-        assert(!root.isSelecting);
-        assert(root.caretIndex == 16);
-
-        root.selectWord();
-        assert(root.selectedValue == "мир");
-
-        root.selectWord();
-        assert(root.selectedValue == "мир!");
-
-    }
-
     /// Select the whole line the cursor is.
     void selectLine() {
 
@@ -3300,43 +2773,6 @@ class TextInput : InputNode!Node, FluidScrollable {
         }
 
         updateCaretPositionAndAnchor(false);
-
-    }
-
-    unittest {
-
-        auto root = textInput();
-
-        root.push("ąąąą ąąą ąąąąąąą ąą\nąąą ąąą");
-        assert(root.caretIndex == 49);
-
-        root.selectLine();
-        assert(root.selectedValue == root.value);
-        assert(root.selectedValue.length == 49);
-        assert(root.value.length == 49);
-
-    }
-
-    unittest {
-
-        auto root = textInput(.multiline);
-
-        root.push("ąąą ąąą ąąąąąąą ąą\nąąą ąąą");
-        root.draw();
-        assert(root.caretIndex == 47);
-
-        root.selectLine();
-        assert(root.selectedValue == "ąąą ąąą");
-        assert(root.selectionStart == 34);
-        assert(root.selectionEnd == 47);
-
-        root.runInputAction!(FluidInputAction.selectPreviousLine);
-        assert(root.selectionStart == 34);
-        assert(root.selectionEnd == 13);
-        assert(root.selectedValue == " ąąąąąąą ąą\n");
-
-        root.selectLine();
-        assert(root.selectedValue == root.value);
 
     }
 
@@ -3383,42 +2819,6 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
-    unittest {
-
-        auto root = textInput();
-        root.push("Привет, мир! Это пример текста для тестирования поддержки Unicode во Fluid.");
-
-        assert(root.caretIndex == root.value.length);
-
-        root.runInputAction!(FluidInputAction.previousWord);
-        assert(root.caretIndex == root.value.length - ".".length);
-
-        root.runInputAction!(FluidInputAction.previousWord);
-        assert(root.caretIndex == root.value.length - "Fluid.".length);
-
-        root.runInputAction!(FluidInputAction.previousChar);
-        assert(root.caretIndex == root.value.length - " Fluid.".length);
-
-        root.runInputAction!(FluidInputAction.previousChar);
-        assert(root.caretIndex == root.value.length - "о Fluid.".length);
-
-        root.runInputAction!(FluidInputAction.previousChar);
-        assert(root.caretIndex == root.value.length - "во Fluid.".length);
-
-        root.runInputAction!(FluidInputAction.previousWord);
-        assert(root.caretIndex == root.value.length - "Unicode во Fluid.".length);
-
-        root.runInputAction!(FluidInputAction.previousWord);
-        assert(root.caretIndex == root.value.length - "поддержки Unicode во Fluid.".length);
-
-        root.runInputAction!(FluidInputAction.nextChar);
-        assert(root.caretIndex == root.value.length - "оддержки Unicode во Fluid.".length);
-
-        root.runInputAction!(FluidInputAction.nextWord);
-        assert(root.caretIndex == root.value.length - "Unicode во Fluid.".length);
-
-    }
-
     /// Move caret to the previous or next word.
     @(FluidInputAction.previousWord, FluidInputAction.nextWord)
     protected void previousOrNextWord(FluidInputAction action) {
@@ -3451,58 +2851,17 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         // Next line
         if (action == FluidInputAction.nextLine) {
-
-            search.y += typeface.lineHeight;
-
+            search.y += lineHeight;
         }
 
         // Previous line
         else {
-
-            search.y -= typeface.lineHeight;
-
+            search.y -= lineHeight;
         }
 
         caretTo(search);
         updateCaretPosition(horizontalAnchor < 1);
         moveOrClearSelection();
-
-    }
-
-    unittest {
-
-        auto root = textInput(.multiline);
-
-        // 5 en dashes, 3 then 4; starting at last line
-        root.push("–––––\n–––\n––––");
-        root.draw();
-
-        assert(root.caretIndex == root.value.length);
-
-        // From last line to second line — caret should be at its end
-        root.runInputAction!(FluidInputAction.previousLine);
-        assert(root.valueBeforeCaret == "–––––\n–––");
-
-        // First line, move to 4th dash (same as third line)
-        root.runInputAction!(FluidInputAction.previousLine);
-        assert(root.valueBeforeCaret == "––––");
-
-        // Next line — end
-        root.runInputAction!(FluidInputAction.nextLine);
-        assert(root.valueBeforeCaret == "–––––\n–––");
-
-        // Update anchor to match second line
-        root.runInputAction!(FluidInputAction.toLineEnd);
-        assert(root.valueBeforeCaret == "–––––\n–––");
-
-        // First line again, should be 3rd dash now (same as second line)
-        root.runInputAction!(FluidInputAction.previousLine);
-        assert(root.valueBeforeCaret == "–––");
-
-        // Last line, 3rd dash too
-        root.runInputAction!(FluidInputAction.nextLine);
-        root.runInputAction!(FluidInputAction.nextLine);
-        assert(root.valueBeforeCaret == "–––––\n–––\n–––");
 
     }
 
@@ -3603,32 +2962,12 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
-    unittest {
+    /// ditto
+    void caretToPointer(HoverPointer pointer) {
 
-        import std.math : isClose;
-
-        // caretToMouse is a just a wrapper over caretTo, enabling mouse input
-        // This test checks if it correctly maps mouse coordinates to internal coordinates
-
-        auto io = new HeadlessBackend;
-        auto theme = nullTheme.derive(
-            rule!TextInput(
-                Rule.margin = 40,
-                Rule.padding = 40,
-            )
-        );
-        auto root = textInput(.multiline, theme);
-
-        root.io = io;
-        root.size = Vector2(200, 0);
-        root.value = "123\n456\n789";
-        root.draw();
-
-        io.nextFrame();
-        io.mousePosition = Vector2(140, 90);
-        root.caretToMouse();
-
-        assert(root.caretIndex == 3);
+        caretTo(pointer.position - _inner.start);
+        updateCaretPosition(false);
+        horizontalAnchor = caretPosition.x;
 
     }
 
@@ -3875,88 +3214,20 @@ class TextInput : InputNode!Node, FluidScrollable {
 
     }
 
-    unittest {
-
-        auto root = textInput();
-
-        root.draw();
-        root.push("Foo Bar Baz Ban");
-
-        // Move cursor to "Bar"
-        root.runInputAction!(FluidInputAction.toStart);
-        root.runInputAction!(FluidInputAction.nextWord);
-
-        // Select "Bar Baz "
-        root.runInputAction!(FluidInputAction.selectNextWord);
-        root.runInputAction!(FluidInputAction.selectNextWord);
-
-        assert(root.io.clipboard == "");
-        assert(root.selectedValue == "Bar Baz ");
-
-        // Cut the text
-        root.cut();
-
-        assert(root.io.clipboard == "Bar Baz ");
-        assert(root.value == "Foo Ban");
-
-    }
-
-    unittest {
-
-        auto root = textInput();
-
-        root.push("Привет, мир! Это пример текста для тестирования поддержки Unicode во Fluid.");
-        root.draw();
-        root.io.clipboard = "ą";
-
-        root.runInputAction!(FluidInputAction.previousChar);
-        root.selectionStart = 106;  // Before "Unicode"
-        root.cut();
-
-        assert(root.value == "Привет, мир! Это пример текста для тестирования поддержки .");
-        assert(root.io.clipboard == "Unicode во Fluid");
-
-        root.caretIndex = 14;
-        root.runInputAction!(FluidInputAction.selectNextWord);  // мир
-        root.paste();
-
-        assert(root.value == "Привет, Unicode во Fluid! Это пример текста для тестирования поддержки .");
-
-    }
-
     /// Copy selected text to clipboard.
     @(FluidInputAction.copy)
     void copy() {
 
         import std.conv : text;
 
-        if (isSelecting)
-            io.clipboard = text(selectedValue);
+        if (!isSelecting) return;
 
-    }
-
-    unittest {
-
-        auto root = textInput();
-
-        root.draw();
-        root.push("Foo Bar Baz Ban");
-
-        // Select all
-        root.selectAll();
-
-        assert(root.io.clipboard == "");
-
-        root.copy();
-
-        assert(root.io.clipboard == "Foo Bar Baz Ban");
-
-        // Reduce selection by a word
-        root.runInputAction!(FluidInputAction.selectPreviousWord);
-        root.copy();
-
-        assert(root.io.clipboard == "Foo Bar Baz ");
-        assert(root.value == "Foo Bar Baz Ban");
+        if (clipboardIO) {
+            clipboardIO.writeClipboard = selectedValue.toString();
+        }
+        else {
+            io.clipboard = selectedValue.toString();
+        }
 
     }
 
@@ -3966,32 +3237,33 @@ class TextInput : InputNode!Node, FluidScrollable {
 
         const isMinor = false;
 
-        push(io.clipboard, isMinor);
+        auto snap = snapshot();
 
-    }
+        // New I/O
+        if (clipboardIO) {
 
-    unittest {
+            char[1024] buffer;
+            int offset;
 
-        auto root = textInput();
+            // Read text
+            while (true) {
 
-        root.value = "Foo ";
-        root.draw();
-        root.caretToEnd();
-        root.io.clipboard = "Bar";
+                // Push the text
+                if (auto text = clipboardIO.readClipboard(buffer, offset)) {
+                    push(text, isMinor);
+                }
+                else break;
 
-        assert(root.caretIndex == 4);
-        assert(root.value == "Foo ");
+            }
 
-        root.paste();
+        }
 
-        assert(root.caretIndex == 7);
-        assert(root.value == "Foo Bar");
+        // Old clipboard
+        else {
+            push(io.clipboard, isMinor);
+        }
 
-        root.caretToStart();
-        root.paste();
-
-        assert(root.caretIndex == 3);
-        assert(root.value == "BarFoo Bar");
+        forcePushSnapshot(snap);
 
     }
 
@@ -4025,11 +3297,11 @@ class TextInput : InputNode!Node, FluidScrollable {
     /// snapshot.
     ///
     /// History:
-    ///     As of Fluid 0.7.1, this function now replaces the old `pushSnapshot`. `psuhHistory` does not have 
-    ///     to be called explicitly. `replace` will automatically call this whenever needed. It can still be 
+    ///     As of Fluid 0.7.1, this function now replaces the old `pushSnapshot`. `psuhHistory` does not have
+    ///     to be called explicitly. `replace` will automatically call this whenever needed. It can still be
     ///     useful when used together with `replaceNoHistory`
     /// Params:
-    ///     newSnapshot = Entry to insert into the `undo` history. This entry should be a revision *preceding* 
+    ///     newSnapshot = Entry to insert into the `undo` history. This entry should be a revision *preceding*
     ///         the current state.
     /// Returns:
     ///     True if the snapshot was added to history, or false if not.
@@ -4072,7 +3344,7 @@ class TextInput : InputNode!Node, FluidScrollable {
         assert(root.value == "");
 
     }
-    
+
     @("Undo and redo work with basic actions")
     unittest {
 
@@ -4272,7 +3544,7 @@ unittest {
     import fluid.scroll;
 
     const viewportHeight = 50;
-    
+
     auto theme = nullTheme.derive(
         rule!Node(
             Rule.typeface = Style.defaultTypeface,
@@ -4300,8 +3572,8 @@ unittest {
 
     assert(focusBox.start == input.caretRectangle.start);
     assert(focusBox.end.y - viewportHeight == root.scroll);
-    
-    
+
+
 }
 
 @("TextInput paste benchmark")
@@ -4314,7 +3586,7 @@ unittest {
         .layout!"fill",
     );
     auto root = vscrollFrame(
-        .layout!"fill", 
+        .layout!"fill",
         input
     );
     auto io = new HeadlessBackend;
@@ -4356,7 +3628,7 @@ unittest {
         .layout!"fill",
     );
     auto root = vscrollFrame(
-        .layout!"fill", 
+        .layout!"fill",
         input
     );
     auto io = new HeadlessBackend;
@@ -4391,7 +3663,7 @@ unittest {
             input.insert(input.value.length, "Hello, World!");
             root.draw();
         },
-        
+
     )(runCount);
 
     auto average = result[].map!(a => a / runCount);
@@ -4433,7 +3705,7 @@ unittest {
             root.push(letter);
             root.draw();
         }
-        
+
     })(runCount);
 
     const average = result[0] / runCount;

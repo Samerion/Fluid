@@ -1,9 +1,11 @@
 module fluid.password_input;
 
 import fluid.utils;
+import fluid.style;
 import fluid.backend;
 import fluid.text_input;
 
+import fluid.io.canvas;
 
 @safe:
 
@@ -39,6 +41,31 @@ class PasswordInput : TextInput {
     this(string placeholder = "", void delegate() @trusted submitted = null) {
 
         super(placeholder, submitted);
+        this.contentLabel = new LocalContentLabel;
+
+    }
+
+    static class LocalContentLabel : ContentLabel {
+
+        this() {
+            isWrapDisabled = true;
+        }
+
+        override void resizeImpl(Vector2 available) {
+
+            super.resizeImpl(available);
+
+            if (!isPlaceholder) {
+                const x = getAdvanceX(io, canvasIO, style);
+                const radius = x / 2f;
+                const advance = x * 1.2;
+                minSize = Vector2(
+                    advance * value.countCharacters,
+                    radius * 2,
+                );
+            }
+
+        }
 
     }
 
@@ -82,77 +109,21 @@ class PasswordInput : TextInput {
 
     }
 
-    unittest {
+    protected override void resizeImpl(Vector2 space) {
 
-        import fluid.input;
+        use(canvasIO);
 
-        auto root = passwordInput();
-        root.value = "Hello, ";
-        root.caretToEnd();
-        root.push("World!");
+        // Use the "X" character as reference
+        const x = getAdvanceX(io, canvasIO, style);
 
-        assert(root.value == "Hello, World!");
+        radius = x / 2f;
+        advance = x * 1.2;
 
-        auto value1 = root.value;
-        root.shred();
-
-        assert(root.value == "");
-        assert(value1 == "Hello, \xFF\xFF\xFF\xFF\xFF\xFF");
-
-        root.push("Hello, World!");
-        root.runInputAction!(FluidInputAction.previousChar);
-
-        auto value2 = root.value;
-        root.chopWord();
-        root.push("Fluid");
-
-        auto value3 = root.value;
-
-        assert(root.value == "Hello, Fluid!");
-        assert(value2 == "Hello, World!");
-        assert(value3 == "Hello, Fluid!");
-
-        root.shred();
-
-        assert(root.value == "");
-        assert(value2 == "\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF");
-        assert(value3 == value2);
-
-    }
-
-    unittest {
-
-        import fluid.input : FluidInputAction;
-
-        auto root = passwordInput();
-        root.savePush("Hello, x");
-        root.runInputAction!(FluidInputAction.backspace);
-        root.savePush("World!");
-
-        assert(root.value == "Hello, World!");
-
-        root.undo();
-
-        assert(root.value == "Hello, ");
-
-        root.shred();
-
-        assert(root.value == "");
-
-        root.undo();
-
-        assert(root.value == "");
-
-        root.redo();
-        root.redo();
-
-        assert(root.value == "");
+        super.resizeImpl(space);
 
     }
 
     protected override void drawContents(Rectangle inner, Rectangle innerScrolled) {
-
-        auto typeface = pickStyle.getTypeface;
 
         // Empty, draw the placeholder using regular input
         if (isEmpty) return super.drawContents(inner, innerScrolled);
@@ -160,15 +131,21 @@ class PasswordInput : TextInput {
         // Draw selection
         drawSelection(innerScrolled);
 
-        auto cursor = start(innerScrolled) + Vector2(radius, typeface.lineHeight / 2f);
+        auto cursor = start(innerScrolled) + Vector2(radius, lineHeight / 2f);
+        auto style = pickStyle;
 
         // Draw a circle for each character
-        foreach (_; value) {
-
-            io.drawCircle(cursor, radius, style.textColor);
-
-            cursor.x += advance;
-
+        if (canvasIO) {
+            foreach (_; value) {
+                canvasIO.drawCircle(cursor, radius, style.textColor);
+                cursor.x += advance;
+            }
+        }
+        else {
+            foreach (_; value) {
+                io.drawCircle(cursor, radius, style.textColor);
+                cursor.x += advance;
+            }
         }
 
         // Draw the caret
@@ -216,8 +193,6 @@ class PasswordInput : TextInput {
         // Ignore if selection is empty
         if (selectionStart == selectionEnd) return;
 
-        const typeface = style.getTypeface;
-
         const low = min(selectionStart, selectionEnd);
         const high = max(selectionStart, selectionEnd);
 
@@ -226,23 +201,33 @@ class PasswordInput : TextInput {
 
         const rect = Rectangle(
             (inner.start + Vector2(start, 0)).tupleof,
-            size, typeface.lineHeight,
+            size, lineHeight,
         );
 
-        io.drawRectangle(rect, style.selectionBackgroundColor);
+        if (canvasIO) {
+            canvasIO.drawRectangle(rect, style.selectionBackgroundColor);
+        }
+        else {
+            io.drawRectangle(rect, style.selectionBackgroundColor);
+        }
 
     }
 
-    protected override void reloadStyles() {
+    /// Get the X advance of letter "X."
+    protected static float getAdvanceX(FluidBackend io, CanvasIO canvasIO, Style style) {
 
-        super.reloadStyles();
+        float scale;
 
-        // Use the "X" character as reference
-        auto typeface = style.getTypeface;
-        auto x = typeface.advance('X').x;
+        if (canvasIO) {
+            style.setDPI(canvasIO.dpi);
+            scale = canvasIO.toDots(Vector2(1, 0)).x;
+        }
+        else {
+            style.setDPI(io.dpi);
+            scale = io.hidpiScale.x;
+        }
 
-        radius = x / 2f;
-        advance = x * 1.2;
+        return style.getTypeface.advance('X').x / scale;
 
     }
 

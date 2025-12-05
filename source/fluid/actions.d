@@ -7,12 +7,92 @@ import fluid.input;
 import fluid.scroll;
 import fluid.backend;
 
+import fluid.io.focus;
+
+import fluid.future.pipe;
+
 
 @safe:
 
 
+/// Abstract class for tree actions that find and return a node.
+abstract class NodeSearchAction : TreeAction, Publisher!Node {
+
+    public {
+
+        /// Node this action has found.
+        Node result;
+
+    }
+
+    private {
+
+        /// Event that runs when the tree action finishes.
+        Event!Node finished;
+
+    }
+
+    alias then = typeof(super).then;
+    alias then = Publisher!Node.then;
+    alias subscribe = typeof(super).subscribe;
+    alias subscribe = Publisher!Node.subscribe;
+
+    override void clearSubscribers() {
+        super.clearSubscribers();
+        finished.clearSubscribers();
+    }
+
+    override void subscribe(Subscriber!Node subscriber) {
+        finished.subscribe(subscriber);
+    }
+
+    override void beforeTree(Node node, Rectangle rect) {
+        super.beforeTree(node, rect);
+        result = null;
+    }
+
+    override void stopped() {
+        super.stopped();
+        finished(result);
+    }
+
+}
+
+abstract class FocusSearchAction : NodeSearchAction, Publisher!Focusable {
+
+    private {
+
+        /// Event that runs when the tree action finishes.
+        Event!Focusable finished;
+
+    }
+
+    alias then = typeof(super).then;
+    alias then = Publisher!Focusable.then;
+    alias subscribe = typeof(super).subscribe;
+    alias subscribe = Publisher!Focusable.subscribe;
+
+    override void clearSubscribers() {
+        super.clearSubscribers();
+        finished.clearSubscribers();
+    }
+
+    override void subscribe(Subscriber!Focusable subscriber) {
+        finished.subscribe(subscriber);
+    }
+
+    override void stopped() {
+        super.stopped();
+        finished(cast(Focusable) result);
+    }
+
+}
+
 /// Set focus on the given node, if focusable, or the first of its focusable children. This will be done lazily during
-/// the next draw. If calling `focusRecurseChildren`, the subject of the call will be excluded from taking focus.
+/// the next draw.
+///
+/// If focusing the given node is not desired, use `focusRecurseChildren`.
+///
 /// Params:
 ///     parent = Container node to search in.
 FocusRecurseAction focusRecurse(Node parent) {
@@ -57,7 +137,10 @@ unittest {
 
 }
 
-/// ditto
+/// Set focus on the first of the node's focusable children. This will be done lazily during the next draw.
+///
+/// Params:
+///     parent = Container node to search in.
 FocusRecurseAction focusRecurseChildren(Node parent) {
 
     auto action = new FocusRecurseAction;
@@ -75,27 +158,23 @@ FocusRecurseAction focusChild(Node parent) {
 
 }
 
+@("FocusRecurse works")
 unittest {
 
     import fluid.space;
     import fluid.button;
 
-    auto io = new HeadlessBackend;
     auto root = vframeButton(
         button("", delegate { }),
         button("", delegate { }),
         delegate { }
     );
 
-    root.io = io;
-
     // Typical focusRecurse call will focus the button
     root.focusRecurse;
     root.draw();
 
     assert(root.tree.focus is root);
-
-    io.nextFrame;
 
     // If we want to make sure the action descends below the root, we must
     root.focusRecurseChildren;
@@ -105,11 +184,12 @@ unittest {
 
 }
 
-class FocusRecurseAction : TreeAction {
+class FocusRecurseAction : FocusSearchAction {
 
     public {
 
         bool excludeStartNode;
+        bool isReverse;
         void delegate(FluidFocusable) @safe finished;
 
     }
@@ -125,16 +205,23 @@ class FocusRecurseAction : TreeAction {
         // Check if the node is focusable
         if (auto focusable = cast(FluidFocusable) node) {
 
-            // Give it focus
-            focusable.focus();
+            // Mark the node
+            result = node;
 
-            // Submit the result
-            if (finished) finished(focusable);
-
-            // We're done here
-            stop;
+            // Stop here if selecting the first
+            if (!isReverse) stop;
 
         }
+
+    }
+
+    override void stopped() {
+
+        if (auto focusable = cast(FluidFocusable) result) {
+            focusable.focus();
+            if (finished) finished(focusable);
+        }
+        super.stopped();
 
     }
 
@@ -161,6 +248,7 @@ ScrollIntoViewAction scrollToTop(Node node) {
 
 }
 
+@("Legacy: ScrollIntoViewAction works (migrated)")
 unittest {
 
     import fluid;
@@ -210,7 +298,7 @@ unittest {
     // viewport which probably isn't appropriate in case *like this* where it should reveal the top of the node.
     auto texture1 = io.textures.front;
     assert(isClose(texture1.position.y + texture1.height, viewportHeight));
-    assert(isClose(root.scroll, (root.scrollMax + 10) * 2/3 - 10));
+    assert(isClose(root.scroll, (root.maxScroll + 10) * 2/3 - 10));
 
     io.nextFrame;
     root.draw();
@@ -238,6 +326,12 @@ class ScrollIntoViewAction : TreeAction {
         Vector2 viewport;
         Rectangle childBox;
 
+        /// If non-zero, skips nodes. Incremented in beforeDraw once `startNode` is set to null
+        /// and decremented in afterDraw if non-zero.
+        ///
+        /// Other hooks in `afterDraw` only trigger if zero.
+        int _skipDepth;
+
     }
 
     void reset(bool alignToTop = false) {
@@ -247,7 +341,20 @@ class ScrollIntoViewAction : TreeAction {
 
     }
 
+    override void beforeDraw(Node, Rectangle) {
+        if (startNode is null) {
+            _skipDepth++;
+        }
+    }
+
     override void afterDraw(Node node, Rectangle, Rectangle paddingBox, Rectangle contentBox) {
+
+        // This action only affects the chain of ancestors, from root to target node. No sibling
+        // of any of the nodes should be touched.
+        if (_skipDepth > 0) {
+            _skipDepth--;
+            return;
+        }
 
         // Target node was drawn
         if (node is startNode) {
@@ -262,7 +369,6 @@ class ScrollIntoViewAction : TreeAction {
             // Get the node's padding box
             childBox = node.focusBoxImpl(contentBox);
 
-
         }
 
         // Ignore children of the target node
@@ -270,7 +376,6 @@ class ScrollIntoViewAction : TreeAction {
         else if (startNode !is null) return;
 
         // Reached a scroll node
-        // TODO What if the container isn't an ancestor
         else if (auto scrollable = cast(FluidScrollable) node) {
 
             // Perform the scroll
@@ -278,15 +383,28 @@ class ScrollIntoViewAction : TreeAction {
 
             // Aligning to top, make sure the child aligns with the parent
             if (alignToTop && childBox.y > paddingBox.y) {
-
                 const offset = childBox.y - paddingBox.y;
-
                 scrollable.scroll = scrollable.scroll + cast(size_t) offset;
-
             }
 
         }
 
     }
+
+}
+
+/// Wait for the next frame. This action is a polyfill that can be used in tree action chains to make sure they're
+/// added during `beforeTree`.
+NextFrameAction nextFrame(Node node) {
+
+    auto action = new NextFrameAction;
+    node.startAction(action);
+    return action;
+
+}
+
+class NextFrameAction : TreeAction {
+
+    // Yes! It's that simple!
 
 }

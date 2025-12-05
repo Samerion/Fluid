@@ -13,35 +13,30 @@ import fluid.style;
 import fluid.backend;
 import fluid.structs;
 
+import fluid.io.hover;
+
 public import fluid.scroll_input;
+public import fluid.scroll_frame;
 
 
 @safe:
+deprecated("Use `ScrollFrame` instead. `Scrollable` will be removed in Fluid 0.8.0."):
 
 
-alias ScrollFrame = Scrollable!Frame;
 alias Scrollable(T : Space) = Scrollable!(T, "directionHorizontal");
 
-/// Create a new vertical scroll frame.
-alias vscrollFrame = simpleConstructor!ScrollFrame;
-
-/// Create a new horizontal scroll frame.
-alias hscrollFrame = simpleConstructor!(ScrollFrame, (a) {
-
-    a.directionHorizontal = true;
-
-});
-
 /// Create a new scrollable node.
-alias vscrollable(alias T) = simpleConstructor!(ApplyRight!(ScrollFrame, "false"), T);
+alias vscrollable(alias T) = simpleConstructor!(ApplyRight!(Scrollable, "false"), T);
 
 /// Create a new horizontally scrollable node.
-alias hscrollable(alias T) = simpleConstructor!(ApplyRight!(ScrollFrame, "true"), T);
+alias hscrollable(alias T) = simpleConstructor!(ApplyRight!(Scrollable, "true"), T);
 
 /// Implement scrolling for the given node.
 ///
 /// This only supports scrolling in one axis.
-class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable {
+class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable, HoverScrollable {
+
+    HoverIO hoverIO;
 
     public {
 
@@ -62,6 +57,11 @@ class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable {
         super(args);
         this.scrollBar = .vscrollInput(.layout!(1, "fill"));
 
+    }
+
+    alias opEquals = Node.opEquals;
+    override bool opEquals(const Object other) const {
+        return super.opEquals(other);
     }
 
     /// Distance the node is scrolled by.
@@ -116,6 +116,15 @@ class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable {
     float scrollMax() const {
 
         return scrollBar.scrollMax();
+
+    }
+
+    alias maxScroll = scrollMax;
+
+    deprecated("shallowScrollTo with a Vector2 argument has been deprecated and will be removed in Fluid 0.8.0.")
+    Rectangle shallowScrollTo(const Node child, Vector2, Rectangle parentBox, Rectangle childBox) {
+
+        return shallowScrollTo(child, parentBox, childBox);
 
     }
 
@@ -175,6 +184,8 @@ class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable {
         assert(scrollBar !is null, "No scrollbar has been set for FluidScrollable");
         assert(tree !is null);
 
+        use(hoverIO);
+
         /// Padding represented as a vector. This sums the padding on each axis.
         const paddingVector = Vector2(style.padding.sideX[].sum, style.padding.sideY[].sum);
 
@@ -183,7 +194,7 @@ class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable {
 
         // Resize the scrollbar
         scrollBar.isHorizontal = this.isHorizontal;
-        scrollBar.resize(this.tree, this.theme, paddingSpace);
+        resizeChild(scrollBar, paddingSpace);
 
         /// Space without the scrollbar
         const contentSpace = isHorizontal
@@ -239,7 +250,7 @@ class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable {
 
             scrollBarRect.y += outer.height;
             scrollBarRect.height = scrollBar.minSize.y;
-            mainOuter.height -= scrollBarRect.width;
+            mainOuter.height -= scrollBarRect.height;
 
         }
 
@@ -267,10 +278,17 @@ class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable {
         }
 
         // Draw the scrollbar
-        scrollBar.draw(scrollBarRect);
+        drawChild(scrollBar, scrollBarRect);
 
         // Draw the frame
-        super.drawImpl(mainOuter, inner);
+        if (canvasIO) {
+            const lastArea = canvasIO.intersectCrop(mainOuter);
+            scope (exit) canvasIO.cropArea = lastArea;
+            super.drawImpl(mainOuter, inner);
+        }
+        else {
+            super.drawImpl(mainOuter, inner);
+        }
 
     }
 
@@ -281,8 +299,10 @@ class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable {
             ? valueVec.x
             : valueVec.y;
         const move = speed * value;
+        const maxMoveBackward = -scroll;
+        const maxMoveForward  = maxScroll - scroll;
 
-        return move.to!ptrdiff_t != 0;
+        return move.clamp(maxMoveBackward, maxMoveForward) != 0;
 
     }
 
@@ -297,6 +317,26 @@ class Scrollable(T : Node, string horizontalExpression) : T, FluidScrollable {
 
         scrollBar.setScroll(scroll + move);
 
+    }
+
+    bool canScroll(const HoverPointer pointer) const {
+
+        const value = isHorizontal
+            ? pointer.scroll.x
+            : pointer.scroll.y;
+        const maxMoveBackward = -scroll;
+        const maxMoveForward  = maxScroll - scroll;
+
+        return value.clamp(maxMoveBackward, maxMoveForward) != 0;
+
+    }
+
+    bool scrollImpl(HoverPointer pointer) {
+        const value = isHorizontal
+            ? pointer.scroll.x
+            : pointer.scroll.y;
+        scrollBar.setScroll(scroll + value);
+        return true;
     }
 
 }

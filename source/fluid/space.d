@@ -1,5 +1,82 @@
+/// Spaces create columns or rows of other nodes.
 ///
+/// A Space can be either vertical (a column) or horizontal (a row). Use [vspace] to create a
+/// vertical Space, and a [hspace] to create a horizontal Space.
+///
+/// Spaces are very similar to [Frames][fluid.frame.Frame]. For most purposes, Frames are
+/// sufficient, but Space offers a shorthand:
+///
+/// * Spaces have no background,
+/// * Spaces cannot be "clicked through": if a Space is drawn over other nodes, the nodes can
+///   still be clicked,
+///
+/// Spaces are thus convenient to avoid some of Frame's side effects when only intended for
+/// layout purposes.
+///
+/// On top of the above, Spaces currently do not support drag-and-drop, but Frames
+/// do. A future update [will move drag-and-drop functionality into a separate
+/// node](https://git.samerion.com/Samerion/Fluid/issues/297).
 module fluid.space;
+
+@safe:
+
+///
+unittest {
+    import fluid.label;
+    import fluid.button;
+
+    // A vspace will align all its content in a column
+    vspace(
+        label("First entry"),
+        label("Second entry"),
+        label("Third entry"),
+    );
+
+    // hspace will lay out the nodes in a row
+    hspace(
+        label("One, "),
+        label("Two, "),
+        label("Three!"),
+    );
+
+    // Combine them to quickly build layouts!
+    vspace(
+        label("Are you sure you want to proceed?"),
+        hspace(
+            button("Yes", delegate { }),
+            button("Cancel", delegate { }),
+        ),
+    );
+
+}
+
+/// Use spaces to organize your apps. For example, if you need to insert nodes into a column
+/// on event, you can append them to a `Space`:
+@("Space reference example")
+unittest {
+    import fluid.label;
+    import fluid.frame;
+    import fluid.button;
+    import fluid.text_input;
+
+    Space shoppingList;
+    TextInput newItem;
+    run(
+        vframe(
+            label("My shopping list:"),
+            shoppingList = vspace(
+                label("Apples"),
+                label("Carrots"),
+            ),
+            hspace(
+                newItem = textInput("Item..."),
+                button("Add item", delegate {
+                    shoppingList ~= label(newItem.value);
+                }),
+            ),
+        ),
+    );
+}
 
 import std.math;
 import std.range;
@@ -13,36 +90,34 @@ import fluid.utils;
 import fluid.backend;
 import fluid.children;
 
-
-@safe:
-
-
-/// This is a space, a basic container for other nodes.
-///
-/// Nodes are laid in a column (`vframe`) or in a row (`hframe`).
-///
-/// Space only acts as a container and doesn't implement styles and doesn't take focus. It's very useful as a helper for
-/// building layout, while `Frame` remains to provide styling.
+/// A [node builder][fluid.utils.nodeBuilder] that creates a vertical (`vspace`) or horizontal
+/// Space (`hspace`).
 alias vspace = simpleConstructor!Space;
 
 /// ditto
 alias hspace = simpleConstructor!(Space, (a) {
-
     a.directionHorizontal = true;
-
 });
 
-/// ditto
+/// A container node that aligns its children in columns or rows.
 class Space : Node {
 
     public {
 
-        /// Children of this frame.
+        /// Nodes this space will align and display. They are contained inside the node.
+        ///
+        /// Adding and removing nodes will change the application's layout, so it is necessary
+        /// to call [updateSize] on the `Space` afterwards.
+        ///
+        /// Because of how `Space` stores the children, it is also impossible to change `children`
+        /// while drawing. Attempts to do so will be detected when compiling in debug mode.
+        /// Detection is handled by [Children].
         Children children;
 
-        /// Defines in what directions children of this frame should be placed.
+        /// If true, children are placed horizontally (in a row), if false, vertically
+        /// (in a column).
         ///
-        /// If true, children are placed horizontally, if false, vertically.
+        /// This can be controlled when constructing nodes by using [vspace] or [hspace].
         bool isHorizontal;
 
         alias horizontal = isHorizontal;
@@ -61,27 +136,49 @@ class Space : Node {
     }
 
     /// Create the space and fill it with given nodes.
+    /// Params:
+    ///     nodes = Nodes for the space to control.
     this(Node[] nodes...) {
-
         this.children ~= nodes;
-
     }
 
-    /// Create the space using nodes from the given range.
+    /// ditto
+    this(T : Node)(T[] nodes...)
+    if (!is(T[] : Node[])) {
+        this.children ~= nodes;
+    }
+
+    /// Construct `Space` using node builders:
+    @("Space node constructor demo")
+    unittest {
+        import fluid.label;
+        run(
+            vspace(
+                label("Node 1"),
+                label("Node 2"),
+            ),
+        );
+    }
+
+    deprecated("There is no sensible way for `Space` to use ranges. "
+        ~ "Instead, explicitly convert them to an array with `std.array.array`. "
+        ~ "This constructor will be removed in Fluid 0.8.0.")
     this(Range)(Range range)
-    if (isInputRange!Range)
+    if (isInputRange!Range && !is(Range : T[], T : Node))
     do {
-
         this.children ~= range;
-
     }
 
-    /// Add children.
-    pragma(inline, true)
+    /// Append children nodes to this node.
+    ///
+    /// This is the same as `node.children ~= nodes`, except it will automatically trigger
+    /// a resize.
+    ///
+    /// Params:
+    ///     nodes = Nodes to append.
     void opOpAssign(string operator : "~", T)(T nodes) {
-
         children ~= nodes;
-
+        updateSize();
     }
 
     protected override void resizeImpl(Vector2 available) {
@@ -122,7 +219,7 @@ class Space : Node {
             // Check non-expand nodes now
             else {
 
-                child.resize(tree, theme, childSpace(child, available, false));
+                resizeChild(child, childSpace(child, available, false));
                 minSize = addSize(child.minSize, minSize);
 
                 // Reserve space for this node
@@ -134,7 +231,7 @@ class Space : Node {
 
         }
 
-        const gapSpace 
+        const gapSpace
             = visibleChildren == 0 ? 0
             : isHorizontal ? style.gap.sideX * (visibleChildren - 1u)
             :                style.gap.sideY * (visibleChildren - 1u);
@@ -151,7 +248,7 @@ class Space : Node {
         foreach (child; expandChildren) {
 
             // Resize the child
-            child.resize(tree, theme, childSpace(child, available, false));
+            resizeChild(child, childSpace(child, available, false));
 
             const childSize = child.minSize;
             const childExpand = child.layout.expand;
@@ -175,65 +272,99 @@ class Space : Node {
 
     }
 
-    unittest {
-
-        import std.meta;
-        import fluid.frame;
-        import fluid.size_lock;
-
-        auto theme = nullTheme.derive(
-            rule!Space(
-                Rule.gap = 12,
-            ),
-        );
-
-        auto root = vspace(
-            theme,
-            sizeLock!vframe(
-                sizeLimitY = 200
-            ),
-            sizeLock!vframe(
-                sizeLimitY = 200
-            ),
-            sizeLock!vframe(
-                sizeLimitY = 200
-            ),
-        );
-        root.draw();
-
-        assert(isClose(root.minSize.y, 200 * 3 + 12 * 2));
-
+    protected override void drawImpl(Rectangle, Rectangle inner) {
+        drawChildren(inner);
     }
 
-    protected override void drawImpl(Rectangle, Rectangle area) {
+    /// Draw all of the space's children.
+    ///
+    /// This function is only to be called from within `drawImpl` of nodes that inherit
+    /// from `Space`. Use this if you're making modifications to `Space`'s behavior.
+    ///
+    /// It's illegal to change the children while this function is running. This is because
+    /// any node that is marked for removal will be removed from [children] during iteration.
+    /// This is done in place by shifting all subsequent siblings leftwards.
+    ///
+    /// For example, if node 3 is marked for removal: `[1, 2, 3, 4, 5]`, during iteration
+    /// it will be overridden by a following node: `[1, 2, 4, 5, 5]`. "Leftovers" at the end of
+    /// the array will be removed when the last node is reached: `[1, 2, 4, 5]`.
+    ///
+    /// Params:
+    ///     inner = Rectangle to draw the children in.
+    ///         `Space` normally draws inside the content box (inner).
+    protected void drawChildren(Rectangle inner) {
 
         assertClean(children, "Children were changed without calling updateSize().");
 
-        auto position = start(area);
+        auto position = start(inner);
+        Node[] nodes = children[];
+        size_t destinationIndex = 0;
 
-        foreach (child; filterChildren) {
+        // Prevent modifications while running
+        {
+            children.lock();
+            scope (exit) children.unlock();
 
-            // Ignore if this child is not visible
-            if (child.isHidden) continue;
+            foreach (sourceIndex, child; nodes) {
 
-            // Get params
-            const size = childSpace(child, size(area), true);
-            const rect = Rectangle(
-                position.x, position.y,
-                size.x, size.y
-            );
+                const toRemove = child.toRemove;
+                child.toRemove = false;
 
-            // Draw the child
-            child.draw(rect);
+                // Ignore children that are to be removed
+                if (toRemove) continue;
 
-            // Offset position
-            position = childOffset(position, size);
+                position = drawNextChild(inner, position, child);
 
+                // Move children if needed
+                if (sourceIndex != destinationIndex) {
+                    nodes[destinationIndex] = child;
+                }
+
+                // Set space for next nodes
+                destinationIndex++;
+
+            }
         }
+
+        // Remove leftovers
+        nodes.length = destinationIndex;
+        assertClean(children, "Children were changed without calling updateSize().");
+        children = nodes;
+        children.clearDirty;
 
     }
 
-    /// List children in the space, removing all nodes queued for deletion beforehand.
+    /// Draw a child node and lay it out according to Space's rules.
+    ///
+    /// This function is only to be called from within `drawImpl` of nodes that inherit
+    /// from `Space`. Use this if you're making modifications to `Space`'s behavior.
+    ///
+    /// Params:
+    ///     inner = Rectangle to draw the children in.
+    ///     start = Position to draw the child node on; this will be the node's top-left corner.
+    ///     child = Child node to draw.
+    /// Returns:
+    ///     Position of the next node.
+    protected Vector2 drawNextChild(Rectangle inner, Vector2 start, Node child) {
+
+        // Ignore if this child is not visible
+        if (child.isHidden) return start;
+
+        // Get params
+        const available = size(inner);
+        const size = childSpace(child, available, true);
+        const rect = Rectangle(start.tupleof, size.tupleof);
+
+        // Draw the child
+        drawChild(child, rect);
+
+        // Offset position
+        return childOffset(start, size);
+
+    }
+
+    // Deliberately left undocumented, it will become obsolete:
+    // https://git.samerion.com/Samerion/Fluid/issues/453
     protected auto filterChildren() {
 
         struct ChildIterator {
@@ -261,7 +392,7 @@ class Space : Node {
                 size_t destinationIndex = 0;
                 int end = 0;
 
-                // Iterate through all children. When we come upon ones that are queued for deletion,
+                // Iterate through all children
                 foreach (sourceIndex, child; node.children) {
 
                     const toRemove = child.toRemove;
@@ -303,11 +434,12 @@ class Space : Node {
 
     }
 
-    /// Space does not take hover; isHovered is always false.
+    /// `Space` does not take hover. Clicking will always "pass through" the `Space`, activating
+    /// nodes underneath it, if any.
+    /// Returns:
+    ///     False, always.
     protected override bool hoveredImpl(Rectangle, Vector2) {
-
         return false;
-
     }
 
     /// Params:
@@ -349,6 +481,7 @@ class Space : Node {
     /// Params:
     ///     child     = Child to place
     ///     available = Available space
+    ///     stateful  = .
     protected Vector2 childSpace(const Node child, Vector2 available, bool stateful = true) const
     in(
         child.isHidden || child.layout.expand <= denominator,
@@ -357,7 +490,7 @@ class Space : Node {
         )
     )
     out(
-        r; [r.tupleof].all!isFinite,
+        r; only(r.tupleof).all!isFinite,
         format!"space: child %s given invalid size %s. available = %s, expand = %s, denominator = %s, reserved = %s"(
             typeid(child), r, available, child.layout.expand, denominator, reservedSpace
         )
@@ -402,348 +535,5 @@ class Space : Node {
         }
 
     }
-
-}
-
-///
-unittest {
-
-    import fluid;
-
-    // A vspace will align all its content in a column
-    vspace(
-        label("First entry"),
-        label("Second entry"),
-        label("Third entry"),
-    );
-
-    // hspace will lay out the nodes in a row
-    hspace(
-        label("One, "),
-        label("Two, "),
-        label("Three!"),
-    );
-
-    // Combine them to quickly build layouts!
-    vspace(
-        label("Are you sure you want to proceed?"),
-        hspace(
-            button("Yes", delegate { }),
-            button("Cancel", delegate { }),
-        ),
-    );
-
-}
-
-unittest {
-
-    class Square : Node {
-
-        Color color;
-
-        this(Color color) {
-            this.color = color;
-        }
-
-        override void resizeImpl(Vector2) {
-            minSize = Vector2(50, 50);
-        }
-
-        override void drawImpl(Rectangle, Rectangle inner) {
-            io.drawRectangle(inner, this.color);
-        }
-
-    }
-
-    auto io = new HeadlessBackend;
-    auto root = vspace(
-        new Square(color!"000"),
-        new Square(color!"001"),
-        new Square(color!"002"),
-        hspace(
-            new Square(color!"010"),
-            new Square(color!"011"),
-            new Square(color!"012"),
-        ),
-    );
-
-    root.io = io;
-    root.theme = nullTheme;
-    root.draw();
-
-    // vspace
-    io.assertRectangle(Rectangle(0,   0, 50, 50), color!"000");
-    io.assertRectangle(Rectangle(0,  50, 50, 50), color!"001");
-    io.assertRectangle(Rectangle(0, 100, 50, 50), color!"002");
-
-    // hspace
-    io.assertRectangle(Rectangle(  0, 150, 50, 50), color!"010");
-    io.assertRectangle(Rectangle( 50, 150, 50, 50), color!"011");
-    io.assertRectangle(Rectangle(100, 150, 50, 50), color!"012");
-
-}
-
-unittest {
-
-    import fluid.frame;
-    import fluid.structs;
-
-    auto io = new HeadlessBackend;
-    auto root = hspace(
-        layout!"fill",
-        vframe(layout!1),
-        vframe(layout!2),
-        vframe(layout!1),
-    );
-
-    with (Rule)
-    root.theme = nullTheme.derive(
-        rule!Frame(backgroundColor = color!"7d9"),
-    );
-    root.io = io;
-
-    // Frame 1
-    {
-        root.draw();
-        io.assertRectangle(Rectangle(0,   0, 0, 0), color!"7d9");
-        io.assertRectangle(Rectangle(200, 0, 0, 0), color!"7d9");
-        io.assertRectangle(Rectangle(600, 0, 0, 0), color!"7d9");
-    }
-
-    // Fill all nodes
-    foreach (child; root.children) {
-        child.layout.nodeAlign = NodeAlign.fill;
-    }
-    root.updateSize();
-
-    {
-        io.nextFrame;
-        root.draw();
-        io.assertRectangle(Rectangle(  0, 0, 200, 600), color!"7d9");
-        io.assertRectangle(Rectangle(200, 0, 400, 600), color!"7d9");
-        io.assertRectangle(Rectangle(600, 0, 200, 600), color!"7d9");
-    }
-
-    const alignments = [NodeAlign.start, NodeAlign.center, NodeAlign.end];
-
-    // Make Y alignment different across all three
-    foreach (pair; root.children.zip(alignments)) {
-        pair[0].layout.nodeAlign = pair[1];
-    }
-
-    {
-        io.nextFrame;
-        root.draw();
-        io.assertRectangle(Rectangle(  0,   0, 0, 0), color!"7d9");
-        io.assertRectangle(Rectangle(400, 300, 0, 0), color!"7d9");
-        io.assertRectangle(Rectangle(800, 600, 0, 0), color!"7d9");
-    }
-
-}
-
-unittest {
-
-    import fluid.frame;
-    import fluid.structs;
-
-    auto io = new HeadlessBackend(Vector2(270, 270));
-    auto root = hframe(
-        layout!"fill",
-        vspace(layout!2),
-        vframe(
-            layout!(1, "fill"),
-            hspace(layout!2),
-            hframe(
-                layout!(1, "fill"),
-                vframe(
-                    layout!(1, "fill"),
-                    hframe(
-                        layout!(1, "fill")
-                    ),
-                    hspace(layout!2),
-                ),
-                vspace(layout!2),
-            )
-        ),
-    );
-
-    with (Rule)
-    root.theme = nullTheme.derive(
-        rule!Frame(backgroundColor = color!"0004"),
-    );
-    root.io = io;
-    root.draw();
-
-    io.assertRectangle(Rectangle(  0,   0, 270, 270), color!"0004");
-    io.assertRectangle(Rectangle(180,   0,  90, 270), color!"0004");
-    io.assertRectangle(Rectangle(180, 180,  90,  90), color!"0004");
-    io.assertRectangle(Rectangle(180, 180,  30,  90), color!"0004");
-    io.assertRectangle(Rectangle(180, 180,  30,  30), color!"0004");
-
-}
-
-// https://git.samerion.com/Samerion/Fluid/issues/58
-unittest {
-
-    import fluid.frame;
-    import fluid.label;
-    import fluid.structs;
-
-    auto fill = layout!(1, "fill");
-    auto io = new HeadlessBackend;
-    auto myTheme = nullTheme.derive(
-        rule!Frame(Rule.backgroundColor = color!"#303030"),
-        rule!Label(Rule.backgroundColor = color!"#e65bb8"),
-    );
-    auto root = hframe(
-        fill,
-        myTheme,
-        label(fill, "1"),
-        label(fill, "2"),
-        label(fill, "3"),
-        label(fill, "4"),
-        label(fill, "5"),
-        label(fill, "6"),
-        label(fill, "7"),
-        label(fill, "8"),
-        label(fill, "9"),
-        label(fill, "10"),
-        label(fill, "11"),
-        label(fill, "12"),
-    );
-
-    root.io = io;
-    root.draw();
-
-    io.assertRectangle(Rectangle( 0*800/12f, 0, 66.66, 600), color!"#e65bb8");
-    io.assertRectangle(Rectangle( 1*800/12f, 0, 66.66, 600), color!"#e65bb8");
-    io.assertRectangle(Rectangle( 2*800/12f, 0, 66.66, 600), color!"#e65bb8");
-    io.assertRectangle(Rectangle( 3*800/12f, 0, 66.66, 600), color!"#e65bb8");
-    io.assertRectangle(Rectangle( 4*800/12f, 0, 66.66, 600), color!"#e65bb8");
-    io.assertRectangle(Rectangle( 5*800/12f, 0, 66.66, 600), color!"#e65bb8");
-    io.assertRectangle(Rectangle( 6*800/12f, 0, 66.66, 600), color!"#e65bb8");
-    io.assertRectangle(Rectangle( 7*800/12f, 0, 66.66, 600), color!"#e65bb8");
-    io.assertRectangle(Rectangle( 8*800/12f, 0, 66.66, 600), color!"#e65bb8");
-    io.assertRectangle(Rectangle( 9*800/12f, 0, 66.66, 600), color!"#e65bb8");
-    io.assertRectangle(Rectangle(10*800/12f, 0, 66.66, 600), color!"#e65bb8");
-    io.assertRectangle(Rectangle(11*800/12f, 0, 66.66, 600), color!"#e65bb8");
-
-}
-
-unittest {
-
-    import fluid.frame;
-    import fluid.theme;
-    import fluid.structs : layout;
-
-    auto io = new HeadlessBackend;
-    auto theme = nullTheme.derive(
-        rule!Space(
-            gap = 4,
-        ),
-        rule!Frame(
-            backgroundColor = color("#f00"),
-        ),
-    );
-    auto root = vspace(
-        layout!"fill",
-        theme,
-        vframe(layout!(1, "fill")),
-        vframe(layout!(1, "fill")),
-        vframe(layout!(1, "fill")),
-        vframe(layout!(1, "fill")),
-    );
-
-    root.io = io;
-    root.draw();
-
-    io.assertRectangle(Rectangle(0,   0, 800, 147), color("#f00"));
-    io.assertRectangle(Rectangle(0, 151, 800, 147), color("#f00"));
-    io.assertRectangle(Rectangle(0, 302, 800, 147), color("#f00"));
-    io.assertRectangle(Rectangle(0, 453, 800, 147), color("#f00"));
-
-}
-
-@("Gaps do not apply to invisible children")
-unittest {
-
-    import fluid.theme;
-
-    auto theme = nullTheme.derive(
-        rule!Space(gap = 4),
-    );
-
-    auto spy = new class Space {
-
-        Vector2 position;
-
-        override void drawImpl(Rectangle outer, Rectangle inner) {
-
-            position = outer.start;
-
-        }
-        
-    };
-
-    auto root = vspace(
-        theme,
-        hspace(),
-        hspace(),
-        hspace(),
-        spy,
-    );
-
-    root.draw();
-
-    assert(spy.position == Vector2(0, 12));
-
-    // Hide one child
-    root.children[0].hide();
-    root.draw();
-
-    assert(spy.position == Vector2(0, 8));
-    
-
-}
-
-@("applied style.gap depends on axis")
-unittest {
-
-    auto theme = nullTheme.derive(
-        rule!Space(
-            Rule.gap = [2, 4],
-        ),
-    );
-
-    class Warden : Space {
-
-        Rectangle outer;
-
-        override void drawImpl(Rectangle outer, Rectangle inner) {
-            super.drawImpl(this.outer = outer, inner);
-        }
-
-    }
-
-    Warden[4] wardens;
-
-    auto root = vspace(
-        theme,
-        hspace(
-            wardens[0] = new Warden,
-            wardens[1] = new Warden,
-        ),
-        vspace(
-            wardens[2] = new Warden,
-            wardens[3] = new Warden,
-        ),
-    );
-
-    root.draw();
-    
-    assert(wardens[0].outer.start == Vector2(0, 0));
-    assert(wardens[1].outer.start == Vector2(2, 0));
-    assert(wardens[2].outer.start == Vector2(0, 4));
-    assert(wardens[3].outer.start == Vector2(0, 8));
 
 }

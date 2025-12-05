@@ -3,7 +3,7 @@ module fluid.backend.raylib5;
 version (Have_raylib_d):
 
 debug (Fluid_BuildMessages) {
-    pragma(msg, "Fluid: Building with Raylib 5 support");
+    pragma(msg, "Fluid: Building with Raylib 5 support (Raylib5Backend)");
 }
 
 import raylib;
@@ -201,10 +201,10 @@ class Raylib5Backend : FluidBackend, FluidEntrypointBackend {
             if (newMinX != minX || newMinY != minY) {
 
                 SetWindowMinSize(
-                    minX = newMinX, 
+                    minX = newMinX,
                     minY = newMinY);
                 SetWindowSize(
-                    max(minX, GetScreenWidth), 
+                    max(minX, GetScreenWidth),
                     max(minY, GetScreenHeight));
 
             }
@@ -328,13 +328,17 @@ class Raylib5Backend : FluidBackend, FluidEntrypointBackend {
 
     Vector2 dpi() const @trusted {
 
+        import fluid.io.canvas : getGlobalScale;
+
         static Vector2 value;
 
         if (value == value.init) {
 
+            const globalScale = getGlobalScale();
+
             value = GetWindowScaleDPI;
-            value.x *= 96;
-            value.y *= 96;
+            value.x *= 96 * globalScale.x;
+            value.y *= 96 * globalScale.y;
 
         }
 
@@ -528,13 +532,13 @@ class Raylib5Backend : FluidBackend, FluidEntrypointBackend {
 
     void drawCircle(Vector2 center, float radius, Color color) @trusted {
 
-        DrawCircleV(center, radius, color);
+        DrawCircleV(toRaylibCoords(center), radius * hidpiScale.y, multiply(color, tint));
 
     }
 
     void drawCircleOutline(Vector2 center, float radius, Color color) @trusted {
 
-        DrawCircleLinesV(center, radius, color);
+        DrawCircleLinesV(toRaylibCoords(center), radius * hidpiScale.y, multiply(color, tint));
 
     }
 
@@ -734,7 +738,7 @@ raylib.GamepadButton toRaylib(GamepadButton button) {
 }
 
 /// Convert image to a Raylib image. Do not call `UnloadImage` on the result.
-raylib.Image toRaylib(fluid.backend.Image image) @trusted {
+raylib.Image toRaylib(fluid.backend.Image image) nothrow @trusted {
 
     raylib.Image result;
     result.data = image.data.ptr;
@@ -747,7 +751,7 @@ raylib.Image toRaylib(fluid.backend.Image image) @trusted {
 }
 
 /// Convert Fluid image format to Raylib's closest alternative.
-raylib.PixelFormat toRaylib(fluid.backend.Image.Format imageFormat) {
+raylib.PixelFormat toRaylib(fluid.backend.Image.Format imageFormat) nothrow {
 
     final switch (imageFormat) {
 

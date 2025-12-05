@@ -39,7 +39,7 @@ version (unittest) {
 
 }
 
-@NodeTag 
+@NodeTag
 enum FluidTag {
     warning,
 }
@@ -112,9 +112,14 @@ static this() {
                 margin.sideY = 2,
                 padding.sideX = 6,
 
-                when!"a.isHovered"(backgroundColor = color("#ccc")),
-                when!"a.isFocused"(backgroundColor = color("#ddd")),
-                when!"a.isPressed"(backgroundColor = color("#aaa")),
+                when!"a.isHovered"(backgroundColor = color("#aaa")),
+                when!"a.isFocused"(backgroundColor = color("#bbb")),  // TODO use an outline for focus
+                when!"a.isPressed"(backgroundColor = color("#888")),
+                when!"a.isDisabled"(
+                    textColor = color("000a"),
+                    backgroundColor = color("eee5"),
+                    // TODO disabled should apply opacity, and should work for every node
+                ),
             ),
             rule!Hyperlink(
                 textColor = color("#066cb3"),
@@ -173,8 +178,15 @@ static this() {
                 border = 1,
                 borderStyle = colorBorder(color("#555a")),
                 children!Button(
-                    backgroundColor = Color.init,
+                    backgroundColor = color("#0000"),
                     margin = 0,
+                    when!"a.isHovered"(backgroundColor = color("#dadada")),
+                    when!"a.isFocused"(backgroundColor = color("#ccc")),
+                    when!"a.isPressed"(backgroundColor = color("#aaa")),
+                    when!"a.isDisabled"(
+                        textColor = color("000a"),
+                        backgroundColor = color("eee5"),
+                    ),
                 ),
             ),
             /*rule!FileInputSuggestion(
@@ -201,7 +213,7 @@ static this() {
                 border = 0,
                 borderStyle = null,
                 padding = 2,
-                extra = new Radiobox.Extra(1, color("#555"), color("#5550")),
+                extra = new Radiobox.Extra(1, color("#555"), color("#5552")),
 
                 when!"a.isFocused"(backgroundColor = color("#ddd")),
                 when!"a.isChecked"(

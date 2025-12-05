@@ -1,153 +1,31 @@
+/// A [ProgressBar] node is commonly used to communicate the program is actively working on
+/// something, and needs time to process. It updates the user on the status by indicating the
+/// fraction of work that has been completed.
 ///
+/// The progress bar draws a styleable [ProgressBarFill] node inside, spanning some of its
+/// content, usually starting from left. Current progress is also displayed on top of the progress
+/// bar as text.
+///
+/// <!-- -->
 module fluid.progress_bar;
-
-import fluid.text;
-import fluid.node;
-import fluid.utils;
-import fluid.backend;
-import fluid.structs;
-
 
 @safe:
 
-
-/// Progress bar node for communicating the program is actively working on something, and needs time to process. The
-/// progress bar draws a styleable `ProgressBarFill` node inside, spanning a fraction of its content, usually starting
-/// from left. Text is drawn over the node to display current progress.
-///
-/// The progress bar will use text height for its own height, but it needs extra horizontal space to be functional. To
-/// make sure it displays, ensure its horizontal alignment is always set to "fill" — this is the default, if the layout
-/// is not changed.
-///
-/// ## Styling
-///
-/// The `progressBar` component is split into two nodes, `ProgressBar` and `ProgressBarFill`. When styling, the
-/// former defines the background, greyed out part of the node, and the latter defines the foreground, the fill
-/// that appears as progress is accumulated. Usually, the background for `ProgressBar` will have low saturation or
-/// be grayed out, and `ProgressBarFill` will be colorful.
-///
-/// Text currently uses the `ProgressBar` color, but it's possible it will blend the colors of both sides in the
-/// future.
-///
-/// ---
-/// Theme(
-///     rule!ProgressBar(
-///         backgroundColor = color("#eee"),
-///         textColor = color("#000"),
-///     ),
-///     rule!ProgressBarFill(
-///         backgroundColor = color("#17b117"),
-///     )
-/// )
-/// ---
-///
-/// ## Text format
-///
-/// `ProgressBar` does not currently offer the possibility to change text format, but it can be accomplished by
-/// subclassing and overriding the `buildText` method, like so:
-///
-/// ---
-/// class MyProgressBar : ProgressBar {
-///
-///     override string buildText() const {
-///
-///         return format!"%s/%s"(value, maxValue);
-///
-///     }
-///
-/// }
-/// ---
-///
-/// Importantly, should `buildText` return an empty string, the progress bar will disappear, since its size depends on
-/// the text itself. If text is not desired, one can set `textColor` to a transparent value like `color("#0000")`.
-/// Alternatively `resizeImpl` can also be overrided to change the sizing behavior.
-alias progressBar = simpleConstructor!ProgressBar;
-
-/// ditto
-class ProgressBar : Node {
-
-    public {
-
-        /// `value`, along with `maxValue` indicate the current progress, defined as the fraction of `value` over
-        /// `maxValue`. If 0, the progress bar is empty. If equal to `maxValue`, the progress bar is full.
-        int value;
-
-        /// ditto.
-        int maxValue;
-
-        /// Text used by the node.
-        Text text;
-
-        /// Node used as the filling for this progress bar.
-        ProgressBarFill fill;
-
-    }
-
-    /// Set the `value` and `maxValue` of the progressBar.
-    ///
-    /// If initialized with no arguments, the progress bar starts empty, with `maxValue` set to 100.
-    ///
-    /// Params:
-    ///     value = Current value. Defaults to 0, making the progress bar empty.
-    ///     maxValue = Maximum value for the progress bar.
-    this(int value, int maxValue) {
-
-        this.layout = .layout!("fill", "start");
-        this.value = value;
-        this.maxValue = maxValue;
-        this.fill = new ProgressBarFill(this);
-        this.text = Text(this, "");
-
-    }
-
-    /// ditto
-    this(int maxValue = 100) {
-
-        this(0, maxValue);
-
-    }
-
-    override void resizeImpl(Vector2 space) {
-
-        text = buildText();
-        text.resize();
-        fill.resize(tree, theme, space);
-        minSize = text.size;
-
-    }
-
-    override void drawImpl(Rectangle paddingBox, Rectangle contentBox) {
-
-        auto style = pickStyle();
-        style.drawBackground(io, paddingBox);
-
-        // Draw the filling
-        fill.draw(contentBox);
-
-        // Draw the text
-        const textPosition = center(contentBox) - text.size / 2;
-        text.draw(style, textPosition);
-
-    }
-
-    /// Get text that displays on top of the progress bar.
-    ///
-    /// This function can be overrided to adjust the text and its formatting, or to remove the text completely. Keep in
-    /// mind that since `ProgressBar` uses the text as reference for its own size, if the text is removed, the progress
-    /// bar will disappear — `minSize` has to be adjusted accordingly.
-    string buildText() const {
-
-        import std.format : format;
-
-        const int percentage = 100 * value / maxValue;
-
-        return format!"%s%%"(percentage);
-
-    }
-
+/// Create new progress bars with [progressBar].
+@("ProgressBar reference example")
+unittest {
+    run(
+        progressBar(1, 5),  // 1/5 of the job is done
+    );
 }
 
+/// The progress bar will copy text height for its own height, but it needs extra horizontal space
+/// to be functional. To make sure it displays, ensure its horizontal alignment is always set to
+/// "fill" — this is the default, if the layout is not changed.
 ///
+/// Current progress is stored in the [value][ProgressBar.value] field. Update it regularly and
+/// call [updateSize][Node.updateSize] afterwards.
+@("ProgressBar reference example #2")
 unittest {
 
     const steps = 24;
@@ -164,16 +42,20 @@ unittest {
     }
 
 }
-
+/// ## Styling
+///
+/// The `progressBar` component is split into two nodes, [ProgressBar] and [ProgressBarFill].
+/// When styling, the former defines the background, greyed out part of the node, and the latter
+/// defines the foreground, the fill that appears as progress is made. Usually, the background
+/// for `ProgressBar` will have low saturation or be grayed out, and `ProgressBarFill` will be
+/// colorful.
+///
+/// Text currently uses the `ProgressBar` color, but it's possible it will blend the colors of
+/// both sides in the future.
+///
 unittest {
-
     import fluid.theme;
-    import fluid.default_theme;
-
-    const steps = 24;
-
-    auto io = new HeadlessBackend;
-    auto theme = nullTheme.derive(
+    Theme(
         rule!ProgressBar(
             backgroundColor = color("#eee"),
             textColor = color("#000"),
@@ -182,91 +64,140 @@ unittest {
             backgroundColor = color("#17b117"),
         )
     );
-    auto bar = progressBar(theme, steps);
-
-    bar.io = io;
-    bar.draw();
-
-    assert(bar.text == "0%");
-    io.assertRectangle(Rectangle(0, 0, 800, 27), color("#eee"));
-    io.assertRectangle(Rectangle(0, 0, 0, 27), color("#17b117"));
-    io.assertTexture(bar.text.texture.chunks[0].texture, Vector2(387, 0), color("#fff"));
-
-    io.nextFrame;
-    bar.value = 2;
-    bar.updateSize();
-    bar.draw();
-
-    assert(bar.text == "8%");
-    io.assertRectangle(Rectangle(0, 0, 800, 27), color("#eee"));
-    io.assertRectangle(Rectangle(0, 0, 66.66, 27), color("#17b117"));
-    io.assertTexture(bar.text.texture.chunks[0].texture, Vector2(387.5, 0), color("#fff"));
-
-    io.nextFrame;
-    bar.value = steps;
-    bar.updateSize();
-    bar.draw();
-
-    assert(bar.text == "100%");
-    io.assertRectangle(Rectangle(0, 0, 800, 27), color("#eee"));
-    io.assertRectangle(Rectangle(0, 0, 800, 27), color("#17b117"));
-    io.assertTexture(bar.text.texture.chunks[0].texture, Vector2(377, 0), color("#fff"));
-
 }
 
+/// ## Text format
+///
+/// `ProgressBar` can't currently change text formatting on its own, but text can be changed by
+/// subclassing and overriding the [buildText][ProgressBar.buildText] method.
+///
+/// Importantly, should `buildText` return an empty string, the progress bar will disappear, since
+/// its size depends on the text itself. If text is not desired, one can set `textColor` to a
+/// transparent value like `color("#0000")`. Alternatively [resizeImpl][Node.resizeImpl] can also
+/// be overridden to change the sizing behavior.
+@("ProgressBar text format example")
 unittest {
-
-    import fluid.style;
-    import fluid.theme;
-
-    auto io = new HeadlessBackend;
-    auto theme = nullTheme.derive(
-        rule!ProgressBar(
-            backgroundColor = color("#eee"),
-        ),
-        rule!ProgressBarFill(
-            backgroundColor = color("#17b117"),
-        )
-    );
-    auto bar = new class ProgressBar {
-
-        override void resizeImpl(Vector2 space) {
-
-            super.resizeImpl(space);
-            minSize = Vector2(0, 4);
-
-        }
+    class MyProgressBar : ProgressBar {
 
         override string buildText() const {
-
-            return "";
-
+            import std.format;
+            return format!"%s/%s"(value, maxValue);
         }
 
-    };
+    }
+}
 
-    bar.io = io;
-    bar.theme = theme;
-    bar.maxValue = 20;
-    bar.draw();
+import fluid.text;
+import fluid.node;
+import fluid.utils;
+import fluid.backend;
+import fluid.structs;
 
-    assert(bar.text == "");
-    io.assertRectangle(Rectangle(0, 0, 800, 4), color("#eee"));
-    io.assertRectangle(Rectangle(0, 0, 0, 4), color("#17b117"));
+import fluid.io.canvas;
 
-    io.nextFrame;
-    bar.value = 2;
-    bar.updateSize();
-    bar.draw();
+/// A [node builder][nodeBuilder] that constructs a [ProgressBar].
+alias progressBar = nodeBuilder!ProgressBar;
 
-    assert(bar.text == "");
-    io.assertRectangle(Rectangle(0, 0, 800, 4), color("#eee"));
-    io.assertRectangle(Rectangle(0, 0, 80, 4), color("#17b117"));
+/// A progress bar is a node that fills up to indicate the program has made progress in a
+/// time-taking action, such as loading or copying files.
+class ProgressBar : Node {
+
+    CanvasIO canvasIO;
+
+    public {
+
+        /// `value`, along with `maxValue` indicate the current progress, defined as the fraction
+        /// of `value` over `maxValue`. If `0`, the progress bar is empty. If equal to `maxValue`,
+        /// the progress bar is full.
+        int value;
+
+        /// ditto
+        int maxValue;
+
+        /// Text displayed by the node. It cannot be updated externally; the progress bar will
+        /// change the text on update.
+        Text text;
+
+        /// Node used as the filling for this progress bar. As progress is added, `fill` takes up
+        /// more of `ProgressBar`'s space.
+        ProgressBarFill fill;
+
+    }
+
+    /// Set the `value` and `maxValue` of the progress bar.
+    ///
+    /// If initialized with one or zero arguments, the progress bar starts empty. The only
+    /// argument, if given, sets the target progress (`maxValue`).
+    ///
+    /// Two values can be passed to specify a fraction.
+    ///
+    /// Params:
+    ///     value    = Current value. Defaults to `0`, making the progress bar empty.
+    ///     maxValue = Maximum value for the progress bar. Defaults to `100`.
+    this(int value, int maxValue) {
+        this.layout = .layout!("fill", "start");
+        this.value = value;
+        this.maxValue = maxValue;
+        this.fill = new ProgressBarFill(this);
+        this.text = Text(this, "");
+    }
+
+    /// ditto
+    this(int maxValue = 100) {
+        this(0, maxValue);
+    }
+
+    override void resizeImpl(Vector2 space) {
+
+        use(canvasIO);
+
+        text = buildText();
+        text.resize(canvasIO);
+        resizeChild(fill, space);
+        minSize = text.size;
+
+    }
+
+    override void drawImpl(Rectangle paddingBox, Rectangle contentBox) {
+
+        auto style = pickStyle();
+        style.drawBackground(io, canvasIO, paddingBox);
+
+        // Draw the filling
+        drawChild(fill, contentBox);
+
+        // Draw the text
+        const textPosition = center(contentBox) - text.size / 2;
+
+        text.draw(canvasIO, style, textPosition);
+
+    }
+
+    /// Get text that displays on top of the progress bar.
+    ///
+    /// This function can be overridden to adjust the text, or to remove the text completely. Keep
+    /// in mind that since `ProgressBar` uses the text as reference for its own size, if the text
+    /// is removed, the progress bar will disappear — `minSize` has to be adjusted accordingly.
+    ///
+    /// Returns:
+    ///     Text for the progress bar to use.
+    string buildText() const {
+
+        import std.format : format;
+
+        const int percentage = 100 * value / maxValue;
+
+        return format!"%s%%"(percentage);
+
+    }
 
 }
 
-/// Content for the progress bar. Used for styling. See `ProgressBar` for usage instructions.
+
+/// Content for the progress bar. Used for styling. See [ProgressBar] for usage instructions.
 class ProgressBarFill : Node {
+
+    CanvasIO canvasIO;
 
     public {
 
@@ -275,17 +206,21 @@ class ProgressBarFill : Node {
 
     }
 
+    /// Construct fill using data from the given progress bar.
+    ///
+    /// For the fill to apply, it has to be then assigned to [ProgressBar.fill]; that is not
+    /// done automatically.
+    ///
+    /// Params:
+    ///     bar = Bar to take progress data from.
     this(ProgressBar bar) {
-
         this.layout = .layout!"fill";
         this.bar = bar;
-
     }
 
     override void resizeImpl(Vector2 space) {
-
+        use(canvasIO);
         minSize = Vector2(0, 0);
-
     }
 
     override void drawImpl(Rectangle paddingBox, Rectangle contentBox) {
@@ -294,7 +229,7 @@ class ProgressBarFill : Node {
         paddingBox.width *= cast(float) bar.value / bar.maxValue;
 
         auto style = pickStyle();
-        style.drawBackground(io, paddingBox);
+        style.drawBackground(io, canvasIO, paddingBox);
 
     }
 

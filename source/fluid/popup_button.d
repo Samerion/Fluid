@@ -1,69 +1,19 @@
+/// [PopupButton] is a shorthand for a [Button] that opens a [PopupFrame].
 ///
+/// Such buttons can be built using [popupButton].
 module fluid.popup_button;
+
+@safe:
 
 import fluid.node;
 import fluid.utils;
 import fluid.label;
 import fluid.style;
+import fluid.types;
 import fluid.button;
 import fluid.popup_frame;
 
-@safe:
-
-/// A button made to open popups.
-alias popupButton = simpleConstructor!PopupButton;
-
-// For no known reason, this will not compile (producing the most misleading error of the century) if extending directly
-// from Button.
-
-/// ditto
-class PopupButton : ButtonImpl!Label {
-
-    mixin enableInputActions;
-
-    public {
-
-        /// Popup enabled by this button.
-        PopupFrame popup;
-
-        /// Popup this button belongs to, if any. Set automatically if the popup is spawned with `spawnPopup`.
-        PopupFrame parentPopup;
-
-    }
-
-    /// Create a new button.
-    /// Params:
-    ///     text          = Text for the button.
-    ///     popupChildren = Children to appear within the button.
-    this(string text, Node[] popupChildren...) {
-
-        // Craft the popup
-        popup = popupFrame(popupChildren);
-
-        super(text, delegate {
-
-            // Parent popup active
-            if (parentPopup && parentPopup.isFocused)
-                parentPopup.spawnChildPopup(popup);
-
-            // No parent
-            else {
-                popup.theme = theme;
-                tree.spawnPopup(popup);
-            }
-
-        });
-
-    }
-
-    override string toString() const {
-
-        import std.format;
-        return format!"popupButton(%s)"(text);
-
-    }
-
-}
+import fluid.io.overlay;
 
 ///
 unittest {
@@ -80,141 +30,126 @@ unittest {
 
 }
 
+/// [nodeBuilder] for [PopupButton]. The button can be given a label, followed by nodes to place
+/// inside the popup.
+alias popupButton = nodeBuilder!PopupButton;
+
+///
+@("popupButton builder example")
 unittest {
-
-    import fluid.backend;
-
-    string lastAction;
-
-    void action(string text)() {
-        lastAction = text;
-    }
-
-    Button[6] buttons;
-
-    auto io = new HeadlessBackend;
-    auto root = popupButton("Options",
-        buttons[0] = button("Edit", &action!"edit"),
-        buttons[1] = button("Copy", &action!"copy"),
-        buttons[2] = popupButton("Share",
-            buttons[3] = button("SMS", &action!"sms"),
-            buttons[4] = button("Via e-mail", &action!"email"),
-            buttons[5] = button("Send to device", &action!"device"),
-        ),
+    popupButton("Open shopping list",
+        label("Apples"),
+        label("Flour"),
+        label("Eggs"),
     );
+}
 
-    auto sharePopupButton = cast(PopupButton) buttons[2];
-    auto sharePopup = sharePopupButton.popup;
 
-    root.io = io;
-    root.draw();
+/// `PopupButton` is a [Button] programmed to open a [PopupFrame] when clicked.
+///
+/// The popup frame will be constructed the moment the button is built, and will be reused
+/// whenever it is clicked again.
+///
+/// `PopupButton` can be nested inside `PopupFrame`, making it convenient for creating submenus.
+class PopupButton : ButtonImpl!Label {
+    // ↑ For no known reason, this will not compile (producing the most misleading error of the
+    // century) if extending directly from Button.
 
-    import std.stdio;
+    mixin enableInputActions;
 
-    // Focus the button
-    {
-        io.nextFrame;
-        io.press(KeyboardKey.down);
+    OverlayIO overlayIO;
 
-        root.draw();
+    public {
 
-        assert(root.isFocused);
-    }
+        /// [PopupFrame] that will be opened by this popup.
+        ///
+        /// The popup will be constructed by the [PopupButton] from the nodes it is initially
+        /// given.
+        PopupFrame popup;
 
-    // Press it
-    {
-        io.nextFrame;
-        io.release(KeyboardKey.down);
-        io.press(KeyboardKey.enter);
-
-        root.draw();
-    }
-
-    // Popup opens
-    {
-        io.nextFrame;
-        io.release(KeyboardKey.enter);
-
-        root.draw();
-
-        assert(buttons[0].isFocused, "The first button inside should be focused");
-    }
-
-    // Go to the previous button, expecting wrap
-    {
-        io.nextFrame;
-        io.press(KeyboardKey.leftShift);
-        io.press(KeyboardKey.tab);
-
-        root.draw();
-
-        assert(buttons[2].isFocused, "The last button inside the first menu should be focused");
-    }
-
-    // Press it
-    {
-        io.nextFrame;
-        io.release(KeyboardKey.leftShift);
-        io.release(KeyboardKey.tab);
-        io.press(KeyboardKey.enter);
-
-        root.draw();
-    }
-
-    // Wait for the popup to appear
-    {
-        io.nextFrame;
-        io.release(KeyboardKey.enter);
-
-        root.draw();
-        assert(buttons[3].isFocused, "The first button of the second menu should be focused");
-    }
-
-    // Press the up arrow, it should do nothing
-    {
-        io.nextFrame;
-        io.press(KeyboardKey.up);
-
-        root.draw();
-        assert(buttons[3].isFocused);
-    }
-
-    // Press the down arrow
-    {
-        io.nextFrame;
-        io.release(KeyboardKey.up);
-        io.press(KeyboardKey.down);
-
-        root.draw();
-        assert(buttons[4].isFocused);
-    }
-
-    // Press the button
-    {
-        io.nextFrame;
-        io.release(KeyboardKey.down);
-        io.press(KeyboardKey.enter);
-
-        root.draw();
-        assert(buttons[4].isFocused);
-        assert(lastAction == "email");
-        assert(!sharePopup.isHidden);
+        /// Popup this button is placed in, if any. Set automatically if the popup is spawned
+        /// with `spawnPopup`.
+        ///
+        /// This field will be removed in Fluid 0.8.0.
+        PopupFrame parentPopup;
 
     }
 
-    // Close the popup by pressing escape
-    {
-        io.nextFrame;
-        io.release(KeyboardKey.enter);
-        io.press(KeyboardKey.escape);
+    private {
 
-        root.draw();
+        Rectangle _inner;
 
-        // Need another frame for the tree action
-        io.nextFrame;
-        root.draw();
+        // workaround for https://git.samerion.com/Samerion/Fluid/issues/401
+        // could be fixed with https://git.samerion.com/Samerion/Fluid/issues/399
+        bool _justOpened;
 
-        assert(sharePopup.isHidden);
+    }
+
+    /// Create a new button, and build the popup that will appear whenever the button is clicked.
+    /// Params:
+    ///     text          = Text for the button. See [Label.text][fluid.label.Label.text].
+    ///     popupChildren = Children to place in the popup. They will be grouped together inside
+    ///         a [PopupFrame] and displayed when the button is clicked.
+    this(string text, Node[] popupChildren...) {
+
+        // Craft the popup
+        popup = popupFrame(popupChildren);
+
+        super(text, delegate {
+
+            // New I/O
+            if (overlayIO) {
+
+                const anchor = focusBoxImpl(_inner);
+
+                // Parent popup active
+                if (parentPopup && parentPopup.isFocused)
+                    overlayIO.addChildPopup(parentPopup, popup, anchor);
+
+                // No parent
+                else {
+                    overlayIO.addPopup(popup, anchor);
+                }
+
+                _justOpened = true;
+
+            }
+
+            // Parent popup active
+            else if (parentPopup && parentPopup.isFocused)
+                parentPopup.spawnChildPopup(popup);
+
+            // No parent
+            else {
+                popup.theme = theme;
+                tree.spawnPopup(popup);
+            }
+
+        });
+
+    }
+
+    override void resizeImpl(Vector2 space) {
+        use(overlayIO);
+        super.resizeImpl(space);
+    }
+
+    override void drawImpl(Rectangle outer, Rectangle inner) {
+        _inner = inner;
+        super.drawImpl(outer, inner);
+        if (hoverIO && !hoverIO.isHovered(this)) {
+            _justOpened = false;
+        }
+    }
+
+    override void focus() {
+        if (hoverIO && _justOpened) return;
+        super.focus();
+    }
+
+    override string toString() const {
+        import std.format;
+        return format!"popupButton(%s)"(text);
     }
 
 }

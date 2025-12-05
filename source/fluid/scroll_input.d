@@ -9,6 +9,9 @@ import fluid.input;
 import fluid.style;
 import fluid.backend;
 
+import fluid.io.hover;
+import fluid.io.canvas;
+
 
 @safe:
 
@@ -31,9 +34,12 @@ class ScrollInput : InputNode!Node {
 
     mixin enableInputActions;
 
+    CanvasIO canvasIO;
+
     public {
 
         /// Mouse scroll speed; Pixels per event in Scrollable.
+        /// Only applies to legacy backend-based I/O.
         enum scrollSpeed = 60.0;
 
         /// Keyboard/gamepad scroll speed in pixels per event.
@@ -96,26 +102,44 @@ class ScrollInput : InputNode!Node {
 
     }
 
-    /// Set the scroll to a value clamped between start and end. Doesn't trigger the `changed` event.
+    deprecated("`setScroll` was renamed to `scroll` and will be removed in Fluid 0.8.0. "
+        ~ "You can use it as a setter: `scroll = value`.")
     void setScroll(float value) {
-
-        assert(scrollMax.isFinite);
-
-        position = value.clamp(0, scrollMax);
-
-        assert(position.isFinite);
-
+        cast(void) (this.scroll = value);
     }
 
-    /// Get the maximum value this container can be scrolled to. Requires at least one draw.
+    deprecated("`scrollMax` was renamed to `maxScroll` and will be removed in Fluid 0.8.0.")
     float scrollMax() const {
+        return maxScroll;
+    }
 
+    /// Returns:
+    ///     Offset, in pixels, from the start of the container to current scroll position.
+    float scroll() const {
+        return position;
+    }
+
+    /// Set a new scroll value. The value will be clamped to be between 0 and [maxScroll].
+    /// Returns:
+    ///     Newly set scroll value.
+    float scroll(float value) {
+        assert(maxScroll.isFinite);
+        position = value.clamp(0, maxScroll);
+        assert(position.isFinite);
+        return position;
+    }
+
+    /// Returns:
+    ///     Maximum value for [scroll]; the end of the container.
+    float maxScroll() const {
         return max(0, availableSpace - pageLength);
-
     }
 
     /// Set the total size of the scrollbar. Will always fill the available space in the target direction.
     override protected void resizeImpl(Vector2 space) {
+
+        super.resizeImpl(space);
+        use(canvasIO);
 
         // Get minSize
         minSize = isHorizontal
@@ -128,7 +152,7 @@ class ScrollInput : InputNode!Node {
             : space.y + style.padding.sideY[].sum + style.margin.sideY[].sum;
 
         // Resize the handle
-        handle.resize(tree, theme, minSize);
+        resizeChild(handle, minSize);
 
     }
 
@@ -139,13 +163,13 @@ class ScrollInput : InputNode!Node {
         const style = pickStyle();
 
         // Clamp the values first
-        setScroll(position);
+        this.scroll = position;
 
         // Draw the background
-        style.drawBackground(tree.io, paddingBox);
+        style.drawBackground(tree.io, canvasIO, paddingBox);
 
         // Ignore if we can't scroll
-        if (scrollMax == 0) return;
+        if (maxScroll == 0) return;
 
         // Calculate the size of the scrollbar
         length = isHorizontal ? contentBox.width : contentBox.height;
@@ -153,7 +177,7 @@ class ScrollInput : InputNode!Node {
             ? max(handle.minimumLength, length^^2 / availableSpace)
             : 0;
 
-        const handlePosition = (length - handle.length) * position / scrollMax;
+        const handlePosition = (length - handle.length) * position / maxScroll;
 
         // Now create a rectangle for the handle
         auto handleRect = contentBox;
@@ -172,7 +196,7 @@ class ScrollInput : InputNode!Node {
 
         }
 
-        handle.draw(handleRect);
+        drawChild(handle, handleRect);
 
     }
 
@@ -225,7 +249,7 @@ class ScrollInput : InputNode!Node {
         if (move == 0) return;
 
         // Update scroll
-        setScroll(position + move);
+        this.scroll = position + move;
 
         // Run the callback
         if (changed) changed();
@@ -234,70 +258,14 @@ class ScrollInput : InputNode!Node {
 
 }
 
-unittest {
-
-    import std.range;
-    import fluid.label;
-    import fluid.button;
-    import fluid.scroll;
-    import fluid.structs;
-
-    Button btn;
-
-    auto io = new HeadlessBackend(Vector2(200, 100));
-    auto root = vscrollFrame(
-        layout!"fill",
-        btn = button(layout!"fill", "Button to test hover slipping", delegate { assert(false); }),
-        label("Text long enough to overflow this very small viewport and create a scrollbar"),
-    );
-
-    root.io = io;
-    root.draw();
-
-    // Grab the scrollbar
-    io.nextFrame;
-    io.mousePosition = Vector2(195, 10);
-    io.press;
-    root.draw();
-
-    // Drag the scrollbar 10 pixels lower
-    io.nextFrame;
-    io.mousePosition = Vector2(195, 20);
-    root.draw();
-
-    // Note down the difference
-    const scrollDiff = root.scroll;
-
-    // Drag the scrollbar 10 pixels lower, but also move it out of the scrollbar's area
-    io.nextFrame;
-    io.mousePosition = Vector2(150, 30);
-    root.draw();
-
-    const target = scrollDiff*2;
-
-    assert(target-1 <= root.scroll && root.scroll <= target+1,
-        "Scrollbar should operate at the same rate, even if the cursor is outside");
-
-    // Make sure the button is hovered
-    io.nextFrame;
-    io.mousePosition = Vector2(150, 20);
-    root.draw();
-    assert(root.tree.hover is root.scrollBar.handle, "The scrollbar should retain hover control");
-    assert(btn.isHovered, "The button has to be hovered");
-
-    // Release the mouse while it's hovering the button
-    io.nextFrame;
-    io.release;
-    root.draw();
-    assert(btn.isHovered);
-    // No event should trigger
-
-}
-
-class ScrollInputHandle : Node, FluidHoverable {
+class ScrollInputHandle : Node, FluidHoverable, Hoverable {
 
     mixin makeHoverable;
-    mixin enableInputActions;
+    mixin FluidHoverable.enableInputActions;
+    mixin Hoverable.enableInputActions;
+
+    HoverIO hoverIO;
+    CanvasIO canvasIO;
 
     public {
 
@@ -350,6 +318,12 @@ class ScrollInputHandle : Node, FluidHoverable {
 
     }
 
+    override bool blocksInput() const {
+
+        return isDisabled || isDisabledInherited;
+
+    }
+
     override bool isHovered() const {
 
         return this is tree.hover || super.isHovered();
@@ -357,6 +331,9 @@ class ScrollInputHandle : Node, FluidHoverable {
     }
 
     override protected void resizeImpl(Vector2 space) {
+
+        use(hoverIO);
+        use(canvasIO);
 
         if (parent.isHorizontal)
             minSize = Vector2(minimumLength, parent.width);
@@ -367,27 +344,28 @@ class ScrollInputHandle : Node, FluidHoverable {
 
     override protected void drawImpl(Rectangle paddingBox, Rectangle contentBox) @trusted {
 
-        // Check if pressed
-        const pressed = isHovered && tree.isMouseDown!(FluidInputAction.press);
-        justPressed = pressed && !_isPressed;
-        _isPressed = pressed;
-
         auto style = pickStyle();
-        style.drawBackground(io, paddingBox);
+        style.drawBackground(io, canvasIO, paddingBox);
 
     }
 
     @(FluidInputAction.press, fluid.input.WhileDown)
-    protected void whileDown() @trusted {
+    protected bool whileDown(HoverPointer pointer) @trusted {
 
-        const mousePosition = io.mousePosition;
+        const mousePosition = pointer.position;
+
+        assert(startMousePosition.x.isFinite);
+        assert(startMousePosition.y.isFinite);
+
+        justPressed = !_isPressed;
+        _isPressed = true;
 
         // Just pressed, save data
         if (justPressed) {
 
             startMousePosition = mousePosition;
             startScrollPosition = parent.position;
-            return;
+            return true;
 
         }
 
@@ -395,23 +373,44 @@ class ScrollInputHandle : Node, FluidHoverable {
             ? mousePosition.x - startMousePosition.x
             : mousePosition.y - startMousePosition.y;
 
-        const scrollDifference = totalMove * parent.scrollMax / (parent.length - length);
+        const scrollDifference = totalMove * parent.maxScroll / (parent.length - length);
 
         assert(totalMove.isFinite);
         assert(parent.length.isFinite);
         assert(length.isFinite);
+        assert(startScrollPosition.isFinite);
         assert(scrollDifference.isFinite);
 
         // Move the scrollbar
-        parent.setScroll(startScrollPosition + scrollDifference);
+        parent.scroll = startScrollPosition + scrollDifference;
 
         // Emit signal
         if (parent.changed) parent.changed();
 
+        return true;
+
     }
 
-    protected void mouseImpl() {
+    @(FluidInputAction.press, fluid.input.WhileDown)
+    protected void whileDown() @trusted {
 
+        // Call the new overload if new I/O isn't loaded
+        if (hoverIO is null) {
+            HoverPointer pointer;
+            pointer.position = io.mousePosition;
+            cast(void) whileDown(pointer);
+        }
+
+    }
+
+    protected override void mouseImpl() {
+        hoverImpl(HoverPointer.init);
+    }
+
+    protected override bool hoverImpl(HoverPointer) {
+        justPressed = false;
+        _isPressed = false;
+        return false;
     }
 
 }

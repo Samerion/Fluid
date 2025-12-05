@@ -1,12 +1,12 @@
-/// A headless backend. This backend does not actually render anything. This allows apps reliant on Fluid to run 
+/// A headless backend. This backend does not actually render anything. This allows apps reliant on Fluid to run
 /// outside of graphical environments, provided an alternative method of access exist.
 ///
-/// This backend is used internally in Fluid for performing tests. For this reason, this module may be configured to 
-/// capture the output in a way that can be analyzed or compared againt later. This functionality is disabled by 
+/// This backend is used internally in Fluid for performing tests. For this reason, this module may be configured to
+/// capture the output in a way that can be analyzed or compared againt later. This functionality is disabled by
 /// default due to significant overhead — use version `Fluid_HeadlessOutput` to turn it on.
 ///
-/// If `elemi` is added as a dependency and `Fluid_HeadlessOutput` is set, the backend will also expose its 
-/// experimental SVG export functionality through `saveSVG`. It is only intended for testing; note it will export text 
+/// If `elemi` is added as a dependency and `Fluid_HeadlessOutput` is set, the backend will also expose its
+/// experimental SVG export functionality through `saveSVG`. It is only intended for testing; note it will export text
 /// as embedded raster images rather than proper vector text.
 module fluid.backend.headless;
 
@@ -181,7 +181,7 @@ class HeadlessBackend : FluidBackend {
     }
 
     version (Fluid_HeadlessOutput) {
-    
+
         alias Drawing = SumType!(DrawnLine, DrawnTriangle, DrawnCircle, DrawnRectangle, DrawnTexture);
 
         /// All items drawn during the last frame
@@ -482,7 +482,7 @@ class HeadlessBackend : FluidBackend {
 
     Rectangle area() const {
 
-        if (_scissorsOn) 
+        if (_scissorsOn)
             return _area;
         else
             return Rectangle(0, 0, _windowSize.tupleof);

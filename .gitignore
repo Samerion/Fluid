@@ -2,7 +2,6 @@
 docs.json
 __dummy.html
 profilegc.log
-docs/
 build/
 *.exe
 *.o
@@ -11,3 +10,4 @@ build/
 /tags
 .DS_Store
 *~
+/docs/source

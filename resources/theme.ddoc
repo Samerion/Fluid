@@ -1,0 +1,247 @@
+H1 = <h1>$0</h1>
+H2 = <h2>$0</h2>
+H3 = <h3>$0</h3>
+H4 = <h4>$0</h4>
+H5 = <h5>$0</h5>
+H6 = <h6>$0</h6>
+B = <b>$0</b>
+I = <i>$0</i>
+EM = <em>$0</em>
+STRONG = <strong>$0</strong>
+U = <u>$0</u>
+P = <p>$0</p>
+DL = <dl>$0</dl>
+DT = <dt>$0</dt>
+DD = <dd>$0</dd>
+TABLE = <table>$0</table>
+THEAD = <thead>$0</thead>
+TBODY = <tbody>$0</tbody>
+TR = <tr>$0</tr>
+TH = <th>$0</th>
+TD = <td>$0</td>
+TH_ALIGN = <th align="$1">$+</th>
+TD_ALIGN = <td align="$1">$+</td>
+OL = <ol>$0</ol>
+OL_START = <ol start="$1">$2</ol>
+UL = <ul>$0</ul>
+LI = <li>$0</li>
+BIG = <span class="font-big">$0</span>
+SMALL = <small>$0</small>
+BR = <br/>
+HR = <hr/>
+LINK = <a href="$0">$0</a>
+LINK2 = <a href="$1">$+</a>
+LINK_TITLE = <a href="$1" title="$2">$3</a>
+SYMBOL_LINK = <a href="$1"><code class="psymbol inline">$+</code></a>
+FLUID_WEB = https://libfluid.org/
+PHOBOS_PATH = https://dlang.org/phobos/
+ROOT = /docs/source/fluid
+DOC_ROOT_std = $(PHOBOS_PATH)
+DOC_ROOT_core = $(PHOBOS_PATH)
+DOC_ROOT_etc = $(PHOBOS_PATH)
+DOC_ROOT_object = $(PHOBOS_PATH)
+DOC_EXTENSION = .html
+IMAGE = <img src="$1" alt="$+" />
+IMAGE_TITLE = <img src="$1" alt="$3" title="$2" />
+BLOCKQUOTE = <blockquote>$0</blockquote>
+DEPRECATED = $0
+
+D_CODE = $(OTHER_CODE d, $0)
+
+OTHER_CODE =
+<pre class="language-$1"><code>$+</code></pre>
+
+D_INLINECODE = <code class="inline">$0</code>
+DDOC_BACKQUOTED = $(D_INLINECODE $0)
+D_COMMENT = <span class="comment">$0</span>
+D_STRING = <span class="string">$0</span>
+D_KEYWORD = <span class="keyword">$0</span>
+D_PSYMBOL = <span class="psymbol">$0</span>
+D_PARAM = <span class="param">$0</span>
+
+DDOC_BLANKLINE = <div class="blank"></div>
+DDOC_COMMENT = <!-- $0 -->
+
+STYLESHEET = <link rel="stylesheet" href="/resources/fluid-docs.css"/>
+
+DDOC =
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>$(TITLE)</title>
+    $(STYLESHEET)
+  </head>
+  <body class="ddoc">
+    <nav class="main-navigation">
+      <a href="$(FLUID_WEB)">Fluid</a>
+      <a href="$(ROOT)/package.html">Reference</a>
+    </nav>
+    <main class="module">
+      <h1 class="module-name">$(TITLE)</h1>
+      $(BODY)
+    </main>
+  </body>
+</html>$(LF)
+
+DDOC_MODULE_MEMBERS = <ul class="module-members members">
+  $0
+</div>$(LF)
+DDOC_CLASS_MEMBERS = <ul class="class-members members">
+  $0
+</ul>$(LF)
+DDOC_STRUCT_MEMBERS = <ul class="struct-members members">
+  $0
+</ul>$(LF)
+DDOC_ENUM_MEMBERS = <ul class="enum-members members">
+  $0
+</ul>$(LF)
+DDOC_TEMPLATE_MEMBERS = <ul class="template-members members">
+  $0
+</ul>$(LF)
+DDOC_MEMBERS = <ul class="members">
+  $0
+</ul>$(LF)
+
+DDOC_MEMBER = <li>
+  <section class="member">
+    $0
+  </section>
+</li>$(LF)
+
+DDOC_MEMBER_HEADER = $0
+
+DDOC_HEADER_ANCHOR = 
+  <a class="anchor" href="#.$1" id=".$1" title="Link to $2"></a>$(LF)
+
+DDOC_DECL = 
+<div class="declaration">
+  <pre><code class="code">$0</code></pre>
+</div>$(LF)
+
+DDOC_ANCHOR = <span class="anchor" id="$1"></span>
+
+DDOC_DECL_DD = $0
+
+DDOC_SECTIONS = <div class="sections">
+  $0
+</div>$(LF)
+
+DDOC_SUMMARY = <div class="summary">
+  $0
+</div>$(LF)
+
+DDOC_DESCRIPTION = <div class="description">
+  $0
+</div>$(LF)
+
+DDOC_EXAMPLES = <div class="example">
+    $0
+</div>$(LF)
+
+DDOC_RETURNS = <div class="returns">
+  <h4>Return value</h4>
+  $0
+</div>$(LF)
+
+DDOC_PARAMS = <div class="params">
+  <h4>Parameters</h4>
+  <table>
+    <tbody>
+      $0
+    </tbody>
+  </table>
+</div>$(LF)
+
+DDOC_PARAM_ROW = <tr>
+  $0
+</tr>$(LF)
+
+DDOC_PARAM_ID = <td class="param-id">
+  <code class="inline">
+    <em>$0</em>
+  </code>
+</td>$(LF)
+
+DDOC_PARAM_DESC = <td class="param-description">
+  $0
+</td>$(LF)
+
+DDOC_LICENSE = <div class="license">
+  <h4>License</h4>
+  $0
+</div>$(LF)
+
+DDOC_AUTHORS = <div class="authors">
+  <h4>Authors</h4>
+  $0
+</div>$(LF)
+
+DDOC_BUGS = <div class="bugs">
+  <h4>Bugs</h4>
+  $0
+</div>$(LF)
+
+DDOC_COPYRIGHT = <div class="copyright">
+  <h4>Copyright</h4>
+  $0
+</div>$(LF)
+
+DDOC_DATE = <div class="date">
+  <h4>Date</h4>
+  $0
+</div>$(LF)
+
+DDOC_DEPRECATED = <div class="deprecated">
+  <h4>Deprecated</h4>
+  $0
+</div>$(LF)
+
+DDOC_HISTORY = <div class="history">
+  <h4>History</h4>
+  $0
+</div>$(LF)
+
+DDOC_SEE_ALSO = <div class="see-also">
+  <h4>See also</h4>
+  $0
+</div>$(LF)
+
+DDOC_STANDARDS = <div class="standards">
+  <h4>Standards</h4>
+  $0
+</div>$(LF)
+
+DDOC_THROWS = <div class="throws">
+  <h4>Throws</h4>
+  $0
+</div>$(LF)
+
+DDOC_VERSION = <div class="version">
+  <h4>Version</h4>
+  $0
+</div>$(LF)
+
+DDOC_SECTION = <div class="custom-section">
+  $0
+</div>$(LF)
+
+DDOC_SECTION_H = <h4>$0</h4>
+
+DDOC_DITTO = $0
+
+DDOC_PSYMBOL = <code class="psymbol">$0</code>
+DDOC_ENUM_BASETYPE = <span class="type">$0</span>
+DDOC_PSUPER_SYMBOL = <span class="psuper">$0</span>
+DDOC_KEYWORD = $(D_KEYWORD $0)
+DDOC_PARAM = $(D_PARAM $0)
+DDOC_CONSTRAINT = <br/><span class="constraint">if ($0)</span>
+DDOC_OVERLOAD_SEPARATOR = <span class="overload-separator">$0</span>
+DDOC_TEMPLATE_PARAM_LIST = <span class="template-param-list">$0</span>
+DDOC_TEMPLATE_PARAM = <span class="template-param">$0</span>
+DDOC_LINK_AUTODETECT = $(LINK $0)
+DDOC_AUTO_PSYMBOL = $0
+DDOC_AUTO_KEYWORD = $0
+DDOC_AUTO_PARAM = $0
+DDOC_AUTO_PSYMBOL_SUPPRESS = $0
