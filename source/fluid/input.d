@@ -14,7 +14,7 @@ import fluid.backend;
 public import fluid.input_node;
 import fluid.io.focus;
 import fluid.io.hover;
-import fluid.io.action;
+public import fluid.io.action;
 
 import fluid.future.context;
 
