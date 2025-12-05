@@ -737,24 +737,15 @@ interface FluidHoverable {
     bool runInputActionImpl(immutable InputActionID action, bool active = true);
 
     final bool runInputActionImpl(alias action)(bool active = true) {
-
         return runInputActionImpl(inputActionID!action, active);
-
     }
 
     final bool runInputAction(immutable InputActionID action, bool active = true) {
-
-        // The programmer may override the action
-        if (inputActionImpl(action, active)) return true;
-
         return runInputActionImpl(action, active);
-
     }
 
     final bool runInputAction(alias action)(bool active = true) {
-
         return runInputAction(inputActionID!action, active);
-
     }
 
     /// Run mouse input actions for the node.
