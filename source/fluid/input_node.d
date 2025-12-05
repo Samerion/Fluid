@@ -99,6 +99,7 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable, Focusable, Hov
     }
 
     override void resizeImpl(Vector2 space) {
+        import std.traits : isAbstractFunction;
 
         use(focusIO);
         use(hoverIO);
@@ -106,7 +107,6 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable, Focusable, Hov
         static if (!isAbstractFunction!(typeof(super).resizeImpl)) {
             super.resizeImpl(space);
         }
-
     }
 
     /// Change the focus to this node.
