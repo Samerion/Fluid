@@ -977,9 +977,10 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         auto chunks = area.empty
             ? texture.allChunks
             : texture.visibleChunks(position - area.front.start, area.front.size);
+        const scale = canvasIO.toDots(Vector2(1, 1));
 
         // Generate the text
-        generate(chunks.save);
+        generateImpl(canvasIO.dpi, scale, chunks.save);
 
         // Load the updated chunks
         foreach (chunkIndex; chunks) {
@@ -988,19 +989,25 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
     }
 
-    /// ditto
     void generate(R)(R chunks) @trusted {
+        generateImpl(dpi, hidpiScale, chunks);
+
+        // Load the updated chunks
+        foreach (chunkIndex; chunks) {
+            texture.upload(backend, chunkIndex, dpi);
+        }
+    }
+
+    /// ditto
+    private void generateImpl(R)(Vector2 dpi, Vector2 scale, R chunks) @trusted {
 
         // Empty, nothing to do
         if (chunks.empty) return;
 
         auto style = node.pickStyle;
         auto typeface = style.getTypeface;
-        const dpi = this.dpi;
-        const scale = this.hidpiScale;
 
         // Apply sizing settings
-        style.setDPI(dpi);
         typeface.indentWidth = cast(int) (indentWidth * scale.x);
 
         // Ignore chunks which have already been generated
@@ -1122,13 +1129,6 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
                 }
 
             }
-
-        }
-
-        // Load the updated chunks
-        foreach (chunkIndex; newChunks) {
-
-            texture.upload(backend, chunkIndex, dpi);
 
         }
 
