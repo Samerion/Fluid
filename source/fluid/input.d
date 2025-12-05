@@ -121,40 +121,35 @@ enum FluidInputAction {
 /// See_Also:
 ///     `InputAction`
 immutable struct InputActionID {
+    import fluid.future.static_id;
 
-    private template _id(alias symbol) {
+    StaticID staticID;
 
-        align(1)
-        static immutable bool _id;
+    alias staticID this;
 
-    }
-
-    /// Unique ID of the action.
-    size_t id;
-
-    /// Action name. Only emitted when debugging.
-    debug string name;
-
-    /// Get ID of an input action.
-    private this(size_t id, string name) immutable {
-
-        this.id = id;
-        debug this.name = name;
-
+    private this(StaticID staticID) immutable {
+        this.staticID = staticID;
     }
 
     deprecated("InputActionID.from has been replaced by inputActionID and will be removed in Fluid 0.9.0")
     static InputActionID from(alias item)() {
-
         return inputActionID!item;
-
     }
 
     bool opEqual(InputActionID other) {
-
         return id == other.id;
-
     }
+
+}
+
+/// Get the ID of an input action.
+/// Params:
+///     action = Action to get the ID of.
+/// Returns:
+///     `InputActionID` struct with the action encoded.
+InputActionID inputActionID(alias action)() {
+    import fluid.future.static_id;
+    return InputActionID(staticID!action);
 
 }
 
