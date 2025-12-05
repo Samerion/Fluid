@@ -323,7 +323,12 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         override void resizeImpl(Vector2 space) {
 
             super.resizeImpl(space);
-            placeholderText.resize(space, !isWrapDisabled);
+            if (canvasIO) {
+                placeholderText.resize(canvasIO, space, !isWrapDisabled);
+            }
+            else {
+                placeholderText.resize(space, !isWrapDisabled);
+            }
 
             if (placeholderText.size.x > minSize.x)
                 minSize.x = placeholderText.size.x;
@@ -1215,15 +1220,18 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
             const lineHeight = style.getTypeface.lineHeight;
             const caretRect = this.caretRectangle();
-            const caretStart = start(inner) + Vector2(caretRect.x, caretRect.y + caretRect.height);  // bottom left
-            const caretEnd   = start(inner) + Vector2(caretRect.x + caretRect.width, caretRect.y);   // top right
+            const bottomLeft = start(inner)
+                + Vector2(caretRect.x, caretRect.y + caretRect.height);
+            const topRight = start(inner)
+                + Vector2(caretRect.x + caretRect.width, caretRect.y);
 
             // Draw the caret
-            io.drawLine(
-                caretStart,
-                caretEnd,
-                style.textColor,
-            );
+            if (canvasIO) {
+                canvasIO.drawLine(topRight, bottomLeft, 1, style.textColor);
+            }
+            else {
+                io.drawLine(topRight, bottomLeft, style.textColor);
+            }
 
         }
 
