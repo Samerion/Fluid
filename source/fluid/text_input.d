@@ -1631,7 +1631,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         _snapshot.diff = Rope.DiffRegion.init;
 
         // Run the input action and compare changes to send to history
-        const handled = runInputActionImpl(id, active);
+        const handled = runInputActionHandler(this, id, active);
 
         if (handled) {
             pushHistory(past);
