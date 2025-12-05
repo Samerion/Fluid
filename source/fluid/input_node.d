@@ -6,14 +6,24 @@ import fluid.style;
 import fluid.input;
 import fluid.backend;
 
+import fluid.io.focus;
+import fluid.io.hover;
+import fluid.io.action;
+
+import fluid.future.context;
+
+
 @safe:
 
 /// `InputNode` is a foundation for most nodes that accept user input. It implements the `FluidFocusable` interface,
 /// and provides common functions for input handling.
-abstract class InputNode(Parent : Node) : Parent, FluidFocusable {
+abstract class InputNode(Parent : Node) : Parent, FluidFocusable, Focusable, Hoverable {
 
     mixin makeHoverable;
     mixin enableInputActions;
+
+    FocusIO focusIO;
+    HoverIO hoverIO;
 
     /// Callback to run when the input value is altered.
     void delegate() changed;
@@ -25,6 +35,26 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable {
 
         super(sup);
 
+    }
+
+    alias opEquals = typeof(super).opEquals;
+
+    mixin template enableInputActions() {
+
+        import fluid.input : FluidFocusable;
+        import fluid.io.action : Actionable;
+
+        mixin FluidFocusable.enableInputActions;
+        mixin Actionable.enableInputActions;
+
+    }
+
+    override bool opEquals(const Object other) const {
+        return super.opEquals(other);
+    }
+
+    override bool blocksInput() const {
+        return isDisabled || isDisabledInherited;
     }
 
     /// Handle mouse input if no input action did.
@@ -42,6 +72,10 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable {
 
     }
 
+    override bool hoverImpl(HoverPointer) {
+        return false;
+    }
+
     /// Handle keyboard and gamepad input if no input action did.
     ///
     /// Usually, you'd prefer to define a method marked with an `InputAction` enum. This function is preferred for more
@@ -51,9 +85,7 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable {
     ///
     /// Returns: True if the input was handled, false if not.
     override bool focusImpl() {
-
         return keyboardImpl();
-
     }
 
     /// Check if the node is being pressed. Performs action lookup.
@@ -66,6 +98,17 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable {
 
     }
 
+    override void resizeImpl(Vector2 space) {
+
+        use(focusIO);
+        use(hoverIO);
+
+        static if (!isAbstractFunction!(typeof(super).resizeImpl)) {
+            super.resizeImpl(space);
+        }
+
+    }
+
     /// Change the focus to this node.
     void focus() {
 
@@ -74,11 +117,57 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable {
         // Ignore if disabled
         if (isDisabled) return;
 
-        // Switch the scroll
-        tree.focus = this;
+        // Switch focus using the active I/O technique
+        if (focusIO) {
+            focusIO.currentFocus = this;
+        }
+        else {
+            tree.focus = this;
+        }
 
-        // Ensure this node gets focus
+        // Ensure this node is in view
         this.scrollIntoView();
+
+    }
+
+    override bool isHovered() const {
+
+        if (hoverIO) {
+            return hoverIO.isHovered(this);
+        }
+        else {
+            return super.isHovered();
+        }
+
+    }
+
+    override protected void focusPreviousOrNext(FluidInputAction actionType) {
+
+        super.focusPreviousOrNext(actionType);
+
+    }
+
+    @(FluidInputAction.focusPrevious, FluidInputAction.focusNext)
+    protected bool focusPreviousOrNextBool(FluidInputAction actionType) {
+
+        if (focusIO) return false;
+        focusPreviousOrNext(actionType);
+        return true;
+    }
+
+    override protected void focusInDirection(FluidInputAction actionType) {
+
+        super.focusInDirection(actionType);
+
+    }
+
+    @(FluidInputAction.focusLeft, FluidInputAction.focusRight)
+    @(FluidInputAction.focusUp, FluidInputAction.focusDown)
+    protected bool focusInDirectionBool(FluidInputAction action) {
+
+        if (focusIO) return false;
+        focusInDirection(action);
+        return true;
 
     }
 
@@ -87,7 +176,12 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable {
         /// Check if the node has focus.
         bool isFocused() const {
 
-            return tree.focus is this;
+            if (focusIO) {
+                return focusIO.isFocused(this);
+            }
+            else {
+                return tree.focus is this;
+            }
 
         }
 
@@ -95,7 +189,16 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable {
         bool isFocused(bool enable) {
 
             if (enable) focus();
-            else if (isFocused) tree.focus = null;
+            else if (isFocused) {
+
+                if (focusIO) {
+                    focusIO.currentFocus = null;
+                }
+                else {
+                    tree.focus = null;
+                }
+
+            }
 
             return enable;
 
@@ -327,4 +430,3 @@ unittest {
     assert(pressCount == [1, 2]);
 
 }
-
