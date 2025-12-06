@@ -140,11 +140,11 @@ unittest {
 
     root.setScale(1.25);
     root.drawAndAssert(
-        node.isDrawn().at(0, 0, 400, 27),
-        node.drawsRectangle(0, 0, 400, 27).ofColor("#eeeeee"),
-        node.fill.isDrawn().at(0, 0, 400, 27),
-        node.fill.drawsRectangle(0, 0, 0, 27).ofColor("#17b117"),
-        node.drawsHintedImage().at(187.2, 0.3, 25.6, 26.4).ofColor("#ffffff")
+        node.isDrawn().at(0, 0, 400, 33),
+        node.drawsRectangle(0, 0, 400, 33).ofColor("#eeeeee"),
+        node.fill.isDrawn().at(0, 0, 400, 33),
+        node.fill.drawsRectangle(0, 0, 0, 33).ofColor("#17b117"),
+        node.drawsHintedImage().at(184, 0, 25.6, 26.4).ofColor("#ffffff")
             .sha256("0d527db3ea41c4f1b4b17d4f6b4bf6d1921f640e25b530b949baa78232fa0681"),
     );
 
