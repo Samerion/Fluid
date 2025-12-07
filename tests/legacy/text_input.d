@@ -25,7 +25,7 @@ unittest {
         root.draw();
 
         assert(root.value == "");
-        assert(root.contentLabel.text == "placeholder");
+        assert(root.contentLabel.showPlaceholder);
         assert(root.isEmpty);
     }
 
