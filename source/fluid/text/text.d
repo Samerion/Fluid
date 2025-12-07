@@ -148,23 +148,23 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     }
 
     /// Returns: DPI currently used by this struct.
-    private Vector2 dpi() const {
-
-        if (auto b = backend)
+    private Vector2 dpi(CanvasIO canvasIO) const {
+        if (canvasIO)
+            return canvasIO.dpi;
+        else if (auto b = backend)
             return b.dpi;
         else
             return Vector2(96, 96);
-
     }
 
     /// Returns: Scale currently used by this struct.
-    private Vector2 hidpiScale() const {
-
+    private Vector2 hidpiScale(CanvasIO canvasIO) const {
+        if (canvasIO)
+            return canvasIO.toDots(Vector2(1, 1));
         if (auto b = backend)
             return b.hidpiScale;
         else
             return Vector2(1, 1);
-
     }
 
     /// Get or the value rendered by this text.
@@ -196,14 +196,12 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     }
 
     /// Clear cache and reload all text.
-    void reload() {
-
+    void reload(CanvasIO canvasIO = null) {
         auto style = node.pickStyle;
         auto typeface = style.getTypeface;
         auto width = _cache.startRuler.lineWidth;
 
-        clearCache(typeface, width);
-
+        clearCache(canvasIO, typeface, width);
     }
 
     /// Queue reloading text in range. If the range changes length, specify both oldHigh and newHigh.
@@ -392,14 +390,11 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
     /// Get the size of the text.
     Vector2 size() const {
-
-        const scale = hidpiScale;
-
+        const scale = _dpi / 96f;
         return Vector2(
             _sizeDots.x / scale.x,
             _sizeDots.y / scale.y,
         );
-
     }
 
     alias minSize = size;
@@ -432,7 +427,8 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
         auto style = node.pickStyle;
         auto typeface = style.getTypeface;
-        const scale = this.hidpiScale;
+        const scale = this.hidpiScale(null);
+        const dpi = this.dpi(null);
 
         // Apply DPI
         style.setDPI(dpi);
@@ -441,7 +437,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         space.y *= scale.y;
 
         /// Minimum pixel change that counts
-        measure!splitter(space, wrap);
+        measure!splitter(null, space, wrap);
         clearTextures(dpi);
 
     }
@@ -458,7 +454,6 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         auto typeface = style.getTypeface;
         const dpi = canvasIO.dpi;
         const scale = canvasIO.toDots(Vector2(1, 1));
-        _dpi = dpi;
 
         // Apply DPI
         style.setDPI(dpi);
@@ -467,25 +462,23 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         space.y *= scale.y;
 
         // Update the size
-        measure!splitter(space, wrap);
+        measure!splitter(canvasIO, space, wrap);
         clearTextures(dpi);
     }
 
     /// Returns: Number of pixels in both directions that may make a notable visual difference.
     private Vector2 epsilon() const {
-
-        return 96 / 4 / dpi;
-
+        return Vector2(1/4f, 1/4f);
     }
 
     /// Test for changes to text properties: typeface, DPI, font size, box width and wrapping.
     /// Returns: True if the cache should be purged.
-    private bool shouldCacheReset(Vector2 space, bool wrap) {
+    private bool shouldCacheReset(CanvasIO canvasIO, Vector2 space, bool wrap) {
 
         auto style = node.pickStyle;
         auto typeface = style.getTypeface;
 
-        const dpi = this.dpi;
+        const dpi = this.dpi(canvasIO);
         const firstRuler = _cache.startRuler;
         const widthChanged = wrap && abs(space.x - firstRuler.lineWidth) >= epsilon.x;
 
@@ -499,16 +492,14 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     }
 
     /// Clear the cache.
-    private void clearCache(Typeface typeface, float lineWidth)
+    private void clearCache(CanvasIO canvasIO, Typeface typeface, float lineWidth)
     in (typeface)
     do {
 
         auto ruler = TextRuler(typeface, lineWidth);
         ruler.startLine();
         _cache = TextRulerCache(ruler);
-        _dpi = backend
-            ? backend.dpi
-            : Vector2();
+        _dpi = this.dpi(canvasIO);
         _updateRangeStart = 0;
         _updateRangeEnd = value.length;
 
@@ -532,7 +523,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     ///     splitter = Function to use to split words.
     ///     space   = Limit for the space of the region the text shouldn't cross, in dots.
     ///     wrap    = If true, text should be limited by a bounding box.
-    private void measure(alias splitter = Typeface.defaultWordChunks)(Vector2 space, bool wrap)
+    private void measure(alias splitter = Typeface.defaultWordChunks)(CanvasIO canvasIO, Vector2 space, bool wrap)
     out (; isMeasured)
     do {
 
@@ -544,8 +535,8 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         if (!wrap) space = Vector2(float.nan, float.nan);
 
         // Reset the cache if text properties changed
-        if (shouldCacheReset(space, wrap)) {
-            clearCache(typeface, space.x);
+        if (shouldCacheReset(canvasIO, space, wrap)) {
+            clearCache(canvasIO, typeface, space.x);
             _wrap = wrap;
         }
 
@@ -994,33 +985,36 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         auto chunks = area.empty
             ? texture.allChunks
             : texture.visibleChunks(position - area.front.start, area.front.size);
-        const scale = canvasIO.toDots(Vector2(1, 1));
 
         // Generate the text
-        generateImpl(canvasIO.dpi, scale, chunks.save);
+        generateImpl(canvasIO, chunks.save);
 
         // Load the updated chunks
         foreach (chunkIndex; chunks) {
-            texture.upload(canvasIO, chunkIndex, dpi);
+            texture.upload(canvasIO, chunkIndex,
+                dpi(canvasIO));
         }
 
     }
 
     void generate(R)(R chunks) @trusted {
-        generateImpl(dpi, hidpiScale, chunks);
+        generateImpl(null, chunks);
 
         // Load the updated chunks
         foreach (chunkIndex; chunks) {
-            texture.upload(backend, chunkIndex, dpi);
+            texture.upload(backend, chunkIndex,
+                dpi(null));
         }
     }
 
     /// ditto
-    private void generateImpl(R)(Vector2 dpi, Vector2 scale, R chunks) @trusted {
+    private void generateImpl(R)(CanvasIO canvasIO, R chunks) @trusted {
 
         // Empty, nothing to do
         if (chunks.empty) return;
 
+        const dpi = this.dpi(canvasIO);
+        const scale = this.hidpiScale(canvasIO);
         auto style = node.pickStyle;
         auto typeface = style.getTypeface;
 
