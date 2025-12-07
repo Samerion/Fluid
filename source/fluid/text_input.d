@@ -1273,11 +1273,15 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     /// Draw selection, if applicable.
     protected void drawSelection(Rectangle inner) {
+        import optional : some;
 
         // Ignore if selection is empty
         if (selectionStart == selectionEnd) return;
 
-        const windowSize = io.windowSize;
+        const cropArea = canvasIO
+            ? canvasIO.cropArea
+            : some(
+                Rectangle(0, 0, io.windowSize.tupleof));
 
         auto low = selectionLowIndex;
         const high = selectionHighIndex;
@@ -1327,10 +1331,10 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
                 const startIndex = index;
                 const endIndex = index = startIndex + word.length;
 
-                scope (exit) lineEnd = ruler.caret.end;
+                scope (exit) lineEnd = scale(ruler.caret.end);
 
-                // Started a new line, draw the last one
-                if (caret.y != lineStart.y) {
+                // Started a new line, draw the last line
+                if (scale(caret.start).y != lineStart.y) {
 
                     // Don't draw if selection starts here
                     if (startIndex != low) {
@@ -1350,7 +1354,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
                     // Restart the line
                     auto startRuler = ruler;
                     startRuler.penPosition = penPosition;
-                    lineStart = startRuler.caret.start;
+                    lineStart = scale(startRuler.caret.start);
 
                 }
 
@@ -1358,10 +1362,10 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
                 if (startIndex <= high && high <= endIndex) {
 
                     const dent = typeface.measure(word[0 .. high - startIndex]);
-                    const lineEnd = caret.end + Vector2(dent.x, 0);
+                    const lineEnd = scale(caret.end + Vector2(dent.x, 0));
                     const rect = Rectangle(
-                        (inner.start + scale(lineStart)).tupleof,
-                        scale(lineEnd - lineStart).tupleof
+                        (inner.start + lineStart).tupleof,
+                        (lineEnd - lineStart).tupleof
                     );
 
                     if (canvasIO) {
@@ -1375,7 +1379,9 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
                 }
 
                 // Stop drawing when selection is offscreen
-                if (inner.start.y + ruler.caret.y > windowSize.y) return;
+                const isOffscreen = !cropArea.empty
+                    && inner.start.y + ruler.caret.y > cropArea.front.end.y;
+                if (isOffscreen) return;
 
             }
 
