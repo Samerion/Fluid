@@ -1839,8 +1839,8 @@ unittest {
         assert(node.caretIndex == 4);
         root.drawAndAssert(
             i == 0
-                ? node.drawsLine().from(33.0, 2.70).to(33.0, 24.30).ofWidth(1).ofColor("#000000")
-                : node.drawsLine().from(33.6, 2.64).to(33.6, 23.76).ofWidth(1).ofColor("#000000"),
+                ? node.drawsLine().from(33.0, 0.0).to(33.0, 27.0).ofWidth(1).ofColor("#000000")
+                : node.drawsLine().from(33.6, 0.0).to(33.6, 26.4).ofWidth(1).ofColor("#000000"),
         );
 
         node.caretTo(Vector2(47, 66));
@@ -1848,8 +1848,8 @@ unittest {
         assert(node.caretIndex == 33);
         root.drawAndAssert(
             i == 0
-                ? node.drawsLine().from(50.0, 56.70).to(50.0, 78.30).ofWidth(1).ofColor("#000000")
-                : node.drawsLine().from(48.8, 55.44).to(48.8, 76.56).ofWidth(1).ofColor("#000000"),
+                ? node.drawsLine().from(50.0, 54.0).to(50.0, 81.0).ofWidth(1).ofColor("#000000")
+                : node.drawsLine().from(48.8, 52.8).to(48.8, 79.2).ofWidth(1).ofColor("#000000"),
         );
     }
 
@@ -1917,12 +1917,12 @@ unittest {
         // First half of the blank interval: caret visible
         assert( input.isCaretVisible);
         root.drawAndAssert(
-            input.drawsLine().from(0, 2.7).to(0, 24.3),
+            input.drawsLine().from(0, 0).to(0, 27),
         );
         time += input.blinkInterval / 4;
         assert( input.isCaretVisible);
         root.drawAndAssert(
-            input.drawsLine().from(0, 2.7).to(0, 24.3),
+            input.drawsLine().from(0, 0).to(0, 27),
         );
         time += input.blinkInterval / 4;
 
