@@ -648,18 +648,25 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     /// Current horizontal visual offset of the label.
     float scroll() const {
-
         return _scroll;
-
     }
 
     /// Set scroll value.
     float scroll(float value) {
+        return _scroll = value.clamp(minScroll, maxScroll);
+    }
 
-        const limit = max(0, contentLabel.minSize.x - _inner.w);
+    /// Returns:
+    ///     Minimum available scroll value. By default, this is always zero.
+    float minScroll() const {
+        return 0;
+    }
 
-        return _scroll = value.clamp(0, limit);
-
+    /// Returns:
+    ///     Maximum available scroll value. By default, this is the width of the text, minus
+    ///     the width of the input.
+    float maxScroll() const {
+        return max(minScroll, contentLabel.minSize.x - _availableWidth);
     }
 
     ///
@@ -1051,8 +1058,8 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
         // Scroll to make sure the caret is always in view
         const scrollOffset
-            = scrolledCaret > _inner.width ? scrolledCaret - _inner.width
-            : scrolledCaret < 0            ? scrolledCaret
+            = scrolledCaret > _availableWidth ? scrolledCaret - _availableWidth
+            : scrolledCaret < 0               ? scrolledCaret
             : 0;
 
         // Set the scroll
