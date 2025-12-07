@@ -206,6 +206,21 @@ struct CompositeTexture {
     }
 
     /// Get a range of indices for all currently visible chunks.
+    ///
+    /// Loads all chunks if no `cropArea` is set.
+    const visibleChunks(CanvasIO canvasIO, Vector2 position) {
+        const area = canvasIO.cropArea;
+        if (area.empty) {
+            return allChunks;
+        }
+        else {
+            return visibleChunks(
+                position - area.front.start,
+                area.front.size);
+        }
+    }
+
+    /// Get a range of indices for all currently visible chunks.
     const visibleChunks(Vector2 position, Vector2 windowSize) {
 
         const offsetPx = -position;
@@ -221,11 +236,8 @@ struct CompositeTexture {
         );
 
         ptrdiff_t positionToIndex(alias round)(float position, ptrdiff_t limit) {
-
             const index = cast(ptrdiff_t) round(position / maxChunkSize);
-
             return index.clamp(0, limit);
-
         }
 
         const rowStart = positionToIndex!floor(offset.y, rows);
@@ -396,11 +408,7 @@ struct CompositeTexture {
     /// Draw onscreen parts of the texture using the new backend.
     void drawAlign(CanvasIO canvasIO, Rectangle rectangle, Color tint = Color(0xff, 0xff, 0xff, 0xff)) {
 
-        const area = canvasIO.cropArea;
-
-        auto chosenChunks = area.empty
-            ? allChunks
-            : visibleChunks(rectangle.start - area.front.start, area.front.size);
+        auto chosenChunks = visibleChunks(canvasIO, rectangle.start);
 
         // Draw each visible chunk
         foreach (index; chosenChunks) {

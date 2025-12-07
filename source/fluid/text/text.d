@@ -979,12 +979,13 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
     /// ditto
     void generate(CanvasIO canvasIO, Vector2 position) {
+        if (canvasIO is null) {
+            generate(position);
+            return;
+        }
 
         // Pick relevant chunks based on the crop area
-        const area = canvasIO.cropArea;
-        auto chunks = area.empty
-            ? texture.allChunks
-            : texture.visibleChunks(position - area.front.start, area.front.size);
+        auto chunks = texture.visibleChunks(canvasIO, position);
 
         // Generate the text
         generateImpl(canvasIO, chunks.save);
@@ -1013,7 +1014,6 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         // Empty, nothing to do
         if (chunks.empty) return;
 
-        const dpi = this.dpi(canvasIO);
         const scale = this.hidpiScale(canvasIO);
         auto style = node.pickStyle;
         auto typeface = style.getTypeface;
@@ -1114,11 +1114,11 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
                         // Ignore chunks this word is not in the bounds of
                         const startCaret = ruler.caret(currentPenPosition);
                         const endCaret = ruler.caret();
-                        const relevant =
-                               chunkRect.contains(startCaret.start)
-                            || chunkRect.contains(startCaret.end)
-                            || chunkRect.contains(endCaret.start)
-                            || chunkRect.contains(endCaret.end);
+                        const wordRect = Rectangle(
+                            (startCaret.start).tupleof,
+                            (endCaret.end - startCaret.start).tupleof,
+                        );
+                        const relevant = overlap(chunkRect, wordRect);
 
                         if (!relevant) continue;
 
