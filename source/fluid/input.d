@@ -784,7 +784,8 @@ interface FluidHoverable {
             format!"%s : FluidHoverable must inherit from Node"(typeid(this)));
 
         // Provide a default implementation of inputActionImpl
-        static if (!is(typeof(super) : FluidHoverable))
+        static if (!is(typeof(super) : FluidHoverable)
+            && !__traits(hasMember, typeof(super), "inputActionImpl"))
         bool inputActionImpl(immutable InputActionID id, bool active) {
 
             return false;

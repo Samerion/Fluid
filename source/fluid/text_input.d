@@ -1608,7 +1608,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         _snapshot.diff = Rope.DiffRegion.init;
 
         // Run the input action and compare changes to send to history
-        const handled = runInputActionHandler(this, id, active);
+        const handled = runLocalInputAction(id, active);
 
         if (handled) {
             pushHistory(past);
@@ -1616,6 +1616,10 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
         return handled;
 
+    }
+
+    protected bool runLocalInputAction(immutable InputActionID id, bool active) {
+        return runInputActionHandler(this, id, active);
     }
 
     @("TextInput methods do not create history entries")
