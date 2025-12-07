@@ -1234,7 +1234,6 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         // Add a blinking caret
         if (isCaretVisible) {
 
-            const lineHeight = style.getTypeface.lineHeight;
             const caretRect = this.caretRectangle();
             const bottomLeft = start(inner)
                 + Vector2(caretRect.x, caretRect.y + caretRect.height);
