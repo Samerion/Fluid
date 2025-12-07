@@ -1871,8 +1871,8 @@ unittest {
         node.isDrawn().at(0, 0, 200, 27),
         node.drawsRectangle(0, 0, 200, 27).ofColor("#ffaaff"),
         node.cropsTo(0, 0, 200, 27),
-        node.contentLabel.drawsHintedImage().at(0, 0, 819.2, 819.2).ofColor("#ffffff")
-            .sha256("f8e7558a9641e24bb5cb8bb49c27284d87436789114e2f875e2736b521fe170e"),
+        node.contentLabel.drawsHintedImage().at(0, 0, 409.6, 409.6).ofColor("#ffffff")
+            .sha256("a396f29d6bced4b7a469ff8c70bc8d1b822bdfea6057b09d56cff23ce7ac569c"),
         node.contentLabel.doesNotDraw(),
     );
 
@@ -1882,10 +1882,10 @@ unittest {
     root.drawAndAssert(
         node.cropsTo(0, 0, 200, 27),
         node.contentLabel.isDrawn().at(-784, 0, 984, 27),
-        node.contentLabel.drawsHintedImage().at(-784, 0, 819.2, 819.2).ofColor("#ffffff")
-            .sha256("01f6ca34c8a7cda32d38daac9938031a5b16020e8fed3aca0f4748582c787de8"),
-        node.contentLabel.drawsHintedImage().at(35.2, 0, 819.2, 819.2).ofColor("#ffffff")
-            .sha256("9fa7e5f27e1ad1d7c21efa837f94ab241b3f4b4401c61841720eb40c5ff859cc"),
+        node.contentLabel.drawsHintedImage().at(-374.4, 0, 409.6, 409.6).ofColor("#ffffff")
+            .sha256("d580c1ed197afb13391efb9677f1d9024c53f5ce8afe7687e31e295b4b9c8c0b"),
+        node.contentLabel.drawsHintedImage().at(35.2, 0, 409.6, 409.6).ofColor("#ffffff")
+            .sha256("4507b4c99278dafd920128714b07b2ce661b98fb045f9637874f4ffed6122578"),
     );
 
     foreach (_; 0..4) {
@@ -1894,10 +1894,10 @@ unittest {
     root.drawAndAssert(
         node.cropsTo(0, 0, 200, 27),
         node.contentLabel.isDrawn().at(-1440, 0, 1640, 27),
-        node.contentLabel.drawsHintedImage().at(-620.8, 0, 819.2, 819.2).ofColor("#ffffff")
-            .sha256("e4910bc3700d464f172425e266ea918ec88f6a6c0d42b6cbeed396e9f22fb5df"),
-        node.contentLabel.drawsHintedImage().at(198.4, 0, 819.2, 819.2).ofColor("#ffffff")
-            .sha256("bb017d2518a0b78fe37ba7aa231553806dbb9f6a8aaff8a84fedb8b4b704025d"),
+        node.contentLabel.drawsHintedImage().at(-211.2, 0, 409.6, 409.6).ofColor("#ffffff")
+            .sha256("838553f6282dd940f583c9d8ac986e549afe3c777bc34be0410b38e61915b443"),
+        node.contentLabel.drawsHintedImage().at(198.4, 0, 409.6, 409.6).ofColor("#ffffff")
+            .sha256("d39e1e73324563394292cf4ab483981aa32fe802d2c51e9119dc8fe7514da823"),
     );
 
 }
