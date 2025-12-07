@@ -140,7 +140,7 @@ unittest {
         root.draw();
 
         assert(input.value == "");
-        assert(input.contentLabel.text == "placeholder");
+        assert(input.contentLabel.showPlaceholder);
         assert(input.isEmpty);
     }
 
