@@ -1795,8 +1795,8 @@ unittest {
         node.drawsRectangle(0, 54, 50, 27).ofColor("#0022aa"),
 
         node.contentLabel.isDrawn().at(0, 0, 200, 108),
-        node.contentLabel.drawsHintedImage().at(0, 0, 1024, 1024).ofColor("#ffffff")
-            .sha256("7033f92fce5cf825ab357b1514628504361399d20ce47e2966ed86cacc45cf3a"),
+        node.contentLabel.drawsHintedImage().at(0, 0, 512, 512).ofColor("#ffffff")
+            .sha256("3f32d765238421e8c470518efce7827d91f2b7bd3db45c4bf99d9d03e984493c"),
     );
 
     // 125% scale
@@ -1809,8 +1809,9 @@ unittest {
         node.drawsRectangle(0, 52.8, 48.8, 26.4).ofColor("#0022aa"),
 
         node.contentLabel.isDrawn().at(0, 0, 200, 106),
-        node.contentLabel.drawsHintedImage().at(0, 0, 819.2, 819.2).ofColor("#ffffff")
-            .sha256("2c72029c85ba28479d2089456261828dfb046c1be134b46408740b853e352b90"),
+        node.contentLabel.drawsHintedImage().at(0, 0, 409.6, 409.6).ofColor("#ffffff")
+            .sha256("b55ed3d53d21a46e8067cae1b5e3acf3cc53e9a06efb400ecf1a7d46f9f0ba37"),
+
     );
 
 }
