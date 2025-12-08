@@ -209,7 +209,7 @@ class Frame : Space, FluidDroppable {
 
     protected override void drawImpl(Rectangle outer, Rectangle inner) {
         const style = pickStyle();
-        style.drawBackground(tree.io, canvasIO, outer);
+        style.drawBackground(canvasIO, outer);
 
         if (isDropHovered) {
             _dropIndex = 0;

@@ -60,29 +60,20 @@ class Separator : Node {
     }
 
     override void drawImpl(Rectangle outer, Rectangle inner) {
-
         auto style = pickStyle();
-
-        style.drawBackground(io, canvasIO, outer);
+        style.drawBackground(canvasIO, outer);
 
         if (isHorizontal) {
-
             auto start = Vector2(start(inner).x, center(inner).y);
             auto end = Vector2(end(inner).x, center(inner).y);
-
-            style.drawLine(io, canvasIO, start, end);
-
+            style.drawLine(canvasIO, start, end);
         }
 
         else {
-
             auto start = Vector2(center(inner).x, start(inner).y);
             auto end = Vector2(center(inner).x, end(inner).y);
-
-            style.drawLine(io, canvasIO, start, end);
-
+            style.drawLine(canvasIO, start, end);
         }
-
     }
 
 }

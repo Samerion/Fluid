@@ -156,16 +156,13 @@ class ScrollInput : InputNode!Node {
     }
 
     override protected void drawImpl(Rectangle paddingBox, Rectangle contentBox) @trusted {
-
-        _isPressed = checkIsPressed;
-
         const style = pickStyle();
 
         // Clamp the values first
         this.scroll = position;
 
         // Draw the background
-        style.drawBackground(tree.io, canvasIO, paddingBox);
+        style.drawBackground(canvasIO, paddingBox);
 
         // Ignore if we can't scroll
         if (maxScroll == 0) return;
@@ -344,7 +341,7 @@ class ScrollInputHandle : Node, FluidHoverable, Hoverable {
     override protected void drawImpl(Rectangle paddingBox, Rectangle contentBox) @trusted {
 
         auto style = pickStyle();
-        style.drawBackground(io, canvasIO, paddingBox);
+        style.drawBackground(canvasIO, paddingBox);
 
     }
 
@@ -387,18 +384,6 @@ class ScrollInputHandle : Node, FluidHoverable, Hoverable {
         if (parent.changed) parent.changed();
 
         return true;
-
-    }
-
-    @(FluidInputAction.press, fluid.input.WhileDown)
-    protected void whileDown() @trusted {
-
-        // Call the new overload if new I/O isn't loaded
-        if (hoverIO is null) {
-            HoverPointer pointer;
-            pointer.position = io.mousePosition;
-            cast(void) whileDown(pointer);
-        }
 
     }
 

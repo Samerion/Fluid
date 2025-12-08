@@ -167,21 +167,6 @@ class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable {
 
     }
 
-    /// ditto
-    @(FluidInputAction.press, .WhileDown)
-    void drag()
-    in (tree)
-    do {
-
-        // Polyfill for old backend-based I/O
-        if (!hoverIO) {
-            HoverPointer pointer;
-            pointer.position = io.mousePosition;
-            drag(pointer);
-        }
-
-    }
-
     alias isHidden = typeof(super).isHidden;
 
     /// `DragSlot` hides itself from its parent node while its drawn.
@@ -435,16 +420,9 @@ class DragHandle : Node {
         const color = style.lineColor;
         const fill = style.cropBox(inner, [radius, radius, 0, 0]);
 
-        if (canvasIO) {
-            canvasIO.drawCircle(start(inner) + circleVec, radius, color);
-            canvasIO.drawCircle(end(inner) - circleVec, radius, color);
-            canvasIO.drawRectangle(fill, color);
-        }
-        else {
-            io.drawCircle(start(inner) + circleVec, radius, color);
-            io.drawCircle(end(inner) - circleVec, radius, color);
-            io.drawRectangle(fill, color);
-        }
+        canvasIO.drawCircle(start(inner) + circleVec, radius, color);
+        canvasIO.drawCircle(end(inner) - circleVec, radius, color);
+        canvasIO.drawRectangle(fill, color);
     }
 
 }
@@ -480,10 +458,6 @@ class DragAction : TreeAction {
         bool _stopDragging;
         bool _readyToDrop;
 
-    }
-
-    deprecated this(DragSlot slot) {
-        this(slot, slot.io.mousePosition);
     }
 
     /// Params:
