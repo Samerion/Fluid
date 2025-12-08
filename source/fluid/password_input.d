@@ -42,6 +42,7 @@ class PasswordInput : TextInput {
 
         super(placeholder, submitted);
         this.contentLabel = new LocalContentLabel;
+        this.contentLabel.placeholderText = placeholder;
 
     }
 
