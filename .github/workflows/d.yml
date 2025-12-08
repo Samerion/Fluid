@@ -10,14 +10,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macOS-latest, macos-13]
+        os: [ubuntu-latest, windows-latest, macOS-latest, macos-14]
         dc: [dmd, ldc, ldc-1.28.1]
         #dub: [dub, redub]
         #os: [ubuntu-latest, windows-latest]  # DEBUG
         dub: [dub]                           # DEBUG
         exclude:
           - { os: macos-latest, dc: dmd }
-          - { os: macos-13, dc: dmd }
+          - { os: macos-14, dc: dmd }
 
     runs-on: ${{ matrix.os }}
     env: 
