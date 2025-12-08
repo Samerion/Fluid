@@ -25,7 +25,6 @@ import fluid.node;
 import fluid.text;
 import fluid.utils;
 import fluid.style;
-import fluid.backend;
 
 import fluid.io.canvas;
 

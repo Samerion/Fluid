@@ -28,7 +28,6 @@ import fluid.tree;
 import fluid.utils;
 import fluid.space;
 import fluid.input;
-import fluid.backend;
 
 import fluid.io.canvas;
 import fluid.io.debug_signal;

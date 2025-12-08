@@ -4,7 +4,6 @@ module fluid.input_node;
 import fluid.node;
 import fluid.style;
 import fluid.input;
-import fluid.backend;
 
 import fluid.io.focus;
 import fluid.io.hover;

@@ -9,7 +9,6 @@ module fluid.switch_slot;
 import fluid.node;
 import fluid.utils;
 import fluid.style;
-import fluid.backend;
 
 /// [nodeBuilder] for [SwitchSlot]. Takes a list of nodes, in order from largest to smallest,
 /// optionally terminated with a `null` to indicate nothing should be displayed if no node fits.

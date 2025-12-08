@@ -8,7 +8,6 @@ import std.algorithm;
 import fluid.node;
 import fluid.input;
 import fluid.style;
-import fluid.backend;
 
 import fluid.future.pipe;
 import fluid.future.context;
