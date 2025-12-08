@@ -22,6 +22,7 @@ module fluid;
 ///
 /// * [Label][fluid.label] can be used to display text on the screen.
 /// * [Button][fluid.button] is a clickable button.
+/// * [Hyperlink][fluid.hyperlink] is a website link.
 /// * [ImageView][fluid.image_view] displays images.
 /// * [ProgressBar][fluid.progress_bar] shows completion status of an operation.
 /// * [Separator][fluid.separator] draws a line to separate unrelated content.
@@ -267,6 +268,7 @@ public import
     fluid.hover_button,        // skipped    (deprecated)
     fluid.hover_chain,         // documented
     fluid.hover_transform,     // documented
+    fluid.hyperlink,           // documented
     fluid.image_view,          // documented
     fluid.input,               // skipped    #216
     fluid.input_map_chain,     // documented
