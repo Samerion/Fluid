@@ -185,23 +185,37 @@ class CodeInput : TextInput {
         }
 
         override void resizeImpl(Vector2 available) {
+            // Note: no super.resizeImpl call: `text` is replaced with our own field.
 
             assert(text.hasFastEdits);
 
             use(canvasIO);
 
-            auto typeface = style.getTypeface;
-            typeface.setSize(io.dpi, style.fontSize);
-
-            text.indentWidth = indentWidth * typeface.advance(' ').x / io.hidpiScale.x;
-            text.resize(available);
-            placeholderText.resize(available);
+            // Set indent size
+            resizeIndent();
+            text.resize(canvasIO, available, !isWrapDisabled);
+            placeholderText.resize(canvasIO, available, !isWrapDisabled);
 
             minSize.x = max(placeholderText.size.x, text.size.x);
             minSize.y = max(placeholderText.size.y, text.size.y);
 
             assert(this.text.isMeasured);
 
+        }
+
+        protected void resizeIndent() {
+            const dpi = Vector2(96, 96);  // Deliberately constant
+            auto typeface = style.getTypeface;
+            typeface.setSize(dpi, style.fontSize);
+            if (canvasIO) {
+                const spaceSize = typeface.advance(' ');
+                text.indentWidth = indentWidth * canvasIO.fromDots(spaceSize).x;
+            }
+            else {
+                const spaceWidth = typeface.advance(' ').x / io.hidpiScale.x;
+                text.indentWidth = indentWidth * spaceWidth;
+            }
+            placeholderText.indentWidth = text.indentWidth;
         }
 
         override void drawImpl(Rectangle outer, Rectangle inner) {
