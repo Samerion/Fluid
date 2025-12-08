@@ -205,10 +205,10 @@ unittest {
     root.io = io;
 
     io.clipboard = "World";
-    root.push("  Hello,");
-    root.push(" ");
-    root.paste();
-    root.push("!");
+    root.savePush("  Hello,");
+    root.savePush(" ");
+    root.runInputAction!(FluidInputAction.paste);
+    root.savePush("!");
     assert(root.value == "  Hello, World!");
 
     // Undo the exclamation mark

@@ -1541,7 +1541,7 @@ class CodeInput : TextInput {
 
             int highlightCount;
 
-            void parse(Rope) {
+            override void parse(Rope, TextInterval, TextInterval, TextInterval) {
                 highlightCount++;
             }
 
