@@ -136,12 +136,12 @@ unittest {
     assert(root.value == "    aa  ");
     root.insertTab();
     assert(root.value == "    aa      ");
-    root.push("\n");
+    root.rawPush("\n");
     root.insertTab();
     assert(root.value == "    aa      \n    ");
     root.insertTab();
     assert(root.value == "    aa      \n        ");
-    root.push("||");
+    root.rawPush("||");
     root.insertTab();
     assert(root.value == "    aa      \n        ||  ");
 
@@ -153,20 +153,20 @@ unittest {
     auto root = codeInput(.useSpaces(2));
     root.insertTab();
     assert(root.value == "  ");
-    root.push("aa");
+    root.rawPush("aa");
     root.insertTab();
     assert(root.value == "  aa  ");
     root.insertTab();
     assert(root.value == "  aa    ");
-    root.push("\n");
+    root.rawPush("\n");
     root.insertTab();
     assert(root.value == "  aa    \n  ");
     root.insertTab();
     assert(root.value == "  aa    \n    ");
-    root.push("||");
+    root.rawPush("||");
     root.insertTab();
     assert(root.value == "  aa    \n    ||  ");
-    root.push("x");
+    root.rawPush("x");
     root.insertTab();
     assert(root.value == "  aa    \n    ||  x ");
 
@@ -178,17 +178,17 @@ unittest {
     auto root = codeInput(.useTabs);
     root.insertTab();
     assert(root.value == "\t");
-    root.push("aa");
+    root.rawPush("aa");
     root.insertTab();
     assert(root.value == "\taa\t");
     root.insertTab();
     assert(root.value == "\taa\t\t");
-    root.push("\n");
+    root.rawPush("\n");
     root.insertTab();
     assert(root.value == "\taa\t\t\n\t");
     root.insertTab();
     assert(root.value == "\taa\t\t\n\t\t");
-    root.push("||");
+    root.rawPush("||");
     root.insertTab();
     assert(root.value == "\taa\t\t\n\t\t||\t");
 
@@ -232,9 +232,9 @@ unittest {
 
     auto root = codeInput(.useTabs);
 
-    root.push("Hello, World!");
+    root.savePush("Hello, World!");
     root.caretToStart();
-    root.insertTab();
+    root.runInputAction!(FluidInputAction.insertTab);
     assert(root.value == "\tHello, World!");
     assert(root.valueBeforeCaret == "\t");
 
@@ -247,7 +247,7 @@ unittest {
     assert(root.valueBeforeCaret == "\t");
 
     root.caretToEnd();
-    root.outdent();
+    root.runInputAction!(FluidInputAction.outdent);
     assert(root.value == "Hello, World!");
     assert(root.valueBeforeCaret == root.value);
     assert(root.valueAfterCaret == "");
@@ -527,13 +527,13 @@ unittest {
     auto root = codeInput(.useSpaces(2));
     root.value = "      abc";
     root.caretIndex = 6;
-    root.chop();
+    root.runInputAction!(FluidInputAction.backspace);
     assert(root.value == "    abc");
-    root.chop();
+    root.runInputAction!(FluidInputAction.backspace);
     assert(root.value == "  abc");
-    root.chop();
+    root.runInputAction!(FluidInputAction.backspace);
     assert(root.value == "abc");
-    root.chop();
+    root.runInputAction!(FluidInputAction.backspace);
     assert(root.value == "abc");
 
     root.undo();
@@ -552,16 +552,16 @@ unittest {
     root.runInputAction!(FluidInputAction.breakLine);
     assert(root.value == "abcdef\n");
 
-    root.insertTab();
+    root.runInputAction!(FluidInputAction.insertTab);
     root.runInputAction!(FluidInputAction.breakLine);
     assert(root.value == "abcdef\n    \n    ");
 
-    root.insertTab();
+    root.runInputAction!(FluidInputAction.insertTab);
     root.runInputAction!(FluidInputAction.breakLine);
     assert(root.value == "abcdef\n    \n        \n        ");
 
-    root.outdent();
-    root.outdent();
+    root.runInputAction!(FluidInputAction.outdent);
+    root.runInputAction!(FluidInputAction.outdent);
     assert(root.value == "abcdef\n    \n        \n");
 
     root.runInputAction!(FluidInputAction.breakLine);
@@ -660,6 +660,7 @@ unittest {
 
     // mixed tabs (8 width total) -> 2 indents
     root.value = "  \t  \t";
+    root.caretToEnd();
     root.breakLine();
     assert(root.value == "  \t  \t\n        ");
 
@@ -714,6 +715,7 @@ unittest {
 
     // Move to line below
     root.runInputAction!(FluidInputAction.nextLine);
+    root.runInputAction!(FluidInputAction.nextChar);
     root.reformatLine();
     assert(root.value == "int main() {\n\treturn 0;\n}");
     assert(root.valueBeforeCaret == "int main() {\n\t");
@@ -982,10 +984,10 @@ unittest {
 
     root.draw();
     clipboard.value = "World";
-    input.push("  Hello,");
+    input.savePush("  Hello,");
     input.runInputAction!(FluidInputAction.breakLine);
-    input.paste();
-    input.push("!");
+    input.runInputAction!(FluidInputAction.paste);
+    input.savePush("!");
     assert(input.value == "  Hello,\n  World!");
 
     // Undo the exclamation mark
@@ -1038,10 +1040,10 @@ unittest {
     root.draw();
 
     clipboard.value = "World";
-    input.push("  Hello,");
-    input.push(" ");
-    input.paste();
-    input.push("!");
+    input.savePush("  Hello,");
+    input.savePush(" ");
+    input.runInputAction!(FluidInputAction.paste);
+    input.savePush("!");
     assert(input.value == "  Hello, World!");
 
     // Undo the exclamation mark
