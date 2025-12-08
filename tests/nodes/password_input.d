@@ -134,9 +134,9 @@ unittest {
 unittest {
 
     auto root = passwordInput();
-    root.push("Hello, x");
+    root.savePush("Hello, x");
     root.chop();
-    root.push("World!");
+    root.savePush("World!");
 
     assert(root.value == "Hello, World!");
 
@@ -174,13 +174,13 @@ unittest {
     root.draw();
     root.drawAndAssert(
         node.cropsTo(0, 0, 200, 27),
-        node.drawsCircle().at(-7.84, 13.2).ofRadius(5.2).ofColor("#000000"),
-        node.drawsCircle().at(4.64, 13.2).ofRadius(5.2).ofColor("#000000"),
-        node.drawsCircle().at(17.12, 13.2).ofRadius(5.2).ofColor("#000000"),
+        node.drawsCircle().at(-6.96, 13.2).ofRadius(5.2).ofColor("#000000"),
+        node.drawsCircle().at(5.52, 13.2).ofRadius(5.2).ofColor("#000000"),
+        node.drawsCircle().at(18, 13.2).ofRadius(5.2).ofColor("#000000"),
         // ... more circles...
-        node.drawsCircle().at(179.36, 13.2).ofRadius(5.2).ofColor("#000000"),
-        node.drawsCircle().at(191.84, 13.2).ofRadius(5.2).ofColor("#000000"),
-        node.drawsLine().from(199.12, 2.64).to(199.12, 23.76).ofWidth(1).ofColor("#000000"),
+        node.drawsCircle().at(180.24, 13.2).ofRadius(5.2).ofColor("#000000"),
+        node.drawsCircle().at(192.72, 13.2).ofRadius(5.2).ofColor("#000000"),
+        node.drawsLine().from(200, 0).to(200, 26.4).ofWidth(1).ofColor("#000000"),
     );
 
     node.push(textConstant);
@@ -192,7 +192,7 @@ unittest {
         // ... more circles...
         node.drawsCircle().at(180.24, 13.2).ofRadius(5.2).ofColor("#000000"),
         node.drawsCircle().at(192.72, 13.2).ofRadius(5.2).ofColor("#000000"),
-        node.drawsLine().from(200, 2.64).to(200, 23.76).ofWidth(1).ofColor("#000000"),
+        node.drawsLine().from(200, 0).to(200, 26.4).ofWidth(1).ofColor("#000000"),
     );
 
 }

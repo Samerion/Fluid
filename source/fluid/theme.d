@@ -19,18 +19,6 @@ import fluid.structs;
 @safe:
 
 
-deprecated("Styles have been reworked and defineStyles is now a no-op. To be removed in 0.8.0.") {
-    mixin template defineStyles(args...) { }
-    mixin template DefineStyles(args...) { }
-}
-
-deprecated("makeTheme is now a no-op. Use `Theme()` and refer to the changelog for updates. To be removed in 0.8.0.")
-Theme makeTheme(string s, Ts...)(Ts) {
-
-    return Theme.init;
-
-}
-
 /// Node theme.
 struct Theme {
 
@@ -155,6 +143,172 @@ unittest {
     root.draw();
     io.assertTexture(root.text.texture.chunks[0], Vector2(0, 0), color!"#fff");
     assert(root.text.texture.chunks[0].palette[0] == color("#abc"));
+
+}
+
+@system unittest {
+
+    import fluid.frame;
+
+    auto frameRule = rule!Frame(
+        Rule.margin.sideX = 8,
+        Rule.margin.sideY = 4,
+    );
+    auto theme = nullTheme.derive(frameRule);
+
+    // Test selector
+    assert(frameRule.selector.type == typeid(Frame));
+    assert(frameRule.selector.tags.empty);
+
+    // Test fields
+    auto style = Style.init;
+    frameRule.apply(vframe(), style);
+    assert(style.margin == [8, 8, 4, 4]);
+    assert(style.padding == style.init.padding);
+    assert(style.textColor == style.textColor.init);
+
+    // No dynamic rules
+    assert(rule.styleDelegate is null);
+
+    auto io = new HeadlessBackend;
+    auto root = vframe(theme);
+    root.io = io;
+
+    root.draw();
+
+    assert(root.style == style);
+
+}
+
+unittest {
+
+    // Inheritance
+
+    import fluid.label;
+    import fluid.button;
+
+    auto myTheme = nullTheme.derive(
+        rule!Node(
+            Rule.margin.sideX = 8,
+        ),
+        rule!Label(
+            Rule.margin.sideTop = 6,
+        ),
+        rule!Button(
+            Rule.margin.sideBottom = 4,
+        ),
+    );
+
+    auto style = Style.init;
+    myTheme.apply(button("", delegate { }), style);
+
+    assert(style.margin == [8, 8, 6, 4]);
+
+}
+
+@("Copying rules interacts correctly with dynamic rules")
+unittest {
+
+    import fluid.label;
+    import fluid.button;
+
+    auto myRule = rule!Label(
+        Rule.textColor = color!"011",
+        Rule.backgroundColor = color!"faf",
+        (Label node) => node.isDisabled
+            ? rule(Rule.tint = color!"000a")
+            : rule()
+    );
+
+    auto myTheme = nullTheme.derive(
+        rule!Label(
+            myRule,
+        ),
+        rule!Button(
+            myRule,
+            Rule.textColor = color!"012",
+        ),
+    );
+
+    auto style = Style.init;
+    auto myLabel = label("");
+
+    // Apply the style, including dynamic rules
+    auto cbs = myTheme.apply(myLabel, style);
+    assert(cbs.length == 1);
+    cbs[0](myLabel).apply(myLabel, style);
+
+    assert(style.textColor == color!"011");
+    assert(style.backgroundColor == color!"faf");
+    assert(style.tint == Style.init.tint);
+
+    // Disable the node and apply again, it should change nothing
+    myLabel.disable();
+    myTheme.apply(myLabel, style);
+    assert(style.tint == Style.init.tint);
+
+    // Apply the callback, tint should change
+    cbs[0](myLabel).apply(myLabel, style);
+    assert(style.tint == color!"000a");
+
+}
+
+unittest {
+
+    import fluid.label;
+
+    auto myLabel = label("");
+
+    void testMargin(Rule rule, float[4] margin) {
+
+        auto style = Style.init;
+
+        rule.apply(myLabel, style);
+
+        assert(style.margin == margin);
+
+    }
+
+    with (Rule) {
+
+        testMargin(rule(margin = 2), [2, 2, 2, 2]);
+        testMargin(rule(margin.sideX = 2), [2, 2, 0, 0]);
+        testMargin(rule(margin.sideY = 2), [0, 0, 2, 2]);
+        testMargin(rule(margin.sideTop = 2), [0, 0, 2, 0]);
+        testMargin(rule(margin.sideBottom = 2), [0, 0, 0, 2]);
+        testMargin(rule(margin.sideX = 2, margin.sideY = 4), [2, 2, 4, 4]);
+        testMargin(rule(margin = [1, 2, 3, 4]), [1, 2, 3, 4]);
+        testMargin(rule(margin.sideX = [1, 2]), [1, 2, 0, 0]);
+
+    }
+
+}
+
+unittest {
+
+    import std.math;
+    import fluid.label;
+
+    auto myRule = rule(
+        Rule.opacity = 0.5,
+    );
+    auto style = Style.init;
+
+    myRule.apply(label(""), style);
+
+    assert(style.opacity.isClose(127/255f));
+    assert(style.tint == color!"ffffff7f");
+
+    auto secondRule = rule(
+        Rule.tint = color!"abc",
+        Rule.opacity = 0.6,
+    );
+
+    style = Style.init;
+    secondRule.apply(label(""), style);
+
+    assert(style.opacity.isClose(153/255f));
+    assert(style.tint == color!"abc9");
 
 }
 
@@ -828,6 +982,52 @@ struct Field(string fieldName, T) {
         }
 
     }
+
+}
+
+unittest {
+
+    import fluid.text.freetype;
+
+    auto typeface = new FreetypeTypeface;
+    auto sample = Rule.typeface = typeface;
+
+    assert(sample.name == "typeface");
+
+    auto target = Style.defaultTypeface;
+    assert(target !is typeface);
+    sample.value.apply(target);
+
+    assert(target is typeface);
+    assert(typeface is typeface);
+
+}
+
+unittest {
+
+    auto sampleField = Rule.margin = 4;
+
+    assert(sampleField.name == "margin");
+    assert(sampleField.slice == [0, 0]);
+
+    float[4] field = [1, 1, 1, 1];
+    sampleField.value.apply(field);
+
+    assert(field == [4, 4, 4, 4]);
+
+}
+
+unittest {
+
+    auto sampleField = Rule.margin.sideX = 8;
+
+    assert(sampleField.name == "margin");
+    assert(sampleField.slice == [0, 2]);
+
+    float[4] field = [1, 1, 1, 1];
+    sampleField.value.apply(field);
+
+    assert(field == [8, 8, 1, 1]);
 
 }
 

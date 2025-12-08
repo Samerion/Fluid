@@ -42,6 +42,7 @@ class PasswordInput : TextInput {
 
         super(placeholder, submitted);
         this.contentLabel = new LocalContentLabel;
+        this.contentLabel.placeholderText = placeholder;
 
     }
 
@@ -55,7 +56,7 @@ class PasswordInput : TextInput {
 
             super.resizeImpl(available);
 
-            if (!isPlaceholder) {
+            if (!showPlaceholder) {
                 const x = getAdvanceX(io, canvasIO, style);
                 const radius = x / 2f;
                 const advance = x * 1.2;
@@ -172,11 +173,14 @@ class PasswordInput : TextInput {
 
     }
 
-    protected override Vector2 caretPositionImpl(float availableWidth, bool preferNextLine) {
+    protected override Rectangle caretRectangleImpl(float availableWidth, bool preferNextLine) {
 
-        return Vector2(
+        auto superRect = super.caretRectangleImpl(availableWidth, preferNextLine);
+        return Rectangle(
             advance * valueBeforeCaret.countCharacters,
-            super.caretPositionImpl(availableWidth, preferNextLine).y,
+            superRect.y,
+            0,
+            superRect.height,
         );
 
     }

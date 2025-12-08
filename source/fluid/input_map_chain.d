@@ -294,9 +294,7 @@ struct InputMapping {
 
         /// Get the ID of an input action.
         auto bind(alias a)(InputEventCode code) {
-
-            return Trigger(InputAction!a.id, code);
-
+            return Trigger(inputActionID!a, code);
         }
 
         with (FluidInputAction) {

@@ -205,10 +205,10 @@ unittest {
     root.io = io;
 
     io.clipboard = "World";
-    root.push("  Hello,");
-    root.push(" ");
-    root.paste();
-    root.push("!");
+    root.savePush("  Hello,");
+    root.savePush(" ");
+    root.runInputAction!(FluidInputAction.paste);
+    root.savePush("!");
     assert(root.value == "  Hello, World!");
 
     // Undo the exclamation mark
@@ -233,69 +233,6 @@ unittest {
 
 }
 
-@("CodeInput.paste uses the indentor to reformat code")
-@Abandoned
-unittest {
-
-    auto indentor = new class CodeIndentor {
-
-        Rope text;
-
-        void parse(Rope text) {
-
-            this.text = text;
-
-        }
-
-        int indentDifference(ptrdiff_t offset) {
-
-            int lastLine;
-            int current;
-            int nextLine;
-
-            foreach (ch; text[0 .. offset+1].byDchar) {
-
-                if (ch == '{')
-                    nextLine++;
-                else if (ch == '}')
-                    current--;
-                else if (ch == '\n') {
-                    lastLine = current;
-                    current = nextLine;
-                }
-
-            }
-
-            return current - lastLine;
-
-        }
-
-    };
-    auto io = new HeadlessBackend;
-    auto root = codeInput(.useTabs);
-
-    // In this test, the indentor does nothing but preserve last indent
-    io.clipboard = "text\ntext";
-    root.io = io;
-    root.indentor = indentor;
-    root.insertTab;
-    root.paste();
-    assert(root.value == "\ttext\n\ttext");
-
-    io.clipboard = "let foo() {\n\tbar\n}";
-    root.value = "";
-    root.paste();
-    assert(root.value == "let foo() {\n\tbar\n}");
-
-    root.caretIndex = root.value.indexOf("bar");
-    root.runInputAction!(FluidInputAction.selectNextWord);
-    assert(root.selectedValue == "bar");
-
-    root.paste();
-    assert(root.value == "let foo() {\n\tlet foo() {\n\t\tbar\n\t}\n}");
-
-}
-
 @("CodeInput.paste strips common indent, even if indent character differs from the editor's")
 @Migrated
 unittest {
@@ -315,97 +252,5 @@ unittest {
     root.caretIndex = root.value.indexOf("x");
     root.paste();
     assert(root.value == "let foo() {\n\tfoo\n\tbar\n\tx\n}");
-
-}
-
-@("CodeInput can trigger outdents from Indentor while typing")
-@Abandoned
-unittest {
-
-    import std.typecons : BlackHole;
-
-    class Indentor : BlackHole!CodeIndentor {
-
-        bool outdent;
-
-        override void parse(Rope rope) {
-
-            outdent = rope.canFind("end");
-
-        }
-
-        override int indentDifference(ptrdiff_t offset) {
-
-            if (outdent)
-                return -1;
-            else
-                return 1;
-
-        }
-
-    }
-
-    // Every new line indents. If "end" is found in the text, every new line *outdents*, effectively making the text
-    // flat.
-    auto io = new HeadlessBackend;
-    auto root = codeInput();
-    root.io = io;
-    root.indentor = new Indentor;
-    root.value = "begin";
-    root.focus();
-    root.draw();
-    assert(root.value == "begin");
-
-    // The difference defaults to 1 in this case, so the line should be indented
-    root.reformatLine();
-    assert(root.value == "    begin");
-
-    // But, if the "end" keyword is added, it should outdent automatically
-    io.nextFrame;
-    io.inputCharacter = " end";
-    root.caretToEnd();
-    root.draw();
-    io.nextFrame;
-    root.draw();
-    assert(root.value == "begin end");
-
-    // Backspace also triggers updates
-    io.nextFrame;
-    io.press(KeyboardKey.backspace);
-    root.draw();
-    io.nextFrame;
-    io.release(KeyboardKey.backspace);
-    root.draw();
-    assert(root.value == "    begin en");
-
-    // However, no change should be made if the keyword was in place before
-    io.nextFrame;
-    io.inputCharacter = " ";
-    root.value = "    begin end";
-    root.caretToEnd();
-    root.draw();
-    io.nextFrame;
-    root.draw();
-    assert(root.value == "    begin end ");
-
-    io.nextFrame;
-    root.value = "Hello\n    bar";
-    root.clearHistory();
-    root.caretIndex = 5;
-    root.runInputAction!(FluidInputAction.breakLine);
-    assert(root.value == "Hello\n    \n    bar");
-
-    root.runInputAction!(FluidInputAction.undo);
-    assert(root.value == "Hello\n    bar");
-
-    root.indent();
-    assert(root.value == "    Hello\n    bar");
-
-    root.caretIndex = 9;
-    root.runInputAction!(FluidInputAction.breakLine);
-    assert(root.value == "    Hello\n        \n    bar");
-
-    root.runInputAction!(FluidInputAction.undo);
-    assert(root.value == "    Hello\n    bar");
 
 }

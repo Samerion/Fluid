@@ -1,6 +1,7 @@
 module fluid.default_theme;
 
 import fluid.node;
+import fluid.utils;
 import fluid.frame;
 import fluid.style;
 import fluid.label;
@@ -10,14 +11,15 @@ import fluid.backend;
 import fluid.structs;
 import fluid.checkbox;
 import fluid.radiobox;
-import fluid.typeface;
 import fluid.drag_slot;
+import fluid.hyperlink;
 import fluid.separator;
 import fluid.file_input;
 import fluid.text_input;
 import fluid.popup_frame;
 import fluid.number_input;
 import fluid.scroll_input;
+import fluid.text.typeface;
 
 /// Theme with no properties set.
 ///
@@ -77,9 +79,12 @@ static this() {
 
         fluidDefaultTheme.add(
             rule!Node(
-                typeface = Typeface.defaultTypeface,
+                typeface = Style.defaultTypeface,
                 textColor = color("#000"),
                 selectionBackgroundColor = color("#55b9ff"),
+                when!"a.isDisabled"(
+                    opacity = 0.6,
+                ),
             ),
             rule!Frame(
                 backgroundColor = color("#fff"),
@@ -98,6 +103,17 @@ static this() {
                     backgroundColor = color("eee5"),
                     // TODO disabled should apply opacity, and should work for every node
                 ),
+            ),
+            rule!Hyperlink(
+                textColor = color("#066cb3"),
+                // TODO proper text underline, please.
+                borderStyle = colorBorder(color("#066cb3")),
+                border.sideBottom = 1,
+                padding.sideBottom = -6,
+                margin.sideBottom = 6,
+                mouseCursor = FluidMouseCursor.pointer,
+                when!"a.isHovered"(backgroundColor = color("#066cb344")),
+                when!"a.isFocused"(backgroundColor = color("#066cb344")),
             ),
             rule!FrameButton(
                 mouseCursor = FluidMouseCursor.pointer,

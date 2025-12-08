@@ -3,21 +3,9 @@ module nodes.text_input;
 import std.algorithm;
 
 import fluid;
+import text.text;
 
 @safe:
-
-Theme testTheme;
-
-static this() {
-    testTheme = nullTheme.derive(
-        rule!TextInput(
-            Rule.textColor = color("#000"),
-            Rule.backgroundColor = color("#faf"),
-            Rule.selectionBackgroundColor = color("#02a"),
-            Rule.fontSize = 14.pt,
-        ),
-    );
-}
 
 @("TextInput scrolls when there is too much text to fit in its width")
 unittest {
@@ -116,7 +104,7 @@ unittest {
     root.updateSize();
     root.draw();
 
-    assert(root.caretPosition.x < 1);
+    assert(root.caretRectangle.x < 1);
     assert(textSize.x < 1);
 
     root.value = "This value exceeds the default size of a text input.";
@@ -124,7 +112,7 @@ unittest {
     root.caretToEnd();
     root.draw();
 
-    assert(root.caretPosition.x > 200);
+    assert(root.caretRectangle.x > 200);
     assert(textSize.x > 200);
     assert(textSize.x > root.size.x);
 
@@ -152,7 +140,7 @@ unittest {
         root.draw();
 
         assert(input.value == "");
-        assert(input.contentLabel.text == "placeholder");
+        assert(input.contentLabel.showPlaceholder);
         assert(input.isEmpty);
     }
 
@@ -192,7 +180,7 @@ unittest {
 
     auto root = textInput(.multiline);
 
-    root.push("hello");
+    root.savePush("hello");
     root.runInputAction!(FluidInputAction.breakLine);
     assert(root.value == "hello\n");
 
@@ -231,14 +219,14 @@ unittest {
 
 }
 
-@("breakLine creates history entries")
+@("TextInput.breakLine creates its own history entry")
 unittest {
 
     auto root = textInput(.multiline);
-    root.push("first line");
-    root.breakLine();
-    root.push("second line");
-    root.breakLine();
+    root.savePush("first line");
+    root.runInputAction!(FluidInputAction.breakLine);
+    root.savePush("second line");
+    root.runInputAction!(FluidInputAction.breakLine);
     assert(root.value == "first line\nsecond line\n");
 
     root.undo();
@@ -898,15 +886,15 @@ unittest {
 unittest {
 
     auto root = textInput(.multiline);
-    root.push("Hello, ");
+    root.savePush("Hello, ");
     root.runInputAction!(FluidInputAction.breakLine);
-    root.push("new");
+    root.savePush("new");
     root.runInputAction!(FluidInputAction.breakLine);
-    root.push("line");
-    root.chop;
-    root.chopWord;
-    root.push("few");
-    root.push(" lines");
+    root.savePush("line");
+    root.runInputAction!(FluidInputAction.backspace);
+    root.runInputAction!(FluidInputAction.backspaceWord);
+    root.savePush("few");
+    root.savePush(" lines");
     assert(root.value == "Hello, \nnew\nfew lines");
 
     // Move back to last chop
@@ -921,6 +909,8 @@ unittest {
 
     // Move back through isnerts
     root.undo();
+    assert(root.value == "Hello, \nnew\nlin");
+    root.undo();
     assert(root.value == "Hello, \nnew\nline");
     root.undo();
     assert(root.value == "Hello, \nnew\n");
@@ -943,6 +933,8 @@ unittest {
     root.redo();
     assert(root.value == "Hello, \nnew\nline");
     root.redo();
+    assert(root.value == "Hello, \nnew\nlin");
+    root.redo();
     assert(root.value == "Hello, \nnew\n");
     root.redo();
     assert(root.value == "Hello, \nnew\nfew lines");
@@ -950,7 +942,7 @@ unittest {
     // Navigate and replace "Hello"
     root.caretIndex = 5;
     root.runInputAction!(FluidInputAction.selectPreviousWord);
-    root.push("Hi");
+    root.savePush("Hi");
     assert(root.value == "Hi, \nnew\nfew lines");
     assert(root.valueBeforeCaret == "Hi");
 
@@ -964,47 +956,48 @@ unittest {
 
 }
 
-@("Movement breaks up inserts into separate TextInput history entries")
+@("History entries do not merge if the caret has moved")
 unittest {
 
     auto root = textInput();
 
-    foreach (i; 0..4) {
+    foreach (i; "dcba") {
         root.caretToStart();
-        root.push("a");
+        root.savePush(i);
     }
 
-    assert(root.value == "aaaa");
+    assert(root.value == "abcd");
     assert(root.valueBeforeCaret == "a");
     root.undo();
-    assert(root.value == "aaa");
+    assert(root.value == "bcd");
     assert(root.valueBeforeCaret == "");
     root.undo();
-    assert(root.value == "aa");
+    assert(root.value == "cd");
     assert(root.valueBeforeCaret == "");
     root.undo();
-    assert(root.value == "a");
+    assert(root.value == "d");
     assert(root.valueBeforeCaret == "");
     root.undo();
     assert(root.value == "");
 
 }
 
-@("TextInput.selectToEnd selects until a linea break")
+@("TextInput.selectToEnd selects until a line break")
 unittest {
 
-    auto root = textInput(.nullTheme, .multiline);
-    auto lineHeight = root.style.getTypeface.lineHeight;
+    auto root = textInput(.testTheme, .multiline);
 
     root.value = "First one\nSecond two";
     root.draw();
+
+    auto lineHeight = root.style.getTypeface.lineHeight;
 
     // Navigate to the start and select the whole line
     root.caretToStart();
     root.runInputAction!(FluidInputAction.selectToLineEnd);
 
     assert(root.selectedValue == "First one");
-    assert(root.caretPosition.y < lineHeight);
+    assert(root.caretRectangle.center.y < lineHeight);
 
 }
 
@@ -1218,12 +1211,12 @@ unittest {
 
     // Just by the way, check if the caret position is correct
     root.updateCaretPosition(true);
-    assert(root.caretPosition.x.isClose(0));
-    assert(root.caretPosition.y.isClose(135));
+    assert(root.caretRectangle.x.isClose(0));
+    assert(root.caretRectangle.y.isClose(135));
 
     root.updateCaretPosition(false);
-    assert(root.caretPosition.x.isClose(153));
-    assert(root.caretPosition.y.isClose(108));
+    assert(root.caretRectangle.x.isClose(153));
+    assert(root.caretRectangle.y.isClose(108));
 
     // Try the same with the third line
     root.caretTo(Vector2(200, 148));
@@ -1290,28 +1283,28 @@ unittest {
 
     assert(root.valueBeforeCaret.wordBack == "enough ");
     assert(root.valueAfterCaret.wordFront == "to ");
-    assert(root.caretPosition.x.isClose(0));
+    assert(root.caretRectangle.x.isClose(0));
 
     // Move to the previous line
     root.runInputAction!(FluidInputAction.previousLine);
 
     assert(root.valueBeforeCaret.wordBack == ", ");
     assert(root.valueAfterCaret.wordFront == "make ");
-    assert(root.caretPosition.x.isClose(0));
+    assert(root.caretRectangle.x.isClose(0));
 
     // Move to its end — position should be the same as earlier, but the caret should be on the same line
     root.runInputAction!(FluidInputAction.toLineEnd);
 
     assert(root.valueBeforeCaret.wordBack == "enough ");
     assert(root.valueAfterCaret.wordFront == "to ");
-    assert(root.caretPosition.x.isClose(181));
+    assert(root.caretRectangle.x.isClose(181));
 
     // Move to the previous line — again
     root.runInputAction!(FluidInputAction.previousLine);
 
     assert(root.valueBeforeCaret.wordBack == ", ");
     assert(root.valueAfterCaret.wordFront == "make ");
-    assert(root.caretPosition.x.isClose(153));
+    assert(root.caretRectangle.x.isClose(153));
 
 }
 
@@ -1352,7 +1345,7 @@ unittest {
 
     const focusBox = input.focusBoxImpl(Rectangle(0, 0, viewportWidth, viewportHeight));
 
-    assert(focusBox.start == input.caretPosition);
+    assert(focusBox.start == input.caretRectangle.start);
     assert(focusBox.end.y - viewportHeight == root.scroll);
 
 }
@@ -1633,7 +1626,7 @@ unittest {
     input.caretIndex = "Line one\nLin".length;
     input.updateCaretPosition();
 
-    const middle = input.caretPosition;
+    const middle = input.caretRectangle.center;
     const top    = middle - Vector2(0, lineHeight);
     const blank  = middle + Vector2(0, lineHeight);
     const bottom = middle + Vector2(0, lineHeight * 2);
@@ -1685,7 +1678,7 @@ unittest {
     input.caretIndex = "Line one\nLin".length;
     input.updateCaretPosition();
 
-    const middle = input.caretPosition;
+    const middle = input.caretRectangle.center;
     const top    = middle - Vector2(0, lineHeight);
     const blank  = middle + Vector2(0, lineHeight);
     const bottom = middle + Vector2(0, lineHeight * 2);
@@ -1742,7 +1735,7 @@ unittest {
     input.caretIndex = "Line one\nLin".length;
     input.updateCaretPosition();
 
-    const middle = input.caretPosition;
+    const middle = input.caretRectangle.center;
     const top    = middle - Vector2(0, lineHeight);
     const blank  = middle + Vector2(0, lineHeight);
     const bottom = middle + Vector2(0, lineHeight * 2);
@@ -1802,8 +1795,8 @@ unittest {
         node.drawsRectangle(0, 54, 50, 27).ofColor("#0022aa"),
 
         node.contentLabel.isDrawn().at(0, 0, 200, 108),
-        node.contentLabel.drawsHintedImage().at(0, 0, 1024, 1024).ofColor("#ffffff")
-            .sha256("7033f92fce5cf825ab357b1514628504361399d20ce47e2966ed86cacc45cf3a"),
+        node.contentLabel.drawsHintedImage().at(0, 0, 512, 512).ofColor("#ffffff")
+            .sha256("3f32d765238421e8c470518efce7827d91f2b7bd3db45c4bf99d9d03e984493c"),
     );
 
     // 125% scale
@@ -1816,8 +1809,9 @@ unittest {
         node.drawsRectangle(0, 52.8, 48.8, 26.4).ofColor("#0022aa"),
 
         node.contentLabel.isDrawn().at(0, 0, 200, 106),
-        node.contentLabel.drawsHintedImage().at(0, 0, 819.2, 819.2).ofColor("#ffffff")
-            .sha256("2c72029c85ba28479d2089456261828dfb046c1be134b46408740b853e352b90"),
+        node.contentLabel.drawsHintedImage().at(0, 0, 409.6, 409.6).ofColor("#ffffff")
+            .sha256("b55ed3d53d21a46e8067cae1b5e3acf3cc53e9a06efb400ecf1a7d46f9f0ba37"),
+
     );
 
 }
@@ -1846,8 +1840,8 @@ unittest {
         assert(node.caretIndex == 4);
         root.drawAndAssert(
             i == 0
-                ? node.drawsLine().from(33.0, 2.70).to(33.0, 24.30).ofWidth(1).ofColor("#000000")
-                : node.drawsLine().from(33.6, 2.64).to(33.6, 23.76).ofWidth(1).ofColor("#000000"),
+                ? node.drawsLine().from(33.0, 0.0).to(33.0, 27.0).ofWidth(1).ofColor("#000000")
+                : node.drawsLine().from(33.6, 0.0).to(33.6, 26.4).ofWidth(1).ofColor("#000000"),
         );
 
         node.caretTo(Vector2(47, 66));
@@ -1855,8 +1849,8 @@ unittest {
         assert(node.caretIndex == 33);
         root.drawAndAssert(
             i == 0
-                ? node.drawsLine().from(50.0, 56.70).to(50.0, 78.30).ofWidth(1).ofColor("#000000")
-                : node.drawsLine().from(48.8, 55.44).to(48.8, 76.56).ofWidth(1).ofColor("#000000"),
+                ? node.drawsLine().from(50.0, 54.0).to(50.0, 81.0).ofWidth(1).ofColor("#000000")
+                : node.drawsLine().from(48.8, 52.8).to(48.8, 79.2).ofWidth(1).ofColor("#000000"),
         );
     }
 
@@ -1877,8 +1871,8 @@ unittest {
         node.isDrawn().at(0, 0, 200, 27),
         node.drawsRectangle(0, 0, 200, 27).ofColor("#ffaaff"),
         node.cropsTo(0, 0, 200, 27),
-        node.contentLabel.drawsHintedImage().at(0, 0, 819.2, 819.2).ofColor("#ffffff")
-            .sha256("f8e7558a9641e24bb5cb8bb49c27284d87436789114e2f875e2736b521fe170e"),
+        node.contentLabel.drawsHintedImage().at(0, 0, 409.6, 409.6).ofColor("#ffffff")
+            .sha256("a396f29d6bced4b7a469ff8c70bc8d1b822bdfea6057b09d56cff23ce7ac569c"),
         node.contentLabel.doesNotDraw(),
     );
 
@@ -1888,10 +1882,10 @@ unittest {
     root.drawAndAssert(
         node.cropsTo(0, 0, 200, 27),
         node.contentLabel.isDrawn().at(-784, 0, 984, 27),
-        node.contentLabel.drawsHintedImage().at(-784, 0, 819.2, 819.2).ofColor("#ffffff")
-            .sha256("01f6ca34c8a7cda32d38daac9938031a5b16020e8fed3aca0f4748582c787de8"),
-        node.contentLabel.drawsHintedImage().at(35.2, 0, 819.2, 819.2).ofColor("#ffffff")
-            .sha256("9fa7e5f27e1ad1d7c21efa837f94ab241b3f4b4401c61841720eb40c5ff859cc"),
+        node.contentLabel.drawsHintedImage().at(-374.4, 0, 409.6, 409.6).ofColor("#ffffff")
+            .sha256("d580c1ed197afb13391efb9677f1d9024c53f5ce8afe7687e31e295b4b9c8c0b"),
+        node.contentLabel.drawsHintedImage().at(35.2, 0, 409.6, 409.6).ofColor("#ffffff")
+            .sha256("4507b4c99278dafd920128714b07b2ce661b98fb045f9637874f4ffed6122578"),
     );
 
     foreach (_; 0..4) {
@@ -1900,10 +1894,10 @@ unittest {
     root.drawAndAssert(
         node.cropsTo(0, 0, 200, 27),
         node.contentLabel.isDrawn().at(-1440, 0, 1640, 27),
-        node.contentLabel.drawsHintedImage().at(-620.8, 0, 819.2, 819.2).ofColor("#ffffff")
-            .sha256("e4910bc3700d464f172425e266ea918ec88f6a6c0d42b6cbeed396e9f22fb5df"),
-        node.contentLabel.drawsHintedImage().at(198.4, 0, 819.2, 819.2).ofColor("#ffffff")
-            .sha256("bb017d2518a0b78fe37ba7aa231553806dbb9f6a8aaff8a84fedb8b4b704025d"),
+        node.contentLabel.drawsHintedImage().at(-211.2, 0, 409.6, 409.6).ofColor("#ffffff")
+            .sha256("838553f6282dd940f583c9d8ac986e549afe3c777bc34be0410b38e61915b443"),
+        node.contentLabel.drawsHintedImage().at(198.4, 0, 409.6, 409.6).ofColor("#ffffff")
+            .sha256("d39e1e73324563394292cf4ab483981aa32fe802d2c51e9119dc8fe7514da823"),
     );
 
 }
@@ -1924,12 +1918,12 @@ unittest {
         // First half of the blank interval: caret visible
         assert( input.isCaretVisible);
         root.drawAndAssert(
-            input.drawsLine().from(0, 2.7).to(0, 24.3),
+            input.drawsLine().from(0, 0).to(0, 27),
         );
         time += input.blinkInterval / 4;
         assert( input.isCaretVisible);
         root.drawAndAssert(
-            input.drawsLine().from(0, 2.7).to(0, 24.3),
+            input.drawsLine().from(0, 0).to(0, 27),
         );
         time += input.blinkInterval / 4;
 

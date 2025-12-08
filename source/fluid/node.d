@@ -558,8 +558,10 @@ abstract class Node {
 
     }
 
-    /// True if this node is pending a resize.
-    bool resizePending() const {
+    alias resizePending = isResizePending;
+
+    /// Returns: True if this node is to be resized before the next frame.
+    bool isResizePending() const {
         return _resizePending;
     }
 
@@ -1414,8 +1416,6 @@ abstract class Node {
 
     /// Reload style from the current theme.
     protected void reloadStyles() {
-
-        import fluid.typeface;
 
         // Reset style
         _style = Style.init;

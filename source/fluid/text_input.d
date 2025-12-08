@@ -20,8 +20,11 @@ import fluid.scroll;
 import fluid.actions;
 import fluid.backend;
 import fluid.structs;
-import fluid.typeface;
 import fluid.popup_frame;
+import fluid.text.typeface;
+
+alias wordFront = fluid.text.wordFront;
+alias wordBack  = fluid.text.wordBack;
 
 import fluid.io.time;
 import fluid.io.focus;
@@ -63,6 +66,8 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     mixin enableInputActions;
 
+    enum defaultBufferSize = 512;
+
     /// An interval in which the text input caret disappears and reappears. The caret will hide
     /// when half of this time passes, and will show again once the interval ends.
     enum blinkInterval = 2.seconds;
@@ -76,9 +81,6 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
         /// Size of the field.
         auto size = Vector2(200, 0);
-
-        /// A placeholder text for the field, displayed when the field is empty. Style using `emptyStyle`.
-        Rope placeholder;
 
         /// Time of the last interaction with the input.
         SysTime lastTouch;
@@ -119,9 +121,9 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
             size_t selectionStart;
             size_t selectionEnd;
 
-            /// If true, the entry results from an action that was executed immediately after the last action, without
-            /// changing caret position in the meantime.
-            bool isContinuous;
+            /// If true, the entry was created as a result of a small change, like inserting a character or removing
+            /// a word, and can be merged with another, similar change.
+            bool isMinor;
 
             /// Change made by this entry.
             ///
@@ -134,50 +136,34 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
             /// subtractive.
             ///
             /// See_Also: `setPreviousEntry`, `canMergeWith`
-            bool isAdditive;
-
-            /// ditto.
-            bool isSubtractive;
-
-            /// Set `isAdditive` and `isSubtractive` based on the given text representing the last input.
-            void setPreviousEntry(HistoryEntry entry) {
-
-                setPreviousEntry(entry.value);
-
+            bool isAdditive() const {
+                return !diff.second.empty;
             }
 
             /// ditto
-            void setPreviousEntry(Rope previousValue) {
-
-                this.diff = previousValue.diff(value);
-                this.isAdditive = diff.second.length != 0;
-                this.isSubtractive = diff.first.length != 0;
-
+            bool isSubtractive() const {
+                return !diff.first.empty;
             }
 
             /// Check if this entry can be merged with (newer) entry given its text content. This is used to combine
             /// runs of similar actions together, for example when typing a word, the whole word will form a single
             /// entry, instead of creating separate entries per character.
             ///
-            /// Two entries can be combined if they are:
+            /// Entries will only merge if they are minor, or the text didn't change. Two minor entries can be combined
+            /// if they are:
             ///
-            /// 1. Both additive, and the latter is not subtractive. This combines runs input, including if the first
-            ///    item in the run replaces some text. However, replacing text will break an existing chain of actions.
+            /// 1. Both additive, and the latter is not subtractive. This combines runs of inserts, including if
+            ///    the first item in the run replaces some text. However, replacing text will break an existing
+            ///    chain of actions.
             /// 2. Both subtractive, and neither is additive.
             ///
             /// See_Also: `isAdditive`
-            bool canMergeWith(Rope nextValue) const {
-
-                // Create a dummy entry based on the text
-                auto nextEntry = HistoryEntry(nextValue, 0, 0);
-                nextEntry.setPreviousEntry(value);
-
-                return canMergeWith(nextEntry);
-
-            }
-
-            /// ditto
             bool canMergeWith(HistoryEntry nextEntry) const {
+
+                // Always merge if nothing changed
+                if (value is nextEntry.value) return true;
+
+                if (!isMinor || !nextEntry.isMinor) return false;
 
                 const mergeAdditive = this.isAdditive
                     && nextEntry.isAdditive
@@ -202,15 +188,24 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         /// Last padding box assigned to this node, with scroll applied.
         Rectangle _inner = Rectangle(0, 0, 0, 0);
 
-        /// If true, the caret index has not changed since last `pushSnapshot`.
-        bool _isContinuous;
-
         /// Current action history, expressed as two stacks, indicating undoable and redoable actions, controllable via
-        /// `snapshot`, `pushSnapshot`, `undo` and `redo`.
+        /// `undo` and `redo`. History entries are added when calling `replace` or `replaceAmend`.
         DList!HistoryEntry _undoStack;
 
         /// ditto
         DList!HistoryEntry _redoStack;
+
+        /// Current history entry, if relevant.
+        HistoryEntry _snapshot;
+
+        deprecated("`_isContinuous` is deprecated in favor of `snapshot.isMinor` and will be removed in Fluid 0.9.0."
+            ~ " `replaceNoHistory` or `setCaretIndexNoHistory` are also likely replacements.") {
+
+            ref inout(bool) _isContinuous() inout {
+                return _snapshot.isMinor;
+            }
+
+        }
 
         /// The line height used by this input, in pixels.
         ///
@@ -237,14 +232,11 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         invariant(_bufferNode is null || _bufferNode.left.value.sameTail(_buffer[0 .. _usedBufferSize]),
             "_bufferNode must be in sync with _buffer");
 
-        /// Value of the text input.
-        Rope _value;
-
         /// Available horizontal space.
         float _availableWidth = float.nan;
 
-        /// Visual position of the caret.
-        Vector2 _caretPosition;
+        /// Visual position of the caret. See `caretRectangle`
+        Rectangle _caretRectangle;
 
         /// Index of the caret.
         ptrdiff_t _caretIndex;
@@ -265,10 +257,10 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
         import fluid.button;
 
-        this.placeholder = placeholder;
         this.submitted = submitted;
         this.lastTouch = Clock.currTime;
         this.contentLabel = new typeof(contentLabel);
+        this.placeholder = placeholder;
 
         // Make single line the default
         contentLabel.isWrapDisabled = true;
@@ -308,21 +300,53 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     static class ContentLabel : Label {
 
-        bool isPlaceholder;
+        bool showPlaceholder;
+        Text placeholderText;
 
         this() {
             super("");
+            placeholderText = Text(this, "");
+        }
+
+        protected inout(Rope) value() inout {
+            return text;
+        }
+
+        protected void replace(size_t start, size_t end, Rope value) {
+            text.replace(start, end, value);
         }
 
         override bool hoveredImpl(Rectangle, Vector2) const {
             return false;
         }
 
+        override void resizeImpl(Vector2 space) {
+
+            super.resizeImpl(space);
+            if (canvasIO) {
+                placeholderText.resize(canvasIO, space, !isWrapDisabled);
+            }
+            else {
+                placeholderText.resize(space, !isWrapDisabled);
+            }
+
+            if (placeholderText.size.x > minSize.x)
+                minSize.x = placeholderText.size.x;
+
+            if (placeholderText.size.y > minSize.y)
+                minSize.y = placeholderText.size.y;
+
+        }
+
         override void drawImpl(Rectangle outer, Rectangle inner) {
 
             // Don't draw background
             const style = pickStyle();
-            text.draw(canvasIO, style, inner.start);
+
+            if (showPlaceholder)
+                placeholderText.draw(canvasIO, style, inner.start);
+            else
+                text.draw(canvasIO, style, inner.start);
 
         }
 
@@ -387,36 +411,214 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     }
 
-    /// Value written in the input.
+    /// Value written in the input. This will be displayed by the component, and will be editable by the user.
+    ///
+    /// To efficiently change a substring of the value, use `replace`. Reassigning via `value` is comparatively slow,
+    /// as the entire text will have to be measured again.
+    ///
+    /// Note:
+    ///     At the moment, setting `value` will not affect the undo/redo history, but this is due to change in
+    ///     a future update. Use `replaceNoHistory` to keep old behavior.
+    /// Params:
+    ///     newValue = If given, set a new value.
+    /// Returns: The value used by this input.
     inout(Rope) value() inout {
 
-        return _value;
+        return contentLabel.value;
 
     }
 
     /// ditto
     Rope value(Rope newValue) {
 
-        auto withoutLineFeeds = Typeface.lineSplitter(newValue).joiner;
-
-        // Single line mode — filter vertical space out
-        if (!multiline && !newValue.equal(withoutLineFeeds)) {
-
-            newValue = Typeface.lineSplitter(newValue).join(' ');
-
-        }
-
-        _value = newValue;
-        _bufferNode = null;
-        updateSize();
+        replace(0, value.length, newValue);
         return value;
 
     }
 
     /// ditto
-    Rope value(const(char)[] value) {
+    Rope value(const(char)[] newValue) {
 
-        return this.value(Rope(value));
+        return this.value(Rope(newValue));
+
+    }
+
+    /// Placeholder text that is displayed when the text input is empty.
+    /// Returns: Placeholder text.
+    /// Params:
+    ///     value = If given, replace the current placeholder with new one.
+    Rope placeholder() const {
+        return contentLabel.placeholderText;
+    }
+
+    /// ditto
+    Rope placeholder(Rope value) {
+        return contentLabel.placeholderText = value;
+    }
+
+    /// ditto
+    Rope placeholder(string value) {
+        return contentLabel.placeholderText = Rope(value);
+    }
+
+    /// Replace value at a given range with a new value. This is the main, and fastest way to operate on TextInput text.
+    ///
+    /// There are two ways to use this function: `replace(start, end, "value")` and `replace[start..end] = value`.
+    /// In a future update, it will be possible to use `value[start..end] = value` directly.
+    ///
+    /// This function will automatically update caretIndex: if inside the replaced area, it will be moved to the
+    /// end, otherwise it will be adjusted to stay in the same spot in the text.
+    ///
+    /// All changes to the value will be noted in the edit history so they can be undone with `undo`. Many small,
+    /// consecutive changes will be merged together they're marked as `minor`.
+    ///
+    /// Params:
+    ///     start    = Low index, inclusive; First index to delete.
+    ///     end      = High index, exclusive; First index after the newly inserted fragment.
+    ///     newValue = Value to insert.
+    ///     minor    = True if this is a minor change, like inserting a character or deleting a word. Similar minor
+    ///         changes will be merged together in the edit history.
+
+    /// Replace the value without making any changes to edit history.
+    ///
+    /// The API of this function is not yet stable.
+    ///
+    /// Returns: True if the value was changed, false otherwise.
+    protected bool replace(size_t start, size_t end, Rope newValue, bool isMinor = false) {
+
+        // Single line mode — filter vertical space out
+        if (!multiline) {
+
+            auto lines = newValue.byLine;
+
+            if (lines.front.length < newValue.length) {
+                newValue = lines.join(' ');
+            }
+
+        }
+
+        // Nothing changed, ignore this request
+        if (start == end && newValue.length == 0) return false;
+
+        const oldValue = contentLabel.value[start..end];
+        const oldCaretIndex = caretIndex;
+
+        // Perform the replace
+        contentLabel.replace(start, end, newValue);
+
+        // Update caret index
+        if (oldCaretIndex > start) {
+
+            if (oldCaretIndex <= end)
+                caretIndex = start + newValue.length;
+            else
+                caretIndex = oldCaretIndex + start + newValue.length - end;
+
+            updateCaretPositionAndAnchor();
+
+        }
+
+        // Update current history entry — this doesn't affect undo/redo history, but is needed to keep integrity
+        const diff = Rope.DiffRegion(start, oldValue, newValue);
+        _snapshot = HistoryEntry(value, selectionStart, selectionEnd, isMinor, diff);
+
+        // Trigger a resize
+        _bufferNode = null;
+        updateSize();
+
+        return true;
+
+    }
+
+    /// ditto
+    protected bool replace(size_t start, size_t end, string newValue, bool isMinor = false) {
+
+        return replace(start, end, Rope(newValue), isMinor);
+
+    }
+
+    /// ditto
+    auto replace(bool minor = false) {
+
+        static struct Replace {
+
+            private TextInput input;
+            private bool isMinor;
+
+            Rope opIndexAssign(Rope value, size_t[2] slice) {
+                input.replace(slice[0], slice[1], value, isMinor);
+                return value;
+            }
+
+            string opIndexAssign(string value, size_t[2] slice) {
+                input.replace(slice[0], slice[1], Rope(value), isMinor);
+                return value;
+            }
+
+            size_t[2] opSlice(size_t dim)(size_t i, size_t j) const {
+                return [i, j];
+            }
+
+            size_t opDollar() const {
+                return input.value.length;
+            }
+
+        }
+
+        return Replace(this, minor);
+
+    }
+
+    @("TextInput.replace correctly sets cursor position (caret inside selection)")
+    unittest {
+
+        auto root = textInput();
+        root.value = "foo bar baz";
+        root.caretIndex = "foo ba".length;
+        root.replace("foo ".length, "foo bar".length, "bazinga");
+
+        assert(root.value == "foo bazinga baz");
+        assert(root.valueBeforeCaret == "foo bazinga");
+
+    }
+
+    @("TextInput.replace correctly sets cursor position (caret after selection)")
+    unittest {
+
+        auto root = textInput();
+        root.value = "foo bar baz";
+        root.caretIndex = "foo bar ".length;
+        root.replace("foo ".length, "foo bar".length, "bazinga");
+
+        assert(root.value == "foo bazinga baz");
+        assert(root.valueBeforeCaret == "foo bazinga ");
+
+    }
+
+    @("TextInput.replace correctly sets cursor position (caret before selection)")
+    unittest {
+
+        auto root = textInput();
+        root.value = "foo bar baz";
+        root.caretIndex = "foo ".length;
+        root.replace("foo ".length, "foo bar".length, "bazinga");
+
+        assert(root.value == "foo bazinga baz");
+        assert(root.valueBeforeCaret == "foo ");
+
+    }
+
+    /// Insert text at the given position.
+    void insert(size_t position, Rope value, bool minor = false) {
+
+        replace(position, position, value, minor);
+
+    }
+
+    /// ditto
+    void insert(size_t position, string value, bool minor = false) {
+
+        replace(position, position, value, minor);
 
     }
 
@@ -446,18 +648,25 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     /// Current horizontal visual offset of the label.
     float scroll() const {
-
         return _scroll;
-
     }
 
     /// Set scroll value.
     float scroll(float value) {
+        return _scroll = value.clamp(minScroll, maxScroll);
+    }
 
-        const limit = max(0, contentLabel.minSize.x - _inner.w);
+    /// Returns:
+    ///     Minimum available scroll value. By default, this is always zero.
+    float minScroll() const {
+        return 0;
+    }
 
-        return _scroll = value.clamp(0, limit);
-
+    /// Returns:
+    ///     Maximum available scroll value. By default, this is the width of the text, minus
+    ///     the width of the input.
+    float maxScroll() const {
+        return max(minScroll, contentLabel.minSize.x - _availableWidth);
     }
 
     ///
@@ -505,12 +714,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
     Rope valueBeforeCaret(Rope newValue) {
 
         // Replace the data
-        if (valueAfterCaret.empty)
-            value = newValue;
-        else
-            value = newValue ~ valueAfterCaret;
-
-        caretIndex = newValue.length;
+        replace[0 .. caretIndex] = newValue;
         updateSize();
 
         return value[0 .. caretIndex];
@@ -534,14 +738,16 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
     /// ditto
     Rope selectedValue(Rope newValue) {
 
-        const isLow = caretIndex == selectionStart;
         const low = selectionLowIndex;
         const high = selectionHighIndex;
+        const isMinor = false;
 
-        value = value.replace(low, high, newValue);
-        caretIndex = low + newValue.length;
-        updateSize();
+        replace(low, high, newValue, isMinor);
         clearSelection();
+
+        // Put the caret at the end
+        caretIndex = low + newValue.length;
+        updateCaretPositionAndAnchor();
 
         return value[low .. low + newValue.length];
 
@@ -565,11 +771,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
     Rope valueAfterCaret(Rope newValue) {
 
         // Replace the data
-        if (valueBeforeCaret.empty)
-            value = newValue;
-        else
-            value = valueBeforeCaret ~ newValue;
-
+        replace[caretIndex .. $] = newValue;
         updateSize();
 
         return value[caretIndex .. $];
@@ -583,15 +785,81 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     }
 
-    /// Visual position of the caret, relative to the top-left corner of the input.
-    Vector2 caretPosition() const {
+    unittest {
 
-        // Calculated in caretPositionImpl
-        return _caretPosition;
+        auto root = textInput();
+
+        root.value = "hello wörld!";
+        assert(root.value == "hello wörld!");
+
+        root.value = "hello wörld!\n";
+        assert(root.value == "hello wörld! ");
+
+        root.value = "hello wörld!\r\n";
+        assert(root.value == "hello wörld! ");
+
+        root.value = "hello wörld!\v";
+        assert(root.value == "hello wörld! ");
 
     }
 
-    /// Index of the character, byte-wise.
+    unittest {
+
+        auto root = textInput(.multiline);
+
+        root.value = "hello wörld!";
+        assert(root.value == "hello wörld!");
+
+        root.value = "hello wörld!\n";
+        assert(root.value == "hello wörld!\n");
+
+        root.value = "hello wörld!\r\n";
+        assert(root.value == "hello wörld!\r\n");
+
+        root.value = "hello wörld!\v";
+        assert(root.value == "hello wörld!\v");
+
+    }
+
+    /// Returns:
+    ///     Visual position of the caret's center, relative to the top-left corner of the input.
+    /// See_Also:
+    ///     `caretRectangle`
+    deprecated("caretPosition has been replaced by caretRectangle and will be removed in Fluid 0.9.0")
+    Vector2 caretPosition() const {
+
+        // Calculated in caretPositionImpl
+        return _caretRectangle.center;
+
+    }
+
+    /// The caret is a line used to control keyboard input. Inserted text will be placed right before the caret.
+    ///
+    /// The caret is formed from a rectangle by connecting its top-right and bottom-left corners. This rectangle will
+    /// be of zero width for regular text. For sloped text, it will be wider to reflect the slope, however this is not
+    /// implemented at the moment.
+    ///
+    /// Returns:
+    ///     A rectangle representing both ends of the caret. The caret line connects the rectangle's top-right corner
+    ///     with its bottom-left corner.
+    Rectangle caretRectangle() const {
+
+        return _caretRectangle;
+
+    }
+
+    /// The position of the caret in the text as an index. Since the caret is placed between characters,
+    /// when the caret is at the end of the text, the index is equal to the text's length.
+    ///
+    /// Changing the `caretIndex` will mark the last change made to the text as a major change, if it was set to minor.
+    /// This means that moving the caret between two changes to the text will separate them in the undo/redo history.
+    /// If this is not desired, use `setCaretIndexNoHistory`.
+    ///
+    /// Returns: Index of the character, byte-wise.
+    /// Params:
+    ///     index = If set, move the caret to a different index.
+    ///         As the text is in UTF-8, this index must be on a character boundary; it cannot be in the middle
+    ///         of a multibyte sequence.
     ptrdiff_t caretIndex() const {
 
         return _caretIndex.clamp(0, value.length);
@@ -601,14 +869,28 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
     /// ditto
     ptrdiff_t caretIndex(ptrdiff_t index) {
 
+        _snapshot.isMinor = false;
+        setCaretIndexNoHistory(index);
+        return index;
+
+    }
+
+    /// Update the caret index without affecting the history.
+    ///
+    /// Multiple minor edits will be merged together in edit history unless the caret index changes in the meantime.
+    /// This function will move the caret without preventing the edits from merging.
+    ///
+    /// Params:
+    ///     index = Index to move the caret to.
+    protected void setCaretIndexNoHistory(ptrdiff_t index) {
+
         if (!isSelecting) {
             _selectionStart = index;
         }
 
         touch();
         _bufferNode = null;
-        _isContinuous = false;
-        return _caretIndex = index;
+        _caretIndex = index;
 
     }
 
@@ -704,10 +986,6 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         // Set the size
         minSize = size;
 
-        // Set the label text
-        contentLabel.isPlaceholder = value == "";
-        contentLabel.text = value == "" ? placeholder : value;
-
         const isFill = layout.nodeAlign[0] == NodeAlign.fill;
 
         _availableWidth = isFill
@@ -719,6 +997,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
             : Vector2(0, size.y);
 
         // Resize the label, and remove the spacing
+        contentLabel.showPlaceholder = value == "";
         contentLabel.style = pickLabelStyle(style);
         resizeChild(contentLabel, textArea);
 
@@ -734,11 +1013,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         minSize.y = max(minSize.y, lineHeight * minLines, contentLabel.minSize.y);
 
         // Locate the cursor
-        updateCaretPosition();
-
-        // Horizontal anchor is not set, update it
-        if (horizontalAnchor.isNaN)
-            horizontalAnchor = caretPosition.x;
+        updateCaretPositionAndAnchor();
 
     }
 
@@ -773,18 +1048,18 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
         // No available width, waiting for resize
         if (_availableWidth.isNaN) {
-            _caretPosition.x = float.nan;
+            _caretRectangle.x = float.nan;
             return;
         }
 
-        _caretPosition = caretPositionImpl(_availableWidth, preferNextLine);
+        _caretRectangle = caretRectangleImpl(_availableWidth, preferNextLine);
 
-        const scrolledCaret = caretPosition.x - scroll;
+        const scrolledCaret = _caretRectangle.x - scroll;
 
         // Scroll to make sure the caret is always in view
         const scrollOffset
-            = scrolledCaret > _inner.width ? scrolledCaret - _inner.width
-            : scrolledCaret < 0            ? scrolledCaret
+            = scrolledCaret > _availableWidth ? scrolledCaret - _availableWidth
+            : scrolledCaret < 0               ? scrolledCaret
             : 0;
 
         // Set the scroll
@@ -794,94 +1069,21 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     }
 
+    alias indexAt = nearestCharacter;
+
+    /// ditto
+    void updateCaretPositionAndAnchor(bool preferNextLine = false) {
+
+        updateCaretPosition(preferNextLine);
+        horizontalAnchor = caretRectangle.x;
+
+    }
+
     /// Find the closest index to the given position.
-    /// Returns: Index of the character. The index may be equal to character length.
-    size_t nearestCharacter(Vector2 needlePx) {
+    /// Returns: Index of the character. The index may be equal to text length.
+    size_t nearestCharacter(Vector2 needle) {
 
-        import std.math : abs;
-
-        auto ruler = textRuler();
-        auto typeface = ruler.typeface;
-
-        const needle = canvasIO
-            ? canvasIO.toDots(needlePx)
-            : Vector2(
-                io.hidpiScale.x * needlePx.x,
-                io.hidpiScale.y * needlePx.y,
-            );
-
-        struct Position {
-            size_t index;
-            Vector2 position;
-        }
-
-        /// Returns the position (inside the word) of the character that is the closest to the needle.
-        Position closest(Vector2 startPosition, Vector2 endPosition, const Rope word) {
-
-            // Needle is before or after the word
-            if (needle.x <= startPosition.x) return Position(0, startPosition);
-            if (needle.x >= endPosition.x) return Position(word.length, endPosition);
-
-            size_t index;
-            auto match = Position(0, startPosition);
-
-            // Search inside the word
-            while (index < word.length) {
-
-                decode(word[], index);  // index by reference
-
-                auto size = typeface.measure(word[0..index]);
-                auto end = startPosition.x + size.x;
-                auto half = (match.position.x + end)/2;
-
-                // Hit left side of this character, or right side of the previous, return the previous character
-                if (needle.x < half) break;
-
-                match.index = index;
-                match.position.x = startPosition.x + size.x;
-
-            }
-
-            return match;
-
-        }
-
-        auto result = Position(0, Vector2(float.infinity, float.infinity));
-
-        // Search for a matching character on adjacent lines
-        search: foreach (index, line; typeface.lineSplitterIndex(value[])) {
-
-            ruler.startLine();
-
-            // Each word is a single, unbreakable unit
-            foreach (word, penPosition; typeface.eachWord(ruler, line, multiline)) {
-
-                scope (exit) index += word.length;
-
-                // Find the middle of the word to use as a reference for vertical search
-                const middleY = ruler.caret.center.y;
-
-                // Skip this word if the closest match is closer vertically
-                if (abs(result.position.y - needle.y) < abs(middleY - needle.y)) continue;
-
-                // Find the words' closest horizontal position
-                const newLine = ruler.wordLineIndex == 1;
-                const startPosition = Vector2(penPosition.x, middleY);
-                const endPosition = Vector2(ruler.penPosition.x, middleY);
-                const reference = closest(startPosition, endPosition, word);
-
-                // Skip if the closest match is still closer than the chosen reference
-                if (!newLine && abs(result.position.x - needle.x) < abs(reference.position.x - needle.x)) continue;
-
-                // Save the result if it's better
-                result = reference;
-                result.index += index;
-
-            }
-
-        }
-
-        return result.index;
+        return contentLabel.text.indexAt(canvasIO, needle);
 
     }
 
@@ -917,68 +1119,55 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     /// Request a new or a larger buffer.
     /// Params:
-    ///     minimumSize = Minimum size to allocate for the buffer.
-    protected void newBuffer(size_t minimumSize = 64) {
+    ///     minimumSize = Minimum size to allocate for the buffer. More may be allocated to allow for future input.
+    protected void newBuffer(size_t minimumSize = defaultBufferSize) {
 
-        const newSize = max(minimumSize, 64);
+        const newSize = max(minimumSize, defaultBufferSize);
 
         _buffer = new char[newSize];
         usedBufferSize = 0;
 
     }
 
-    protected Vector2 caretPositionImpl(float textWidth, bool preferNextLine) {
+    protected Rectangle caretRectangleImpl(float, bool preferNextLine) {
 
-        Rope unbreakableChars(Rope value) {
-
-            // Split on lines
-            auto lines = Typeface.lineSplitter(value);
-            if (lines.empty) return value.init;
-
-            // Split on words
-            auto chunks = Typeface.defaultWordChunks(lines.front);
-            if (chunks.empty) return value.init;
-
-            // Return empty string if the result starts with whitespace
-            if (chunks.front.byDchar.front.isWhite) return value.init;
-
-            // Return first word only
-            return chunks.front;
-
-        }
-
-        // Check if the caret follows unbreakable characters
-        const head = unbreakableChars(
-            valueBeforeCaret.wordBack(true)
-        );
-
-        // If the caret is surrounded by unbreakable characters, include them in the output to make sure the
-        // word is wrapped correctly
-        const tail = preferNextLine || !head.empty
-            ? unbreakableChars(valueAfterCaret)
-            : Rope.init;
-
-        auto typeface = style.getTypeface;
-        auto ruler = textRuler();
-        auto slice = value[0 .. caretIndex + tail.length];
-
-        // Measure text until the caret; include the word that follows to keep proper wrapping
-        typeface.measure(ruler, slice, multiline);
-
-        auto caretPosition = ruler.caret.start;
-
-        // Measure the word itself, and remove it
-        caretPosition.x -= typeface.measure(tail[]).x;
+        const ruler = rulerAt(caretIndex, preferNextLine);
 
         if (canvasIO) {
-            return canvasIO.fromDots(caretPosition);
+            return Rectangle(
+                canvasIO.fromDots(ruler.caret.start).tupleof,
+                canvasIO.fromDots(ruler.caret.size).tupleof);
         }
         else {
-            return Vector2(
-                caretPosition.x / io.hidpiScale.x,
-                caretPosition.y / io.hidpiScale.y,
-            );
+            return Rectangle(
+                ruler.caret.x      / io.hidpiScale.x,
+                ruler.caret.y      / io.hidpiScale.y,
+                ruler.caret.width  / io.hidpiScale.x,
+                ruler.caret.height / io.hidpiScale.y);
         }
+
+    }
+
+    /// Returns: A text ruler measuring text between the start and a chosen character.
+    /// See_Also: `Text.rulerAt`
+    /// Params:
+    ///     index = Index of the requested character.
+    TextRuler rulerAt(size_t index, bool preferNextLine = false) {
+
+        return contentLabel.text.rulerAt(index, preferNextLine);
+
+    }
+
+    CachedTextRuler rulerAtPosition(Vector2 position) {
+        return contentLabel.text.rulerAtPosition(canvasIO, position);
+    }
+
+    /// Returns: `TextInterval` measuing all characters between the start of text, and the given index.
+    /// Params:
+    ///     index = Index of character to find the interval for.
+    TextInterval intervalAt(size_t index) {
+
+        return contentLabel.text.intervalAt(index);
 
     }
 
@@ -999,9 +1188,6 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         // Save the inner box
         _inner = scrolledInner;
 
-        // Update scroll to match the new box
-        scroll = scroll;
-
         // Increase the size of the inner box so that tree doesn't turn on scissors mode on its own
         scrolledInner.w += scroll;
 
@@ -1016,6 +1202,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
         }
 
+
         // Old I/O
         else {
 
@@ -1029,7 +1216,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     }
 
-    protected void drawContents(Rectangle inner, Rectangle scrolledInner) {
+    protected void drawContents(Rectangle, Rectangle scrolledInner) {
 
         // Draw selection
         drawSelection(scrolledInner);
@@ -1047,25 +1234,18 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         // Add a blinking caret
         if (isCaretVisible) {
 
-            const lineHeight = this.lineHeight;
-            const margin = lineHeight / 10f;
-            const relativeCaretPosition = this.caretPosition();
-            const caretPosition = start(inner) + relativeCaretPosition;
+            const caretRect = this.caretRectangle();
+            const bottomLeft = start(inner)
+                + Vector2(caretRect.x, caretRect.y + caretRect.height);
+            const topRight = start(inner)
+                + Vector2(caretRect.x + caretRect.width, caretRect.y);
 
             // Draw the caret
             if (canvasIO) {
-                canvasIO.drawLine(
-                    caretPosition + Vector2(0, margin),
-                    caretPosition - Vector2(0, margin - lineHeight),
-                    1,
-                    style.textColor);
+                canvasIO.drawLine(topRight, bottomLeft, 1, style.textColor);
             }
             else {
-                io.drawLine(
-                    caretPosition + Vector2(0, margin),
-                    caretPosition - Vector2(0, margin - lineHeight),
-                    style.textColor,
-                );
+                io.drawLine(topRight, bottomLeft, style.textColor);
             }
 
         }
@@ -1074,11 +1254,12 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     override Rectangle focusBoxImpl(Rectangle inner) const {
 
-        const position = inner.start + caretPosition;
+        const position = inner.start + caretRectangle.start;
+        const size     = caretRectangle.size;
 
         return Rectangle(
             position.tupleof,
-            1, lineHeight
+            size.x + 1, size.y,
         );
 
     }
@@ -1092,11 +1273,17 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     /// Draw selection, if applicable.
     protected void drawSelection(Rectangle inner) {
+        import optional : some;
 
         // Ignore if selection is empty
         if (selectionStart == selectionEnd) return;
 
-        const low = selectionLowIndex;
+        const cropArea = canvasIO
+            ? canvasIO.cropArea
+            : some(
+                Rectangle(0, 0, io.windowSize.tupleof));
+
+        auto low = selectionLowIndex;
         const high = selectionHighIndex;
 
         Vector2 scale(Vector2 input) {
@@ -1113,52 +1300,61 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
         auto style = pickStyle();
         auto typeface = style.getTypeface;
-        auto ruler = textRuler();
+        auto ruler = rulerAt(low);
 
-        Vector2 lineStart;
+        // Some text is overflowing
+        if (inner.y < 0) {
+
+            auto topRuler = rulerAtPosition(Vector2(0, -inner.y));
+
+            if (topRuler.point.length > low) {
+                ruler = topRuler;
+                low = topRuler.point.length;
+            }
+
+        }
+
+        Vector2 lineStart = Vector2(float.nan, float.nan);
         Vector2 lineEnd;
 
         // Run through the text
-        foreach (index, line; typeface.lineSplitterIndex(value)) {
+        foreach (line; value[low..$].byLine) {
 
-            ruler.startLine();
+            auto index = low + line.index;
+
+            scope (exit) ruler.startLine();
 
             // Each word is a single, unbreakable unit
             foreach (word, penPosition; typeface.eachWord(ruler, line, multiline)) {
 
                 const caret = ruler.caret(penPosition);
                 const startIndex = index;
-                const endIndex = index = index + word.length;
+                const endIndex = index = startIndex + word.length;
 
-                const newLine = ruler.wordLineIndex == 1;
+                scope (exit) lineEnd = scale(ruler.caret.end);
 
-                scope (exit) lineEnd = ruler.caret.end;
+                // Started a new line, draw the last line
+                if (scale(caret.start).y != lineStart.y) {
 
-                // New line started, flush the line
-                if (newLine && startIndex > low) {
+                    // Don't draw if selection starts here
+                    if (startIndex != low) {
+                        const rect = Rectangle(
+                            (inner.start + lineStart).tupleof,
+                            (lineEnd - lineStart).tupleof
+                        );
 
-                    const rect = Rectangle(
-                        (inner.start + scale(lineStart)).tupleof,
-                        scale(lineEnd - lineStart).tupleof
-                    );
-
-                    lineStart = caret.start;
-
-                    if (canvasIO) {
-                        canvasIO.drawRectangle(rect, style.selectionBackgroundColor);
+                        if (canvasIO) {
+                            canvasIO.drawRectangle(rect, style.selectionBackgroundColor);
+                        }
+                        else {
+                            io.drawRectangle(rect, style.selectionBackgroundColor);
+                        }
                     }
-                    else {
-                        io.drawRectangle(rect, style.selectionBackgroundColor);
-                    }
 
-                }
-
-                // Selection starts here
-                if (startIndex <= low && low <= endIndex) {
-
-                    const dent = typeface.measure(word[0 .. low - startIndex]);
-
-                    lineStart = caret.start + Vector2(dent.x, 0);
+                    // Restart the line
+                    auto startRuler = ruler;
+                    startRuler.penPosition = penPosition;
+                    lineStart = scale(startRuler.caret.start);
 
                 }
 
@@ -1166,10 +1362,10 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
                 if (startIndex <= high && high <= endIndex) {
 
                     const dent = typeface.measure(word[0 .. high - startIndex]);
-                    const lineEnd = caret.end + Vector2(dent.x, 0);
+                    const lineEnd = scale(caret.end + Vector2(dent.x, 0));
                     const rect = Rectangle(
-                        (inner.start + scale(lineStart)).tupleof,
-                        scale(lineEnd - lineStart).tupleof
+                        (inner.start + lineStart).tupleof,
+                        (lineEnd - lineStart).tupleof
                     );
 
                     if (canvasIO) {
@@ -1181,6 +1377,11 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
                     return;
 
                 }
+
+                // Stop drawing when selection is offscreen
+                const isOffscreen = !cropArea.empty
+                    && inner.start.y + ruler.caret.y > cropArea.front.end.y;
+                if (isOffscreen) return;
 
             }
 
@@ -1248,8 +1449,10 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
             // Read text
             if (const key = io.inputCharacter) {
 
+                const isMinor = true;
+
                 // Append to char arrays
-                push(key);
+                savePush(key, isMinor);
                 changed = true;
 
             }
@@ -1273,20 +1476,235 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     }
 
-    /// Push a character or string to the input.
-    void push(dchar character) {
+    @("TextInput.push reuses the text buffer; creates undo entries regardless of buffer")
+    unittest {
 
-        char[4] buffer;
+        auto root = textInput();
+        root.value = "Ho";
 
-        auto size = buffer.encode(character);
-        push(buffer[0..size]);
+        root.caretIndex = 1;
+        root.savePush("e");
+        assert(root.value.byNode.equal(["H", "e", "o"]));
+        assert(root.caretIndex == 2);
+
+        root.savePush("n");
+
+        assert(root.value.byNode.equal(["H", "en", "o"]));
+        assert(root.caretIndex == 3);
+
+        root.savePush("l");
+        assert(root.value.byNode.equal(["H", "enl", "o"]));
+        assert(root.caretIndex == 4);
+
+        // Create enough text to fill the buffer
+        // A new node should be created as a result
+        auto bufferFiller = 'A'.repeat(root.freeBuffer.length).array;
+
+        root.savePush(bufferFiller);
+        assert(root.value.byNode.equal(["H", "enl", bufferFiller, "o"]));
+
+        // Undo all pushes until the initial fill
+        root.undo();
+        assert(root.value == "Ho");
+        assert(root.valueBeforeCaret == "H");
+
+        // Undo will not clear the initial value
+        root.undo();
+        assert(root.value == "Ho");
+        assert(root.valueBeforeCaret == "H");
+
+        // The above undo does not add a new redo stack entry; effectively, this redo cancels both undo actions above
+        root.redo();
+        assert(root.value.byNode.equal(["H", "enl", bufferFiller, "o"]));
+
+    }
+
+    unittest {
+
+        auto io = new HeadlessBackend;
+        auto root = textInput("placeholder");
+
+        root.io = io;
+
+        // Empty text
+        {
+            root.draw();
+
+            assert(root.value == "");
+            assert(root.contentLabel.text == "");
+            assert(root.contentLabel.placeholderText == "placeholder");
+            assert(root.contentLabel.showPlaceholder);
+            assert(root.isEmpty);
+        }
+
+        // Focus the box and input stuff
+        {
+            io.nextFrame;
+            io.inputCharacter("¡Hola, mundo!");
+            root.focus();
+            root.draw();
+
+            assert(root.value == "¡Hola, mundo!");
+
+            io.nextFrame;
+            root.draw();
+
+            assert(!root.contentLabel.showPlaceholder);
+        }
+
+        // The text will be displayed the next frame
+        {
+            io.nextFrame;
+            root.draw();
+
+            assert(root.contentLabel.text == "¡Hola, mundo!");
+            assert(root.isFocused);
+        }
+
+    }
+
+    /// Hook into input actions to create matching history entries.
+    ///
+    /// Operating on `TextInput` contents using exposed methods will not create any history entries:
+    ///
+    /// ---
+    /// root.value = "Hello, !";
+    /// root.replace(7, 7, "World");
+    /// root.replace(7, 7+5, "Fluid");
+    /// root.caretToEnd();
+    /// root.breakLine();
+    /// root.undo();  // does nothing
+    /// ---
+    ///
+    /// This behavior is different for changes made through input actions, as they directly correspond to changes made
+    /// by the user.
+    ///
+    /// ---
+    /// with (FluidInputAction) {
+    ///     root.savePush("Hello, World!");
+    ///     root.runInputAction!previousChar;
+    ///     root.runInputAction!backspaceWord;
+    ///     root.savePush("Fluid");
+    /// }
+    /// assert(root.value == "Hello, Fluid!");
+    /// root.undo();
+    /// assert(root.value == "Hello, !");
+    /// root.undo();
+    /// assert(root.value == "Hello, World!");
+    /// ---
+    ///
+    /// See_Also: `savePush`, `snapshot`, `pushHistory`
+    override bool inputActionImpl(immutable InputActionID id, bool active) {
+
+        // Do not override inactive events
+        if (!active) return false;
+
+        // Do not override undo/redo actions
+        if (id == inputActionID!(FluidInputAction.undo)) return false;
+        if (id == inputActionID!(FluidInputAction.redo)) return false;
+
+        const past = snapshot();
+
+        _snapshot.diff = Rope.DiffRegion.init;
+
+        // Run the input action and compare changes to send to history
+        const handled = runLocalInputAction(id, active);
+
+        if (handled) {
+            pushHistory(past);
+        }
+
+        return handled;
+
+    }
+
+    protected bool runLocalInputAction(immutable InputActionID id, bool active) {
+        return runInputActionHandler(this, id, active);
+    }
+
+    @("TextInput methods do not create history entries")
+    unittest {
+
+        auto root = multilineInput();
+        root.value = "Hello, !";
+        root.replace(7, 7, "World");
+        root.replace(7, 7+5, "Fluid");
+        root.caretToEnd();
+        root.breakLine();
+        root.undo();  // does nothing
+        assert(root.value == "Hello, Fluid!\n");
+
+    }
+
+    @("TextInput.runInputAction will create history entries")
+    unittest {
+
+        auto root = multilineInput();
+        with (FluidInputAction) {
+            root.savePush("Hello, World!");
+            root.runInputAction!previousChar;
+            root.runInputAction!backspaceWord;
+            root.savePush("Fluid");
+        }
+        assert(root.value == "Hello, Fluid!");
+        root.undo();
+        assert(root.value == "Hello, !");
+        root.undo();
+        assert(root.value == "Hello, World!");
+
+    }
+
+    /// Write text at the caret position and save the result to history.
+    ///
+    /// The `savePush` family of functions wraps `push`.
+    ///
+    /// See_Also:
+    ///     `push`
+    /// Params:
+    ///     character = The character to insert.
+    ///     text      = Text to insert.
+    ///     isMinor   = If true, this is a minor change. Consecutive minor changes will be merged together.
+    final void savePush(dchar character, bool isMinor = true) {
+
+        const past = snapshot();
+        push(character, isMinor);
+        pushHistory(past);
 
     }
 
     /// ditto
-    void push(scope const(char)[] ch)
-    out (; _bufferNode, "_bufferNode must exist after pushing to buffer")
-    do {
+    final void savePush(scope const(char)[] text, bool isMinor = true) {
+
+        const past = snapshot();
+        push(text, isMinor);
+        pushHistory(past);
+
+    }
+
+    /// ditto
+    final void savePush(Rope text, bool isMinor = true) {
+
+        const past = snapshot();
+        push(text, isMinor);
+        pushHistory(past);
+
+    }
+
+    /// Push a character or string to the input.
+    final void push(dchar character, bool isMinor = true) {
+
+        char[4] buffer;
+
+        auto size = buffer.encode(character);
+        push(buffer[0..size], isMinor);
+
+    }
+
+    /// ditto
+    void push(scope const(char)[] ch, bool isMinor = true) {
+
+        // TODO `push` should *not* have isMinor = true as default for API consistency
+        //      it does for backwards compatibility
 
         // Move the buffer node into here; move it back when done
         auto bufferNode = _bufferNode;
@@ -1310,6 +1728,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         _usedBufferSize += ch.length;
 
         // Selection is active, overwrite it
+        // This should be done even if given text is empty, effectively removing the selection
         if (isSelecting) {
 
             bufferNode = new RopeNode(Rope(slice), Rope.init);
@@ -1318,115 +1737,75 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
         }
 
-        // The above `if` handles the one case where `push` doesn't directly add new characters to the text.
+        // Nothing to insert, so nothing will change
+        if (ch == "") return;
+
+        // The above `if` handles the one case where `push` doesn't just add new characters to the text.
         // From here, appending can be optimized by memorizing the node we create to add the text, and reusing it
-        // afterwards. This way, we avoid creating many one element nodes.
+        // afterwards. This way, we avoid creating many one character nodes.
 
-        size_t originalLength;
+        const oldCaretIndex = caretIndex;
+        const newCaretIndex = caretIndex + ch.length;
 
-        // Make sure there is a node to write to
-        if (!bufferNode)
+        // Create a node to write to
+        if (!bufferNode) {
+
             bufferNode = new RopeNode(Rope(slice), Rope.init);
+
+            // Insert the node
+            insert(caretIndex, Rope(bufferNode), isMinor);
+
+        }
 
         // If writing in a single sequence, reuse the last inserted node
         else {
 
-            originalLength = bufferNode.length;
+            const originalLength = bufferNode.length;
 
             // Append the character to its value
             // The bufferNode will always share tail with the buffer
             bufferNode.left = usedBuffer[$ - originalLength - ch.length .. $];
 
+            // Update the node
+            replace(caretIndex - originalLength, caretIndex, Rope(bufferNode), isMinor);
+
+            // Change the history for this change so only the new characters are seen
+            snapshot.diff.start = oldCaretIndex;
+            snapshot.diff.first = Rope.init;
+            snapshot.diff.second = Rope(bufferNode)[$ - ch.length .. $];
+
+            assert(!snapshot.isSubtractive);
+            assert( snapshot.isAdditive);
+
         }
 
-        // Save previous value in undo stack
-        const previousState = snapshot();
-        scope (success) pushSnapshot(previousState);
-
         // Insert the text by replacing the old node, if present
-        value = value.replace(caretIndex - originalLength, caretIndex, Rope(bufferNode));
         assert(value.isBalanced);
 
-        // Move the caret
-        caretIndex = caretIndex + ch.length;
-        updateCaretPosition();
-        horizontalAnchor = caretPosition.x;
+        setCaretIndexNoHistory(newCaretIndex);
+        updateCaretPositionAndAnchor();
 
     }
 
     /// ditto
-    void push(Rope text) {
+    void push(Rope text, bool isMinor = true) {
 
-        // Save previous value in undo stack
-        const previousState = snapshot();
-        scope (success) pushSnapshot(previousState);
+        const newCaretIndex = caretIndex + text.length;
 
         // If selection is active, overwrite the selection
         if (isSelecting) {
-
-            // Override with the character
-            selectedValue = text;
+            replace(selectionLowIndex, selectionHighIndex, text, isMinor);
             clearSelection();
-
         }
 
         // Insert the character before caret
-        else if (valueBeforeCaret.length) {
-
-            valueBeforeCaret = valueBeforeCaret ~ text;
-            touch();
-
-        }
-
         else {
-
-            valueBeforeCaret = text;
-            touch();
-
+            insert(caretIndex, text, isMinor);
         }
 
-        updateCaretPosition();
-        horizontalAnchor = caretPosition.x;
-
-    }
-
-    @("TextInput.push reuses the text buffer; creates undo entries regardless of buffer")
-    unittest {
-
-        auto root = textInput();
-        root.value = "Ho";
-
-        root.caretIndex = 1;
-        root.push("e");
-        assert(root.value.byNode.equal(["H", "e", "o"]));
-
-        root.push("n");
-
-        assert(root.value.byNode.equal(["H", "en", "o"]));
-
-        root.push("l");
-        assert(root.value.byNode.equal(["H", "enl", "o"]));
-
-        // Create enough text to fill the buffer
-        // A new node should be created as a result
-        auto bufferFiller = 'A'.repeat(root.freeBuffer.length).array;
-
-        root.push(bufferFiller);
-        assert(root.value.byNode.equal(["H", "enl", bufferFiller, "o"]));
-
-        // Undo all pushes until the initial fill
-        root.undo();
-        assert(root.value == "Ho");
-        assert(root.valueBeforeCaret == "H");
-
-        // Undo will not clear the initial value
-        root.undo();
-        assert(root.value == "Ho");
-        assert(root.valueBeforeCaret == "H");
-
-        // The above undo does not add a new redo stack entry; effectively, this redo cancels both undo actions above
-        root.redo();
-        assert(root.value.byNode.equal(["H", "enl", bufferFiller, "o"]));
+        // Put the caret at the end
+        setCaretIndexNoHistory(newCaretIndex);
+        updateCaretPositionAndAnchor();
 
     }
 
@@ -1436,11 +1815,22 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
         if (!multiline) return false;
 
-        auto snap = snapshot();
-        push('\n');
-        forcePushSnapshot(snap);
+        const isMinor = false;
+
+        push('\n', isMinor);
 
         return true;
+
+    }
+
+    unittest {
+
+        auto root = textInput();
+
+        root.push("hello");
+        root.runInputAction!(FluidInputAction.breakLine);
+
+        assert(root.value == "hello");
 
     }
 
@@ -1467,10 +1857,6 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         import std.uni;
         import std.range;
 
-        // Save previous value in undo stack
-        const previousState = snapshot();
-        scope (success) pushSnapshot(previousState);
-
         // Selection active, delete it
         if (isSelecting) {
 
@@ -1485,7 +1871,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
             const erasedWord = valueAfterCaret.wordFront;
 
             // Remove the word
-            valueAfterCaret = valueAfterCaret[erasedWord.length .. $];
+            replace[caretIndex .. caretIndex + erasedWord.length] = Rope.init;
 
         }
 
@@ -1496,14 +1882,9 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
             const erasedWord = valueBeforeCaret.wordBack;
 
             // Remove the word
-            valueBeforeCaret = valueBeforeCaret[0 .. $ - erasedWord.length];
+            replace[caretIndex - erasedWord.length .. caretIndex] = Rope.init;
 
         }
-
-        // Update the size of the box
-        updateSize();
-        updateCaretPosition();
-        horizontalAnchor = caretPosition.x;
 
     }
 
@@ -1530,9 +1911,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
     ///     forward = If true, removes character after the caret, otherwise removes the one before.
     void chop(bool forward = false) {
 
-        // Save previous value in undo stack
-        const previousState = snapshot();
-        scope (success) pushSnapshot(previousState);
+        const isMinor = true;
 
         // Selection active
         if (isSelecting) {
@@ -1548,7 +1927,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
             const length = valueAfterCaret.decodeFrontStatic.codeLength!char;
 
-            valueAfterCaret = valueAfterCaret[length..$];
+            replace(isMinor)[caretIndex .. caretIndex + length] = Rope.init;
 
         }
 
@@ -1559,17 +1938,12 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
             const length = valueBeforeCaret.decodeBackStatic.codeLength!char;
 
-            valueBeforeCaret = valueBeforeCaret[0..$-length];
+            replace(isMinor)[caretIndex - length .. caretIndex] = Rope.init;
 
         }
 
         // Trigger the callback
         touchText();
-
-        // Update the size of the box
-        updateSize();
-        updateCaretPosition();
-        horizontalAnchor = caretPosition.x;
 
     }
 
@@ -1690,24 +2064,26 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         auto io = new HeadlessBackend;
         auto theme = nullTheme.derive(
             rule!TextInput(
+                Rule.fontSize = 14.pt,
                 Rule.selectionBackgroundColor = color("#02a"),
                 Rule.fontSize = 14.pt,
             ),
         );
         auto root = textInput(.multiline, theme);
+        auto typeface = root.style.getTypeface;
+        typeface.setSize(Vector2(96, 96), 14.pt);
+        auto lineHeight = typeface.lineHeight;
 
         root.io = io;
         root.value = "Line one\nLine two\n\nLine four";
         root.focus();
         root.draw();
 
-        auto lineHeight = root.style.getTypeface.lineHeight;
-
         // Move the caret to second line
         root.caretIndex = "Line one\nLin".length;
         root.updateCaretPosition();
 
-        const middle = root._inner.start + root.caretPosition;
+        const middle = root._inner.start + root.caretRectangle.center;
         const top    = middle - Vector2(0, lineHeight);
         const blank  = middle + Vector2(0, lineHeight);
         const bottom = middle + Vector2(0, lineHeight * 2);
@@ -1856,7 +2232,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         return true;
     }
 
-    Rectangle shallowScrollTo(const(Node) child, Rectangle parentBox, Rectangle childBox) {
+    Rectangle shallowScrollTo(const Node, Rectangle, Rectangle childBox) {
 
         return childBox;
 
@@ -1882,16 +2258,16 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
     Rope lineByIndex(size_t index, Rope newValue) {
 
         import std.utf;
-        import fluid.typeface;
+        import fluid.text.typeface;
 
-        const backLength = Typeface.lineSplitter(value[0..index].retro).front.byChar.walkLength;
-        const frontLength = Typeface.lineSplitter(value[index..$]).front.byChar.walkLength;
+        const backLength = value[0..index].byLineReverse.front.length;
+        const frontLength = value[index..$].byLine.front.length;
         const start = index - backLength;
         const end = index + frontLength;
         size_t[2] selection = [selectionStart, selectionEnd];
 
         // Combine everything on the same line, before and after the caret
-        value = value.replace(start, end, newValue);
+        replace(start, end, newValue);
 
         // Caret/selection needs updating
         foreach (i, ref caret; selection) {
@@ -1980,6 +2356,8 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
     }
 
     /// Iterate on each line in an interval.
+    ///
+    /// Warning: Iterating on the line by reference is now deprecated.
     auto eachLineByIndex(ptrdiff_t start, ptrdiff_t end) {
 
         struct LineIterator {
@@ -2008,8 +2386,13 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
                     auto stop = yield(lineStart, front);
 
                     // Update indices in case the line has changed
-                    if (front !is originalFront) {
+                    if (front.chomp !is originalFront) {
                         setLine(originalFront, front);
+                    }
+                    else {
+                        const newNextLine = input.value.nextLineByIndex(lineStart);
+                        end += newNextLine - nextLine;
+                        nextLine = newNextLine;
                     }
 
                     // Stop if requested
@@ -2127,8 +2510,71 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         value = null;
 
         clearSelection();
-        updateCaretPosition();
-        horizontalAnchor = caretPosition.x;
+        updateCaretPositionAndAnchor();
+
+    }
+
+    unittest {
+
+        auto io = new HeadlessBackend;
+        auto root = textInput();
+
+        io.inputCharacter("Hello, World!");
+        root.io = io;
+        root.focus();
+        root.draw();
+
+        auto value1 = root.value;
+
+        root.chop();
+
+        assert(value1     == "Hello, World!");
+        assert(root.value == "Hello, World");
+
+        auto value2 = root.value;
+        root.chopWord();
+
+        assert(value2     == "Hello, World");
+        assert(root.value == "Hello, ");
+
+        auto value3 = root.value;
+        root.clear();
+
+        assert(value3     == "Hello, ");
+        assert(root.value == "");
+
+    }
+
+    unittest {
+
+        auto io = new HeadlessBackend;
+        auto root = textInput();
+
+        io.inputCharacter("Hello, World");
+        root.io = io;
+        root.focus();
+        root.draw();
+
+        auto value1 = root.value;
+
+        root.chopWord();
+
+        assert(value1     == "Hello, World");
+        assert(root.value == "Hello, ");
+
+        auto value2 = root.value;
+
+        root.push("Moon");
+
+        assert(value2     == "Hello, ");
+        assert(root.value == "Hello, Moon");
+
+        auto value3 = root.value;
+
+        root.clear();
+
+        assert(value3     == "Hello, Moon");
+        assert(root.value == "");
 
     }
 
@@ -2163,10 +2609,10 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
         const isLow = selectionStart <= selectionEnd;
 
-        foreach (index, line; Typeface.lineSplitterIndex(value)) {
+        foreach (line; value.byLine) {
 
-            const lineStart = index;
-            const lineEnd = index + line.length;
+            const lineStart = line.index;
+            const lineEnd = lineStart + line.length;
 
             // Found selection start
             if (lineStart <= selectionStart && selectionStart <= lineEnd) {
@@ -2189,8 +2635,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
         }
 
-        updateCaretPosition(false);
-        horizontalAnchor = caretPosition.x;
+        updateCaretPositionAndAnchor(false);
 
     }
 
@@ -2233,8 +2678,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
         }
 
-        updateCaretPosition(true);
-        horizontalAnchor = caretPosition.x;
+        updateCaretPositionAndAnchor(true);
 
     }
 
@@ -2256,9 +2700,8 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
         }
 
-        updateCaretPosition(true);
+        updateCaretPositionAndAnchor(true);
         moveOrClearSelection();
-        horizontalAnchor = caretPosition.x;
 
     }
 
@@ -2266,7 +2709,8 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
     @(FluidInputAction.previousLine, FluidInputAction.nextLine)
     protected void previousOrNextLine(FluidInputAction action) {
 
-        auto search = Vector2(horizontalAnchor, caretPosition.y);
+        auto typeface = style.getTypeface;
+        auto search = Vector2(horizontalAnchor, caretRectangle.center.y);
 
         // Next line
         if (action == FluidInputAction.nextLine) {
@@ -2297,8 +2741,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
     void caretToMouse() {
 
         caretTo(io.mousePosition - _inner.start);
-        updateCaretPosition(false);
-        horizontalAnchor = caretPosition.x;
+        updateCaretPositionAndAnchor(false);
 
     }
 
@@ -2306,8 +2749,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
     void caretToPointer(HoverPointer pointer) {
 
         caretTo(pointer.position - _inner.start);
-        updateCaretPosition(false);
-        horizontalAnchor = caretPosition.x;
+        updateCaretPositionAndAnchor(false);
 
     }
 
@@ -2316,12 +2758,11 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
     @(FluidInputAction.toLineStart)
     void caretToLineStart() {
 
-        const search = Vector2(0, caretPosition.y);
+        const search = Vector2(0, caretRectangle.center.y);
 
         caretTo(search);
-        updateCaretPosition(true);
+        updateCaretPositionAndAnchor(true);
         moveOrClearSelection();
-        horizontalAnchor = caretPosition.x;
 
     }
 
@@ -2329,12 +2770,11 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
     @(FluidInputAction.toLineEnd)
     void caretToLineEnd() {
 
-        const search = Vector2(float.infinity, caretPosition.y);
+        const search = Vector2(float.infinity, caretRectangle.center.y);
 
         caretTo(search);
-        updateCaretPosition(false);
+        updateCaretPositionAndAnchor(false);
         moveOrClearSelection();
-        horizontalAnchor = caretPosition.x;
 
     }
 
@@ -2343,9 +2783,8 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
     void caretToStart() {
 
         caretIndex = 0;
-        updateCaretPosition(true);
+        updateCaretPositionAndAnchor(true);
         moveOrClearSelection();
-        horizontalAnchor = caretPosition.x;
 
     }
 
@@ -2354,9 +2793,8 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
     void caretToEnd() {
 
         caretIndex = value.length;
-        updateCaretPosition(false);
+        updateCaretPositionAndAnchor(false);
         moveOrClearSelection();
-        horizontalAnchor = caretPosition.x;
 
     }
 
@@ -2369,6 +2807,38 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
         _selectionStart = 0;
         caretToEnd();
+
+    }
+
+    unittest {
+
+        auto root = textInput();
+
+        root.draw();
+        root.selectAll();
+
+        assert(root.selectionStart == 0);
+        assert(root.selectionEnd == 0);
+
+        root.push("foo bar ");
+
+        assert(!root.isSelecting);
+
+        root.push("baz");
+
+        assert(root.value == "foo bar baz");
+
+        auto value1 = root.value;
+
+        root.selectAll();
+
+        assert(root.selectionStart == 0);
+        assert(root.selectionEnd == root.value.length);
+
+        root.push("replaced");
+
+        assert(value1     == "foo bar baz");
+        assert(root.value == "replaced");
 
     }
 
@@ -2437,9 +2907,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
     @(FluidInputAction.cut)
     void cut() {
 
-        auto snap = snapshot();
         copy();
-        pushSnapshot(snap);
         selectedValue = null;
 
     }
@@ -2464,7 +2932,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
     /// Paste text from clipboard.
     @(FluidInputAction.paste)
     void paste() {
-
+        const isMinor = false;
         auto snap = snapshot();
 
         // New I/O
@@ -2472,27 +2940,24 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
             char[1024] buffer;
             int offset;
+            Rope result;
 
             // Read text
             while (true) {
-
-                // Push the text
                 if (auto text = clipboardIO.readClipboard(buffer, offset)) {
-                    push(text);
+                    result ~= text.dup;
                 }
                 else break;
-
             }
+
+            push(result, isMinor);
 
         }
 
         // Old clipboard
         else {
-            push(io.clipboard);
+            push(io.clipboard, isMinor);
         }
-
-        forcePushSnapshot(snap);
-
     }
 
     /// Clear the undo/redo action history.
@@ -2506,68 +2971,109 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     }
 
+    deprecated("`pushSnapshot` and `forcePushSnapshot` have been replaced by `pushHistory`/`forcePushHistory`"
+        ~ " and will be removed in Fluid 0.9.0.") {
+
+        void pushSnapshot(HistoryEntry entry) {
+            pushHistory(entry);
+        }
+        void forcePushSnapshot(HistoryEntry entry) {
+            forcePushHistory(entry);
+        }
+
+    }
+
     /// Push the given state snapshot (value, caret & selection) into the undo stack. Refuses to push if the current
     /// state can be merged with it, unless `forcePushSnapshot` is used.
     ///
-    /// A snapshot pushed through `forcePushSnapshot` will break continuity — it will not be merged with any other
+    /// A snapshot pushed through `forcePushHistory` will break continuity — it will not be merged with any other
     /// snapshot.
-    void pushSnapshot(HistoryEntry entry) {
+    ///
+    /// History:
+    ///     As of Fluid 0.7.1, this function now replaces the old `pushSnapshot`. `psuhHistory` does not have
+    ///     to be called explicitly. `replace` will automatically call this whenever needed. It can still be
+    ///     useful when used together with `replaceNoHistory`
+    /// Params:
+    ///     newSnapshot = Entry to insert into the `undo` history. This entry should be a revision *preceding*
+    ///         the current state.
+    /// Returns:
+    ///     True if the snapshot was added to history, or false if not.
+    bool pushHistory(HistoryEntry newSnapshot) {
 
-        // Compare against current state, so it can be dismissed if it's too similar
-        auto currentState = snapshot();
-        currentState.setPreviousEntry(entry);
+        if (!newSnapshot.canMergeWith(snapshot)) {
+            forcePushHistory(newSnapshot);
+            return true;
+        }
 
-        // Mark as continuous, so runs of similar characters can be merged together
-        scope (success) _isContinuous = true;
-
-        // No change was made, ignore
-        if (currentState.diff.isSame()) return;
-
-        // Current state is compatible, ignore
-        if (entry.isContinuous && entry.canMergeWith(currentState)) return;
-
-        // Push state
-        forcePushSnapshot(entry);
+        else return false;
 
     }
 
     /// ditto
-    void forcePushSnapshot(HistoryEntry entry) {
+    void forcePushHistory(HistoryEntry newSnapshot) {
 
-        // Break continuity
-        _isContinuous = false;
-
-        // Ignore if the last entry is identical
-        if (!_undoStack.empty && _undoStack.back == entry) return;
-
-        // Truncate the history to match the index, insert the current value.
-        _undoStack.insertBack(entry);
-
-        // Clear the redo stack
-        _redoStack.clear();
+        _undoStack.insertBack(newSnapshot);
 
     }
 
-    /// Produce a snapshot for the current state. Returns the snapshot.
-    protected HistoryEntry snapshot() const {
+    /// Replacing text and saving the change to history.
+    unittest {
 
-        auto entry = HistoryEntry(value, selectionStart, selectionEnd, _isContinuous);
+        auto root = textInput();
 
-        // Get previous entry in the history
-        if (!_undoStack.empty)
-            entry.setPreviousEntry(_undoStack.back.value);
+        // Take a snapshot of the node's status before the change
+        auto past = root.snapshot;
 
-        return entry;
+        if (root.replace(0, 0, "Hello, World!")) {
+
+            // Once the change is performed, push the snapshot to history
+            root.pushHistory(past);
+
+        }
+
+        // Now, the change can easily be undone
+        assert(root.value == "Hello, World!");
+        root.undo();
+        assert(root.value == "");
 
     }
 
-    /// Restore state from snapshot
+    /// Returns: History entry for the current state.
+    protected const(HistoryEntry) snapshot() const {
+
+        HistoryEntry snap = _snapshot;
+        snap.selectionStart = selectionStart;
+        snap.selectionEnd   = selectionEnd;
+        return snap;
+
+    }
+
+    /// ditto
+    protected ref HistoryEntry snapshot() {
+
+        const that = this;
+        _snapshot = that.snapshot;
+        return _snapshot;
+
+    }
+
+    /// Restore state from snapshot.
+    deprecated("`snapshot(HistoryEntry)` is deprecated and will be removed in Fluid 0.9.0."
+        ~ " Please use `restoreSnapshot` instead.")
     protected HistoryEntry snapshot(HistoryEntry entry) {
 
-        value = entry.value;
-        selectSlice(entry.selectionStart, entry.selectionEnd);
-
+        restoreSnapshot(entry);
         return entry;
+
+    }
+
+    /// Restore state from snapshot.
+    protected void restoreSnapshot(HistoryEntry entry) {
+
+        // TODO this could be faster
+        replace(0, value.length, entry.value);
+        selectSlice(entry.selectionStart, entry.selectionEnd);
+        _snapshot = entry;
 
     }
 
@@ -2582,7 +3088,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         _redoStack.insertBack(snapshot);
 
         // Restore the value
-        this.snapshot = _undoStack.back;
+        restoreSnapshot(_undoStack.back);
         _undoStack.removeBack;
 
     }
@@ -2598,114 +3104,152 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         _undoStack.insertBack(snapshot);
 
         // Restore the value
-        this.snapshot = _redoStack.back;
+        restoreSnapshot(_redoStack.back);
         _redoStack.removeBack;
 
     }
 
 }
 
-/// `wordFront` and `wordBack` get the word at the beginning or end of given string, respectively.
-///
-/// A word is a streak of consecutive characters — non-whitespace, either all alphanumeric or all not — followed by any
-/// number of whitespace.
-///
-/// Params:
-///     text = Text to scan for the word.
-///     excludeWhite = If true, whitespace will not be included in the word.
-T wordFront(T)(T text, bool excludeWhite = false) {
+@("TextInput paste benchmark")
+unittest {
 
-    size_t length;
+    import std.file;
+    import std.datetime.stopwatch;
 
-    T result() { return text[0..length]; }
-    T remaining() { return text[length..$]; }
+    auto input = multilineInput(
+        .layout!"fill",
+    );
+    auto root = vscrollFrame(
+        .layout!"fill",
+        input
+    );
+    auto io = new HeadlessBackend;
 
-    while (remaining != "") {
+    // Prepare
+    root.io = io;
+    io.clipboard = readText(__FILE__);
+    root.draw();
+    input.focus();
+    io.nextFrame();
 
-        // Get the first character
-        const lastChar = remaining.decodeFrontStatic;
+    const runCount = 10;
 
-        // Exclude white characters if enabled
-        if (excludeWhite && lastChar.isWhite) break;
+    // Paste the text
+    auto result = benchmark!({
+        input.value = "";
+        input.paste();
+        root.draw();
+    })(runCount);
 
-        length += lastChar.codeLength!(typeof(text[0]));
+    const average = result[0] / runCount;
 
-        // Stop if empty
-        if (remaining == "") break;
-
-        const nextChar = remaining.decodeFrontStatic;
-
-        // Stop if the next character is a line feed
-        if (nextChar.only.chomp.empty && !only(lastChar, nextChar).equal("\r\n")) break;
-
-        // Continue if the next character is whitespace
-        // Includes any case where the previous character is followed by whitespace
-        else if (nextChar.isWhite) continue;
-
-        // Stop if whitespace follows a non-white character
-        else if (lastChar.isWhite) break;
-
-        // Stop if the next character has different type
-        else if (lastChar.isAlphaNum != nextChar.isAlphaNum) break;
-
+    // This should be trivial on practically any machine
+    assert(average <= 100.msecs, "Too slow: average " ~ average.toString);
+    if (average > 10.msecs) {
+        import std.stdio;
+        writeln("Warning: TextInput paste benchmark runs slowly, ", average);
     }
 
-    return result;
-
 }
 
-/// ditto
-T wordBack(T)(T text, bool excludeWhite = false) {
+@("TextInput edit after paste benchmark")
+unittest {
 
-    size_t length = text.length;
+    import std.file;
+    import std.datetime.stopwatch;
 
-    T result() { return text[length..$]; }
-    T remaining() { return text[0..length]; }
+    auto input = multilineInput(
+        .layout!"fill",
+    );
+    auto root = vscrollFrame(
+        .layout!"fill",
+        input
+    );
+    auto io = new HeadlessBackend;
+    io.clipboard = readText(__FILE__);
 
-    while (remaining != "") {
+    root.io = io;
+    root.draw();
+    input.focus();
+    input.paste();
+    io.nextFrame();
+    root.draw();
 
-        // Get the first character
-        const lastChar = remaining.decodeBackStatic;
+    const runCount = 10;
 
-        // Exclude white characters if enabled
-        if (excludeWhite && lastChar.isWhite) break;
+    // Paste the text
+    auto result = benchmark!(
 
-        length -= lastChar.codeLength!(typeof(text[0]));
+        // At the start
+        {
+            input.insert(0, "Hello, World!");
+            root.draw();
+        },
 
-        // Stop if empty
-        if (remaining == "") break;
+        // Into the middle
+        {
+            input.insert(input.value.length / 2, "Hello, World!");
+            root.draw();
+        },
 
-        const nextChar = remaining.decodeBackStatic;
+        // At the end
+        {
+            input.insert(input.value.length, "Hello, World!");
+            root.draw();
+        },
 
-        // Stop if the character is a line feed
-        if (lastChar.only.chomp.empty && !only(nextChar, lastChar).equal("\r\n")) break;
+    )(runCount);
 
-        // Continue if the current character is whitespace
-        // Inverse to `wordFront`
-        else if (lastChar.isWhite) continue;
+    auto average = result[].map!(a => a / runCount);
+    const totalAverage = average.sum / result[].length;
 
-        // Stop if whitespace follows a non-white character
-        else if (nextChar.isWhite) break;
-
-        // Stop if the next character has different type
-        else if (lastChar.isAlphaNum != nextChar.isAlphaNum) break;
-
+    assert(totalAverage <= 20.msecs, format!"Too slow: average %(%s / %)"(average));
+    if (totalAverage > 5.msecs) {
+        import std.stdio;
+        writefln!"Warning: TextInput edit after paste benchmark runs slowly, %(%s / %)"(average);
     }
 
-    return result;
-
 }
 
-/// `decodeFront` and `decodeBack` variants that do not mutate the range
-private dchar decodeFrontStatic(T)(T range) @trusted {
+@("TextInput loads of small edits benchmark")
+unittest {
 
-    return range.decodeFront;
+    import std.file;
+    import std.datetime.stopwatch;
 
-}
+    auto root = multilineInput();
+    auto io = new HeadlessBackend;
+    io.clipboard = readText(__FILE__);
 
-/// ditto
-private dchar decodeBackStatic(T)(T range) @trusted {
+    root.io = io;
+    root.draw();
+    root.focus();
+    root.paste();
+    io.nextFrame();
+    root.draw();
+    root.caretIndex = 0;
 
-    return range.decodeBack;
+    const runCount = 1;  // TODO make this greater once you fix this performance please
+    const sampleText = "Hello, world! This is some text I'd like to type in. This should be fast.";
+
+    // Type in the text
+    auto result = benchmark!({
+
+        foreach (letter; sampleText) {
+            root.push(letter);
+            root.draw();
+        }
+
+    })(runCount);
+
+    const average = result[0] / runCount;
+    const averageCharacter = average / sampleText.length;
+
+    assert(averageCharacter <= 20.msecs, format!"Too slow: average %s per character"(averageCharacter));
+    if (averageCharacter > 5.msecs) {
+        import std.stdio;
+        writefln!"Warning: TextInput loads of small edits benchmark runs slowly, %s per character"(averageCharacter);
+    }
 
 }

@@ -94,6 +94,8 @@ class Label : Node {
         text.resize(canvasIO, available, !isWrapDisabled);
         minSize = text.size;
 
+        assert(text.isMeasured);
+
     }
 
     protected override void drawImpl(Rectangle outer, Rectangle inner) {

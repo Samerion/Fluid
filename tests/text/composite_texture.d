@@ -40,7 +40,7 @@ unittest {
     );
     auto viewport = vscrollFrame(content);
     auto root = sizeLock!testSpace(
-        .sizeLimit(800, 600),
+        .sizeLimit(800, 200),
         .cropViewport,
         .nullTheme,
         viewport

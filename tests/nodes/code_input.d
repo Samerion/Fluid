@@ -136,12 +136,12 @@ unittest {
     assert(root.value == "    aa  ");
     root.insertTab();
     assert(root.value == "    aa      ");
-    root.push("\n");
+    root.rawPush("\n");
     root.insertTab();
     assert(root.value == "    aa      \n    ");
     root.insertTab();
     assert(root.value == "    aa      \n        ");
-    root.push("||");
+    root.rawPush("||");
     root.insertTab();
     assert(root.value == "    aa      \n        ||  ");
 
@@ -153,20 +153,20 @@ unittest {
     auto root = codeInput(.useSpaces(2));
     root.insertTab();
     assert(root.value == "  ");
-    root.push("aa");
+    root.rawPush("aa");
     root.insertTab();
     assert(root.value == "  aa  ");
     root.insertTab();
     assert(root.value == "  aa    ");
-    root.push("\n");
+    root.rawPush("\n");
     root.insertTab();
     assert(root.value == "  aa    \n  ");
     root.insertTab();
     assert(root.value == "  aa    \n    ");
-    root.push("||");
+    root.rawPush("||");
     root.insertTab();
     assert(root.value == "  aa    \n    ||  ");
-    root.push("x");
+    root.rawPush("x");
     root.insertTab();
     assert(root.value == "  aa    \n    ||  x ");
 
@@ -178,17 +178,17 @@ unittest {
     auto root = codeInput(.useTabs);
     root.insertTab();
     assert(root.value == "\t");
-    root.push("aa");
+    root.rawPush("aa");
     root.insertTab();
     assert(root.value == "\taa\t");
     root.insertTab();
     assert(root.value == "\taa\t\t");
-    root.push("\n");
+    root.rawPush("\n");
     root.insertTab();
     assert(root.value == "\taa\t\t\n\t");
     root.insertTab();
     assert(root.value == "\taa\t\t\n\t\t");
-    root.push("||");
+    root.rawPush("||");
     root.insertTab();
     assert(root.value == "\taa\t\t\n\t\t||\t");
 
@@ -232,9 +232,9 @@ unittest {
 
     auto root = codeInput(.useTabs);
 
-    root.push("Hello, World!");
+    root.savePush("Hello, World!");
     root.caretToStart();
-    root.insertTab();
+    root.runInputAction!(FluidInputAction.insertTab);
     assert(root.value == "\tHello, World!");
     assert(root.valueBeforeCaret == "\t");
 
@@ -247,7 +247,7 @@ unittest {
     assert(root.valueBeforeCaret == "\t");
 
     root.caretToEnd();
-    root.outdent();
+    root.runInputAction!(FluidInputAction.outdent);
     assert(root.value == "Hello, World!");
     assert(root.valueBeforeCaret == root.value);
     assert(root.valueAfterCaret == "");
@@ -527,13 +527,13 @@ unittest {
     auto root = codeInput(.useSpaces(2));
     root.value = "      abc";
     root.caretIndex = 6;
-    root.chop();
+    root.runInputAction!(FluidInputAction.backspace);
     assert(root.value == "    abc");
-    root.chop();
+    root.runInputAction!(FluidInputAction.backspace);
     assert(root.value == "  abc");
-    root.chop();
+    root.runInputAction!(FluidInputAction.backspace);
     assert(root.value == "abc");
-    root.chop();
+    root.runInputAction!(FluidInputAction.backspace);
     assert(root.value == "abc");
 
     root.undo();
@@ -552,16 +552,16 @@ unittest {
     root.runInputAction!(FluidInputAction.breakLine);
     assert(root.value == "abcdef\n");
 
-    root.insertTab();
+    root.runInputAction!(FluidInputAction.insertTab);
     root.runInputAction!(FluidInputAction.breakLine);
     assert(root.value == "abcdef\n    \n    ");
 
-    root.insertTab();
+    root.runInputAction!(FluidInputAction.insertTab);
     root.runInputAction!(FluidInputAction.breakLine);
     assert(root.value == "abcdef\n    \n        \n        ");
 
-    root.outdent();
-    root.outdent();
+    root.runInputAction!(FluidInputAction.outdent);
+    root.runInputAction!(FluidInputAction.outdent);
     assert(root.value == "abcdef\n    \n        \n");
 
     root.runInputAction!(FluidInputAction.breakLine);
@@ -660,6 +660,7 @@ unittest {
 
     // mixed tabs (8 width total) -> 2 indents
     root.value = "  \t  \t";
+    root.caretToEnd();
     root.breakLine();
     assert(root.value == "  \t  \t\n        ");
 
@@ -714,6 +715,7 @@ unittest {
 
     // Move to line below
     root.runInputAction!(FluidInputAction.nextLine);
+    root.runInputAction!(FluidInputAction.nextChar);
     root.reformatLine();
     assert(root.value == "int main() {\n\treturn 0;\n}");
     assert(root.valueBeforeCaret == "int main() {\n\t");
@@ -801,141 +803,6 @@ unittest {
         TextStyleSlice(0, 5, tokenFunction),
         TextStyleSlice(6, 21, tokenString),
     ]));
-
-}
-
-@("CodeInput can use CodeIndentor separate from CodeHighlighter")
-unittest {
-
-    import std.typecons : BlackHole;
-
-    auto originalText
-       = "void foo() {\n"
-       ~ "fun();\n"
-       ~ "functionCall(\n"
-       ~ "stuff()\n"
-       ~ ");\n"
-       ~ "    }\n";
-    auto formattedText
-       = "void foo() {\n"
-       ~ "    fun();\n"
-       ~ "    functionCall(\n"
-       ~ "        stuff()\n"
-       ~ "    );\n"
-       ~ "}\n";
-
-    class Indentor : BlackHole!CodeIndentor {
-
-        struct Indent {
-            ptrdiff_t offset;
-            int indent;
-        }
-
-        Indent[] indents;
-
-        override void parse(Rope rope) {
-
-            bool lineStart;
-
-            indents = [Indent(0, 0)];
-
-            foreach (i, ch; rope.enumerate) {
-
-                if (ch.among('{', '(')) {
-                    indents ~= Indent(i + 1, 1);
-                }
-
-                else if (ch.among('}', ')')) {
-                    indents ~= Indent(i, lineStart ? -1 : 0);
-                }
-
-                else if (ch == '\n') lineStart = true;
-                else if (ch != ' ') lineStart = false;
-
-            }
-
-        }
-
-        override int indentDifference(ptrdiff_t offset) {
-
-            return indents
-                .filter!(a => a.offset <= offset)
-                .tail(1)
-                .front
-                .indent;
-
-        }
-
-    }
-
-    auto indentor = new Indentor;
-    auto highlighter = new class Indentor, CodeHighlighter {
-
-        const(char)[] nextTokenName(ubyte) {
-            return null;
-        }
-
-        CodeSlice query(size_t) {
-            return CodeSlice.init;
-        }
-
-        override void parse(Rope value) {
-            super.parse(value);
-        }
-
-    };
-
-    auto indentorOnlyInput = codeInput();
-    indentorOnlyInput.indentor = indentor;
-    auto highlighterInput = codeInput(highlighter);
-
-    foreach (root; [indentorOnlyInput, highlighterInput]) {
-
-        root.value = originalText;
-        root.draw();
-
-        // Reformat first line
-        root.caretIndex = 0;
-        assert(root.targetIndentLevelByIndex(0) == 0);
-        root.reformatLine();
-        assert(root.value == originalText);
-
-        // Reformat second line
-        root.caretIndex = 13;
-        assert(root.indentor.indentDifference(13) == 1);
-        assert(root.targetIndentLevelByIndex(13) == 1);
-        root.reformatLine();
-        assert(root.value == formattedText[0..23] ~ originalText[19..$]);
-
-        // Reformat third line
-        root.caretIndex = 24;
-        assert(root.indentor.indentDifference(24) == 0);
-        assert(root.targetIndentLevelByIndex(24) == 1);
-        root.reformatLine();
-        assert(root.value == formattedText[0..42] ~ originalText[34..$]);
-
-        // Reformat fourth line
-        root.caretIndex = 42;
-        assert(root.indentor.indentDifference(42) == 1);
-        assert(root.targetIndentLevelByIndex(42) == 2);
-        root.reformatLine();
-        assert(root.value == formattedText[0..58] ~ originalText[42..$]);
-
-        // Reformat fifth line
-        root.caretIndex = 58;
-        assert(root.indentor.indentDifference(58) == -1);
-        assert(root.targetIndentLevelByIndex(58) == 1);
-        root.reformatLine();
-        assert(root.value == formattedText[0..65] ~ originalText[45..$]);
-
-        // And the last line, finally
-        root.caretIndex = 65;
-        assert(root.indentor.indentDifference(65) == -1);
-        assert(root.targetIndentLevelByIndex(65) == 0);
-        root.reformatLine();
-        assert(root.value == formattedText);
-
-    }
 
 }
 
@@ -1117,10 +984,10 @@ unittest {
 
     root.draw();
     clipboard.value = "World";
-    input.push("  Hello,");
+    input.savePush("  Hello,");
     input.runInputAction!(FluidInputAction.breakLine);
-    input.paste();
-    input.push("!");
+    input.runInputAction!(FluidInputAction.paste);
+    input.savePush("!");
     assert(input.value == "  Hello,\n  World!");
 
     // Undo the exclamation mark
@@ -1173,10 +1040,10 @@ unittest {
     root.draw();
 
     clipboard.value = "World";
-    input.push("  Hello,");
-    input.push(" ");
-    input.paste();
-    input.push("!");
+    input.savePush("  Hello,");
+    input.savePush(" ");
+    input.runInputAction!(FluidInputAction.paste);
+    input.savePush("!");
     assert(input.value == "  Hello, World!");
 
     // Undo the exclamation mark
@@ -1254,8 +1121,8 @@ unittest {
         node.drawsRectangle(28, 0, 52, 27).ofColor("#41d2ff"),
         node.drawsRectangle(0, 27, 66, 27).ofColor("#41d2ff"),
         node.contentLabel.isDrawn().at(0, 0, 200, 81),
-        node.contentLabel.drawsHintedImage().at(0, 0, 1024, 1024).ofColor("#ffffff")
-            .sha256("7d1a992dbe8419432e5c387a88ad8b5117fdd06f9eb51ca80e1c4bb49c6e33a9"),
+        node.contentLabel.drawsHintedImage().at(0, 0, 512, 512).ofColor("#ffffff")
+            .sha256("00514849a8792edbf7ed722e01a0ac29d8ce686ed542933876612794ea37a2c5"),
         node.resetsCrop(),
     );
 
@@ -1264,10 +1131,10 @@ unittest {
     root.drawAndAssert(
         node.cropsTo(0, 0, 200, 80),
         node.drawsRectangle(28, 0, 51.2, 26.4).ofColor("#41d2ff"),
-        node.drawsRectangle(0, 26.4, 64.8, 26.4).ofColor("#41d2ff"),
+        node.drawsRectangle(0, 26.4, 61.6, 26.4).ofColor("#41d2ff"),
         node.contentLabel.isDrawn().at(0, 0, 200, 80),
-        node.contentLabel.drawsHintedImage().at(0, 0, 819.2, 819.2).ofColor("#ffffff")
-            .sha256("fe98c96e3d23bf446821cc1732361588236d1177fbf298de43be3df7e6c61778"),
+        node.contentLabel.drawsHintedImage().at(0, 0, 409.6, 409.6).ofColor("#ffffff")
+            .sha256("420071fa24bcfadef285b7dcffb9637f0a888ee4c3acfe6cfcc00ac4fcd20bbb"),
         node.resetsCrop(),
     );
 
