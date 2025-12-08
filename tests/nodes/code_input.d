@@ -1121,8 +1121,8 @@ unittest {
         node.drawsRectangle(28, 0, 52, 27).ofColor("#41d2ff"),
         node.drawsRectangle(0, 27, 66, 27).ofColor("#41d2ff"),
         node.contentLabel.isDrawn().at(0, 0, 200, 81),
-        node.contentLabel.drawsHintedImage().at(0, 0, 1024, 1024).ofColor("#ffffff")
-            .sha256("7d1a992dbe8419432e5c387a88ad8b5117fdd06f9eb51ca80e1c4bb49c6e33a9"),
+        node.contentLabel.drawsHintedImage().at(0, 0, 512, 512).ofColor("#ffffff")
+            .sha256("00514849a8792edbf7ed722e01a0ac29d8ce686ed542933876612794ea37a2c5"),
         node.resetsCrop(),
     );
 
@@ -1131,10 +1131,10 @@ unittest {
     root.drawAndAssert(
         node.cropsTo(0, 0, 200, 80),
         node.drawsRectangle(28, 0, 51.2, 26.4).ofColor("#41d2ff"),
-        node.drawsRectangle(0, 26.4, 64.8, 26.4).ofColor("#41d2ff"),
+        node.drawsRectangle(0, 26.4, 61.6, 26.4).ofColor("#41d2ff"),
         node.contentLabel.isDrawn().at(0, 0, 200, 80),
-        node.contentLabel.drawsHintedImage().at(0, 0, 819.2, 819.2).ofColor("#ffffff")
-            .sha256("fe98c96e3d23bf446821cc1732361588236d1177fbf298de43be3df7e6c61778"),
+        node.contentLabel.drawsHintedImage().at(0, 0, 409.6, 409.6).ofColor("#ffffff")
+            .sha256("420071fa24bcfadef285b7dcffb9637f0a888ee4c3acfe6cfcc00ac4fcd20bbb"),
         node.resetsCrop(),
     );
 
