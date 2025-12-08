@@ -340,31 +340,6 @@ class MapFrame : Frame {
         );
     }
 
-    protected override void drawImpl(Rectangle outer, Rectangle inner) {
-        if (_mouseDrag) {
-            import std.math;
-
-            // Update the mouse position
-            auto mouse = tree.io.mousePosition;
-            scope (exit) _mousePosition = mouse;
-
-            // If the previous mouse position was NaN, we've just started dragging
-            if (isNaN(_mousePosition.x)) {
-                auto position = _mouseDrag in positions;
-                assert(position, "Dragged node is not present in the map");
-
-                // Keep them in bounds
-                position.coords = moveToBounds(inner, position.coords, _mouseDrag.minSize);
-            }
-
-            else {
-                moveChildBy(_mouseDrag, mouse - _mousePosition);
-            }
-        }
-
-        super.drawImpl(outer, inner);
-    }
-
     protected override void drawChildren(Rectangle inner) {
         foreach (child; filterChildren) {
 

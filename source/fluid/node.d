@@ -21,6 +21,8 @@ import fluid.future.pipe;
 import fluid.future.context;
 import fluid.future.branch_action;
 
+public import fluid.types;
+
 // mustuse is not available in LDC 1.28
 static if (__traits(compiles, { import core.attribute : mustuse; }))
     import core.attribute : mustuse;
@@ -38,29 +40,6 @@ abstract class Node {
     public import fluid.structs : Align = NodeAlign;
 
     static class Extra {
-
-        private struct CacheKey {
-
-            size_t dataPtr;
-            FluidBackend backend;
-
-        }
-
-        /// Styling texture cache, by image pointer.
-        private TextureGC[CacheKey] cache;
-
-        /// Load a texture from the image. May return null if there's no valid image.
-        TextureGC* getTexture(FluidBackend backend, Image image) @trusted {
-
-            // No image
-            if (image.area == 0) return null;
-
-            const key = CacheKey(cast(size_t) image.data.ptr, backend);
-
-            // Find or create the entry
-            return &cache.require(key, TextureGC(backend, image));
-
-        }
 
     }
 
@@ -303,28 +282,6 @@ abstract class Node {
         }
 
     }
-
-    inout(FluidBackend) backend() inout {
-
-        return tree.backend;
-
-    }
-
-    FluidBackend backend(FluidBackend backend) {
-
-        // Create the tree if not present
-        if (tree is null) {
-
-            tree = new LayoutTree(this, backend);
-            return backend;
-
-        }
-
-        else return tree.backend = backend;
-
-    }
-
-    alias io = backend;
 
     /// Toggle the node's visibility.
     final void toggleShow() {
@@ -590,14 +547,6 @@ abstract class Node {
 
         assert(theme);
 
-        const space = tree.io.windowSize;
-
-        // Clear mouse hover if LMB is up
-        if (!isLMBHeld) tree.hover = null;
-
-        // Clear scroll
-        tree.scroll = null;
-
         // Clear focus info
         tree.focusDirection = FocusDirection(tree.focusBox);
         tree.focusBox = Rectangle(float.nan);
@@ -605,23 +554,15 @@ abstract class Node {
         // Clear breadcrumbs
         tree.breadcrumbs = Breadcrumbs.init;
 
-        // Update input
-        tree.poll();
-
-        // Request a resize if the window was resized
-        if (tree.io.hasJustResized) updateSize();
-
         // Resize if required
         if (resizePending) {
-
             prepareInternalImpl(tree, theme);
-            resizeInternalImpl(space);
+            resizeInternalImpl(Vector2.init);
             _resizePending = false;
-
         }
 
         /// Area to render on
-        const viewport = Rectangle(0, 0, space.x, space.y);
+        const viewport = Rectangle(0, 0, 0, 0);
 
         // Run beforeTree actions
         foreach (action; tree.filterActions) {
@@ -635,114 +576,11 @@ abstract class Node {
 
         // Run afterTree actions
         foreach (action; tree.filterActions) {
-
             action.afterTreeImpl();
-
         }
-
-
-        // Set mouse cursor to match hovered node
-        if (tree.hover) {
-
-            tree.io.mouseCursor = tree.hover.pickStyle().mouseCursor;
-
-        }
-
-
-        // Note: pressed, not released; released activates input events, pressed activates focus
-        const mousePressed = tree.io.isPressed(MouseButton.left)
-            || tree.io.isPressed(MouseButton.right)
-            || tree.io.isPressed(MouseButton.middle);
-
-        // Update scroll input
-        if (tree.scroll) tree.scroll.scrollImpl(io.scroll);
-
-        // Mouse is hovering an input node
-        // Note that nodes will remain in tree.hover if LMB is pressed to prevent "hover slipping" — actions should
-        // only trigger if the button was both pressed and released on the node.
-        if (auto hoverInput = cast(FluidHoverable) tree.hover) {
-
-            // Pass input to the node, unless it's disabled
-            if (!tree.hover.isDisabledInherited) {
-
-                // Check if the node is focusable
-                auto focusable = cast(FluidFocusable) tree.hover;
-
-                // If the left mouse button is pressed down, give the node focus
-                if (mousePressed && focusable) focusable.focus();
-
-                // Pass the input to it
-                hoverInput.runMouseInputActions || hoverInput.mouseImpl;
-
-            }
-
-        }
-
-        // Mouse pressed over a non-focusable node, remove focus
-        else if (mousePressed) tree.focus = null;
-
-
-        // Pass keyboard input to the currently focused node
-        if (tree.focus && !tree.focus.asNode.isDisabledInherited) {
-
-            // TODO BUG: also fires for removed nodes
-
-            // Let it handle input
-            tree.wasKeyboardHandled = either(
-                tree.focus.runFocusInputActions,
-                tree.focus.focusImpl,
-            );
-
-        }
-
-        // Nothing has focus
-        else with (FluidInputAction)
-        tree.wasKeyboardHandled = {
-
-            // Check the first focusable node
-            if (auto first = tree.focusDirection.first) {
-
-                // Check for focus action
-                const focusFirst = tree.isFocusActive!(FluidInputAction.focusNext)
-                    || tree.isFocusActive!(FluidInputAction.focusDown)
-                    || tree.isFocusActive!(FluidInputAction.focusRight)
-                    || tree.isFocusActive!(FluidInputAction.focusLeft);
-
-                // Switch focus
-                if (focusFirst) {
-
-                    first.focus();
-                    return true;
-
-                }
-
-            }
-
-            // Or maybe, get the last focusable node
-            if (auto last = tree.focusDirection.last) {
-
-                // Check for focus action
-                const focusLast = tree.isFocusActive!(FluidInputAction.focusPrevious)
-                    || tree.isFocusActive!(FluidInputAction.focusUp);
-
-                // Switch focus
-                if (focusLast) {
-
-                    last.focus();
-                    return true;
-
-                }
-
-            }
-
-            return false;
-
-        }();
 
         foreach (action; tree.filterActions) {
-
             action.afterInput(tree.wasKeyboardHandled);
-
         }
 
     }
@@ -804,50 +642,10 @@ abstract class Node {
         tree.breadcrumbs ~= currentStyle.breadcrumbs;
         scope (exit) tree.breadcrumbs = breadcrumbs;
 
-        // Get the visible part of the padding box — so overflowed content doesn't get mouse focus
-        const visibleBox = tree.intersectScissors(paddingBox);
-
-        // Check if hovered
-        _isHovered = hoveredImpl(visibleBox, tree.io.mousePosition);
-
         // Set tint
-        auto previousTint = io.tint;
-        io.tint = multiply(previousTint, currentStyle.tint);
-        tree.context.tint = io.tint;
-        scope (exit) io.tint = previousTint;
+        auto previousTint = tree.context.tint;
+        tree.context.tint = multiply(previousTint, currentStyle.tint);
         scope (exit) tree.context.tint = previousTint;
-
-        // If there's a border active, draw it
-        if (currentStyle.borderStyle) {
-
-            currentStyle.borderStyle.apply(io, borderBox, style.border);
-            // TODO wouldn't it be better to draw borders as background?
-
-        }
-
-        // Check if the mouse stroke started this node
-        const heldElsewhere = !tree.io.isPressed(MouseButton.left)
-            && isLMBHeld;
-
-        // Check for hover, unless ignored by this node
-        if (isHovered && !ignoreMouse) {
-
-            // Set global hover as long as the mouse isn't held down
-            if (!heldElsewhere) tree.hover = this;
-
-            // Update scroll
-            if (auto scrollable = cast(FluidScrollable) this) {
-
-                // Only if scrolling is possible
-                if (scrollable.canScroll(io.scroll))  {
-
-                    tree.scroll = scrollable;
-
-                }
-
-            }
-
-        }
 
         assert(
             only(size.tupleof).all!isFinite,
@@ -886,20 +684,7 @@ abstract class Node {
 
         }
 
-        // Draw the node cropped
-        // Note: minSize includes margin!
-        if (minSize.x > space.width || minSize.y > space.height) {
-
-            const lastScissors = tree.pushScissors(mainBox);
-            scope (exit) tree.popScissors(lastScissors);
-
-            drawImpl(mainBox, contentBox);
-
-        }
-
-        // Draw the node
-        else drawImpl(mainBox, contentBox);
-
+        drawImpl(mainBox, contentBox);
 
         // If not disabled
         if (!branchDisabled) {
@@ -1430,17 +1215,8 @@ abstract class Node {
 
     }
 
-    private bool isLMBHeld() @trusted {
-
-        return tree.io.isDown(MouseButton.left)
-            || tree.io.isReleased(MouseButton.left);
-
-    }
-
     override string toString() const {
-
         return format!"%s(%s)"(typeid(this), layout);
-
     }
 
 }
@@ -1469,34 +1245,12 @@ abstract class Node {
 ///     node = This node will serve as the root of your user interface until closed. If you wish to change it at
 ///         runtime, wrap it in a `NodeSlot`.
 void run(Node node) {
-
     if (mockRun) {
         mockRun()(node);
         return;
     }
 
-    auto backend = cast(FluidEntrypointBackend) defaultFluidBackend;
-
-    assert(backend, "Chosen default backend does not expose an event loop interface.");
-
-    node.io = backend;
-    backend.run(node);
-
-}
-
-/// ditto
-void run(Node node, FluidEntrypointBackend backend) {
-
-    // Mock run callback is available
-    if (mockRun) {
-        mockRun()(node);
-    }
-
-    else {
-        node.io = backend;
-        backend.run(node);
-    }
-
+    assert(false, "run() is not implemented for new I/O");
 }
 
 alias RunCallback = void delegate(Node node) @safe;

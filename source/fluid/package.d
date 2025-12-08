@@ -331,31 +331,6 @@ unittest {
 
 }
 
-@("Legacy: readme.md example (migrated)")
-unittest {
-
-    import std.math;
-
-    auto io = new HeadlessBackend;
-    auto root = vspace(
-        .layout!"center",
-        label(.layout!"center", "Hello World from"),
-        imageView("./logo.png", Vector2(499, 240)),
-    );
-
-    root.io = io;
-    root.draw();
-
-    // This should render two textures
-    auto textTexture = io.textures.front;
-    io.textures.popFront;
-    auto imageView = io.textures.front;
-
-    // Both textures should have the same bottom line
-    assert(textTexture.rectangle.end.y.isClose(imageView.rectangle.end.y));
-
-}
-
 static assert(__traits(compiles, openURL("https://samerion.com")));
 
 @("readme.md example")

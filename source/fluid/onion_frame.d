@@ -7,6 +7,7 @@ module fluid.onion_frame;
 import fluid.frame;
 import fluid.utils;
 import fluid.style;
+import fluid.types;
 import fluid.structs;
 
 @safe:

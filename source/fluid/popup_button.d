@@ -96,35 +96,18 @@ class PopupButton : ButtonImpl!Label {
         popup = popupFrame(popupChildren);
 
         super(text, delegate {
-
-            // New I/O
-            if (overlayIO) {
-
-                const anchor = focusBoxImpl(_inner);
-
-                // Parent popup active
-                if (parentPopup && parentPopup.isFocused)
-                    overlayIO.addChildPopup(parentPopup, popup, anchor);
-
-                // No parent
-                else {
-                    overlayIO.addPopup(popup, anchor);
-                }
-
-                _justOpened = true;
-
-            }
+            const anchor = focusBoxImpl(_inner);
 
             // Parent popup active
-            else if (parentPopup && parentPopup.isFocused)
-                parentPopup.spawnChildPopup(popup);
+            if (parentPopup && parentPopup.isFocused)
+                overlayIO.addChildPopup(parentPopup, popup, anchor);
 
             // No parent
             else {
-                popup.theme = theme;
-                tree.spawnPopup(popup);
+                overlayIO.addPopup(popup, anchor);
             }
 
+            _justOpened = true;
         });
 
     }

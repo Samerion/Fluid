@@ -289,7 +289,7 @@ class NodeSlot(T : Node) : Node {
     }
 
     protected override void drawImpl(Rectangle outer, Rectangle inner) {
-        pickStyle().drawBackground(io, canvasIO, outer);
+        pickStyle().drawBackground(canvasIO, outer);
 
         if (!value) return;
 

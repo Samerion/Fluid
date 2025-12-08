@@ -160,7 +160,7 @@ class ProgressBar : Node {
     override void drawImpl(Rectangle paddingBox, Rectangle contentBox) {
 
         auto style = pickStyle();
-        style.drawBackground(io, canvasIO, paddingBox);
+        style.drawBackground(canvasIO, paddingBox);
 
         // Draw the filling
         drawChild(fill, contentBox);
@@ -228,7 +228,7 @@ class ProgressBarFill : Node {
         paddingBox.width *= cast(float) bar.value / bar.maxValue;
 
         auto style = pickStyle();
-        style.drawBackground(io, canvasIO, paddingBox);
+        style.drawBackground(canvasIO, paddingBox);
 
     }
 

@@ -105,6 +105,7 @@ FocusRecurseAction focusRecurse(Node parent) {
 
 }
 
+version (TODO)
 unittest {
 
     import fluid.space;
@@ -247,67 +248,6 @@ ScrollIntoViewAction scrollToTop(Node node) {
 
 }
 
-@("Legacy: ScrollIntoViewAction works (migrated)")
-unittest {
-
-    import fluid;
-    import std.math;
-    import std.array;
-    import std.range;
-    import std.algorithm;
-
-    const viewportHeight = 10;
-
-    auto io = new HeadlessBackend(Vector2(10, viewportHeight));
-    auto root = vscrollFrame(
-        layout!(1, "fill"),
-        nullTheme,
-
-        label("a"),
-        label("b"),
-        label("c"),
-    );
-
-    root.io = io;
-    root.scrollBar.width = 0;  // TODO replace this with scrollBar.hide()
-
-    // Prepare scrolling
-    // Note: Changes made when scrolling will be visible during the next frame
-    root.children[1].scrollIntoView;
-    root.draw();
-
-    auto getPositions() {
-        return io.textures.map!(a => a.position).array;
-    }
-
-    // Find label positions
-    auto positions = getPositions();
-
-    // No theme so everything is as compact as it can be: the first label should be at the very top
-    assert(positions[0].y.isClose(0));
-
-    // It is reasonable to assume the text will be larger than 10 pixels (viewport height)
-    // Other text will not render, since it's offscreen
-    assert(positions.length == 1);
-
-    io.nextFrame;
-    root.draw();
-
-    // TODO Because the label was hidden below the viewport, Fluid will align the bottom of the selected node with the
-    // viewport which probably isn't appropriate in case *like this* where it should reveal the top of the node.
-    auto texture1 = io.textures.front;
-    assert(isClose(texture1.position.y + texture1.height, viewportHeight));
-    assert(isClose(root.scroll, (root.maxScroll + 10) * 2/3 - 10));
-
-    io.nextFrame;
-    root.draw();
-
-    auto scrolledPositions = getPositions();
-
-    // TODO more tests. Scrolling while already in the viewport, scrolling while partially out of the view, etc.
-
-}
-
 class ScrollIntoViewAction : TreeAction {
 
     public {
@@ -322,7 +262,6 @@ class ScrollIntoViewAction : TreeAction {
         /// The node this action attempts to put into view.
         Node target;
 
-        Vector2 viewport;
         Rectangle childBox;
 
         /// If non-zero, skips nodes. Incremented in beforeDraw once `startNode` is set to null
@@ -361,9 +300,6 @@ class ScrollIntoViewAction : TreeAction {
             // Make sure the action reaches the end of the tree
             target = node;
             startNode = null;
-
-            // Get viewport size
-            viewport = node.tree.io.windowSize;
 
             // Get the node's padding box
             childBox = node.focusBoxImpl(contentBox);

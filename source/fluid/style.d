@@ -23,6 +23,15 @@ public import fluid.default_theme;
 
 @safe:
 
+// TODO temporary
+enum FluidMouseCursor {
+    pointer,
+    text,
+    resizeEW,
+    resizeNS,
+    resizeNESW,
+    resizeNWSE,
+}
 
 /// Contains the style for a node.
 struct Style {
@@ -205,60 +214,20 @@ struct Style {
     }
 
     /// Draw the background & border.
-    void drawBackground(FluidBackend backend, Rectangle rect) const {
+    void drawBackground(CanvasIO canvasIO, Rectangle rect) const
+    in (canvasIO, "CanvasIO is unavailable (null)")
+    do {
+        canvasIO.drawRectangle(rect, backgroundColor);
 
-        backend.drawRectangle(rect, backgroundColor);
-
-        // Add border if active
+        // Draw border if present and compatible
         if (borderStyle) {
-
-            borderStyle.apply(backend, rect, border);
-
+            borderStyle.apply(canvasIO, rect, border);
         }
-
-    }
-
-    /// ditto
-    void drawBackground(FluidBackend backend, CanvasIO io, Rectangle rect) const {
-
-        // New I/O system used
-        if (io) {
-
-            const ioBorder = cast(const FluidIOBorder) borderStyle;
-
-            io.drawRectangle(rect, backgroundColor);
-
-            // Draw border if present and compatible
-            if (ioBorder) {
-                ioBorder.apply(io, rect, border);
-            }
-
-        }
-
-        // Old Backend system
-        else drawBackground(backend, rect);
-
     }
 
     /// Draw a line.
-    void drawLine(FluidBackend backend, Vector2 start, Vector2 end) const {
-
-        backend.drawLine(start, end, lineColor);
-
-    }
-
-    /// ditto
-    void drawLine(FluidBackend backend, CanvasIO canvasIO, Vector2 start, Vector2 end) const {
-
-        // New I/O system used
-        if (canvasIO) {
-
-            canvasIO.drawLine(start, end, 1, lineColor);
-
-        }
-
-        else drawLine(backend, start, end);
-
+    void drawLine(CanvasIO canvasIO, Vector2 start, Vector2 end) const {
+        canvasIO.drawLine(start, end, 1, lineColor);
     }
 
     /// Get a side array holding both the regular margin and the border.
@@ -591,97 +560,6 @@ unittest {
     assert(rect.y == rect.getSide(Style.Side.top));
     assert(rect.end.x == rect.getSide(Style.Side.right));
     assert(rect.end.y == rect.getSide(Style.Side.bottom));
-
-}
-
-@("Legacy: Style.tint stacks (migrated)")
-unittest {
-
-    import fluid.frame;
-    import fluid.structs;
-
-    auto io = new HeadlessBackend;
-    auto myTheme = nullTheme.derive(
-        rule!Frame(
-            Rule.backgroundColor = color!"fff",
-            Rule.tint = color!"aaaa",
-        ),
-    );
-    auto root = vframe(
-        layout!(1, "fill"),
-        myTheme,
-        vframe(
-            layout!(1, "fill"),
-            vframe(
-                layout!(1, "fill"),
-                vframe(
-                    layout!(1, "fill"),
-                )
-            ),
-        ),
-    );
-
-    root.io = io;
-    root.draw();
-
-    auto rect = Rectangle(0, 0, 800, 600);
-    auto bg = color!"fff";
-
-    // Background rectangles — all covering the same area, but with fading color and transparency
-    io.assertRectangle(rect, bg = multiply(bg, color!"aaaa"));
-    io.assertRectangle(rect, bg = multiply(bg, color!"aaaa"));
-    io.assertRectangle(rect, bg = multiply(bg, color!"aaaa"));
-    io.assertRectangle(rect, bg = multiply(bg, color!"aaaa"));
-
-}
-
-@("Legacy: Border occupies and takes space (abandoned)")
-unittest {
-
-    import fluid.frame;
-    import fluid.structs;
-
-    auto io = new HeadlessBackend;
-    auto myTheme = nullTheme.derive(
-        rule!Frame(
-            Rule.backgroundColor = color!"fff",
-            Rule.tint = color!"aaaa",
-            Rule.border.sideRight = 1,
-            Rule.borderStyle = colorBorder(color!"f00"),
-        )
-    );
-    auto root = vframe(
-        layout!(1, "fill"),
-        myTheme,
-        vframe(
-            layout!(1, "fill"),
-            vframe(
-                layout!(1, "fill"),
-                vframe(
-                    layout!(1, "fill"),
-                )
-            ),
-        ),
-    );
-
-    root.io = io;
-    root.draw();
-
-    auto bg = color!"fff";
-
-    // Background rectangles — reducing in size every pixel as the border gets added
-    io.assertRectangle(Rectangle(0, 0, 800, 600), bg = multiply(bg, color!"aaaa"));
-    io.assertRectangle(Rectangle(0, 0, 799, 600), bg = multiply(bg, color!"aaaa"));
-    io.assertRectangle(Rectangle(0, 0, 798, 600), bg = multiply(bg, color!"aaaa"));
-    io.assertRectangle(Rectangle(0, 0, 797, 600), bg = multiply(bg, color!"aaaa"));
-
-    auto border = color!"f00";
-
-    // Border rectangles
-    io.assertRectangle(Rectangle(799, 0, 1, 600), border = multiply(border, color!"aaaa"));
-    io.assertRectangle(Rectangle(798, 0, 1, 600), border = multiply(border, color!"aaaa"));
-    io.assertRectangle(Rectangle(797, 0, 1, 600), border = multiply(border, color!"aaaa"));
-    io.assertRectangle(Rectangle(796, 0, 1, 600), border = multiply(border, color!"aaaa"));
 
 }
 

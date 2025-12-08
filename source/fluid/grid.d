@@ -289,7 +289,7 @@ class GridFrame : Frame {
     }
 
     override void drawImpl(Rectangle outer, Rectangle inner) {
-        pickStyle.drawBackground(tree.io, canvasIO, outer);
+        pickStyle.drawBackground(canvasIO, outer);
         drawChildren(inner);
     }
 

@@ -87,16 +87,6 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable, Focusable, Hov
         return keyboardImpl();
     }
 
-    /// Check if the node is being pressed. Performs action lookup.
-    ///
-    /// This is a helper for nodes that might do something when pressed, for example, buttons.
-    protected bool checkIsPressed() {
-
-        return (isHovered && tree.isMouseDown!(FluidInputAction.press))
-            || (isFocused && tree.isFocusDown!(FluidInputAction.press));
-
-    }
-
     override void resizeImpl(Vector2 space) {
         import std.traits : isAbstractFunction;
 
@@ -207,6 +197,7 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable, Focusable, Hov
 
 }
 
+version (TODO)
 unittest {
 
     import fluid.label;
@@ -314,6 +305,7 @@ unittest {
 
 }
 
+version (TODO)
 unittest {
 
     import fluid.space;

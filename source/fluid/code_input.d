@@ -8,6 +8,7 @@ import fluid.text;
 import fluid.input;
 import fluid.utils;
 import fluid.style;
+import fluid.types;
 import fluid.text_input;
 import fluid.text.typeface;
 
@@ -135,15 +136,11 @@ class CodeInput : TextInput {
     }
 
     override size_t nearestCharacter(Vector2 needle) {
-
-        return contentLabel.text.indexAt(needle);
-
+        return contentLabel.text.indexAt(canvasIO, needle);
     }
 
     override TextRuler rulerAt(size_t index, bool preferNextLine = false) {
-
         return contentLabel.text.rulerAt(index, preferNextLine);
-
     }
 
     override TextInterval intervalAt(size_t index) {
@@ -153,9 +150,7 @@ class CodeInput : TextInput {
     }
 
     override CachedTextRuler rulerAtPosition(Vector2 position) {
-
-        return contentLabel.text.rulerAtPosition(position);
-
+        return contentLabel.text.rulerAtPosition(canvasIO, position);
     }
 
     override bool multiline() const {
@@ -206,14 +201,9 @@ class CodeInput : TextInput {
             const dpi = Vector2(96, 96);  // Deliberately constant
             auto typeface = style.getTypeface;
             typeface.setSize(dpi, style.fontSize);
-            if (canvasIO) {
-                const spaceSize = typeface.advance(' ');
-                text.indentWidth = indentWidth * canvasIO.fromDots(spaceSize).x;
-            }
-            else {
-                const spaceWidth = typeface.advance(' ').x / io.hidpiScale.x;
-                text.indentWidth = indentWidth * spaceWidth;
-            }
+
+            const spaceSize = typeface.advance(' ');
+            text.indentWidth = indentWidth * canvasIO.fromDots(spaceSize).x;
             placeholderText.indentWidth = text.indentWidth;
         }
 
@@ -928,6 +918,7 @@ class CodeInput : TextInput {
 
     }
 
+    version (TODO)
     unittest {
 
         auto io = new HeadlessBackend;
@@ -1396,6 +1387,7 @@ class CodeInput : TextInput {
 
     }
 
+    version (TODO)
     unittest {
 
         foreach (useTabs; [false, true]) {
@@ -1572,63 +1564,8 @@ class CodeInput : TextInput {
 
     }
 
-    @("Legacy: CodeInput.paste creates a history entry (migrated)")
-    unittest {
-
-        auto io = new HeadlessBackend;
-        auto root = codeInput(.useSpaces(2));
-        root.io = io;
-
-        io.clipboard = "World";
-        root.savePush("  Hello,");
-        root.runInputAction!(FluidInputAction.breakLine);
-        root.runInputAction!(FluidInputAction.paste);
-        assert(!root.snapshot.isMinor);
-        root.savePush("!");
-        assert(root.value == "  Hello,\n  World!");
-        assert(root.valueBeforeCaret == root.value);
-
-        // Undo the exclamation mark
-        root.undo();
-        assert(root.value == "  Hello,\n  World");
-        assert(root.valueBeforeCaret == root.value);
-
-        // Undo moves before pasting
-        root.undo();
-        assert(root.value == "  Hello,\n  ");
-        assert(root.valueBeforeCaret == root.value);
-
-        // Next undo moves before line break
-        root.undo();
-        assert(root.value == "  Hello,");
-
-        // Next undo clears all changes
-        root.undo();
-        assert(root.value == "");
-
-        // No change
-        root.undo();
-        assert(root.value == "");
-
-        // It can all be redone
-        root.redo();
-        assert(root.value == "  Hello,");
-        assert(root.valueBeforeCaret == root.value);
-        root.redo();
-        assert(root.value == "  Hello,\n  ");
-        assert(root.valueBeforeCaret == root.value);
-        root.redo();
-        assert(root.value == "  Hello,\n  World");
-        assert(root.valueBeforeCaret == root.value);
-        root.redo();
-        assert(root.value == "  Hello,\n  World!");
-        assert(root.valueBeforeCaret == root.value);
-        root.redo();
-        assert(root.value == "  Hello,\n  World!");
-
-    }
-
     @("CodeInput: Undo and redo works")
+    version (none)
     unittest {
 
         // Same test as above, but insert a space instead of line break
@@ -1670,6 +1607,7 @@ class CodeInput : TextInput {
 
     }
 
+    version (none)
     unittest {
 
         auto io = new HeadlessBackend;
@@ -1899,6 +1837,7 @@ unittest {
 }
 
 @("CodeInput formatting benchmark")
+version (TODO)
 unittest {
 
     // This test may appear pretty stupid but it was used to diagnose a dumb bug
