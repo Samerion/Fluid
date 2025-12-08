@@ -15,7 +15,6 @@ import fluid.utils;
 import fluid.input;
 import fluid.actions;
 import fluid.structs;
-import fluid.backend;
 import fluid.theme : Breadcrumbs;
 
 import fluid.future.pipe;
@@ -1365,7 +1364,7 @@ abstract class Node {
     deprecated("implHoveredRect is now the default behavior; implHoveredRect is to be removed in 0.8.0")
     protected mixin template implHoveredRect() {
 
-        private import fluid.backend : Rectangle, Vector2;
+        private import fluid.types : Rectangle, Vector2;
 
         protected override bool hoveredImpl(Rectangle rect, Vector2 mousePosition) const {
 

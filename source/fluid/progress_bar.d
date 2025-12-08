@@ -90,7 +90,6 @@ unittest {
 import fluid.text;
 import fluid.node;
 import fluid.utils;
-import fluid.backend;
 import fluid.structs;
 
 import fluid.io.canvas;

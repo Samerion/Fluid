@@ -2,7 +2,6 @@ module fluid.password_input;
 
 import fluid.utils;
 import fluid.style;
-import fluid.backend;
 import fluid.text_input;
 
 import fluid.io.canvas;

@@ -5,7 +5,6 @@ import fluid.node;
 import fluid.input;
 import fluid.utils;
 import fluid.style;
-import fluid.backend;
 import fluid.image_view;
 
 import fluid.io.canvas;

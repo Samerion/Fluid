@@ -8,9 +8,6 @@
 /// Note that because Raylib introduces breaking changes in every version, the current version of Raylib should
 /// be specified using `raylibStack.v5_5()`. Raylib 5.5 is currently the oldest version supported,
 /// and is the default in case no version is chosen explicitly.
-///
-/// Unlike `fluid.backend.Raylib5Backend`, this uses the new I/O system introduced in Fluid 0.8.0. This layer
-/// is recommended for new apps, but disabled by default.
 module fluid.raylib_view;
 
 version (Have_raylib_d):
@@ -46,7 +43,6 @@ import fluid.node_chain;
 import fluid.future.arena;
 
 import fluid.backend.raylib5 : Raylib5Backend, toRaylib;
-import fluid.backend.headless : HeadlessBackend;
 
 import fluid.io.time;
 import fluid.io.canvas;
@@ -768,12 +764,6 @@ class RaylibStack(RaylibViewVersion raylibVersion) : Node {
 
     }
 
-    private {
-
-        HeadlessBackend _headlessBackend;
-
-    }
-
     /// Initialize the stack.
     /// Params:
     ///     next = Node to draw using the stack.
@@ -781,7 +771,6 @@ class RaylibStack(RaylibViewVersion raylibVersion) : Node {
 
         import fluid.structs : layout;
 
-        _headlessBackend = new HeadlessBackend;
         chain(
             preferenceIO = preferenceChain(),
             timeIO       = timeChain(),
@@ -831,11 +820,6 @@ class RaylibStack(RaylibViewVersion raylibVersion) : Node {
     override void resizeImpl(Vector2 space) {
         resizeChild(root, space);
         minSize = root.minSize;
-
-        // If RaylibStack is used as the root, disable the legacy backend
-        if (tree.root == this) {
-            this.backend = _headlessBackend;
-        }
     }
 
     override void drawImpl(Rectangle, Rectangle inner) {

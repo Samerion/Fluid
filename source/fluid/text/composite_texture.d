@@ -11,7 +11,6 @@ debug (Fluid_TextUpdates) {
 }
 
 import fluid.utils;
-import fluid.backend;
 import fluid.io.canvas;
 
 debug (Fluid_BuildMessages) {

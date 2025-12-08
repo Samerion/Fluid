@@ -193,7 +193,6 @@ version (Fluid_Docs) {
     ///
     /// * [fluid.io][fluid.io] defines standard interfaces for I/O processing.
     /// * [RaylibView and RaylibStack][fluid.raylib_view] implement Raylib support.
-    /// * Legacy: [fluid.backend][fluid.backend] contains the old I/O interfaces.
     /// * [NodeChain][fluid.node_chain] is an optimized base class for I/O implementations.
     ///
     /// ### Transformation
@@ -249,7 +248,6 @@ else {
 }
 
 public import
-    fluid.backend,             // documented
     fluid.actions,             // documented
     fluid.arsd_image_chain,    // documented
     fluid.button,              // documented

@@ -1,7 +1,6 @@
 module fluid.border;
 
 import fluid.style;
-import fluid.backend;
 
 import fluid.io.canvas;
 

@@ -7,7 +7,6 @@ import fluid.node;
 import fluid.utils;
 import fluid.input;
 import fluid.style;
-import fluid.backend;
 
 import fluid.io.hover;
 import fluid.io.canvas;

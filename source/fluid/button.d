@@ -36,7 +36,6 @@ import fluid.label;
 import fluid.utils;
 import fluid.style;
 import fluid.structs;
-import fluid.backend;
 
 /// A [node builder][nodeBuilder] to create a [Button] labelled with text.
 /// It takes a string for the label text, and a delegate describing the effect.

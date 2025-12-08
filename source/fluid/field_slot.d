@@ -20,7 +20,6 @@ import fluid.node;
 import fluid.utils;
 import fluid.input;
 import fluid.actions;
-import fluid.backend;
 
 import fluid.io.hover;
 import fluid.io.focus;
