@@ -1,0 +1,9 @@
+# Ignore list for Helix' file picker
+
+# Binary files
+*.a
+*.dll
+*.lib
+*.png
+*.ttf
+resources/*-alpha

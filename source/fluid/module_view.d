@@ -28,16 +28,16 @@ import std.algorithm;
 
 import fluid.node;
 import fluid.slot;
-import fluid.rope;
 import fluid.label;
 import fluid.space;
 import fluid.style;
 import fluid.frame;
 import fluid.button;
 import fluid.structs;
-import fluid.popup_button;
+import fluid.text.rope;
 import fluid.code_input;
 import fluid.tree_sitter;
+import fluid.popup_button;
 import fluid.default_theme;
 
 // Disable playground functionality under Windows & macOS
@@ -894,7 +894,7 @@ private Rope readDocs(string source, TSQueryCapture[] captures) @trusted {
 private Space interpretDocs(Rope rope) {
 
     import std.conv : to;
-    import fluid.typeface : Typeface;
+    import fluid.text.typeface : Typeface;
 
     const space = Rope(" ");
     const lineFeed = Rope("\n");
@@ -918,7 +918,7 @@ private Space interpretDocs(Rope rope) {
     string preformattedDelimiter;
 
     // Read line by line
-    foreach (line; Typeface.lineSplitter(rope)) {
+    foreach (Rope line; rope.byLine) {
 
         // Regular documentation line
         if (preformattedDelimiter.empty) {

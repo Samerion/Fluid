@@ -355,17 +355,6 @@ inout(T) castIfAcceptsInput(T : Actionable)(inout Object node) {
 
 }
 
-/// Get the ID of an input action.
-/// Params:
-///     action = Action to get the ID of.
-/// Returns:
-///     `InputActionID` struct with the action encoded.
-InputActionID inputActionID(alias action)() {
-
-    return InputActionID.from!action;
-
-}
-
 /// Check if the given symbol defines an input action.
 ///
 /// The symbol symbol must be a member of an enum marked with `@InputAction`. The enum $(B must not) be a manifest
@@ -634,7 +623,7 @@ template InputActionHandlers(T) {
             static foreach (i, actionType; __traits(getAttributes, overload)) {
 
                 // Input action — add to the result
-                static if (isInputActionType!actionType) {
+                static if (isInputAction!actionType) {
 
                     Result = AliasSeq!(
                         Result,

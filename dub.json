@@ -172,8 +172,8 @@
 				"fluid": {
 					"path": "."
 				},
-				"fluid-tree-sitter": "~>0.1.6",
-				"fluid-tree-sitter:d": "~>0.1.6"
+				"fluid-tree-sitter": "~>0.2.0",
+				"fluid-tree-sitter:d": "~>0.2.0"
 			},
 			"environments": {
 				"BINDBC_FREETYPE_PACKAGE_DIR": "$BINDBC_FREETYPE_PACKAGE_DIR",

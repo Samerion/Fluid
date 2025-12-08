@@ -1,4 +1,3 @@
-@Migrated
 module legacy.text_input;
 
 import fluid;
@@ -7,6 +6,8 @@ import legacy;
 import std.range;
 import std.datetime;
 import std.algorithm;
+
+import text.text;
 
 @safe:
 
@@ -24,7 +25,7 @@ unittest {
         root.draw();
 
         assert(root.value == "");
-        assert(root.contentLabel.text == "placeholder");
+        assert(root.contentLabel.showPlaceholder);
         assert(root.isEmpty);
     }
 
@@ -616,12 +617,12 @@ unittest {
 
     // Just by the way, check if the caret position is correct
     root.updateCaretPosition(true);
-    assert(root.caretPosition.x.isClose(0));
-    assert(root.caretPosition.y.isClose(135));
+    assert(root.caretRectangle.x.isClose(0));
+    assert(root.caretRectangle.y.isClose(135));
 
     root.updateCaretPosition(false);
-    assert(root.caretPosition.x.isClose(153));
-    assert(root.caretPosition.y.isClose(108));
+    assert(root.caretRectangle.x.isClose(153));
+    assert(root.caretRectangle.y.isClose(108));
 
     // Try the same with the third line
     root.caretTo(Vector2(200, 148));
@@ -673,7 +674,7 @@ unittest {
     import std.math : isClose;
 
     auto io = new HeadlessBackend;
-    auto root = textInput(.nullTheme, .multiline);
+    auto root = textInput(.testTheme, .multiline);
 
     root.io = io;
     root.size = Vector2(200, 0);
@@ -724,30 +725,31 @@ unittest {
 
     assert(root.valueBeforeCaret.wordBack == "enough ");
     assert(root.valueAfterCaret.wordFront == "to ");
-    assert(root.caretPosition.x.isClose(0));
+    assert(root.caretRectangle.x.isClose(0));
 
     // Move to the previous line
     root.runInputAction!(FluidInputAction.previousLine);
 
     assert(root.valueBeforeCaret.wordBack == ", ");
     assert(root.valueAfterCaret.wordFront == "make ");
-    assert(root.caretPosition.x.isClose(0));
+    assert(root.caretRectangle.x.isClose(0));
 
     // Move to its end — position should be the same as earlier, but the caret should be on the same line
     root.runInputAction!(FluidInputAction.toLineEnd);
 
     assert(root.valueBeforeCaret.wordBack == "enough ");
     assert(root.valueAfterCaret.wordFront == "to ");
-    assert(root.caretPosition.x.isClose(181));
+    assert(root.caretRectangle.x.isClose(181));
 
     // Move to the previous line — again
     root.runInputAction!(FluidInputAction.previousLine);
 
     assert(root.valueBeforeCaret.wordBack == ", ");
     assert(root.valueAfterCaret.wordFront == "make ");
-    assert(root.caretPosition.x.isClose(153));
+    assert(root.caretRectangle.x.isClose(153));
 
 }
+
 
 @("TextInput.cut removes text and puts it in the clipboard")
 @Migrated
@@ -891,7 +893,92 @@ unittest {
 
     const focusBox = input.focusBoxImpl(Rectangle(0, 0, 200, 50));
 
-    assert(focusBox.start == input.caretPosition);
+    assert(focusBox.start == input.caretRectangle.start);
     assert(focusBox.end.y - viewportHeight == root.scroll);
+
+
+}
+
+@("TextInput.toLineStart and TextInput.toLineEnd work and correctly set horizontal anchors")
+unittest {
+
+    // Note: This test depends on parameters specific to the default typeface.
+
+    import std.math : isClose;
+
+    auto io = new HeadlessBackend;
+    auto root = textInput(.testTheme, .multiline);
+
+    root.io = io;
+    root.size = Vector2(200, 0);
+    root.value = "Hello, World!\nHello, Moon\n\nHello, Sun\nWrap this line µp, make it long enough to cross over";
+    root.focus();
+    root.draw();
+
+    root.caretIndex = 0;
+    root.updateCaretPosition();
+    root.runInputAction!(FluidInputAction.toLineEnd);
+
+    assert(root.caretIndex == "Hello, World!".length);
+
+    // Move to the next line, should be at the end
+    root.runInputAction!(FluidInputAction.nextLine);
+
+    assert(root.valueBeforeCaret.wordBack == "Moon");
+    assert(root.valueAfterCaret.wordFront == "\n");
+
+    // Move to the blank line
+    root.runInputAction!(FluidInputAction.nextLine);
+
+    const blankLine = root.caretIndex;
+    assert(root.valueBeforeCaret.wordBack == "\n");
+    assert(root.valueAfterCaret.wordFront == "\n");
+
+    // toLineEnd and toLineStart should have no effect
+    root.runInputAction!(FluidInputAction.toLineStart);
+    assert(root.caretIndex == blankLine);
+    root.runInputAction!(FluidInputAction.toLineEnd);
+    assert(root.caretIndex == blankLine);
+
+    // Next line again
+    // The anchor has been reset to the beginning
+    root.runInputAction!(FluidInputAction.nextLine);
+
+    assert(root.valueBeforeCaret.wordBack == "\n");
+    assert(root.valueAfterCaret.wordFront == "Hello");
+
+    // Move to the very end
+    root.runInputAction!(FluidInputAction.toEnd);
+
+    assert(root.valueBeforeCaret.wordBack == "over");
+    assert(root.valueAfterCaret.wordFront == "");
+
+    // Move to start of the line
+    root.runInputAction!(FluidInputAction.toLineStart);
+
+    assert(root.valueBeforeCaret.wordBack == "enough ");
+    assert(root.valueAfterCaret.wordFront == "to ");
+    assert(root.caretRectangle.x.isClose(0));
+
+    // Move to the previous line
+    root.runInputAction!(FluidInputAction.previousLine);
+
+    assert(root.valueBeforeCaret.wordBack == ", ");
+    assert(root.valueAfterCaret.wordFront == "make ");
+    assert(root.caretRectangle.x.isClose(0));
+
+    // Move to its end — position should be the same as earlier, but the caret should be on the same line
+    root.runInputAction!(FluidInputAction.toLineEnd);
+
+    assert(root.valueBeforeCaret.wordBack == "enough ");
+    assert(root.valueAfterCaret.wordFront == "to ");
+    assert(root.caretRectangle.x.isClose(181));
+
+    // Move to the previous line — again
+    root.runInputAction!(FluidInputAction.previousLine);
+
+    assert(root.valueBeforeCaret.wordBack == ", ");
+    assert(root.valueAfterCaret.wordFront == "make ");
+    assert(root.caretRectangle.x.isClose(153));
 
 }

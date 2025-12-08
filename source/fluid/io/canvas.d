@@ -42,14 +42,22 @@ interface CanvasIO : IO {
     /// Returns:
     ///     Corresponding value in dots.
     final Vector2 toDots(Vector2 pixels) const nothrow {
-
         const dpi = this.dpi;
-
         return Vector2(
             pixels.x * dpi.x / 96,
             pixels.y * dpi.y / 96,
         );
+    }
 
+    /// ditto
+    final Rectangle toDots(Rectangle pixels) const nothrow {
+        const dpi = this.dpi;
+        return Rectangle(
+            pixels.x      * dpi.x / 96,
+            pixels.y      * dpi.y / 96,
+            pixels.width  * dpi.x / 96,
+            pixels.height * dpi.y / 96,
+        );
     }
 
     /// Measure distance in pixels taken by a number of dots.
@@ -61,14 +69,22 @@ interface CanvasIO : IO {
     /// Returns:
     ///     Corresponding value in pixels.
     final Vector2 fromDots(Vector2 dots) const nothrow {
-
         const dpi = this.dpi;
-
         return Vector2(
             dots.x / dpi.x * 96,
             dots.y / dpi.y * 96,
         );
+    }
 
+    /// ditto
+    final Rectangle fromDots(Rectangle dots) const nothrow {
+        const dpi = this.dpi;
+        return Rectangle(
+            dots.x      / dpi.x * 96,
+            dots.y      / dpi.y * 96,
+            dots.width  / dpi.x * 96,
+            dots.height / dpi.y * 96,
+        );
     }
 
     @("toDots/fromDots performs correct conversion")

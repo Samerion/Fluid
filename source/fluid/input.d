@@ -11,9 +11,10 @@ import fluid.tree;
 import fluid.style;
 import fluid.backend;
 
+public import fluid.input_node;
 import fluid.io.focus;
 import fluid.io.hover;
-import fluid.io.action;
+public import fluid.io.action;
 
 import fluid.future.context;
 
@@ -27,8 +28,15 @@ enum WhileHeld;
 
 alias WhileDown = WhileHeld;
 
-deprecated ("`whileDown` has been deprecated and will be removed in Fluid 0.8.0. Use `WhileDown` instead.")
-alias whileDown = WhileDown;
+/// This meta-UDA can be attached to an enum definition, so Fluid would recognize its members
+/// as input action definitions. These members can then be attached as attributes to functions
+/// to turn them into input action handlers.
+///
+/// You can get the ID of an input action by passing it to `inputActionID`, for example
+/// `inputActionID!(FluidInputAction.press)`.
+///
+/// All built-in input actions are defined in `FluidInputAction`.
+enum InputAction;
 
 /// Default input actions one can listen to.
 @InputAction
@@ -106,37 +114,49 @@ enum FluidInputAction {
 }
 
 /// ID of an input action.
+///
+/// Each input action has a unique ID based on its position in the executable binary. You can get the ID
+/// using `inputActionID`.
+///
+/// See_Also:
+///     `InputAction`
 immutable struct InputActionID {
+    import fluid.future.static_id;
 
-    /// Unique ID of the action.
-    size_t id;
+    StaticID staticID;
 
-    /// Action name. Only emitted when debugging.
-    debug string name;
+    alias staticID this;
 
-    /// Get ID of an input action.
-    this(IA : InputAction!actionType, alias actionType)(IA) immutable {
-
-        this.id = cast(size_t) &IA._id;
-        debug this.name = fullyQualifiedName!(IA.type);
-
+    private this(StaticID staticID) immutable {
+        this.staticID = staticID;
     }
 
+    deprecated("InputActionID.from has been replaced by inputActionID and will be removed in Fluid 0.9.0")
     static InputActionID from(alias item)() {
-
-        return InputAction!item.id;
-
+        return inputActionID!item;
     }
 
     bool opEqual(InputActionID other) {
-
         return id == other.id;
-
     }
 
 }
 
-enum isInputActionType(alias actionType) = isInputAction!actionType;
+/// Get the ID of an input action.
+/// Params:
+///     action = Action to get the ID of.
+/// Returns:
+///     `InputActionID` struct with the action encoded.
+InputActionID inputActionID(alias action)() {
+    import fluid.future.static_id;
+    return InputActionID(staticID!action);
+
+}
+
+deprecated("isInputActionType has been renamed to isInputAction and will be removed in Fluid 0.9.0.") {
+    alias isInputActionType(alias actionType) = isInputAction!actionType;
+}
+
 
 unittest {
 
@@ -149,16 +169,16 @@ unittest {
         foo,
     }
 
-    static assert(isInputActionType!(FluidInputAction.entryUp));
-    static assert(isInputActionType!(MyAction.foo));
+    static assert(isInputAction!(FluidInputAction.entryUp));
+    static assert(isInputAction!(MyAction.foo));
 
-    static assert(!isInputActionType!InputNode);
-    static assert(!isInputActionType!InputAction);
-    static assert(!isInputActionType!(InputAction!(FluidInputAction.entryUp)));
-    static assert(!isInputActionType!FluidInputAction);
-    static assert(!isInputActionType!MyEnum);
-    static assert(!isInputActionType!(MyEnum.foo));
-    static assert(!isInputActionType!MyAction);
+    static assert(!isInputAction!InputNode);
+    static assert(!isInputAction!InputAction);
+    static assert(!isInputAction!(inputActionID!(FluidInputAction.entryUp)));
+    static assert(!isInputAction!FluidInputAction);
+    static assert(!isInputAction!MyEnum);
+    static assert(!isInputAction!(MyEnum.foo));
+    static assert(!isInputAction!MyAction);
 
 
 }
@@ -414,47 +434,10 @@ struct InputLayer {
 
 }
 
-/// This meta-UDA can be attached to an enum, so Fluid would recognize members of said enum as an UDA defining input
-/// actions. As an UDA, this template should be used without instantiating.
-///
-/// This template also serves to provide unique identifiers for each action type, generated on startup. For example,
-/// `InputAction!(FluidInputAction.press).id` will have the same value anywhere in the program.
-///
-/// Action types are resolved at compile-time using symbols, so you can supply any `@InputAction`-marked enum defining
-/// input actions. All built-in enums are defined in `FluidInputAction`.
-///
-/// If the method returns `true`, it is understood that the action has been processed and no more actions will be
-/// emitted during the frame. If it returns `false`, other actions and keyboardImpl will be tried until any call returns
-/// `true` or no handlers are left.
-struct InputAction(alias actionType)
-if (isInputActionType!actionType) {
-
-    alias type = actionType;
-
-    alias id this;
-
-    /// **The pointer** to `_id` serves as ID of the input actions.
-    ///
-    /// Note: we could be directly getting the address of the ID function itself (`&id`), but it's possible some linkers
-    /// would merge declarations, so we're using `&_id` for safety. Example of such behavior can be achieved using
-    /// `ld.gold` with `--icf=all`. It's possible the linker could be aware we're checking the function address
-    // (`--icf=safe` works correctly), but again, we prefer to play it safe. Alternatively, we could test for this
-    /// behavior when the program starts, but it probably isn't worth it.
-    align(1)
-    private static immutable bool _id;
-
-    static InputActionID id() {
-
-        return InputActionID(typeof(this)());
-
-    }
-
-}
-
 unittest {
 
-    assert(InputAction!(FluidInputAction.press).id == InputAction!(FluidInputAction.press).id);
-    assert(InputAction!(FluidInputAction.press).id != InputAction!(FluidInputAction.entryUp).id);
+    assert(inputActionID!(FluidInputAction.press) == inputActionID!(FluidInputAction.press));
+    assert(inputActionID!(FluidInputAction.press) != inputActionID!(FluidInputAction.entryUp));
 
     // IDs should have the same equality as the enum members, within the same enum
     // This will not be the case for enum values with explicitly assigned values (but probably should be!)
@@ -463,9 +446,9 @@ unittest {
         foreach (right; EnumMembers!FluidInputAction) {
 
             if (left == right)
-                assert(InputAction!left.id == InputAction!right.id);
+                assert(inputActionID!left == inputActionID!right);
             else
-                assert(InputAction!left.id != InputAction!right.id);
+                assert(inputActionID!left != inputActionID!right);
 
         }
 
@@ -482,10 +465,10 @@ unittest {
         action = 0,
     }
 
-    assert(InputAction!(FooActions.action).id == InputAction!(FooActions.action).id);
-    assert(InputAction!(FooActions.action).id != InputAction!(BarActions.action).id);
-    assert(InputAction!(FooActions.action).id != InputAction!(FluidInputAction.press).id);
-    assert(InputAction!(BarActions.action).id != InputAction!(FluidInputAction.press).id);
+    assert(inputActionID!(FooActions.action) == inputActionID!(FooActions.action));
+    assert(inputActionID!(FooActions.action) != inputActionID!(BarActions.action));
+    assert(inputActionID!(FooActions.action) != inputActionID!(FluidInputAction.press));
+    assert(inputActionID!(BarActions.action) != inputActionID!(FluidInputAction.press));
 
 }
 
@@ -495,28 +478,28 @@ unittest {
     import std.concurrency;
 
     // IDs are global across threads
-    auto t0 = InputAction!(FluidInputAction.press).id;
+    auto t0 = inputActionID!(FluidInputAction.press);
 
     spawn({
 
-        ownerTid.send(InputAction!(FluidInputAction.press).id);
+        ownerTid.send(inputActionID!(FluidInputAction.press));
 
         spawn({
 
-            ownerTid.send(InputAction!(FluidInputAction.press).id);
+            ownerTid.send(inputActionID!(FluidInputAction.press));
 
         });
 
         ownerTid.send(receiveOnly!InputActionID);
 
-        ownerTid.send(InputAction!(FluidInputAction.cancel).id);
+        ownerTid.send(inputActionID!(FluidInputAction.cancel));
 
     });
 
     auto t1 = receiveOnly!InputActionID;
     auto t2 = receiveOnly!InputActionID;
 
-    auto c0 = InputAction!(FluidInputAction.cancel).id;
+    auto c0 = inputActionID!(FluidInputAction.cancel);
     auto c1 = receiveOnly!InputActionID;
 
     assert(t0 == t1);
@@ -535,7 +518,7 @@ unittest {
 bool isDown(alias type)(LayoutTree* tree)
 if (isInputActionType!type) {
 
-    return tree.downActions[].canFind!"a.action == b"(InputActionID.from!type);
+    return tree.downActions[].canFind!"a.action == b"(inputActionID!type);
 
 }
 
@@ -583,7 +566,7 @@ bool isMouseDown(alias type)(LayoutTree* tree)
 if (isInputActionType!type) {
 
     return tree.downActions[].canFind!(a
-        => a.action == InputActionID.from!type
+        => a.action == inputActionID!type
         && InputStroke.isMouseItem(a.trigger));
 
 }
@@ -637,7 +620,7 @@ bool isFocusDown(alias type)(LayoutTree* tree)
 if (isInputActionType!type) {
 
     return tree.downActions[].canFind!(a
-        => a.action == InputActionID.from!type
+        => a.action == inputActionID!type
         && !InputStroke.isMouseItem(a.trigger));
 
 }
@@ -673,7 +656,7 @@ bool isActive(alias type)(LayoutTree* tree)
 if (isInputActionType!type) {
 
     return tree.activeActions[].canFind!(a
-        => a.action == InputActionID.from!type);
+        => a.action == inputActionID!type);
 
 }
 
@@ -682,7 +665,7 @@ bool isMouseActive(alias type)(LayoutTree* tree)
 if (isInputActionType!type) {
 
     return tree.activeActions[].canFind!(a
-        => a.action == InputActionID.from!type
+        => a.action == inputActionID!type
         && InputStroke.isMouseItem(a.trigger));
 
 }
@@ -692,7 +675,7 @@ bool isFocusActive(alias type)(LayoutTree* tree)
 if (isInputActionType!type) {
 
     return tree.activeActions[].canFind!(a
-        => a.action == InputActionID.from!type
+        => a.action == inputActionID!type
         && !InputStroke.isMouseItem(a.trigger));
 
 }
@@ -724,9 +707,10 @@ interface FluidHoverable {
     /// ---
     /// override bool inputActionImpl(InputActionID id, bool active) {
     ///
-    ///     if (active && id == InputActionID.from!(FluidInputAction.press)) {
+    ///     if (active && id == inputActionID!(FluidInputAction.press)) {
     ///
-    ///         return runInputAction!(FluidInputAction.press);
+    ///         // use `run...Impl` to prevent recursion
+    ///         return runInputActionImpl!(FluidInputAction.submit);
     ///
     ///     }
     ///
@@ -752,16 +736,16 @@ interface FluidHoverable {
     /// Manual implementation is discouraged; override `inputActionImpl` instead.
     bool runInputActionImpl(immutable InputActionID action, bool active = true);
 
+    final bool runInputActionImpl(alias action)(bool active = true) {
+        return runInputActionImpl(inputActionID!action, active);
+    }
+
     final bool runInputAction(immutable InputActionID action, bool active = true) {
-
         return runInputActionImpl(action, active);
-
     }
 
     final bool runInputAction(alias action)(bool active = true) {
-
-        return runInputActionImpl(InputActionID.from!action, active);
-
+        return runInputAction(inputActionID!action, active);
     }
 
     /// Run mouse input actions for the node.
@@ -800,7 +784,8 @@ interface FluidHoverable {
             format!"%s : FluidHoverable must inherit from Node"(typeid(this)));
 
         // Provide a default implementation of inputActionImpl
-        static if (!is(typeof(super) : FluidHoverable))
+        static if (!is(typeof(super) : FluidHoverable)
+            && !__traits(hasMember, typeof(super), "inputActionImpl"))
         bool inputActionImpl(immutable InputActionID id, bool active) {
 
             return false;
@@ -941,420 +926,5 @@ interface FluidScrollable {
 
     /// Set scroll value.
     float scroll(float value);
-
-}
-
-/// Represents a general input node.
-abstract class InputNode(Parent : Node) : Parent, FluidFocusable, Focusable, Hoverable {
-
-    mixin makeHoverable;
-    mixin enableInputActions;
-
-    FocusIO focusIO;
-    HoverIO hoverIO;
-
-    /// Callback to run when the input value is altered.
-    void delegate() changed;
-
-    /// Callback to run when the input is submitted.
-    void delegate() submitted;
-
-    this(T...)(T sup) {
-
-        super(sup);
-
-    }
-
-    alias opEquals = typeof(super).opEquals;
-
-    mixin template enableInputActions() {
-
-        import fluid.input : FluidFocusable;
-        import fluid.io.action : Actionable;
-
-        mixin FluidFocusable.enableInputActions;
-        mixin Actionable.enableInputActions;
-
-    }
-
-    override bool opEquals(const Object other) const {
-        return super.opEquals(other);
-    }
-
-    override bool blocksInput() const {
-        return isDisabled || isDisabledInherited;
-    }
-
-    /// Handle mouse input if no input action did.
-    ///
-    /// Usually, you'd prefer to define a method marked with an `InputAction` enum. This function is preferred for more
-    /// advanced usage.
-    ///
-    /// Only one node can run its `mouseImpl` callback per frame, specifically, the last one to register its input.
-    /// This is to prevent parents or overlapping children to take input when another node is drawn on top.
-    protected override void mouseImpl() { }
-
-    protected bool keyboardImpl() {
-
-        return false;
-
-    }
-
-    override bool hoverImpl(HoverPointer) {
-        return false;
-    }
-
-    /// Handle keyboard and gamepad input if no input action did.
-    ///
-    /// Usually, you'd prefer to define a method marked with an `InputAction` enum. This function is preferred for more
-    /// advanced usage.
-    ///
-    /// This will be called each frame as long as this node has focus, unless an `InputAction` was triggered first.
-    ///
-    /// Returns: True if the input was handled, false if not.
-    override bool focusImpl() {
-        return keyboardImpl();
-    }
-
-    /// Check if the node is being pressed. Performs action lookup.
-    ///
-    /// This is a helper for nodes that might do something when pressed, for example, buttons.
-    protected bool checkIsPressed() {
-
-        return (isHovered && tree.isMouseDown!(FluidInputAction.press))
-            || (isFocused && tree.isFocusDown!(FluidInputAction.press));
-
-    }
-
-    override void resizeImpl(Vector2 space) {
-
-        use(focusIO);
-        use(hoverIO);
-
-        static if (!isAbstractFunction!(typeof(super).resizeImpl)) {
-            super.resizeImpl(space);
-        }
-
-    }
-
-    /// Change the focus to this node.
-    void focus() {
-
-        import fluid.actions;
-
-        // Ignore if disabled
-        if (isDisabled) return;
-
-        // Switch focus using the active I/O technique
-        if (focusIO) {
-            focusIO.currentFocus = this;
-        }
-        else {
-            tree.focus = this;
-        }
-
-        // Ensure this node is in view
-        this.scrollIntoView();
-
-    }
-
-    override bool isHovered() const {
-
-        if (hoverIO) {
-            return hoverIO.isHovered(this);
-        }
-        else {
-            return super.isHovered();
-        }
-
-    }
-
-    override protected void focusPreviousOrNext(FluidInputAction actionType) {
-
-        super.focusPreviousOrNext(actionType);
-
-    }
-
-    @(FluidInputAction.focusPrevious, FluidInputAction.focusNext)
-    protected bool focusPreviousOrNextBool(FluidInputAction actionType) {
-
-        if (focusIO) return false;
-        focusPreviousOrNext(actionType);
-        return true;
-    }
-
-    override protected void focusInDirection(FluidInputAction actionType) {
-
-        super.focusInDirection(actionType);
-
-    }
-
-    @(FluidInputAction.focusLeft, FluidInputAction.focusRight)
-    @(FluidInputAction.focusUp, FluidInputAction.focusDown)
-    protected bool focusInDirectionBool(FluidInputAction action) {
-
-        if (focusIO) return false;
-        focusInDirection(action);
-        return true;
-
-    }
-
-    @property {
-
-        /// Check if the node has focus.
-        bool isFocused() const {
-
-            if (focusIO) {
-                return focusIO.isFocused(this);
-            }
-            else {
-                return tree.focus is this;
-            }
-
-        }
-
-        /// Set or remove focus from this node.
-        bool isFocused(bool enable) {
-
-            if (enable) focus();
-            else if (isFocused) {
-
-                if (focusIO) {
-                    focusIO.currentFocus = null;
-                }
-                else {
-                    tree.focus = null;
-                }
-
-            }
-
-            return enable;
-
-        }
-
-    }
-
-}
-
-unittest {
-
-    import fluid.label;
-
-    // This test checks triggering and running actions bound via UDAs, including reacting to keyboard and mouse input.
-
-    int pressCount;
-    int cancelCount;
-
-    auto io = new HeadlessBackend;
-    auto root = new class InputNode!Label {
-
-        @safe:
-
-        mixin enableInputActions;
-
-        this() {
-            super("");
-        }
-
-        override void resizeImpl(Vector2 space) {
-
-            minSize = Vector2(10, 10);
-
-        }
-
-        @(FluidInputAction.press)
-        void press() {
-
-            pressCount++;
-
-        }
-
-        @(FluidInputAction.cancel)
-        void cancel() {
-
-            cancelCount++;
-
-        }
-
-    };
-
-    root.io = io;
-    root.theme = nullTheme;
-    root.focus();
-
-    // Press the node via focus
-    io.press(KeyboardKey.enter);
-
-    root.draw();
-
-    assert(root.tree.isFocusActive!(FluidInputAction.press));
-    assert(pressCount == 1);
-
-    io.nextFrame;
-
-    // Holding shouldn't trigger the callback multiple times
-    root.draw();
-
-    assert(pressCount == 1);
-
-    // Hover the node and press it with the mouse
-    io.nextFrame;
-    io.release(KeyboardKey.enter);
-    io.mousePosition = Vector2(5, 5);
-    io.press(MouseButton.left);
-
-    root.draw();
-    root.tree.focus = null;
-
-    // This shouldn't be enough to activate the action
-    assert(pressCount == 1);
-
-    // If we now drag away from the button and release...
-    io.nextFrame;
-    io.mousePosition = Vector2(15, 15);
-    io.release(MouseButton.left);
-
-    root.draw();
-
-    // ...the action shouldn't trigger
-    assert(pressCount == 1);
-
-    // But if we release the mouse on the button
-    io.nextFrame;
-    io.mousePosition = Vector2(5, 5);
-    io.release(MouseButton.left);
-
-    root.draw();
-
-    assert(pressCount == 2);
-    assert(cancelCount == 0);
-
-    // Focus the node again
-    root.focus();
-
-    // Press escape to cancel
-    io.nextFrame;
-    io.press(KeyboardKey.escape);
-
-    root.draw();
-
-    assert(pressCount == 2);
-    assert(cancelCount == 1);
-
-}
-
-unittest {
-
-    import fluid.space;
-    import fluid.button;
-
-    // This test checks if "hover slipping" happens; namely, if the user clicks and holds on an object, then hovers on
-    // something else and releases, the click should be cancelled, and no other object should react to the same click.
-
-    class SquareButton : Button {
-
-        mixin enableInputActions;
-
-        this(T...)(T t) {
-            super(t);
-        }
-
-        override void resizeImpl(Vector2) {
-            minSize = Vector2(10, 10);
-        }
-
-    }
-
-    int[2] pressCount;
-    SquareButton[2] buttons;
-
-    auto io = new HeadlessBackend;
-    auto root = hspace(
-        .nullTheme,
-        buttons[0] = new SquareButton("", delegate { pressCount[0]++; }),
-        buttons[1] = new SquareButton("", delegate { pressCount[1]++; }),
-    );
-
-    root.io = io;
-
-    // Press the left button
-    io.mousePosition = Vector2(5, 5);
-    io.press(MouseButton.left);
-
-    root.draw();
-
-    // Release it
-    io.release(MouseButton.left);
-
-    root.draw();
-
-    assert(root.tree.hover is buttons[0]);
-    assert(pressCount == [1, 0], "Left button should trigger");
-
-    // Press the right button
-    io.nextFrame;
-    io.mousePosition = Vector2(15, 5);
-    io.press(MouseButton.left);
-
-    root.draw();
-
-    // Release it
-    io.release(MouseButton.left);
-
-    root.draw();
-
-    assert(pressCount == [1, 1], "Right button should trigger");
-
-    // Press the left button, but don't release
-    io.nextFrame;
-    io.mousePosition = Vector2(5, 5);
-    io.press(MouseButton.left);
-
-    root.draw();
-
-    assert( buttons[0].isPressed);
-    assert(!buttons[1].isPressed);
-
-    // Move the cursor over the right button
-    io.nextFrame;
-    io.mousePosition = Vector2(15, 5);
-
-    root.draw();
-
-    // Left button should have tree-scope hover, but isHovered status is undefined. At the time of writing, only the
-    // right button will be isHovered and neither will be isPressed.
-    //
-    // TODO It might be a good idea to make neither isHovered. Consider new condition:
-    //
-    //      (_isHovered && tree.hover is this && !_isDisabled && !tree.isBranchDisabled)
-    //
-    // This should also fix having two nodes visually hovered in case they overlap.
-    //
-    // Other frameworks might retain isPressed status on the left button, but it might good idea to keep current
-    // behavior as a visual clue it wouldn't trigger.
-    assert(root.tree.hover is buttons[0]);
-
-    // Release the button on the next frame
-    io.nextFrame;
-    io.release(MouseButton.left);
-
-    root.draw();
-
-    assert(pressCount == [1, 1], "Neither button should trigger on lost hover");
-
-    // Things should go to normal next frame
-    io.nextFrame;
-    io.press(MouseButton.left);
-
-    root.draw();
-
-    // So we can expect the right button to trigger now
-    io.nextFrame;
-    io.release(MouseButton.left);
-
-    root.draw();
-
-    assert(root.tree.hover is buttons[1]);
-    assert(pressCount == [1, 2]);
 
 }

@@ -91,7 +91,7 @@ unittest {
             : rule()
     );
 
-    auto myTheme = Theme(
+    auto myTheme = nullTheme.derive(
         rule!Label(
             myRule,
         ),
@@ -572,7 +572,7 @@ unittest {
 @("Rule.typeface can change typeface")
 unittest {
 
-    import fluid.typeface;
+    import fluid.text.freetype;
 
     auto typeface = new FreetypeTypeface;
     auto sample = Rule.typeface = typeface;
