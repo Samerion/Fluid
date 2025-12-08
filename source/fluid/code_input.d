@@ -1457,6 +1457,12 @@ class CodeInput : TextInput {
     ///     text    = Text to insert.
     ///     isMinor = True if this is a minor (insignificant) change.
     override void push(scope const(char)[] text, bool isMinor = true) {
+        const source = Rope(text);
+        push(source, isMinor);
+    }
+
+    /// ditto
+    override void push(scope Rope text, bool isMinor = true) {
 
         // Use minor status for these changes so they are merged together
         const isThisMinor = true;
@@ -1465,13 +1471,11 @@ class CodeInput : TextInput {
         replace(selectionLowIndex, selectionHighIndex, Rope.init, isThisMinor);
         clearSelection();
 
-        const source = Rope(text);
-
         // Step 1: Find the common indent of all lines in the inserted text
         // This data will be needed for subsequent steps
 
         // Skip the first line because it's likely to be without indent when copy-pasting
-        auto indentLines = source.byLine.drop(1);
+        auto indentLines = text.byLine.drop(1);
 
         // Count indents on each line
         // Use the character count, assuming the indent is uniform
@@ -1493,7 +1497,7 @@ class CodeInput : TextInput {
 
         bool started;
         int indentLevel;
-        foreach (line; source.byLine) {
+        foreach (line; text.byLine) {
 
             // Step 2: Remove the common indent
             // This way the indent in the inserted text will be uniform. It can then be replaced by indent
