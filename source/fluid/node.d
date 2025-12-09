@@ -1250,7 +1250,7 @@ void run(Node node) {
         return;
     }
 
-    assert(false, "run() is not implemented for new I/O");
+    // NOOP TODO
 }
 
 alias RunCallback = void delegate(Node node) @safe;

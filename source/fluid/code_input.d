@@ -183,7 +183,7 @@ class CodeInput : TextInput {
 
             assert(text.hasFastEdits);
 
-            use(canvasIO);
+            require(canvasIO);
 
             // Set indent size
             resizeIndent();
