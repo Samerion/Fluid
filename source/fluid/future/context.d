@@ -17,11 +17,9 @@ struct TreeContext {
 
     /// Create the context if it doesn't already exist.
     void prepare() {
-
         if (ptr is null) {
             ptr = new TreeContextData();
         }
-
     }
 
     bool opCast(T : bool)() const {
@@ -35,6 +33,22 @@ struct TreeContext {
 struct TreeContextData {
 
     public {
+
+        /// [TreeWrapper] instance this tree should use. This is a wrapper for [Node.draw],
+        /// called to handle drawing the root node. May be null.
+        ///
+        /// It is the wrapper's responsibility to prepare core I/O systems like `CanvasIO` and
+        /// `HoverIO` that will be used by the Fluid node tree during runtime. This enables Fluid
+        /// to skip the burden of configuration from the programmer:
+        ///
+        /// ---
+        /// auto root = label("Hello, World!");  // requires CanvasIO
+        /// root.draw();  // Works out of the box
+        /// ---
+        ///
+        /// If `null`, the wrapper will not be used, and the node tree will be drawn directly,
+        /// with no prior setup.
+        TreeWrapper wrapper;
 
         /// Keeps track of currently active I/O systems.
         TreeIOContext io;
@@ -405,6 +419,46 @@ struct TreeActionContext {
 
         return 0;
 
+    }
+
+}
+
+/// Prepares and draws the node tree. This wrapper sets up I/O systems needed for the node tree
+/// before the tree is drawn.
+interface TreeWrapper {
+    import fluid.node;
+
+    /// Draw the node tree.
+    ///
+    /// The wrapper is called every frame, and needs to attach relevant I/O systems, draw the
+    /// given node, then detach again. Typically, the Wrapper does this by supplying its own stack
+    /// of nodes, and wrapping the given node as a child.
+    ///
+    /// Params:
+    ///     root = Root node of the tree for the wrapper to draw.
+    void drawTree(Node root);
+
+    ///
+    @("drawTree implementation example")
+    unittest {
+        import fluid.hover_chain;
+
+        class MyWrapper : TreeWrapper {
+            HoverChain chain;
+
+            this() {
+                chain = hoverChain();
+            }
+
+            void drawTree(Node root) {
+                if (root !is chain.next) {
+                    chain.next = root;
+                    chain.updateSize();
+                }
+                chain.drawAsRoot();
+            }
+
+        }
     }
 
 }
