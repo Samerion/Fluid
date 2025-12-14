@@ -70,14 +70,17 @@ abstract class NodeChain : Node {
     /// Set the next node in chain.
     /// Params:
     ///     value = Node to set.
+    ///         A resize will be triggered if this node is different from the current one.
     /// Returns:
     ///     Assigned node.
     Node next(Node value) {
+        if (_next is value) return value;
 
         if (auto chain = cast(NodeChain) value) {
             _nextChain = chain;
         }
 
+        updateSize();
         return _next = value;
 
     }
@@ -105,17 +108,17 @@ abstract class NodeChain : Node {
         while (true) {
 
             // Run tree actions
-            foreach (action; tree.filterActions) {
+            foreach (action; filterActions) {
                 action.beforeResizeImpl(chain, space);
             }
 
             // Prepare the node and follow up with beforeResize
-            prepareChild(chain);
             chain.beforeResize(space);
 
             // Update the chain
             if (chain.nextChain) {
                 chain.nextChain._previousChain = chain;
+                chain.prepareChild(chain.nextChain);
                 chain = chain.nextChain;
             }
             else break;
@@ -124,14 +127,14 @@ abstract class NodeChain : Node {
 
         // Resize the innermost child
         if (chain.next) {
-            resizeChild(chain.next, space);
+            chain.resizeChild(chain.next, space);
             minSize = chain.next.minSize;
         }
 
         // Call afterResize on each part
         while (chain) {
             chain.afterResize(space);
-            foreach (action; tree.filterActions) {
+            foreach (action; filterActions) {
                 action.afterResizeImpl(chain, space);
             }
             chain = chain._previousChain;
@@ -148,7 +151,7 @@ abstract class NodeChain : Node {
             // Run tree actions
             // tree actions were already called by `drawChild` for `this`
             if (chain !is this) {
-                foreach (action; tree.filterActions) {
+                foreach (action; filterActions) {
                     action.beforeDrawImpl(chain, outer, outer, inner);
                 }
             }
@@ -166,14 +169,14 @@ abstract class NodeChain : Node {
 
         // Draw the innermost child
         if (chain.next) {
-            drawChild(chain.next, inner);
+            chain.drawChild(chain.next, inner);
         }
 
         // Call afterDraw on each part
         while (chain) {
             chain.afterDraw(outer, inner);
             if (chain !is this) {
-                foreach (action; tree.filterActions) {
+                foreach (action; filterActions) {
                     action.afterDrawImpl(chain, outer, outer, inner);
                 }
             }

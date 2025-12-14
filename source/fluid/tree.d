@@ -10,7 +10,6 @@ import fluid.input;
 import fluid.style;
 
 import fluid.future.pipe;
-import fluid.future.context;
 
 
 @safe:
@@ -574,14 +573,6 @@ struct LayoutTree {
         /// True if the current tree branch is marked as disabled (doesn't take input).
         bool isBranchDisabled;
 
-        /// Current breadcrumbs. These are assigned to any node that is resized or drawn at the time.
-        ///
-        /// Any node that introduces its own breadcrumbs will push onto this stack, and pop once finished.
-        Breadcrumbs breadcrumbs;
-
-        /// Context for the new I/O system. https://git.samerion.com/Samerion/Fluid/issues/148
-        TreeContextData context;
-
     }
 
     /// Incremented for every `filterActions` access to prevent nested accesses from breaking previously made ranges.
@@ -672,15 +663,6 @@ struct LayoutTree {
 
                         }
 
-                    }
-
-                }
-
-                // Run new actions too
-                foreach (action; tree.context.actions) {
-
-                    if (auto result = fun(action)) {
-                        return result;
                     }
 
                 }

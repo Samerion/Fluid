@@ -95,6 +95,8 @@ abstract class Node {
 
     private {
 
+        TreeContext _treeContext;
+
         /// If true, this node must update its size.
         bool _resizePending = true;
 
@@ -273,14 +275,7 @@ abstract class Node {
     }
 
     final inout(TreeContext) treeContext() inout nothrow {
-
-        if (tree is null) {
-            return inout TreeContext(null);
-        }
-        else {
-            return inout TreeContext(&tree.context);
-        }
-
+        return _treeContext;
     }
 
     /// Toggle the node's visibility.
@@ -527,13 +522,32 @@ abstract class Node {
         // Tree might be null — if so, the node will be resized regardless
     }
 
+    /// Change [TreeContext] used by this tree.
+    final void prepare(TreeContext context) {
+        if (_treeContext != context) {
+            this._treeContext = context;
+            updateSize();
+        }
+    }
+
+    final void draw() {
+        _treeContext.prepare();
+        if (treeContext.wrapper) {
+            treeContext.wrapper.drawTree(treeContext, this);
+        }
+        else {
+            drawAsRoot();
+        }
+    }
+
     /// Draw this node as a root node.
-    final void draw() @trusted {
+    final void drawAsRoot(Rectangle viewport = Rectangle(0, 0, 0, 0)) @trusted {
 
         // No tree set, create one
         if (tree is null) {
 
             tree = new LayoutTree(this);
+            _treeContext.prepare();
 
         }
 
@@ -552,20 +566,17 @@ abstract class Node {
         tree.focusBox = Rectangle(float.nan);
 
         // Clear breadcrumbs
-        tree.breadcrumbs = Breadcrumbs.init;
+        treeContext.breadcrumbs = Breadcrumbs.init;
 
         // Resize if required
         if (resizePending) {
-            prepareInternalImpl(tree, theme);
-            resizeInternalImpl(Vector2.init);
+            prepareInternalImpl(tree, treeContext, theme);
+            resizeInternalImpl(viewport.size);
             _resizePending = false;
         }
 
-        /// Area to render on
-        const viewport = Rectangle(0, 0, 0, 0);
-
         // Run beforeTree actions
-        foreach (action; tree.filterActions) {
+        foreach (action; filterActions) {
 
             action.beforeTreeImpl(this, viewport);
 
@@ -575,14 +586,42 @@ abstract class Node {
         drawInternalImpl(viewport);
 
         // Run afterTree actions
-        foreach (action; tree.filterActions) {
+        foreach (action; filterActions) {
             action.afterTreeImpl();
         }
 
-        foreach (action; tree.filterActions) {
+        foreach (action; filterActions) {
             action.afterInput(tree.wasKeyboardHandled);
         }
 
+    }
+
+    protected auto filterActions() {
+        static struct Actions {
+            LayoutTree* tree;
+            TreeContext context;
+
+            int opApply(int delegate(TreeAction) @safe yield) {
+
+                // Old actions
+                foreach (action; tree.filterActions) {
+                    if (auto result = yield(action)) {
+                        return result;
+                    }
+                }
+
+                // New actions
+                foreach (action; context.actions) {
+                    if (auto result = yield(action)) {
+                        return result;
+                    }
+                }
+                return 0;
+
+            }
+        }
+
+        return Actions(tree, treeContext);
     }
 
     /// Draw a child node at the specified location inside of this node.
@@ -634,18 +673,18 @@ abstract class Node {
         const size = marginBox.size;
 
         // Load breadcrumbs from the tree
-        breadcrumbs = tree.breadcrumbs;
+        breadcrumbs = treeContext.breadcrumbs;
         auto currentStyle = pickStyle();
 
         // Write dynamic breadcrumbs to the tree
         // Restore when done
-        tree.breadcrumbs ~= currentStyle.breadcrumbs;
-        scope (exit) tree.breadcrumbs = breadcrumbs;
+        treeContext.breadcrumbs ~= currentStyle.breadcrumbs;
+        scope (exit) treeContext.breadcrumbs = breadcrumbs;
 
         // Set tint
-        auto previousTint = tree.context.tint;
-        tree.context.tint = multiply(previousTint, currentStyle.tint);
-        scope (exit) tree.context.tint = previousTint;
+        auto previousTint = treeContext.tint;
+        treeContext.tint = multiply(previousTint, currentStyle.tint);
+        scope (exit) treeContext.tint = previousTint;
 
         assert(
             only(size.tupleof).all!isFinite,
@@ -678,7 +717,7 @@ abstract class Node {
         scope (exit) tree.depth--;
 
         // Run beforeDraw actions
-        foreach (action; tree.filterActions) {
+        foreach (action; filterActions) {
 
             action.beforeDrawImpl(this, space, mainBox, contentBox);
 
@@ -705,7 +744,7 @@ abstract class Node {
         }
 
         // Run afterDraw actions
-        foreach (action; tree.filterActions) {
+        foreach (action; filterActions) {
 
             action.afterDrawImpl(this, space, mainBox, contentBox);
 
@@ -750,7 +789,7 @@ abstract class Node {
     ///     child = Child node to resize.
     protected void prepareChild(Node child) {
 
-        child.prepareInternalImpl(tree, theme);
+        child.prepareInternalImpl(tree, treeContext, theme);
 
     }
 
@@ -780,22 +819,23 @@ abstract class Node {
     in(theme, "Theme for Node.resize() must not be null.")
     do {
 
-        prepareInternalImpl(tree, theme);
+        prepareInternalImpl(tree, TreeContext.init, theme);
         resizeInternalImpl(space);
 
     }
 
-    private final void prepareInternalImpl(LayoutTree* tree, Theme theme)
+    private final void prepareInternalImpl(LayoutTree* tree, TreeContext context, Theme theme)
     in(tree, "Tree for prepareChild(Node) must not be null.")
     in(theme, "Theme for prepareChild(Node) must not be null.")
     do {
 
         // Inherit tree and theme
         this.tree = tree;
+        this._treeContext = context;
         inheritTheme(theme);
 
         // Load breadcrumbs from the tree
-        breadcrumbs = tree.breadcrumbs;
+        breadcrumbs = treeContext.breadcrumbs;
 
         // Load the theme
         reloadStyles();
@@ -817,8 +857,8 @@ abstract class Node {
     do {
 
         // Write breadcrumbs into the tree
-        tree.breadcrumbs ~= _style.breadcrumbs;
-        scope (exit) tree.breadcrumbs = breadcrumbs;
+        treeContext.breadcrumbs ~= _style.breadcrumbs;
+        scope (exit) treeContext.breadcrumbs = breadcrumbs;
 
         // The node is hidden, reset size
         if (isHidden) minSize = Vector2(0, 0);
@@ -843,14 +883,14 @@ abstract class Node {
             );
 
             // Run beforeResize actions
-            foreach (action; tree.filterActions) {
+            foreach (action; filterActions) {
                 action.beforeResize(this, space);
             }
 
             // Resize the node
             resizeImpl(space);
 
-            foreach (action; tree.filterActions) {
+            foreach (action; filterActions) {
                 action.afterResize(this, space);
             }
 
@@ -921,7 +961,7 @@ abstract class Node {
     protected T use(T : IO)()
     in (tree, "`use()` should only be used inside `resizeImpl`")
     do {
-        return tree.context.io.get!T();
+        return treeContext.io.get!T();
     }
 
     /// ditto
