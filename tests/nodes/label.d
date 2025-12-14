@@ -71,12 +71,20 @@ unittest {
         rule!(Label, Medium)(fontSize = 14.pt),
         rule!(Label, Large)(fontSize = 20.pt),
     );
+    Label smallLabel, mediumLabel, largeLabel;
     auto root = testSpace(
         theme,
-        label(.tags!Small, "Hello, World!"),
-        label(.tags!Medium, "Hello, World!"),
-        label(.tags!Large, "Hello, World!"),
+        smallLabel  = label(.tags!Small, "Hello, World!"),
+        mediumLabel = label(.tags!Medium, "Hello, World!"),
+        largeLabel  = label(.tags!Large, "Hello, World!"),
     );
 
-    root.drawToSVG("/tmp/fluid.svg");
+    root.drawAndAssert(
+        smallLabel.drawsHintedImage().at(0, 0, 61, 16)
+            .sha256("d16603f2c87f6a247fb8066f658ddc138b751aab61bf395f308887333b4acbd1"),
+        mediumLabel.drawsHintedImage().at(0, 16, 109, 27)
+            .sha256("e5b75b97f0894aeba0c17c078a7509ab0e9e652b89797817fac0063cc82055f4"),
+        largeLabel.drawsHintedImage().at(0, 43, 154, 38)
+            .sha256("182db11f53c6505abe9c165de7ce529a90d8e3ac052a2019311a10abcc07660c"),
+    );
 }
