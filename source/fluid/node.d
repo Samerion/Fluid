@@ -522,6 +522,14 @@ abstract class Node {
         // Tree might be null — if so, the node will be resized regardless
     }
 
+    /// Change [TreeContext] used by this tree.
+    final void prepare(TreeContext context) {
+        if (_treeContext != context) {
+            this._treeContext = context;
+            updateSize();
+        }
+    }
+
     final void draw() {
         drawAsRoot();
     }
@@ -533,6 +541,7 @@ abstract class Node {
         if (tree is null) {
 
             tree = new LayoutTree(this);
+            _treeContext.prepare();
 
         }
 
