@@ -566,7 +566,7 @@ abstract class Node {
         tree.focusBox = Rectangle(float.nan);
 
         // Clear breadcrumbs
-        tree.breadcrumbs = Breadcrumbs.init;
+        treeContext.breadcrumbs = Breadcrumbs.init;
 
         // Resize if required
         if (resizePending) {
@@ -673,13 +673,13 @@ abstract class Node {
         const size = marginBox.size;
 
         // Load breadcrumbs from the tree
-        breadcrumbs = tree.breadcrumbs;
+        breadcrumbs = treeContext.breadcrumbs;
         auto currentStyle = pickStyle();
 
         // Write dynamic breadcrumbs to the tree
         // Restore when done
-        tree.breadcrumbs ~= currentStyle.breadcrumbs;
-        scope (exit) tree.breadcrumbs = breadcrumbs;
+        treeContext.breadcrumbs ~= currentStyle.breadcrumbs;
+        scope (exit) treeContext.breadcrumbs = breadcrumbs;
 
         // Set tint
         auto previousTint = treeContext.tint;
@@ -835,7 +835,7 @@ abstract class Node {
         inheritTheme(theme);
 
         // Load breadcrumbs from the tree
-        breadcrumbs = tree.breadcrumbs;
+        breadcrumbs = treeContext.breadcrumbs;
 
         // Load the theme
         reloadStyles();
@@ -857,8 +857,8 @@ abstract class Node {
     do {
 
         // Write breadcrumbs into the tree
-        tree.breadcrumbs ~= _style.breadcrumbs;
-        scope (exit) tree.breadcrumbs = breadcrumbs;
+        treeContext.breadcrumbs ~= _style.breadcrumbs;
+        scope (exit) treeContext.breadcrumbs = breadcrumbs;
 
         // The node is hidden, reset size
         if (isHidden) minSize = Vector2(0, 0);

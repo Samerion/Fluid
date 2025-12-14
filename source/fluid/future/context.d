@@ -48,6 +48,8 @@ struct TreeContext {
 
 struct TreeContextData {
 
+    import fluid.theme : Breadcrumbs;
+
     public {
 
         /// [TreeWrapper] instance this tree should use. This is a wrapper for [Node.draw],
@@ -71,6 +73,13 @@ struct TreeContextData {
 
         /// Manages and runs tree actions.
         TreeActionContext actions;
+
+        /// Current breadcrumbs. These are assigned to any node that is resized or drawn at the
+        /// time.
+        ///
+        /// Any node that introduces its own breadcrumbs will push onto this stack, and pop once
+        /// finished.
+        Breadcrumbs breadcrumbs;
 
     }
 
