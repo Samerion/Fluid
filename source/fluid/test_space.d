@@ -28,12 +28,14 @@ import fluid.tree;
 import fluid.utils;
 import fluid.space;
 import fluid.input;
+import fluid.node_chain;
 
 import fluid.io.canvas;
 import fluid.io.debug_signal;
 
 import fluid.future.pipe;
 import fluid.future.arena;
+import fluid.future.context;
 
 @safe:
 
@@ -42,6 +44,8 @@ alias vtestSpace = nodeBuilder!TestSpace;
 alias htestSpace = nodeBuilder!(TestSpace, (a) {
     a.isHorizontal = true;
 });
+
+alias testWrapper = nodeBuilder!TestWrapper;
 
 /// Node property for `TestSpace` that enables cropping. This will prevent overflowing content from being drawn.
 /// This can be used to test nodes that rely on cropping information, for example to limit drawn content to what
@@ -314,6 +318,47 @@ class TestSpace : Space, CanvasIO, DebugSignalIO {
             drawAndAssert(asserts)
         );
 
+    }
+
+}
+
+class TestWrapper : TreeWrapper {
+
+    public {
+        Vector2 windowSize = Vector2(800, 600);
+    }
+
+    private {
+        TestSpace _root;
+        NodeChain _last;
+    }
+
+    this() {
+        import fluid.preference_chain;
+        import fluid.time_chain;
+        import fluid.input_map_chain;
+        import fluid.focus_chain;
+        import fluid.hover_chain;
+        import fluid.file_chain;
+        import fluid.overlay_chain;
+        import fluid.test_space;
+
+        _root = testSpace(
+            chain(
+                preferenceChain(),
+                timeChain(),
+                inputMapChain(),
+                focusChain(),
+                hoverChain(),
+                fileChain(),
+                _last = overlayChain(),
+            ),
+        );
+    }
+
+    override void drawTree(Node start) {
+        _last.next = start;
+        _root.drawAsRoot();
     }
 
 }
