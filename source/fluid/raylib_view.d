@@ -326,7 +326,7 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
         // Send buttons
         foreach (button; NoDuplicates!(EnumMembers!(MouseIO.Button))) {
 
-            const buttonRay = button.toRaylibEx;
+            const buttonRay = button.toRaylib;
 
             if (buttonRay == -1) continue;
 
@@ -868,8 +868,6 @@ class RaylibStack(RaylibViewVersion raylibVersion) : Node, TreeWrapper {
 
 /// Convert a `MouseIO.Button` to a `raylib.MouseButton`.
 ///
-/// Temporarily named `toRaylibEx` instead of `toRaylib` to avoid conflicts with legacy Raylib functionality.
-///
 /// Note:
 ///     `raylib.MouseButton` does not have a dedicated invalid value so this function will instead
 ///     return `-1`.
@@ -877,7 +875,7 @@ class RaylibStack(RaylibViewVersion raylibVersion) : Node, TreeWrapper {
 ///     button = A Fluid `MouseIO` button code.
 /// Returns:
 ///     A corresponding `raylib.MouseButton` value, `-1` if there isn't one.
-int toRaylibEx(MouseIO.Button button) {
+int toRaylib(MouseIO.Button button) {
 
     with (MouseButton)
     with (button)
@@ -1099,4 +1097,27 @@ ImageType identifyImageType(const ubyte[] data) {
             : ImageType.none,
     );
 
+}
+
+/// Convert image to a Raylib image. Do not call `UnloadImage` on the result.
+raylib.Image toRaylib(fluid.Image image) nothrow @trusted {
+    raylib.Image result;
+    result.data = image.data.ptr;
+    result.width = image.width;
+    result.height = image.height;
+    result.format = image.format.toRaylib;
+    result.mipmaps = 1;
+    return result;
+}
+
+/// Convert Fluid image format to Raylib's closest alternative.
+raylib.PixelFormat toRaylib(fluid.Image.Format imageFormat) nothrow {
+    final switch (imageFormat) {
+        case imageFormat.rgba:
+            return PixelFormat.PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
+        case imageFormat.palettedAlpha:
+            return PixelFormat.PIXELFORMAT_UNCOMPRESSED_GRAY_ALPHA;
+        case imageFormat.alpha:
+            return PixelFormat.PIXELFORMAT_UNCOMPRESSED_GRAYSCALE;
+    }
 }
