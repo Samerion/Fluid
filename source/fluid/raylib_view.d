@@ -43,8 +43,6 @@ import fluid.node_chain;
 import fluid.future.arena;
 import fluid.future.context;
 
-import fluid.backend.raylib5 : Raylib5Backend, toRaylib;
-
 import fluid.io.time;
 import fluid.io.canvas;
 import fluid.io.hover;
@@ -125,6 +123,39 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
     TimeIO timeIO;
     PreferenceIO preferenceIO;
 
+    /// Shader code for alpha images.
+    enum alphaImageShaderCode = q{
+        #version 330
+        in vec2 fragTexCoord;
+        in vec4 fragColor;
+        out vec4 finalColor;
+        uniform sampler2D texture0;
+        uniform vec4 colDiffuse;
+        void main() {
+            // Alpha masks are white to make them practical for modulation
+            vec4 texelColor = texture(texture0, fragTexCoord);
+            finalColor = vec4(1, 1, 1, texelColor.r) * colDiffuse * fragColor;
+        }
+    };
+
+    /// Shader code for palette images.
+    enum palettedAlphaImageShaderCode = q{
+        #version 330
+        in vec2 fragTexCoord;
+        in vec4 fragColor;
+        out vec4 finalColor;
+        uniform sampler2D texture0;
+        uniform sampler2D palette;
+        uniform vec4 colDiffuse;
+        void main() {
+            // index.a is alpha/opacity
+            // index.r is palette index
+            vec4 index = texture(texture0, fragTexCoord);
+            vec4 texel = texture(palette, vec2(index.r, 0));
+            finalColor = texel * vec4(1, 1, 1, index.a) * colDiffuse * fragColor;
+        }
+    };
+
     public {
 
         /// Node drawn by this view.
@@ -195,10 +226,10 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
 
         // Load shaders
         if (!IsShaderReady(_alphaImageShader)) {
-            _alphaImageShader = LoadShaderFromMemory(null, Raylib5Backend.alphaImageShaderCode.ptr);
+            _alphaImageShader = LoadShaderFromMemory(null, alphaImageShaderCode.ptr);
         }
         if (!IsShaderReady(_palettedAlphaImageShader)) {
-            _palettedAlphaImageShader = LoadShaderFromMemory(null, Raylib5Backend.palettedAlphaImageShaderCode.ptr);
+            _palettedAlphaImageShader = LoadShaderFromMemory(null, palettedAlphaImageShaderCode.ptr);
             _palettedAlphaImageShader_palette = GetShaderLocation(_palettedAlphaImageShader, "palette");
         }
 
