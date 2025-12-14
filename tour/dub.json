@@ -22,16 +22,5 @@
 	],
 	"targetName": "fluid-tour",
 	"targetPath": "../build",
-	"targetType": "executable",
-	"configurations": [
-		{
-			"name": "default"
-		},
-		{
-			"name": "new-io",
-			"versions": [
-				"FluidTour_NewIO"
-			]
-		}
-	]
+	"targetType": "executable"
 }
