@@ -113,12 +113,12 @@ abstract class NodeChain : Node {
             }
 
             // Prepare the node and follow up with beforeResize
-            prepareChild(chain);
             chain.beforeResize(space);
 
             // Update the chain
             if (chain.nextChain) {
                 chain.nextChain._previousChain = chain;
+                chain.prepareChild(chain.nextChain);
                 chain = chain.nextChain;
             }
             else break;
@@ -127,7 +127,7 @@ abstract class NodeChain : Node {
 
         // Resize the innermost child
         if (chain.next) {
-            resizeChild(chain.next, space);
+            chain.resizeChild(chain.next, space);
             minSize = chain.next.minSize;
         }
 
@@ -169,7 +169,7 @@ abstract class NodeChain : Node {
 
         // Draw the innermost child
         if (chain.next) {
-            drawChild(chain.next, inner);
+            chain.drawChild(chain.next, inner);
         }
 
         // Call afterDraw on each part

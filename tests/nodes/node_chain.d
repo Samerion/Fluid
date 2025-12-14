@@ -130,10 +130,11 @@ unittest {
     assert(link1.afterDrawCalls == 1);
     assert(link2.afterDrawCalls == 1);
     assert(link3.afterDrawCalls == 1);
-    assert(link.drawChildCalls  == 1);
+
+    assert(link.drawChildCalls  == 0);
     assert(link1.drawChildCalls == 0);
     assert(link2.drawChildCalls == 0);
-    assert(link3.drawChildCalls == 0);
+    assert(link3.drawChildCalls == 1);
 
 }
 
