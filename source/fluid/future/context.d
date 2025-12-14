@@ -9,6 +9,23 @@ import fluid.future.static_id;
 
 @safe:
 
+/// This hook is called every time a new node tree is created to provide a tree wrapper, unless
+/// one such wrapper was already provided.
+static shared TreeWrapper delegate() @safe createDefaultTreeWrapper;
+
+shared static this() {
+    version (Have_raylib_d) {
+        import fluid.raylib_view : raylibStack;
+        createDefaultTreeWrapper = () => raylibStack.v5_5();
+    }
+    else version (Fluid_TestSpace) {
+        import fluid.test_space : testWrapper;
+        createDefaultTreeWrapper = () => testWrapper();
+    }
+    else static assert(false, "No default `TreeWrapper` is available. "
+        ~ "Please assign `createDefaultTreeWrapper`.");
+}
+
 struct TreeContext {
 
     TreeContextData* ptr;
@@ -17,30 +34,52 @@ struct TreeContext {
 
     /// Create the context if it doesn't already exist.
     void prepare() {
-
         if (ptr is null) {
-            ptr = new TreeContextData();
+            ptr = new TreeContextData(
+                createDefaultTreeWrapper());
         }
-
     }
 
     bool opCast(T : bool)() const {
-
         return ptr !is null;
-
     }
 
 }
 
 struct TreeContextData {
 
+    import fluid.theme : Breadcrumbs;
+
     public {
+
+        /// [TreeWrapper] instance this tree should use. This is a wrapper for [Node.draw],
+        /// called to handle drawing the root node. May be null.
+        ///
+        /// It is the wrapper's responsibility to prepare core I/O systems like `CanvasIO` and
+        /// `HoverIO` that will be used by the Fluid node tree during runtime. This enables Fluid
+        /// to skip the burden of configuration from the programmer:
+        ///
+        /// ---
+        /// auto root = label("Hello, World!");  // requires CanvasIO
+        /// root.draw();  // Works out of the box
+        /// ---
+        ///
+        /// If `null`, the wrapper will not be used, and the node tree will be drawn directly,
+        /// with no prior setup.
+        TreeWrapper wrapper;
 
         /// Keeps track of currently active I/O systems.
         TreeIOContext io;
 
         /// Manages and runs tree actions.
         TreeActionContext actions;
+
+        /// Current breadcrumbs. These are assigned to any node that is resized or drawn at the
+        /// time.
+        ///
+        /// Any node that introduces its own breadcrumbs will push onto this stack, and pop once
+        /// finished.
+        Breadcrumbs breadcrumbs;
 
     }
 
@@ -405,6 +444,47 @@ struct TreeActionContext {
 
         return 0;
 
+    }
+
+}
+
+/// Prepares and draws the node tree. This wrapper sets up I/O systems needed for the node tree
+/// before the tree is drawn.
+interface TreeWrapper {
+    import fluid.node;
+
+    /// Draw the node tree.
+    ///
+    /// The wrapper is called every frame, and needs to attach relevant I/O systems, draw the
+    /// given node, then detach again. Typically, the Wrapper does this by supplying its own stack
+    /// of nodes, and wrapping the given node as a child.
+    ///
+    /// Params:
+    ///     context = Active tree context.
+    ///         The wrapper should assign this context to any node it draws, through
+    ///         [Node.prepare].
+    ///     root = Root node of the tree for the wrapper to draw.
+    void drawTree(TreeContext context, Node root);
+
+    ///
+    @("drawTree implementation example")
+    unittest {
+        import fluid.hover_chain;
+
+        class MyWrapper : TreeWrapper {
+            HoverChain chain;
+
+            this() {
+                chain = hoverChain();
+            }
+
+            void drawTree(TreeContext context, Node root) {
+                chain.next = root;
+                chain.prepare(context);
+                chain.drawAsRoot();
+            }
+
+        }
     }
 
 }

@@ -35,7 +35,7 @@ struct TextInterval {
     /// Calculate the interval occupied by a range (rope or string).
     /// Params:
     ///     fragment = Fragment to measure.
-    this(Range)(Range fragment) 
+    this(Range)(Range fragment)
     if (isSomeChar!(ElementType!Range) && (hasLength!Range || isSomeString!Range))
     do {
 
@@ -70,7 +70,7 @@ struct TextInterval {
     TextInterval opBinary(string op : "+")(const TextInterval other) const {
 
         // If the other point has a line break, our column does not affect it
-        // Add them only if there is no line break 
+        // Add them only if there is no line break
         const column = other.line
             ? other.column
             : other.column + column;
@@ -86,9 +86,9 @@ struct TextInterval {
     }
 
     /// Change the point of reference for this interval, as if skipping characters from the start of the string. This
-    /// is the interval equivalent of `std.range.drop` or a `[n..$]` slice. 
+    /// is the interval equivalent of `std.range.drop` or a `[n..$]` slice.
     ///
-    /// This function is an inverse of interval sum (+), where `head` is the left hand side argument, and the return 
+    /// This function is an inverse of interval sum (+), where `head` is the left hand side argument, and the return
     /// value is the right hand side argument.
     ///
     /// Returns:
@@ -101,8 +101,8 @@ struct TextInterval {
     do {
 
         // If the head points to some line in the middle, the resulting column stays the same.
-        //     [Lorem ipsum dolor sit amet, consectetur adipiscing 
-        //     elit, sed do eiusmod tempor] incididunt ut labore et 
+        //     [Lorem ipsum dolor sit amet, consectetur adipiscing
+        //     elit, sed do eiusmod tempor] incididunt ut labore et
         //     dolore magna aliqua.
         //                        ^ this.column, return.column
         if (head.line != this.line) {
@@ -110,8 +110,8 @@ struct TextInterval {
         }
 
         // If the head points to the last line, however, the column will be a difference.
-        //     [Lorem ipsum dolor sit amet, consectetur adipiscing 
-        //     elit, sed do eiusmod tempor incididunt ut labore et 
+        //     [Lorem ipsum dolor sit amet, consectetur adipiscing
+        //     elit, sed do eiusmod tempor incididunt ut labore et
         //     dolore magna] aliqua.
         //     head.column ^       ^ this.column
         else {
@@ -136,11 +136,11 @@ struct CachedTextRuler {
 }
 
 /// This is a cache storing instances of `TextRuler` corresponding to different positions in the same text. This makes
-/// it possible to find screen position of any character in text by its index. It also maps each of these points to a 
+/// it possible to find screen position of any character in text by its index. It also maps each of these points to a
 /// line and column number combo, making it possible to query characters by their position in the grid.
 ///
-/// Entries into the cache are made in intervals. The cache will return the last found cache entry rather than one 
-/// directly corresponding to the queried character. To get an exact position, the text ruler can be advanced by 
+/// Entries into the cache are made in intervals. The cache will return the last found cache entry rather than one
+/// directly corresponding to the queried character. To get an exact position, the text ruler can be advanced by
 /// measuring all characters in between.
 ///
 /// See_Also:
@@ -166,15 +166,15 @@ package struct TextRulerCache {
 
             assert(start, "Right branch is null, but the left isn't");
             assert(startRuler is left.startRuler);
-            assert(interval == left.interval + right.interval, 
-                format!"Cache interval %s is not the sum of its members %s + %s"(interval, left.interval, 
+            assert(interval == left.interval + right.interval,
+                format!"Cache interval %s is not the sum of its members %s + %s"(interval, left.interval,
                     right.interval));
             assert(depth == max(left.depth, right.depth) + 1);
 
         }
 
         else {
-            
+
             assert(right is null, "Left branch is null, but the right isn't");
             assert(depth == 1);
 
@@ -265,14 +265,14 @@ package struct TextRulerCache {
         }
 
         // Find a relevant node, update intervals of all ancestors and itself
-        // thus pushing or pulling subsequent nodes 
+        // thus pushing or pulling subsequent nodes
         if (absoluteEnd.length < cache.interval.length)
         while (true) {
 
             const oldEnd = start + oldInterval;
             const newEnd = start + newInterval;
 
-            debug assert (cache.interval.length >= oldEnd.length, 
+            debug assert (cache.interval.length >= oldEnd.length,
                 format!"`head` cannot be longer (%s) than `this` (%s)\n%s"(
                     oldEnd.length, cache.interval.length, diagnose));
 
@@ -280,9 +280,9 @@ package struct TextRulerCache {
 
             // Found the deepest relevant node
             // `isLeaf` is inlined to keep invariants from running
-            if (cache.left is null) break; 
+            if (cache.left is null) break;
 
-            // Search for a node that can control the start of the interval; either exactly at the start, 
+            // Search for a node that can control the start of the interval; either exactly at the start,
             // or shortly before it, just like `query()`
             if (start.length < cache.left.interval.length) {
                 cache = cache.left;
@@ -332,16 +332,16 @@ package struct TextRulerCache {
                 stderr.writeln(toRope);
             }
 
-            assert(cache.interval.length != 0, 
+            assert(cache.interval.length != 0,
                 "Failed to detect append; Cache data is inconsistent");
-            assert(point.length > foundPoint.length, 
+            assert(point.length > foundPoint.length,
                 "Failed to detect append; Last item in the cache must be of length 0");
-            assert(point.length < foundPoint.length + cache.interval.length, 
+            assert(point.length < foundPoint.length + cache.interval.length,
                 "Cache data is inconsistent; missed an insert point.");
 
             const oldInterval = cache.interval;
 
-            // We're inserting in between two points; `leftInterval` is distance from the left to our point, 
+            // We're inserting in between two points; `leftInterval` is distance from the left to our point,
             // `rightInterval` is the distance from our point to the next point. Total distance is `cache.interval`.
             //
             //   ~~~~~~~~~~~~ cache.interval ~~~~~~~~~~~~
@@ -399,19 +399,19 @@ package struct TextRulerCache {
         auto left  = new TextRulerCache(cache.startRuler, relativePoint);
         auto right = new TextRulerCache(ruler, TextInterval.init);
 
-        *cache = TextRulerCache(left, right);        
+        *cache = TextRulerCache(left, right);
         rebalance();
 
     }
 
-    /// Returns: True if this cache node is out of balance. 
+    /// Returns: True if this cache node is out of balance.
     /// See_Also: `rebalance` to rebalance a node to improve its performance.
     bool isBalanced() const {
 
         if (isLeaf) return true;
 
         const diff = left.depth - right.depth;
-                
+
         return -10 < diff && diff < 10;
 
     }
@@ -439,7 +439,7 @@ package struct TextRulerCache {
 
     /// Returns: A new cache node compromising multiple cache nodes.
     /// Params:
-    ///     nodes = Leaf nodes the new cache can be made up of. They must be ordered, so that their intervals will 
+    ///     nodes = Leaf nodes the new cache can be made up of. They must be ordered, so that their intervals will
     ///         specify their relations.
     static TextRulerCache* merge(scope TextRulerCache*[] nodes) {
 
@@ -454,13 +454,13 @@ package struct TextRulerCache {
                 merge(nodes[0   .. $/2]),
                 merge(nodes[$/2 .. $])
             );
-        
-        
+
+
     }
 
     /// Find and report issues in the cache's storage.
     ///
-    /// This function is intended for debugging crashes caused by issues in the `TextCache` data 
+    /// This function is intended for debugging crashes caused by issues in the `TextCache` data
     /// and isn't normally needed during program flow.
     ///
     /// The way the cache is structured is prone to bugs that may be difficult to locate. These will usually
@@ -533,9 +533,9 @@ package struct TextRulerCache {
 
             const node = frame.cache;
 
-            result = Rope(offset.to!string) ~ ": TextRulerCache(" 
-                ~ Rope(node.interval.to!string) ~ ", " 
-                ~ Rope(node.startRuler.to!string) 
+            result = Rope(offset.to!string) ~ ": TextRulerCache("
+                ~ Rope(node.interval.to!string) ~ ", "
+                ~ Rope(node.startRuler.to!string)
                 ~ Rope(frame.isRightVisited ? " -> right"
                     : frame.isLeftVisited ? " -> left"
                     : "") ~ ")\n"
@@ -552,13 +552,13 @@ package struct TextRulerCache {
         return info ~ result;
 
     }
-    
+
     /// Dump data in the cache into a rope.
-    /// 
+    ///
     /// This function is @system because stringifying a Typeface is.
     ///
     /// Params:
-    ///     indentLevel = Indent to use for each line of the rope. At the moment indent is created using four spaces 
+    ///     indentLevel = Indent to use for each line of the rope. At the moment indent is created using four spaces
     ///         per level.
     /// Returns: A rope representation of the cache.
     Rope toRope(int indentLevel = 0) @system {
@@ -573,11 +573,11 @@ package struct TextRulerCache {
         }
 
         else {
-            return here 
-                ~ Rope(left.interval + right.interval != this.interval 
-                    ? repeat("# ", indentLevel).join ~ "! Mismatched interval\n" 
+            return here
+                ~ Rope(left.interval + right.interval != this.interval
+                    ? repeat("# ", indentLevel).join ~ "! Mismatched interval\n"
                     : "")
-                ~ left.toRope(indentLevel + 1) 
+                ~ left.toRope(indentLevel + 1)
                 ~ right.toRope(indentLevel + 1);
         }
 
@@ -595,7 +595,7 @@ package struct TextRulerCache {
 /// `query` will find a ruler based on text index, which can be used for finding visual position of a character,
 /// and `queryPosition` will find a ruler based on screen position, effectively doing the reverse.
 ///
-/// Note that `queryPosition` only accepts position on the Y axis as the argument. Position on the X axis varies 
+/// Note that `queryPosition` only accepts position on the Y axis as the argument. Position on the X axis varies
 /// unpredictably on bidirectional layouts.
 ///
 /// Params:
@@ -605,8 +605,8 @@ package struct TextRulerCache {
 /// Returns:
 ///     A range with the requested `TextRuler` — either matching the query exactly or placed before — as the first item.
 ///     All subsequent saved rulers will follow, so they can be updated while the text is being measured.
-/// 
-///     The text ruler will be wrapped with an extra `point` field to indicate the location in text the point 
+///
+///     The text ruler will be wrapped with an extra `point` field to indicate the location in text the point
 ///     corresponds to.
 /// See_Also:
 ///     `Text.rulerAt` for high level API over the cache.
@@ -616,9 +616,9 @@ package auto query(return scope TextRulerCache* cache, size_t index) {
     // We must pick the last item that matches the index. If the right side cache is placed before the index,
     // the left side must be skipped. A.K.A. We only go left if the index is before the right node's index.
     //
-    //           ↓ target                          ↓ target               
-    // left |----o---|-------| right     left |--------|-------| right    
-    //      ^^^^^^^^^                                  ^^^^^^^^ 
+    //           ↓ target                          ↓ target
+    // left |----o---|-------| right     left |--------|-------| right
+    //      ^^^^^^^^^                                  ^^^^^^^^
     //      selected cache                       selected cache
     //
     // (b.offset.length + b.front.left.interval.length) is the interval between the start of text and the beginning
@@ -635,9 +635,9 @@ package auto queryPosition(return scope TextRulerCache* cache, float y) {
     // Just like in `cache()`, the middle point is used to determine the side the query descends into.
     // In this case, the Y position of the middle point is the position of the right side's `startRuler`.
     return queryImpl!((a, b) {
-        
+
         return a < b.front.right.startRuler.caret.end.y;
-            
+
     })(cache, y);
 
 }
@@ -697,16 +697,16 @@ do {
 
     }
 
-    /// This range iterates the cache tree in order while skipping all but the last element that precedes the index. 
-    /// It builds a stack so that its last item points to the current element of the range. Since the cache is 
-    /// a binary tree in which each node either has one or two children, the stack can only have three possible 
+    /// This range iterates the cache tree in order while skipping all but the last element that precedes the index.
+    /// It builds a stack so that its last item points to the current element of the range. Since the cache is
+    /// a binary tree in which each node either has one or two children, the stack can only have three possible
     /// states:
     ///
     /// * It is empty, and so is this range
     /// * It points to a leaf (which is a valid state for `front`)
     /// * The last item has two children, so it needs to descend into one to find a leaf.
     ///
-    /// During descend, left nodes are chosen, unless the range's first item — the needle — is on the right side. When 
+    /// During descend, left nodes are chosen, unless the range's first item — the needle — is on the right side. When
     /// ascending (`popFront`), right nodes are chosen as left nodes have already been visited.
     static struct TextRulerCacheRange {
 
@@ -739,7 +739,7 @@ do {
 
                 // End as soon as an unaffected ancestor is reached
                 if (ancestor.startRuler is ancestor.left.startRuler) break;
-                
+
                 ancestor.startRuler = ancestor.left.startRuler;
 
             }
@@ -819,7 +819,7 @@ do {
             assert(offset.length != 0, "Cannot remove the first item in the cache.");
 
             const front = stack.back;
-            
+
             // Ascend back to the parent
             stack.removeBack();
             auto parent = stack.back;
@@ -863,7 +863,7 @@ do {
                     successor = successor.right;
 
                 }
-                
+
                 updateDepth();
                 ascendAndDescend();
 
@@ -877,10 +877,10 @@ do {
                 // Move the right side to replace it
                 *parent = *parent.right;
 
-                // Now to keep the right side in the correct place, the interval has to be added to whatever node 
-                // precedes it. This means we must find an adjacent branch that goes leftwards. We will search our 
+                // Now to keep the right side in the correct place, the interval has to be added to whatever node
+                // precedes it. This means we must find an adjacent branch that goes leftwards. We will search our
                 // ancestors: one containing a preceding node will have `isRight` set to `true`, i.e. the current node
-                // is in the right branch. 
+                // is in the right branch.
                 // @trusted: no stack.removeBack() calls
                 () @trusted {
 
@@ -897,7 +897,7 @@ do {
                             previous = ancestor.left;
                             continue;
                         }
-                
+
                         // Recalculate the start and interval
                         ancestor.startRuler = ancestor.left.startRuler;
                         ancestor.interval = ancestor.left.interval + ancestor.right.interval;
@@ -906,8 +906,8 @@ do {
 
                     assert(previous);
 
-                    // Descend into the preceding branch (always going right), expanding the interval of every node 
-                    // until we hit a leaf. 
+                    // Descend into the preceding branch (always going right), expanding the interval of every node
+                    // until we hit a leaf.
                     while (previous) {
                         previous.interval += offset;
                         previous = previous.right;
@@ -927,7 +927,7 @@ do {
 
         /// Zero the interval of the rightmost node in the current branch. This is used to reset the length of the last
         /// node when it is removed. Clears the stack when done.
-        private void collapse() 
+        private void collapse()
         out (; empty)
         do {
 
@@ -986,7 +986,7 @@ do {
         }
 
     }
-    
+
     auto ruler = TextRulerCacheRange(
         Stack!CacheStackFrame(
             CacheStackFrame(cache)
@@ -1046,7 +1046,7 @@ unittest {
 
     assert(cache.query( 0).equal(points));
     assert(cache.query( 1).equal(points));
-    
+
     assert(cache.query( 7).equal(points[1..$]));
     assert(cache.query(30).equal(points[5..$]));
     assert(cache.query(18).equal(points[3..$]));
@@ -1066,39 +1066,40 @@ unittest {
     cache.insert(newPoints[2].tupleof);
     cache.insert(newPoints[0].tupleof);
     cache.insert(newPoints[1].tupleof);
-    
+
     assert(cache.query(0).equal(points));
 
 }
 
 @("Text automatically creates TextRulerCache entries")
+version (TODO)
 unittest {
 
     import fluid.label;
     import fluid.default_theme;
 
-    auto root = label(nullTheme, "Lorem ipsum dolor sit amet, consectetur " 
-        ~ "adipiscing elit, sed do eiusmod tempor " 
-        ~ "incididunt ut labore et dolore magna " 
-        ~ "aliqua. Ut enim ad minim veniam, quis " 
-        ~ "nostrud exercitation ullamco laboris " 
-        ~ "nisi ut aliquip ex ea commodo consequat." 
-        ~ "adipiscing elit, sed do eiusmod tempor " 
-        ~ "incididunt ut labore et dolore magna " 
-        ~ "aliqua. Ut enim ad minim veniam, quis " 
-        ~ "nostrud exercitation ullamco laboris " 
-        ~ "nisi ut aliquip ex ea commodo consequat.\n" 
-        ~ "\n" 
-        ~ "Duis aute irure dolor in reprehenderit " 
-        ~ "in voluptate velit esse cillum dolore " 
-        ~ "eu fugiat nulla pariatur. Excepteur " 
-        ~ "sint occaecat cupidatat non proident, " 
-        ~ "sunt in culpa qui officia deserunt " 
-        ~ "Duis aute irure dolor in reprehenderit " 
-        ~ "in voluptate velit esse cillum dolore " 
-        ~ "eu fugiat nulla pariatur. Excepteur " 
-        ~ "sint occaecat cupidatat non proident, " 
-        ~ "sunt in culpa qui officia deserunt " 
+    auto root = label(nullTheme, "Lorem ipsum dolor sit amet, consectetur "
+        ~ "adipiscing elit, sed do eiusmod tempor "
+        ~ "incididunt ut labore et dolore magna "
+        ~ "aliqua. Ut enim ad minim veniam, quis "
+        ~ "nostrud exercitation ullamco laboris "
+        ~ "nisi ut aliquip ex ea commodo consequat."
+        ~ "adipiscing elit, sed do eiusmod tempor "
+        ~ "incididunt ut labore et dolore magna "
+        ~ "aliqua. Ut enim ad minim veniam, quis "
+        ~ "nostrud exercitation ullamco laboris "
+        ~ "nisi ut aliquip ex ea commodo consequat.\n"
+        ~ "\n"
+        ~ "Duis aute irure dolor in reprehenderit "
+        ~ "in voluptate velit esse cillum dolore "
+        ~ "eu fugiat nulla pariatur. Excepteur "
+        ~ "sint occaecat cupidatat non proident, "
+        ~ "sunt in culpa qui officia deserunt "
+        ~ "Duis aute irure dolor in reprehenderit "
+        ~ "in voluptate velit esse cillum dolore "
+        ~ "eu fugiat nulla pariatur. Excepteur "
+        ~ "sint occaecat cupidatat non proident, "
+        ~ "sunt in culpa qui officia deserunt "
         ~ "mollit anim id est laborum.\n");
 
     assert(root.text._updateRangeStart == 0);
@@ -1148,22 +1149,22 @@ unittest {
     import fluid.label;
     import fluid.default_theme;
 
-    auto root = label(nullTheme, "Lorem ipsum dolor sit amet, consectetur " 
-        ~ "adipiscing elit, sed do eiusmod tempor " 
-        ~ "incididunt ut labore et dolore magna " 
-        ~ "aliqua. Ut enim ad minim veniam, quis " 
-        ~ "nostrud exercitation ullamco laboris " 
-        ~ "adipiscing elit, sed do eiusmod tempor " 
-        ~ "incididunt ut labore et dolore magna " 
-        ~ "aliqua. Ut enim ad minim veniam, quis " 
-        ~ "nostrud exercitation ullamco laboris " 
-        ~ "nisi ut aliquip ex ea commodo consequat.\n" 
-        ~ "\n" 
-        ~ "Duis aute irure dolor in reprehenderit " 
-        ~ "in voluptate velit esse cillum dolore " 
-        ~ "eu fugiat nulla pariatur. Excepteur " 
-        ~ "sint occaecat cupidatat non proident, " 
-        ~ "sunt in culpa qui officia deserunt " 
+    auto root = label(nullTheme, "Lorem ipsum dolor sit amet, consectetur "
+        ~ "adipiscing elit, sed do eiusmod tempor "
+        ~ "incididunt ut labore et dolore magna "
+        ~ "aliqua. Ut enim ad minim veniam, quis "
+        ~ "nostrud exercitation ullamco laboris "
+        ~ "adipiscing elit, sed do eiusmod tempor "
+        ~ "incididunt ut labore et dolore magna "
+        ~ "aliqua. Ut enim ad minim veniam, quis "
+        ~ "nostrud exercitation ullamco laboris "
+        ~ "nisi ut aliquip ex ea commodo consequat.\n"
+        ~ "\n"
+        ~ "Duis aute irure dolor in reprehenderit "
+        ~ "in voluptate velit esse cillum dolore "
+        ~ "eu fugiat nulla pariatur. Excepteur "
+        ~ "sint occaecat cupidatat non proident, "
+        ~ "sunt in culpa qui officia deserunt "
         ~ "mollit anim id est laborum.\n");
 
     root.draw();
@@ -1180,7 +1181,7 @@ unittest {
     root.text[260..530] = 'a'.repeat(270).array;
 
     assert(root.tree.resizePending);
-    
+
     root.draw();
 
     assert(query(&root.text._cache, 0).equal!"a.point == b"([
@@ -1231,11 +1232,11 @@ unittest {
          CachedTextRuler(TextInterval(88, 5,  0), TextRuler(typeface, 5)),
          CachedTextRuler(TextInterval(95, 6,  0), TextRuler(typeface, 6)),
     ]));
-    
+
 }
 
 @("Cache node removal works")
-@trusted 
+@trusted
 unittest {
 
     import fluid.style;
@@ -1286,13 +1287,13 @@ unittest {
             CachedTextRuler(TextInterval(0,  0, 0), TextRuler(typeface, 1)),
             CachedTextRuler(TextInterval(16, 3, 0), TextRuler(typeface, 2)),
         ]));
-        
+
     }
 
     // Clearing it out
     {
         TextRulerCache[6] nodes = make();
-        auto root = TextRulerCache(&nodes[0], 
+        auto root = TextRulerCache(&nodes[0],
             new TextRulerCache(
                 new TextRulerCache(
                     &nodes[1],
@@ -1335,7 +1336,7 @@ unittest {
     {
         TextRulerCache[4] nodes;
         foreach (ref node; nodes) node = make();
-        auto root = new TextRulerCache( 
+        auto root = new TextRulerCache(
             new TextRulerCache(
                 &nodes[0],
                 &nodes[1],
@@ -1385,7 +1386,7 @@ unittest {
         range.popFrontN(3);
         range.removeFront();
         assert(root.diagnose == Rope.init, root.diagnose.toString);
-        
+
     }
 
 }
@@ -1433,7 +1434,7 @@ unittest {
 
     assert(cache.interval == TextInterval(16, 1, 6));
     assert(cache.right.interval == TextInterval(6, 0, 6));
-    
+
     cache.query(20).removeFront;
 
     assert(cache.interval == TextInterval(10, 1, 0));

@@ -175,10 +175,7 @@ void main(string[] args) {
     // Prepare the window
     SetConfigFlags(ConfigFlags.FLAG_WINDOW_RESIZABLE);
     SetTraceLogLevel(TraceLogLevel.LOG_WARNING);
-    version (FluidTour_NewIO)
-        InitWindow(1000, 750, "Fluid tour (New I/O)");
-    else
-        InitWindow(1000, 750, "Fluid tour");
+    InitWindow(1000, 750, "Fluid tour");
     SetTargetFPS(60);
     SetExitKey(0);
     scope (exit) CloseWindow();
@@ -187,16 +184,7 @@ void main(string[] args) {
     auto ui = args.length > 1
         ? createUI(args[1])
         : createUI();
-
-    // If new I/O is toggled on, disable the default backend
-    // and wrap the UI in the raylibStack root
-    version (FluidTour_NewIO) {
-        auto root = raylibStack.v5_5(ui);
-        root.io = new HeadlessBackend;
-    }
-    else {
-        auto root = ui;
-    }
+    auto root = ui;
 
     // Event loop
     while (!WindowShouldClose) {

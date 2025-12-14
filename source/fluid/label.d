@@ -25,7 +25,6 @@ import fluid.node;
 import fluid.text;
 import fluid.utils;
 import fluid.style;
-import fluid.backend;
 
 import fluid.io.canvas;
 
@@ -86,7 +85,6 @@ class Label : Node {
     }
 
     protected override void resizeImpl(Vector2 available) {
-
         import std.math;
 
         use(canvasIO);
@@ -95,24 +93,19 @@ class Label : Node {
         minSize = text.size;
 
         assert(text.isMeasured);
-
     }
 
     protected override void drawImpl(Rectangle outer, Rectangle inner) {
-
         const style = pickStyle();
-        style.drawBackground(tree.io, canvasIO, outer);
+        style.drawBackground(canvasIO, outer);
         text.draw(canvasIO, style, inner.start);
-
     }
 
     override string toString() const {
-
         import std.range;
         import std.format;
 
         return format!"Label(%(%s%))"(only(text.toString));
-
     }
 
 }

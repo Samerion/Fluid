@@ -10,7 +10,6 @@ import fluid.node;
 import fluid.input;
 import fluid.utils;
 import fluid.style;
-import fluid.backend;
 import fluid.structs;
 import fluid.text_input;
 
@@ -203,97 +202,6 @@ unittest {
 
 }
 
-@("Legacy: NumberInput supports math operations (migrated)")
-unittest {
-
-    int calls;
-
-    auto io = new HeadlessBackend;
-    auto root = intInput(delegate {
-
-        calls++;
-
-    });
-
-    root.io = io;
-
-    // First frame: initial state
-    root.focus();
-    root.draw();
-
-    assert(root.value == 0);
-    assert(root.TextInput.value == "0");
-
-    // Second frame, type in "10"
-    io.nextFrame();
-    io.inputCharacter("10");
-    root.draw();
-
-    // Value should remain unchanged
-    assert(calls == 0);
-    assert(root.value == 0);
-    assert(root.TextInput.value.among("010", "10"));
-
-    // Hit enter to update
-    io.nextFrame;
-    io.press(KeyboardKey.enter);
-    root.draw();
-
-    assert(calls == 1);
-    assert(root.value == 10);
-    assert(root.TextInput.value == "10");
-
-    // Test math equations
-    io.nextFrame;
-    io.inputCharacter("+20*5");
-    io.release(KeyboardKey.enter);
-    root.focus();
-    root.draw();
-
-    assert(calls == 1);
-    assert(root.value == 10);
-    assert(root.TextInput.value == "10+20*5");
-
-    // Submit the expression
-    io.nextFrame;
-    io.press(KeyboardKey.enter);
-    root.draw();
-
-    assert(calls == 2);
-    assert(root.value != (10+20)*5);
-    assert(root.value == 110);
-    assert(root.TextInput.value == "110");
-
-    // Try incrementing
-    io.nextFrame;
-    io.mousePosition = start(root.spinner._lastRectangle);
-    io.press;
-    root.draw();
-
-    io.nextFrame;
-    io.release;
-    root.draw();
-
-    assert(calls == 3);
-    assert(root.value == 111);
-    assert(root.TextInput.value == "111");
-
-    // Try decrementing
-    io.nextFrame;
-    io.mousePosition = end(root.spinner._lastRectangle) - Vector2(1, 1);
-    io.press;
-    root.draw();
-
-    io.nextFrame;
-    io.release;
-    root.draw();
-
-    assert(calls == 4);
-    assert(root.value == 110);
-    assert(root.TextInput.value == "110");
-
-}
-
 abstract class AbstractNumberInput : TextInput {
 
     mixin enableInputActions;
@@ -415,47 +323,25 @@ class NumberInputSpinner : Node, FluidHoverable, Hoverable {
 
         auto style = pickStyle();
 
-        style.drawBackground(io, canvasIO, outer);
+        style.drawBackground(canvasIO, outer);
 
         _lastRectangle = buttonsRectangle(style, inner);
 
         // If using canvasIO, draw the image
-        if (canvasIO) {
-            spinnerImage.draw(_lastRectangle);
-        }
-
-        // If there's a texture for buttons, display it
-        else if (auto texture = getTexture(style)) {
-            texture.draw(_lastRectangle);
-        }
+        spinnerImage.draw(_lastRectangle);
 
     }
 
     /// Get rectangle for the buttons
     Rectangle buttonsRectangle(const Style style, Rectangle inner) {
-
         if (spinnerImage != Image.init) {
-
             const scale = inner.height / spinnerImage.height;
             const size = spinnerImage.size * scale;
             const position = end(inner) - size;
 
             return Rectangle(position.tupleof, size.tupleof);
-
         }
-
-        if (auto texture = getTexture(style)) {
-
-            const scale = inner.height / texture.height;
-            const size = Vector2(texture.width, texture.height) * scale;
-            const position = end(inner) - size;
-
-            return Rectangle(position.tupleof, size.tupleof);
-
-        }
-
         return Rectangle.init;
-
     }
 
     @(FluidInputAction.press)
@@ -469,18 +355,6 @@ class NumberInputSpinner : Node, FluidHoverable, Hoverable {
         // Below center (decrement)
         else {
             if (decremented) decremented();
-        }
-
-    }
-
-    @(FluidInputAction.press)
-    void press() {
-
-        // Polyfill for old I/O
-        if (!hoverIO) {
-            HoverPointer pointer;
-            pointer.position = io.mousePosition;
-            press(pointer);
         }
 
     }
@@ -500,18 +374,6 @@ class NumberInputSpinner : Node, FluidHoverable, Hoverable {
         if (!extra) return Image.init;
 
         return extra.buttons;
-
-    }
-
-    /// Get texture used by the spinner.
-    protected TextureGC* getTexture(const Style style) @trusted {
-
-        auto extra = cast(Extra) style.extra;
-
-        if (!extra) return null;
-
-        // Check entries for this backend
-        return extra.getTexture(io, extra.buttons);
 
     }
 

@@ -11,7 +11,7 @@ debug (Fluid_TextUpdates) {
 }
 
 import fluid.utils;
-import fluid.backend;
+import fluid.types;
 import fluid.io.canvas;
 
 debug (Fluid_BuildMessages) {
@@ -31,17 +31,12 @@ struct CompositeTexture {
     enum maxChunkSize = 512;
 
     struct Chunk {
-
-        TextureGC texture;
         DrawableImage image;
         bool isValid;
 
         debug (Fluid_TextUpdates) {
             SysTime lastEdit;
         }
-
-        alias texture this;
-
     }
 
     /// Format of the texture.
@@ -297,43 +292,6 @@ struct CompositeTexture {
     }
 
     /// Update the texture of a given chunk using its corresponding image.
-    void upload(FluidBackend backend, size_t i, Vector2 dpi) @trusted {
-
-        const sizeMatches = chunks[i].image.width == chunks[i].texture.width
-            && chunks[i].image.height == chunks[i].texture.height;
-
-        // Size is the same as before, update the texture
-        if (sizeMatches) {
-
-            assert(chunks[i].texture.backend !is null);
-            debug assert(backend == chunks[i].texture.backend,
-                .format!"Backend mismatch %s != %s"(backend, chunks[i].texture.backend));
-
-            chunks[i].texture.update(chunks[i].image);
-
-        }
-
-        // No match, create a new texture
-        else {
-
-            chunks[i].texture = TextureGC(backend, chunks[i].image);
-
-        }
-
-        // Update DPI
-        chunks[i].texture.dpiX = cast(int) dpi.x;
-        chunks[i].texture.dpiY = cast(int) dpi.y;
-
-        // Mark as valid
-        chunks[i].isValid = true;
-
-        debug (Fluid_TextUpdates) {
-            chunks[i].lastEdit = Clock.currTime;
-        }
-
-    }
-
-    /// Update the texture of a given chunk using its corresponding image.
     void upload(CanvasIO canvasIO, size_t index, Vector2 dpi) @trusted {
 
         // Update texture DPI
@@ -351,56 +309,6 @@ struct CompositeTexture {
 
         debug (Fluid_TextUpdates) {
             chunks[index].lastEdit = Clock.currTime;
-        }
-
-    }
-
-    /// Draw onscreen parts of the texture.
-    void drawAlign(FluidBackend backend, Rectangle rectangle, Color tint = Color(0xff, 0xff, 0xff, 0xff)) {
-
-        // Draw each visible chunk
-        foreach (index; visibleChunks(rectangle.start, backend.windowSize)) {
-
-            assert(chunks[index].texture.backend !is null);
-            debug assert(backend == chunks[index].texture.backend,
-                .format!"Backend mismatch %s != %s"(backend, chunks[index].texture.backend));
-
-            const start = rectangle.start + chunkPosition(index);
-            const size = chunks[index].texture.viewportSize;
-            const rect = Rectangle(start.tupleof, size.tupleof);
-
-            // Assign palette
-            chunks[index].palette = palette;
-
-            debug (Fluid_TextChunks) {
-
-                if (index % 2) {
-                    backend.drawRectangle(rect, color("#0002"));
-                }
-                else {
-                    backend.drawRectangle(rect, color("#fff2"));
-                }
-
-            }
-
-            debug (Fluid_TextUpdates) {
-
-                const timeSinceLastUpdate = Clock.currTime - chunks[index].lastEdit;
-                const secondsSinceLastUpdate = timeSinceLastUpdate.total!"msecs" / 1000f;
-
-                if (0 <= secondsSinceLastUpdate && secondsSinceLastUpdate <= 1) {
-
-                    const opacity = 1 - secondsSinceLastUpdate;
-
-                    backend.drawRectangle(rect, color("#ffc307").setAlpha(opacity));
-
-                }
-
-
-            }
-
-            backend.drawTextureAlign(chunks[index], rect, tint);
-
         }
 
     }
@@ -443,17 +351,3 @@ struct CompositeTexture {
 
 
 }
-
-unittest {
-
-    import std.file;
-    import fluid.text_input;
-
-    auto root = textInput();
-    root.draw();
-    root.io.clipboard = readText(__FILE__);
-    root.paste();
-    root.draw();
-
-}
-

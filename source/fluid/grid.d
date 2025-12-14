@@ -39,7 +39,6 @@ import fluid.tree;
 import fluid.frame;
 import fluid.style;
 import fluid.utils;
-import fluid.backend;
 import fluid.structs;
 
 deprecated("`Grid` and `grid` were renamed to `GridFrame` and `gridFrame` respectively. To be removed in 0.8.0.") {
@@ -290,7 +289,7 @@ class GridFrame : Frame {
     }
 
     override void drawImpl(Rectangle outer, Rectangle inner) {
-        pickStyle.drawBackground(tree.io, canvasIO, outer);
+        pickStyle.drawBackground(canvasIO, outer);
         drawChildren(inner);
     }
 

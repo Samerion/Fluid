@@ -83,10 +83,10 @@ unittest {
     int clicked;
 
     Button firstButton, secondButton;
-    Space space;
+    Space space, wrapperSpace;
 
     auto root = focusChain(
-        vspace(
+        wrapperSpace = vspace(
             firstButton = button("One", delegate { clicked++; }),
             space       = vspace(
                 secondButton = button("One", delegate { clicked++; }),
@@ -112,7 +112,7 @@ unittest {
     assert(clicked == 2);
 
     // Disable the root
-    root.disable();
+    wrapperSpace.disable();
     root.draw();
     root.currentFocus = secondButton;
     root.runInputAction!(FluidInputAction.press);

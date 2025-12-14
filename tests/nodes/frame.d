@@ -1,7 +1,6 @@
 module nodes.frame;
 
 import fluid;
-import legacy;
 
 @safe:
 
