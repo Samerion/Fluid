@@ -541,7 +541,7 @@ abstract class Node {
     }
 
     /// Draw this node as a root node.
-    final void drawAsRoot() @trusted {
+    final void drawAsRoot(Rectangle viewport = Rectangle(0, 0, 0, 0)) @trusted {
 
         // No tree set, create one
         if (tree is null) {
@@ -571,12 +571,9 @@ abstract class Node {
         // Resize if required
         if (resizePending) {
             prepareInternalImpl(tree, treeContext, theme);
-            resizeInternalImpl(Vector2.init);
+            resizeInternalImpl(viewport.size);
             _resizePending = false;
         }
-
-        /// Area to render on
-        const viewport = Rectangle(0, 0, 0, 0);
 
         // Run beforeTree actions
         foreach (action; filterActions) {
