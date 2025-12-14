@@ -35,7 +35,8 @@ struct TreeContext {
     /// Create the context if it doesn't already exist.
     void prepare() {
         if (ptr is null) {
-            ptr = new TreeContextData();
+            ptr = new TreeContextData(
+                createDefaultTreeWrapper());
         }
     }
 

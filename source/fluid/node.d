@@ -531,7 +531,13 @@ abstract class Node {
     }
 
     final void draw() {
-        drawAsRoot();
+        treeContext.prepare();
+        if (treeContext.wrapper) {
+            treeContext.wrapper.drawTree(treeContext, this);
+        }
+        else {
+            drawAsRoot();
+        }
     }
 
     /// Draw this node as a root node.
