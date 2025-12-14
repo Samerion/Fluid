@@ -282,8 +282,6 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
 
     protected void updateMouse() @trusted {
 
-        import fluid.backend : FluidMouseCursor;
-
         // Update mouse status
         _mousePointer.position     = toFluid(GetMousePosition);
         _mousePointer.scroll       = scroll();
@@ -303,24 +301,26 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
         hoverIO.loadTo(_mousePointer);
 
         // Set cursor icon
-        if (auto node = cast(Node) hoverIO.hoverOf(_mousePointer)) {
+        version (none) {
+            if (auto node = cast(Node) hoverIO.hoverOf(_mousePointer)) {
 
-            const cursor = node.pickStyle().mouseCursor;
+                const cursor = node.pickStyle().mouseCursor;
 
-            // Hide the cursor if requested
-            if (cursor.system == cursor.system.none) {
-                HideCursor();
+                // Hide the cursor if requested
+                if (cursor.system == cursor.system.none) {
+                    HideCursor();
+                }
+                // Show the cursor
+                else {
+                    SetMouseCursor(cursor.system.toRaylib);
+                    ShowCursor();
+                }
+
             }
-            // Show the cursor
             else {
-                SetMouseCursor(cursor.system.toRaylib);
+                SetMouseCursor(FluidMouseCursor.systemDefault.system.toRaylib);
                 ShowCursor();
             }
-
-        }
-        else {
-            SetMouseCursor(FluidMouseCursor.systemDefault.system.toRaylib);
-            ShowCursor();
         }
 
         // Send buttons
