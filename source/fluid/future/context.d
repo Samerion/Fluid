@@ -450,8 +450,11 @@ interface TreeWrapper {
     /// of nodes, and wrapping the given node as a child.
     ///
     /// Params:
+    ///     context = Active tree context.
+    ///         The wrapper should assign this context to any node it draws, through
+    ///         [Node.prepare].
     ///     root = Root node of the tree for the wrapper to draw.
-    void drawTree(Node root);
+    void drawTree(TreeContext context, Node root);
 
     ///
     @("drawTree implementation example")
@@ -465,11 +468,9 @@ interface TreeWrapper {
                 chain = hoverChain();
             }
 
-            void drawTree(Node root) {
-                if (root !is chain.next) {
-                    chain.next = root;
-                    chain.updateSize();
-                }
+            void drawTree(TreeContext context, Node root) {
+                chain.next = root;
+                chain.prepare(context);
                 chain.drawAsRoot();
             }
 

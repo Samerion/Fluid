@@ -356,8 +356,9 @@ class TestWrapper : TreeWrapper {
         );
     }
 
-    override void drawTree(Node start) {
+    override void drawTree(TreeContext context, Node start) {
         _last.next = start;
+        _root.prepare(context);
         _root.drawAsRoot();
     }
 
