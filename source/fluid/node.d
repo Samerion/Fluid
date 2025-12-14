@@ -527,8 +527,12 @@ abstract class Node {
         // Tree might be null — if so, the node will be resized regardless
     }
 
+    final void draw() {
+        drawAsRoot();
+    }
+
     /// Draw this node as a root node.
-    final void draw() @trusted {
+    final void drawAsRoot() @trusted {
 
         // No tree set, create one
         if (tree is null) {
