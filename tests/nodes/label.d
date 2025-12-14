@@ -59,3 +59,24 @@ unittest {
     );
 
 }
+
+@("Labels can have different font sizes")
+unittest {
+    import fluid.theme;
+    @NodeTag enum Small;
+    @NodeTag enum Medium;
+    @NodeTag enum Large;
+    auto theme = nullTheme.derive(
+        rule!(Label, Small)(fontSize = 8.pt),
+        rule!(Label, Medium)(fontSize = 14.pt),
+        rule!(Label, Large)(fontSize = 20.pt),
+    );
+    auto root = testSpace(
+        theme,
+        label(.tags!Small, "Hello, World!"),
+        label(.tags!Medium, "Hello, World!"),
+        label(.tags!Large, "Hello, World!"),
+    );
+
+    root.drawToSVG("/tmp/fluid.svg");
+}
