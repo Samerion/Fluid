@@ -70,14 +70,17 @@ abstract class NodeChain : Node {
     /// Set the next node in chain.
     /// Params:
     ///     value = Node to set.
+    ///         A resize will be triggered if this node is different from the current one.
     /// Returns:
     ///     Assigned node.
     Node next(Node value) {
+        if (_next is value) return value;
 
         if (auto chain = cast(NodeChain) value) {
             _nextChain = chain;
         }
 
+        updateSize();
         return _next = value;
 
     }
