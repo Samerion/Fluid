@@ -531,7 +531,7 @@ abstract class Node {
     }
 
     final void draw() {
-        treeContext.prepare();
+        _treeContext.prepare();
         if (treeContext.wrapper) {
             treeContext.wrapper.drawTree(treeContext, this);
         }
@@ -570,7 +570,7 @@ abstract class Node {
 
         // Resize if required
         if (resizePending) {
-            prepareInternalImpl(tree, theme);
+            prepareInternalImpl(tree, treeContext, theme);
             resizeInternalImpl(Vector2.init);
             _resizePending = false;
         }
@@ -792,7 +792,7 @@ abstract class Node {
     ///     child = Child node to resize.
     protected void prepareChild(Node child) {
 
-        child.prepareInternalImpl(tree, theme);
+        child.prepareInternalImpl(tree, treeContext, theme);
 
     }
 
@@ -822,18 +822,19 @@ abstract class Node {
     in(theme, "Theme for Node.resize() must not be null.")
     do {
 
-        prepareInternalImpl(tree, theme);
+        prepareInternalImpl(tree, TreeContext.init, theme);
         resizeInternalImpl(space);
 
     }
 
-    private final void prepareInternalImpl(LayoutTree* tree, Theme theme)
+    private final void prepareInternalImpl(LayoutTree* tree, TreeContext context, Theme theme)
     in(tree, "Tree for prepareChild(Node) must not be null.")
     in(theme, "Theme for prepareChild(Node) must not be null.")
     do {
 
         // Inherit tree and theme
         this.tree = tree;
+        this._treeContext = context;
         inheritTheme(theme);
 
         // Load breadcrumbs from the tree
