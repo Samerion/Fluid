@@ -95,6 +95,8 @@ abstract class Node {
 
     private {
 
+        TreeContext _treeContext;
+
         /// If true, this node must update its size.
         bool _resizePending = true;
 
@@ -273,14 +275,7 @@ abstract class Node {
     }
 
     final inout(TreeContext) treeContext() inout nothrow {
-
-        if (tree is null) {
-            return inout TreeContext(null);
-        }
-        else {
-            return inout TreeContext(&tree.context);
-        }
-
+        return _treeContext;
     }
 
     /// Toggle the node's visibility.
@@ -569,7 +564,7 @@ abstract class Node {
         const viewport = Rectangle(0, 0, 0, 0);
 
         // Run beforeTree actions
-        foreach (action; tree.filterActions) {
+        foreach (action; filterActions) {
 
             action.beforeTreeImpl(this, viewport);
 
@@ -579,14 +574,42 @@ abstract class Node {
         drawInternalImpl(viewport);
 
         // Run afterTree actions
-        foreach (action; tree.filterActions) {
+        foreach (action; filterActions) {
             action.afterTreeImpl();
         }
 
-        foreach (action; tree.filterActions) {
+        foreach (action; filterActions) {
             action.afterInput(tree.wasKeyboardHandled);
         }
 
+    }
+
+    protected auto filterActions() {
+        static struct Actions {
+            LayoutTree* tree;
+            TreeContext context;
+
+            int opApply(int delegate(TreeAction) @safe yield) {
+
+                // Old actions
+                foreach (action; tree.filterActions) {
+                    if (auto result = yield(action)) {
+                        return result;
+                    }
+                }
+
+                // New actions
+                foreach (action; context.actions) {
+                    if (auto result = yield(action)) {
+                        return result;
+                    }
+                }
+                return 0;
+
+            }
+        }
+
+        return Actions(tree, treeContext);
     }
 
     /// Draw a child node at the specified location inside of this node.
@@ -647,9 +670,9 @@ abstract class Node {
         scope (exit) tree.breadcrumbs = breadcrumbs;
 
         // Set tint
-        auto previousTint = tree.context.tint;
-        tree.context.tint = multiply(previousTint, currentStyle.tint);
-        scope (exit) tree.context.tint = previousTint;
+        auto previousTint = treeContext.tint;
+        treeContext.tint = multiply(previousTint, currentStyle.tint);
+        scope (exit) treeContext.tint = previousTint;
 
         assert(
             only(size.tupleof).all!isFinite,
@@ -682,7 +705,7 @@ abstract class Node {
         scope (exit) tree.depth--;
 
         // Run beforeDraw actions
-        foreach (action; tree.filterActions) {
+        foreach (action; filterActions) {
 
             action.beforeDrawImpl(this, space, mainBox, contentBox);
 
@@ -709,7 +732,7 @@ abstract class Node {
         }
 
         // Run afterDraw actions
-        foreach (action; tree.filterActions) {
+        foreach (action; filterActions) {
 
             action.afterDrawImpl(this, space, mainBox, contentBox);
 
@@ -847,14 +870,14 @@ abstract class Node {
             );
 
             // Run beforeResize actions
-            foreach (action; tree.filterActions) {
+            foreach (action; filterActions) {
                 action.beforeResize(this, space);
             }
 
             // Resize the node
             resizeImpl(space);
 
-            foreach (action; tree.filterActions) {
+            foreach (action; filterActions) {
                 action.afterResize(this, space);
             }
 
@@ -925,7 +948,7 @@ abstract class Node {
     protected T use(T : IO)()
     in (tree, "`use()` should only be used inside `resizeImpl`")
     do {
-        return tree.context.io.get!T();
+        return treeContext.io.get!T();
     }
 
     /// ditto
