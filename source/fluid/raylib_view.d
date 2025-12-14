@@ -41,6 +41,7 @@ import fluid.types;
 import fluid.node_chain;
 
 import fluid.future.arena;
+import fluid.future.context;
 
 import fluid.backend.raylib5 : Raylib5Backend, toRaylib;
 
@@ -726,7 +727,7 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
 /// On top of systems already provided by `RaylibView`, `RaylibStack` also includes `HoverIO`, `FocusIO`, `ActionIO`,
 /// `PreferenceIO`, `TimeIO` and `FileIO`. You can access them through fields named `hoverIO`, `focusIO`, `actionIO`,
 /// `preferenceIO`, `timeIO` and `fileIO` respectively.
-class RaylibStack(RaylibViewVersion raylibVersion) : Node {
+class RaylibStack(RaylibViewVersion raylibVersion) : Node, TreeWrapper {
 
     import fluid.hover_chain;
     import fluid.focus_chain;
@@ -815,6 +816,11 @@ class RaylibStack(RaylibViewVersion raylibVersion) : Node {
     ///     Newly set node.
     Node next(Node value) {
         return top.next = value;
+    }
+
+    override void drawTree(Node root) {
+        next(root);
+        drawAsRoot();
     }
 
     override void resizeImpl(Vector2 space) {
