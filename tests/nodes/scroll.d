@@ -35,7 +35,7 @@ class PlainBox : Node {
     }
 
     override void drawImpl(Rectangle outer, Rectangle) {
-        style.drawBackground(io, canvasIO, outer);
+        style.drawBackground(canvasIO, outer);
     }
 
 }

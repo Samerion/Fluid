@@ -36,7 +36,6 @@ import fluid.label;
 import fluid.utils;
 import fluid.style;
 import fluid.structs;
-import fluid.backend;
 
 /// A [node builder][nodeBuilder] to create a [Button] labelled with text.
 /// It takes a string for the label text, and a delegate describing the effect.
@@ -91,21 +90,8 @@ class ButtonImpl(T : Node = Label) : InputNode!T {
     ///         For [Button] this will be the label text.
     ///     pressed = Action to perform when the button is pressed.
     this(T...)(T sup, void delegate() @safe pressed) {
-
         super(sup);
         this.pressed = pressed;
-
-    }
-
-    protected override void drawImpl(Rectangle outer, Rectangle inner) {
-
-        // Check if pressed
-        isPressed = checkIsPressed;
-        // TODO this should be *false* if key is held down, but wasn't pressed while in focus
-
-        // Draw the button
-        super.drawImpl(outer, inner);
-
     }
 
     /// Handle input by calling the [pressed][Button.pressed] delegate assigned to this
@@ -114,10 +100,7 @@ class ButtonImpl(T : Node = Label) : InputNode!T {
     /// This method is bound to the [press input action][FluidInputAction.press].
     @(FluidInputAction.press)
     void press() @trusted {
-
-        // Run the callback
         if (pressed) pressed();
-
     }
 
     static if (is(typeof(text) : string))

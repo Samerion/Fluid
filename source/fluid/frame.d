@@ -70,7 +70,6 @@ import fluid.style;
 import fluid.utils;
 import fluid.input;
 import fluid.structs;
-import fluid.backend;
 
 import fluid.io.canvas;
 
@@ -210,7 +209,7 @@ class Frame : Space, FluidDroppable {
 
     protected override void drawImpl(Rectangle outer, Rectangle inner) {
         const style = pickStyle();
-        style.drawBackground(tree.io, canvasIO, outer);
+        style.drawBackground(canvasIO, outer);
 
         if (isDropHovered) {
             _dropIndex = 0;

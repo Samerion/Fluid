@@ -193,7 +193,6 @@ version (Fluid_Docs) {
     ///
     /// * [fluid.io][fluid.io] defines standard interfaces for I/O processing.
     /// * [RaylibView and RaylibStack][fluid.raylib_view] implement Raylib support.
-    /// * Legacy: [fluid.backend][fluid.backend] contains the old I/O interfaces.
     /// * [NodeChain][fluid.node_chain] is an optimized base class for I/O implementations.
     ///
     /// ### Transformation
@@ -249,7 +248,6 @@ else {
 }
 
 public import
-    fluid.backend,             // documented
     fluid.actions,             // documented
     fluid.arsd_image_chain,    // documented
     fluid.button,              // documented
@@ -330,31 +328,6 @@ unittest {
             ),
         ),
     );
-
-}
-
-@("Legacy: readme.md example (migrated)")
-unittest {
-
-    import std.math;
-
-    auto io = new HeadlessBackend;
-    auto root = vspace(
-        .layout!"center",
-        label(.layout!"center", "Hello World from"),
-        imageView("./logo.png", Vector2(499, 240)),
-    );
-
-    root.io = io;
-    root.draw();
-
-    // This should render two textures
-    auto textTexture = io.textures.front;
-    io.textures.popFront;
-    auto imageView = io.textures.front;
-
-    // Both textures should have the same bottom line
-    assert(textTexture.rectangle.end.y.isClose(imageView.rectangle.end.y));
 
 }
 

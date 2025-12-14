@@ -28,13 +28,14 @@ import fluid.tree;
 import fluid.utils;
 import fluid.space;
 import fluid.input;
-import fluid.backend;
+import fluid.node_chain;
 
 import fluid.io.canvas;
 import fluid.io.debug_signal;
 
 import fluid.future.pipe;
 import fluid.future.arena;
+import fluid.future.context;
 
 @safe:
 
@@ -43,6 +44,8 @@ alias vtestSpace = nodeBuilder!TestSpace;
 alias htestSpace = nodeBuilder!(TestSpace, (a) {
     a.isHorizontal = true;
 });
+
+alias testWrapper = nodeBuilder!TestWrapper;
 
 /// Node property for `TestSpace` that enables cropping. This will prevent overflowing content from being drawn.
 /// This can be used to test nodes that rely on cropping information, for example to limit drawn content to what
@@ -319,6 +322,50 @@ class TestSpace : Space, CanvasIO, DebugSignalIO {
 
 }
 
+class TestWrapper : TreeWrapper {
+
+    public {
+        Rectangle viewport = Rectangle(0, 0, 800, 600);
+    }
+
+    private {
+        TestSpace _root;
+        NodeChain _last;
+    }
+
+    this() {
+        import fluid.preference_chain;
+        import fluid.time_chain;
+        import fluid.input_map_chain;
+        import fluid.focus_chain;
+        import fluid.hover_chain;
+        import fluid.file_chain;
+        import fluid.overlay_chain;
+        import fluid.test_space;
+        import fluid.structs : layout;
+
+        _root = testSpace(
+            layout!"fill",
+            chain(
+                preferenceChain(layout!(1, "fill")),
+                timeChain(),
+                inputMapChain(),
+                focusChain(),
+                hoverChain(),
+                fileChain(),
+                _last = overlayChain(),
+            ),
+        );
+    }
+
+    override void drawTree(TreeContext context, Node start) {
+        _last.next = start;
+        _root.prepare(context);
+        _root.drawAsRoot(viewport);
+    }
+
+}
+
 private class TestProbe : TreeAction {
 
     import std.array;
@@ -396,7 +443,9 @@ private class TestProbe : TreeAction {
     override void afterResize(Node node, Vector2) {
 
         // Pop last node
-        _stack.shrinkTo(_stack[].length - 1);
+        if (!_stack[].empty) {
+            _stack.shrinkTo(_stack[].length - 1);
+        }
 
         // Restore previous subject from the stack
         if (!_stack[].empty) {

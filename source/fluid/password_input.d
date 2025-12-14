@@ -2,7 +2,7 @@ module fluid.password_input;
 
 import fluid.utils;
 import fluid.style;
-import fluid.backend;
+import fluid.types;
 import fluid.text_input;
 
 import fluid.io.canvas;
@@ -57,7 +57,7 @@ class PasswordInput : TextInput {
             super.resizeImpl(available);
 
             if (!showPlaceholder) {
-                const x = getAdvanceX(io, canvasIO, style);
+                const x = getAdvanceX(canvasIO, style);
                 const radius = x / 2f;
                 const advance = x * 1.2;
                 minSize = Vector2(
@@ -111,17 +111,14 @@ class PasswordInput : TextInput {
     }
 
     protected override void resizeImpl(Vector2 space) {
-
-        use(canvasIO);
+        require(canvasIO);
 
         // Use the "X" character as reference
-        const x = getAdvanceX(io, canvasIO, style);
-
+        const x = getAdvanceX(canvasIO, style);
         radius = x / 2f;
         advance = x * 1.2;
 
         super.resizeImpl(space);
-
     }
 
     protected override void drawContents(Rectangle inner, Rectangle innerScrolled) {
@@ -136,17 +133,9 @@ class PasswordInput : TextInput {
         auto style = pickStyle;
 
         // Draw a circle for each character
-        if (canvasIO) {
-            foreach (_; value) {
-                canvasIO.drawCircle(cursor, radius, style.textColor);
-                cursor.x += advance;
-            }
-        }
-        else {
-            foreach (_; value) {
-                io.drawCircle(cursor, radius, style.textColor);
-                cursor.x += advance;
-            }
+        foreach (_; value) {
+            canvasIO.drawCircle(cursor, radius, style.textColor);
+            cursor.x += advance;
         }
 
         // Draw the caret
@@ -187,7 +176,6 @@ class PasswordInput : TextInput {
 
     /// Draw selection, if applicable.
     protected override void drawSelection(Rectangle inner) {
-
         import std.range : enumerate;
         import std.algorithm : min, max;
 
@@ -205,31 +193,15 @@ class PasswordInput : TextInput {
             size, lineHeight,
         );
 
-        if (canvasIO) {
-            canvasIO.drawRectangle(rect, style.selectionBackgroundColor);
-        }
-        else {
-            io.drawRectangle(rect, style.selectionBackgroundColor);
-        }
-
+        canvasIO.drawRectangle(rect, style.selectionBackgroundColor);
     }
 
     /// Get the X advance of letter "X."
-    protected static float getAdvanceX(FluidBackend io, CanvasIO canvasIO, Style style) {
-
-        float scale;
-
-        if (canvasIO) {
-            style.setDPI(canvasIO.dpi);
-            scale = canvasIO.toDots(Vector2(1, 0)).x;
-        }
-        else {
-            style.setDPI(io.dpi);
-            scale = io.hidpiScale.x;
-        }
+    protected static float getAdvanceX(CanvasIO canvasIO, Style style) {
+        style.setDPI(canvasIO.dpi);
+        const scale = canvasIO.toDots(Vector2(1, 0)).x;
 
         return style.getTypeface.advance('X').x / scale;
-
     }
 
     /// Request a new or larger buffer.

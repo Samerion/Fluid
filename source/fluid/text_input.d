@@ -18,7 +18,6 @@ import fluid.style;
 import fluid.utils;
 import fluid.scroll;
 import fluid.actions;
-import fluid.backend;
 import fluid.structs;
 import fluid.popup_frame;
 import fluid.text.typeface;
@@ -1001,10 +1000,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         contentLabel.style = pickLabelStyle(style);
         resizeChild(contentLabel, textArea);
 
-        const scale = canvasIO
-            ? canvasIO.toDots(Vector2(0, 1)).y
-            : io.hidpiScale.y;
-
+        const scale = canvasIO.toDots(Vector2(0, 1)).y;
         lineHeight = style.getTypeface.lineHeight / scale;
 
         const minLines = multiline ? 3 : 1;
@@ -1130,22 +1126,10 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
     }
 
     protected Rectangle caretRectangleImpl(float, bool preferNextLine) {
-
         const ruler = rulerAt(caretIndex, preferNextLine);
-
-        if (canvasIO) {
-            return Rectangle(
-                canvasIO.fromDots(ruler.caret.start).tupleof,
-                canvasIO.fromDots(ruler.caret.size).tupleof);
-        }
-        else {
-            return Rectangle(
-                ruler.caret.x      / io.hidpiScale.x,
-                ruler.caret.y      / io.hidpiScale.y,
-                ruler.caret.width  / io.hidpiScale.x,
-                ruler.caret.height / io.hidpiScale.y);
-        }
-
+        return Rectangle(
+            canvasIO.fromDots(ruler.caret.start).tupleof,
+            canvasIO.fromDots(ruler.caret.size).tupleof);
     }
 
     /// Returns: A text ruler measuring text between the start and a chosen character.
@@ -1176,7 +1160,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         auto style = pickStyle();
 
         // Fill the background
-        style.drawBackground(tree.io, canvasIO, outer);
+        style.drawBackground(canvasIO, outer);
 
         // Copy style to the label
         contentLabel.style = pickLabelStyle(style);
@@ -1191,29 +1175,11 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         // Increase the size of the inner box so that tree doesn't turn on scissors mode on its own
         scrolledInner.w += scroll;
 
-        // New I/O
-        if (canvasIO) {
+        const lastArea = canvasIO.intersectCrop(outer);
+        scope (exit) canvasIO.cropArea = lastArea;
 
-            const lastArea = canvasIO.intersectCrop(outer);
-            scope (exit) canvasIO.cropArea = lastArea;
-
-            // Draw the contents
-            drawContents(inner, scrolledInner);
-
-        }
-
-
-        // Old I/O
-        else {
-
-            const lastScissors = tree.pushScissors(outer);
-            scope (exit) tree.popScissors(lastScissors);
-
-            // Draw the contents
-            drawContents(inner, scrolledInner);
-
-        }
-
+        // Draw the contents
+        drawContents(inner, scrolledInner);
     }
 
     protected void drawContents(Rectangle, Rectangle scrolledInner) {
@@ -1241,12 +1207,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
                 + Vector2(caretRect.x + caretRect.width, caretRect.y);
 
             // Draw the caret
-            if (canvasIO) {
-                canvasIO.drawLine(topRight, bottomLeft, 1, style.textColor);
-            }
-            else {
-                io.drawLine(topRight, bottomLeft, style.textColor);
-            }
+            canvasIO.drawLine(topRight, bottomLeft, 1, style.textColor);
 
         }
 
@@ -1278,24 +1239,12 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         // Ignore if selection is empty
         if (selectionStart == selectionEnd) return;
 
-        const cropArea = canvasIO
-            ? canvasIO.cropArea
-            : some(
-                Rectangle(0, 0, io.windowSize.tupleof));
-
+        const cropArea = canvasIO.cropArea;
         auto low = selectionLowIndex;
         const high = selectionHighIndex;
 
         Vector2 scale(Vector2 input) {
-            if (canvasIO) {
-                return canvasIO.fromDots(input);
-            }
-            else {
-                return Vector2(
-                    input.x / io.hidpiScale.x,
-                    input.y / io.hidpiScale.y,
-                );
-            }
+            return canvasIO.fromDots(input);
         }
 
         auto style = pickStyle();
@@ -1343,12 +1292,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
                             (lineEnd - lineStart).tupleof
                         );
 
-                        if (canvasIO) {
-                            canvasIO.drawRectangle(rect, style.selectionBackgroundColor);
-                        }
-                        else {
-                            io.drawRectangle(rect, style.selectionBackgroundColor);
-                        }
+                        canvasIO.drawRectangle(rect, style.selectionBackgroundColor);
                     }
 
                     // Restart the line
@@ -1368,12 +1312,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
                         (lineEnd - lineStart).tupleof
                     );
 
-                    if (canvasIO) {
-                        canvasIO.drawRectangle(rect, style.selectionBackgroundColor);
-                    }
-                    else {
-                        io.drawRectangle(rect, style.selectionBackgroundColor);
-                    }
+                    canvasIO.drawRectangle(rect, style.selectionBackgroundColor);
                     return;
 
                 }
@@ -1421,7 +1360,6 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
         // Read text off FocusIO
         if (focusIO) {
-
             int offset;
             char[1024] buffer;
 
@@ -1440,36 +1378,12 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
             if (offset != 0) {
                 changed = true;
             }
-
-        }
-
-        // Get pressed key
-        else while (true) {
-
-            // Read text
-            if (const key = io.inputCharacter) {
-
-                const isMinor = true;
-
-                // Append to char arrays
-                savePush(key, isMinor);
-                changed = true;
-
-            }
-
-            // Stop if there's nothing left
-            else break;
-
         }
 
         // Typed something
         if (changed) {
-
-            // Trigger the callback
             touchText();
-
             return true;
-
         }
 
         return true;
@@ -1519,6 +1433,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     }
 
+    version (TODO)
     unittest {
 
         auto io = new HeadlessBackend;
@@ -1840,9 +1755,6 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
         import std.sumtype : match;
 
-        // breakLine has higher priority, stop if it's active
-        if (multiline && tree.isActive!(FluidInputAction.breakLine)) return;
-
         // Run the callback
         if (submitted) submitted();
 
@@ -1850,7 +1762,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     /// Erase last word before the caret, or the first word after.
     ///
-    /// Parms:
+    /// Params:
     ///     forward = If true, delete the next word. If false, delete the previous.
     void chopWord(bool forward = false) {
 
@@ -1969,19 +1881,21 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
         enum maxDistance = 5;
 
-        // To count as repeated, the click must be within the specified double click time, and close enough
-        // to the original location
-        const isRepeated = Clock.currTime - _lastClick < io.doubleClickTime  /* TODO GET RID */
-            && distance(pointer.position, _lastClickPosition) < maxDistance;
+        version (none) {
+            // To count as repeated, the click must be within the specified double click time, and close enough
+            // to the original location
+            const isRepeated = Clock.currTime - _lastClick < io.doubleClickTime  /* TODO GET RID */
+                && distance(pointer.position, _lastClickPosition) < maxDistance;
 
-        // Count repeated clicks
-        _clickCount = isRepeated
-            ? _clickCount + 1
-            : 0;
+            // Count repeated clicks
+            _clickCount = isRepeated
+                ? _clickCount + 1
+                : 0;
 
-        // Register the click
-        _lastClick = Clock.currTime;
-        _lastClickPosition = pointer.position;
+            // Register the click
+            _lastClick = Clock.currTime;
+            _lastClickPosition = pointer.position;
+        }
 
     }
 
@@ -2018,34 +1932,6 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     }
 
-    protected override void mouseImpl() {
-
-        // The new I/O system will call the other overload.
-        // Call it as a polyfill for the old system.
-        if (!hoverIO) {
-
-            // Not holding, disable selection
-            if (!tree.isMouseDown!(FluidInputAction.press)) {
-                selectionMovement = false;
-                return;
-            }
-
-            HoverPointer pointer;
-            pointer.position = io.mousePosition;
-            pointer.clickCount = _clickCount + 1;
-
-            if (tree.isMouseActive!(FluidInputAction.press)) {
-                press(pointer);
-            }
-
-            pointer.clickCount = _clickCount + 1;
-
-            pressAndHold(pointer);
-
-        }
-
-    }
-
     protected override bool hoverImpl(HoverPointer) {
 
         // Disable selection when not holding
@@ -2053,168 +1939,6 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
             selectionMovement = false;
         }
         return false;
-
-    }
-
-    @("Legacy: mouse selections works correctly across lines (migrated)")
-    unittest {
-
-        import std.math : isClose;
-
-        auto io = new HeadlessBackend;
-        auto theme = nullTheme.derive(
-            rule!TextInput(
-                Rule.fontSize = 14.pt,
-                Rule.selectionBackgroundColor = color("#02a"),
-                Rule.fontSize = 14.pt,
-            ),
-        );
-        auto root = textInput(.multiline, theme);
-        auto typeface = root.style.getTypeface;
-        typeface.setSize(Vector2(96, 96), 14.pt);
-        auto lineHeight = typeface.lineHeight;
-
-        root.io = io;
-        root.value = "Line one\nLine two\n\nLine four";
-        root.focus();
-        root.draw();
-
-        // Move the caret to second line
-        root.caretIndex = "Line one\nLin".length;
-        root.updateCaretPosition();
-
-        const middle = root._inner.start + root.caretRectangle.center;
-        const top    = middle - Vector2(0, lineHeight);
-        const blank  = middle + Vector2(0, lineHeight);
-        const bottom = middle + Vector2(0, lineHeight * 2);
-
-        {
-
-            // Press, and move the mouse around
-            io.nextFrame();
-            io.mousePosition = middle;
-            io.press();
-            root.draw();
-
-            // Move it to top row
-            io.nextFrame();
-            io.mousePosition = top;
-            root.draw();
-
-            assert(root.selectedValue == "e one\nLin");
-            assert(root.selectionStart > root.selectionEnd);
-
-            // Move it to bottom row
-            io.nextFrame();
-            io.mousePosition = bottom;
-            root.draw();
-
-            assert(root.selectedValue == "e two\n\nLin");
-            assert(root.selectionStart < root.selectionEnd);
-
-            // And to the blank line
-            io.nextFrame();
-            io.mousePosition = blank;
-            root.draw();
-
-            assert(root.selectedValue == "e two\n");
-            assert(root.selectionStart < root.selectionEnd);
-
-        }
-
-        {
-
-            // Double click
-            io.mousePosition = middle;
-            root._lastClick = SysTime.init;
-
-            foreach (i; 0..2) {
-
-                io.nextFrame();
-                io.release();
-                root.draw();
-
-                io.nextFrame();
-                io.press();
-                root.draw();
-
-            }
-
-            assert(root.selectedValue == "Line");
-            assert(root.selectionStart < root.selectionEnd);
-
-            // Move it to top row
-            io.nextFrame();
-            io.mousePosition = top;
-            root.draw();
-
-            assert(root.selectedValue == "Line one\nLine");
-            assert(root.selectionStart > root.selectionEnd);
-
-            // Move it to bottom row
-            io.nextFrame();
-            io.mousePosition = bottom;
-            root.draw();
-
-            assert(root.selectedValue == "Line two\n\nLine");
-            assert(root.selectionStart < root.selectionEnd);
-
-            // And to the blank line
-            io.nextFrame();
-            io.mousePosition = blank;
-            root.draw();
-
-            assert(root.selectedValue == "Line two\n");
-            assert(root.selectionStart < root.selectionEnd);
-
-        }
-
-        {
-
-            // Triple
-            io.mousePosition = middle;
-            root._lastClick = SysTime.init;
-
-            foreach (i; 0..3) {
-
-                io.nextFrame();
-                io.release();
-                root.draw();
-
-                io.nextFrame();
-                io.press();
-                root.draw();
-
-            }
-
-            assert(root.selectedValue == "Line two");
-            assert(root.selectionStart < root.selectionEnd);
-
-            // Move it to top row
-            io.nextFrame();
-            io.mousePosition = top;
-            root.draw();
-
-            assert(root.selectedValue == "Line one\nLine two");
-            assert(root.selectionStart > root.selectionEnd);
-
-            // Move it to bottom row
-            io.nextFrame();
-            io.mousePosition = bottom;
-            root.draw();
-
-            assert(root.selectedValue == "Line two\n\nLine four");
-            assert(root.selectionStart < root.selectionEnd);
-
-            // And to the blank line
-            io.nextFrame();
-            io.mousePosition = blank;
-            root.draw();
-
-            assert(root.selectedValue == "Line two\n");
-            assert(root.selectionStart < root.selectionEnd);
-
-        }
 
     }
 
@@ -2475,13 +2199,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         const anchor = focusBoxImpl(_inner);
 
         // Spawn the popup at caret position
-        if (overlayIO) {
-            overlayIO.addPopup(contextMenu, anchor);
-        }
-        else {
-            contextMenu.anchor = anchor;
-            tree.spawnPopup(contextMenu);
-        }
+        overlayIO.addPopup(contextMenu, anchor);
 
     }
 
@@ -2514,6 +2232,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     }
 
+    version (TODO)
     unittest {
 
         auto io = new HeadlessBackend;
@@ -2545,6 +2264,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     }
 
+    version (TODO)
     unittest {
 
         auto io = new HeadlessBackend;
@@ -2737,14 +2457,6 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     }
 
-    /// Move the caret to mouse position.
-    void caretToMouse() {
-
-        caretTo(io.mousePosition - _inner.start);
-        updateCaretPositionAndAnchor(false);
-
-    }
-
     /// ditto
     void caretToPointer(HoverPointer pointer) {
 
@@ -2915,18 +2627,8 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
     /// Copy selected text to clipboard.
     @(FluidInputAction.copy)
     void copy() {
-
-        import std.conv : text;
-
         if (!isSelecting) return;
-
-        if (clipboardIO) {
-            clipboardIO.writeClipboard = selectedValue.toString();
-        }
-        else {
-            io.clipboard = selectedValue.toString();
-        }
-
+        clipboardIO.writeClipboard = selectedValue.toString();
     }
 
     /// Paste text from clipboard.
@@ -2935,29 +2637,19 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         const isMinor = false;
         auto snap = snapshot();
 
-        // New I/O
-        if (clipboardIO) {
+        char[1024] buffer;
+        int offset;
+        Rope result;
 
-            char[1024] buffer;
-            int offset;
-            Rope result;
-
-            // Read text
-            while (true) {
-                if (auto text = clipboardIO.readClipboard(buffer, offset)) {
-                    result ~= text.dup;
-                }
-                else break;
+        // Read text
+        while (true) {
+            if (auto text = clipboardIO.readClipboard(buffer, offset)) {
+                result ~= text.dup;
             }
-
-            push(result, isMinor);
-
+            else break;
         }
 
-        // Old clipboard
-        else {
-            push(io.clipboard, isMinor);
-        }
+        push(result, isMinor);
     }
 
     /// Clear the undo/redo action history.
@@ -3111,6 +2803,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
 }
 
+version (TODO)
 @("TextInput paste benchmark")
 unittest {
 
@@ -3154,6 +2847,7 @@ unittest {
 }
 
 @("TextInput edit after paste benchmark")
+version (TODO)
 unittest {
 
     import std.file;
@@ -3212,6 +2906,7 @@ unittest {
 
 }
 
+version (TODO)
 @("TextInput loads of small edits benchmark")
 unittest {
 

@@ -5,7 +5,6 @@ import optional;
 
 import fluid.types;
 import fluid.utils;
-import fluid.backend;
 import fluid.future.context;
 
 @safe:

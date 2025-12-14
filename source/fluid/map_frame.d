@@ -15,7 +15,6 @@ import fluid.input;
 import fluid.style;
 import fluid.utils;
 import fluid.actions;
-import fluid.backend;
 
 /// Node builder for [MapFrame]. The constructor takes a number of child nodes, each
 /// optionally preceded by [MapDropVector], [Vector2], or [MapPosition]. See [`MapFrame`
@@ -315,6 +314,7 @@ class MapFrame : Frame {
         minSize = Vector2(0, 0);
 
         // TODO get rid of position entries for removed elements
+        require(canvasIO);
 
         foreach (child; children) {
 
@@ -339,31 +339,6 @@ class MapFrame : Frame {
             coords.x.clamp(inner.x, inner.x + max(0, inner.width - size.x)),
             coords.y.clamp(inner.y, inner.y + max(0, inner.height - size.y)),
         );
-    }
-
-    protected override void drawImpl(Rectangle outer, Rectangle inner) {
-        if (_mouseDrag) {
-            import std.math;
-
-            // Update the mouse position
-            auto mouse = tree.io.mousePosition;
-            scope (exit) _mousePosition = mouse;
-
-            // If the previous mouse position was NaN, we've just started dragging
-            if (isNaN(_mousePosition.x)) {
-                auto position = _mouseDrag in positions;
-                assert(position, "Dragged node is not present in the map");
-
-                // Keep them in bounds
-                position.coords = moveToBounds(inner, position.coords, _mouseDrag.minSize);
-            }
-
-            else {
-                moveChildBy(_mouseDrag, mouse - _mousePosition);
-            }
-        }
-
-        super.drawImpl(outer, inner);
     }
 
     protected override void drawChildren(Rectangle inner) {

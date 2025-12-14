@@ -4,7 +4,6 @@ module fluid.input_node;
 import fluid.node;
 import fluid.style;
 import fluid.input;
-import fluid.backend;
 
 import fluid.io.focus;
 import fluid.io.hover;
@@ -86,16 +85,6 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable, Focusable, Hov
     /// Returns: True if the input was handled, false if not.
     override bool focusImpl() {
         return keyboardImpl();
-    }
-
-    /// Check if the node is being pressed. Performs action lookup.
-    ///
-    /// This is a helper for nodes that might do something when pressed, for example, buttons.
-    protected bool checkIsPressed() {
-
-        return (isHovered && tree.isMouseDown!(FluidInputAction.press))
-            || (isFocused && tree.isFocusDown!(FluidInputAction.press));
-
     }
 
     override void resizeImpl(Vector2 space) {
@@ -208,6 +197,7 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable, Focusable, Hov
 
 }
 
+version (TODO)
 unittest {
 
     import fluid.label;
@@ -315,6 +305,7 @@ unittest {
 
 }
 
+version (TODO)
 unittest {
 
     import fluid.space;

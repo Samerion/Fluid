@@ -5,7 +5,6 @@ import fluid.node;
 import fluid.input;
 import fluid.utils;
 import fluid.style;
-import fluid.backend;
 import fluid.image_view;
 
 import fluid.io.canvas;
@@ -101,31 +100,15 @@ class Checkbox : InputNode!Node {
     }
 
     protected override void drawImpl(Rectangle outer, Rectangle inner) {
-
         import std.algorithm : min;
 
         auto style = pickStyle();
+        style.drawBackground(canvasIO, outer);
 
-        style.drawBackground(io, canvasIO, outer);
-
-        if (canvasIO) {
-
-            const size = _markImage.size.fitInto(inner.size);
-            const position = center(inner) - size/2;
-
-            _markImage.draw(Rectangle(position.tupleof, size.tupleof));
-
-        }
-
-        if (auto texture = getTexture(style)) {
-
-            const size = texture.canvasSize.fitInto(inner.size);
-            const position = center(inner) - size/2;
-
-            texture.draw(Rectangle(position.tupleof, size.tupleof));
-
-        }
-
+        const size = _markImage.size.fitInto(inner.size);
+        const position = center(inner) - size/2;
+        _markImage.draw(
+            Rectangle(position.tupleof, size.tupleof));
     }
 
     /// Get checkmark image used by this checkbox.
@@ -137,20 +120,6 @@ class Checkbox : InputNode!Node {
         return Image.init;
 
     }
-
-    /// Get checkmark texture used by this checkbox.
-    protected TextureGC* getTexture(Style style) @trusted {
-
-        auto extra = cast(Extra) style.extra;
-
-        // No valid extra data, ignore
-        if (!extra) return null;
-
-        // Load the texture
-        return extra.getTexture(io, extra.checkmark);
-
-    }
-
 
     /// Toggle the checkbox.
     void toggle() {

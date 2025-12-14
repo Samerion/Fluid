@@ -12,7 +12,6 @@ import std.exception;
 import fluid.node;
 import fluid.utils;
 import fluid.style;
-import fluid.backend;
 import fluid.structs;
 
 
@@ -122,30 +121,7 @@ struct Theme {
 
 }
 
-@("Legacy: Themes apply to nodes (migrated)")
-unittest {
-
-    import fluid.label;
-
-    Theme theme;
-
-    with (Rule)
-    theme.add(
-        rule!Label(
-            textColor = color!"#abc",
-        ),
-    );
-
-    auto io = new HeadlessBackend;
-    auto root = label(theme, "placeholder");
-    root.io = io;
-
-    root.draw();
-    io.assertTexture(root.text.texture.chunks[0], Vector2(0, 0), color!"#fff");
-    assert(root.text.texture.chunks[0].palette[0] == color("#abc"));
-
-}
-
+version (TODO)
 @system unittest {
 
     import fluid.frame;

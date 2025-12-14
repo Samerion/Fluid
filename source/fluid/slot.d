@@ -80,7 +80,6 @@ import std.traits;
 import fluid.node;
 import fluid.utils;
 import fluid.style;
-import fluid.backend;
 import fluid.structs;
 
 import fluid.io.canvas;
@@ -290,7 +289,7 @@ class NodeSlot(T : Node) : Node {
     }
 
     protected override void drawImpl(Rectangle outer, Rectangle inner) {
-        pickStyle().drawBackground(io, canvasIO, outer);
+        pickStyle().drawBackground(canvasIO, outer);
 
         if (!value) return;
 

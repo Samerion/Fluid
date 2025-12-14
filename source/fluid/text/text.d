@@ -10,7 +10,6 @@ import std.algorithm;
 import fluid.node;
 import fluid.style;
 import fluid.utils;
-import fluid.backend;
 import fluid.io.canvas;
 
 import fluid.text.util;
@@ -138,21 +137,10 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
     }
 
-    inout(FluidBackend) backend() inout {
-
-        if (node.tree)
-            return node.tree.backend;
-        else
-            return null;
-
-    }
-
     /// Returns: DPI currently used by this struct.
     private Vector2 dpi(CanvasIO canvasIO) const {
         if (canvasIO)
             return canvasIO.dpi;
-        else if (auto b = backend)
-            return b.dpi;
         else
             return Vector2(96, 96);
     }
@@ -161,8 +149,6 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     private Vector2 hidpiScale(CanvasIO canvasIO) const {
         if (canvasIO)
             return canvasIO.toDots(Vector2(1, 1));
-        if (auto b = backend)
-            return b.hidpiScale;
         else
             return Vector2(1, 1);
     }
@@ -475,7 +461,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     /// Returns: True if the cache should be purged.
     private bool shouldCacheReset(CanvasIO canvasIO, Vector2 space, bool wrap) {
 
-        auto style = node.pickStyle;
+        auto style = node.style;
         auto typeface = style.getTypeface;
 
         const dpi = this.dpi(canvasIO);
@@ -500,6 +486,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         ruler.startLine();
         _cache = TextRulerCache(ruler);
         _dpi = this.dpi(canvasIO);
+        _fontSize = node.style.fontSize;
         _updateRangeStart = 0;
         _updateRangeEnd = value.length;
 
@@ -787,20 +774,9 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     /// Returns:
     ///     Text ruler with text measurement data from the start of the text to the given character, not including
     ///     queried character. The ruler has an extra `point` field, indicating distance from the start of the text.
-    CachedTextRuler rulerAtPosition(Vector2 needle) {
-        return rulerAtPosition(null, needle);
-    }
-
-    /// ditto
     CachedTextRuler rulerAtPosition(CanvasIO canvasIO, Vector2 needle) {
-        if (canvasIO) {
-            return rulerAtPositionDots(
-                canvasIO.toDots(needle));
-        }
-        else {
-            return rulerAtPositionDots(backend.scale * needle);
-        }
-
+        return rulerAtPositionDots(
+            canvasIO.toDots(needle));
     }
 
     /// ditto
@@ -886,19 +862,9 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     /// Returns:
     ///     Index of a matching character, or the same index + 1 if the point is to its right.
     ///     If pressed out of bounds, returns the closest character of the line, or the last character in the text.
-    size_t indexAt(Vector2 needle) {
-        return indexAtDots(backend.scale * needle);
-    }
-
-    /// ditto
     size_t indexAt(CanvasIO canvasIO, Vector2 needle) {
-        if (canvasIO) {
-            return indexAtDots(
-                canvasIO.toDots(needle));
-        }
-        else {
-            return indexAt(needle);
-        }
+        return indexAtDots(
+            canvasIO.toDots(needle));
     }
 
     /// ditto
@@ -970,18 +936,9 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     ///     chunks = Indices of chunks that need to be regenerated.
     ///     position = Position of the text; If given, only on-screen chunks will be generated.
     ///     canvasIO = Canvas I/O to get DPI and clip area from.
-    void generate(Vector2 position) {
-
-        generate(texture.visibleChunks(position, backend.windowSize));
-
-    }
-
-    /// ditto
-    void generate(CanvasIO canvasIO, Vector2 position) {
-        if (canvasIO is null) {
-            generate(position);
-            return;
-        }
+    void generate(CanvasIO canvasIO, Vector2 position)
+    in (canvasIO !is null, "CanvasIO is unavailable (null)")
+    do {
 
         // Pick relevant chunks based on the crop area
         auto chunks = texture.visibleChunks(canvasIO, position);
@@ -998,17 +955,6 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     }
 
     /// ditto
-    void generate(R)(R chunks) @trusted {
-        generateImpl(null, chunks);
-
-        // Load the updated chunks
-        foreach (chunkIndex; chunks) {
-            texture.upload(backend, chunkIndex,
-                dpi(null));
-        }
-    }
-
-    /// ditto
     private void generateImpl(R)(CanvasIO canvasIO, R chunks) @trusted {
 
         // Empty, nothing to do
@@ -1020,6 +966,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
         // Apply sizing settings
         typeface.indentWidth = cast(int) (indentWidth * scale.x);
+        style.setDPI(canvasIO.dpi);
 
         // Ignore chunks which have already been generated
         auto newChunks = chunks
@@ -1145,41 +1092,6 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
     }
 
-    /// Draw the text.
-    void draw(const Style style, Vector2 position) {
-        scope const Style[1] styles = [style];
-        draw(styles, position);
-    }
-
-    /// ditto
-    void draw(scope const Style[] styles, Vector2 position)
-    in (styles.length >= 1, "At least one style must be passed to draw(Style[], Vector2)")
-    do {
-
-        import std.math;
-        import fluid.utils;
-
-        const rectangle = Rectangle(position.tupleof, size.tupleof);
-        const screen = Rectangle(0, 0, backend.windowSize.tupleof);
-
-        // Ignore if offscreen
-        if (!overlap(rectangle, screen)) return;
-
-        // Regenerate visible textures
-        generate(position);
-
-        // Make space in the texture's palette
-        if (texture.palette.length != styles.length)
-            texture.palette.length = styles.length;
-
-        // Fill it with text colors of each of the styles
-        styles.map!"a.textColor".copy(texture.palette);
-
-        // Draw the texture if present
-        texture.drawAlign(backend, rectangle);
-
-    }
-
     /// ditto
     void draw(CanvasIO canvasIO, const Style style, Vector2 position) {
         scope const Style[1] styles = [style];
@@ -1188,14 +1100,9 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
     /// ditto
     void draw(CanvasIO canvasIO, scope const Style[] styles, Vector2 position)
+    in (canvasIO !is null, "CanvasIO is unavailable (null)")
     in (styles.length >= 1, "At least one style must be passed to draw(Style[], Vector2)")
     do {
-
-        if (canvasIO is null) {
-            draw(styles, position);
-            return;
-        }
-
         import std.math;
         import fluid.utils;
 
@@ -1220,22 +1127,9 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
     }
 
-    /// ditto
-    deprecated("Use draw(Style, Vector2) instead. Hint: Use fluid.utils.start(Rectangle) to get the position vector.")
-    void draw(const Style style, Rectangle rectangle) {
-
-        // Should this "crop" the result?
-
-        draw(style, Vector2(rectangle.x, rectangle.y));
-
-    }
-
     string toString() const {
-
         import std.conv : to;
-
         return _value.to!string;
-
     }
 
 }
@@ -1265,112 +1159,6 @@ struct TextStyleSlice {
         return TextStyleSlice(start + offset, end + offset, styleIndex);
 
     }
-
-}
-
-@("Legacy: Text coloring works (abandoned)")
-unittest {
-
-    import fluid.space;
-
-    auto io = new HeadlessBackend;
-    auto root = vspace();
-    auto text = Text(root, "Hello, green world!");
-
-    // Set colors for each part
-    Style[4] styles;
-    styles[0].textColor = color("#000000");
-    styles[1].textColor = color("#1eff00");
-    styles[2].textColor = color("#55b9ff");
-    styles[3].textColor = color("#0058f1");
-
-    // Define regions
-    text.styleMap = [
-        TextStyleSlice(7, 12, 1),   // green
-        TextStyleSlice(13, 14, 2),  // w
-        TextStyleSlice(14, 15, 3),  // o
-        TextStyleSlice(15, 16, 2),  // r
-        TextStyleSlice(16, 17, 3),  // l
-        TextStyleSlice(17, 18, 2),  // d
-    ];
-
-    // Prepare the tree
-    root.io = io;
-    root.draw();
-
-    // Draw the text
-    io.nextFrame;
-    text.resize();
-    text.draw(styles, Vector2(0, 0));
-
-    // Make sure the texture was drawn with the correct color
-    io.assertTexture(text.texture.chunks[0], Vector2(), color("#fff"));
-
-    foreach (i; 0..4) {
-
-        assert(text.texture.chunks[0].palette[i] == styles[i].textColor);
-        assert(text.texture.palette[i] == styles[i].textColor);
-
-    }
-
-    // TODO Is there a way to reliably test if the result was drawn properly? Sampling specific pixels maybe?
-
-}
-
-@("Legacy: Text coloring works, pt. 2 (abandoned)")
-unittest {
-
-    import fluid.space;
-
-    auto io = new HeadlessBackend;
-    auto root = vspace();
-
-    Style[2] styles;
-    styles[0].textColor = color("#000000");
-    styles[1].textColor = color("#1eff00");
-
-    auto styleMap = recurrence!"a[n-1] + 1"(0)
-        .map!(a => TextStyleSlice(a, a+1, cast(ubyte) (a % 2)));
-
-    auto text = mapText(root, "Hello, World!", styleMap);
-
-    // Prepare the tree
-    root.io = io;
-    root.draw();
-
-    // Draw the text
-    io.nextFrame;
-    text.resize(Vector2(50, 50));
-    text.draw(styles, Vector2(0, 0));
-
-}
-
-@("Legacy: Text coloring works, pt. 3 (abandoned)")
-unittest {
-
-    import fluid.space;
-
-    auto io = new HeadlessBackend;
-    auto root = vspace();
-
-    Style[2] styles;
-    styles[0].textColor = color("#000000");
-    styles[1].textColor = color("#1eff00");
-
-    auto styleMap = [
-        TextStyleSlice(2, 11, 1),
-    ];
-
-    auto text = mapText(root, "Hello, World!", styleMap);
-
-    // Prepare the tree
-    root.io = io;
-    root.draw();
-
-    // Draw the text
-    io.nextFrame;
-    text.resize(Vector2(60, 50));
-    text.draw(styles, Vector2(0, 0));
 
 }
 

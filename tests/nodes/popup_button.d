@@ -7,9 +7,6 @@ import fluid.future.pipe;
 
 @("PopupButton supports keyboard navigation")
 unittest {
-
-    import fluid.backend;
-
     string lastAction;
 
     void action(string text)() {
@@ -82,7 +79,6 @@ unittest {
 
         // Need another frame for the tree action
         .then(() => assert(sharePopup.isHidden));
-
 }
 
 @("PopupButton uses OverlayIO to create the popup")

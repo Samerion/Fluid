@@ -8,9 +8,6 @@
 /// Note that because Raylib introduces breaking changes in every version, the current version of Raylib should
 /// be specified using `raylibStack.v5_5()`. Raylib 5.5 is currently the oldest version supported,
 /// and is the default in case no version is chosen explicitly.
-///
-/// Unlike `fluid.backend.Raylib5Backend`, this uses the new I/O system introduced in Fluid 0.8.0. This layer
-/// is recommended for new apps, but disabled by default.
 module fluid.raylib_view;
 
 version (Have_raylib_d):
@@ -44,9 +41,7 @@ import fluid.types;
 import fluid.node_chain;
 
 import fluid.future.arena;
-
-import fluid.backend.raylib5 : Raylib5Backend, toRaylib;
-import fluid.backend.headless : HeadlessBackend;
+import fluid.future.context;
 
 import fluid.io.time;
 import fluid.io.canvas;
@@ -128,6 +123,39 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
     TimeIO timeIO;
     PreferenceIO preferenceIO;
 
+    /// Shader code for alpha images.
+    enum alphaImageShaderCode = q{
+        #version 330
+        in vec2 fragTexCoord;
+        in vec4 fragColor;
+        out vec4 finalColor;
+        uniform sampler2D texture0;
+        uniform vec4 colDiffuse;
+        void main() {
+            // Alpha masks are white to make them practical for modulation
+            vec4 texelColor = texture(texture0, fragTexCoord);
+            finalColor = vec4(1, 1, 1, texelColor.r) * colDiffuse * fragColor;
+        }
+    };
+
+    /// Shader code for palette images.
+    enum palettedAlphaImageShaderCode = q{
+        #version 330
+        in vec2 fragTexCoord;
+        in vec4 fragColor;
+        out vec4 finalColor;
+        uniform sampler2D texture0;
+        uniform sampler2D palette;
+        uniform vec4 colDiffuse;
+        void main() {
+            // index.a is alpha/opacity
+            // index.r is palette index
+            vec4 index = texture(texture0, fragTexCoord);
+            vec4 texel = texture(palette, vec2(index.r, 0));
+            finalColor = texel * vec4(1, 1, 1, index.a) * colDiffuse * fragColor;
+        }
+    };
+
     public {
 
         /// Node drawn by this view.
@@ -198,10 +226,10 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
 
         // Load shaders
         if (!IsShaderReady(_alphaImageShader)) {
-            _alphaImageShader = LoadShaderFromMemory(null, Raylib5Backend.alphaImageShaderCode.ptr);
+            _alphaImageShader = LoadShaderFromMemory(null, alphaImageShaderCode.ptr);
         }
         if (!IsShaderReady(_palettedAlphaImageShader)) {
-            _palettedAlphaImageShader = LoadShaderFromMemory(null, Raylib5Backend.palettedAlphaImageShaderCode.ptr);
+            _palettedAlphaImageShader = LoadShaderFromMemory(null, palettedAlphaImageShaderCode.ptr);
             _palettedAlphaImageShader_palette = GetShaderLocation(_palettedAlphaImageShader, "palette");
         }
 
@@ -254,8 +282,6 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
 
     protected void updateMouse() @trusted {
 
-        import fluid.backend : FluidMouseCursor;
-
         // Update mouse status
         _mousePointer.position     = toFluid(GetMousePosition);
         _mousePointer.scroll       = scroll();
@@ -275,30 +301,32 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
         hoverIO.loadTo(_mousePointer);
 
         // Set cursor icon
-        if (auto node = cast(Node) hoverIO.hoverOf(_mousePointer)) {
+        version (none) {
+            if (auto node = cast(Node) hoverIO.hoverOf(_mousePointer)) {
 
-            const cursor = node.pickStyle().mouseCursor;
+                const cursor = node.pickStyle().mouseCursor;
 
-            // Hide the cursor if requested
-            if (cursor.system == cursor.system.none) {
-                HideCursor();
+                // Hide the cursor if requested
+                if (cursor.system == cursor.system.none) {
+                    HideCursor();
+                }
+                // Show the cursor
+                else {
+                    SetMouseCursor(cursor.system.toRaylib);
+                    ShowCursor();
+                }
+
             }
-            // Show the cursor
             else {
-                SetMouseCursor(cursor.system.toRaylib);
+                SetMouseCursor(FluidMouseCursor.systemDefault.system.toRaylib);
                 ShowCursor();
             }
-
-        }
-        else {
-            SetMouseCursor(FluidMouseCursor.systemDefault.system.toRaylib);
-            ShowCursor();
         }
 
         // Send buttons
         foreach (button; NoDuplicates!(EnumMembers!(MouseIO.Button))) {
 
-            const buttonRay = button.toRaylibEx;
+            const buttonRay = button.toRaylib;
 
             if (buttonRay == -1) continue;
 
@@ -730,7 +758,7 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
 /// On top of systems already provided by `RaylibView`, `RaylibStack` also includes `HoverIO`, `FocusIO`, `ActionIO`,
 /// `PreferenceIO`, `TimeIO` and `FileIO`. You can access them through fields named `hoverIO`, `focusIO`, `actionIO`,
 /// `preferenceIO`, `timeIO` and `fileIO` respectively.
-class RaylibStack(RaylibViewVersion raylibVersion) : Node {
+class RaylibStack(RaylibViewVersion raylibVersion) : Node, TreeWrapper {
 
     import fluid.hover_chain;
     import fluid.focus_chain;
@@ -768,12 +796,6 @@ class RaylibStack(RaylibViewVersion raylibVersion) : Node {
 
     }
 
-    private {
-
-        HeadlessBackend _headlessBackend;
-
-    }
-
     /// Initialize the stack.
     /// Params:
     ///     next = Node to draw using the stack.
@@ -781,7 +803,6 @@ class RaylibStack(RaylibViewVersion raylibVersion) : Node {
 
         import fluid.structs : layout;
 
-        _headlessBackend = new HeadlessBackend;
         chain(
             preferenceIO = preferenceChain(),
             timeIO       = timeChain(),
@@ -828,14 +849,15 @@ class RaylibStack(RaylibViewVersion raylibVersion) : Node {
         return top.next = value;
     }
 
+    override void drawTree(TreeContext context, Node root) {
+        next = root;
+        prepare(context);
+        drawAsRoot();
+    }
+
     override void resizeImpl(Vector2 space) {
         resizeChild(root, space);
         minSize = root.minSize;
-
-        // If RaylibStack is used as the root, disable the legacy backend
-        if (tree.root == this) {
-            this.backend = _headlessBackend;
-        }
     }
 
     override void drawImpl(Rectangle, Rectangle inner) {
@@ -846,8 +868,6 @@ class RaylibStack(RaylibViewVersion raylibVersion) : Node {
 
 /// Convert a `MouseIO.Button` to a `raylib.MouseButton`.
 ///
-/// Temporarily named `toRaylibEx` instead of `toRaylib` to avoid conflicts with legacy Raylib functionality.
-///
 /// Note:
 ///     `raylib.MouseButton` does not have a dedicated invalid value so this function will instead
 ///     return `-1`.
@@ -855,7 +875,7 @@ class RaylibStack(RaylibViewVersion raylibVersion) : Node {
 ///     button = A Fluid `MouseIO` button code.
 /// Returns:
 ///     A corresponding `raylib.MouseButton` value, `-1` if there isn't one.
-int toRaylibEx(MouseIO.Button button) {
+int toRaylib(MouseIO.Button button) {
 
     with (MouseButton)
     with (button)
@@ -1077,4 +1097,27 @@ ImageType identifyImageType(const ubyte[] data) {
             : ImageType.none,
     );
 
+}
+
+/// Convert image to a Raylib image. Do not call `UnloadImage` on the result.
+raylib.Image toRaylib(fluid.Image image) nothrow @trusted {
+    raylib.Image result;
+    result.data = image.data.ptr;
+    result.width = image.width;
+    result.height = image.height;
+    result.format = image.format.toRaylib;
+    result.mipmaps = 1;
+    return result;
+}
+
+/// Convert Fluid image format to Raylib's closest alternative.
+raylib.PixelFormat toRaylib(fluid.Image.Format imageFormat) nothrow {
+    final switch (imageFormat) {
+        case imageFormat.rgba:
+            return PixelFormat.PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
+        case imageFormat.palettedAlpha:
+            return PixelFormat.PIXELFORMAT_UNCOMPRESSED_GRAY_ALPHA;
+        case imageFormat.alpha:
+            return PixelFormat.PIXELFORMAT_UNCOMPRESSED_GRAYSCALE;
+    }
 }

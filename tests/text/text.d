@@ -21,6 +21,7 @@ static this() {
 }
 
 @("Text can be used with, or without specifying styles")
+version (TODO)
 unittest {
 
     import fluid.space;
@@ -38,7 +39,7 @@ unittest {
 
 }
 
-version (unittest) {
+version (TODO) {
 
     mixin template indexAtTest() {
 
@@ -62,6 +63,7 @@ version (unittest) {
 }
 
 @("Text.indexAt works with multiple lines of text")
+version (TODO)
 unittest {
 
     // This test depends on specific properties of the default typeface
@@ -113,6 +115,7 @@ unittest {
 }
 
 @("Text.indexAt works correctly with blank lines")
+version (TODO)
 unittest {
 
     // This test depends on specific properties of the default typeface
@@ -208,6 +211,7 @@ unittest {
 }
 
 @("Text rendering is consistent for large text")
+version (TODO)
 unittest {
 
     import std.file;

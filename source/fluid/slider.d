@@ -6,7 +6,6 @@ import fluid.node;
 import fluid.utils;
 import fluid.input;
 import fluid.style;
-import fluid.backend;
 import fluid.structs;
 
 import fluid.io.hover;
@@ -156,11 +155,8 @@ abstract class AbstractSlider : InputNode!Node {
             outer.width, railWidth
         );
 
-        // Check if the slider is pressed
-        _isPressed = checkIsPressed();
-
         // Draw the rail
-        style.drawBackground(io, canvasIO, rail);
+        style.drawBackground(canvasIO, rail);
 
         const availableWidth = rail.width - handle.size.x;
         const handleOffset = availableWidth * index / (length - 1f);
@@ -183,7 +179,7 @@ abstract class AbstractSlider : InputNode!Node {
             const start = Vector2(firstStepX + visualStepDistance * step, end(rail).y);
             const end = Vector2(start.x, end(outer).y);
 
-            style.drawLine(io, canvasIO, start, end);
+            style.drawLine(canvasIO, start, end);
 
         }
 
@@ -212,19 +208,6 @@ abstract class AbstractSlider : InputNode!Node {
             index = step;
             if (changed) changed();
 
-        }
-
-    }
-
-    @(FluidInputAction.press, WhileDown)
-    protected void press() {
-
-        // The new I/O system will call the other overload.
-        // Call it as a polyfill for the old system.
-        if (!hoverIO) {
-            HoverPointer pointer;
-            pointer.position = io.mousePosition;
-            press(pointer);
         }
 
     }
@@ -316,16 +299,12 @@ class SliderHandle : Node {
     }
 
     override void resizeImpl(Vector2 space) {
-
-        use(canvasIO);
+        require(canvasIO);
         minSize = size;
-
     }
 
     override void drawImpl(Rectangle outer, Rectangle inner) {
-
-        pickStyle().drawBackground(io, canvasIO, outer);
-
+        pickStyle().drawBackground(canvasIO, outer);
     }
 
 }

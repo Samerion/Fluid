@@ -26,7 +26,6 @@ unittest {
 import fluid.node;
 import fluid.utils;
 import fluid.style;
-import fluid.backend;
 
 import fluid.io.file;
 import fluid.io.canvas;
@@ -92,9 +91,6 @@ class ImageView : Node {
 
     protected {
 
-        /// Texture for this node.
-        Texture _texture;
-
         /// If set, path in the filesystem the texture is to be loaded from.
         string _texturePath;
 
@@ -102,9 +98,6 @@ class ImageView : Node {
         Rectangle _targetArea;
 
     }
-
-    /// Set to true if the image view owns the texture and manages its ownership.
-    private bool _isOwner;
 
     /// Create an image node from given image or filename.
     ///
@@ -147,20 +140,8 @@ class ImageView : Node {
 
     @property {
 
-        /// Set the texture.
-        Texture texture(Texture texture) {
-
-            clear();
-            _isOwner = false;
-            _texturePath = null;
-
-            return this._texture = texture;
-
-        }
-
         /// Change the image displayed by the `ImageView`.
         Image texture(Image image) {
-
             clear();
             updateSize();
             this.image = image;
@@ -170,60 +151,20 @@ class ImageView : Node {
 
         /// Load the texture from a filename.
         string texture(string filename) @trusted {
-
             import std.string : toStringz;
 
             _texturePath = filename;
-
-            if (tree && !canvasIO) {
-
-                clear();
-                _texture = tree.io.loadTexture(filename);
-                _isOwner = true;
-
-            }
-
             updateSize();
 
             return filename;
-
         }
-
-        /// Get the current texture. Does not work with the new I/O system.
-        const(Texture) texture() const {
-
-            return _texture;
-
-        }
-
-    }
-
-    /// Release ownership over the displayed texture. Does not apply to the new I/O system.
-    ///
-    /// Keep the texture alive as long as it's used by this `imageView`, free it manually
-    /// using the `destroy()` method.
-    Texture release() {
-
-        _isOwner = false;
-        return _texture;
 
     }
 
     /// Remove any texture if attached.
-    void clear() @trusted scope {
-
-        // Free the texture
-        if (_isOwner) {
-            _texture.destroy();
-        }
-
-        // Remove the texture
-        _texture = texture.init;
+    void clear() scope {
         _texturePath = null;
-
-        // Remove the image
         image = Image.init;
-
     }
 
     /// Returns:
@@ -242,115 +183,52 @@ class ImageView : Node {
     }
 
     override protected void resizeImpl(Vector2 space) @trusted {
-
         import std.algorithm : min;
 
-        use(canvasIO);
+        require(canvasIO);
         use(fileIO);
         use(imageLoadIO);
 
-        // New I/O system
-        if (canvasIO) {
+        // Load an image from the filesystem if no image is already loaded
+        if (image == Image.init && _texturePath != "" && fileIO && imageLoadIO) {
 
-            // Load an image from the filesystem if no image is already loaded
-            if (image == Image.init && _texturePath != "" && fileIO && imageLoadIO) {
-
-                auto file = fileIO.loadFile(_texturePath);
-                image = imageLoadIO.loadImage(file);
-
-            }
-
-            // Load the image
-            load(canvasIO, image);
-
-            // Adjust size
-            if (isSizeAutomatic) {
-
-                const viewportSize = image.viewportSize(canvasIO.dpi);
-
-                // No image loaded, shrink to nothingness
-                if (image == Image.init) {
-                    minSize = Vector2(0, 0);
-                }
-
-                else if (isAutoExpand) {
-                    minSize = fitInto(viewportSize, space);
-                }
-
-                else {
-                    minSize = viewportSize;
-                }
-
-            }
+            auto file = fileIO.loadFile(_texturePath);
+            image = imageLoadIO.loadImage(file);
 
         }
 
-        // Old backend
-        else {
+        // Load the image
+        load(canvasIO, image);
 
-            // Lazy-load the texture if the backend wasn't present earlier
-            if (_texture == _texture.init && _texturePath) {
-                _texture = tree.io.loadTexture(_texturePath);
-                _isOwner = true;
+        // Adjust size
+        if (isSizeAutomatic) {
+            const viewportSize = image.viewportSize(canvasIO.dpi);
+
+            // No image loaded, shrink to nothingness
+            if (image == Image.init) {
+                minSize = Vector2(0, 0);
             }
-            else if (_texture == texture.init && image != Image.init) {
-                _texture = tree.io.loadTexture(image);
-                _isOwner = true;
+            else if (isAutoExpand) {
+                minSize = fitInto(viewportSize, space);
             }
-
-            // Adjust size
-            if (isSizeAutomatic) {
-
-                // No texture loaded, shrink to nothingness
-                if (_texture is _texture.init) {
-                    minSize = Vector2(0, 0);
-                }
-
-                else if (isAutoExpand) {
-                    minSize = fitInto(texture.viewportSize, space);
-                }
-
-                else {
-                    minSize = texture.viewportSize;
-                }
-
+            else {
+                minSize = viewportSize;
             }
-
         }
-
     }
 
     override protected void drawImpl(Rectangle, Rectangle inner) @trusted {
-
         import std.algorithm : min;
 
-        if (canvasIO) {
+        // Ignore if there is no texture to draw
+        if (image == Image.init) return;
 
-            // Ignore if there is no texture to draw
-            if (image == Image.init) return;
+        const size = image.viewportSize(canvasIO.dpi)
+            .fitInto(inner.size);
+        const position = center(inner) - size/2;
 
-            const size = image.viewportSize(canvasIO.dpi)
-                .fitInto(inner.size);
-            const position = center(inner) - size/2;
-
-            _targetArea = Rectangle(position.tupleof, size.tupleof);
-            image.draw(_targetArea);
-
-        }
-
-        else {
-
-            // Ignore if there is no texture to draw
-            if (texture.id <= 0) return;
-
-            const size     = fitInto(texture.viewportSize, inner.size);
-            const position = center(inner) - size/2;
-
-            _targetArea = Rectangle(position.tupleof, size.tupleof);
-            _texture.draw(_targetArea);
-
-        }
-
+        _targetArea = Rectangle(position.tupleof, size.tupleof);
+        image.draw(_targetArea);
     }
 
     override protected bool hoveredImpl(Rectangle, Vector2 mouse) const {
