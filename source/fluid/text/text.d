@@ -461,7 +461,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     /// Returns: True if the cache should be purged.
     private bool shouldCacheReset(CanvasIO canvasIO, Vector2 space, bool wrap) {
 
-        auto style = node.pickStyle;
+        auto style = node.style;
         auto typeface = style.getTypeface;
 
         const dpi = this.dpi(canvasIO);
@@ -486,6 +486,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         ruler.startLine();
         _cache = TextRulerCache(ruler);
         _dpi = this.dpi(canvasIO);
+        _fontSize = node.style.fontSize;
         _updateRangeStart = 0;
         _updateRangeEnd = value.length;
 
@@ -966,6 +967,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
         // Apply sizing settings
         typeface.indentWidth = cast(int) (indentWidth * scale.x);
+        style.setDPI(canvasIO.dpi);
 
         // Ignore chunks which have already been generated
         auto newChunks = chunks
