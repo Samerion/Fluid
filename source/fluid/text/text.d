@@ -935,7 +935,6 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     /// Params:
     ///     chunks = Indices of chunks that need to be regenerated.
     ///     position = Position of the text; If given, only on-screen chunks will be generated.
-    ///     dpi      = DPI for the texture. Defaults to legacy backend's DPI.
     ///     canvasIO = Canvas I/O to get DPI and clip area from.
     void generate(CanvasIO canvasIO, Vector2 position)
     in (canvasIO !is null, "CanvasIO is unavailable (null)")

@@ -1,5 +1,5 @@
-/// Fluid is a declarative library to build graphical user interfaces. Done the D way,
-/// the Fluid way.
+/// Fluid is a declarative library to build graphical user interfaces. Done [the D
+/// way](https://dlang.org), the Fluid way.
 ///
 /// These pages serve as the reference documentation for the library. For the time being, there
 /// are no recommended learning resources, but you can get a quickstart using the tour:

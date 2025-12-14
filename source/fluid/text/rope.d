@@ -1,4 +1,4 @@
-/// This module provides `Rope`, which Fluid uses to store text across its nodes. `Rope` makes it possible to 
+/// This module provides `Rope`, which Fluid uses to store text across its nodes. `Rope` makes it possible to
 /// alter text in a way that is more efficient than `string`.
 module fluid.text.rope;
 
@@ -72,7 +72,7 @@ struct Rope {
             this(left);
 
         // Neither is empty, create a new node
-        else 
+        else
             this(new inout RopeNode(left, right));
 
     }
@@ -430,7 +430,7 @@ struct Rope {
 
     }
 
-    /// Returns: 
+    /// Returns:
     ///     True if the rope is fairly balanced.
     /// Params:
     ///     maxDistance = Maximum allowed `depth` difference
@@ -446,14 +446,12 @@ struct Rope {
 
     }
 
-    /// Returns: 
-    ///     If the rope is unbalanced, returns a copy of the rope, optimized to improve reading performance. 
-    ///     If the rope is already balanced, returns the original rope unmodified.
-    /// Params:
-    ///     maxDistance = Maximum allowed `depth` difference before rebalancing happens.
+    /// Returns:
+    ///     If the rope is unbalanced, returns a copy of the rope, optimized to improve reading
+    ///     performance.  If the rope is already balanced, returns the original rope unmodified.
     Rope rebalance() const nothrow
     out (r) {
-        assert(r.isBalanced, 
+        assert(r.isBalanced,
             format("rebalance(%s) failed. Depth %s (left %s, right %s)", this, depth, left.depth, right.depth)
                 .assumeWontThrow);
     }
@@ -1047,15 +1045,15 @@ struct Rope {
 
     }
 
-    /// `byChar` and `byCharReverse` provide ranges that allow iterating on characters in the `Rope` in both 
+    /// `byChar` and `byCharReverse` provide ranges that allow iterating on characters in the `Rope` in both
     /// directions.
     /// Even if `Rope` exposes a range interface on its own, it is not as efficient as `byChar`.
     ///
     /// These ranges are unidirectional, as a bidirectional `Rope` iterator would require extra overhead.
     ///
-    /// Returns: 
+    /// Returns:
     ///     A range iterating on the rope byte by byte.
-    /// See_Also: 
+    /// See_Also:
     ///     * `byDchar` for Unicode-aware iteration.
     ///     * `byNode` for iteration based on nodes
     ByChar!false byChar() const nothrow {
@@ -1097,7 +1095,7 @@ struct Rope {
         ByChar save() const nothrow {
             static if (reverse)
                 return ByChar(rope[0 .. $ - index]);
-            else 
+            else
                 return ByChar(rope[index .. $]);
         }
 
@@ -1151,7 +1149,7 @@ struct Rope {
             Rope(
                 Rope("Hello, "),
                 Rope("colorful "),
-            ), 
+            ),
             Rope("world!"),
         );
 
@@ -1226,7 +1224,7 @@ struct Rope {
     ByLine!true byLineReverse() const {
         return ByLine!true(this);
     }
-    
+
     static struct ByLine(bool reverse) {
 
         // Recognized line separators:
@@ -1275,7 +1273,7 @@ struct Rope {
             if (!empty) {
                 this.front = findNextLine();
             }
-            
+
         }
 
         private RopeLine findNextLine() {
@@ -1358,7 +1356,7 @@ struct Rope {
                     if (head == 0x85) {
                         if (byChar.front != 0xC2) continue;
                         next();
-                        return output(2);    
+                        return output(2);
                     }
                 }
 
@@ -1498,7 +1496,7 @@ struct Rope {
 
     }
 
-    @("Rope.byLine emits correct indices") 
+    @("Rope.byLine emits correct indices")
     unittest {
 
         import std.typecons : tuple;
@@ -1564,11 +1562,11 @@ struct Rope {
 
     }
 
-    /// `byNode` and `byNodeReverse` create ranges that can be used to iterate through all leaf nodes in the 
+    /// `byNode` and `byNodeReverse` create ranges that can be used to iterate through all leaf nodes in the
     /// rope — nodes that only contain strings, and not other ropes. `byNode` iterates in regular order (from start
     /// to end) and `byNodeReverse` in reverse (from end to start).
     ///
-    /// This is the low-level iteration API, which exposes the structure of the rope, constrasting with `byChar` 
+    /// This is the low-level iteration API, which exposes the structure of the rope, constrasting with `byChar`
     /// which does not.
     /// Returns:
     ///     A range iterating through all leaf nodes in the rope.
@@ -1618,7 +1616,7 @@ struct Rope {
             // Switch to its right sibling
             static if (reverse)
                 descend(parent.left);
-            else 
+            else
                 descend(parent.right);
 
         }
@@ -1638,7 +1636,7 @@ struct Rope {
             // Start from the left side
             static if (reverse)
                 descend(node.right);
-            else 
+            else
                 descend(node.left);
 
         }
@@ -1738,7 +1736,7 @@ struct Rope {
         auto back  = this[0..index].byLineReverse.front;
         static if (keepTerminator)
             auto front = this[index..$].byLine.front.withSeparator;
-        else 
+        else
             auto front = this[index..$].byLine.front;
 
         static assert(is(ElementType!(typeof(back)) == char));
@@ -1919,7 +1917,7 @@ struct Rope {
 
         // Perform string comparison
         const prefix = commonPrefix(
-            BasicRopeRange(this[]), 
+            BasicRopeRange(this[]),
             BasicRopeRange(other[])).length;
         const suffix = commonPrefix(this[prefix..$].retro, other[prefix..$].retro).length;
 
@@ -2152,7 +2150,7 @@ struct Rope {
     unittest {
 
         import core.stdc.string;
-        
+
         auto input = Rope("Hello, World!");
 
         assert(strlen(input.toStringzMutable) == input.length);
@@ -2213,7 +2211,7 @@ unittest {
 
 }
 
-/// A wrapper over Range which disables slicing. Some algorithms assume slicing is faster than regular range access, 
+/// A wrapper over Range which disables slicing. Some algorithms assume slicing is faster than regular range access,
 /// but it's not the case for `Rope`.
 struct BasicRopeRange {
 
