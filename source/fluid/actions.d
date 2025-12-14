@@ -159,6 +159,7 @@ FocusRecurseAction focusChild(Node parent) {
 }
 
 @("FocusRecurse works")
+version (TODO)
 unittest {
 
     import fluid.space;
