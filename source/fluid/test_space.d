@@ -443,7 +443,9 @@ private class TestProbe : TreeAction {
     override void afterResize(Node node, Vector2) {
 
         // Pop last node
-        _stack.shrinkTo(_stack[].length - 1);
+        if (!_stack[].empty) {
+            _stack.shrinkTo(_stack[].length - 1);
+        }
 
         // Restore previous subject from the stack
         if (!_stack[].empty) {
