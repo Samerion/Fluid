@@ -9,6 +9,23 @@ import fluid.future.static_id;
 
 @safe:
 
+/// This hook is called every time a new node tree is created to provide a tree wrapper, unless
+/// one such wrapper was already provided.
+static shared TreeWrapper delegate() @safe createDefaultTreeWrapper;
+
+shared static this() {
+    version (Have_raylib_d) {
+        import fluid.raylib_view : raylibStack;
+        createDefaultTreeWrapper = () => raylibStack.v5_5();
+    }
+    else version (Fluid_TestSpace) {
+        import fluid.test_space : testWrapper;
+        createDefaultTreeWrapper = () => testWrapper();
+    }
+    else static assert(false, "No default `TreeWrapper` is available. "
+        ~ "Please assign `createDefaultTreeWrapper`.");
+}
+
 struct TreeContext {
 
     TreeContextData* ptr;
@@ -23,9 +40,7 @@ struct TreeContext {
     }
 
     bool opCast(T : bool)() const {
-
         return ptr !is null;
-
     }
 
 }
