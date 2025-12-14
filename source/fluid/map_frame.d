@@ -314,6 +314,7 @@ class MapFrame : Frame {
         minSize = Vector2(0, 0);
 
         // TODO get rid of position entries for removed elements
+        require(canvasIO);
 
         foreach (child; children) {
 
