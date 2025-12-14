@@ -325,7 +325,7 @@ class TestSpace : Space, CanvasIO, DebugSignalIO {
 class TestWrapper : TreeWrapper {
 
     public {
-        Vector2 windowSize = Vector2(800, 600);
+        Rectangle viewport = Rectangle(0, 0, 800, 600);
     }
 
     private {
@@ -342,10 +342,12 @@ class TestWrapper : TreeWrapper {
         import fluid.file_chain;
         import fluid.overlay_chain;
         import fluid.test_space;
+        import fluid.structs : layout;
 
         _root = testSpace(
+            layout!"fill",
             chain(
-                preferenceChain(),
+                preferenceChain(layout!(1, "fill")),
                 timeChain(),
                 inputMapChain(),
                 focusChain(),
@@ -359,7 +361,7 @@ class TestWrapper : TreeWrapper {
     override void drawTree(TreeContext context, Node start) {
         _last.next = start;
         _root.prepare(context);
-        _root.drawAsRoot();
+        _root.drawAsRoot(viewport);
     }
 
 }
