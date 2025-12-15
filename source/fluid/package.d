@@ -258,7 +258,6 @@ public import
     fluid.default_theme,       // skipped    https://git.samerion.com/Samerion/Fluid/issues/216
     fluid.drag_slot,           // documented
     fluid.file_chain,          // documented
-    fluid.file_input,          // skipped    (disabled)
     fluid.field_slot,          // documented
     fluid.frame,               // documented
     fluid.focus_chain,         // documented
