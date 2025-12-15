@@ -236,9 +236,8 @@ abstract class AbstractNumberInput : TextInput {
 }
 
 /// Increment and decrement buttons that appear on the right of number inputs.
-class NumberInputSpinner : Node, FluidHoverable, Hoverable {
+class NumberInputSpinner : Node, Hoverable {
 
-    mixin FluidHoverable.enableInputActions;
     mixin Hoverable.enableInputActions;
 
     CanvasIO canvasIO;
@@ -356,10 +355,6 @@ class NumberInputSpinner : Node, FluidHoverable, Hoverable {
         else {
             if (decremented) decremented();
         }
-
-    }
-
-    void mouseImpl() {
 
     }
 

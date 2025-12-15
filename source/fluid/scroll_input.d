@@ -254,10 +254,8 @@ class ScrollInput : InputNode!Node {
 
 }
 
-class ScrollInputHandle : Node, FluidHoverable, Hoverable {
+class ScrollInputHandle : Node, Hoverable {
 
-    mixin makeHoverable;
-    mixin FluidHoverable.enableInputActions;
     mixin Hoverable.enableInputActions;
 
     HoverIO hoverIO;
@@ -385,10 +383,6 @@ class ScrollInputHandle : Node, FluidHoverable, Hoverable {
 
         return true;
 
-    }
-
-    protected override void mouseImpl() {
-        hoverImpl(HoverPointer.init);
     }
 
     protected override bool hoverImpl(HoverPointer) {
