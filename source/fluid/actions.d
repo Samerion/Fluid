@@ -191,7 +191,6 @@ class FocusRecurseAction : FocusSearchAction {
 
         bool excludeStartNode;
         bool isReverse;
-        void delegate(FluidFocusable) @safe finished;
 
     }
 
@@ -204,7 +203,7 @@ class FocusRecurseAction : FocusSearchAction {
         if (excludeStartNode && node is startNode) return;
 
         // Check if the node is focusable
-        if (auto focusable = cast(FluidFocusable) node) {
+        if (auto focusable = cast(Focusable) node) {
 
             // Mark the node
             result = node;
@@ -218,9 +217,8 @@ class FocusRecurseAction : FocusSearchAction {
 
     override void stopped() {
 
-        if (auto focusable = cast(FluidFocusable) result) {
+        if (auto focusable = cast(Focusable) result) {
             focusable.focus();
-            if (finished) finished(focusable);
         }
         super.stopped();
 
