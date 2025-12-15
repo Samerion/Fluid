@@ -11,3 +11,4 @@ build/
 .DS_Store
 *~
 /docs/source
+__dummy_docs

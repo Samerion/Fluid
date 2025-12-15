@@ -11,19 +11,41 @@ import fluid.future.static_id;
 
 /// This hook is called every time a new node tree is created to provide a tree wrapper, unless
 /// one such wrapper was already provided.
-static shared TreeWrapper delegate() @safe createDefaultTreeWrapper;
+///
+/// It should create and return a [TreeWrapper]. It can return `null` or be directly set
+/// to `null.`
+///
+/// By default, this will be assigned to the first available option: a
+/// [RaylibStack][fluid.raylib_view] or [TestWrapper][fluid.test_space]. If neither is available,
+/// this will be left `null`.
+///
+/// See_Also:
+///     [createDefaultTreeWrapper] calls this function while performing relevant null checks.
+static shared TreeWrapper delegate() @safe createDefaultTreeWrapperDelegate;
 
 shared static this() {
     version (Have_raylib_d) {
         import fluid.raylib_view : raylibStack;
-        createDefaultTreeWrapper = () => raylibStack.v5_5();
+        createDefaultTreeWrapperDelegate = () => raylibStack.v5_5();
     }
     else version (Fluid_TestSpace) {
         import fluid.test_space : testWrapper;
-        createDefaultTreeWrapper = () => testWrapper();
+        createDefaultTreeWrapperDelegate = () => testWrapper();
     }
-    else static assert(false, "No default `TreeWrapper` is available. "
-        ~ "Please assign `createDefaultTreeWrapper`.");
+}
+
+/// Creates a new tree wrapper. The exact wrapper created depends on config.
+///
+/// Returns:
+///     Return value of [createDefaultTreeWrapperDelegate] if one is present (non-null), otherwise
+///     returns `null`.
+TreeWrapper createDefaultTreeWrapper() {
+    if (createDefaultTreeWrapperDelegate) {
+        return createDefaultTreeWrapperDelegate();
+    }
+    else {
+        return null;
+    }
 }
 
 struct TreeContext {
