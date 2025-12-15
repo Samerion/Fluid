@@ -769,8 +769,8 @@ unittest {
     hover.loadTo(pointer2);
     root.draw();
 
-    assert(hover.fetch(pointer1.id).position == Vector2(10, 10));
-    assert(hover.fetch(pointer2.id).position == Vector2(20, 20));
+    assert(hover.fetchPointer(pointer1.id).position == Vector2(10, 10));
+    assert(hover.fetchPointer(pointer2.id).position == Vector2(20, 20));
 
 }
 
@@ -907,8 +907,8 @@ unittest {
 
         // Try upadting the data
         action.move(20, 20);
-        assert(hover.fetch(id).position == Vector2(20, 20));
-        assert(hover.fetch(armedID).position == Vector2(50, 50));
+        assert(hover.fetchPointer(id).position == Vector2(20, 20));
+        assert(hover.fetchPointer(armedID).position == Vector2(50, 50));
 
         tracker.pressCount = 0;
 
