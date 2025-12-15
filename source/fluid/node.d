@@ -135,23 +135,6 @@ abstract class Node {
 
     }
 
-    @property {
-
-        /// Check if the node is hidden.
-        bool isHidden() const return { return _isHidden || toRemove; }
-
-        /// Set the visibility
-        bool isHidden(bool value) return {
-
-            // If changed, trigger resize
-            if (_isHidden != value) updateSize();
-
-            return _isHidden = value;
-
-        }
-
-    }
-
     /// Construct a new node.
     ///
     /// The typical approach to constructing new nodes is via `fluid.utils.simpleConstructor`. A node component would
@@ -170,6 +153,19 @@ abstract class Node {
     /// See_Also:
     ///     `fluid.utils.simpleConstructor`
     this() { }
+
+    /// Check if the node is hidden.
+    bool isHidden() const return { return _isHidden || toRemove; }
+
+    /// Set the visibility
+    bool isHidden(bool value) return {
+
+        // If changed, trigger resize
+        if (_isHidden != value) updateSize();
+
+        return _isHidden = value;
+
+    }
 
     /// Returns: True if both nodes are the same node.
     override bool opEquals(const Object other) const @safe {
@@ -314,7 +310,6 @@ abstract class Node {
     /// Check if this node is hovered.
     ///
     /// Returns false if the node or, while the node is being drawn, some of its ancestors are disabled.
-    @property
     bool isHovered() const { return _isHovered && !_isDisabled && !tree.isBranchDisabled; }
 
     /// Check if this node is disabled.

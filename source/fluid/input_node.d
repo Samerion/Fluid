@@ -160,38 +160,34 @@ abstract class InputNode(Parent : Node) : Parent, FluidFocusable, Focusable, Hov
 
     }
 
-    @property {
+    /// Check if the node has focus.
+    bool isFocused() const {
 
-        /// Check if the node has focus.
-        bool isFocused() const {
+        if (focusIO) {
+            return focusIO.isFocused(this);
+        }
+        else {
+            return tree.focus is this;
+        }
+
+    }
+
+    /// Set or remove focus from this node.
+    bool isFocused(bool enable) {
+
+        if (enable) focus();
+        else if (isFocused) {
 
             if (focusIO) {
-                return focusIO.isFocused(this);
+                focusIO.currentFocus = null;
             }
             else {
-                return tree.focus is this;
+                tree.focus = null;
             }
 
         }
 
-        /// Set or remove focus from this node.
-        bool isFocused(bool enable) {
-
-            if (enable) focus();
-            else if (isFocused) {
-
-                if (focusIO) {
-                    focusIO.currentFocus = null;
-                }
-                else {
-                    tree.focus = null;
-                }
-
-            }
-
-            return enable;
-
-        }
+        return enable;
 
     }
 
