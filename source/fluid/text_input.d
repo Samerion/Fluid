@@ -982,7 +982,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         require(focusIO);
         require(hoverIO);
         require(overlayIO);
-        require(clipboardIO);
+        use(clipboardIO);
 
         // Initialize touch time
         if (timeIO && lastTouchTime == MonoTime.init) {
@@ -2593,23 +2593,30 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     /// Cut selected text to clipboard, clearing the selection.
     @(FluidInputAction.cut)
-    void cut() {
-
+    bool cut() {
         copy();
         selectedValue = null;
-
+        return true;
     }
 
     /// Copy selected text to clipboard.
     @(FluidInputAction.copy)
-    void copy() {
-        if (!isSelecting) return;
-        clipboardIO.writeClipboard = selectedValue.toString();
+    bool copy() {
+        if (!isSelecting) return false;
+        if (clipboardIO) {
+            clipboardIO.writeClipboard = selectedValue.toString();
+            return true;
+        }
+        else {
+            return false;
+        }
     }
 
     /// Paste text from clipboard.
     @(FluidInputAction.paste)
-    void paste() {
+    bool paste() {
+        if (!clipboardIO) return false;
+
         const isMinor = false;
         auto snap = snapshot();
 
@@ -2626,6 +2633,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         }
 
         push(result, isMinor);
+        return true;
     }
 
     /// Clear the undo/redo action history.
