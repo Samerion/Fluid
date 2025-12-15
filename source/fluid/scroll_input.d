@@ -319,9 +319,7 @@ class ScrollInputHandle : Node, Hoverable {
     }
 
     override bool isHovered() const {
-
-        return this is tree.hover || super.isHovered();
-
+        return super.isHovered();
     }
 
     override protected void resizeImpl(Vector2 space) {

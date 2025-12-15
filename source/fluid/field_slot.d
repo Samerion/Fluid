@@ -118,22 +118,9 @@ class FieldSlot(T : Node) : T, Hoverable, Focusable {
         _focusableChild = focus;
     }
 
-    override void drawImpl(Rectangle outer, Rectangle inner) {
-
-        const previousHover = tree.hover;
-
-        // Draw children
-        super.drawImpl(outer, inner);
-
-        // Test if hover has switched to any of them
-        const isChildHovered = tree.hover !is previousHover;
-
-    }
-
     // implements Hoverable
     override bool isHovered() const {
-        return tree.hover is this
-            || super.isHovered();
+        return super.isHovered();
     }
 
     override bool blocksInput() const {
