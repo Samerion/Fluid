@@ -11,7 +11,7 @@ import fluid.node;
 debug struct Children {
 
     private enum mutateError = "Cannot mutate children list while its being rendered. This should be done in an event "
-        ~ "handler, such as the mouseImpl/keyboardImpl methods.";
+        ~ "handler, such as the hoverImpl/focusImpl methods.";
 
     private {
 
@@ -101,7 +101,7 @@ debug struct Children {
     ref Node[] getChildren() return {
 
         debug assert(!_isLocked, "Can't get a mutable reference to children while rendering. Consider doing this in "
-            ~ "input handling methods like mouseImpl/keyboardImpl which happen after rendering is complete. But if "
+            ~ "input handling methods like hoverImpl/focusImpl which happen after rendering is complete. But if "
             ~ "this is necessary, you may use `fluid.children.asConst` instead. Note, iterating over the (mutable) "
             ~ "children is still legal. You can also use `node.remove` if you want to simply remove a node.");
         _hasChanged = true;
