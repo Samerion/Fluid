@@ -41,6 +41,10 @@ jobs:
       #   run: $DUB test :module-view -d Fluid_BuildMessages
       #   if: matrix.dc != 'ldc-1.28.1'
 
+      - name: Compile documentation
+        shell: bash
+        run: $DUB -b=docs
+
       - name: Compile tour
         shell: bash
         run: $DUB build :tour
