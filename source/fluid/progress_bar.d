@@ -148,7 +148,7 @@ class ProgressBar : Node {
 
     override void resizeImpl(Vector2 space) {
 
-        use(canvasIO);
+        require(canvasIO);
 
         text = buildText();
         text.resize(canvasIO);
@@ -218,18 +218,16 @@ class ProgressBarFill : Node {
     }
 
     override void resizeImpl(Vector2 space) {
-        use(canvasIO);
+        require(canvasIO);
         minSize = Vector2(0, 0);
     }
 
     override void drawImpl(Rectangle paddingBox, Rectangle contentBox) {
+        auto style = pickStyle();
 
         // Use a fraction of the padding box corresponding to the fill value
         paddingBox.width *= cast(float) bar.value / bar.maxValue;
-
-        auto style = pickStyle();
         style.drawBackground(canvasIO, paddingBox);
-
     }
 
 }

@@ -975,14 +975,13 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
     }
 
     protected override void resizeImpl(Vector2 area) {
-
         import std.math : isNaN;
 
-        use(timeIO);
-        use(canvasIO);
-        use(focusIO);
-        use(hoverIO);
-        use(overlayIO);
+        require(timeIO);
+        require(canvasIO);
+        require(focusIO);
+        require(hoverIO);
+        require(overlayIO);
         use(clipboardIO);
 
         // Initialize touch time
@@ -1020,7 +1019,6 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
         // Locate the cursor
         updateCaretPositionAndAnchor();
-
     }
 
     /// Update the caret position to match the caret index.
@@ -2595,23 +2593,30 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     /// Cut selected text to clipboard, clearing the selection.
     @(FluidInputAction.cut)
-    void cut() {
-
+    bool cut() {
         copy();
         selectedValue = null;
-
+        return true;
     }
 
     /// Copy selected text to clipboard.
     @(FluidInputAction.copy)
-    void copy() {
-        if (!isSelecting) return;
-        clipboardIO.writeClipboard = selectedValue.toString();
+    bool copy() {
+        if (!isSelecting) return false;
+        if (clipboardIO) {
+            clipboardIO.writeClipboard = selectedValue.toString();
+            return true;
+        }
+        else {
+            return false;
+        }
     }
 
     /// Paste text from clipboard.
     @(FluidInputAction.paste)
-    void paste() {
+    bool paste() {
+        if (!clipboardIO) return false;
+
         const isMinor = false;
         auto snap = snapshot();
 
@@ -2628,6 +2633,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         }
 
         push(result, isMinor);
+        return true;
     }
 
     /// Clear the undo/redo action history.

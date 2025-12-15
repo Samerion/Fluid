@@ -87,16 +87,10 @@ class Checkbox : InputNode!Node {
     }
 
     protected override void resizeImpl(Vector2 space) {
-
-        use(canvasIO);
-
-        if (canvasIO) {
-            _markImage = getImage(pickStyle());
-            load(canvasIO, _markImage);
-        }
-
+        require(canvasIO);
+        _markImage = getImage(pickStyle());
+        load(canvasIO, _markImage);
         minSize = size;
-
     }
 
     protected override void drawImpl(Rectangle outer, Rectangle inner) {
