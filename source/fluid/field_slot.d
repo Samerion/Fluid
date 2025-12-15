@@ -68,7 +68,7 @@ class FieldSlot(T : Node) : T, FluidHoverable, Hoverable, Focusable {
     @(FluidInputAction.press)
     void press() {
         focusAnd.then((Node node) {
-            if (auto focusable = cast(FluidFocusable) node) {
+            if (auto focusable = cast(Focusable) node) {
                 focusable.runInputAction!(FluidInputAction.press);
             }
         });

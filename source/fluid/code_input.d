@@ -1628,10 +1628,6 @@ class CodeInput : TextInput {
 
     }
 
-    override protected bool runLocalInputAction(immutable InputActionID id, bool active) {
-        return runInputActionHandler(this, id, active);
-    }
-
 }
 
 ///

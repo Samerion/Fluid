@@ -263,7 +263,6 @@ public import
     fluid.frame,               // documented
     fluid.focus_chain,         // documented
     fluid.grid,                // documented
-    fluid.hover_button,        // skipped    (deprecated)
     fluid.hover_chain,         // documented
     fluid.hover_transform,     // documented
     fluid.hyperlink,           // documented
