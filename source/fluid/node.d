@@ -557,7 +557,6 @@ abstract class Node {
         assert(theme);
 
         // Clear focus info
-        tree.focusDirection = FocusDirection(tree.focusBox);
         tree.focusBox = Rectangle(float.nan);
 
         // Clear breadcrumbs
@@ -719,24 +718,6 @@ abstract class Node {
         }
 
         drawImpl(mainBox, contentBox);
-
-        // If not disabled
-        if (!branchDisabled) {
-
-            const focusBox = focusBoxImpl(contentBox);
-
-            // Update focus info
-            tree.focusDirection.update(this, focusBox, tree.depth);
-
-            // If this node is focused
-            if (this is cast(Node) tree.focus) {
-
-                // Set the focus box
-                tree.focusBox = focusBox;
-
-            }
-
-        }
 
         // Run afterDraw actions
         foreach (action; filterActions) {
@@ -904,51 +885,6 @@ abstract class Node {
             minSize.x.isFinite && minSize.y.isFinite,
             format!"Internal error — Node %s returned invalid minSize %s"(typeid(this), minSize)
         );
-
-    }
-
-    /// Switch to the previous or next focused item
-    @(FluidInputAction.focusPrevious, FluidInputAction.focusNext)
-    protected void focusPreviousOrNext(FluidInputAction actionType) {
-
-        auto direction = tree.focusDirection;
-
-        // Get the node to switch to
-        auto node = actionType == FluidInputAction.focusPrevious
-
-            // Requesting previous item
-            ? either(direction.previous, direction.last)
-
-            // Requesting next
-            : either(direction.next, direction.first);
-
-        // Switch focus
-        if (node) node.focus();
-
-    }
-
-    /// Switch focus towards a specified direction.
-    @(FluidInputAction.focusLeft, FluidInputAction.focusRight)
-    @(FluidInputAction.focusUp, FluidInputAction.focusDown)
-    protected void focusInDirection(FluidInputAction action) {
-
-        with (FluidInputAction) {
-
-            // Check which side we're going
-            const side = action.predSwitch(
-                focusLeft,  Style.Side.left,
-                focusRight, Style.Side.right,
-                focusUp,    Style.Side.top,
-                focusDown,  Style.Side.bottom,
-            );
-
-            // Get the node
-            auto node = tree.focusDirection.positional[side];
-
-            // Switch focus to the node
-            if (node !is null) node.focus();
-
-        }
 
     }
 

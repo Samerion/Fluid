@@ -99,36 +99,6 @@ abstract class InputNode(Parent : Node) : Parent, Focusable, Hoverable {
 
     }
 
-    override protected void focusPreviousOrNext(FluidInputAction actionType) {
-
-        super.focusPreviousOrNext(actionType);
-
-    }
-
-    @(FluidInputAction.focusPrevious, FluidInputAction.focusNext)
-    protected bool focusPreviousOrNextBool(FluidInputAction actionType) {
-
-        if (focusIO) return false;
-        focusPreviousOrNext(actionType);
-        return true;
-    }
-
-    override protected void focusInDirection(FluidInputAction actionType) {
-
-        super.focusInDirection(actionType);
-
-    }
-
-    @(FluidInputAction.focusLeft, FluidInputAction.focusRight)
-    @(FluidInputAction.focusUp, FluidInputAction.focusDown)
-    protected bool focusInDirectionBool(FluidInputAction action) {
-
-        if (focusIO) return false;
-        focusInDirection(action);
-        return true;
-
-    }
-
     /// Check if the node has focus.
     bool isFocused() const {
         if (focusIO) {
