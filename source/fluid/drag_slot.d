@@ -64,10 +64,8 @@ alias dragSlot = nodeBuilder!DragSlot;
 ///
 /// `DragSlot` is a bit out of date in terms of common practices in Fluid, and doesn't serve
 /// as a good example of how nodes can be written, but should remain useful as a standalone node.
-class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable {
+class DragSlot : NodeSlot!Node, Hoverable {
 
-    mixin makeHoverable;
-    mixin FluidHoverable.enableInputActions;
     mixin Hoverable.enableInputActions;
 
     HoverIO hoverIO;
@@ -271,10 +269,6 @@ class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable {
 
     override bool isHovered() const {
         return this is tree.hover || super.isHovered();
-    }
-
-    override void mouseImpl() {
-
     }
 
     override bool hoverImpl(HoverPointer) {
