@@ -89,7 +89,6 @@ void addChildPopup(OverlayIO overlayIO, PopupFrame parent, PopupFrame popup, Rec
 /// Popup needs [OverlayIO] to function, so it is an instance of [Overlayable].
 class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, WithPositionalFocus {
 
-    mixin makeHoverable;
     mixin enableInputActions;
 
     public {
@@ -103,22 +102,6 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
         /// See_Also:
         ///     https://xkcd.com/1975/
         PopupFrame childPopup;
-
-        /// Node that had focus before the popup frame took over. When the popup is closed using
-        /// a [FluidInputAction.cancel] focus event, such as a keyboard shortcut, this node will
-        /// take focus again.
-        ///
-        /// `previousFocus` is used only in the old backend, if [FocusIO] isn't available.
-        /// See [previousFocusable] for the new I/O system.
-        ///
-        /// The [restorePreviousFocus] method can be used to bring this node back to focus.
-        ///
-        /// `previousFocus` is assigned automatically if [spawnPopup] or [spawnChildPopup] is
-        /// used.
-        ///
-        /// See_Also:
-        ///     [previousFocusable], which is used with the new I/O system.
-        FluidFocusable previousFocus;
 
         /// Node that was focused before the popup was opened. Using [restorePreviousFocus], it
         /// can be given focus again, closing the popup. This is the default behavior for the
@@ -357,10 +340,6 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
 
         // Handle events locally otherwise
         return this.runInputActionHandler(io, number, actionID, isActive);
-
-    }
-
-    protected override void mouseImpl() {
 
     }
 

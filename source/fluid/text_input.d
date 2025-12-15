@@ -1351,7 +1351,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         return isCaretVisible();
     }
 
-    protected override bool keyboardImpl() {
+    protected override bool focusImpl() {
 
         import std.uni : isAlpha, isWhite;
         import std.range : back;
