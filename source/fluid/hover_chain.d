@@ -146,7 +146,7 @@ class HoverChain : NodeChain, ActionHoverIO {
     ///     If the pointer is already an armed variant, no conversion is performed.
     inout(HoverPointer) armedPointer(HoverPointer pointer) inout {
         const armed = armedPointerID(pointer.id);
-        return fetch(armed);
+        return fetchPointer(armed);
     }
 
     override int load(HoverPointer pointer)
@@ -197,7 +197,7 @@ class HoverChain : NodeChain, ActionHoverIO {
     ///     `normalizedPointerID` and `armedPointerID` for converting between pointer IDs.
     /// Returns:
     ///     Pointer associated with the node.
-    override inout(HoverPointer) fetch(int number) inout {
+    override inout(HoverPointer) fetchPointer(int number) inout {
 
         // Armed variant
         if (number < 0) {
@@ -458,7 +458,7 @@ class HoverChain : NodeChain, ActionHoverIO {
     /// ditto
     protected final bool runInputAction(InputActionID actionID, bool isActive, int number) {
 
-        auto pointer = fetch(number);
+        auto pointer = fetchPointer(number);
         return runInputAction(pointer, actionID, isActive);
 
     }
