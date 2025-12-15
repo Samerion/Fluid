@@ -268,7 +268,7 @@ class DragSlot : NodeSlot!Node, Hoverable {
     }
 
     override bool isHovered() const {
-        return this is tree.hover || super.isHovered();
+        return super.isHovered();
     }
 
     override bool hoverImpl(HoverPointer) {
