@@ -41,10 +41,8 @@ alias fieldSlot(alias node) = nodeBuilder!(FieldSlot, node);
 /// Fields expand the interactable (clickable) area of input nodes by other nodes that are placed
 /// inside the slot. For example, in the code snippet below, if the user clicks on the "username"
 /// label, the text input underneath will gain focus.
-class FieldSlot(T : Node) : T, FluidHoverable, Hoverable, Focusable {
+class FieldSlot(T : Node) : T, Hoverable, Focusable {
 
-    mixin makeHoverable;
-    mixin FluidHoverable.enableInputActions;
     mixin Hoverable.enableInputActions;
 
     private {
@@ -120,35 +118,9 @@ class FieldSlot(T : Node) : T, FluidHoverable, Hoverable, Focusable {
         _focusableChild = focus;
     }
 
-    override void drawImpl(Rectangle outer, Rectangle inner) {
-
-        const previousHover = tree.hover;
-
-        // Draw children
-        super.drawImpl(outer, inner);
-
-        // Test if hover has switched to any of them
-        const isChildHovered = tree.hover !is previousHover;
-
-        // If the node doesn't handle hover itself, take over
-        // (pun not intended)
-        if (isChildHovered && !cast(FluidHoverable) tree.hover) {
-
-            tree.hover = this;
-
-        }
-
-    }
-
-    // implements FluidHoverable
+    // implements Hoverable
     override bool isHovered() const {
-        return tree.hover is this
-            || super.isHovered();
-    }
-
-    // implements FluidHoverable
-    override void mouseImpl() {
-
+        return super.isHovered();
     }
 
     override bool blocksInput() const {

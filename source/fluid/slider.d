@@ -52,7 +52,7 @@ class Slider(T) : AbstractSlider {
 
     override bool isHovered() const {
 
-        return super.isHovered || this is tree.hover;
+        return super.isHovered;
 
     }
 
