@@ -172,7 +172,6 @@ class DragSlot : NodeSlot!Node, FluidHoverable, Hoverable {
     /// `DragSlot` hides itself from its parent node while its drawn.
     /// Returns:
     ///     True while the drag slot is set to hidden or while its being dragged.
-    @property
     override bool isHidden() const scope {
 
         // Don't hide from the draw action

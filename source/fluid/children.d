@@ -30,27 +30,22 @@ debug struct Children {
 
     }
 
-    @property {
+    size_t length() const {
 
-        size_t length() const {
-
-            return _children.length;
-
-        }
-
-        size_t length(size_t value) {
-
-            assert(!_isLocked, mutateError);
-
-            _hasChanged = true;
-
-            return _children.length = value;
-
-        }
+        return _children.length;
 
     }
 
-    @property
+    size_t length(size_t value) {
+
+        assert(!_isLocked, mutateError);
+
+        _hasChanged = true;
+
+        return _children.length = value;
+
+    }
+
     bool empty() const {
 
         return _children.length == 0;
@@ -97,7 +92,6 @@ debug struct Children {
 
     }
 
-    @property
     size_t opDollar() const {
 
         return _children.length;
