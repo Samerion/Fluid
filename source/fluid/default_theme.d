@@ -13,7 +13,6 @@ import fluid.radiobox;
 import fluid.drag_slot;
 import fluid.hyperlink;
 import fluid.separator;
-import fluid.file_input;
 import fluid.text_input;
 import fluid.popup_frame;
 import fluid.number_input;
@@ -171,11 +170,6 @@ static this() {
                     ),
                 ),
             ),
-            /*rule!FileInputSuggestion(
-                margin = 0,
-                backgroundColor = color("#fff"),
-                when!"a.isSelected"(backgroundColor = color("#55b9ff"))
-            ),*/
             rule!Checkbox(
                 margin.sideX = 8,
                 margin.sideY = 4,
