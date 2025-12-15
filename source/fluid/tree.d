@@ -296,11 +296,6 @@ struct LayoutTree {
         /// Root node of the tree.
         Node root;
 
-        /// Node the mouse is hovering over if any.
-        ///
-        /// This is the last — topmost — node in the tree with `isHovered` set to true.
-        Node hover;
-
         /// Deepest hovered scrollable node.
         FluidScrollable scroll;
 
@@ -351,13 +346,6 @@ struct LayoutTree {
     bool resizePending() const {
 
         return root.resizePending;
-
-    }
-
-    /// Returns: True if the mouse is currently hovering a node in the tree.
-    bool isHovered() const {
-
-        return hover !is null;
 
     }
 
