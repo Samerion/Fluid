@@ -137,9 +137,9 @@ abstract class AbstractSlider : InputNode!Node {
     }
 
     override void resizeImpl(Vector2 space) {
-
-        use(canvasIO);
-        use(hoverIO);
+        super.resizeImpl(space);
+        require(canvasIO);
+        require(hoverIO);
 
         resizeChild(handle, space);
         minSize = handle.minSize;

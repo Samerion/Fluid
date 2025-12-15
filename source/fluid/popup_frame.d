@@ -89,7 +89,6 @@ void addChildPopup(OverlayIO overlayIO, PopupFrame parent, PopupFrame popup, Rec
 /// Popup needs [OverlayIO] to function, so it is an instance of [Overlayable].
 class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, WithPositionalFocus {
 
-    mixin makeHoverable;
     mixin enableInputActions;
 
     public {
@@ -103,22 +102,6 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
         /// See_Also:
         ///     https://xkcd.com/1975/
         PopupFrame childPopup;
-
-        /// Node that had focus before the popup frame took over. When the popup is closed using
-        /// a [FluidInputAction.cancel] focus event, such as a keyboard shortcut, this node will
-        /// take focus again.
-        ///
-        /// `previousFocus` is used only in the old backend, if [FocusIO] isn't available.
-        /// See [previousFocusable] for the new I/O system.
-        ///
-        /// The [restorePreviousFocus] method can be used to bring this node back to focus.
-        ///
-        /// `previousFocus` is assigned automatically if [spawnPopup] or [spawnChildPopup] is
-        /// used.
-        ///
-        /// See_Also:
-        ///     [previousFocusable], which is used with the new I/O system.
-        FluidFocusable previousFocus;
 
         /// Node that was focused before the popup was opened. Using [restorePreviousFocus], it
         /// can be given focus again, closing the popup. This is the default behavior for the
@@ -213,7 +196,7 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
     ///     True if the `PopupFrame` has no focus (in new I/O only), or was manually marked
     ///     for removal.
     override bool toRemove() const {
-        if (!toTakeFocus && usingFocusIO && !this.isFocused) {
+        if (!toTakeFocus && !this.isFocused) {
             return true;
         }
         return super.toRemove;
@@ -240,21 +223,12 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
     /// [previousFocus]. If no node was focused, [clears focus][FocusIO.clearFocus].
     @(FluidInputAction.cancel)
     void restorePreviousFocus() {
-
-        // Restore focus if possible
         if (previousFocusable) {
             previousFocusable.focus();
         }
-        else if (previousFocus) {
-            previousFocus.focus();
-        }
-
-        // Clear focus
-        else if (usingFocusIO) {
+        else {
             focusIO.clearFocus();
         }
-        else tree.focus = null;
-
     }
 
     /// Returns:
@@ -316,7 +290,7 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
         else super.resizeImpl(space);
 
         // Immediately switch focus to self
-        if (usingFocusIO && toTakeFocus) {
+        if (toTakeFocus) {
             previousFocusable = focusIO.currentFocus;
             focus();
             toTakeFocus = false;
@@ -326,24 +300,9 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
     alias toRemove = typeof(super).toRemove;
 
     protected override void drawImpl(Rectangle outer, Rectangle inner) {
-
-        // Clear directional focus data; give the popup a separate context
-        tree.focusDirection = FocusDirection(tree.focusDirection.lastFocusBox);
-
         auto action1 = this.startBranchAction(_findFocusBoxAction);
         auto action2 = this.startBranchAction(_markPopupButtonsAction);
         super.drawImpl(outer, inner);
-
-        // Forcibly register previous & next focus if missing
-        // The popup will register itself just after it gets drawn without this — and it'll be better if it doesn't
-        if (tree.focusDirection.previous is null) {
-            tree.focusDirection.previous = tree.focusDirection.last;
-        }
-
-        if (tree.focusDirection.next is null) {
-            tree.focusDirection.next = tree.focusDirection.first;
-        }
-
     }
 
     protected override bool actionImpl(IO io, int number, immutable InputActionID actionID,
@@ -357,10 +316,6 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
 
         // Handle events locally otherwise
         return this.runInputActionHandler(io, number, actionID, isActive);
-
-    }
-
-    protected override void mouseImpl() {
 
     }
 
@@ -392,21 +347,15 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
     }
 
     override inout(Focusable) currentFocus() inout {
-        if (usingFocusIO && !focusIO.isFocused(this)) {
+        if (!focusIO.isFocused(this)) {
             return null;
         }
         return _currentFocus;
     }
 
     override Focusable currentFocus(Focusable newValue) {
-        if (usingFocusIO) {
-            focusIO.currentFocus = this;
-        }
+        focusIO.currentFocus = this;
         return _currentFocus = newValue;
-    }
-
-    private bool usingFocusIO() const nothrow {
-        return focusIO && focusIO !is this;
     }
 
 }
