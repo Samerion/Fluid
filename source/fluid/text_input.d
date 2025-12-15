@@ -63,7 +63,7 @@ alias multilineInput = nodeBuilder!(TextInput, (a) {
 /// ditto
 class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
-    mixin enableInputActions;
+    mixin InputNode!Node.enableInputActions;
 
     enum defaultBufferSize = 512;
 
@@ -75,6 +75,16 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
     CanvasIO canvasIO;
     ClipboardIO clipboardIO;
     OverlayIO overlayIO;
+
+    mixin template enableInputActions() {
+        import fluid.future.context : IO;
+        import fluid.io.action : InputActionID, runInputActionHandler;
+        override protected bool runLocalInputAction(IO io, int num, immutable InputActionID id,
+            bool active)
+        do {
+            return runInputActionHandler(this, io, num, id, active);
+        }
+    }
 
     public {
 
@@ -1480,52 +1490,20 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     /// Hook into input actions to create matching history entries.
     ///
-    /// Operating on `TextInput` contents using exposed methods will not create any history entries:
-    ///
-    /// ---
-    /// root.value = "Hello, !";
-    /// root.replace(7, 7, "World");
-    /// root.replace(7, 7+5, "Fluid");
-    /// root.caretToEnd();
-    /// root.breakLine();
-    /// root.undo();  // does nothing
-    /// ---
-    ///
-    /// This behavior is different for changes made through input actions, as they directly correspond to changes made
-    /// by the user.
-    ///
-    /// ---
-    /// with (FluidInputAction) {
-    ///     root.savePush("Hello, World!");
-    ///     root.runInputAction!previousChar;
-    ///     root.runInputAction!backspaceWord;
-    ///     root.savePush("Fluid");
-    /// }
-    /// assert(root.value == "Hello, Fluid!");
-    /// root.undo();
-    /// assert(root.value == "Hello, !");
-    /// root.undo();
-    /// assert(root.value == "Hello, World!");
-    /// ---
-    ///
-    /// See_Also: `savePush`, `snapshot`, `pushHistory`
-    override bool inputActionImpl(immutable InputActionID id, bool active) {
+    /// See_Also: [savePush], [snapshot], [pushHistory]
+    override bool actionImpl(IO io, int number, immutable InputActionID id, bool isActive) {
 
-        // Do not override inactive events
-        if (!active) return false;
-
-        // Do not override undo/redo actions
-        if (id == inputActionID!(FluidInputAction.undo)) return false;
-        if (id == inputActionID!(FluidInputAction.redo)) return false;
+        // Passive events should not create snapshots
+        const doSnapshot = isActive
+            && id != inputActionID!(FluidInputAction.undo)
+            && id != inputActionID!(FluidInputAction.redo);
 
         const past = snapshot();
-
         _snapshot.diff = Rope.DiffRegion.init;
 
         // Run the input action and compare changes to send to history
-        const handled = runLocalInputAction(id, active);
-
-        if (handled) {
+        const handled = runLocalInputAction(io, number, id, isActive);
+        if (handled && doSnapshot) {
             pushHistory(past);
         }
 
@@ -1533,10 +1511,8 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     }
 
-    protected bool runLocalInputAction(immutable InputActionID id, bool active) {
-        return runInputActionHandler(this, id, active);
-    }
-
+    /// Operating on `TextInput` contents using exposed methods will not create any history
+    /// entries:
     @("TextInput methods do not create history entries")
     unittest {
 
@@ -1551,22 +1527,24 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     }
 
+    /// This behavior is different for changes made through input actions, as they directly
+    /// correspond to changes made by the user.
     @("TextInput.runInputAction will create history entries")
     unittest {
-
         auto root = multilineInput();
-        with (FluidInputAction) {
-            root.savePush("Hello, World!");
-            root.runInputAction!previousChar;
-            root.runInputAction!backspaceWord;
-            root.savePush("Fluid");
-        }
+        root.savePush("Hello, World!");
+        root.runInputAction!(FluidInputAction.previousChar);
+        root.runInputAction!(FluidInputAction.backspaceWord);
+        root.savePush("Fluid");
         assert(root.value == "Hello, Fluid!");
         root.undo();
         assert(root.value == "Hello, !");
         root.undo();
         assert(root.value == "Hello, World!");
+    }
 
+    protected bool runLocalInputAction(IO io, int num, immutable InputActionID id, bool active) {
+        return runInputActionHandler(this, io, num, id, active);
     }
 
     /// Write text at the caret position and save the result to history.
