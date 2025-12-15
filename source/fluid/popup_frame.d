@@ -196,7 +196,7 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
     ///     True if the `PopupFrame` has no focus (in new I/O only), or was manually marked
     ///     for removal.
     override bool toRemove() const {
-        if (!toTakeFocus && usingFocusIO && !this.isFocused) {
+        if (!toTakeFocus && !this.isFocused) {
             return true;
         }
         return super.toRemove;
@@ -223,21 +223,12 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
     /// [previousFocus]. If no node was focused, [clears focus][FocusIO.clearFocus].
     @(FluidInputAction.cancel)
     void restorePreviousFocus() {
-
-        // Restore focus if possible
         if (previousFocusable) {
             previousFocusable.focus();
         }
-        else if (previousFocus) {
-            previousFocus.focus();
-        }
-
-        // Clear focus
-        else if (usingFocusIO) {
+        else {
             focusIO.clearFocus();
         }
-        else tree.focus = null;
-
     }
 
     /// Returns:
@@ -299,7 +290,7 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
         else super.resizeImpl(space);
 
         // Immediately switch focus to self
-        if (usingFocusIO && toTakeFocus) {
+        if (toTakeFocus) {
             previousFocusable = focusIO.currentFocus;
             focus();
             toTakeFocus = false;
@@ -309,24 +300,9 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
     alias toRemove = typeof(super).toRemove;
 
     protected override void drawImpl(Rectangle outer, Rectangle inner) {
-
-        // Clear directional focus data; give the popup a separate context
-        tree.focusDirection = FocusDirection(tree.focusDirection.lastFocusBox);
-
         auto action1 = this.startBranchAction(_findFocusBoxAction);
         auto action2 = this.startBranchAction(_markPopupButtonsAction);
         super.drawImpl(outer, inner);
-
-        // Forcibly register previous & next focus if missing
-        // The popup will register itself just after it gets drawn without this — and it'll be better if it doesn't
-        if (tree.focusDirection.previous is null) {
-            tree.focusDirection.previous = tree.focusDirection.last;
-        }
-
-        if (tree.focusDirection.next is null) {
-            tree.focusDirection.next = tree.focusDirection.first;
-        }
-
     }
 
     protected override bool actionImpl(IO io, int number, immutable InputActionID actionID,
@@ -371,21 +347,15 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
     }
 
     override inout(Focusable) currentFocus() inout {
-        if (usingFocusIO && !focusIO.isFocused(this)) {
+        if (!focusIO.isFocused(this)) {
             return null;
         }
         return _currentFocus;
     }
 
     override Focusable currentFocus(Focusable newValue) {
-        if (usingFocusIO) {
-            focusIO.currentFocus = this;
-        }
+        focusIO.currentFocus = this;
         return _currentFocus = newValue;
-    }
-
-    private bool usingFocusIO() const nothrow {
-        return focusIO && focusIO !is this;
     }
 
 }
