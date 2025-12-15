@@ -271,7 +271,7 @@ class NodeSlot(T : Node) : Node {
     }
 
     protected override void resizeImpl(Vector2 space) {
-        use(canvasIO);
+        require(canvasIO);
 
         minSize = Vector2();
 

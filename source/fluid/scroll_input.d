@@ -136,9 +136,8 @@ class ScrollInput : InputNode!Node {
 
     /// Set the total size of the scrollbar. Will always fill the available space in the target direction.
     override protected void resizeImpl(Vector2 space) {
-
         super.resizeImpl(space);
-        use(canvasIO);
+        require(canvasIO);
 
         // Get minSize
         minSize = isHorizontal
@@ -152,7 +151,6 @@ class ScrollInput : InputNode!Node {
 
         // Resize the handle
         resizeChild(handle, minSize);
-
     }
 
     override protected void drawImpl(Rectangle paddingBox, Rectangle contentBox) @trusted {
@@ -323,15 +321,13 @@ class ScrollInputHandle : Node, Hoverable {
     }
 
     override protected void resizeImpl(Vector2 space) {
-
-        use(hoverIO);
-        use(canvasIO);
+        require(hoverIO);
+        require(canvasIO);
 
         if (parent.isHorizontal)
             minSize = Vector2(minimumLength, parent.width);
         else
             minSize = Vector2(parent.width, minimumLength);
-
     }
 
     override protected void drawImpl(Rectangle paddingBox, Rectangle contentBox) @trusted {

@@ -64,8 +64,8 @@ abstract class InputNode(Parent : Node) : Parent, Focusable, Hoverable {
     override void resizeImpl(Vector2 space) {
         import std.traits : isAbstractFunction;
 
-        use(focusIO);
-        use(hoverIO);
+        require(focusIO);
+        require(hoverIO);
 
         static if (!isAbstractFunction!(typeof(super).resizeImpl)) {
             super.resizeImpl(space);
