@@ -251,11 +251,6 @@ unittest {
     auto popup = popupFrame(tracker);
     overlay.addPopup(popup, Rectangle(0, 0, 0, 0));
 
-    // TODO This focus call shouldn't be necessary;
-    //      focusRecurse currently requires FluidFocusable
-    root.draw();
-    tracker.focus();
-
     root.draw();
     assert(popup.isFocused);
     assert(tracker.isFocused);
