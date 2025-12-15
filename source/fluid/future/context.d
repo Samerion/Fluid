@@ -22,8 +22,6 @@ shared static this() {
         import fluid.test_space : testWrapper;
         createDefaultTreeWrapper = () => testWrapper();
     }
-    else static assert(false, "No default `TreeWrapper` is available. "
-        ~ "Please assign `createDefaultTreeWrapper`.");
 }
 
 struct TreeContext {
