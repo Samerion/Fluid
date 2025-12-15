@@ -38,7 +38,7 @@ class OnionFrame : Frame {
     protected override void resizeImpl(Vector2 available) {
         import std.algorithm : max;
 
-        use(canvasIO);
+        require(canvasIO);
         minSize = Vector2(0, 0);
 
         // Check each child

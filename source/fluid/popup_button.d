@@ -113,7 +113,7 @@ class PopupButton : ButtonImpl!Label {
     }
 
     override void resizeImpl(Vector2 space) {
-        use(overlayIO);
+        require(overlayIO);
         super.resizeImpl(space);
     }
 

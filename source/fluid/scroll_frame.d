@@ -51,8 +51,6 @@ alias hscrollFrame = simpleConstructor!(ScrollFrame, (a) {
 /// This node only supports scrolling in one axis.
 class ScrollFrame : Frame, FluidScrollable, HoverScrollable {
 
-    HoverIO hoverIO;
-
     public {
 
         /// Scrollbar node used by the frame. The scrollbar shows how far the frame has been
@@ -210,8 +208,6 @@ class ScrollFrame : Frame, FluidScrollable, HoverScrollable {
 
         assert(scrollBar !is null, "No scrollbar has been set for FluidScrollable");
         assert(tree !is null);
-
-        use(hoverIO);
 
         /// Padding represented as a vector. This sums the padding on each axis.
         const paddingVector = Vector2(style.padding.sideX[].sum, style.padding.sideY[].sum);

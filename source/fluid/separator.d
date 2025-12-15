@@ -53,10 +53,8 @@ class Separator : Node {
     }
 
     override void resizeImpl(Vector2) {
-
-        use(canvasIO);
+        require(canvasIO);
         minSize = Vector2(1, 1);
-
     }
 
     override void drawImpl(Rectangle outer, Rectangle inner) {

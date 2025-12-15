@@ -200,8 +200,8 @@ class DragSlot : NodeSlot!Node, Hoverable {
     }
 
     override void resizeImpl(Vector2 available) {
-        use(hoverIO);
-        use(overlayIO);
+        require(hoverIO);
+        require(overlayIO);
 
         // Resize the slot
         super.resizeImpl(available);
@@ -401,7 +401,7 @@ class DragHandle : Node {
     }
 
     override void resizeImpl(Vector2 available) {
-        use(canvasIO);
+        require(canvasIO);
         minSize = Vector2(width * 2, width);
     }
 

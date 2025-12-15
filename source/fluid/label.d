@@ -85,14 +85,9 @@ class Label : Node {
     }
 
     protected override void resizeImpl(Vector2 available) {
-        import std.math;
-
-        use(canvasIO);
-
+        require(canvasIO);
         text.resize(canvasIO, available, !isWrapDisabled);
         minSize = text.size;
-
-        assert(text.isMeasured);
     }
 
     protected override void drawImpl(Rectangle outer, Rectangle inner) {
