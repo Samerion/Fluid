@@ -236,8 +236,15 @@ interface Actionable {
     ///     isActive = Whether to start an active or "held" input action.
     /// Returns:
     ///     True if the node handled the action.
+    /// See_Also:
+    ///     [actionImpl] for the underlying, low-level call.
     final bool runInputAction(alias action)(bool isActive = true) {
         return actionImpl(null, 0, inputActionID!action, isActive);
+    }
+
+    /// ditto
+    final bool runInputAction(immutable InputActionID action, bool isActive) {
+        return actionImpl(null, 0, action, isActive);
     }
 
     /// Memory safe and `const` object comparison.
