@@ -275,19 +275,14 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
     protected override void resizeImpl(Vector2 space) {
 
         // Load FocusIO if available
-        if (auto focusIO = use(this.focusIO)) {
-
-            {
-                auto io = this.implementIO();
-                super.resizeImpl(space);
-            }
-
-            // The above resizeImpl call sets `focusIO` to `this`, it now needs to be restored
-            this.focusIO = focusIO;
+        auto focusIO = require(this.focusIO);
+        {
+            auto io = this.implementIO();
+            super.resizeImpl(space);
         }
 
-        // No FocusIO in use
-        else super.resizeImpl(space);
+        // The above resizeImpl call sets `focusIO` to `this`, it now needs to be restored
+        this.focusIO = focusIO;
 
         // Immediately switch focus to self
         if (toTakeFocus) {

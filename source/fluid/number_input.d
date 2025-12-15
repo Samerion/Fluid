@@ -296,18 +296,13 @@ class NumberInputSpinner : Node, Hoverable {
     }
 
     override void resizeImpl(Vector2) {
-
-        use(hoverIO);
-        use(canvasIO);
-
+        require(hoverIO);
+        require(canvasIO);
         minSize = Vector2();
 
         // Load image for the spinner from CanvasIO
-        if (canvasIO) {
-            spinnerImage = getImage(style);
-            load(canvasIO, spinnerImage);
-        }
-
+        spinnerImage = getImage(style);
+        load(canvasIO, spinnerImage);
     }
 
     protected override bool hoveredImpl(Rectangle rect, Vector2 mousePosition) {

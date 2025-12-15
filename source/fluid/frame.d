@@ -184,7 +184,7 @@ class Frame : Space, FluidDroppable {
     }
 
     protected override void resizeImpl(Vector2 availableSpace) {
-        use(canvasIO);
+        require(canvasIO);
         super.resizeImpl(availableSpace);
 
         // Hovered by a dragged node

@@ -7,3 +7,5 @@
 *.png
 *.ttf
 resources/*-alpha
+package.json
+package-lock.json

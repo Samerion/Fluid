@@ -371,7 +371,7 @@ class GridRow : Frame {
     }
 
     override void resizeImpl(Vector2 space) {
-        use(canvasIO);
+        require(canvasIO);
 
         // Reset the size
         minSize = Vector2();

@@ -975,15 +975,14 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
     }
 
     protected override void resizeImpl(Vector2 area) {
-
         import std.math : isNaN;
 
-        use(timeIO);
-        use(canvasIO);
-        use(focusIO);
-        use(hoverIO);
-        use(overlayIO);
-        use(clipboardIO);
+        require(timeIO);
+        require(canvasIO);
+        require(focusIO);
+        require(hoverIO);
+        require(overlayIO);
+        require(clipboardIO);
 
         // Initialize touch time
         if (timeIO && lastTouchTime == MonoTime.init) {
@@ -1020,7 +1019,6 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
         // Locate the cursor
         updateCaretPositionAndAnchor();
-
     }
 
     /// Update the caret position to match the caret index.
