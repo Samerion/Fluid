@@ -48,30 +48,26 @@ class SwitchSlot : Node {
 
     }
 
-    @property {
+    alias isHidden = typeof(super).isHidden;
 
-        alias isHidden = typeof(super).isHidden;
+    /// Returns:
+    ///     True if the slot is marked as [hidden][Node.isHidden], or if it chose
+    ///     `null` as a child among available candidates.
+    override bool isHidden() const return {
 
-        /// Returns:
-        ///     True if the slot is marked as [hidden][Node.isHidden], or if it chose
-        ///     `null` as a child among available candidates.
-        override bool isHidden() const return {
+        // Tree is available and resized
+        if (tree && !tree.resizePending) {
 
-            // Tree is available and resized
-            if (tree && !tree.resizePending) {
+            // Principal node is visible, hide self
+            if (principalNode && !principalNode.isHidden)
+                return true;
 
-                // Principal node is visible, hide self
-                if (principalNode && !principalNode.isHidden)
-                    return true;
-
-                // Hide if no node was chosen
-                return super.isHidden || node is null;
-
-            }
-
-            return super.isHidden;
+            // Hide if no node was chosen
+            return super.isHidden || node is null;
 
         }
+
+        return super.isHidden;
 
     }
 

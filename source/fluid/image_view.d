@@ -138,27 +138,23 @@ class ImageView : Node {
         clear();
     }
 
-    @property {
+    /// Change the image displayed by the `ImageView`.
+    Image texture(Image image) {
+        clear();
+        updateSize();
+        this.image = image;
 
-        /// Change the image displayed by the `ImageView`.
-        Image texture(Image image) {
-            clear();
-            updateSize();
-            this.image = image;
+        return image;
+    }
 
-            return image;
-        }
+    /// Load the texture from a filename.
+    string texture(string filename) @trusted {
+        import std.string : toStringz;
 
-        /// Load the texture from a filename.
-        string texture(string filename) @trusted {
-            import std.string : toStringz;
+        _texturePath = filename;
+        updateSize();
 
-            _texturePath = filename;
-            updateSize();
-
-            return filename;
-        }
-
+        return filename;
     }
 
     /// Remove any texture if attached.
@@ -169,7 +165,6 @@ class ImageView : Node {
 
     /// Returns:
     ///     The minimum size for this node.
-    @property
     ref inout(Vector2) minSize() inout {
         return super.minSize;
     }
@@ -177,7 +172,6 @@ class ImageView : Node {
     /// Returns:
     ///     Area on the screen the image was last drawn to.
     ///     Updated only when the node is drawn.
-    @property
     Rectangle targetArea() const {
         return _targetArea;
     }
