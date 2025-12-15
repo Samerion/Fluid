@@ -933,7 +933,6 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     /// Generate the textures, if not already generated.
     ///
     /// Params:
-    ///     chunks = Indices of chunks that need to be regenerated.
     ///     position = Position of the text; If given, only on-screen chunks will be generated.
     ///     canvasIO = Canvas I/O to get DPI and clip area from.
     void generate(CanvasIO canvasIO, Vector2 position)
@@ -954,7 +953,6 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
     }
 
-    /// ditto
     private void generateImpl(R)(CanvasIO canvasIO, R chunks) @trusted {
 
         // Empty, nothing to do
