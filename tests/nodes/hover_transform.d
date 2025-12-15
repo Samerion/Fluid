@@ -66,7 +66,7 @@ unittest {
     hover.draw();
 
     auto action = hover.point(56, 56).scroll(2, 3);
-    auto pointer = transform.fetch(action.pointer.id);
+    auto pointer = transform.fetchPointer(action.pointer.id);
     assert(pointer.id       == action.pointer.id);
     assert(pointer.position == Vector2(-94, -94));
     assert(pointer.scroll   == Vector2(  2,   3));
@@ -240,8 +240,8 @@ unittest {
 
     const outerPointerID = hover.armedPointerID(outerDevice.pointers[0].id);
     const innerPointerID = hover.armedPointerID(innerDevice.pointers[0].id);
-    auto outerPointer = hover.fetch(outerPointerID);
-    auto innerPointer = hover.fetch(innerPointerID);
+    auto outerPointer = hover.fetchPointer(outerPointerID);
+    auto innerPointer = hover.fetchPointer(innerPointerID);
 
     // `outerDevice`, just like in other tests, gets transformed and hits `tracker1`.
     assert(hover.hoverOf(outerPointer).opEquals(transform));

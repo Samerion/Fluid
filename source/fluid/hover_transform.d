@@ -297,8 +297,8 @@ class HoverTransform : NodeChain, HoverIO, Focusable, Hoverable, HoverScrollable
         return hoverIO.load(hostPointer);
     }
 
-    override inout(HoverPointer) fetch(int number) inout {
-        auto pointer = hoverIO.fetch(number);
+    override inout(HoverPointer) fetchPointer(int number) inout {
+        auto pointer = hoverIO.fetchPointer(number);
         return pointerToLocal(pointer);
     }
 

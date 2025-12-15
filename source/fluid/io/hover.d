@@ -80,7 +80,7 @@ interface HoverIO : IO {
     ///     number = Number assigned to the pointer by this I/O.
     /// Returns:
     ///     The pointer.
-    inout(HoverPointer) fetch(int number) inout;
+    inout(HoverPointer) fetchPointer(int number) inout;
 
     /// Read an input event from an input device. Input devices will call this function every
     /// frame if an input event (such as a button press) occurs. Moving a mouse does not qualify
@@ -329,7 +329,7 @@ struct HoverPointer {
 
         if (auto hoverIO = cast(HoverIO) io) {
             return typeof(return)(
-                hoverIO.fetch(number));
+                hoverIO.fetchPointer(number));
         }
 
         return typeof(return).init;
