@@ -10,7 +10,7 @@ abstract class BranchAction : TreeAction {
 
     private {
 
-        /// Balance is incremented when entering a node, and decremented when leaving. 
+        /// Balance is incremented when entering a node, and decremented when leaving.
         /// If the balance is negative, the action stops.
         int _balance;
 
@@ -26,9 +26,6 @@ abstract class BranchAction : TreeAction {
     final override void afterTree() {
         stop;
     }
-
-    /// ditto
-    final override void afterInput(ref bool) { }
 
     /// Branch action excludes the start node from results.
     /// Returns:
@@ -50,14 +47,14 @@ abstract class BranchAction : TreeAction {
         }
 
         return filter;
-        
+
 
     }
 
     /// Branch action excludes the start node from results.
     /// Returns:
     ///     True only if the node is a child of the `startNode`; always true if there isn't one set.
-    override bool filterAfterDraw(Node node) @trusted { 
+    override bool filterAfterDraw(Node node) @trusted {
 
         _balance--;
 

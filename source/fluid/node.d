@@ -584,10 +584,6 @@ abstract class Node {
             action.afterTreeImpl();
         }
 
-        foreach (action; filterActions) {
-            action.afterInput(tree.wasKeyboardHandled);
-        }
-
     }
 
     protected auto filterActions() {
