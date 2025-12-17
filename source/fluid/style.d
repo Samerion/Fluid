@@ -23,16 +23,6 @@ public import fluid.default_theme;
 
 @safe:
 
-// TODO temporary
-enum FluidMouseCursor {
-    pointer,
-    text,
-    resizeEW,
-    resizeNS,
-    resizeNESW,
-    resizeNWSE,
-}
-
 /// Contains the style for a node.
 struct Style {
 
@@ -681,5 +671,46 @@ unittest {
     assert(!rect2.isAbove(rect1));
     assert(!rect1.isBelow(rect2));
     assert(!rect2.isBelow(rect1));
+
+}
+
+alias FluidMouseCursor = Cursor;
+struct Cursor {
+
+    enum SystemCursors {
+
+        systemDefault,     // Default system cursor.
+        none,              // No pointer.
+        pointer,           // Pointer indicating a link or button, typically a pointing hand. 👆
+        crosshair,         // Cross cursor, often indicating selection inside images.
+        text,              // Vertical beam indicating selectable text.
+        allScroll,         // Omnidirectional scroll, content can be scrolled in any direction (panned).
+        resizeEW,          // Cursor indicating the content underneath can be resized horizontally.
+        resizeNS,          // Cursor indicating the content underneath can be resized vertically.
+        resizeNESW,        // Diagonal resize cursor, top-right + bottom-left.
+        resizeNWSE,        // Diagonal resize cursor, top-left + bottom-right.
+        notAllowed,        // Indicates a forbidden action.
+
+    }
+
+    enum {
+
+        systemDefault = FluidMouseCursor(SystemCursors.systemDefault),
+        none          = FluidMouseCursor(SystemCursors.none),
+        pointer       = FluidMouseCursor(SystemCursors.pointer),
+        crosshair     = FluidMouseCursor(SystemCursors.crosshair),
+        text          = FluidMouseCursor(SystemCursors.text),
+        allScroll     = FluidMouseCursor(SystemCursors.allScroll),
+        resizeEW      = FluidMouseCursor(SystemCursors.resizeEW),
+        resizeNS      = FluidMouseCursor(SystemCursors.resizeNS),
+        resizeNESW    = FluidMouseCursor(SystemCursors.resizeNESW),
+        resizeNWSE    = FluidMouseCursor(SystemCursors.resizeNWSE),
+        notAllowed    = FluidMouseCursor(SystemCursors.notAllowed),
+
+    }
+
+    /// Use a system-provided cursor.
+    SystemCursors system;
+    // TODO user-provided cursor image
 
 }
