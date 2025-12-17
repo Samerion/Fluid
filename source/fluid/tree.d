@@ -272,17 +272,6 @@ abstract class TreeAction : Publisher!() {
 
     }
 
-    /// Hook that triggers after processing input. Useful if post-processing is necessary to, perhaps, implement
-    /// fallback input.
-    ///
-    /// Warning: This will **not trigger** unless `afterTree` is overrided not to stop the action. If you make use of
-    /// this, make sure to make the action stop in this method.
-    ///
-    /// Params:
-    ///     keyboardHandled = If true, keyboard input was handled. Passed by reference, so if you react to input, change
-    ///         this to true.
-    void afterInput(ref bool keyboardHandled) { }
-
 }
 
 /// Global data for the layout tree.
