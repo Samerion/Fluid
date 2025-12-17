@@ -274,11 +274,11 @@ unittest {
 
             // Hover over the target
             .then((a) {
-                a.press(false);  // Wait 1 more frame to trigger `afterKeyboard`
-                root.draw();     // TODO fix this in 0.8.0
+                a.press(false);
+                root.draw();
+                a.press(false);
 
                 // Control sample
-                a.press(false);
                 if (index == 0) {
                     root.drawAndAssert(
                         dummies[0].isDrawn().at(0, 0),
@@ -308,8 +308,8 @@ unittest {
 
             // Drop it
             .then((a) {
-                a.press(true);
-                root.draw();
+                root.draw();  // _readyToDrop = true
+                root.draw();  // drop()
 
                 if (index == 0) {
                     root.drawAndAssert(
