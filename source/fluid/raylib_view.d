@@ -38,6 +38,7 @@ import std.string;
 import fluid.node;
 import fluid.utils;
 import fluid.types;
+import fluid.style : Cursor;
 import fluid.node_chain;
 
 import fluid.future.arena;
@@ -301,26 +302,24 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
         hoverIO.loadTo(_mousePointer);
 
         // Set cursor icon
-        version (none) {
-            if (auto node = cast(Node) hoverIO.hoverOf(_mousePointer)) {
+        if (auto node = cast(Node) hoverIO.hoverOf(_mousePointer)) {
 
-                const cursor = node.pickStyle().mouseCursor;
+            const cursor = node.pickStyle().mouseCursor;
 
-                // Hide the cursor if requested
-                if (cursor.system == cursor.system.none) {
-                    HideCursor();
-                }
-                // Show the cursor
-                else {
-                    SetMouseCursor(cursor.system.toRaylib);
-                    ShowCursor();
-                }
-
+            // Hide the cursor if requested
+            if (cursor.system == cursor.system.none) {
+                HideCursor();
             }
+            // Show the cursor
             else {
-                SetMouseCursor(FluidMouseCursor.systemDefault.system.toRaylib);
+                SetMouseCursor(cursor.system.toRaylib);
                 ShowCursor();
             }
+
+        }
+        else {
+            SetMouseCursor(Cursor.systemDefault.system.toRaylib);
+            ShowCursor();
         }
 
         // Send buttons
@@ -1121,3 +1120,34 @@ raylib.PixelFormat toRaylib(fluid.Image.Format imageFormat) nothrow {
             return PixelFormat.PIXELFORMAT_UNCOMPRESSED_GRAYSCALE;
     }
 }
+
+/// Get the Raylib enum for a mouse cursor.
+raylib.MouseCursor toRaylib(Cursor.SystemCursors cursor) {
+    with (raylib.MouseCursor)
+    with (Cursor.SystemCursors)
+    switch (cursor) {
+        default:
+        case none:
+        case systemDefault:
+            return MOUSE_CURSOR_DEFAULT;
+        case pointer:
+            return MOUSE_CURSOR_POINTING_HAND;
+        case crosshair:
+            return MOUSE_CURSOR_CROSSHAIR;
+        case text:
+            return MOUSE_CURSOR_IBEAM;
+        case allScroll:
+            return MOUSE_CURSOR_RESIZE_ALL;
+        case resizeEW:
+            return MOUSE_CURSOR_RESIZE_EW;
+        case resizeNS:
+            return MOUSE_CURSOR_RESIZE_NS;
+        case resizeNESW:
+            return MOUSE_CURSOR_RESIZE_NESW;
+        case resizeNWSE:
+            return MOUSE_CURSOR_RESIZE_NWSE;
+        case notAllowed:
+            return MOUSE_CURSOR_NOT_ALLOWED;
+    }
+}
+
