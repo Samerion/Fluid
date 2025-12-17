@@ -509,14 +509,6 @@ class DragAction : TreeAction {
         if (slot.overlayIO is null) {
             drawSlot(slot.tree.root);
         }
-    }
-
-    private void drawSlot(Node parent) {
-        const rect = slot.dragRectangle(offset);
-        slot.drawDragged(parent, rect);
-    }
-
-    override void afterInput(ref bool focusHandled) {
 
         // We should have received a signal from the slot if it is still being dragged
         if (!_stopDragging) {
@@ -550,7 +542,11 @@ class DragAction : TreeAction {
         slot.overlay.remove();
         slot.updateSize();
         stop;
+    }
 
+    private void drawSlot(Node parent) {
+        const rect = slot.dragRectangle(offset);
+        slot.drawDragged(parent, rect);
     }
 
 }
