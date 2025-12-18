@@ -854,6 +854,41 @@ class RaylibStack(RaylibViewVersion raylibVersion) : Node, TreeWrapper {
         drawAsRoot();
     }
 
+    override void runTree(TreeContext context, Node root) @trusted {
+        import std.algorithm : max;
+
+        SetConfigFlags(ConfigFlags.FLAG_WINDOW_RESIZABLE | ConfigFlags.FLAG_WINDOW_HIDDEN);
+        SetTraceLogLevel(TraceLogLevel.LOG_WARNING);
+        InitWindow(800, 600, "Fluid app");
+        SetTargetFPS(60);
+        scope (exit) CloseWindow();
+
+        void draw() {
+            BeginDrawing();
+            ClearBackground(color("fff"));
+            drawTree(context, root);
+            EndDrawing();
+        }
+
+        // Probe the node for information
+        draw();
+
+        // Set window size
+        auto min = root.getMinSize;
+        int minX = cast(int) min.x;
+        int minY = cast(int) min.y;
+        SetWindowMinSize(minX, minY);
+        SetWindowSize(minX, minY);
+
+        // Now draw
+        ClearWindowState(ConfigFlags.FLAG_WINDOW_HIDDEN);
+
+        // Event loop
+        while (!WindowShouldClose) {
+            draw();
+        }
+    }
+
     override void resizeImpl(Vector2 space) {
         resizeChild(root, space);
         minSize = root.minSize;
