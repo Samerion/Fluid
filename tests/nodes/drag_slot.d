@@ -194,6 +194,7 @@ unittest {
         overlay.drawsChild(slot.overlay),
         slot.isDrawn,
     );
+    slot.drag(action.pointer);
     root.drawAndAssertFailure(
         overlay.drawsChild(slot),
     );
