@@ -481,6 +481,9 @@ interface TreeWrapper {
     /// given node, then detach again. Typically, the Wrapper does this by supplying its own stack
     /// of nodes, and wrapping the given node as a child.
     ///
+    /// Some systems may not support pausing the event loop. The backends should point the
+    /// programmer to [run][fluid.node.run]; the behavior of `drawTree` in that case is undefined.
+    ///
     /// Params:
     ///     context = Active tree context.
     ///         The wrapper should assign this context to any node it draws, through
@@ -504,6 +507,60 @@ interface TreeWrapper {
                 chain.next = root;
                 chain.prepare(context);
                 chain.drawAsRoot();
+            }
+
+            void runTree(TreeContext context, Node) { }
+
+        }
+    }
+
+    /// Start an event loop and start the user interface. This function is ran if
+    /// [run][fluid.node.run] is called.
+    ///
+    /// The implementation of this function is entirely up to the wrapper. While [drawTree]
+    /// is meant to process and draw a single frame, `runTree` should handle the whole event
+    /// loop until finished. The programmer calling `run` should not be required to perform
+    /// any additional configuration.
+    ///
+    /// Params:
+    ///     context = Active tree context.
+    ///         The wrapper should assign this context to any node it draws, through
+    ///         [Node.prepare].
+    ///     root = Root node of the tree for the wrapper to draw.
+    void runTree(TreeContext context, Node root);
+
+    /// The wrapper should operate under assumptions of the system it is running on. For example,
+    /// on a desktop system, that would typically mean opening a window and handling all events
+    /// until it is manually closed by the user.
+    @("run example")
+    unittest {
+        import fluid;
+
+        void main() {
+            // Opens a window with text "Hello, World!" on it
+            run(
+                label("Hello, World!"),
+            );
+            // Closes when the user closes the window
+        }
+    }
+
+    ///
+    @("runTree implementation example")
+    unittest {
+        import fluid.hover_chain;
+
+        class MyWrapper : TreeWrapper {
+            bool shouldQuit;
+
+            void drawTree(TreeContext context, Node root) {
+                root.drawAsRoot();
+            }
+
+            void runTree(TreeContext context, Node root) {
+                while (!shouldQuit) {
+                    drawTree(context, root);
+                }
             }
 
         }
