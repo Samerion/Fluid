@@ -62,6 +62,13 @@ struct TreeContext {
         }
     }
 
+    /// ditto
+    void prepare(TreeWrapper wrapper) {
+        if (ptr is null) {
+            ptr = new TreeContextData(wrapper);
+        }
+    }
+
     bool opCast(T : bool)() const {
         return ptr !is null;
     }
