@@ -303,21 +303,32 @@ class TestSpace : Space, CanvasIO, DebugSignalIO {
     }
 
     /// Draw a single frame and test if the asserts can be fulfilled.
-    void drawAndAssert(Assert[] asserts...) {
+    void drawAndAssert(Ts...)(Ts asserts, string filename = __FILE__, size_t line = __LINE__) {
+        drawAndAssert([asserts], filename, line);
+    }
 
-        _probe.asserts = asserts.dup;
+    /// ditto
+    void drawAndAssert(Assert[] asserts, string filename = __FILE__, size_t line = __LINE__) {
+        _probe.asserts = asserts;
         queueAction(_probe);
         draw();
-
+        _probe.check(filename, line);
     }
 
     /// Draw a single frame and make sure the asserts are NOT fulfilled.
-    void drawAndAssertFailure(Assert[] asserts...) @trusted {
+    void drawAndAssertFailure(Ts...)(Ts asserts, string filename = __FILE__,
+        size_t line = __LINE__)
+    do {
+        drawAndAssertFailure([asserts], filename, line);
+    }
 
+    /// ditto
+    void drawAndAssertFailure(Assert[] asserts, string filename = __FILE__,
+        size_t line = __LINE__) @trusted
+    do {
         assertThrown!AssertError(
-            drawAndAssert(asserts)
+            drawAndAssert(asserts, filename, line)
         );
-
     }
 
 }
@@ -477,13 +488,16 @@ private class TestProbe : TreeAction {
 
     }
 
-    override void stopped() {
+    private void check(string filename, size_t line) {
 
         if (allowFailure) return;
 
         // Make sure the asserts pass
-        assert(this.asserts.empty, format!"Assert[%s] failure: %s"(
-            assertsPassed, this.asserts.front.toString));
+        if (!this.asserts.empty) {
+            const message = format!"Assert[%s] failure: %s"(
+                assertsPassed, this.asserts.front.toString);
+            throw new AssertError(message, filename, line);
+        }
 
     }
 
