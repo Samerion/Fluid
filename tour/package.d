@@ -170,36 +170,18 @@ enum Tags {
 /// The entrypoint prepares themes and the window.
 void main(string[] args) {
 
-    import raylib;
-
-    // Prepare the window
-    SetConfigFlags(ConfigFlags.FLAG_WINDOW_RESIZABLE);
-    SetTraceLogLevel(TraceLogLevel.LOG_WARNING);
-    InitWindow(1000, 750, "Fluid tour");
-    SetTargetFPS(60);
-    SetExitKey(0);
-    scope (exit) CloseWindow();
-
     // Create the UI — pass the first argument to load a chapter under the given name
     auto ui = args.length > 1
         ? createUI(args[1])
         : createUI();
     auto root = ui;
 
-    // Event loop
-    while (!WindowShouldClose) {
+    root.nextFrame.then(() @trusted {
+        import raylib;
+        SetWindowTitle("Fluid Tour");
+    });
 
-        BeginDrawing();
-        scope (exit) EndDrawing();
-
-        ClearBackground(color!"fff");
-
-        // Fluid is by default configured to work with Raylib, so all you need to make them work together is a single
-        // call
-        root.draw();
-
-    }
-
+    run(root);
 }
 
 Space createUI(string initialChapter = null) @safe {

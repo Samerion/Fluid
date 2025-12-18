@@ -1212,12 +1212,38 @@ abstract class Node {
 ///     node = This node will serve as the root of your user interface until closed. If you wish to change it at
 ///         runtime, wrap it in a `NodeSlot`.
 void run(Node node) {
+    auto wrapper = createDefaultTreeWrapper();
+    run(wrapper, node);
+}
+
+void run(TreeWrapper wrapper, Node node) {
+    TreeContext context;
+    context.prepare(wrapper);
+    run(context, node);
+}
+
+void run(TreeContext context, Node node) {
     if (mockRun) {
         mockRun()(node);
         return;
     }
 
-    // NOOP TODO
+    assert(context.wrapper !is null,
+        "No wrapper is available for run() to use (null). "
+        ~ "Please verify your Fluid configuration:\n"
+        ~ "\n"
+        ~ " 1. Did you compile Fluid with DUB? The Raylib wrapper should be packaged\n"
+        ~ "    by default.\n"
+        ~ " 2. If so, try command:\n"
+        ~ "    \n"
+        ~ "    dub add raylib-d\n"
+        ~ "    \n"
+        ~ "    to add the wrapper manually.\n"
+        ~ " 3. If something different than Raylib, refer to the documentation of\n"
+        ~ "    the respective package.\n"
+        ~ " 4. Finally, if you're tinkering with Fluid yourself, check if the wrapper\n"
+        ~ "    you've created is not null.");
+    context.wrapper.runTree(context, node);
 }
 
 alias RunCallback = void delegate(Node node) @safe;
