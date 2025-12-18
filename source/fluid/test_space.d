@@ -375,6 +375,10 @@ class TestWrapper : TreeWrapper {
         _root.drawAsRoot(viewport);
     }
 
+    override void runTree(TreeContext context, Node start) {
+        drawTree(context, start);
+    }
+
 }
 
 private class TestProbe : TreeAction {
