@@ -108,7 +108,7 @@
       "version": "~>5"
     }
   },
-  "description": "A straightforward and easy to use GUI library.",
+  "description": "Flexible, declarative library for graphical user interfaces (GUI, UI)",
   "excludedSourceFiles": [
     "source/fluid/module_view.d"
   ],
