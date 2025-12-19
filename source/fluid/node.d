@@ -553,7 +553,7 @@ abstract class Node {
         // No tree set, create one
         if (tree is null) {
 
-            tree = new LayoutTree(this);
+            tree = new LayoutTree;
             _treeContext.prepare();
 
         }

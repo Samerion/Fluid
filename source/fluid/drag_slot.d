@@ -481,15 +481,6 @@ class DragAction : TreeAction {
         target = null;
     }
 
-    override void beforeResize(Node node, Vector2 space) {
-
-        // Resize only if OverlayIO is not in use
-        if (slot.overlayIO is null && node is node.tree.root) {
-            slot.resizeInternal(node, space);
-        }
-
-    }
-
     override void beforeDraw(Node node, Rectangle rectangle, Rectangle outer, Rectangle inner) {
         auto droppable = cast(FluidDroppable) node;
 
@@ -506,9 +497,6 @@ class DragAction : TreeAction {
     }
 
     override void afterTree() {
-        if (slot.overlayIO is null) {
-            drawSlot(slot.tree.root);
-        }
 
         // We should have received a signal from the slot if it is still being dragged
         if (!_stopDragging) {
