@@ -261,8 +261,6 @@ class DragSlot : NodeSlot!Node, Hoverable {
         return false;
     }
 
-    alias opEquals = typeof(super).opEquals;
-
     override bool opEquals(const Object other) const {
         return super.opEquals(other);
     }
@@ -313,8 +311,6 @@ class DragSlotOverlay : Node, Overlayable {
         else return Rectangle.init;
 
     }
-
-    alias opEquals = typeof(super).opEquals;
 
     override bool opEquals(const Object other) const {
         return super.opEquals(other);
