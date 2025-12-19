@@ -15,7 +15,7 @@ import fluid.io.canvas;
 
 
 ///
-alias slider(T) = simpleConstructor!(Slider!T);
+alias slider(T) = nodeBuilder!(Slider!T);
 
 /// ditto
 class Slider(T) : AbstractSlider {
@@ -124,7 +124,7 @@ abstract class AbstractSlider : InputNode!Node {
 
     this() {
 
-        alias sliderHandle = simpleConstructor!SliderHandle;
+        alias sliderHandle = nodeBuilder!SliderHandle;
 
         this.handle = sliderHandle();
 

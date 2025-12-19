@@ -91,10 +91,10 @@ import fluid.children;
 
 /// A [node builder][fluid.utils.nodeBuilder] that creates a vertical (`vspace`) or horizontal
 /// Space (`hspace`).
-alias vspace = simpleConstructor!Space;
+alias vspace = nodeBuilder!Space;
 
 /// ditto
-alias hspace = simpleConstructor!(Space, (a) {
+alias hspace = nodeBuilder!(Space, (a) {
     a.directionHorizontal = true;
 });
 

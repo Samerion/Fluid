@@ -188,7 +188,7 @@ unittest {
 
     }
 
-    alias square = simpleConstructor!Square;
+    alias square = nodeBuilder!Square;
 
     auto colors = [
         color("7ff0a5"),

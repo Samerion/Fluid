@@ -16,14 +16,14 @@ import fluid.text_input;
 import fluid.io.hover;
 import fluid.io.canvas;
 
-alias numberInput(T) = simpleConstructor!(NumberInput!T);
-alias intInput = simpleConstructor!IntInput;
-alias floatInput = simpleConstructor!FloatInput;
+alias numberInput(T) = nodeBuilder!(NumberInput!T);
+alias intInput = nodeBuilder!IntInput;
+alias floatInput = nodeBuilder!FloatInput;
 
 alias IntInput = NumberInput!int;
 alias FloatInput = NumberInput!float;
 
-alias numberInputSpinner = simpleConstructor!NumberInputSpinner;
+alias numberInputSpinner = nodeBuilder!NumberInputSpinner;
 
 
 @safe:

@@ -13,9 +13,10 @@ import fluid.types;
 
 /// Check if the given type implements node parameter interface.
 ///
-/// Node parameters passed at the beginning of a simpleConstructor will not be passed to the node constructor. Instead,
-/// their `apply` function will be called on the node after the node has been created. This can be used to initialize
-/// properties at the time of creation. A basic implementation of the interface looks as follows:
+/// Node parameters passed at the beginning of a [nodeBuilder][fluid.utils.nodeBuilder] will not
+/// be passed to the node constructor. Instead, their `apply` function will be called on the node
+/// after the node has been created. This can be used to initialize properties at the time of
+/// creation. A basic implementation of the interface looks as follows:
 ///
 /// ---
 /// struct MyParameter {
