@@ -55,11 +55,6 @@ struct NodeBuilder(T, alias fun = "a") {
 
     alias Type = T;
 
-    deprecated("`NodeBuilder.initializer` is affected by a codegen bug in DMD, "
-        ~ "and has been replaced with `initialize`. "
-        ~ "Please update your code before Fluid 0.8.0")
-    alias initializer = unaryFun!fun;
-
     void initialize(T node) {
         unaryFun!fun(node);
     }
