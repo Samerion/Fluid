@@ -89,8 +89,6 @@ class HoverTracker : Node, Hoverable {
         return hoverIO.isHovered(this);
     }
 
-    alias opEquals = typeof(super).opEquals;
-
     override bool opEquals(const Object other) const {
         return super.opEquals(other);
     }
@@ -122,8 +120,6 @@ class ScrollTracker : Frame, HoverScrollable {
     this(Node[] nodes...) {
         super(nodes);
     }
-
-    alias opEquals = Frame.opEquals;
 
     override bool opEquals(const Object other) const {
         return super.opEquals(other);

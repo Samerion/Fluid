@@ -43,8 +43,6 @@ class SampleOverlay : Node, Overlayable {
         canvasIO.drawRectangle(inner, color("#000"));
     }
 
-    alias opEquals = typeof(super).opEquals;
-
     override bool opEquals(const Object object) const {
         return super.opEquals(object);
     }

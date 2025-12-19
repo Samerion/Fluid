@@ -363,7 +363,6 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     }
 
-    alias opEquals = Node.opEquals;
     override bool opEquals(const Object other) const {
         return super.opEquals(other);
     }

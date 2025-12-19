@@ -68,7 +68,6 @@ class MyScrollable : Frame, HoverScrollable {
         super(nodes);
     }
 
-    alias opEquals = Space.opEquals;
     override bool opEquals(const Object other) const {
         return super.opEquals(other);
     }
