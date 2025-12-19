@@ -366,6 +366,7 @@ unittest {
 }
 
 @("Tint can be locked to prevent changes")
+deprecated
 unittest {
 
     import fluid.frame;

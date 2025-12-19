@@ -150,23 +150,27 @@ struct TreeContextData {
         }
     }
 
-    /// Lock tint in place, preventing it from changing, or cancel a lock, making changes possible again.
-    ///
-    /// This function is needed for compatibility with the legacy `FluidBackend` system.
-    /// Locks can be stacked, so if `lockTint()` is called twice, `unlockTint()` also has to be called twice
-    /// to unlock tinting.
-    ///
-    /// It is expected that this function will be deprecated as soon as `FluidBackend` is no longer a part
-    /// of Fluid. It will then be deleted in the next minor release.
-    void lockTint() {
-        _lockTint++;
-    }
+    deprecated("`lockTint` is no longer supported, and will be removed in Fluid 0.8.1.") {
 
-    /// ditto
-    void unlockTint() {
-        if (_lockTint > 0) {
-            _lockTint--;
+        /// Lock tint in place, preventing it from changing, or cancel a lock, making changes possible again.
+        ///
+        /// This function is needed for compatibility with the legacy `FluidBackend` system.
+        /// Locks can be stacked, so if `lockTint()` is called twice, `unlockTint()` also has to be called twice
+        /// to unlock tinting.
+        ///
+        /// It is expected that this function will be deprecated as soon as `FluidBackend` is no longer a part
+        /// of Fluid. It will then be deleted in the next minor release.
+        void lockTint() {
+            _lockTint++;
         }
+
+        /// ditto
+        void unlockTint() {
+            if (_lockTint > 0) {
+                _lockTint--;
+            }
+        }
+
     }
 
 }
