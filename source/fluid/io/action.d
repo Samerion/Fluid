@@ -20,13 +20,13 @@ public import fluid.input;
 /// must be placed inside as a child will react to these actions. Similarly, nodes representing
 /// input devices, also have to be placed as children.
 ///
-/// `ActionIOv2` is currently recommended for new code, but more small updates are also expected
-/// in short-term future.
+/// `ActionIOv2` is currently recommended for new code.
 ///
 /// History:
+///     * Fluid 0.8.0 dropped `ActionIOv1`.
 ///     * [ActionIOv2] was added in Fluid 0.7.6 — it adds an [IO] parameter to [emitAction].
 ///     * `ActionIO` was introduced in Fluid 0.7.2.
-interface ActionIOv1 : IO {
+interface ActionIOv2 : IO {
 
     /// Basic input actions necessary for input actions to work.
     @InputAction
@@ -108,35 +108,6 @@ interface ActionIOv1 : IO {
     ///
     /// Params:
     ///     event    = Input event the system should save.
-    ///     number   = A number that will be passed as-is into the callback. Can be used to
-    ///         distinguish between different action calls without allocating a closure.
-    ///     callback = Function to call if the event has triggered an input action. The ID of the
-    ///         action will be passed as an argument, along with a boolean indicating if it was
-    ///         triggered by an inactive, or active event. The number passed into the `emitEvent`
-    ///         function will be passed as the third argument to this callback. The return value
-    ///         of the callback should indicate if the action was handled or not.
-    void emitEvent(InputEvent event, int number, ActionCallback callback);
-
-}
-
-///
-interface ActionIO : ActionIOv1 {
-
-    deprecated("Superseded by `ActionIOv2.emitEvent`. The original overload, and `ActionIOv1`, "
-        ~ "will be removed in Fluid 0.8.0. To preserve backwards-compatibility, use "
-        ~ "`Node.use(actionIOv1).upgrade(actionIOv2)`.")
-    alias emitEvent = ActionIOv1.emitEvent;
-
-}
-
-/// An updated version of `ActionIO` that allows the event to be hijacked by an intermediate
-/// `ActionIO` for introspection. This interface can be used to implement, for example, a fallback
-/// handler for all input actions.
-interface ActionIOv2 : ActionIO {
-
-    /// An alternative overload for `ActionIO`, which accepts an `io` parameter.
-    /// Params:
-    ///     event    = Input event the system should save.
     ///     io       = I/O system that emitted the event. May be null.
     ///     number   = A number that will be passed as-is into the callback. Can be used to
     ///         distinguish between different action calls without allocating a closure.
@@ -148,6 +119,8 @@ interface ActionIOv2 : ActionIO {
     void emitEvent(InputEvent event, IO io, int number, ActionCallback callback);
 
 }
+
+alias ActionIO = ActionIOv2;
 
 /// Uniquely codes a pressed key, button or a gesture, by using an I/O ID and event code map.
 /// Each I/O interface can define its own keys and buttons it needs to map. The way it maps

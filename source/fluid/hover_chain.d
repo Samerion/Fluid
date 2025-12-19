@@ -32,8 +32,7 @@ class HoverChain : NodeChain, ActionHoverIO {
 
     mixin controlIO;
 
-    ActionIOv1 actionIO;
-    ActionIOv2 actionIOv2;
+    ActionIO actionIO;
     FocusIO focusIO;
 
     private {
@@ -224,11 +223,8 @@ class HoverChain : NodeChain, ActionHoverIO {
         _pointers[id].isHeld = true;
 
         // Emit the event
-        if (actionIOv2) {
-            actionIOv2.emitEvent(event, this, id, &runInputAction);
-        }
-        else if (actionIO) {
-            actionIO.emitEvent(event, id, &runInputAction);
+        if (actionIO) {
+            actionIO.emitEvent(event, this, id, &runInputAction);
         }
 
     }
@@ -290,7 +286,7 @@ class HoverChain : NodeChain, ActionHoverIO {
     }
 
     override void beforeResize(Vector2) {
-        use(actionIO).upgrade(actionIOv2);
+        use(actionIO);
         use(focusIO);
         _pointers.startCycle();
         startIO();
@@ -365,11 +361,8 @@ class HoverChain : NodeChain, ActionHoverIO {
             resource.isHandled = false;
 
             // Send a frame event to trigger hoverImpl
-            if (actionIOv2) {
-                actionIOv2.emitEvent(ActionIO.frameEvent, this, armedID, &runInputAction);
-            }
-            else if (actionIO) {
-                actionIO.emitEvent(ActionIO.frameEvent, armedID, &runInputAction);
+            if (actionIO) {
+                actionIO.emitEvent(ActionIO.frameEvent, this, armedID, &runInputAction);
             }
             else if (auto hoverable = resource.heldNode.castIfAcceptsInput!Hoverable) {
                 resource.isHandled = hoverable.hoverImpl(pointer);

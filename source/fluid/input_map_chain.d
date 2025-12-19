@@ -64,18 +64,8 @@ class InputMapChain : NodeChain, ActionIOv2 {
 
     }
 
-    override void emitEvent(InputEvent event, int number, ActionCallback callback) {
-
-        // Save the event to list
-        _events ~= ReceivedInputEvent(event, number, callback);
-
-    }
-
     override void emitEvent(InputEvent event, IO io, int number, ActionCallback callback) {
-
-        // Save the event to list
-        emitEvent(event, number, callback);
-
+        _events ~= ReceivedInputEvent(event, number, callback);
     }
 
     /// Find the given event type among ones that were emitted this frame.
