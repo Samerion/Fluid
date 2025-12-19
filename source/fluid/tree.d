@@ -282,9 +282,6 @@ struct LayoutTree {
     /// Miscelleanous, technical properties.
     public {
 
-        /// Current node drawing depth.
-        uint depth;
-
         /// Current rectangle drawing is limited to.
         Rectangle scissors;
 
