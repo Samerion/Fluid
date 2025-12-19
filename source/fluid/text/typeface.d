@@ -65,13 +65,6 @@ interface Typeface {
     /// Instances of Typeface have to be comparable in a memory-safe manner.
     bool opEquals(const Object object) @safe const;
 
-    /// Get the default Fluid typeface.
-    deprecated("Use Style.defaultTypeface instead. Typeface.defaultTypeface will be removed in 0.9.0.")
-    static defaultTypeface() {
-        import fluid.text.freetype;
-        return FreetypeTypeface.defaultTypeface;
-    }
-
     /// Measure space the given text would span. Uses dots as the unit.
     ///
     /// If `availableSpace` is specified, assumes text wrapping. Text wrapping is only performed on whitespace
