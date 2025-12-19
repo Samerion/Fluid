@@ -33,27 +33,6 @@ class StartAndStopAction : TreeAction {
 
 }
 
-@("Node.queueAction() will fire start and stop hooks")
-unittest {
-
-    auto root = vspace();
-    auto action = new StartAndStopAction;
-    root.queueAction(action);
-
-    root.draw();
-    assert(action.starts == 1);
-    assert(action.stops == 1);
-    assert(action.iterations == 1);
-
-    action.continueAfter = true;    
-    root.queueAction(action);
-    root.draw();
-    assert(action.starts == 2);
-    assert(action.stops == 1);
-    assert(action.iterations == 2);
-
-}
-
 @("Node.startAction() will fire start and stop hooks")
 unittest {
 
@@ -66,7 +45,7 @@ unittest {
     assert(action.stops == 1);
     assert(action.iterations == 1);
 
-    action.continueAfter = true;    
+    action.continueAfter = true;
     root.startAction(action);
     root.draw();
     assert(action.starts == 2);

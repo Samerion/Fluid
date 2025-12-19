@@ -279,8 +279,7 @@ class Frame : Space, FluidDroppable {
     ///
     ///     No node can be dropped into a frame that is disabled.
     bool canDrop(Node node) {
-        return dropSelector.test(node)
-            && !isDisabledInherited;
+        return dropSelector.test(node);
     }
 
     void dropHover(Vector2 position, Rectangle rectangle) {

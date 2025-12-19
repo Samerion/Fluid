@@ -138,7 +138,7 @@ class DragSlot : NodeSlot!Node, Hoverable {
     ///     pointer = (New I/O only) Pointer performing the drag motion.
     @(FluidInputAction.press, .WhileDown)
     void drag(HoverPointer pointer)
-    in (tree)
+    in (treeContext)
     do {
 
         // Ignore if already dragging
@@ -150,16 +150,9 @@ class DragSlot : NodeSlot!Node, Hoverable {
         // Queue the drag action
         else {
             dragAction = new DragAction(this, pointer.position);
-            if (overlayIO) {
-                overlayIO.addOverlay(overlay, OverlayIO.types.draggable);
-            }
-            if (hoverIO) {
-                auto hover = cast(Node) hoverIO;
-                hover.startAction(dragAction);
-            }
-            else {
-                tree.queueAction(dragAction);
-            }
+            overlayIO.addOverlay(overlay, OverlayIO.types.draggable);
+            auto hover = cast(Node) hoverIO;
+            hover.startAction(dragAction);
             updateSize();
         }
 
@@ -182,7 +175,7 @@ class DragSlot : NodeSlot!Node, Hoverable {
     }
 
     override bool blocksInput() const {
-        return isDisabled || isDisabledInherited;
+        return isDisabled;
     }
 
     private Rectangle dragRectangle(Vector2 offset) const nothrow {
@@ -249,15 +242,8 @@ class DragSlot : NodeSlot!Node, Hoverable {
             valueRect.h -= handleWidth + style.gap.sideY;
         }
 
-        // Disable the children while dragging
-        const disable = _drawDragged && !tree.isBranchDisabled;
-
-        if (disable) tree.isBranchDisabled = true;
-
         // Draw the value
         super.drawImpl(outer, valueRect);
-
-        if (disable) tree.isBranchDisabled = false;
 
         // Draw the handle
         drawChild(handle, handleRect);
@@ -481,15 +467,6 @@ class DragAction : TreeAction {
         target = null;
     }
 
-    override void beforeResize(Node node, Vector2 space) {
-
-        // Resize only if OverlayIO is not in use
-        if (slot.overlayIO is null && node is node.tree.root) {
-            slot.resizeInternal(node, space);
-        }
-
-    }
-
     override void beforeDraw(Node node, Rectangle rectangle, Rectangle outer, Rectangle inner) {
         auto droppable = cast(FluidDroppable) node;
 
@@ -506,9 +483,6 @@ class DragAction : TreeAction {
     }
 
     override void afterTree() {
-        if (slot.overlayIO is null) {
-            drawSlot(slot.tree.root);
-        }
 
         // We should have received a signal from the slot if it is still being dragged
         if (!_stopDragging) {
