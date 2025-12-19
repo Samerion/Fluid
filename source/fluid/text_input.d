@@ -16,10 +16,10 @@ import fluid.input;
 import fluid.label;
 import fluid.style;
 import fluid.utils;
-import fluid.scroll;
 import fluid.actions;
 import fluid.structs;
 import fluid.popup_frame;
+import fluid.scroll_frame;
 import fluid.text.typeface;
 
 alias wordFront = fluid.text.wordFront;

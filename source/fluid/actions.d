@@ -4,7 +4,6 @@ module fluid.actions;
 import fluid.node;
 import fluid.tree;
 import fluid.input;
-import fluid.scroll;
 
 import fluid.io.focus;
 
