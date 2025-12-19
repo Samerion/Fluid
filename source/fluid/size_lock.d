@@ -143,7 +143,7 @@ struct FloatSizeLimit {
 /// A node builder that constructs a `SizeLock` node. `sizeLock` can be used with other node
 /// builders, for example `sizeLock!vframe()` will use a vertical frame as its base,
 /// while `sizeLock!hframe()` will use a horizontal frame.
-alias sizeLock(alias T) = simpleConstructor!(SizeLock, T);
+alias sizeLock(alias T) = nodeBuilder!(SizeLock, T);
 
 /// `SizeLock` "locks" the size of a node, limiting the amount of space it will use from the space
 /// it is given.

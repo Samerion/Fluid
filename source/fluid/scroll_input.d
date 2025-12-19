@@ -16,10 +16,10 @@ import fluid.io.canvas;
 
 
 /// Create a new vertical scroll bar.
-alias vscrollInput = simpleConstructor!ScrollInput;
+alias vscrollInput = nodeBuilder!ScrollInput;
 
 /// Create a new horizontal scroll bar.
-alias hscrollInput = simpleConstructor!(ScrollInput, (a) {
+alias hscrollInput = nodeBuilder!(ScrollInput, (a) {
 
     a.isHorizontal = true;
 

@@ -10,7 +10,7 @@ import fluid.checkbox;
 @safe:
 
 /// A radiobox is similar to checkbox, except only one in a group can be selected at a time.
-alias radiobox = simpleConstructor!Radiobox;
+alias radiobox = nodeBuilder!Radiobox;
 
 /// ditto
 class Radiobox : Checkbox {
