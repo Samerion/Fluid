@@ -148,25 +148,6 @@ Color setAlpha(Color color, ubyte alpha) pure nothrow {
 
 }
 
-/// Blend two colors together; apply `top` on top of the `bottom` color. If `top` has maximum alpha, returns `top`. If
-/// alpha is zero, returns `bottom`.
-///
-/// BUG: This function is currently broken and returns incorrect results.
-deprecated("alphaBlend is bugged and unused, it will be removed in Fluid 0.8.0")
-Color alphaBlend(Color bottom, Color top) {
-
-    auto topA = cast(float) top.a / ubyte.max;
-    auto bottomA = (1 - topA) * cast(float) bottom.a / ubyte.max;
-
-    return Color(
-        cast(ubyte) (bottom.r * bottomA + top.r * topA),
-        cast(ubyte) (bottom.g * bottomA + top.g * topA),
-        cast(ubyte) (bottom.b * bottomA + top.b * topA),
-        cast(ubyte) (bottom.a * bottomA + top.a * topA),
-    );
-
-}
-
 /// Multiple color values.
 Color multiply(Color a, Color b) nothrow {
 
