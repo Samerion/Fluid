@@ -34,10 +34,10 @@ public import fluid.scroll_input;
 
 
 /// Create a new vertical [ScrollFrame] node. The frame will display its contents in a column.
-alias vscrollFrame = simpleConstructor!ScrollFrame;
+alias vscrollFrame = nodeBuilder!ScrollFrame;
 
 /// Create a new horizontal [ScrollFrame] node. The frame will display its contents in a row.
-alias hscrollFrame = simpleConstructor!(ScrollFrame, (a) {
+alias hscrollFrame = nodeBuilder!(ScrollFrame, (a) {
     a.directionHorizontal = true;
 });
 

@@ -12,7 +12,7 @@ import fluid.io.canvas;
 @safe:
 
 /// A checkbox can be selected by the user to indicate a true or false state.
-alias checkbox = simpleConstructor!Checkbox;
+alias checkbox = nodeBuilder!Checkbox;
 
 /// ditto
 class Checkbox : InputNode!Node {

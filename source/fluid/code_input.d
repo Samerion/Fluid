@@ -61,7 +61,7 @@ auto useSpaces(int width) {
 
 /// A CodeInput is a special variant of `TextInput` that provides syntax highlighting and a gutter (column with line
 /// numbers).
-alias codeInput = simpleConstructor!CodeInput;
+alias codeInput = nodeBuilder!CodeInput;
 
 /// ditto
 class CodeInput : TextInput {

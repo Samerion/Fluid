@@ -11,7 +11,7 @@ import fluid.io.canvas;
 
 
 /// A password input box.
-alias passwordInput = simpleConstructor!PasswordInput;
+alias passwordInput = nodeBuilder!PasswordInput;
 
 /// ditto
 class PasswordInput : TextInput {

@@ -123,10 +123,11 @@ abstract class Node {
 
     /// Construct a new node.
     ///
-    /// The typical approach to constructing new nodes is via `fluid.utils.simpleConstructor`. A node component would
-    /// provide an alias pointing to the `simpleConstructor` instance, which can then be used as a factory function. For
-    /// example, `Label` provides the `label` simpleConstructor. Using these has increased convenience by making it
-    /// possible to specify special properties while constructing the node, for example
+    /// The typical approach to constructing new nodes is via [fluid.utils.nodeBuilder]. A
+    /// node component would provide an alias pointing to the `nodeBuilder` instance,
+    /// which can then be used as a factory function. For example, `Label` provides the `label`
+    /// node builder. Using these has increased convenience by making it possible to specify
+    /// special properties while constructing the node, for example
     ///
     /// ---
     /// auto myLabel = label(.layout!1, .theme, "Hello, World!");
@@ -137,7 +138,7 @@ abstract class Node {
     /// ---
     ///
     /// See_Also:
-    ///     `fluid.utils.simpleConstructor`
+    ///     [fluid.utils.nodeBuilder]
     this() { }
 
     /// Check if the node is hidden.
