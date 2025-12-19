@@ -41,13 +41,6 @@ import fluid.style;
 import fluid.utils;
 import fluid.structs;
 
-deprecated("`Grid` and `grid` were renamed to `GridFrame` and `gridFrame` respectively. To be removed in 0.8.0.") {
-
-    alias grid = simpleConstructor!GridFrame;
-    alias Grid = GridFrame;
-
-}
-
 /// [Node builder][nodeBuilder] for [GridFrame]. Usually, it will be given arrays of nodes (which
 /// it then converts into [GridRow] nodes), but it can also be given `GridRow` or other nodes
 /// directly.
