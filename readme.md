@@ -73,6 +73,6 @@ Fluid welcomes contributions! You can review open issues and open pull requests 
 If you need help, you'll receive it.
 
 * [Open an issue](https://git.samerion.com/Samerion/Fluid/issues/new)
-* [Review current goals](https://git.samerion.com/Samerion/Fluid/milestones?state=open&q=0.7&fuzzy=)
+* [Review current goals](https://git.samerion.com/Samerion/Fluid/milestones?state=open&q=0.8&fuzzy=)
 
 Read more about contributing to Fluid in our [contributing.md](contributing.md) file.
