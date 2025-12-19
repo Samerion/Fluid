@@ -311,8 +311,6 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
 
     alias isFocused = typeof(super).isFocused;
 
-    alias opEquals = typeof(super).opEquals;
-
     override bool opEquals(const Object other) const {
         return super.opEquals(other);
     }

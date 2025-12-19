@@ -35,8 +35,6 @@ abstract class InputNode(Parent : Node) : Parent, Focusable, Hoverable {
 
     }
 
-    alias opEquals = typeof(super).opEquals;
-
     override bool opEquals(const Object other) const {
         return super.opEquals(other);
     }
