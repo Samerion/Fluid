@@ -86,7 +86,7 @@ import fluid.io.canvas;
 
 
 /// Creates a [NodeSlot] which accepts a single node of type `T` as a child.
-alias nodeSlot(alias T) = simpleConstructor!(NodeSlot!T);
+alias nodeSlot(alias T) = nodeBuilder!(NodeSlot!T);
 
 ///
 @("nodeSlot builder example")
