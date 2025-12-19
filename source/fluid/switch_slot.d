@@ -96,6 +96,8 @@ class SwitchSlot : Node {
     }
 
     override void resizeImpl(Vector2 availableSpace) {
+        import fluid.future.context;
+
         minSize = Vector2();
         this.node = null;
         _availableSpace = availableSpace;
@@ -107,7 +109,7 @@ class SwitchSlot : Node {
             // Null node reached, stop with no minSize
             if (node is null) return;
 
-            auto previousTree = node.tree;
+            auto previousTree = node.treeContext;
             auto previousTheme = node.theme;
             auto previousSize = node.minSize;
 
@@ -118,12 +120,9 @@ class SwitchSlot : Node {
 
             // Restore previous info, unless this is the last node
             if (i+1 != availableNodes.length && previousTree) {
-
-                // Resize the node again to recursively restore old parameters
-                node.tree = null;
+                node.treeContext = TreeContext.init;
                 node.inheritTheme(Theme.init);
                 resizeChild(node, previousSize);
-
             }
         }
 

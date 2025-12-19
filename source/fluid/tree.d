@@ -273,20 +273,3 @@ abstract class TreeAction : Publisher!() {
     }
 
 }
-
-/// Global data for the layout tree.
-struct LayoutTree {
-
-    import fluid.theme : Breadcrumbs;
-
-    /// Miscelleanous, technical properties.
-    public {
-
-        /// Current rectangle drawing is limited to.
-        Rectangle scissors;
-
-    }
-
-    /// Incremented for every `filterActions` access to prevent nested accesses from breaking previously made ranges.
-    private int _actionAccessCounter;
-}
