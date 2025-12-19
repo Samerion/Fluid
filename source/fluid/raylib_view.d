@@ -849,8 +849,8 @@ class RaylibStack(RaylibViewVersion raylibVersion) : Node, TreeWrapper {
     }
 
     override void drawTree(TreeContext context, Node root) {
-        next = root;
-        prepare(context);
+        this.next = root;
+        this.treeContext = context;
         drawAsRoot();
     }
 

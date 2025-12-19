@@ -371,7 +371,7 @@ class TestWrapper : TreeWrapper {
 
     override void drawTree(TreeContext context, Node start) {
         _last.next = start;
-        _root.prepare(context);
+        _root.treeContext = context;
         _root.drawAsRoot(viewport);
     }
 

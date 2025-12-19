@@ -270,8 +270,24 @@ abstract class Node {
 
     }
 
+    /// Returns:
+    ///     Active [TreeContext] for this node.
     final inout(TreeContext) treeContext() inout nothrow {
         return _treeContext;
+    }
+
+    /// Change [TreeContext] used by this tree. Triggers a resize if the new context is different
+    /// from the one set.
+    /// Params:
+    ///     context = New context to set.
+    /// Returns:
+    ///     Same context as passed.
+    final TreeContext treeContext(TreeContext context) {
+        if (_treeContext != context) {
+            this._treeContext = context;
+            updateSize();
+        }
+        return context;
     }
 
     /// Toggle the node's visibility.
@@ -515,14 +531,6 @@ abstract class Node {
     final void updateSize() scope nothrow {
         if (tree) tree.root._resizePending = true;
         // Tree might be null — if so, the node will be resized regardless
-    }
-
-    /// Change [TreeContext] used by this tree.
-    final void prepare(TreeContext context) {
-        if (_treeContext != context) {
-            this._treeContext = context;
-            updateSize();
-        }
     }
 
     final void draw() {
