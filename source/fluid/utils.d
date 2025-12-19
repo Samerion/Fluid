@@ -15,12 +15,6 @@ alias simpleConstructor = nodeBuilder;
 alias SimpleConstructor = NodeBuilder;
 alias isSimpleConstructor = isNodeBuilder;
 
-deprecated("Use NodeBuilder instead") {
-    alias componentBuilder = nodeBuilder;
-    alias ComponentBuilder = NodeBuilder;
-    alias isComponentBuilder = isNodeBuilder;
-}
-
 // For saner testing and debugging.
 version (unittest)
 private extern(C) __gshared string[] rt_options = ["oncycle=ignore"];
