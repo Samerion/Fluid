@@ -2029,10 +2029,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
     }
 
     /// Iterate on each line in an interval.
-    ///
-    /// Warning: Iterating on the line by reference is now deprecated.
     auto eachLineByIndex(ptrdiff_t start, ptrdiff_t end) {
-
         struct LineIterator {
 
             TextInput input;
@@ -2044,84 +2041,45 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
             alias SetLine = void delegate(Rope line) @safe;
 
-            int opApply(scope int delegate(size_t startIndex, ref Rope line) @safe yield) {
-
+            int opApply(scope int delegate(size_t startIndex, Rope line) @safe yield) {
                 while (index <= end) {
-
                     const line = input.value.lineByIndex!(Yes.keepTerminator)(index);
 
                     // Get index of the next line
                     const lineStart = index - input.column!char(index);
                     nextLine = lineStart + line.length;
 
-                    // Output the line
-                    const originalFront = front = line[].chomp;
-                    auto stop = yield(lineStart, front);
-
-                    // Update indices in case the line has changed
-                    if (front.chomp !is originalFront) {
-                        setLine(originalFront, front);
-                    }
-                    else {
-                        const newNextLine = input.value.nextLineByIndex(lineStart);
-                        end += newNextLine - nextLine;
-                        nextLine = newNextLine;
+                    // Remove the line feed and output the line
+                    front = line[].chomp;
+                    if (auto stop = yield(lineStart, front)) {
+                        return stop;
                     }
 
-                    // Stop if requested
-                    if (stop) return stop;
+                    // Move to next line
+                    const newNextLine = input.value.nextLineByIndex(lineStart);
+                    end += newNextLine - nextLine;
+                    nextLine = newNextLine;
 
                     // Stop if reached the end of string
                     if (index == nextLine) return 0;
-                    if (line.length == originalFront.length) return 0;
+                    if (line.length == front.length) return 0;
 
                     // Move to the next line
                     index = nextLine;
-
                 }
-
                 return 0;
-
             }
 
-            int opApply(scope int delegate(ref Rope line) @safe yield) {
-
-                foreach (index, ref line; this) {
-
+            int opApply(scope int delegate(Rope line) @safe yield) {
+                foreach (index, line; this) {
                     if (auto stop = yield(line)) return stop;
-
                 }
-
                 return 0;
-
-            }
-
-            /// Replace the current line with a new one.
-            private void setLine(Rope oldLine, Rope line) @safe {
-
-                const lineStart = index - input.column!char(index);
-
-                // Get the size of the line terminator
-                const lineTerminatorLength = nextLine - lineStart - oldLine.length;
-
-                // Update the line
-                input.lineByIndex(index, line);
-                index = lineStart + line.length;
-                end += line.length - oldLine.length;
-
-                // Add the terminator
-                nextLine = index + lineTerminatorLength;
-
-                assert(line == front);
-                assert(nextLine >= index);
-                assert(nextLine <= input.value.length);
-
             }
 
         }
 
         return LineIterator(this, start, end);
-
     }
 
     /// Return each line containing the selection.
