@@ -568,9 +568,6 @@ abstract class Node {
 
         assert(theme);
 
-        // Clear focus info
-        tree.focusBox = Rectangle(float.nan);
-
         // Clear breadcrumbs
         treeContext.breadcrumbs = Breadcrumbs.init;
 

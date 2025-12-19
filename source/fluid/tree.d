@@ -282,11 +282,6 @@ struct LayoutTree {
     // Input
     public {
 
-        /// Padding box of the currently focused node. Only available after the node has been drawn.
-        ///
-        /// See_also: `focusDirection.lastFocusBox`.
-        Rectangle focusBox;
-
         /// Tree actions queued to execute during next draw.
         DList!TreeAction actions;
 
