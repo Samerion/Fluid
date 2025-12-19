@@ -331,13 +331,6 @@ struct LayoutTree {
         this.root = root;
     }
 
-    /// Returns true if this branch requested a resize or is pending a resize.
-    bool resizePending() const {
-
-        return root.resizePending;
-
-    }
-
     /// Queue an action to perform while iterating the tree.
     ///
     /// Avoid using this; most of the time `Node.queueAction` is what you want. `LayoutTree.queueAction` might fire
