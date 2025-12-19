@@ -512,7 +512,7 @@ interface TreeWrapper {
 
             void drawTree(TreeContext context, Node root) {
                 chain.next = root;
-                chain.prepare(context);
+                chain.treeContext = context;
                 chain.drawAsRoot();
             }
 
