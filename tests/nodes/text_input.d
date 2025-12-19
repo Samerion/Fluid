@@ -1313,7 +1313,7 @@ unittest {
 
     // Note: This theme relies on properties of the default typeface
 
-    import fluid.scroll;
+    import fluid.scroll_frame;
 
     const viewportWidth = 200;
     const viewportHeight = 50;
