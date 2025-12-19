@@ -203,7 +203,7 @@ Space createUI(string initialChapter = null) @safe {
             .layout!"fill",
             "Top",
             delegate {
-                contentWrapper.scrollStart();
+                contentWrapper.scrollToStart();
             }
         ),
         outlineContent,
@@ -228,10 +228,11 @@ Space createUI(string initialChapter = null) @safe {
         rightButton.isHidden = chapter == Chapter.max;
 
         // Scroll back to top
-        contentWrapper.scrollStart();
+        contentWrapper.scrollToStart();
 
         // Collect all headings and build the outline
-        content.queueAction(new BuildOutline(outlineContent));
+        content.startAction(
+            new BuildOutline(outlineContent));
 
     }
 
