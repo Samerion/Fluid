@@ -45,9 +45,6 @@ abstract class Node {
 
     public {
 
-        /// Tree data for the node. Note: requires at least one draw before this will work.
-        LayoutTree* tree;
-
         /// Layout for this node.
         Layout layout;
 
@@ -536,11 +533,8 @@ abstract class Node {
     final void drawAsRoot(Rectangle viewport = Rectangle(0, 0, 0, 0)) @trusted {
 
         // No tree set, create one
-        if (tree is null) {
-
-            tree = new LayoutTree;
+        if (!treeContext) {
             _treeContext.prepare();
-
         }
 
         // No theme set, set the default
@@ -558,7 +552,7 @@ abstract class Node {
 
         // Resize if required
         if (resizePending) {
-            prepareInternalImpl(tree, treeContext, theme);
+            prepareInternalImpl(treeContext, theme);
             resizeInternalImpl(viewport.size);
             treeContext.shouldResize = false;
         }
@@ -618,8 +612,8 @@ abstract class Node {
         import std.range;
 
         assert(!toRemove, "A toRemove child wasn't removed from container.");
-        assert(tree !is null, toString ~ " wasn't resized prior to drawing. You might be missing an `updateSize`"
-            ~ " call!");
+        assert(treeContext, toString ~ " wasn't resized prior to drawing. You might be missing "
+            ~ "an `updateSize` call!");
 
         // If hidden, don't draw anything
         if (isHidden) return;
@@ -699,19 +693,19 @@ abstract class Node {
         return style.cropBox(borderBox, style.border);
     }
 
-    /// Prepare a child for use. This is automatically called by `resizeChild` and only meant for advanced usage.
+    /// Prepare a child for use. This is automatically called by `resizeChild` and only meant for
+    /// advanced usage.
     ///
-    /// This method is intended to be used when conventional resizing through `resizeImpl` is not desired. This can
-    /// be used to implement an advanced system with a different resizing mechanism, or something like `NodeChain`,
-    /// which changes how children are managed. Be mindful that child nodes must have some preparation mechanism
-    /// available to initialize their I/O systems and resources — normally this is done by `resizeImpl`.
+    /// This method is intended to be used when conventional resizing through `resizeImpl` is
+    /// not desired. This can be used to implement an advanced system with a different resizing
+    /// mechanism, or something like `NodeChain`, which changes how children are managed. Be
+    /// mindful that child nodes must have some preparation mechanism available to initialize
+    /// their I/O systems and resources — normally this is done by `resizeImpl`.
     ///
     /// Params:
     ///     child = Child node to resize.
     protected void prepareChild(Node child) {
-
-        child.prepareInternalImpl(tree, treeContext, theme);
-
+        child.prepareInternalImpl(treeContext, theme);
     }
 
     /// Resize a child of this node.
@@ -729,29 +723,12 @@ abstract class Node {
 
     }
 
-    /// Recalculate the minimum node size and update the `minSize` property.
-    /// Params:
-    ///     tree  = The parent's tree to pass down to this node.
-    ///     theme = Theme to inherit from the parent.
-    ///     space = Available space.
-    deprecated("`Node.resize` has been replaced with `resizeChild(Node, Vector2)` and will be removed in Fluid 0.8.0.")
-    protected final void resize(LayoutTree* tree, Theme theme, Vector2 space)
-    in(tree, "Tree for Node.resize() must not be null.")
-    in(theme, "Theme for Node.resize() must not be null.")
-    do {
-
-        prepareInternalImpl(tree, TreeContext.init, theme);
-        resizeInternalImpl(space);
-
-    }
-
-    private final void prepareInternalImpl(LayoutTree* tree, TreeContext context, Theme theme)
-    in(tree, "Tree for prepareChild(Node) must not be null.")
+    private final void prepareInternalImpl(TreeContext context, Theme theme)
+    in(context, "Tree for prepareChild(Node) must not be null.")
     in(theme, "Theme for prepareChild(Node) must not be null.")
     do {
 
         // Inherit tree and theme
-        this.tree = tree;
         this._treeContext = context;
         inheritTheme(theme);
 
@@ -768,7 +745,7 @@ abstract class Node {
     }
 
     private final void resizeInternalImpl(Vector2 space)
-    in(tree, "Tree for Node.resize() must not be null.")
+    in(treeContext, "Tree for Node.resize() must not be null.")
     in(theme, "Theme for Node.resize() must not be null.")
     do {
 
@@ -830,21 +807,21 @@ abstract class Node {
 
     /// Connect to an I/O system
     protected T use(T : IO)()
-    in (tree, "`use()` should only be used inside `resizeImpl`")
+    in (treeContext, "`use()` should only be used inside `resizeImpl`")
     do {
         return treeContext.io.get!T();
     }
 
     /// ditto
     protected T use(T : IO)(out T io)
-    in (tree, "`use()` should only be used inside `resizeImpl`")
+    in (treeContext, "`use()` should only be used inside `resizeImpl`")
     do {
         return io = use!T();
     }
 
     /// Require
     protected T require(T : IO)()
-    in (tree, "`require()` should only be used inside `resizeImpl`")
+    in (treeContext, "`require()` should only be used inside `resizeImpl`")
     do {
         auto io = use!T();
         assert(io, "require: Requested I/O " ~ T.stringof ~ " is not active");
@@ -853,7 +830,7 @@ abstract class Node {
 
     /// ditto
     protected T require(T : IO)(out T io)
-    in (tree, "`require()` should only be used inside `resizeImpl`")
+    in (treeContext, "`require()` should only be used inside `resizeImpl`")
     do {
         return io = require!T();
     }

@@ -207,7 +207,7 @@ class ScrollFrame : Frame, FluidScrollable, HoverScrollable {
     override void resizeImpl(Vector2 space) {
 
         assert(scrollBar !is null, "No scrollbar has been set for FluidScrollable");
-        assert(tree !is null);
+        assert(treeContext);
 
         /// Padding represented as a vector. This sums the padding on each axis.
         const paddingVector = Vector2(style.padding.sideX[].sum, style.padding.sideY[].sum);

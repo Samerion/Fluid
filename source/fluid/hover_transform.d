@@ -132,7 +132,7 @@ class HoverTransform : NodeChain, HoverIO, Focusable, Hoverable, HoverScrollable
     ///     Rectangle for output. By default, this should match the padding box of this node,
     ///     unless explicitly changed to something else.
     Rectangle destinationRectangle() const {
-        if (tree)
+        if (treeContext)
             return _destinationRectangle;
         else
             return sourceRectangle;
