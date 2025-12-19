@@ -135,27 +135,6 @@
   "subPackages": [
     "./tour",
     {
-      "dependencies": {
-        "fluid": {
-          "path": "."
-        },
-        "libdparse": "~>0.23.2"
-      },
-      "libs": [
-        "raylib"
-      ],
-      "name": "showcase",
-      "preBuildCommands": [
-        "echo Deprecated: fluid:showcase has been renamed to fluid:tour"
-      ],
-      "sourcePaths": [
-        "tour"
-      ],
-      "targetName": "fluid-tour",
-      "targetPath": "build",
-      "targetType": "executable"
-    },
-    {
       "name": "init-exec",
       "sourceFiles": [
         "source/fluid/dub_template.d"

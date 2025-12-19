@@ -23,9 +23,6 @@ interface Typeface {
 
     public import fluid.text.util : defaultWordChunks;
     public import fluid.text.ruler : eachWord;
-    deprecated("Use Rope.byLine instead. lineSplitter will be removed in 0.9.0") {
-        public import fluid.text.util : lineSplitter, lineSplitterIndex;
-    }
 
     /// List glyphs in the typeface.
     long glyphCount() const;
@@ -42,16 +39,6 @@ interface Typeface {
 
     /// Get advance vector for the given glyph. Uses dots, not pixels, as the unit.
     Vector2 advance(dchar glyph);
-
-    /// Set font scale. This should be called at least once before drawing.
-    /// `Text` sets DPI automatically.
-    ///
-    /// Font renderer should cache this and not change the scale unless updated.
-    ///
-    /// Params:
-    ///     scale = Horizontal and vertical DPI value, for example (96, 96)
-    deprecated("Use setSize instead. dpi(Vector2) will be removed in 0.9.0")
-    Vector2 dpi(Vector2 scale);
 
     /// Get curently set DPI.
     Vector2 dpi() const;
@@ -77,13 +64,6 @@ interface Typeface {
 
     /// Instances of Typeface have to be comparable in a memory-safe manner.
     bool opEquals(const Object object) @safe const;
-
-    /// Get the default Fluid typeface.
-    deprecated("Use Style.defaultTypeface instead. Typeface.defaultTypeface will be removed in 0.9.0.")
-    static defaultTypeface() {
-        import fluid.text.freetype;
-        return FreetypeTypeface.defaultTypeface;
-    }
 
     /// Measure space the given text would span. Uses dots as the unit.
     ///

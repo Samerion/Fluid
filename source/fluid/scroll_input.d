@@ -101,17 +101,6 @@ class ScrollInput : InputNode!Node {
 
     }
 
-    deprecated("`setScroll` was renamed to `scroll` and will be removed in Fluid 0.8.0. "
-        ~ "You can use it as a setter: `scroll = value`.")
-    void setScroll(float value) {
-        cast(void) (this.scroll = value);
-    }
-
-    deprecated("`scrollMax` was renamed to `maxScroll` and will be removed in Fluid 0.8.0.")
-    float scrollMax() const {
-        return maxScroll;
-    }
-
     /// Returns:
     ///     Offset, in pixels, from the start of the container to current scroll position.
     float scroll() const {

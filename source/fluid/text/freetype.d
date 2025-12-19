@@ -160,17 +160,7 @@ class FreetypeTypeface : Typeface {
     }
 
     Vector2 dpi() const {
-
         return Vector2(_dpiX, _dpiY);
-
-    }
-
-    deprecated("Use setSize instead")
-    Vector2 dpi(Vector2 dpi) {
-
-        setSize(dpi, _size);
-        return dpi;
-
     }
 
     void setSize(Vector2 dpi, float size) @trusted {
@@ -214,7 +204,7 @@ class FreetypeTypeface : Typeface {
         }
 
     }
-    
+
     Vector2 advance(dchar glyph) @trusted {
 
         assert(_dpiX && _dpiY, "Font DPI hasn't been set");
@@ -289,7 +279,7 @@ class FreetypeTypeface : Typeface {
                 }
 
             }
-            
+
             // Advance pen positon
             penPosition += Vector2(face.glyph.advance.tupleof) / 64;
 

@@ -16,10 +16,10 @@ import fluid.input;
 import fluid.label;
 import fluid.style;
 import fluid.utils;
-import fluid.scroll;
 import fluid.actions;
 import fluid.structs;
 import fluid.popup_frame;
+import fluid.scroll_frame;
 import fluid.text.typeface;
 
 alias wordFront = fluid.text.wordFront;
@@ -206,15 +206,6 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
         /// Current history entry, if relevant.
         HistoryEntry _snapshot;
-
-        deprecated("`_isContinuous` is deprecated in favor of `snapshot.isMinor` and will be removed in Fluid 0.9.0."
-            ~ " `replaceNoHistory` or `setCaretIndexNoHistory` are also likely replacements.") {
-
-            ref inout(bool) _isContinuous() inout {
-                return _snapshot.isMinor;
-            }
-
-        }
 
         /// The line height used by this input, in pixels.
         ///
@@ -830,18 +821,6 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     }
 
-    /// Returns:
-    ///     Visual position of the caret's center, relative to the top-left corner of the input.
-    /// See_Also:
-    ///     `caretRectangle`
-    deprecated("caretPosition has been replaced by caretRectangle and will be removed in Fluid 0.9.0")
-    Vector2 caretPosition() const {
-
-        // Calculated in caretPositionImpl
-        return _caretRectangle.center;
-
-    }
-
     /// The caret is a line used to control keyboard input. Inserted text will be placed right before the caret.
     ///
     /// The caret is formed from a rectangle by connecting its top-right and bottom-left corners. This rectangle will
@@ -1351,12 +1330,6 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         // Add a blinking caret if there is no selection
         return selectionStart == selectionEnd && blinkProgress < blinkInterval/2;
 
-    }
-
-    deprecated("showCaret has been renamed to isCaretVisible, "
-        ~ "and will be removed in Fluid 0.8.0")
-    protected bool showCaret() {
-        return isCaretVisible();
     }
 
     protected override bool focusImpl() {
@@ -2056,10 +2029,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
     }
 
     /// Iterate on each line in an interval.
-    ///
-    /// Warning: Iterating on the line by reference is now deprecated.
     auto eachLineByIndex(ptrdiff_t start, ptrdiff_t end) {
-
         struct LineIterator {
 
             TextInput input;
@@ -2071,84 +2041,45 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
             alias SetLine = void delegate(Rope line) @safe;
 
-            int opApply(scope int delegate(size_t startIndex, ref Rope line) @safe yield) {
-
+            int opApply(scope int delegate(size_t startIndex, Rope line) @safe yield) {
                 while (index <= end) {
-
                     const line = input.value.lineByIndex!(Yes.keepTerminator)(index);
 
                     // Get index of the next line
                     const lineStart = index - input.column!char(index);
                     nextLine = lineStart + line.length;
 
-                    // Output the line
-                    const originalFront = front = line[].chomp;
-                    auto stop = yield(lineStart, front);
-
-                    // Update indices in case the line has changed
-                    if (front.chomp !is originalFront) {
-                        setLine(originalFront, front);
-                    }
-                    else {
-                        const newNextLine = input.value.nextLineByIndex(lineStart);
-                        end += newNextLine - nextLine;
-                        nextLine = newNextLine;
+                    // Remove the line feed and output the line
+                    front = line[].chomp;
+                    if (auto stop = yield(lineStart, front)) {
+                        return stop;
                     }
 
-                    // Stop if requested
-                    if (stop) return stop;
+                    // Move to next line
+                    const newNextLine = input.value.nextLineByIndex(lineStart);
+                    end += newNextLine - nextLine;
+                    nextLine = newNextLine;
 
                     // Stop if reached the end of string
                     if (index == nextLine) return 0;
-                    if (line.length == originalFront.length) return 0;
+                    if (line.length == front.length) return 0;
 
                     // Move to the next line
                     index = nextLine;
-
                 }
-
                 return 0;
-
             }
 
-            int opApply(scope int delegate(ref Rope line) @safe yield) {
-
-                foreach (index, ref line; this) {
-
+            int opApply(scope int delegate(Rope line) @safe yield) {
+                foreach (index, line; this) {
                     if (auto stop = yield(line)) return stop;
-
                 }
-
                 return 0;
-
-            }
-
-            /// Replace the current line with a new one.
-            private void setLine(Rope oldLine, Rope line) @safe {
-
-                const lineStart = index - input.column!char(index);
-
-                // Get the size of the line terminator
-                const lineTerminatorLength = nextLine - lineStart - oldLine.length;
-
-                // Update the line
-                input.lineByIndex(index, line);
-                index = lineStart + line.length;
-                end += line.length - oldLine.length;
-
-                // Add the terminator
-                nextLine = index + lineTerminatorLength;
-
-                assert(line == front);
-                assert(nextLine >= index);
-                assert(nextLine <= input.value.length);
-
             }
 
         }
 
         return LineIterator(this, start, end);
-
     }
 
     /// Return each line containing the selection.
@@ -2647,18 +2578,6 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     }
 
-    deprecated("`pushSnapshot` and `forcePushSnapshot` have been replaced by `pushHistory`/`forcePushHistory`"
-        ~ " and will be removed in Fluid 0.9.0.") {
-
-        void pushSnapshot(HistoryEntry entry) {
-            pushHistory(entry);
-        }
-        void forcePushSnapshot(HistoryEntry entry) {
-            forcePushHistory(entry);
-        }
-
-    }
-
     /// Push the given state snapshot (value, caret & selection) into the undo stack. Refuses to push if the current
     /// state can be merged with it, unless `forcePushSnapshot` is used.
     ///
@@ -2730,16 +2649,6 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         const that = this;
         _snapshot = that.snapshot;
         return _snapshot;
-
-    }
-
-    /// Restore state from snapshot.
-    deprecated("`snapshot(HistoryEntry)` is deprecated and will be removed in Fluid 0.9.0."
-        ~ " Please use `restoreSnapshot` instead.")
-    protected HistoryEntry snapshot(HistoryEntry entry) {
-
-        restoreSnapshot(entry);
-        return entry;
 
     }
 

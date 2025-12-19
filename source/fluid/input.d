@@ -130,15 +130,9 @@ immutable struct InputActionID {
         this.staticID = staticID;
     }
 
-    deprecated("InputActionID.from has been replaced by inputActionID and will be removed in Fluid 0.9.0")
-    static InputActionID from(alias item)() {
-        return inputActionID!item;
-    }
-
     bool opEqual(InputActionID other) {
         return id == other.id;
     }
-
 }
 
 /// Get the ID of an input action.
@@ -151,11 +145,6 @@ InputActionID inputActionID(alias action)() {
     return InputActionID(staticID!action);
 
 }
-
-deprecated("isInputActionType has been renamed to isInputAction and will be removed in Fluid 0.9.0.") {
-    alias isInputActionType(alias actionType) = isInputAction!actionType;
-}
-
 
 unittest {
 

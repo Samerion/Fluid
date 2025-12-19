@@ -74,11 +74,6 @@ abstract class Node {
         /// The default value allows all events.
         HitFilter hitFilter;
 
-        deprecated("`isOpaque` has been renamed to `hitFilter` and will be removed in Fluid 0.8.0")
-        final ref inout isOpaque() {
-            return hitFilter;
-        }
-
         /// True if the theme has been assigned explicitly by a direct assignment. If false, the node will instead
         /// inherit themes from the parent.
         ///
@@ -368,7 +363,6 @@ abstract class Node {
         startAction(action);
     }
 
-
     /// Perform a tree action the next time this node is drawn.
     ///
     /// Tree actions can be used to analyze the node tree and modify its behavior while it runs.
@@ -590,20 +584,6 @@ abstract class Node {
     protected void drawChild(Node child, Rectangle space) {
 
         child.drawInternalImpl(space);
-
-    }
-
-    /// Draw this node at the specified location from within of another (parent) node.
-    ///
-    /// The drawn node will be aligned according to the `layout` field within the box given.
-    ///
-    /// Params:
-    ///     space = Space the node should be drawn in. It should be limited to space within the parent node.
-    ///             If the node can't fit, it will be cropped.
-    deprecated("`Node.draw` has been replaced with `drawChild(Node, Rectangle)` and will be removed in Fluid 0.8.0.")
-    final protected void draw(Rectangle space) {
-
-        drawInternalImpl(space);
 
     }
 
@@ -1030,23 +1010,6 @@ abstract class Node {
         return inBoundsImpl(outer, inner, position)
             .filter(hitFilter)
             .filter(ignoreMouse ? HitFilter.miss : HitFilter.hit);
-    }
-
-    alias ImplHoveredRect = implHoveredRect;
-
-    deprecated("implHoveredRect is now the default behavior; implHoveredRect is to be removed in 0.8.0")
-    protected mixin template implHoveredRect() {
-
-        private import fluid.types : Rectangle, Vector2;
-
-        protected override bool hoveredImpl(Rectangle rect, Vector2 mousePosition) const {
-
-            import fluid.utils : contains;
-
-            return rect.contains(mousePosition);
-
-        }
-
     }
 
     /// The focus box defines the *focused* part of the node. This is relevant in nodes which may have a selectable
