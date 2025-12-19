@@ -159,15 +159,6 @@ class Space : Node {
         );
     }
 
-    deprecated("There is no sensible way for `Space` to use ranges. "
-        ~ "Instead, explicitly convert them to an array with `std.array.array`. "
-        ~ "This constructor will be removed in Fluid 0.8.0.")
-    this(Range)(Range range)
-    if (isInputRange!Range && !is(Range : T[], T : Node))
-    do {
-        this.children ~= range;
-    }
-
     /// Append children nodes to this node.
     ///
     /// This is the same as `node.children ~= nodes`, except it will automatically trigger
