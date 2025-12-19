@@ -5,7 +5,10 @@ A flexible UI library for [the D programming language](https://dlang.org/). Mini
 ```d
 auto root = vspace(
     .layout!"center",
-    label(.layout!"center", "Hello World from"),
+    label(
+        .layout!"center",
+        "Hello World from"
+    ),
     imageView("./logo.png"),
 );
 ```
@@ -14,14 +17,10 @@ Fluid comes with [Raylib 5][raylib] support. Integration is seamless: one or two
 
 ```d
 while (!WindowShouldClose) {
-
     BeginDrawing();
-
         ClearBackground(color!"#fff");
         root.draw();
-
     EndDrawing();
-
 }
 ```
 
