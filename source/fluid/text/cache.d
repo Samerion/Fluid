@@ -1180,7 +1180,7 @@ unittest {
     // Replace enough text to destroy two intervals
     root.text[260..530] = 'a'.repeat(270).array;
 
-    assert(root.tree.resizePending);
+    assert(root.isResizePending);
 
     root.draw();
 

@@ -56,7 +56,7 @@ class SwitchSlot : Node {
     override bool isHidden() const return {
 
         // Tree is available and resized
-        if (tree && !tree.resizePending) {
+        if (!isResizePending) {
 
             // Principal node is visible, hide self
             if (principalNode && !principalNode.isHidden)
