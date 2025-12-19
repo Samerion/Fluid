@@ -43,16 +43,6 @@ interface Typeface {
     /// Get advance vector for the given glyph. Uses dots, not pixels, as the unit.
     Vector2 advance(dchar glyph);
 
-    /// Set font scale. This should be called at least once before drawing.
-    /// `Text` sets DPI automatically.
-    ///
-    /// Font renderer should cache this and not change the scale unless updated.
-    ///
-    /// Params:
-    ///     scale = Horizontal and vertical DPI value, for example (96, 96)
-    deprecated("Use setSize instead. dpi(Vector2) will be removed in 0.9.0")
-    Vector2 dpi(Vector2 scale);
-
     /// Get curently set DPI.
     Vector2 dpi() const;
 
