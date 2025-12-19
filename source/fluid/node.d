@@ -520,6 +520,8 @@ abstract class Node {
     ///
     /// Params:
     ///     wrapper = Wrapper to use.
+    /// See_Also:
+    ///     [configureBlank]
     final void configure(TreeWrapper wrapper) {
         if (!treeContext) {
             _treeContext.prepare(wrapper);
@@ -528,6 +530,13 @@ abstract class Node {
             _treeContext.wrapper = wrapper;
         }
         updateSize();
+    }
+
+    /// Remove tree wrapper. Triggers a resize.
+    ///
+    /// This is equivalent to calling `configure(null)`. See [configure] for details.
+    final void configureBlank() {
+        configure(null);
     }
 
     final void draw() {
