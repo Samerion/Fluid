@@ -296,7 +296,7 @@ class TestSpace : Space, CanvasIO, DebugSignalIO {
         _probe.asserts = [generator];
         _probe.allowFailure = true;
         scope (exit) _probe.allowFailure = false;
-        queueAction(_probe);
+        startAction(_probe);
         draw();
         generator.saveSVG();
 
@@ -310,7 +310,7 @@ class TestSpace : Space, CanvasIO, DebugSignalIO {
     /// ditto
     void drawAndAssert(Assert[] asserts, string filename = __FILE__, size_t line = __LINE__) {
         _probe.asserts = asserts;
-        queueAction(_probe);
+        startAction(_probe);
         draw();
         _probe.check(filename, line);
     }

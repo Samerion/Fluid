@@ -413,7 +413,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         }
         else {
             _scrollAction.reset(alignToTop);
-            queueAction(_scrollAction);
+            startAction(_scrollAction);
         }
 
         return _scrollAction;

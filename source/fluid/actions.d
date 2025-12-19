@@ -99,7 +99,7 @@ FocusRecurseAction focusRecurse(Node parent) {
     auto action = new FocusRecurseAction;
 
     // Perform a tree action to find the child
-    parent.queueAction(action);
+    parent.startAction(action);
 
     return action;
 
@@ -145,7 +145,7 @@ FocusRecurseAction focusRecurseChildren(Node parent) {
 
     auto action = new FocusRecurseAction;
     action.excludeStartNode = true;
-    parent.queueAction(action);
+    parent.startAction(action);
 
     return action;
 
@@ -233,7 +233,7 @@ class FocusRecurseAction : FocusSearchAction {
 ScrollIntoViewAction scrollIntoView(Node node, bool alignToTop = false) {
 
     auto action = new ScrollIntoViewAction;
-    node.queueAction(action);
+    node.startAction(action);
     action.alignToTop = alignToTop;
 
     return action;

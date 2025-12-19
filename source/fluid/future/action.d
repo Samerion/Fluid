@@ -26,28 +26,28 @@ import fluid.future.branch_action;
 ///     wrap   = If true, if no node remains to focus, focus the first or last node found.
 OrderedFocusAction focusNext(Node node, bool wrap = true) {
     auto action = new OrderedFocusAction(node, false, wrap);
-    node.tree.queueAction(action);
+    node.startTreeAction(action);
     return action;
 }
 
 /// ditto
 OrderedFocusAction focusPrevious(Node node, bool wrap = true) {
     auto action = new OrderedFocusAction(node, true, wrap);
-    node.tree.queueAction(action);
+    node.startTreeAction(action);
     return action;
 }
 
 /// ditto
 OrderedFocusAction focusNext(Node node, Node branch, bool wrap = true) {
     auto action = new OrderedFocusAction(node, false, wrap);
-    branch.queueAction(action);
+    branch.startAction(action);
     return action;
 }
 
 /// ditto
 OrderedFocusAction focusPrevious(Node node, Node branch, bool wrap = true) {
     auto action = new OrderedFocusAction(node, true, wrap);
-    branch.queueAction(action);
+    branch.startAction(action);
     return action;
 }
 

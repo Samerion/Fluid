@@ -368,28 +368,11 @@ abstract class Node {
 
     }
 
-    /// Queue an action to perform within this node's branch.
-    ///
-    /// This function is legacy but is kept for backwards compatibility. Use `startAction` instead.
-    ///
-    /// This function is not safe to use while the tree is being drawn.
-    final void queueAction(TreeAction action)
-    in (action, "Invalid action queued (null)")
-    do {
-
-        // Set this node as the start for the given action
-        action.startNode = this;
-
-        // Reset the action
-        action.toStop = false;
-
-        // Insert the action into the tree's queue
-        if (tree) tree.queueAction(action);
-
-        // If there isn't a tree, wait for a resize
-        else _queuedActions ~= action;
-
+    deprecated ("`queueAction` was replaced by `startAction`. Please update before Fluid 0.9.0.")
+    final void queueAction(TreeAction action) {
+        startAction(action);
     }
+
 
     /// Perform a tree action the next time this node is drawn.
     ///
@@ -600,31 +583,7 @@ abstract class Node {
     }
 
     protected auto filterActions() {
-        static struct Actions {
-            LayoutTree* tree;
-            TreeContext context;
-
-            int opApply(int delegate(TreeAction) @safe yield) {
-
-                // Old actions
-                foreach (action; tree.filterActions) {
-                    if (auto result = yield(action)) {
-                        return result;
-                    }
-                }
-
-                // New actions
-                foreach (action; context.actions) {
-                    if (auto result = yield(action)) {
-                        return result;
-                    }
-                }
-                return 0;
-
-            }
-        }
-
-        return Actions(tree, treeContext);
+        return treeContext.actions;
     }
 
     /// Draw a child node at the specified location inside of this node.
@@ -826,12 +785,7 @@ abstract class Node {
         reloadStyles();
 
         // Queue actions into the tree
-        tree.actions ~= _queuedActions;
-        foreach (action; _queuedActions) {
-            action.started();
-        }
         treeContext.actions.spawn(_queuedActionsNew);
-        _queuedActions = null;
         _queuedActionsNew = null;
 
     }
