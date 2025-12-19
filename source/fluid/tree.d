@@ -282,9 +282,6 @@ struct LayoutTree {
     // Input
     public {
 
-        /// Tree actions queued to execute during next draw.
-        DList!TreeAction actions;
-
         /// True if keyboard input was handled during the last frame; updated after tree rendering has completed.
         bool wasKeyboardHandled;
 
@@ -309,84 +306,4 @@ struct LayoutTree {
 
     /// Incremented for every `filterActions` access to prevent nested accesses from breaking previously made ranges.
     private int _actionAccessCounter;
-
-    /// Queue an action to perform while iterating the tree.
-    ///
-    /// Avoid using this; most of the time `Node.queueAction` is what you want. `LayoutTree.queueAction` might fire
-    /// too early
-    void queueAction(TreeAction action)
-    in (action, "Invalid action queued")
-    do {
-
-        actions ~= action;
-
-        // Run the first hook
-        action.started();
-
-    }
-
-    /// List actions in the tree, remove finished actions while iterating.
-    auto filterActions() {
-
-        struct ActionIterator {
-
-            LayoutTree* tree;
-
-            int opApply(int delegate(TreeAction) @safe fun) {
-
-                tree._actionAccessCounter++;
-                scope (exit) tree._actionAccessCounter--;
-
-                // Regular access
-                if (tree._actionAccessCounter == 1) {
-
-                    for (auto range = tree.actions[]; !range.empty; ) {
-
-                        // Yield the item
-                        auto result = fun(range.front);
-
-                        // If finished, remove from the queue
-                        if (range.front.toStop) tree.actions.popFirstOf(range);
-
-                        // Continue to the next item
-                        else range.popFront();
-
-                        // Stop iteration if requested
-                        if (result) return result;
-
-                    }
-
-                }
-
-                // Nested access
-                else {
-
-                    for (auto range = tree.actions[]; !range.empty; ) {
-
-                        auto front = range.front;
-                        range.popFront();
-
-                        // Ignore stopped items
-                        if (front.toStop) continue;
-
-                        // Yield the item
-                        if (auto result = fun(front)) {
-
-                            return result;
-
-                        }
-
-                    }
-
-                }
-
-                return 0;
-
-            }
-
-        }
-
-        return ActionIterator(&this);
-
-    }
 }
