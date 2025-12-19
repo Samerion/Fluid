@@ -674,10 +674,6 @@ abstract class Node {
         // Save disabled status
         _isDisabledInherited = branchDisabled;
 
-        // Count depth
-        tree.depth++;
-        scope (exit) tree.depth--;
-
         // Run beforeDraw actions
         foreach (action; filterActions) {
 
