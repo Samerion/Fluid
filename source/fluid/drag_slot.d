@@ -138,7 +138,7 @@ class DragSlot : NodeSlot!Node, Hoverable {
     ///     pointer = (New I/O only) Pointer performing the drag motion.
     @(FluidInputAction.press, .WhileDown)
     void drag(HoverPointer pointer)
-    in (treeContext)
+    in (treeContext, "DragSlot has to be resized before calling DragSlot.drag()")
     do {
 
         // Ignore if already dragging
