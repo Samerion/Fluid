@@ -106,9 +106,6 @@ abstract class Node {
         /// If true, this node is currently disabled.
         bool _isDisabled;
 
-        /// Check if this node is disabled, or has inherited the status.
-        bool _isDisabledInherited;
-
         /// If true, this node will be removed from the tree on the next draw.
         bool _toRemove;
 
@@ -323,13 +320,14 @@ abstract class Node {
     /// Check if this node is hovered.
     ///
     /// Returns false if the node or, while the node is being drawn, some of its ancestors are disabled.
-    bool isHovered() const { return _isHovered && !_isDisabled && !tree.isBranchDisabled; }
+    bool isHovered() const {
+        return _isHovered && !_isDisabled;
+    }
 
     /// Check if this node is disabled.
-    ref inout(bool) isDisabled() inout { return _isDisabled; }
-
-    /// Checks if the node is disabled, either by self, or by any of its ancestors. Updated when drawn.
-    bool isDisabledInherited() const { return _isDisabledInherited; }
+    ref inout(bool) isDisabled() inout {
+        return _isDisabled;
+    }
 
     /// Apply all of the given node parameters on this node.
     ///
@@ -661,33 +659,16 @@ abstract class Node {
             )
         );
 
-        /// Descending into a disabled tree
-        const branchDisabled = isDisabled || tree.isBranchDisabled;
-
-        /// True if this node is disabled, and none of its ancestors are disabled
-        const disabledRoot = isDisabled && !tree.isBranchDisabled;
-
-        // Toggle disabled branch if we're owning the root
-        if (disabledRoot) tree.isBranchDisabled = true;
-        scope (exit) if (disabledRoot) tree.isBranchDisabled = false;
-
-        // Save disabled status
-        _isDisabledInherited = branchDisabled;
-
         // Run beforeDraw actions
         foreach (action; filterActions) {
-
             action.beforeDrawImpl(this, space, mainBox, contentBox);
-
         }
 
         drawImpl(mainBox, contentBox);
 
         // Run afterDraw actions
         foreach (action; filterActions) {
-
             action.afterDrawImpl(this, space, mainBox, contentBox);
-
         }
 
     }

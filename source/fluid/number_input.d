@@ -288,7 +288,7 @@ class NumberInputSpinner : Node, Hoverable {
     }
 
     override bool blocksInput() const {
-        return isDisabled || isDisabledInherited;
+        return isDisabled;
     }
 
     override bool isHovered() const {
