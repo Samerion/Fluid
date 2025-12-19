@@ -113,15 +113,6 @@ class ScrollFrame : Frame, FluidScrollable, HoverScrollable {
         return value;
     }
 
-    deprecated("`scrollStart` was renamed to `scrollToStart` and will be removed in Fluid 0.8.0")
-    alias scrollStart = scrollToStart;
-
-    deprecated("`scrollEnd` was renamed to `scrollToEnd` and will be removed in Fluid 0.8.0")
-    alias scrollEnd = scrollToEnd;
-
-    deprecated("`scrollMax` was renamed to `maxScroll` and will be removed in Fluid 0.8.0")
-    alias scrollMax = maxScroll;
-
     /// Scroll to the beginning of the node, that is, set [scroll] to `0`.
     void scrollToStart() {
         scroll = 0;
@@ -133,25 +124,12 @@ class ScrollFrame : Frame, FluidScrollable, HoverScrollable {
         scroll = maxScroll;
     }
 
-    /// Set the scroll to a value clamped between start and end.
-    deprecated("Instead of `setScroll(value)` use `scroll = value`. `setScroll` will be removed "
-        ~ "in Fluid 0.8.0")
-    void setScroll(float value) {
-        scrollBar.setScroll(value);
-    }
-
     /// Returns:
     ///     The maximum value this container can be scrolled to. The frame must have been
     ///     [resized][Node.updateSize] at least once for this to return a correct value, otherwise
     ///     it will return `0`.
     float maxScroll() const {
         return scrollBar.maxScroll();
-    }
-
-    deprecated("shallowScrollTo with a Vector2 argument has been deprecated and will be removed "
-        ~ "in Fluid 0.8.0.")
-    Rectangle shallowScrollTo(const Node child, Vector2, Rectangle parentBox, Rectangle childBox) {
-        return shallowScrollTo(child, parentBox, childBox);
     }
 
     Rectangle shallowScrollTo(const Node, Rectangle parentBox, Rectangle childBox) {
