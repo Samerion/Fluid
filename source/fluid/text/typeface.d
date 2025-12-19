@@ -23,9 +23,6 @@ interface Typeface {
 
     public import fluid.text.util : defaultWordChunks;
     public import fluid.text.ruler : eachWord;
-    deprecated("Use Rope.byLine instead. lineSplitter will be removed in 0.9.0") {
-        public import fluid.text.util : lineSplitter, lineSplitterIndex;
-    }
 
     /// List glyphs in the typeface.
     long glyphCount() const;
