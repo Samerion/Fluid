@@ -255,15 +255,6 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
         return _positionalFocusAction;
     }
 
-    /// Returns:
-    ///     Position the frame is "anchored" to. A corner of the frame will be chosen to match
-    ///     this position.
-    deprecated("`Vector2 anchor` has been deprecated in favor of `Rectangle getAnchor` and "
-        ~ "will be removed in Fluid 0.8.0.")
-    final ref inout(Vector2) anchor() inout nothrow pure {
-        return _anchorVec;
-    }
-
     override final Rectangle getAnchor(Rectangle) const nothrow {
         return getAnchor;
     }
