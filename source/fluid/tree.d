@@ -282,9 +282,6 @@ struct LayoutTree {
     // Nodes
     public {
 
-        /// Root node of the tree.
-        Node root;
-
         /// Deepest hovered scrollable node.
         FluidScrollable scroll;
 
@@ -325,11 +322,6 @@ struct LayoutTree {
 
     /// Incremented for every `filterActions` access to prevent nested accesses from breaking previously made ranges.
     private int _actionAccessCounter;
-
-    /// Create a new tree with the given node as its root.
-    this(Node root) {
-        this.root = root;
-    }
 
     /// Queue an action to perform while iterating the tree.
     ///
