@@ -394,11 +394,12 @@ abstract class Node {
     /// Perform a tree action the next time this node is drawn.
     ///
     /// Tree actions can be used to analyze the node tree and modify its behavior while it runs.
-    /// Actions can listen and respond to hooks like `beforeDraw` and `afterDraw`. They can interact
-    /// with existing nodes or inject nodes in any place of the tree.
+    /// Actions can listen and respond to hooks like `beforeDraw` and `afterDraw`. They can
+    /// interact with existing nodes or inject nodes in any place of the tree.
     ///
     /// **Limited scope:** The action will only act on this branch of the tree: `beforeDraw`
-    /// and `afterDraw` hooks will only fire for this node and its children.
+    /// and `afterDraw` hooks will only fire for this node and its children. `startTreeAction`
+    /// can be used to disable this, and search the entire tree.
     ///
     /// **Starting actions:** Most usually, a tree actions provides its own function for creating
     /// and starting, so this method does not need to be called directly. This method may still be
@@ -416,8 +417,6 @@ abstract class Node {
     final void startAction(TreeAction action)
     in (action, "Node.runAction(TreeAction) called with a `null` argument")
     do {
-
-        // Set up the action to run in this branch
         action.startNode = this;
         action.toStop = false;
 
@@ -430,7 +429,12 @@ abstract class Node {
         else {
             _queuedActionsNew ~= action;
         }
+    }
 
+    /// ditto
+    final void startTreeAction(TreeAction action) {
+        startAction(action);
+        action.startNode = null;
     }
 
     /// Start a branch action (or multiple) to run on children of this node.
