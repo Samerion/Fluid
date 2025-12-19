@@ -279,14 +279,6 @@ struct LayoutTree {
 
     import fluid.theme : Breadcrumbs;
 
-    // Nodes
-    public {
-
-        /// Deepest hovered scrollable node.
-        FluidScrollable scroll;
-
-    }
-
     // Input
     public {
 
