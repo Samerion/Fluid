@@ -76,7 +76,7 @@ class HoverTracker : Node, Hoverable {
     }
 
     override bool blocksInput() const {
-        return isDisabled || isDisabledInherited;
+        return isDisabled;
     }
 
     override bool hoverImpl(HoverPointer) {

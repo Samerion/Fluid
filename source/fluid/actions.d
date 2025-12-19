@@ -99,7 +99,7 @@ FocusRecurseAction focusRecurse(Node parent) {
     auto action = new FocusRecurseAction;
 
     // Perform a tree action to find the child
-    parent.queueAction(action);
+    parent.startAction(action);
 
     return action;
 
@@ -145,7 +145,7 @@ FocusRecurseAction focusRecurseChildren(Node parent) {
 
     auto action = new FocusRecurseAction;
     action.excludeStartNode = true;
-    parent.queueAction(action);
+    parent.startAction(action);
 
     return action;
 
@@ -196,21 +196,15 @@ class FocusRecurseAction : FocusSearchAction {
 
     override void beforeDraw(Node node, Rectangle) {
 
-        // Ignore if the branch is disabled
-        if (node.isDisabledInherited) return;
-
         // Ignore the start node if excluded
         if (excludeStartNode && node is startNode) return;
 
         // Check if the node is focusable
-        if (auto focusable = cast(Focusable) node) {
-
-            // Mark the node
+        if (auto focusable = node.castIfAcceptsInput!Focusable) {
             result = node;
 
-            // Stop here if selecting the first
+            // Stop here if selecting the first node
             if (!isReverse) stop;
-
         }
 
     }
@@ -233,7 +227,7 @@ class FocusRecurseAction : FocusSearchAction {
 ScrollIntoViewAction scrollIntoView(Node node, bool alignToTop = false) {
 
     auto action = new ScrollIntoViewAction;
-    node.queueAction(action);
+    node.startAction(action);
     action.alignToTop = alignToTop;
 
     return action;

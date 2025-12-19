@@ -112,6 +112,16 @@ struct TreeContextData {
 
     }
 
+    package (fluid) {
+
+        /// True if the tree should be resized during next frame.
+        ///
+        /// This variable is a temporary solution, and a dedicated I/O system will be used in
+        /// the future. See: https://git.samerion.com/Samerion/Fluid/issues/118
+        bool shouldResize;
+
+    }
+
     private {
         int _lockTint;
         auto _tint = Color(0xff, 0xff, 0xff, 0xff);

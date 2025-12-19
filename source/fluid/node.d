@@ -45,9 +45,6 @@ abstract class Node {
 
     public {
 
-        /// Tree data for the node. Note: requires at least one draw before this will work.
-        LayoutTree* tree;
-
         /// Layout for this node.
         Layout layout;
 
@@ -97,9 +94,6 @@ abstract class Node {
 
         TreeContext _treeContext;
 
-        /// If true, this node must update its size.
-        bool _resizePending = true;
-
         /// If true, this node is hidden and won't be rendered.
         bool _isHidden;
 
@@ -108,9 +102,6 @@ abstract class Node {
 
         /// If true, this node is currently disabled.
         bool _isDisabled;
-
-        /// Check if this node is disabled, or has inherited the status.
-        bool _isDisabledInherited;
 
         /// If true, this node will be removed from the tree on the next draw.
         bool _toRemove;
@@ -326,13 +317,14 @@ abstract class Node {
     /// Check if this node is hovered.
     ///
     /// Returns false if the node or, while the node is being drawn, some of its ancestors are disabled.
-    bool isHovered() const { return _isHovered && !_isDisabled && !tree.isBranchDisabled; }
+    bool isHovered() const {
+        return _isHovered && !_isDisabled;
+    }
 
     /// Check if this node is disabled.
-    ref inout(bool) isDisabled() inout { return _isDisabled; }
-
-    /// Checks if the node is disabled, either by self, or by any of its ancestors. Updated when drawn.
-    bool isDisabledInherited() const { return _isDisabledInherited; }
+    ref inout(bool) isDisabled() inout {
+        return _isDisabled;
+    }
 
     /// Apply all of the given node parameters on this node.
     ///
@@ -371,37 +363,21 @@ abstract class Node {
 
     }
 
-    /// Queue an action to perform within this node's branch.
-    ///
-    /// This function is legacy but is kept for backwards compatibility. Use `startAction` instead.
-    ///
-    /// This function is not safe to use while the tree is being drawn.
-    final void queueAction(TreeAction action)
-    in (action, "Invalid action queued (null)")
-    do {
-
-        // Set this node as the start for the given action
-        action.startNode = this;
-
-        // Reset the action
-        action.toStop = false;
-
-        // Insert the action into the tree's queue
-        if (tree) tree.queueAction(action);
-
-        // If there isn't a tree, wait for a resize
-        else _queuedActions ~= action;
-
+    deprecated ("`queueAction` was replaced by `startAction`. Please update before Fluid 0.9.0.")
+    final void queueAction(TreeAction action) {
+        startAction(action);
     }
+
 
     /// Perform a tree action the next time this node is drawn.
     ///
     /// Tree actions can be used to analyze the node tree and modify its behavior while it runs.
-    /// Actions can listen and respond to hooks like `beforeDraw` and `afterDraw`. They can interact
-    /// with existing nodes or inject nodes in any place of the tree.
+    /// Actions can listen and respond to hooks like `beforeDraw` and `afterDraw`. They can
+    /// interact with existing nodes or inject nodes in any place of the tree.
     ///
     /// **Limited scope:** The action will only act on this branch of the tree: `beforeDraw`
-    /// and `afterDraw` hooks will only fire for this node and its children.
+    /// and `afterDraw` hooks will only fire for this node and its children. `startTreeAction`
+    /// can be used to disable this, and search the entire tree.
     ///
     /// **Starting actions:** Most usually, a tree actions provides its own function for creating
     /// and starting, so this method does not need to be called directly. This method may still be
@@ -419,8 +395,6 @@ abstract class Node {
     final void startAction(TreeAction action)
     in (action, "Node.runAction(TreeAction) called with a `null` argument")
     do {
-
-        // Set up the action to run in this branch
         action.startNode = this;
         action.toStop = false;
 
@@ -433,7 +407,12 @@ abstract class Node {
         else {
             _queuedActionsNew ~= action;
         }
+    }
 
+    /// ditto
+    final void startTreeAction(TreeAction action) {
+        startAction(action);
+        action.startNode = null;
     }
 
     /// Start a branch action (or multiple) to run on children of this node.
@@ -524,13 +503,20 @@ abstract class Node {
 
     /// Returns: True if this node is to be resized before the next frame.
     bool isResizePending() const {
-        return _resizePending;
+        if (treeContext) {
+            return treeContext.shouldResize;
+        }
+        else {
+            return true;
+        }
     }
 
     /// Recalculate the window size before next draw.
     final void updateSize() scope nothrow {
-        if (tree) tree.root._resizePending = true;
-        // Tree might be null — if so, the node will be resized regardless
+        if (treeContext) {
+            treeContext.shouldResize = true;
+        }
+        // Context might be null — if so, the node will be resized regardless
     }
 
     final void draw() {
@@ -547,11 +533,8 @@ abstract class Node {
     final void drawAsRoot(Rectangle viewport = Rectangle(0, 0, 0, 0)) @trusted {
 
         // No tree set, create one
-        if (tree is null) {
-
-            tree = new LayoutTree(this);
+        if (!treeContext) {
             _treeContext.prepare();
-
         }
 
         // No theme set, set the default
@@ -564,17 +547,14 @@ abstract class Node {
 
         assert(theme);
 
-        // Clear focus info
-        tree.focusBox = Rectangle(float.nan);
-
         // Clear breadcrumbs
         treeContext.breadcrumbs = Breadcrumbs.init;
 
         // Resize if required
         if (resizePending) {
-            prepareInternalImpl(tree, treeContext, theme);
+            prepareInternalImpl(treeContext, theme);
             resizeInternalImpl(viewport.size);
-            _resizePending = false;
+            treeContext.shouldResize = false;
         }
 
         // Run beforeTree actions
@@ -595,31 +575,7 @@ abstract class Node {
     }
 
     protected auto filterActions() {
-        static struct Actions {
-            LayoutTree* tree;
-            TreeContext context;
-
-            int opApply(int delegate(TreeAction) @safe yield) {
-
-                // Old actions
-                foreach (action; tree.filterActions) {
-                    if (auto result = yield(action)) {
-                        return result;
-                    }
-                }
-
-                // New actions
-                foreach (action; context.actions) {
-                    if (auto result = yield(action)) {
-                        return result;
-                    }
-                }
-                return 0;
-
-            }
-        }
-
-        return Actions(tree, treeContext);
+        return treeContext.actions;
     }
 
     /// Draw a child node at the specified location inside of this node.
@@ -656,8 +612,8 @@ abstract class Node {
         import std.range;
 
         assert(!toRemove, "A toRemove child wasn't removed from container.");
-        assert(tree !is null, toString ~ " wasn't resized prior to drawing. You might be missing an `updateSize`"
-            ~ " call!");
+        assert(treeContext, toString ~ " wasn't resized prior to drawing. You might be missing "
+            ~ "an `updateSize` call!");
 
         // If hidden, don't draw anything
         if (isHidden) return;
@@ -697,37 +653,16 @@ abstract class Node {
             )
         );
 
-        /// Descending into a disabled tree
-        const branchDisabled = isDisabled || tree.isBranchDisabled;
-
-        /// True if this node is disabled, and none of its ancestors are disabled
-        const disabledRoot = isDisabled && !tree.isBranchDisabled;
-
-        // Toggle disabled branch if we're owning the root
-        if (disabledRoot) tree.isBranchDisabled = true;
-        scope (exit) if (disabledRoot) tree.isBranchDisabled = false;
-
-        // Save disabled status
-        _isDisabledInherited = branchDisabled;
-
-        // Count depth
-        tree.depth++;
-        scope (exit) tree.depth--;
-
         // Run beforeDraw actions
         foreach (action; filterActions) {
-
             action.beforeDrawImpl(this, space, mainBox, contentBox);
-
         }
 
         drawImpl(mainBox, contentBox);
 
         // Run afterDraw actions
         foreach (action; filterActions) {
-
             action.afterDrawImpl(this, space, mainBox, contentBox);
-
         }
 
     }
@@ -758,19 +693,19 @@ abstract class Node {
         return style.cropBox(borderBox, style.border);
     }
 
-    /// Prepare a child for use. This is automatically called by `resizeChild` and only meant for advanced usage.
+    /// Prepare a child for use. This is automatically called by `resizeChild` and only meant for
+    /// advanced usage.
     ///
-    /// This method is intended to be used when conventional resizing through `resizeImpl` is not desired. This can
-    /// be used to implement an advanced system with a different resizing mechanism, or something like `NodeChain`,
-    /// which changes how children are managed. Be mindful that child nodes must have some preparation mechanism
-    /// available to initialize their I/O systems and resources — normally this is done by `resizeImpl`.
+    /// This method is intended to be used when conventional resizing through `resizeImpl` is
+    /// not desired. This can be used to implement an advanced system with a different resizing
+    /// mechanism, or something like `NodeChain`, which changes how children are managed. Be
+    /// mindful that child nodes must have some preparation mechanism available to initialize
+    /// their I/O systems and resources — normally this is done by `resizeImpl`.
     ///
     /// Params:
     ///     child = Child node to resize.
     protected void prepareChild(Node child) {
-
-        child.prepareInternalImpl(tree, treeContext, theme);
-
+        child.prepareInternalImpl(treeContext, theme);
     }
 
     /// Resize a child of this node.
@@ -788,29 +723,12 @@ abstract class Node {
 
     }
 
-    /// Recalculate the minimum node size and update the `minSize` property.
-    /// Params:
-    ///     tree  = The parent's tree to pass down to this node.
-    ///     theme = Theme to inherit from the parent.
-    ///     space = Available space.
-    deprecated("`Node.resize` has been replaced with `resizeChild(Node, Vector2)` and will be removed in Fluid 0.8.0.")
-    protected final void resize(LayoutTree* tree, Theme theme, Vector2 space)
-    in(tree, "Tree for Node.resize() must not be null.")
-    in(theme, "Theme for Node.resize() must not be null.")
-    do {
-
-        prepareInternalImpl(tree, TreeContext.init, theme);
-        resizeInternalImpl(space);
-
-    }
-
-    private final void prepareInternalImpl(LayoutTree* tree, TreeContext context, Theme theme)
-    in(tree, "Tree for prepareChild(Node) must not be null.")
+    private final void prepareInternalImpl(TreeContext context, Theme theme)
+    in(context, "Tree for prepareChild(Node) must not be null.")
     in(theme, "Theme for prepareChild(Node) must not be null.")
     do {
 
         // Inherit tree and theme
-        this.tree = tree;
         this._treeContext = context;
         inheritTheme(theme);
 
@@ -821,18 +739,13 @@ abstract class Node {
         reloadStyles();
 
         // Queue actions into the tree
-        tree.actions ~= _queuedActions;
-        foreach (action; _queuedActions) {
-            action.started();
-        }
         treeContext.actions.spawn(_queuedActionsNew);
-        _queuedActions = null;
         _queuedActionsNew = null;
 
     }
 
     private final void resizeInternalImpl(Vector2 space)
-    in(tree, "Tree for Node.resize() must not be null.")
+    in(treeContext, "Tree for Node.resize() must not be null.")
     in(theme, "Theme for Node.resize() must not be null.")
     do {
 
@@ -894,21 +807,21 @@ abstract class Node {
 
     /// Connect to an I/O system
     protected T use(T : IO)()
-    in (tree, "`use()` should only be used inside `resizeImpl`")
+    in (treeContext, "`use()` should only be used inside `resizeImpl`")
     do {
         return treeContext.io.get!T();
     }
 
     /// ditto
     protected T use(T : IO)(out T io)
-    in (tree, "`use()` should only be used inside `resizeImpl`")
+    in (treeContext, "`use()` should only be used inside `resizeImpl`")
     do {
         return io = use!T();
     }
 
     /// Require
     protected T require(T : IO)()
-    in (tree, "`require()` should only be used inside `resizeImpl`")
+    in (treeContext, "`require()` should only be used inside `resizeImpl`")
     do {
         auto io = use!T();
         assert(io, "require: Requested I/O " ~ T.stringof ~ " is not active");
@@ -917,7 +830,7 @@ abstract class Node {
 
     /// ditto
     protected T require(T : IO)(out T io)
-    in (tree, "`require()` should only be used inside `resizeImpl`")
+    in (treeContext, "`require()` should only be used inside `resizeImpl`")
     do {
         return io = require!T();
     }
