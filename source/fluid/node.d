@@ -97,9 +97,6 @@ abstract class Node {
 
         TreeContext _treeContext;
 
-        /// If true, this node must update its size.
-        bool _resizePending = true;
-
         /// If true, this node is hidden and won't be rendered.
         bool _isHidden;
 
@@ -524,13 +521,20 @@ abstract class Node {
 
     /// Returns: True if this node is to be resized before the next frame.
     bool isResizePending() const {
-        return _resizePending;
+        if (treeContext) {
+            return treeContext.shouldResize;
+        }
+        else {
+            return true;
+        }
     }
 
     /// Recalculate the window size before next draw.
     final void updateSize() scope nothrow {
-        if (tree) tree.root._resizePending = true;
-        // Tree might be null — if so, the node will be resized regardless
+        if (treeContext) {
+            treeContext.shouldResize = true;
+        }
+        // Context might be null — if so, the node will be resized regardless
     }
 
     final void draw() {
@@ -574,7 +578,7 @@ abstract class Node {
         if (resizePending) {
             prepareInternalImpl(tree, treeContext, theme);
             resizeInternalImpl(viewport.size);
-            _resizePending = false;
+            treeContext.shouldResize = false;
         }
 
         // Run beforeTree actions
