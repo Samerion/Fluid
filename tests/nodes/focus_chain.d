@@ -26,7 +26,7 @@ class FocusTracker : Node, Focusable {
     }
 
     override bool blocksInput() const {
-        return isDisabled || isDisabledInherited;
+        return isDisabled;
     }
 
     @(FluidInputAction.press)

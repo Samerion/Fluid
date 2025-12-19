@@ -364,7 +364,7 @@ class HoverTransform : NodeChain, HoverIO, Focusable, Hoverable, HoverScrollable
     }
 
     override bool blocksInput() const {
-        return isDisabled || isDisabledInherited;
+        return isDisabled;
     }
 
     override bool actionImpl(IO io, int hostID, immutable InputActionID actionID, bool isActive) {

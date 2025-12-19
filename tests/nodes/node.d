@@ -77,52 +77,6 @@ unittest {
 
 }
 
-@("isDisabled applies transitively")
-unittest {
-
-    int clicked;
-
-    Button firstButton, secondButton;
-    Space space, wrapperSpace;
-
-    auto root = focusChain(
-        wrapperSpace = vspace(
-            firstButton = button("One", delegate { clicked++; }),
-            space       = vspace(
-                secondButton = button("One", delegate { clicked++; }),
-            ),
-        ),
-    );
-
-    // Disable the space and press both buttons
-    space.disable();
-    root.draw();
-    root.currentFocus = firstButton;
-    root.runInputAction!(FluidInputAction.press);
-    assert(clicked == 1);
-    root.currentFocus = secondButton;
-    root.runInputAction!(FluidInputAction.press);
-    assert(clicked == 1);
-
-    // Enable it
-    space.enable();
-    root.draw();
-    root.currentFocus = secondButton;
-    root.runInputAction!(FluidInputAction.press);
-    assert(clicked == 2);
-
-    // Disable the root
-    wrapperSpace.disable();
-    root.draw();
-    root.currentFocus = secondButton;
-    root.runInputAction!(FluidInputAction.press);
-    assert(clicked == 2);
-    root.currentFocus = firstButton;
-    root.runInputAction!(FluidInputAction.press);
-    assert(clicked == 2);
-
-}
-
 @("TreeAction can be attached to the tree, or to a branch")
 unittest {
 

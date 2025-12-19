@@ -56,7 +56,6 @@ unittest {
     root.draw();
     root.runInputAction!(FluidInputAction.press);
 
-    assert(!btn.isDisabledInherited);
     assert(submitted == 2);
 
 }

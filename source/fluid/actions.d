@@ -196,21 +196,15 @@ class FocusRecurseAction : FocusSearchAction {
 
     override void beforeDraw(Node node, Rectangle) {
 
-        // Ignore if the branch is disabled
-        if (node.isDisabledInherited) return;
-
         // Ignore the start node if excluded
         if (excludeStartNode && node is startNode) return;
 
         // Check if the node is focusable
-        if (auto focusable = cast(Focusable) node) {
-
-            // Mark the node
+        if (auto focusable = node.castIfAcceptsInput!Focusable) {
             result = node;
 
-            // Stop here if selecting the first
+            // Stop here if selecting the first node
             if (!isReverse) stop;
-
         }
 
     }

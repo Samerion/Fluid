@@ -285,9 +285,6 @@ struct LayoutTree {
         /// Current rectangle drawing is limited to.
         Rectangle scissors;
 
-        /// True if the current tree branch is marked as disabled (doesn't take input).
-        bool isBranchDisabled;
-
     }
 
     /// Incremented for every `filterActions` access to prevent nested accesses from breaking previously made ranges.

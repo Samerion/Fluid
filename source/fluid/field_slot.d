@@ -124,7 +124,7 @@ class FieldSlot(T : Node) : T, Hoverable, Focusable {
     }
 
     override bool blocksInput() const {
-        return isDisabled || isDisabledInherited;
+        return isDisabled;
     }
 
     override bool hoverImpl(HoverPointer) {

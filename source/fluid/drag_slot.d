@@ -175,7 +175,7 @@ class DragSlot : NodeSlot!Node, Hoverable {
     }
 
     override bool blocksInput() const {
-        return isDisabled || isDisabledInherited;
+        return isDisabled;
     }
 
     private Rectangle dragRectangle(Vector2 offset) const nothrow {
@@ -242,15 +242,8 @@ class DragSlot : NodeSlot!Node, Hoverable {
             valueRect.h -= handleWidth + style.gap.sideY;
         }
 
-        // Disable the children while dragging
-        const disable = _drawDragged && !tree.isBranchDisabled;
-
-        if (disable) tree.isBranchDisabled = true;
-
         // Draw the value
         super.drawImpl(outer, valueRect);
-
-        if (disable) tree.isBranchDisabled = false;
 
         // Draw the handle
         drawChild(handle, handleRect);
