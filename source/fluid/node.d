@@ -156,16 +156,7 @@ abstract class Node {
 
     /// Returns: True if both nodes are the same node.
     override bool opEquals(const Object other) const @safe {
-
         return this is other;
-
-    }
-
-    /// ditto
-    bool opEquals(const Node otherNode) const {
-
-        return this is otherNode;
-
     }
 
     /// The theme defines how the node will appear to the user.
