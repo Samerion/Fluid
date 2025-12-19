@@ -447,7 +447,6 @@ class HoverTransform : NodeChain, HoverIO, Focusable, Hoverable, HoverScrollable
         return false;
     }
 
-    alias opEquals = typeof(super).opEquals;
     override bool opEquals(const Object other) const {
         return super.opEquals(other);
     }

@@ -51,8 +51,6 @@ class FocusTracker : Node, Focusable {
         return focusIO.isFocused(this);
     }
 
-    alias opEquals = typeof(super).opEquals;
-
     override bool opEquals(const Object other) const {
         return super.opEquals(other);
     }

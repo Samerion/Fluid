@@ -83,7 +83,6 @@ class ScrollFrame : Frame, FluidScrollable, HoverScrollable {
         this.scrollBar = .vscrollInput(.layout!(1, "fill"));
     }
 
-    alias opEquals = Node.opEquals;
     override bool opEquals(const Object other) const {
         return super.opEquals(other);
     }
