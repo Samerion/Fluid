@@ -1,5 +1,7 @@
 ![Hello World from Fluid!](./resources/hello-fluid.png)
 
+# Fluid
+
 * [Documentation](https://libfluid.org)
 * [Issues](https://git.samerion.com/Samerion/Fluid/issues)
 * [DUB](https://code.dlang.org/packages/fluid)
