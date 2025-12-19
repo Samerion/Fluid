@@ -74,6 +74,7 @@ unittest {
     // Press the button using an event
     root.emitEvent(
         KeyboardIO.createEvent(KeyboardIO.Key.space, true),
+        null,
         0,
         &tester.runInputAction,
     );
@@ -83,6 +84,7 @@ unittest {
     // Break line
     root.emitEvent(
         KeyboardIO.createEvent(KeyboardIO.Key.enter, true),
+        null,
         0,
         &tester.runInputAction,
     );
@@ -95,6 +97,7 @@ unittest {
     tester.disableBreaking = true;
     root.emitEvent(
         KeyboardIO.createEvent(KeyboardIO.Key.enter, true),
+        null,
         0,
         &tester.runInputAction,
     );
@@ -118,14 +121,14 @@ unittest {
     assert(tester.frameCalls == 0);
 
     // Emit frame event and expect it to be handled
-    root.emitEvent(ActionIO.frameEvent, 0, &tester.runInputAction);
+    root.emitEvent(ActionIO.frameEvent, null, 0, &tester.runInputAction);
     assert(tester.frameCalls == 0);
     root.draw();
     assert(tester.frameCalls == 1);
 
     // Emit frame event alongside a space press event
-    root.emitEvent(ActionIO.frameEvent, 0, &tester.runInputAction);
-    root.emitEvent(KeyboardIO.press.space, 0, &tester.runInputAction);
+    root.emitEvent(ActionIO.frameEvent, null, 0, &tester.runInputAction);
+    root.emitEvent(KeyboardIO.press.space, null, 0, &tester.runInputAction);
     assert(tester.frameCalls == 1);
     assert(tester.pressed == 0);
     root.draw();
@@ -146,13 +149,13 @@ unittest {
     assert(tester.pressed == 0);
     assert(tester.broken  == 0);
 
-    root.emitEvent(KeyboardIO.press.enter, 0, &tester.runInputAction);
+    root.emitEvent(KeyboardIO.press.enter, null, 0, &tester.runInputAction);
     root.draw();
     assert(tester.pressed == 1);
     assert(tester.broken  == 0);
 
     map.bindNew!(FluidInputAction.breakLine)(KeyboardIO.codes.enter);
-    root.emitEvent(KeyboardIO.press.enter, 0, &tester.runInputAction);
+    root.emitEvent(KeyboardIO.press.enter, null, 0, &tester.runInputAction);
     root.draw();
     assert(tester.pressed == 1);
     assert(tester.broken  == 1);

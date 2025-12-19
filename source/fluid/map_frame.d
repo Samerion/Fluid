@@ -159,11 +159,6 @@ class MapFrame : Frame {
         /// Last mouse position
         Vector2 _mousePosition;
 
-        /// Child currently dragged with the mouse.
-        ///
-        /// The child will move along with mouse movements performed by the user.
-        Node _mouseDrag;
-
     }
 
     /// Construct the frame.
@@ -268,36 +263,6 @@ class MapFrame : Frame {
         positions[node].drop = vector;
     }
 
-    deprecated("`MapFrame.mouseDrag` is legacy and will not continue to work with Fluid's new"
-        ~ " I/O system. You can use `moveChildBy` to move nodes, but you need to implement"
-        ~ " mouse controls yourself. Consequently, `mouseDrag` will be removed in Fluid 0.8.0.")
-    {
-
-        Node mouseDrag(Node node) @trusted {
-
-            assert(node in positions, "Requested node is not present in the map");
-
-            _mouseDrag = node;
-            _mousePosition = Vector2(float.nan, float.nan);
-
-            return node;
-
-        }
-
-        inout(Node) mouseDrag() inout {
-            return _mouseDrag;
-        }
-
-        final void stopMouseDrag() {
-            _mouseDrag = null;
-        }
-
-    }
-
-    deprecated("`dragChildBy` has been renamed to `moveChildBy`"
-        ~ " and will be removed in Fluid 0.8.0")
-    alias dragChildBy = moveChildBy;
-
     /// Move the given child, changing its position by a difference of the new and old position.
     /// Params:
     ///     node  = Node to move.
@@ -305,7 +270,7 @@ class MapFrame : Frame {
     ///         For example `(5, 0)` will move the node 5 pixels to the right.
     void moveChildBy(Node node, Vector2 delta) {
         auto position = node in positions;
-        assert(position, "Dragged node is not present in the map");
+        assert(position, "Moved node is not present in the map");
 
         position.coords += delta;
     }

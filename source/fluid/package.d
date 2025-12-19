@@ -284,7 +284,7 @@ public import
     fluid.radiobox,            // documented
     fluid.raylib_view,         // documented
     fluid.resolution_override, // documented
-    fluid.scroll,              // documented
+    fluid.scroll_frame,        // documented
     fluid.scroll_input,        // documented
     fluid.separator,           // documented
     fluid.size_lock,           // documented

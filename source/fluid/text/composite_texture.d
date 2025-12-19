@@ -63,10 +63,6 @@ struct CompositeTexture {
         resize(size, dpi, alwaysMax);
     }
 
-    deprecated this(Vector2 size, bool alwaysMax = false) {
-        resize(size, alwaysMax);
-    }
-
     Vector2 viewportSize() const pure nothrow {
         return Vector2(
             size.x * 96f / dpi.x,
@@ -93,10 +89,6 @@ struct CompositeTexture {
         foreach (ref chunk; chunks) {
             chunk.isValid = false;
         }
-    }
-
-    deprecated void resize(Vector2 size, bool alwaysMax = false) {
-        resize(size, Vector2(96, 96), alwaysMax);
     }
 
     size_t chunkCount() const {

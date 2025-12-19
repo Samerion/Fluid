@@ -15,12 +15,6 @@ alias simpleConstructor = nodeBuilder;
 alias SimpleConstructor = NodeBuilder;
 alias isSimpleConstructor = isNodeBuilder;
 
-deprecated("Use NodeBuilder instead") {
-    alias componentBuilder = nodeBuilder;
-    alias ComponentBuilder = NodeBuilder;
-    alias isComponentBuilder = isNodeBuilder;
-}
-
 // For saner testing and debugging.
 version (unittest)
 private extern(C) __gshared string[] rt_options = ["oncycle=ignore"];
@@ -60,11 +54,6 @@ struct NodeBuilder(T, alias fun = "a") {
     import fluid.structs;
 
     alias Type = T;
-
-    deprecated("`NodeBuilder.initializer` is affected by a codegen bug in DMD, "
-        ~ "and has been replaced with `initialize`. "
-        ~ "Please update your code before Fluid 0.8.0")
-    alias initializer = unaryFun!fun;
 
     void initialize(T node) {
         unaryFun!fun(node);

@@ -628,12 +628,6 @@ unittest {
 
 }
 
-deprecated("`IsOpaque` and `IsOpaqueMask` have been renamed to `HitFilter` and `HitFilterMask` "
-    ~ "respectively. They will be removed in Fluid 0.8.0.") {
-    alias IsOpaque = HitFilter;
-    alias IsOpaqueMask = HitFilterMask;
-}
-
 /// `HitFilter` is used as a return value of `Node.inBounds`. For most use-cases,
 /// `HitFilter.hit` and `HitFilter.miss` are the most appropriate, specifying that the point in
 /// question is, or is not, in the node's bounds. This defines the way nodes interact with
@@ -663,15 +657,6 @@ enum HitFilter : HitFilterMask {
     /// Indicates that the point is *not* in bounds of any of the nodes in the branch; neither
     /// of self, nor any of the children nodes.
     missBranch = HitFilterMask(3),
-
-    deprecated("`yes` has been renamed to `hit`, and will be removed in Fluid 0.8.0")
-        yes         = hit,
-    deprecated("`no` has been renamed to `miss`, and will be removed in Fluid 0.8.0")
-        no          = miss,
-    deprecated("`onlySelf` has been renamed to `hitBranch`, and will be removed in Fluid 0.8.0")
-        onlySelf    = hitBranch,
-    deprecated("`notInBranch` has been renamed to `missBranch`, and will be removed in Fluid 0.8.0")
-        notInBranch = missBranch,
 
 }
 

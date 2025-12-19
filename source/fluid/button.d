@@ -41,9 +41,6 @@ import fluid.structs;
 /// It takes a string for the label text, and a delegate describing the effect.
 alias button = nodeBuilder!Button;
 
-deprecated("Use vframeButton instead")
-alias frameButton = nodeBuilder!FrameButton;
-
 /// A [node builder][nodeBuilder] to create a [FrameButton]. The contents will be aligned
 /// horizontally (for `hframeButton`) or vertically (for `vframeButton`). Pass a delegate to
 /// describe the button's effects as the last argument.
