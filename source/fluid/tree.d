@@ -279,17 +279,6 @@ struct LayoutTree {
 
     import fluid.theme : Breadcrumbs;
 
-    // Input
-    public {
-
-        /// True if keyboard input was handled during the last frame; updated after tree rendering has completed.
-        bool wasKeyboardHandled;
-
-        deprecated("keyboardHandled was renamed to wasKeyboardHandled and will be removed in Fluid 0.8.0.")
-        alias keyboardHandled = wasKeyboardHandled;
-
-    }
-
     /// Miscelleanous, technical properties.
     public {
 
