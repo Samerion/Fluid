@@ -514,6 +514,31 @@ abstract class Node {
         // Context might be null — if so, the node will be resized regardless
     }
 
+    /// Reconfigure the node to use a specific wrapper (I/O stack). Triggers a resize.
+    ///
+    /// If not called, the default wrapper is used, see [createDefaultTreeWrapper].
+    ///
+    /// Params:
+    ///     wrapper = Wrapper to use.
+    /// See_Also:
+    ///     [configureBlank]
+    final void configure(TreeWrapper wrapper) {
+        if (!treeContext) {
+            _treeContext.prepare(wrapper);
+        }
+        else {
+            _treeContext.wrapper = wrapper;
+        }
+        updateSize();
+    }
+
+    /// Remove tree wrapper. Triggers a resize.
+    ///
+    /// This is equivalent to calling `configure(null)`. See [configure] for details.
+    final void configureBlank() {
+        configure(null);
+    }
+
     final void draw() {
         _treeContext.prepare();
         if (treeContext.wrapper) {

@@ -273,3 +273,44 @@ unittest {
     );
 
 }
+
+@("Node.configure() changes tree wrapper in use")
+unittest {
+    import std.typecons;
+    import fluid.label;
+    import fluid.future.context;
+
+    class BlankNode : BlackHole!Node { }
+
+    auto root = new BlankNode;
+    TreeWrapper activeWrapper;
+
+    class Wrapper : TreeWrapper {
+
+        override void drawTree(TreeContext, Node) {
+            activeWrapper = this;
+        }
+
+        override void runTree(TreeContext, Node) {
+            activeWrapper = this;
+        }
+
+    }
+
+    auto wrapper1 = new Wrapper;
+    auto wrapper2 = new Wrapper;
+
+    root.configure(wrapper1);
+    root.draw();
+    assert(activeWrapper is wrapper1);
+    assert(root.treeContext.wrapper is activeWrapper);
+
+    root.configure(wrapper2);
+    root.draw();
+    assert(activeWrapper is wrapper2);
+    assert(root.treeContext.wrapper is activeWrapper);
+
+    root.configureBlank();
+    root.draw();
+    assert(root.treeContext.wrapper is null);
+}
