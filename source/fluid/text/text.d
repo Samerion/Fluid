@@ -924,12 +924,6 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         texture.resize(_sizeDots, dpi, hasFastEdits);
     }
 
-    /// Reset the texture, destroying it and replacing it with a blank.
-    deprecated void clearTextures() {
-        texture.format = Image.Format.palettedAlpha;
-        texture.resize(_sizeDots, hasFastEdits);
-    }
-
     /// Generate the textures, if not already generated.
     ///
     /// Params:
