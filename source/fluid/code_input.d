@@ -918,47 +918,23 @@ class CodeInput : TextInput {
 
     }
 
-    version (TODO)
+    @("CodeInput insertTab/outdent works")
     unittest {
-
-        auto io = new HeadlessBackend;
         auto root = codeInput();
-        root.io = io;
-        root.focus();
 
         // Tab twice
         foreach (i; 0..2) {
-
             assert(root.value.length == i*4);
-
-            io.nextFrame;
-            io.press(KeyboardKey.tab);
-            root.draw();
-
-            io.nextFrame;
-            io.release(KeyboardKey.tab);
-            root.draw();
-
+            root.insertTab();
         }
-
-        io.nextFrame;
-        root.draw();
-
         assert(root.value == "        ");
         assert(root.valueBeforeCaret == "        ");
 
         // Outdent
-        io.nextFrame;
-        io.press(KeyboardKey.leftShift);
-        io.press(KeyboardKey.tab);
-        root.draw();
-
-        io.nextFrame;
-        root.draw();
+        root.outdent();
 
         assert(root.value == "    ");
         assert(root.valueBeforeCaret == "    ");
-
     }
 
     unittest {
@@ -1387,18 +1363,15 @@ class CodeInput : TextInput {
 
     }
 
-    version (TODO)
     unittest {
-
         foreach (useTabs; [false, true]) {
-
             const tabLength = useTabs ? 1 : 4;
 
-            auto io = new HeadlessBackend;
             auto root = codeInput();
-            root.io = io;
             root.useTabs = useTabs;
-            root.value = root.indentRope ~ "long line that wraps because the viewport is too small to make it fit";
+            root.value = root.indentRope
+                ~ "long line that wraps because the viewport is too "
+                ~ "small to make it fit";
             root.caretIndex = tabLength;
             root.draw();
 
@@ -1429,9 +1402,7 @@ class CodeInput : TextInput {
             assert(root.caretIndex == tabLength);
             root.toggleHome();
             assert(root.caretIndex == 0);
-
         }
-
     }
 
     alias push = typeof(super).push;
