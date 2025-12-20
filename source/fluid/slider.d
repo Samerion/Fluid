@@ -293,9 +293,7 @@ class SliderHandle : Node {
     }
 
     this() {
-
-        ignoreMouse = true;
-
+        hitFilter = HitFilter.miss;
     }
 
     override void resizeImpl(Vector2 space) {
