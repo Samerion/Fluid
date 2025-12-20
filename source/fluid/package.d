@@ -138,7 +138,6 @@ unittest {
 ///
 /// * [fluid.actions][fluid.actions] contains a basic collection of tree actions.
 /// * [TestSpace][fluid.test_space] can automatically test your nodes.
-/// * [Publishers and Subscribers][fluid.future.pipe] (experimental) control asynchronous tasks.
 ///
 /// Other tree actions are currently scattered across [fluid.io][fluid.io].
 @("Tree actions reference example")
