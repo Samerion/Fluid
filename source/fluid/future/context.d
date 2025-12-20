@@ -304,7 +304,7 @@ interface HasContext {
 
 }
 
-interface IO : HasContext {
+interface IO {
 
     bool opEquals(const Object) const;
 
