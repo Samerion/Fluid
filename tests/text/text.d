@@ -21,13 +21,12 @@ static this() {
 }
 
 @("Text can be used with, or without specifying styles")
-version (TODO)
 unittest {
 
     import fluid.space;
 
     Style[2] styles;
-    auto root = vspace();
+    auto root = testSpace();
     auto styleMap = [
         TextStyleSlice(0, 0, 1),
     ];
@@ -35,7 +34,7 @@ unittest {
 
     root.draw();
     text.resize();
-    text.draw(styles, Vector2(0, 0));
+    text.draw(root, styles, Vector2(0, 0));
 
 }
 
