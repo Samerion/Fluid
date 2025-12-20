@@ -510,7 +510,6 @@ interface WithPositionalFocus : WithFocus {
 }
 
 /// Focus next or previous focusable node relative to the point of reference.
-/// This function only works with nodes compatible with the new I/O system introduced in Fluid 0.7.2.
 ///
 /// Params:
 ///     node   = Node to use for reference.

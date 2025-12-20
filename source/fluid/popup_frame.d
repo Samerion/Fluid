@@ -337,8 +337,8 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
 }
 
 /// This tree action will walk the branch to mark PopupButtons with the parent PopupFrame.
-/// This is a temporary workaround to fill `PopupButton.parentPopup` in new I/O; starting with
-/// 0.8.0 popup frames should implement `LayoutIO` to detect child popups.
+/// This is a temporary workaround to fill `PopupButton.parentPopup` in new I/O; eventually,
+/// popup frames should implement `LayoutIO` to detect child popups.
 private class MarkPopupButtonsAction : BranchAction {
 
     PopupFrame parent;

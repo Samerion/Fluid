@@ -1,7 +1,5 @@
 /// Enables transforming the mouse position from one space to another by translating and scaling.
 ///
-/// Requires the new I/O system introduced in Fluid 0.7.2 to be used.
-///
 /// History:
 ///     * Introduced in Fluid 0.7.2.
 module fluid.hover_transform;
