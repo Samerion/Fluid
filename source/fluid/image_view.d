@@ -88,22 +88,18 @@ class ImageView : Node {
 
     }
 
-    /// Create an image node from given image or filename.
-    ///
-    /// Note:
-    ///     If a filename is given, the image will be loaded on the first resize.
-    ///     This is done to make sure a backend is available to load the image.
+    /// Create an image node from the filename. The image will be loaded on the first resize.
     ///
     /// Params:
-    ///     source  = `Texture` struct to use, or a filename to load from.
+    ///     source  = Filename to load from.
     ///     minSize = Minimum size of the node. Defaults to image size.
-    this(T)(T source, Vector2 minSize) {
+    this(string source, Vector2 minSize) {
         super.minSize = minSize;
         this.texture = source;
     }
 
     /// ditto
-    this(T)(T source) {
+    this(string source) {
         this.texture = source;
         this.isSizeAutomatic = true;
     }
