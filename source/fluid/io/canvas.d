@@ -3,6 +3,7 @@ module fluid.io.canvas;
 
 import optional;
 
+import fluid.node : HasContext;
 import fluid.types;
 import fluid.utils;
 import fluid.future.context;
@@ -17,7 +18,11 @@ import fluid.future.context;
 ///
 /// The canvas should allow all inputs and never throw. If there's a defined boundary, the canvas should crop all
 /// geometry to fit.
-interface CanvasIO : IO {
+///
+/// Bugs:
+///     `CanvasIO` uses `TreeContext` to automatically track tint. This is considered a design
+///     error. See https://git.samerion.com/Samerion/Fluid/issues/576 for more details.
+interface CanvasIO : IO, HasContext {
 
     /// Determines the screen's pixel density. A higher value will effectively scale up the interface, but keeping all
     /// detail. The I/O system should trigger a resize when this changes.
