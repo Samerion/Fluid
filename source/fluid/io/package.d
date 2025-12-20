@@ -1,6 +1,8 @@
 ///
 module fluid.io;
 
+public import fluid.io.io;
+
 // Basic
 public import fluid.io.time;
 public import fluid.io.focus;
