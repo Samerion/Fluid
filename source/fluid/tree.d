@@ -273,3 +273,182 @@ abstract class TreeAction : Publisher!() {
     }
 
 }
+
+abstract class BranchAction : TreeAction {
+
+    private {
+
+        /// Balance is incremented when entering a node, and decremented when leaving.
+        /// If the balance is negative, the action stops.
+        int _balance;
+
+    }
+
+    /// A branch action can only hook to draw calls of specific nodes. It cannot bind into these hooks.
+    final override void beforeTree(Node, Rectangle) { }
+
+    /// ditto
+    final override void beforeResize(Node, Vector2) { }
+
+    /// ditto
+    final override void afterTree() {
+        stop;
+    }
+
+    /// Branch action excludes the start node from results.
+    /// Returns:
+    ///     True only if the node is a child of the `startNode`; always true if there isn't one set.
+    override bool filterBeforeDraw(Node node) @trusted {
+
+        _balance++;
+
+        // No start node
+        if (startNode is null) {
+            return true;
+        }
+
+        const filter = super.filterBeforeDraw(node);
+
+        // Skip the start node
+        if (node == startNode) {
+            return false;
+        }
+
+        return filter;
+
+
+    }
+
+    /// Branch action excludes the start node from results.
+    /// Returns:
+    ///     True only if the node is a child of the `startNode`; always true if there isn't one set.
+    override bool filterAfterDraw(Node node) @trusted {
+
+        _balance--;
+
+        // Stop if balance is negative
+        if (_balance < 0) {
+            stop;
+            return false;
+        }
+
+        // No start node
+        if (startNode is null) {
+            return true;
+        }
+
+        const filter = super.filterAfterDraw(node);
+
+        // Stop the action when exiting the start node
+        if (node == startNode) {
+            stop;
+            return false;
+        }
+
+        return filter;
+
+    }
+
+    override void stopped() {
+
+        super.stopped();
+        _balance = 0;
+
+    }
+
+}
+
+/// Keeps track of currently active actions.
+struct TreeActionContext {
+
+    import std.array;
+
+    private {
+
+        struct RunningAction {
+
+            TreeAction action;
+            int generation;
+
+            bool isStopped() const {
+                return action.generation > generation;
+            }
+
+        }
+
+        /// Currently running actions.
+        Appender!(RunningAction[]) _actions;
+
+        /// Number of running iterators. Removing tree actions will only happen if there is exactly one
+        /// running iterator, as to not break the other ones.
+        ///
+        /// Multiple iterators may run in case a tree action draws nodes on its own: one iterator triggers
+        /// the action, and the drawn node activates another iterator.
+        int _runningIterators;
+
+    }
+
+    /// Start a number of tree actions. As the node tree is drawn, the action's hook will be called whenever
+    /// a relevant place is reached in the tree.
+    ///
+    /// To stop a running action, call the action's `stop` method. Most tree actions will do it automatically
+    /// as soon as their job is finished.
+    ///
+    /// If the action is already running, the previous run will be aborted. The action can only run once at a time.
+    ///
+    /// Params:
+    ///     actions = Actions to spawn.
+    void spawn(TreeAction[] actions...) {
+
+        _actions.reserve(_actions[].length + actions.length);
+
+        // Start every action and run the hook
+        foreach (action; actions) {
+
+            _actions ~= RunningAction(action, ++action.generation);
+            action.started();
+
+
+        }
+
+    }
+
+    /// List all currently active actions in a loop.
+    int opApply(int delegate(TreeAction) @safe yield) {
+
+        // Update the iterator counter
+        _runningIterators++;
+        scope (exit) _runningIterators--;
+
+        bool kept;
+
+        // Iterate on active actions
+        // Do *not* increment if an action was removed
+        for (size_t i = 0; i < _actions[].length; i += kept) {
+
+            auto action = _actions[][i];
+            kept = true;
+
+            // If there's one running iterator, remove it from the array
+            // Don't pass stopped actions to the iterator
+            if (action.isStopped) {
+
+                if (_runningIterators == 1) {
+                    _actions[][i] = _actions[][$-1];
+                    _actions.shrinkTo(_actions[].length - 1);
+                    kept = false;
+                }
+                continue;
+
+            }
+
+            // Run the hook
+            if (auto result = yield(action.action)) return result;
+
+        }
+
+        return 0;
+
+    }
+
+}

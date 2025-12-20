@@ -759,10 +759,6 @@ class HoverPointerAction : TreeAction, Publisher!HoverPointerAction, IO {
         return this is other;
     }
 
-    override inout(TreeContext) treeContext() inout {
-        return hoverIO.treeContext;
-    }
-
     void subscribe(Subscriber!HoverPointerAction subscriber) {
         _onInteraction ~= subscriber;
     }

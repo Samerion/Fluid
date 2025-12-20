@@ -34,7 +34,7 @@ else
 
 
 /// Represents a Fluid node.
-abstract class Node {
+abstract class Node : HasContext {
 
     public import fluid.structs : NodeAlign, Layout;
     public import fluid.structs : Align = NodeAlign;
@@ -1189,5 +1189,12 @@ int runWhileDrawing(Publisher!() publisher, Node node, int frameLimit = int.max)
         assert(i < frameLimit || finished, "Frame limit reached");
     }
     return i;
+
+}
+
+interface HasContext {
+
+    /// Returns: The current tree context.
+    inout(TreeContext) treeContext() inout nothrow;
 
 }
