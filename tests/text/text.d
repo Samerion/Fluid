@@ -189,27 +189,29 @@ unittest {
 }
 
 @("Text rendering is consistent for large text")
-version (TODO)
 unittest {
 
     import std.file;
     import fluid.label;
 
-    const source = Rope.merge(Rope("the quick brown fox jumps over the lazy dog. ").repeat(100).array);
+    const source = Rope.merge(
+        Rope("the quick brown fox jumps over the lazy dog. ")
+            .repeat(100)
+            .array);
     const fontSize = 10;
 
-    auto theme = .testTheme.derive(
+    auto theme = testTheme.derive(
         rule!Node(
             Rule.fontSize = fontSize,
         ),
     );
-    auto io = new HeadlessBackend(Vector2(200, 1000));
     auto root = label(theme, source);
     auto text = root.text;
+    auto canvas = testSpace();
 
-    const space = io.windowSize;
+    const space = Vector2(800, 600);
+    const dpi = Vector2(96, 96);
 
-    root.io = io;
     theme.apply(root, root.style);
     text.hasFastEdits = true;
     text.resize(space);
@@ -221,39 +223,22 @@ unittest {
 
     // Draw the first two textures separately
     foreach_reverse (i, ref chunk; text.texture.chunks[0..2]) {
-
-        const position = text.texture.chunkPosition(i);
-
-        text.generate(only(i));
-        text.texture.upload(io, i, io.dpi);
-        chunk.texture.draw(position);
-
-        // Move the image to the list
+        text.generate(canvas, only(i));
         backImages[i] = chunk.image;
         chunk = chunk.init;
-
     }
 
-    io.nextFrame;
     text.resize(space);
-    text.clearTextures(io.dpi);
+    text.clearTextures(dpi);
 
     // Now render both at once
-    text.generate(only(0, 1));
-
+    text.generate(canvas, only(0, 1));
     foreach (i, ref chunk; text.texture.chunks[0..2]) {
-
-        const position = text.texture.chunkPosition(i);
-
-        text.texture.upload(io, i, io.dpi);
-        chunk.texture.draw(position);
-
-        // Move the image to the list
         frontImages[i] = chunk.image;
         chunk = chunk.init;
-
     }
 
-    assert(frontImages[] == backImages[], "Two separately rendered pieces of text should look identical");
+    assert(frontImages[] == backImages[],
+        "Two separately rendered pieces of text should look identical");
 
 }

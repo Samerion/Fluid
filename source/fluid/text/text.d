@@ -937,7 +937,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         auto chunks = texture.visibleChunks(canvasIO, position);
 
         // Generate the text
-        generateImpl(canvasIO, chunks.save);
+        generate(canvasIO, chunks.save);
 
         // Load the updated chunks
         foreach (chunkIndex; chunks) {
@@ -947,7 +947,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
     }
 
-    private void generateImpl(R)(CanvasIO canvasIO, R chunks) @trusted {
+    void generate(R)(CanvasIO canvasIO, R chunks) @trusted {
 
         // Empty, nothing to do
         if (chunks.empty) return;
