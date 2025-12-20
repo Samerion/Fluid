@@ -1413,51 +1413,6 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     }
 
-    version (TODO)
-    unittest {
-
-        auto io = new HeadlessBackend;
-        auto root = textInput("placeholder");
-
-        root.io = io;
-
-        // Empty text
-        {
-            root.draw();
-
-            assert(root.value == "");
-            assert(root.contentLabel.text == "");
-            assert(root.contentLabel.placeholderText == "placeholder");
-            assert(root.contentLabel.showPlaceholder);
-            assert(root.isEmpty);
-        }
-
-        // Focus the box and input stuff
-        {
-            io.nextFrame;
-            io.inputCharacter("¡Hola, mundo!");
-            root.focus();
-            root.draw();
-
-            assert(root.value == "¡Hola, mundo!");
-
-            io.nextFrame;
-            root.draw();
-
-            assert(!root.contentLabel.showPlaceholder);
-        }
-
-        // The text will be displayed the next frame
-        {
-            io.nextFrame;
-            root.draw();
-
-            assert(root.contentLabel.text == "¡Hola, mundo!");
-            assert(root.isFocused);
-        }
-
-    }
-
     /// Hook into input actions to create matching history entries.
     ///
     /// See_Also: [savePush], [snapshot], [pushHistory]
@@ -2135,72 +2090,6 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
         clearSelection();
         updateCaretPositionAndAnchor();
-
-    }
-
-    version (TODO)
-    unittest {
-
-        auto io = new HeadlessBackend;
-        auto root = textInput();
-
-        io.inputCharacter("Hello, World!");
-        root.io = io;
-        root.focus();
-        root.draw();
-
-        auto value1 = root.value;
-
-        root.chop();
-
-        assert(value1     == "Hello, World!");
-        assert(root.value == "Hello, World");
-
-        auto value2 = root.value;
-        root.chopWord();
-
-        assert(value2     == "Hello, World");
-        assert(root.value == "Hello, ");
-
-        auto value3 = root.value;
-        root.clear();
-
-        assert(value3     == "Hello, ");
-        assert(root.value == "");
-
-    }
-
-    version (TODO)
-    unittest {
-
-        auto io = new HeadlessBackend;
-        auto root = textInput();
-
-        io.inputCharacter("Hello, World");
-        root.io = io;
-        root.focus();
-        root.draw();
-
-        auto value1 = root.value;
-
-        root.chopWord();
-
-        assert(value1     == "Hello, World");
-        assert(root.value == "Hello, ");
-
-        auto value2 = root.value;
-
-        root.push("Moon");
-
-        assert(value2     == "Hello, ");
-        assert(root.value == "Hello, Moon");
-
-        auto value3 = root.value;
-
-        root.clear();
-
-        assert(value3     == "Hello, Moon");
-        assert(root.value == "");
 
     }
 
