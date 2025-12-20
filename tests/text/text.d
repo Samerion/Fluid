@@ -21,13 +21,12 @@ static this() {
 }
 
 @("Text can be used with, or without specifying styles")
-version (TODO)
 unittest {
 
     import fluid.space;
 
     Style[2] styles;
-    auto root = vspace();
+    auto root = testSpace();
     auto styleMap = [
         TextStyleSlice(0, 0, 1),
     ];
@@ -35,45 +34,26 @@ unittest {
 
     root.draw();
     text.resize();
-    text.draw(styles, Vector2(0, 0));
+    text.draw(root, styles, Vector2(0, 0));
 
 }
 
-version (TODO) {
-
-    mixin template indexAtTest() {
-
-        void test(size_t expected, Vector2 position) {
-
-            const index = root.text.indexAt(position);
-
-            if (index == expected) {
-                io.drawPointer(position, color("#0a0"));
-            }
-            else {
-                io.drawPointer(position);
-                io.saveSVG("/tmp/fluid.svg");
-                debug assert(false, format!"Expected %s, got %s"(expected, index));
-            }
-
-        }
-
+mixin template indexAtTest() {
+    void test(size_t expected, Vector2 position) {
+        const index = text.text.indexAt(root, position);
+        assert(index == expected);
     }
-
 }
 
 @("Text.indexAt works with multiple lines of text")
-version (TODO)
 unittest {
-
-    // This test depends on specific properties of the default typeface
+    // This test depends on properties of the default typeface
 
     import fluid.label;
     import std.stdio;
 
-    auto root = label(testTheme, "Hello, World!\nHi, Globe!\nWelcome, Fluid user!");
-    auto io = new HeadlessBackend;
-    root.io = io;
+    auto text = label("Hello, World!\nHi, Globe!\nWelcome, Fluid user!");
+    auto root = testSpace(testTheme, text);
     root.draw();
 
     mixin indexAtTest;
@@ -115,7 +95,6 @@ unittest {
 }
 
 @("Text.indexAt works correctly with blank lines")
-version (TODO)
 unittest {
 
     // This test depends on specific properties of the default typeface
@@ -123,9 +102,8 @@ unittest {
     import fluid.label;
     import std.stdio;
 
-    auto root = label(nullTheme, "\r\nHello,\n\nWorld!\n");
-    auto io = new HeadlessBackend;
-    root.io = io;
+    auto text = label("\r\nHello,\n\nWorld!\n");
+    auto root = testSpace(testTheme, text);
     root.draw();
 
     mixin indexAtTest;
@@ -211,27 +189,29 @@ unittest {
 }
 
 @("Text rendering is consistent for large text")
-version (TODO)
 unittest {
 
     import std.file;
     import fluid.label;
 
-    const source = Rope.merge(Rope("the quick brown fox jumps over the lazy dog. ").repeat(100).array);
+    const source = Rope.merge(
+        Rope("the quick brown fox jumps over the lazy dog. ")
+            .repeat(100)
+            .array);
     const fontSize = 10;
 
-    auto theme = .testTheme.derive(
+    auto theme = testTheme.derive(
         rule!Node(
             Rule.fontSize = fontSize,
         ),
     );
-    auto io = new HeadlessBackend(Vector2(200, 1000));
     auto root = label(theme, source);
     auto text = root.text;
+    auto canvas = testSpace();
 
-    const space = io.windowSize;
+    const space = Vector2(800, 600);
+    const dpi = Vector2(96, 96);
 
-    root.io = io;
     theme.apply(root, root.style);
     text.hasFastEdits = true;
     text.resize(space);
@@ -243,39 +223,22 @@ unittest {
 
     // Draw the first two textures separately
     foreach_reverse (i, ref chunk; text.texture.chunks[0..2]) {
-
-        const position = text.texture.chunkPosition(i);
-
-        text.generate(only(i));
-        text.texture.upload(io, i, io.dpi);
-        chunk.texture.draw(position);
-
-        // Move the image to the list
+        text.generate(canvas, only(i));
         backImages[i] = chunk.image;
         chunk = chunk.init;
-
     }
 
-    io.nextFrame;
     text.resize(space);
-    text.clearTextures(io.dpi);
+    text.clearTextures(dpi);
 
     // Now render both at once
-    text.generate(only(0, 1));
-
+    text.generate(canvas, only(0, 1));
     foreach (i, ref chunk; text.texture.chunks[0..2]) {
-
-        const position = text.texture.chunkPosition(i);
-
-        text.texture.upload(io, i, io.dpi);
-        chunk.texture.draw(position);
-
-        // Move the image to the list
         frontImages[i] = chunk.image;
         chunk = chunk.init;
-
     }
 
-    assert(frontImages[] == backImages[], "Two separately rendered pieces of text should look identical");
+    assert(frontImages[] == backImages[],
+        "Two separately rendered pieces of text should look identical");
 
 }
