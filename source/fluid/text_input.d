@@ -96,8 +96,6 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
         /// Time of last interaction with the input. This field uses the system clock sourced
         /// from `TimeIO`.
-        ///
-        /// If the new I/O is not in use, the default system `MonoTime` is used.
         MonoTime lastTouchTime;
 
         /// Reference horizontal (X) position for vertical movement. Relative to the input's top-left corner.
