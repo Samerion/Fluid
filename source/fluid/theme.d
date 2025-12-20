@@ -121,9 +121,7 @@ struct Theme {
 
 }
 
-version (TODO)
 @system unittest {
-
     import fluid.frame;
 
     auto frameRule = rule!Frame(
@@ -146,14 +144,10 @@ version (TODO)
     // No dynamic rules
     assert(rule.styleDelegate is null);
 
-    auto io = new HeadlessBackend;
     auto root = vframe(theme);
-    root.io = io;
-
     root.draw();
 
     assert(root.style == style);
-
 }
 
 unittest {

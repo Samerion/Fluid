@@ -335,8 +335,10 @@ class TestSpace : Space, CanvasIO, DebugSignalIO {
 
 class TestWrapper : TreeWrapper {
 
+    enum defaultViewport = Rectangle(0, 0, 800, 600);
+
     public {
-        Rectangle viewport = Rectangle(0, 0, 800, 600);
+        Rectangle viewport = defaultViewport;
     }
 
     private {

@@ -1072,10 +1072,10 @@ unittest {
 }
 
 @("Text automatically creates TextRulerCache entries")
-version (TODO)
 unittest {
-
+    import fluid.utils;
     import fluid.label;
+    import fluid.test_space;
     import fluid.default_theme;
 
     auto root = label(nullTheme, "Lorem ipsum dolor sit amet, consectetur "
@@ -1108,7 +1108,7 @@ unittest {
     root.draw();
 
     auto typeface = root.style.getTypeface;
-    auto space = root.io.windowSize;
+    auto space = TestWrapper.defaultViewport.size;
 
     assert(root.text[422] == '\n');
     assert(query(&root.text._cache, 0).equal!"a.point == b"([
@@ -1119,8 +1119,7 @@ unittest {
         TextInterval(root.text.length, 3, 0),
     ]));
 
-    version (none) {
-        // Why isn't this equal?
+    {
         auto ruler = TextRuler(typeface, space.x);
         typeface.measure(ruler, "");
         assert(query(&root.text._cache,   0).front == ruler);
