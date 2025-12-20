@@ -1964,3 +1964,19 @@ unittest {
     }
 
 }
+
+@("Runs of user input are merged in undo history")
+unittest {
+    // https://git.samerion.com/Samerion/Fluid/issues/586
+    auto input = textInput();
+    auto focus = focusChain(input);
+    auto root = focus;
+    focus.currentFocus = input;
+    focus.typeText("Hello");
+    root.draw();
+    focus.typeText("World");
+    root.draw();
+    assert(input.value == "HelloWorld");
+    input.undo();
+    assert(input.value == "");
+}
