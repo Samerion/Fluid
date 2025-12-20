@@ -1346,7 +1346,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
                 // Push the text
                 if (auto text = focusIO.readText(buffer, offset)) {
-                    push(text);
+                    savePush(text);
                 }
                 else break;
 
@@ -1419,10 +1419,10 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         // Passive events should not create snapshots
         const doSnapshot = isActive
             && id != inputActionID!(FluidInputAction.undo)
-            && id != inputActionID!(FluidInputAction.redo);
+            && id != inputActionID!(FluidInputAction.redo)
+            && id != inputActionID!(ActionIO.CoreAction.frame);
 
         const past = snapshot();
-        _snapshot.diff = Rope.DiffRegion.init;
 
         // Run the input action and compare changes to send to history
         const handled = runLocalInputAction(io, number, id, isActive);
