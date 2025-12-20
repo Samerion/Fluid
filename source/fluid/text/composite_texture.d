@@ -305,7 +305,7 @@ struct CompositeTexture {
 
     }
 
-    /// Draw onscreen parts of the texture using the new backend.
+    /// Draw onscreen parts of the texture.
     void drawAlign(CanvasIO canvasIO, Rectangle rectangle, Color tint = Color(0xff, 0xff, 0xff, 0xff)) {
 
         auto chosenChunks = visibleChunks(canvasIO, rectangle.start);

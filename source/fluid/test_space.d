@@ -1,4 +1,4 @@
-/// Module for testing Fluid nodes using the new I/O system.
+/// Module for testing Fluid nodes.
 module fluid.test_space;
 
 version (Fluid_TestSpace):

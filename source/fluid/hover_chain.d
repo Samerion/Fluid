@@ -26,8 +26,6 @@ alias hoverChain = nodeBuilder!HoverChain;
 /// `HoverChain` has to be placed inside `FocusIO` to enable switching focus by pressing nodes.
 ///
 /// For focus-based nodes like keyboard and gamepad, see `FocusChain`.
-///
-/// `HoverChain` only works with nodes compatible with the new I/O system introduced in Fluid 0.7.2.
 class HoverChain : NodeChain, ActionHoverIO {
 
     mixin controlIO;

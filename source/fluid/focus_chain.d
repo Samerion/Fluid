@@ -24,8 +24,6 @@ alias focusChain = nodeBuilder!FocusChain;
 /// (focus-based, like a keyboard or gamepad) node can be placed to control nodes inside.
 ///
 /// For hover-based nodes like mouse, see `HoverChain`.
-///
-/// `FocusChain` only works with nodes compatible with the new I/O system introduced in Fluid 0.7.2.
 class FocusChain : NodeChain, FocusIO, WithOrderedFocus, WithPositionalFocus {
 
     mixin controlIO;

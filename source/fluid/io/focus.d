@@ -320,16 +320,6 @@ interface WithFocus {
 /// the corresponding `FluidInputAction` actions and should be automatically picked up by
 /// `enableInputActions`. A complete implementation will thus provide the ability to navigate
 /// between nodes using the "tab" key.
-///
-/// To make `WithOrderedFocus` work, it is currently necessary to override two methods:
-///
-/// ---
-/// override protected inout(OrederedFocusAction) orderedFocusAction() inout;
-/// override protected void focusPreviousOrNext(FluidInputAction actionType) { }
-/// ---
-///
-/// The latter, `focusPreviousOrNext` must be overridden so that it does nothing if `FocusIO`
-/// is in use, as it only applies to the old backend. It will be removed in Fluid 0.8.0.
 interface WithOrderedFocus : WithFocus {
 
     import fluid.node;
@@ -419,17 +409,6 @@ interface WithOrderedFocus : WithFocus {
 ///
 /// This interface exposes a few input actions, which if enabled using `mixin enableInputActions`,
 /// will enable navigation using standard Fluid input actions.
-///
-/// Implementing positional focus using this class requires three overrides in total:
-///
-/// ---
-/// override protected Optional!Rectangle lastFocusBox() const;
-/// override protected inout(PositionalFocusAction) positionalFocusAction() inout;
-/// override protected void focusInDirection(FluidInputAction actionType) { }
-/// ---
-///
-/// The last overload is necessary to avoid conflicts with the old backend system. It will stop
-/// being available in Fluid 0.8.0.
 interface WithPositionalFocus : WithFocus {
 
     import fluid.node;
@@ -531,7 +510,6 @@ interface WithPositionalFocus : WithFocus {
 }
 
 /// Focus next or previous focusable node relative to the point of reference.
-/// This function only works with nodes compatible with the new I/O system introduced in Fluid 0.7.2.
 ///
 /// Params:
 ///     node   = Node to use for reference.
