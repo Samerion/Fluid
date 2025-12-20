@@ -514,6 +514,7 @@ unittest {
 ///
 /// Params:
 ///     value = If set to false, the effect is reversed and mouse input is instead enabled.
+deprecated("`.ignoreMouse` was replaced by `.HitFilter.miss` and will be removed in Fluid 0.9.0")
 auto ignoreMouse(bool value = true) {
 
     static struct IgnoreMouse {
@@ -533,6 +534,7 @@ auto ignoreMouse(bool value = true) {
 }
 
 ///
+deprecated
 unittest {
 
     import fluid.label;
@@ -547,6 +549,7 @@ unittest {
 }
 
 @("ignoreMouse property sets Node.ignoreMouse to true")
+deprecated
 unittest {
 
     import fluid.space;
