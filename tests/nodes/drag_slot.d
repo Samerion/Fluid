@@ -66,7 +66,7 @@ unittest {
 @("DragSlot can be dragged")
 unittest {
 
-    auto content = label(.ignoreMouse, "a");
+    auto content = label(.HitFilter.miss, "a");
     auto slot = dragSlot(.nullTheme, content);
     auto hover = hoverChain();
     auto root = chain(
@@ -251,7 +251,7 @@ unittest {
                     .layout!1,
                     .sizeLimit(100, 100),
                     label(
-                        .ignoreMouse,
+                        .HitFilter.miss,
                         "Drag me"
                     ),
                 ),
@@ -346,7 +346,7 @@ unittest {
 unittest {
 
     auto slot = dragSlot(
-        label(.ignoreMouse, "Drag me"),
+        label(.HitFilter.miss, "Drag me"),
     );
     auto hover = hoverChain(vframe(slot));
     auto root = testSpace(

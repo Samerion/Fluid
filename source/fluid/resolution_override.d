@@ -27,8 +27,6 @@ alias resolutionOverride(alias base) = nodeBuilder!(ResolutionOverride, base);
 /// This node sets a static resolution for its content, ignoring (overriding) whatever layout
 /// was assigned by its parent.
 ///
-/// Works only with the new I/O system introduced in Fluid 0.7.2.
-///
 /// `ResolutionOverride` requires an active instance of `CanvasIO` to work. It will locally
 /// override its `dpi` value — with a default of `(96, 96)` —  to make sure the output
 /// is consistent. The DPI value can be changed using the `dpi` method.

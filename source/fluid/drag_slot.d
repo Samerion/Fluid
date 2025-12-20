@@ -404,7 +404,7 @@ class DragHandle : Node {
 }
 
 /// This [TreeAction] controls [DragSlot] while it is dragged. It is automatically created
-/// whenever a dragging motion starts. It applies both to legacy backend and new I/O.
+/// whenever a dragging motion starts.
 class DragAction : TreeAction {
 
     public {

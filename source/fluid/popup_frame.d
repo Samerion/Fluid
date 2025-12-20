@@ -108,9 +108,6 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
         /// escape key while a popup is open.
         ///
         /// Used if [FocusIO] is available.
-        ///
-        /// See_Also:
-        ///     [previousFocus], which is used with the old backend system.
         Focusable previousFocusable;
 
         /// If true, the frame will claim focus on the next [resize][Node.updateSize]. This is
@@ -189,12 +186,8 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
 
     /// [PopupFrame] will automatically be marked for removal if not focused.
     ///
-    /// For the new I/O, this is done by overriding the `toRemove` getter; the old backend does
-    /// this from a tree action.
-    ///
     /// Returns:
-    ///     True if the `PopupFrame` has no focus (in new I/O only), or was manually marked
-    ///     for removal.
+    ///     True if the `PopupFrame` has no focus, or was manually marked for removal.
     override bool toRemove() const {
         if (!toTakeFocus && !this.isFocused) {
             return true;
@@ -217,10 +210,9 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
 
     }
 
-    /// Give focus to whatever node had [focus][FocusIO.currentFocus] before this one.
-    ///
-    /// In new I/O, gives focus to [previousFocusable], and in the old backend, gives focus to
-    /// [previousFocus]. If no node was focused, [clears focus][FocusIO.clearFocus].
+    /// Give focus to [previousFocusable], that is, whatever node had
+    /// [focus][FocusIO.currentFocus] before this one. If no node was focused, [clears
+    /// focus][FocusIO.clearFocus].
     @(FluidInputAction.cancel)
     void restorePreviousFocus() {
         if (previousFocusable) {
@@ -345,8 +337,8 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
 }
 
 /// This tree action will walk the branch to mark PopupButtons with the parent PopupFrame.
-/// This is a temporary workaround to fill `PopupButton.parentPopup` in new I/O; starting with
-/// 0.8.0 popup frames should implement `LayoutIO` to detect child popups.
+/// This is a temporary workaround to fill `PopupButton.parentPopup` in new I/O; eventually,
+/// popup frames should implement `LayoutIO` to detect child popups.
 private class MarkPopupButtonsAction : BranchAction {
 
     PopupFrame parent;

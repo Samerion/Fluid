@@ -20,13 +20,13 @@ alias overlayChain = nodeBuilder!OverlayChain;
 /// first, before the overlay nodes. The usual, "regular" content can thus be placed as a regular child, and overlays
 /// can then be spawned and be drawn above.
 ///
-/// The `OverlayChain` can be considered a more modern alternative to `MapFrame`, however it is not guaranteed
-/// to be compatible with the old backend. For future code, `OverlayChain` should generally be preferred, but it has
-/// some drawbacks:
+/// The `OverlayChain` can be considered a more modern alternative to `MapFrame`. For new code,
+/// `OverlayChain` should generally be preferred, but it has some drawbacks:
 ///
 /// * Overlay nodes drawn on `OverlayChain` must implement `Overlayable`.
 /// * `OverlayChain` is not a `Frame`, and cannot be used as one.
-/// * It is not stylable; background color, border or decorations cannot be used, and margins may not work.
+/// * It is not stylable; background color, border or decorations cannot be used,
+///   and margins may not work.
 /// * Overlays are not considered in the chain's `minSize`.
 /// * Position is relative to the window, not to the node.
 class OverlayChain : NodeChain, OverlayIO {
