@@ -368,3 +368,50 @@ unittest {
         .runWhileDrawing(root, 4);
 
 }
+
+@("DragSlot can be dragged & dropped multiple times")
+unittest {
+
+    auto slot = dragSlot();
+    auto frame = vframe(
+        .layout!"fill",
+        .acceptDrop,
+        slot
+    );
+    auto overlay = overlayChain(
+        .layout!(1, "fill"),
+        frame
+    );
+    auto root = testSpace(
+        .testTheme,
+        .layout!"fill",
+        overlay,
+    );
+
+    root.draw();
+
+    // Drag & drop, repeatedly
+    foreach (i; 0..10) {
+
+        // Drag
+        slot.drag(HoverPointer.init);
+        root.drawAndAssert(
+            slot.overlay.isDrawn(),
+        );
+        slot.drag(HoverPointer.init);
+        root.drawAndAssertFailure(
+            frame.drawsChild(slot),
+        );
+
+        // Drop
+        root.draw();
+        root.draw();
+        root.drawAndAssert(
+            frame.drawsChild(slot),
+        );
+        root.drawAndAssertFailure(
+            slot.overlay.isDrawn(),
+        );
+    }
+
+}
