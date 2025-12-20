@@ -276,11 +276,13 @@ unittest {
 
 @("Node.configure() changes tree wrapper in use")
 unittest {
-    import std.typecons;
     import fluid.label;
     import fluid.future.context;
 
-    class BlankNode : BlackHole!Node { }
+    class BlankNode : Node {
+        override void resizeImpl(Vector2) { }
+        override void drawImpl(Rectangle, Rectangle) { }
+    }
 
     auto root = new BlankNode;
     TreeWrapper activeWrapper;
