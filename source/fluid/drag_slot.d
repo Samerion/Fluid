@@ -138,7 +138,7 @@ class DragSlot : NodeSlot!Node, Hoverable {
     ///     pointer = (New I/O only) Pointer performing the drag motion.
     @(FluidInputAction.press, .WhileDown)
     void drag(HoverPointer pointer)
-    in (treeContext)
+    in (treeContext, "DragSlot has to be resized before calling DragSlot.drag()")
     do {
 
         // Ignore if already dragging
@@ -150,6 +150,7 @@ class DragSlot : NodeSlot!Node, Hoverable {
         // Queue the drag action
         else {
             dragAction = new DragAction(this, pointer.position);
+            overlay.toRemove = false;
             overlayIO.addOverlay(overlay, OverlayIO.types.draggable);
             auto hover = cast(Node) hoverIO;
             hover.startAction(dragAction);
