@@ -538,3 +538,22 @@ unittest {
     assert(input.value == "Hello");
 
 }
+
+@("Disabled nodes cannot accept text input")
+unittest {
+    auto input = textInput("Placeholder", delegate { });
+    auto root = focusChain(input);
+    root.currentFocus = input;
+
+    // Try typing into the input box
+    root.typeText("Hello, ");
+    root.draw();
+    assert(input.value == "Hello, ");
+
+    // Disable the box and try typing again
+    input.disable();
+    root.typeText("World!");
+    root.draw();
+
+    assert(input.value == "Hello, ", "Input should remain unchanged");
+}
