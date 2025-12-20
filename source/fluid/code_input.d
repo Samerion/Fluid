@@ -1462,19 +1462,15 @@ class CodeInput : TextInput {
         foreach (line; text.byLine) {
 
             // Step 2: Remove the common indent
-            // This way the indent in the inserted text will be uniform. It can then be replaced by indent
-            // matching the text editor or indentor settings
+            // This way the indent in the inserted text will be uniform. It can then be replaced
+            // by indent matching the text editor or indentor settings
 
             const localIndent = line
                 .until!(a => !a.among(' ', '\t'))
                 .walkLength;
             const removedIndent = min(commonIndent, localIndent);
 
-            assert(line.isLeaf);
-            assert(line.withSeparator.isLeaf);
-
             // Step 3: Apply the correct indent
-
             const lineStart = caretIndex;
 
             // Copy the original indent
@@ -1484,14 +1480,18 @@ class CodeInput : TextInput {
             }
 
             // Write the line
-            super.push(line.withSeparator.value[removedIndent .. $], isThisMinor);
+            foreach (node; line.withSeparator[removedIndent .. $].byNode) {
+                super.push(node.value, isThisMinor);
+            }
 
-            // Every line after the first should be indented relative to the first line. `indentLevel`
-            // will be used as a reference. It is the lesser of indent level before and after the insert.
-            // * The push may end up reducing the indent (based on caret position), so indent should be
-            //   checked after the insert;
-            // * Relative indent of each line in the clipboard should be preserved — an *increase* in indent should
-            //   be ignored, so `originalIndentLevel` is still used as a reference.
+            // Every line after the first should be indented relative to the first line.
+            // `indentLevel` will be used as a reference. It is the lesser of indent level before
+            // and after the insert.
+            // * The push may end up reducing the indent (based on caret position), so indent
+            //   should be checked after the insert;
+            // * Relative indent of each line in the clipboard should be preserved — an *increase*
+            //   in indent should be ignored, so `originalIndentLevel` is still used as a
+            //   reference.
             if (!started) {
                 started = true;
                 indentLevel = min(
@@ -1804,46 +1804,36 @@ unittest {
 }
 
 @("CodeInput formatting benchmark")
-version (TODO)
 unittest {
-
     // This test may appear pretty stupid but it was used to diagnose a dumb bug
     // and a performance problem.
     // It should work in any case so it should stay anyway.
-
     import std.file;
     import std.datetime.stopwatch;
     import fluid.code_input;
-    import fluid.backend.headless;
+    import fluid.clipboard_chain;
 
     const source = readText("source/fluid/text_input.d");
-
-    auto io = new HeadlessBackend;
-    auto root = codeInput();
-    root.io = io;
-    io.clipboard = source;
-
+    auto input = codeInput();
+    auto clipboard = clipboardChain(input);
+    auto root = clipboard;
+    clipboard.writeClipboard(source);
     root.draw();
-    root.focus();
-
-    root.paste();
+    input.paste();
     root.draw();
 
     const runCount = 1;
     const results = benchmark!({
-
-        const target1 = root.value.length - root.value.byCharReverse.countUntil(";");
-        const target = target1 - 1 - root.value[0..target1 - 1].byCharReverse.countUntil(";");
-
-        root.caretIndex = target;
-        root.paste();
-
+        const target1 = input.value.length - input.value.byCharReverse.countUntil(";");
+        const target = target1 - 1 - input.value[0..target1 - 1].byCharReverse.countUntil(";");
+        input.caretIndex = target;
+        input.paste();
     })(runCount);
     const average = results[0] / runCount;
 
     // Even if this is just a single paste, reformatting is bound to take a while.
-    // I hope it could be faster in the future, but the current performance seems to be good enough;
-    // I tried the same in IntelliJ and on my machine it's just about the same ~3 seconds,
+    // I hope it could be faster in the future, but the current performance seems to be good
+    // enough; I tried the same in IntelliJ and on my machine it's just about the same ~3 seconds,
     // Fluid might even be slightly faster.
     assert(average <= 5.seconds, format!"Too slow: average %s"(average));
     if (average > 1.seconds) {
