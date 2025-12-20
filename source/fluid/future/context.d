@@ -297,13 +297,6 @@ enum isIO(T) = is(T == interface)
 /// Get all IOs implemented by the given type
 alias allIOs(T) = Filter!(isIO, InterfacesTuple!T);
 
-interface HasContext {
-
-    /// Returns: The current tree context.
-    inout(TreeContext) treeContext() inout nothrow;
-
-}
-
 interface IO {
 
     bool opEquals(const Object) const;
