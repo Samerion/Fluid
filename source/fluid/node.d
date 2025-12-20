@@ -54,13 +54,9 @@ abstract class Node : HasContext {
         /// Breadcrumbs assigned and applicable to this node. Loaded every resize and every draw.
         Breadcrumbs breadcrumbs;
 
-        /// If true, mouse focus will be disabled for this node, so mouse signals will "go
-        /// through" to its parents, as if the node wasn't there. The node will still detect hover
-        /// like normal.
-        ///
-        /// In the new I/O system, this has been replaced with `inBoundsFilter`. The system will
-        /// continue to respect `ignoreMouse` until the last of `0.7.x` releases.
-        bool ignoreMouse;
+        deprecated("`ignoreMouse` has been replaced by `hitFilter` and has no effect") {
+            bool ignoreMouse;
+        }
 
         /// Filter to apply to every result of `inBounds`, controlling how the node reacts to
         /// some events, such as mouse click or a finger touch.
@@ -1025,8 +1021,7 @@ abstract class Node : HasContext {
     /// ditto
     final HitFilter inBounds(Rectangle outer, Rectangle inner, Vector2 position) {
         return inBoundsImpl(outer, inner, position)
-            .filter(hitFilter)
-            .filter(ignoreMouse ? HitFilter.miss : HitFilter.hit);
+            .filter(hitFilter);
     }
 
     /// The focus box defines the *focused* part of the node. This is relevant in nodes which may have a selectable
