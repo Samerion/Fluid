@@ -134,9 +134,7 @@ unittest {
 }
 
 @("Deputy SwitchSlot can be placed before its principal")
-version (TODO)
 unittest {
-
     import std.algorithm;
 
     import fluid.space;
@@ -145,21 +143,17 @@ unittest {
     SwitchSlot slot;
 
     auto checker = new class Node {
-
         Vector2 size;
         Vector2[] spacesGiven;
 
         override void resizeImpl(Vector2 space) {
-
             spacesGiven ~= space;
             size = minSize = Vector2(500, 200);
-
         }
 
         override void drawImpl(Rectangle, Rectangle) {
 
         }
-
     };
 
     auto parentSlot = switchSlot(checker, null);
@@ -191,16 +185,17 @@ unittest {
     root.draw();
 
     // The principal slot gives the least space, namely the width of the window divided by 4
-    assert(checker.spacesGiven.map!"a.x".minElement == HeadlessBackend.defaultWindowSize.x / 4);
+    assert(checker.spacesGiven.map!"a.x".minElement == TestWrapper.defaultViewport.width / 4);
 
-    // The window size that is accepted is equal to its size, as it was assigned by the fallback slot
+    // The window size that is accepted is equal to its size, as it was assigned by the fallback
+    // slot
     assert(checker.spacesGiven[$-1] == checker.size);
 
-    // A total of three resizes were performed: one by the fallback, one by the parent and one, final, by the parent
-    // using previous parameters
+    // A total of three resizes were performed: one by the fallback, one by the parent and one,
+    // final, by the parent using previous parameters
     assert(checker.spacesGiven.length == 3);
 
-    // The first one (which should be the child's) has the largest width given, equal to the window width
-    assert(checker.spacesGiven[0].x == HeadlessBackend.defaultWindowSize.x);
-
+    // The first one (which should be the child's) has the largest width given, equal to
+    // window width
+    assert(checker.spacesGiven[0].x == TestWrapper.defaultViewport.width);
 }

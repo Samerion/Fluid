@@ -104,36 +104,31 @@ FocusRecurseAction focusRecurse(Node parent) {
 
 }
 
-version (TODO)
+@("focusRecurse selects first Focusable node in vspace")
 unittest {
-
     import fluid.space;
     import fluid.label;
     import fluid.button;
+    import fluid.focus_chain;
 
-    auto io = new HeadlessBackend;
-    auto root = vspace(
+    Button target;
+
+    auto space = vspace(
         label(""),
-        button("", delegate { }),
+        target = button("", delegate { }),
         button("", delegate { }),
         button("", delegate { }),
     );
+    auto focus = focusChain(space);
+    auto root = focus;
 
-    // First paint: no node focused
-    root.io = io;
     root.draw();
+    assert(focus.currentFocus is null, "No node should be assigned focus on first frame");
 
-    assert(root.tree.focus is null, "No focus assigned on the first frame");
-
-    io.nextFrame;
-
-    // Recurse into the tree to focus on the first node
     root.focusRecurse();
     root.draw();
-
-    assert(root.tree.focus.asNode is root.children[1], "First child is now focused");
-    assert((cast(FluidFocusable) root.children[1]).isFocused);
-
+    assert(focus.currentFocus is target, "focusRecurse should select first button in vspace");
+    assert(target.isFocused);
 }
 
 /// Set focus on the first of the node's focusable children. This will be done lazily during the next draw.
@@ -158,30 +153,32 @@ FocusRecurseAction focusChild(Node parent) {
 }
 
 @("FocusRecurse works")
-version (TODO)
 unittest {
-
     import fluid.space;
     import fluid.button;
+    import fluid.focus_chain;
 
-    auto root = vframeButton(
-        button("", delegate { }),
+    Button firstChild;
+
+    auto frame = vframeButton(
+        firstChild = button("", delegate { }),
         button("", delegate { }),
         delegate { }
     );
+    auto focus = focusChain(frame);
+    auto root = focus;
 
-    // Typical focusRecurse call will focus the button
-    root.focusRecurse;
+    // Typical focusRecurse call will focus the frame button
+    frame.focusRecurse;
     root.draw();
 
-    assert(root.tree.focus is root);
+    assert(focus.currentFocus is frame);
 
-    // If we want to make sure the action descends below the root, we must
-    root.focusRecurseChildren;
+    // If we want to make sure the action descends into its children, we must use
+    // focusRecurseChildren
+    frame.focusRecurseChildren;
     root.draw();
-
-    assert(root.tree.focus.asNode is root.children[0]);
-
+    assert(focus.currentFocus is firstChild);
 }
 
 class FocusRecurseAction : FocusSearchAction {

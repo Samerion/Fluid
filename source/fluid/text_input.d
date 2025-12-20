@@ -1413,51 +1413,6 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     }
 
-    version (TODO)
-    unittest {
-
-        auto io = new HeadlessBackend;
-        auto root = textInput("placeholder");
-
-        root.io = io;
-
-        // Empty text
-        {
-            root.draw();
-
-            assert(root.value == "");
-            assert(root.contentLabel.text == "");
-            assert(root.contentLabel.placeholderText == "placeholder");
-            assert(root.contentLabel.showPlaceholder);
-            assert(root.isEmpty);
-        }
-
-        // Focus the box and input stuff
-        {
-            io.nextFrame;
-            io.inputCharacter("¡Hola, mundo!");
-            root.focus();
-            root.draw();
-
-            assert(root.value == "¡Hola, mundo!");
-
-            io.nextFrame;
-            root.draw();
-
-            assert(!root.contentLabel.showPlaceholder);
-        }
-
-        // The text will be displayed the next frame
-        {
-            io.nextFrame;
-            root.draw();
-
-            assert(root.contentLabel.text == "¡Hola, mundo!");
-            assert(root.isFocused);
-        }
-
-    }
-
     /// Hook into input actions to create matching history entries.
     ///
     /// See_Also: [savePush], [snapshot], [pushHistory]
@@ -2138,72 +2093,6 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     }
 
-    version (TODO)
-    unittest {
-
-        auto io = new HeadlessBackend;
-        auto root = textInput();
-
-        io.inputCharacter("Hello, World!");
-        root.io = io;
-        root.focus();
-        root.draw();
-
-        auto value1 = root.value;
-
-        root.chop();
-
-        assert(value1     == "Hello, World!");
-        assert(root.value == "Hello, World");
-
-        auto value2 = root.value;
-        root.chopWord();
-
-        assert(value2     == "Hello, World");
-        assert(root.value == "Hello, ");
-
-        auto value3 = root.value;
-        root.clear();
-
-        assert(value3     == "Hello, ");
-        assert(root.value == "");
-
-    }
-
-    version (TODO)
-    unittest {
-
-        auto io = new HeadlessBackend;
-        auto root = textInput();
-
-        io.inputCharacter("Hello, World");
-        root.io = io;
-        root.focus();
-        root.draw();
-
-        auto value1 = root.value;
-
-        root.chopWord();
-
-        assert(value1     == "Hello, World");
-        assert(root.value == "Hello, ");
-
-        auto value2 = root.value;
-
-        root.push("Moon");
-
-        assert(value2     == "Hello, ");
-        assert(root.value == "Hello, Moon");
-
-        auto value3 = root.value;
-
-        root.clear();
-
-        assert(value3     == "Hello, Moon");
-        assert(root.value == "");
-
-    }
-
     /// Select the word surrounding the cursor. If selection is active, expands selection to cover words.
     void selectWord() {
 
@@ -2695,28 +2584,29 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
 }
 
-version (TODO)
 @("TextInput paste benchmark")
 unittest {
-
     import std.file;
+    import fluid.clipboard_chain;
     import std.datetime.stopwatch;
 
     auto input = multilineInput(
         .layout!"fill",
     );
-    auto root = vscrollFrame(
-        .layout!"fill",
+    auto clipboard = clipboardChain(
+        .layout!(1, "fill"),
         input
     );
-    auto io = new HeadlessBackend;
+    auto root = vscrollFrame(
+        .layout!"fill",
+        clipboard
+    );
 
     // Prepare
-    root.io = io;
-    io.clipboard = readText(__FILE__);
+    clipboard.writeClipboard(
+        readText(__FILE__));
     root.draw();
     input.focus();
-    io.nextFrame();
 
     const runCount = 10;
 
@@ -2735,31 +2625,31 @@ unittest {
         import std.stdio;
         writeln("Warning: TextInput paste benchmark runs slowly, ", average);
     }
-
 }
 
 @("TextInput edit after paste benchmark")
-version (TODO)
 unittest {
-
     import std.file;
+    import fluid.clipboard_chain;
     import std.datetime.stopwatch;
 
     auto input = multilineInput(
         .layout!"fill",
     );
-    auto root = vscrollFrame(
-        .layout!"fill",
+    auto clipboard = clipboardChain(
+        .layout!(1, "fill"),
         input
     );
-    auto io = new HeadlessBackend;
-    io.clipboard = readText(__FILE__);
+    auto root = vscrollFrame(
+        .layout!"fill",
+        clipboard
+    );
+    clipboard.writeClipboard(
+        readText(__FILE__));
 
-    root.io = io;
     root.draw();
     input.focus();
     input.paste();
-    io.nextFrame();
     root.draw();
 
     const runCount = 10;
@@ -2795,39 +2685,35 @@ unittest {
         import std.stdio;
         writefln!"Warning: TextInput edit after paste benchmark runs slowly, %(%s / %)"(average);
     }
-
 }
 
-version (TODO)
 @("TextInput loads of small edits benchmark")
 unittest {
-
     import std.file;
+    import fluid.clipboard_chain;
     import std.datetime.stopwatch;
 
-    auto root = multilineInput();
-    auto io = new HeadlessBackend;
-    io.clipboard = readText(__FILE__);
+    auto input = multilineInput();
+    auto clipboard = clipboardChain(input);
+    auto root = clipboard;
+    clipboard.writeClipboard(
+        readText(__FILE__));
 
-    root.io = io;
     root.draw();
-    root.focus();
-    root.paste();
-    io.nextFrame();
+    input.focus();
+    input.paste();
     root.draw();
-    root.caretIndex = 0;
+    input.caretIndex = 0;
 
-    const runCount = 1;  // TODO make this greater once you fix this performance please
+    const runCount = 5;
     const sampleText = "Hello, world! This is some text I'd like to type in. This should be fast.";
 
     // Type in the text
     auto result = benchmark!({
-
         foreach (letter; sampleText) {
-            root.push(letter);
+            input.push(letter);
             root.draw();
         }
-
     })(runCount);
 
     const average = result[0] / runCount;
@@ -2838,5 +2724,4 @@ unittest {
         import std.stdio;
         writefln!"Warning: TextInput loads of small edits benchmark runs slowly, %s per character"(averageCharacter);
     }
-
 }
