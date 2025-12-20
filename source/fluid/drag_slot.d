@@ -150,6 +150,7 @@ class DragSlot : NodeSlot!Node, Hoverable {
         // Queue the drag action
         else {
             dragAction = new DragAction(this, pointer.position);
+            overlay.toRemove = false;
             overlayIO.addOverlay(overlay, OverlayIO.types.draggable);
             auto hover = cast(Node) hoverIO;
             hover.startAction(dragAction);
