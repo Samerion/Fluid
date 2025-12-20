@@ -1106,8 +1106,8 @@ abstract class Node : HasContext {
 ///
 /// You can close the UI programmatically by calling `remove()` on the root node.
 ///
-/// The exact behavior of this function is defined by the backend in use, so some functionality may vary. Some backends
-/// might not support this.
+/// The exact behavior of this function is defined by the [TreeWrapper] in use, so some
+/// functionality may vary. Some backends might not support this.
 ///
 /// Params:
 ///     node = This node will serve as the root of your user interface until closed. If you wish to change it at

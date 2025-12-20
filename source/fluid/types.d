@@ -170,8 +170,7 @@ unittest {
 
 /// Generate an image filled with a given color.
 ///
-/// Note: Image data is GC-allocated. Make sure to keep a reference alive when passing to the backend. Do not use
-/// `UnloadImage` if using Raylib.
+/// Note: Image data is GC-allocated.
 static Image generateColorImage(int width, int height, Color color) {
 
     // Generate each pixel
