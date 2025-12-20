@@ -54,16 +54,6 @@ auto autoExpand(bool value = true) {
 ///
 /// The image will scale to fit the space it is given. It will keep aspect ratio by default and
 /// will be displayed in the middle of the available box.
-///
-/// Note:
-///     `ImageView` is heavily affected by recent changes to how Fluid handles I/O.
-///
-///     * If you only display images from a file, and don't inspect them from code, you will <!--
-///       --> *not* be impacted.
-///     * The new I/O system *always* uses [Image]. Inspect or change the image using the <!--
-///       --> [image][ImageView.image] field.
-///     * If using the old backend, you will need to use [Texture]. You will need to manually <!--
-///       --> manage its lifetime. Migrating to the new I/O system is highly recommended.
 class ImageView : Node {
 
     CanvasIO canvasIO;
@@ -72,8 +62,7 @@ class ImageView : Node {
 
     public {
 
-        /// [Image] this node should display, if any. This field only works with the new I/O
-        /// system, and requires [CanvasIO] to work.
+        /// [Image] this node should display, if any.
         ///
         /// See [DrawableImage] for details on how `CanvasIO` handles image drawing.
         DrawableImage image;
@@ -147,7 +136,7 @@ class ImageView : Node {
         return image;
     }
 
-    /// Load the texture from a filename.
+    /// Load the image from a file.
     string texture(string filename) @trusted {
         import std.string : toStringz;
 
@@ -157,7 +146,7 @@ class ImageView : Node {
         return filename;
     }
 
-    /// Remove any texture if attached.
+    /// Remove any image if attached.
     void clear() scope {
         _texturePath = null;
         image = Image.init;
