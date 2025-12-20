@@ -1762,46 +1762,6 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     }
 
-    private {
-
-        /// Number of clicks performed within short enough time from each other. First click is number 0.
-        int _clickCount;
-
-        /// Time of the last `press` event, used to enable double click and triple click selection.
-        SysTime _lastClick;
-
-        /// Position of the last click.
-        Vector2 _lastClickPosition;
-
-    }
-
-    /// Switch hover selection mode.
-    ///
-    /// A single click+hold will use per-character selection. A double click+hold will select whole words,
-    /// and a triple click+hold will select entire lines.
-    @(FluidInputAction.press)
-    protected void press(HoverPointer pointer) {
-
-        enum maxDistance = 5;
-
-        version (none) {
-            // To count as repeated, the click must be within the specified double click time, and close enough
-            // to the original location
-            const isRepeated = Clock.currTime - _lastClick < io.doubleClickTime  /* TODO GET RID */
-                && distance(pointer.position, _lastClickPosition) < maxDistance;
-
-            // Count repeated clicks
-            _clickCount = isRepeated
-                ? _clickCount + 1
-                : 0;
-
-            // Register the click
-            _lastClick = Clock.currTime;
-            _lastClickPosition = pointer.position;
-        }
-
-    }
-
     /// Update selection using the mouse.
     @(FluidInputAction.press, WhileHeld)
     protected void pressAndHold(HoverPointer pointer) {
