@@ -38,41 +38,22 @@ unittest {
 
 }
 
-version (TODO) {
-
-    mixin template indexAtTest() {
-
-        void test(size_t expected, Vector2 position) {
-
-            const index = root.text.indexAt(position);
-
-            if (index == expected) {
-                io.drawPointer(position, color("#0a0"));
-            }
-            else {
-                io.drawPointer(position);
-                io.saveSVG("/tmp/fluid.svg");
-                debug assert(false, format!"Expected %s, got %s"(expected, index));
-            }
-
-        }
-
+mixin template indexAtTest() {
+    void test(size_t expected, Vector2 position) {
+        const index = text.text.indexAt(root, position);
+        assert(index == expected);
     }
-
 }
 
 @("Text.indexAt works with multiple lines of text")
-version (TODO)
 unittest {
-
-    // This test depends on specific properties of the default typeface
+    // This test depends on properties of the default typeface
 
     import fluid.label;
     import std.stdio;
 
-    auto root = label(testTheme, "Hello, World!\nHi, Globe!\nWelcome, Fluid user!");
-    auto io = new HeadlessBackend;
-    root.io = io;
+    auto text = label("Hello, World!\nHi, Globe!\nWelcome, Fluid user!");
+    auto root = testSpace(testTheme, text);
     root.draw();
 
     mixin indexAtTest;
@@ -114,7 +95,6 @@ unittest {
 }
 
 @("Text.indexAt works correctly with blank lines")
-version (TODO)
 unittest {
 
     // This test depends on specific properties of the default typeface
@@ -122,9 +102,8 @@ unittest {
     import fluid.label;
     import std.stdio;
 
-    auto root = label(nullTheme, "\r\nHello,\n\nWorld!\n");
-    auto io = new HeadlessBackend;
-    root.io = io;
+    auto text = label("\r\nHello,\n\nWorld!\n");
+    auto root = testSpace(testTheme, text);
     root.draw();
 
     mixin indexAtTest;
