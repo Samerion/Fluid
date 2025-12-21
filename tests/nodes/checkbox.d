@@ -84,3 +84,15 @@ unittest {
 
 
 }
+
+@("#585: Checkboxes can be focused")
+unittest {
+    // https://git.samerion.com/Samerion/Fluid/issues/585
+    auto input = checkbox();
+    auto focus = focusChain(input);
+    auto root = focus;
+
+    root.draw();
+    input.focus();
+    assert(focus.currentFocus is input);
+}
