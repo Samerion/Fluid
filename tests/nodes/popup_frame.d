@@ -460,3 +460,25 @@ unittest {
     root.drawAndAssertFailure(popup.isDrawn);
 
 }
+
+@("#593: PopupFrame children can use FocusIO while resizing")
+unittest {
+    auto theme = nullTheme.derive(
+        rule!Button(
+            when!"a.isFocused"(
+                Rule.backgroundColor = color("#f00"),
+            ),
+        ),
+    );
+    auto frame = popupFrame(
+        theme,
+        button("Crash", delegate { })
+    );
+    auto overlay = overlayChain();
+    auto root = overlay;
+
+    // This draw shouldn't crash
+    overlay.addPopup(frame,
+        Rectangle(0, 0, 0, 0));
+    root.draw();
+}
