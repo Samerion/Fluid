@@ -1139,3 +1139,36 @@ unittest {
     );
 
 }
+
+@("CodeInput.indent/outdent updates caret position")
+unittest {
+    auto input = codeInput(.useTabs);
+    auto root = input;
+    input.value = "\t\tHello, World!";
+    root.draw();
+    input.selectSlice(
+        input.lineHomeByIndex(0),
+        input.lineEndByIndex(0),
+    );
+
+    assert(input.selectionEnd == 15);
+    input.indent();
+    assert(input.selectionStart == 3);
+    assert(input.selectionEnd == 16);
+
+    input.indent();
+    assert(input.selectionStart == 4);
+    assert(input.selectionEnd == 17);
+
+    input.outdent();
+    assert(input.selectionStart == 3);
+    assert(input.selectionEnd == 16);
+
+    // Special case: Select entire line
+    input.selectLine();
+    assert(input.selectionStart == 0);
+    assert(input.selectionEnd == 16);
+    input.indent();
+    assert(input.selectionStart == 0);
+    assert(input.selectionEnd == 17);
+}

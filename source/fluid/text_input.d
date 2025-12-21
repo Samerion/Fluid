@@ -498,22 +498,24 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         if (start == end && newValue.length == 0) return false;
 
         const oldValue = contentLabel.value[start..end];
-        const oldCaretIndex = caretIndex;
+        const oldSelectionStart = selectionStart;
+        const oldSelectionEnd = selectionEnd;
+
+        ptrdiff_t newCaretIndex(ptrdiff_t oldCaretIndex) {
+            if (oldCaretIndex > start) {
+                if (oldCaretIndex <= end)
+                    return start + newValue.length;
+                else
+                    return oldCaretIndex + start + newValue.length - end;
+            }
+            else return oldCaretIndex;
+        }
 
         // Perform the replace
         contentLabel.replace(start, end, newValue);
-
-        // Update caret index
-        if (oldCaretIndex > start) {
-
-            if (oldCaretIndex <= end)
-                caretIndex = start + newValue.length;
-            else
-                caretIndex = oldCaretIndex + start + newValue.length - end;
-
-            updateCaretPositionAndAnchor();
-
-        }
+        selectionStart = newCaretIndex(oldSelectionStart);
+        selectionEnd = newCaretIndex(oldSelectionEnd);
+        updateCaretPositionAndAnchor();
 
         // Update current history entry — this doesn't affect undo/redo history, but is needed to keep integrity
         const diff = Rope.DiffRegion(start, oldValue, newValue);
