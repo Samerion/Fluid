@@ -91,6 +91,8 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
 
     mixin enableInputActions;
 
+    FocusIO focusIO;
+
     public {
 
         /// A child popup will keep this popup frame alive while it stays focused.
@@ -227,7 +229,7 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
     ///     True, if this popup (or its child) is currently focused.
     override bool isFocused() const {
         return childHasFocus
-            || super.isFocused
+            || focusIO.isFocused(this)
             || (childPopup && childPopup.isFocused);
     }
 
@@ -257,15 +259,11 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
 
     protected override void resizeImpl(Vector2 space) {
 
-        // Load FocusIO if available
-        auto focusIO = require(this.focusIO);
+        require(focusIO);
         {
             auto io = this.implementIO();
             super.resizeImpl(space);
         }
-
-        // The above resizeImpl call sets `focusIO` to `this`, it now needs to be restored
-        this.focusIO = focusIO;
 
         // Immediately switch focus to self
         if (toTakeFocus) {
@@ -323,6 +321,7 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
     }
 
     override inout(Focusable) currentFocus() inout {
+        assert(focusIO !is this, "Wrong FocusIO loaded");
         if (!focusIO.isFocused(this)) {
             return null;
         }
@@ -330,8 +329,12 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
     }
 
     override Focusable currentFocus(Focusable newValue) {
+        assert(focusIO !is this, "Wrong FocusIO loaded");
         focusIO.currentFocus = this;
-        return _currentFocus = newValue;
+        if (newValue !is this) {
+            return _currentFocus = newValue;
+        }
+        return newValue;
     }
 
 }
