@@ -37,15 +37,15 @@ Space fieldExample() {
 
     return vspace(
         fieldSlot!vframe(
-            label("Name:"),
+            label(.HitFilter.miss, "Name:"),
             textInput("Your name..."),
         ),
         fieldSlot!vframe(
-            label("Password:"),
+            label(.HitFilter.miss, "Password:"),
             passwordInput("Your password..."),
         ),
         fieldSlot!vframe(
-            label("Describe yourself:"),
+            label(.HitFilter.miss, "Describe yourself:"),
             textInput(.multiline, "Your bio..."),
         ),
     );
@@ -62,7 +62,7 @@ Space checkboxExample() {
 
     return fieldSlot!hframe(
         checkbox(),
-        label("I agree to terms and conditions"),
+        label(.HitFilter.miss, "I agree to terms and conditions"),
     );
 
 }

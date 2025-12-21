@@ -16,7 +16,7 @@ unittest {
     import fluid;
 
     fieldSlot!vframe(
-        label("Username"),
+        label(.HitFilter.miss, "Username"),
         textInput(),
     );
 }
@@ -24,6 +24,7 @@ unittest {
 import fluid.node;
 import fluid.utils;
 import fluid.input;
+import fluid.structs;
 import fluid.actions;
 
 import fluid.io.hover;
