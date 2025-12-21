@@ -1,6 +1,11 @@
 /// [FieldSlot] wraps an input node, expanding its hitbox to cover other surrounding nodes.
 ///
 /// It can be constructed with the [fieldSlot] node builder.
+///
+/// Bugs:
+///     `FieldSlot`, at the moment, requires manually marking label nodes
+///     with `HitFilter.miss` or `HitFilter.missBranch`. See [issue
+///     #589](https://git.samerion.com/Samerion/Fluid/issues/589)
 module fluid.field_slot;
 
 @safe:
