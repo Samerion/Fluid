@@ -87,6 +87,7 @@ class Checkbox : InputNode!Node {
     }
 
     protected override void resizeImpl(Vector2 space) {
+        super.resizeImpl(space);
         require(canvasIO);
         _markImage = getImage(pickStyle());
         load(canvasIO, _markImage);
