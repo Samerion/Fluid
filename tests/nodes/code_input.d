@@ -1139,3 +1139,20 @@ unittest {
     );
 
 }
+
+@("CodeInput.indent/outdent updates caret position")
+unittest {
+    auto input = codeInput(.useTabs);
+    auto root = testSpace(input);
+    input.value = "\t\tHello, World!";
+    root.draw();
+    input.selectSlice(
+        input.lineHomeByIndex(0),
+        input.lineEndByIndex(0),
+    );
+    input.indent();
+    root.drawToSVG("/tmp/fluid.svg");
+    assert(input.selectionStart == 3);
+
+    // TODO more tests
+}
