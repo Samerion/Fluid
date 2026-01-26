@@ -94,3 +94,27 @@ unittest {
         .runWhileDrawing(root);
 
 }
+
+@("ScrollInputHandle passes focus to ScrollInput when clicked (with HoverChain)")
+unittest {
+    auto frame = sizeLock!vscrollFrame(
+        .sizeLimit(100, 100),
+        .testTheme,
+        tallBox(),
+    );
+    auto hover = hoverChain(frame);
+    auto focus = focusChain(hover);
+    auto root = focus;
+
+    root.draw();
+
+    hover.point(95, 5)
+        .then((a) {
+            a.press();
+        })
+        .runWhileDrawing(root);
+
+    () @trusted {
+        assert(focus.currentFocus == frame.scrollBar);
+    }();
+}
