@@ -239,11 +239,10 @@ class ScrollInput : InputNode!Node {
 
 }
 
-class ScrollInputHandle : Node, Hoverable {
+class ScrollInputHandle : InputNode!Node {
 
     mixin Hoverable.enableInputActions;
 
-    HoverIO hoverIO;
     CanvasIO canvasIO;
 
     public {
@@ -291,10 +290,12 @@ class ScrollInputHandle : Node, Hoverable {
 
     }
 
-    bool isFocused() const {
-
+    override bool isFocused() const {
         return parent.isFocused;
+    }
 
+    override void focus() {
+        return parent.focus();
     }
 
     override bool blocksInput() const {
@@ -306,7 +307,7 @@ class ScrollInputHandle : Node, Hoverable {
     }
 
     override protected void resizeImpl(Vector2 space) {
-        require(hoverIO);
+        super.resizeImpl(space);
         require(canvasIO);
 
         if (parent.isHorizontal)
