@@ -317,6 +317,10 @@ unittest {
 /// `sideX` and `sideY` can be used to access individual items of an axis array by name.
 enum isAxisArray(T) = is(T == X[2], X) && T.length == 2;
 
+/// ditto
+enum isSomeAxisArray(T) = isAxisArray!T
+    || (is(T == Field!(name, U), string name, U) && isAxisArray!U);
+
 static assert(!isSideArray!(float[2]));
 static assert( isSideArray!(float[4]));
 
@@ -372,53 +376,53 @@ unittest {
 /// Get a reference to the X axis for the given side or axis array.
 ref inout(ElementType!T[2]) sideX(T)(return ref inout T sides)
 if (isSideArray!T) {
-
     const start = Style.Side.left;
     return sides[start .. start + 2];
-
 }
 
 /// ditto
 auto ref sideX(T)(return auto ref inout T sides)
 if (isSomeSideArray!T && !isSideArray!T) {
-
     const start = Style.Side.left;
     return sides[start .. start + 2];
-
 }
 
 /// ditto
 ref inout(ElementType!T) sideX(T)(return ref inout T sides)
 if (isAxisArray!T) {
-
     return sides[0];
+}
 
+/// ditto
+auto ref sideX(T)(return auto ref inout T sides)
+if (isSomeAxisArray!T && !isAxisArray!T) {
+    return sides[0];
 }
 
 /// Get a reference to the Y axis for the given side or axis array.
 ref inout(ElementType!T[2]) sideY(T)(return ref inout T sides)
 if (isSideArray!T) {
-
     const start = Style.Side.top;
     return sides[start .. start + 2];
-
 }
 
 /// ditto
 auto ref sideY(T)(return auto ref inout T sides)
 if (isSomeSideArray!T && !isSideArray!T) {
-
     const start = Style.Side.top;
     return sides[start .. start + 2];
-
 }
 
 /// ditto
 ref inout(ElementType!T) sideY(T)(return ref inout T sides)
 if (isAxisArray!T) {
-
     return sides[1];
+}
 
+/// ditto
+auto ref sideY(T)(return auto ref inout T sides)
+if (isSomeAxisArray!T && !isAxisArray!T) {
+    return sides[1];
 }
 
 /// Assigning values to an axis of a side array.
