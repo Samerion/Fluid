@@ -2412,6 +2412,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         }
 
         push(result, isMinor);
+        touchText();
         return true;
     }
 
