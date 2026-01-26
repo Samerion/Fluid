@@ -613,3 +613,27 @@ unittest {
     assert(field == [8, 8, 1, 1]);
 
 }
+
+@("sideX and sideY can be used with Rule.gap")
+unittest {
+    auto ruleXY = Rule.gap = [1, 2];
+    auto ruleX  = Rule.gap.sideX = 1;
+    auto ruleY  = Rule.gap.sideY = 2;
+
+    float[2] fieldX = [-1, -1];
+    ruleX.value.apply(fieldX);
+    assert(fieldX == [1, -1]);
+
+    float[2] fieldY = [-1, -1];
+    ruleY.value.apply(fieldY);
+    assert(fieldY == [-1, 2]);
+
+    assert(ruleX.value.value[0].value == 1);
+    assert(ruleY.value.value[1].value == 2);
+
+    assert( ruleX.value.value[0].isSet);
+    assert(!ruleX.value.value[1].isSet);
+
+    assert(!ruleY.value.value[0].isSet);
+    assert( ruleY.value.value[1].isSet);
+}
