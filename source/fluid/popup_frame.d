@@ -134,8 +134,6 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
         FindFocusBoxAction _findFocusBoxAction;
         MarkPopupButtonsAction _markPopupButtonsAction;
 
-        bool childHasFocus;
-
     }
 
     /// Create a PopupFrame. Takes an array of nodes to use as children.
@@ -228,8 +226,7 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
     /// Returns:
     ///     True, if this popup (or its child) is currently focused.
     override bool isFocused() const {
-        return childHasFocus
-            || focusIO.isFocused(this)
+        return focusIO.isFocused(this)
             || (childPopup && childPopup.isFocused);
     }
 
