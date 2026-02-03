@@ -363,8 +363,12 @@ unittest {
     auto hover = hoverChain(frame);
     auto root = testSpace(.nullTheme, hover);
 
+    // Button is not in view
     root.drawAndAssert(
-        target.isDrawn.at(0, 100),
+        target.isDrawn.containing(5, 105),
+    );
+    root.drawAndAssertFailure(
+        target.isDrawn.containing(5, 95),
     );
     hover.point(5, 105)
         .then((a) {
@@ -373,6 +377,13 @@ unittest {
         })
         .runWhileDrawing(root);
 
+    // Button is in view
+    root.drawAndAssertFailure(
+        target.isDrawn.containing(5, 105),
+    );
+    root.drawAndAssert(
+        target.isDrawn.containing(5, 95),
+    );
     hover.point(5, 95)
         .then((a) {
             assert( a.isHovered(target));
