@@ -741,6 +741,7 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
         const fileType = identifyImageType(image);
 
         auto imageRay = LoadImageFromMemory(fileType.ptr, image.ptr, cast(int) image.length);
+        scope (exit) UnloadImage(imageRay);
         return imageRay.toFluid;
 
     }
