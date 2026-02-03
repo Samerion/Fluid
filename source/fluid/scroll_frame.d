@@ -292,6 +292,18 @@ class ScrollFrame : Frame, FluidScrollable, HoverScrollable {
 
     }
 
+    /// Nodes inside `ScrollFrame` can only be considered hovered if the `ScrollFrame`
+    /// itself is hovered. That is, nodes scrolled out of view cannot be clicked.
+    override HitFilter inBoundsImpl(Rectangle outer, Rectangle inner, Vector2 position) {
+        const filter = super.inBoundsImpl(outer, inner, position);
+        if (!filter.inSelf) {
+            return HitFilter.missBranch;
+        }
+        else {
+            return filter;
+        }
+    }
+
     bool canScroll(Vector2 valueVec) const {
         const speed = scrollBar.scrollSpeed;
         const value = isHorizontal
