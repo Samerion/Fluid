@@ -1330,6 +1330,7 @@ class IsDrawnAssert : AbstractAssert {
 
     Nullable!Vector2 targetSpaceStart;
     Nullable!Vector2 targetSpaceSize;
+    Nullable!Vector2 targetSpaceContains;
 
     this(Node node) {
         super(node);
@@ -1344,7 +1345,8 @@ class IsDrawnAssert : AbstractAssert {
     override bool beforeDraw(Node node, Rectangle space, Rectangle, Rectangle) {
         return equal(subject, node)
             && equal(targetSpaceStart, space.start)
-            && equal(targetSpaceSize, space.size);
+            && equal(targetSpaceSize, space.size)
+            && contains(targetSpaceContains, space);
     }
 
     auto at(Rectangle space) @safe {
@@ -1366,11 +1368,21 @@ class IsDrawnAssert : AbstractAssert {
         return at(Vector2(x, y));
     }
 
+    auto containing(Vector2 point) {
+        targetSpaceContains = point;
+        return this;
+    }
+
+    auto containing(float x, float y) {
+        return containing(Vector2(x, y));
+    }
+
     override string toString() const {
         return toText(
             subject, " must be drawn",
             describe(" at ", targetSpaceStart),
             describe(" with size ", targetSpaceSize),
+            describe(" containing ", targetSpaceContains),
         );
     }
 
@@ -1932,6 +1944,14 @@ private bool equal(T)(Nullable!(T) target, T subject) {
         return true;
     }
     return target.get == subject;
+}
+
+private bool contains(Nullable!Vector2 target, Rectangle space) {
+    import fluid.utils : contains;
+    if (target.isNull) {
+        return true;
+    }
+    return space.contains(target.get);
 }
 
 private string describe(T : Nullable!E, E)(string prefix, T nullable, string suffix = "") {

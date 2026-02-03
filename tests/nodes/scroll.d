@@ -347,3 +347,46 @@ unittest {
 
 
 }
+
+@("Nodes outside of ScrollFrame viewport cannot be scrolled to")
+unittest {
+    Button target;
+
+    auto frame =
+        sizeLock!vscrollFrame(
+            .sizeLimit(100, 100),
+            sizeLock!vframe(
+                .sizeLimit(100, 100),
+            ),
+            target = button("Click me!", delegate { }),
+        );
+    auto hover = hoverChain(frame);
+    auto root = testSpace(.nullTheme, hover);
+
+    // Button is not in view
+    root.drawAndAssert(
+        target.isDrawn.containing(5, 105),
+    );
+    root.drawAndAssertFailure(
+        target.isDrawn.containing(5, 95),
+    );
+    hover.point(5, 105)
+        .then((a) {
+            assert(!a.isHovered(target));
+            return target.scrollIntoView();
+        })
+        .runWhileDrawing(root);
+
+    // Button is in view
+    root.drawAndAssertFailure(
+        target.isDrawn.containing(5, 105),
+    );
+    root.drawAndAssert(
+        target.isDrawn.containing(5, 95),
+    );
+    hover.point(5, 95)
+        .then((a) {
+            assert( a.isHovered(target));
+        })
+        .runWhileDrawing(root);
+}
