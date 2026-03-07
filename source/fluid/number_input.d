@@ -12,6 +12,7 @@ import fluid.utils;
 import fluid.style;
 import fluid.structs;
 import fluid.text_input;
+import fluid.text.rope;
 
 import fluid.io.hover;
 import fluid.io.canvas;
@@ -37,9 +38,6 @@ class NumberInput(T) : AbstractNumberInput {
 
     public {
 
-        /// Value of the input.
-        T value = 0;
-
         /// Step used by the increment/decrement button.
         T step = 1;
 
@@ -57,8 +55,11 @@ class NumberInput(T) : AbstractNumberInput {
 
     private {
 
-        /// If true, the expression passed to the input has been modified. The value will be updated as soon as the
-        /// input is submitted or loses focus.
+        /// Value of the input.
+        T _value = 0;
+
+        /// If true, the expression passed to the input has been modified. The value will be
+        /// updated as soon as the input is submitted or loses focus.
         bool isDirty;
 
     }
@@ -75,6 +76,49 @@ class NumberInput(T) : AbstractNumberInput {
         this.value = value;
         this.updateText();
 
+    }
+
+    /// Returns:
+    ///     Currently set number.
+    /// Params:
+    ///     newValue = New number to set.
+    ///         Changing the value will trigger a resize to update the text—except if the input is
+    ///         focused, not to discard user input.
+    inout(T) value() inout {
+        return _value;
+    }
+
+    /// ditto
+    T value(T newValue) {
+        if (_value != newValue) {
+            _value = newValue;
+            if (!isFocused) {
+                updateText();
+            }
+        }
+        return newValue;
+    }
+
+    // Just for DMD to STFU
+    private alias value = TextInput.value;
+
+    /// Returns:
+    ///     Current text content of the input.
+    /// Params:
+    ///     newValue = New text to set for the input.
+    Rope text() const {
+        return TextInput.value;
+    }
+
+    /// ditto
+    Rope text(Rope newValue) {
+        return TextInput.value = newValue;
+    }
+
+    /// ditto
+    string text(string newValue) {
+        TextInput.value = Rope(newValue);
+        return newValue;
     }
 
     override void drawImpl(Rectangle outer, Rectangle inner) {
@@ -115,9 +159,9 @@ class NumberInput(T) : AbstractNumberInput {
 
     }
 
-    /// Update textual value from the number.
+    /// Update textual value from the number. This will be called automatically if the value
+    /// changes.
     void updateText() {
-
         import std.conv;
 
         // Update the textual value
@@ -128,7 +172,6 @@ class NumberInput(T) : AbstractNumberInput {
 
         // Resize
         updateSize();
-
     }
 
     /// Increase the value by a step.
@@ -136,7 +179,7 @@ class NumberInput(T) : AbstractNumberInput {
     override void increment() {
 
         evaluateExpression();
-        value += step;
+        value = value + step;
         updateText();
         touch();
         focus();
@@ -151,7 +194,7 @@ class NumberInput(T) : AbstractNumberInput {
     override void decrement() {
 
         evaluateExpression();
-        value -= step;
+        value = value - step;
         updateText();
         touch();
         focus();
