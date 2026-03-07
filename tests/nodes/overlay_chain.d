@@ -77,7 +77,7 @@ unittest {
     root.drawAndAssert(
         label.isDrawn(),
         firstOverlay.isDrawn(),
-        firstOverlay.drawsRectangle(60, 60, overlaySize.tupleof),
+        firstOverlay.drawsRectangle(50, 60, overlaySize.tupleof),
     );
 
     auto secondOverlay = sampleOverlay(
@@ -89,7 +89,7 @@ unittest {
     root.drawAndAssert(
         label.isDrawn(),
         firstOverlay.isDrawn(),
-        firstOverlay.drawsRectangle(60, 60, overlaySize.tupleof),
+        firstOverlay.drawsRectangle(50, 60, overlaySize.tupleof),
         secondOverlay.drawsRectangle(100, 100, overlaySize.tupleof),
     );
 
@@ -111,7 +111,7 @@ unittest {
     );
     chain.addOverlay(centerOverlay);
 
-    const endTarget = Vector2(50, 50) - overlaySize;
+    const endTarget = Vector2(50+10, 50) - overlaySize;
     auto endOverlay = sampleOverlay(
         .layout!"end",
         overlaySize,
@@ -162,9 +162,9 @@ unittest {
     chain.addOverlay(bigOverlay);
 
     root.drawAndAssert(
-        smallOverlay.drawsRectangle(60, 60, 25, 25),
-        cornerOverlay.drawsRectangle(8, 8, 32, 32),
-        edgeOverlay.drawsRectangle(28, 50, 32, 32),
+        smallOverlay.drawsRectangle(40, 60, 25, 25),
+        cornerOverlay.drawsRectangle(48, 8, 32, 32),
+        edgeOverlay.drawsRectangle(48, 50, 32, 32),
         bigOverlay.drawsRectangle(-10, -10, 80, 80),
     );
 
@@ -195,9 +195,9 @@ unittest {
 
     root.drawAndAssert(
         // (start, _)
-        overlays[0].drawsRectangle( 10,  20, 32, 16),  // start
-        overlays[1].drawsRectangle( 10,   2, 32, 16),  // center
-        overlays[2].drawsRectangle( 10, -16, 32, 16),  // end
+        overlays[0].drawsRectangle(  0,  20, 32, 16),  // start
+        overlays[1].drawsRectangle(  0,   2, 32, 16),  // center
+        overlays[2].drawsRectangle(  0, -16, 32, 16),  // end
 
         // (center, _)
         overlays[3].drawsRectangle(-11,  20, 32, 16),  // start
@@ -205,9 +205,9 @@ unittest {
         overlays[5].drawsRectangle(-11, -16, 32, 16),  // end
 
         // (end, _)
-        overlays[6].drawsRectangle(-32,  20, 32, 16),  // start
-        overlays[7].drawsRectangle(-32,   2, 32, 16),  // center
-        overlays[8].drawsRectangle(-32, -16, 32, 16),  // end
+        overlays[6].drawsRectangle(-22,  20, 32, 16),  // start
+        overlays[7].drawsRectangle(-22,   2, 32, 16),  // center
+        overlays[8].drawsRectangle(-22, -16, 32, 16),  // end
      );
 
 }

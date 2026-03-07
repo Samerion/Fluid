@@ -104,7 +104,7 @@ unittest {
 
     root.drawAndAssert(
         button.isDrawn,
-        button.popup.isDrawn.at(button.getMinSize),
+        button.popup.isDrawn.at(0, button.getMinSize.y),
     );
     root.drawAndAssert(
         overlay.drawsChild(button.popup),
