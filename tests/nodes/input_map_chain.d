@@ -161,3 +161,26 @@ unittest {
     assert(tester.broken  == 1);
 
 }
+
+@("It is possible to bind keys to modifier keys")
+unittest {
+    auto map = InputMapping();
+    map.bindNew!(FluidInputAction.submit)(KeyboardIO.codes.leftControl, KeyboardIO.codes.z);
+    map.bindNew!(FluidInputAction.press)(KeyboardIO.codes.leftControl);
+
+    auto tester = actionTester();
+    auto root = inputMapChain(map, tester);
+
+    // Ctrl+Z works
+    root.emitEvent(KeyboardIO.press.leftControl, null, 0, &tester.runInputAction);
+    root.emitEvent(KeyboardIO.press.z, null, 0, &tester.runInputAction);
+    root.draw();
+    assert(tester.submitted == 1);
+    assert(tester.pressed == 0);
+
+    // Ctrl works
+    root.emitEvent(KeyboardIO.press.leftControl, null, 0, &tester.runInputAction);
+    root.draw();
+    assert(tester.submitted == 1);
+    assert(tester.pressed == 1);
+}
