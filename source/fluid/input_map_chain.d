@@ -101,17 +101,13 @@ class InputMapChain : NodeChain, ActionIOv2 {
             // Check if every modifier in this layer is active
             if (layer.modifiers.any!(a => findEvents(a).empty)) continue;
 
-            bool matched;
-
             // Found an active layer, test all bound strokes
             foreach_reverse (binding; layer.bindings) {
 
                 // Check if any of the events matches this binding
                 foreach (event; findEvents(binding.code)) {
-
-                    matched = true;
-                    handled = handled || event.callback(binding.inputAction, event.event.isActive, event.number);
-
+                    handled = handled
+                        || event.callback(binding.inputAction, event.event.isActive, event.number);
                 }
 
                 // Stroke handled, stop here
@@ -119,10 +115,15 @@ class InputMapChain : NodeChain, ActionIOv2 {
 
             }
 
+            // Special case: An action can be bound to a modifier, like "Ctrl"—but that requires
+            // searching through a layer different than the one of the modifier itself. For
+            // example, the "Ctrl" modifier will test the "Ctrl" layer, and not the (blank) layer,
+            // but it will be the (blank) layer that will contain the "Ctrl" keybind.
+            handled = handled
+                || processExact(layer.modifiers);
+
             // End on this layer if any binding matched
-            if (matched) {
-                break;
-            }
+            break;
 
         }
 
@@ -135,6 +136,31 @@ class InputMapChain : NodeChain, ActionIOv2 {
 
         }
 
+    }
+
+    /// Find and trigger identical keybinds
+    private bool processExact(InputEventCode[] codes) @trusted {
+        if (codes.length == 0) return false;
+
+        foreach (layer; map.layers) {
+
+            // This layer must have the exact same modifier count
+            if (layer.modifiers.length + 1 != codes.length) continue;
+
+            // Check if every modifier in this layer is active
+            if (layer.modifiers.any!(a => !codes.canFind(a))) continue;
+
+            foreach_reverse (binding; layer.bindings) {
+                if (!codes.canFind(binding.code)) continue;
+                foreach (event; findEvents(binding.code)) {
+                    const handled = event.callback(
+                        binding.inputAction, event.event.isActive, event.number);
+                    if (handled) return true;
+                }
+            }
+
+        }
+        return false;
     }
 
 }
