@@ -101,12 +101,15 @@ class InputMapChain : NodeChain, ActionIOv2 {
             // Check if every modifier in this layer is active
             if (layer.modifiers.any!(a => findEvents(a).empty)) continue;
 
+            bool matched;
+
             // Found an active layer, test all bound strokes
             foreach_reverse (binding; layer.bindings) {
 
                 // Check if any of the events matches this binding
                 foreach (event; findEvents(binding.code)) {
 
+                    matched = true;
                     handled = handled || event.callback(binding.inputAction, event.event.isActive, event.number);
 
                 }
@@ -116,8 +119,10 @@ class InputMapChain : NodeChain, ActionIOv2 {
 
             }
 
-            // End on this layer
-            break;
+            // End on this layer if any binding matched
+            if (matched) {
+                break;
+            }
 
         }
 
