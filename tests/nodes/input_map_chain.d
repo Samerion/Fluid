@@ -12,6 +12,7 @@ class ActionTester : InputNode!Node {
     int submitted;
     int broken;
     int frameCalls;
+    int held;
 
     bool disableBreaking;
 
@@ -26,6 +27,12 @@ class ActionTester : InputNode!Node {
     @(FluidInputAction.press)
     bool press() {
         pressed++;
+        return true;
+    }
+
+    @(FluidInputAction.press, WhileHeld)
+    bool hold() {
+        held++;
         return true;
     }
 
@@ -183,4 +190,27 @@ unittest {
     root.draw();
     assert(tester.submitted == 1);
     assert(tester.pressed == 1);
+}
+
+@("Modifier-only keybinds can be held")
+unittest {
+    auto map = InputMapping();
+    map.bindNew!(FluidInputAction.submit)(KeyboardIO.codes.leftControl, KeyboardIO.codes.z);
+    map.bindNew!(FluidInputAction.press)(KeyboardIO.codes.leftControl);
+
+    auto tester = actionTester();
+    auto root = inputMapChain(map, tester);
+
+    root.emitEvent(KeyboardIO.hold.leftControl, null, 0, &tester.runInputAction);
+    root.draw();
+    assert(tester.held == 1);
+    assert(tester.pressed == 0);
+    assert(tester.submitted == 0);
+
+    root.emitEvent(KeyboardIO.hold.leftControl, null, 0, &tester.runInputAction);
+    root.emitEvent(KeyboardIO.press.z, null, 0, &tester.runInputAction);
+    root.draw();
+    assert(tester.held == 1);
+    assert(tester.pressed == 0);
+    assert(tester.submitted == 1);
 }
