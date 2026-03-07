@@ -81,9 +81,18 @@ class OverlayChain : NodeChain, OverlayIO {
                 alignLayout!'x'(nodeAlign[0], inner, anchor, size),
                 alignLayout!'y'(nodeAlign[1], inner, anchor, size),
             );
-            const anchorPoint = anchor.end
-                - Vector2(layout.x * anchor.size.x, layout.y * anchor.size.y)
-                - Vector2(layout.x * size.x,        layout.y * size.y);
+
+            // The anchor point is reversed on the Y axis to avoid overlapping:
+            //
+            // +--------+   +--------+ Anchor on the left for "start"                  +--------+
+            // | Anchor |   | Anchor | Anchor on the right for "end"          ↑ End |  | Anchor |
+            // O--------+   +--------O                                       - - ---O  +--------O
+            // O--- - -       - - ---O  Anchor at the *bottom* for "start" +--------O    - - ---O
+            // | Start ->     <- End |  Anchor at the *top* for "end"      | Anchor |     Start |
+            //                                                             +--------+
+            const anchorPoint = Vector2(anchor.start.x, anchor.end.y)
+                + Vector2(layout.x * anchor.size.x, -layout.y * anchor.size.y)
+                - Vector2(layout.x * size.x,         layout.y * size.y);
 
             drawChild(child.node, Rectangle(
                 anchorPoint.tupleof,
