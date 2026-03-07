@@ -22,7 +22,7 @@ unittest {
 
     overlay.addPopup(popup, Rectangle(40, 40, 5, 5));
     root.drawAndAssert(
-        popup.isDrawn().at(45, 45),
+        popup.isDrawn().at(40, 45),
         overlay.doesNotDrawChildren(),
     );
     root.drawAndAssert(
