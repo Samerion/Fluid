@@ -82,7 +82,8 @@ class NumberInput(T) : AbstractNumberInput {
     ///     Currently set number.
     /// Params:
     ///     newValue = New number to set.
-    ///         Setting a new value will trigger a resize.
+    ///         Changing the value will trigger a resize to update the text—except if the input is
+    ///         focused, not to discard user input.
     inout(T) value() inout {
         return _value;
     }
@@ -91,7 +92,9 @@ class NumberInput(T) : AbstractNumberInput {
     T value(T newValue) {
         if (_value != newValue) {
             _value = newValue;
-            updateText();
+            if (!isFocused) {
+                updateText();
+            }
         }
         return newValue;
     }
