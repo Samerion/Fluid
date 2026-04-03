@@ -87,11 +87,19 @@ void addChildPopup(OverlayIO overlayIO, PopupFrame parent, PopupFrame popup, Rec
 /// operate a `PopupFrame` for you.
 ///
 /// Popup needs [OverlayIO] to function, so it is an instance of [Overlayable].
-class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, WithPositionalFocus {
+///
+/// If a child node uses [OverlayIO] to create a global popup, [PopupFrame] will intercept the
+/// call to turn it into a child popup. This allows popups to be stacked without referencing the
+/// parent popup explicitly.
+class PopupFrame : InputNode!Frame, Overlayable, OverlayIO, FocusIO,
+    WithOrderedFocus,
+    WithPositionalFocus
+{
 
     mixin enableInputActions;
 
     FocusIO focusIO;
+    OverlayIO overlayIO;  /// Host [OverlayIO] system.
 
     public {
 
@@ -255,8 +263,8 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
     }
 
     protected override void resizeImpl(Vector2 space) {
-
         require(focusIO);
+        require(overlayIO);
         {
             auto io = this.implementIO();
             super.resizeImpl(space);
@@ -332,6 +340,22 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
             return _currentFocus = newValue;
         }
         return newValue;
+    }
+
+    override void addOverlay(Overlayable node, OverlayType[] type...) nothrow {
+        if (auto child = cast(PopupFrame) node) {
+            childPopup = child;
+        }
+        overlayIO.addChildOverlay(this, node, type);
+    }
+
+    override void addChildOverlay(Overlayable node, Overlayable child, OverlayType[] type...)
+        nothrow
+    do {
+        if (node is null) {
+            return addOverlay(node, type);
+        }
+        overlayIO.addChildOverlay(node, child, type);
     }
 
 }
