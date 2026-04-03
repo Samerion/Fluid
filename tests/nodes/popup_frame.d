@@ -482,3 +482,49 @@ unittest {
         Rectangle(0, 0, 0, 0));
     root.draw();
 }
+
+@("#617: Popups opened inside PopupFrame automatically become children")
+unittest {
+    static class OpenPopup : Button {
+        OverlayIO overlayIO;
+        PopupFrame popup;
+
+        @safe:
+
+        this() {
+            super("_", &openPopup);
+            this.popup = popupFrame();
+        }
+
+        override void resizeImpl(Vector2 space) {
+            require(overlayIO);
+            super.resizeImpl(space);
+            minSize = Vector2(10, 10);
+        }
+
+        void openPopup() {
+            overlayIO.addPopup(popup,
+                Rectangle(0, 0, 0, 0));
+        }
+    }
+
+    auto button = new OpenPopup;
+    auto frame = popupFrame(button);
+    auto overlay = overlayChain();
+    auto root = testSpace(nullTheme, overlay);
+
+    overlay.addPopup(frame,
+        Rectangle(0, 0, 0, 0));
+    root.drawAndAssert(
+        overlay.contains(
+            frame.isDrawn(),
+        ),
+    );
+    button.openPopup();
+    root.drawAndAssert(
+        overlay.contains(
+            frame.isDrawn(),
+            button.popup.isDrawn(),
+        ),
+    );
+}
