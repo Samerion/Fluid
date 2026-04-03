@@ -70,7 +70,8 @@ class PopupButton : ButtonImpl!Label {
         /// Popup this button is placed in, if any. Set automatically if the popup is spawned
         /// with `spawnPopup`.
         ///
-        /// This field will be removed in Fluid 0.8.0.
+        /// This field will be removed in Fluid 0.9.0.
+        deprecated("This field is no longer in use and will be removed in Fluid 0.9.0")
         PopupFrame parentPopup;
 
     }
@@ -97,16 +98,7 @@ class PopupButton : ButtonImpl!Label {
 
         super(text, delegate {
             const anchor = focusBoxImpl(_inner);
-
-            // Parent popup active
-            if (parentPopup && parentPopup.isFocused)
-                overlayIO.addChildPopup(parentPopup, popup, anchor);
-
-            // No parent
-            else {
-                overlayIO.addPopup(popup, anchor);
-            }
-
+            overlayIO.addPopup(popup, anchor);
             _justOpened = true;
         });
 

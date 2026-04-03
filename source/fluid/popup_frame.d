@@ -87,11 +87,19 @@ void addChildPopup(OverlayIO overlayIO, PopupFrame parent, PopupFrame popup, Rec
 /// operate a `PopupFrame` for you.
 ///
 /// Popup needs [OverlayIO] to function, so it is an instance of [Overlayable].
-class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, WithPositionalFocus {
+///
+/// If a child node uses [OverlayIO] to create a global popup, [PopupFrame] will intercept the
+/// call to turn it into a child popup. This allows popups to be stacked without referencing the
+/// parent popup explicitly.
+class PopupFrame : InputNode!Frame, Overlayable, OverlayIO, FocusIO,
+    WithOrderedFocus,
+    WithPositionalFocus
+{
 
     mixin enableInputActions;
 
     FocusIO focusIO;
+    OverlayIO overlayIO;  /// Host [OverlayIO] system.
 
     public {
 
@@ -132,7 +140,6 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
         OrderedFocusAction _orderedFocusAction;
         PositionalFocusAction _positionalFocusAction;
         FindFocusBoxAction _findFocusBoxAction;
-        MarkPopupButtonsAction _markPopupButtonsAction;
 
     }
 
@@ -149,7 +156,6 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
         this._orderedFocusAction     = new OrderedFocusAction;
         this._positionalFocusAction  = new PositionalFocusAction;
         this._findFocusBoxAction     = new FindFocusBoxAction(this);
-        this._markPopupButtonsAction = new MarkPopupButtonsAction(this);
 
         _findFocusBoxAction
             .then((Optional!Rectangle result) => _lastFocusBox = result);
@@ -255,8 +261,8 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
     }
 
     protected override void resizeImpl(Vector2 space) {
-
         require(focusIO);
+        require(overlayIO);
         {
             auto io = this.implementIO();
             super.resizeImpl(space);
@@ -273,8 +279,7 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
     alias toRemove = typeof(super).toRemove;
 
     protected override void drawImpl(Rectangle outer, Rectangle inner) {
-        auto action1 = this.startBranchAction(_findFocusBoxAction);
-        auto action2 = this.startBranchAction(_markPopupButtonsAction);
+        auto action = this.startBranchAction(_findFocusBoxAction);
         super.drawImpl(outer, inner);
     }
 
@@ -334,27 +339,20 @@ class PopupFrame : InputNode!Frame, Overlayable, FocusIO, WithOrderedFocus, With
         return newValue;
     }
 
-}
-
-/// This tree action will walk the branch to mark PopupButtons with the parent PopupFrame.
-/// This is a temporary workaround to fill `PopupButton.parentPopup` in new I/O; eventually,
-/// popup frames should implement `LayoutIO` to detect child popups.
-private class MarkPopupButtonsAction : BranchAction {
-
-    PopupFrame parent;
-
-    this(PopupFrame parent) {
-        this.parent = parent;
+    override void addOverlay(Overlayable node, OverlayType[] type...) nothrow {
+        if (auto child = cast(PopupFrame) node) {
+            childPopup = child;
+        }
+        overlayIO.addChildOverlay(this, node, type);
     }
 
-    override void beforeDraw(Node node, Rectangle) {
-
-        import fluid.popup_button;
-
-        if (auto button = cast(PopupButton) node) {
-            button.parentPopup = parent;
+    override void addChildOverlay(Overlayable node, Overlayable child, OverlayType[] type...)
+        nothrow
+    do {
+        if (node is null) {
+            return addOverlay(node, type);
         }
-
+        overlayIO.addChildOverlay(node, child, type);
     }
 
 }
