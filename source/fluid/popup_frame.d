@@ -140,7 +140,6 @@ class PopupFrame : InputNode!Frame, Overlayable, OverlayIO, FocusIO,
         OrderedFocusAction _orderedFocusAction;
         PositionalFocusAction _positionalFocusAction;
         FindFocusBoxAction _findFocusBoxAction;
-        MarkPopupButtonsAction _markPopupButtonsAction;
 
     }
 
@@ -157,7 +156,6 @@ class PopupFrame : InputNode!Frame, Overlayable, OverlayIO, FocusIO,
         this._orderedFocusAction     = new OrderedFocusAction;
         this._positionalFocusAction  = new PositionalFocusAction;
         this._findFocusBoxAction     = new FindFocusBoxAction(this);
-        this._markPopupButtonsAction = new MarkPopupButtonsAction(this);
 
         _findFocusBoxAction
             .then((Optional!Rectangle result) => _lastFocusBox = result);
@@ -281,8 +279,7 @@ class PopupFrame : InputNode!Frame, Overlayable, OverlayIO, FocusIO,
     alias toRemove = typeof(super).toRemove;
 
     protected override void drawImpl(Rectangle outer, Rectangle inner) {
-        auto action1 = this.startBranchAction(_findFocusBoxAction);
-        auto action2 = this.startBranchAction(_markPopupButtonsAction);
+        auto action = this.startBranchAction(_findFocusBoxAction);
         super.drawImpl(outer, inner);
     }
 
@@ -356,29 +353,6 @@ class PopupFrame : InputNode!Frame, Overlayable, OverlayIO, FocusIO,
             return addOverlay(node, type);
         }
         overlayIO.addChildOverlay(node, child, type);
-    }
-
-}
-
-/// This tree action will walk the branch to mark PopupButtons with the parent PopupFrame.
-/// This is a temporary workaround to fill `PopupButton.parentPopup` in new I/O; eventually,
-/// popup frames should implement `LayoutIO` to detect child popups.
-private class MarkPopupButtonsAction : BranchAction {
-
-    PopupFrame parent;
-
-    this(PopupFrame parent) {
-        this.parent = parent;
-    }
-
-    override void beforeDraw(Node node, Rectangle) {
-
-        import fluid.popup_button;
-
-        if (auto button = cast(PopupButton) node) {
-            button.parentPopup = parent;
-        }
-
     }
 
 }
