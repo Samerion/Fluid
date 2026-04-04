@@ -306,14 +306,20 @@ struct CompositeTexture {
     }
 
     /// Draw onscreen parts of the texture.
-    void drawAlign(CanvasIO canvasIO, Rectangle rectangle, Color tint = Color(0xff, 0xff, 0xff, 0xff)) {
-
+    void drawAlign(CanvasIO canvasIO, Rectangle rectangle,
+        Color tint = Color(0xff, 0xff, 0xff, 0xff))
+    do {
         auto chosenChunks = visibleChunks(canvasIO, rectangle.start);
+        drawAlign(canvasIO, rectangle.start, chosenChunks, tint);
+    }
 
-        // Draw each visible chunk
+    /// Draw the whole texture.
+    void drawAlign(R)(CanvasIO canvasIO, Vector2 start, R chosenChunks,
+        Color tint = Color(0xff, 0xff, 0xff, 0xff))
+    do {
         foreach (index; chosenChunks) {
             chunks[index].image.palette = palette;
-            const rect = chunkViewportRectangle(index, rectangle.start);
+            const rect = chunkViewportRectangle(index, start);
 
             debug (Fluid_TextChunks) {
                 if (index % 2) {
@@ -338,8 +344,6 @@ struct CompositeTexture {
             }
             chunks[index].image.drawHinted(rect, tint);
         }
-
     }
-
 
 }
