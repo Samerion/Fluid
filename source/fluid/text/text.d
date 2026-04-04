@@ -932,22 +932,19 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     void generate(CanvasIO canvasIO, Vector2 position)
     in (canvasIO !is null, "CanvasIO is unavailable (null)")
     do {
-
-        // Pick relevant chunks based on the crop area
         auto chunks = texture.visibleChunks(canvasIO, position);
-
-        // Generate the text
         generate(canvasIO, chunks.save);
+    }
 
-        // Load the updated chunks
+    private void generate(R)(CanvasIO canvasIO, R chunks) @trusted {
+        generateImpl(canvasIO, chunks);
         foreach (chunkIndex; chunks) {
             texture.upload(canvasIO, chunkIndex,
                 dpi(canvasIO));
         }
-
     }
 
-    void generate(R)(CanvasIO canvasIO, R chunks) @trusted {
+    private void generateImpl(R)(CanvasIO canvasIO, R chunks) @trusted {
 
         // Empty, nothing to do
         if (chunks.empty) return;
