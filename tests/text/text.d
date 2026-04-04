@@ -242,3 +242,46 @@ unittest {
         "Two separately rendered pieces of text should look identical");
 
 }
+
+@("Text.forceDraw can be used to draw text out of screen bounds")
+unittest {
+    static class TextNode : Node {
+        CanvasIO canvasIO;
+        Text text;
+        bool isForced;
+
+        this() {
+            text = Text(this, "Hello, World!");
+        }
+
+        override void resizeImpl(Vector2 space) {
+            require(canvasIO);
+            text.resize(canvasIO);
+        }
+
+        override void drawImpl(Rectangle outer, Rectangle inner) {
+            const position = Vector2(200, 200);
+            if (isForced) {
+                text.forceDraw(canvasIO, pickStyle, position);
+            }
+            else {
+                text.draw(canvasIO, pickStyle, position);
+            }
+        }
+    }
+
+    auto text = new TextNode;
+    auto root = sizeLock!testSpace(
+        .sizeLimit(0, 0),
+        .cropViewport,
+        text
+    );
+    root.drawAndAssert(
+        text.doesNotDrawImages,
+    );
+    text.isForced = true;
+    root.drawAndAssert(
+        text.drawsHintedImage().at(200, 200, 109, 27).ofColor("#ffffff")
+            .sha256("e5b75b97f0894aeba0c17c078a7509ab0e9e652b89797817fac0063cc82055f4"),
+    );
+}
