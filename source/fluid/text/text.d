@@ -1106,17 +1106,17 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
 
         // Regenerate visible textures
         generate(canvasIO, position);
-
-        // Make space in the texture's palette
-        if (texture.palette.length != styles.length)
-            texture.palette.length = styles.length;
-
-        // Fill it with text colors of each of the styles
-        styles.map!"a.textColor".copy(texture.palette);
+        fillPalette(styles);
 
         // Draw the texture if present
         texture.drawAlign(canvasIO, rectangle);
+    }
 
+    /// Make space in the texture's palette and fill it with text colors of each of the styles.
+    private void fillPalette(scope const Style[] styles) {
+        if (texture.palette.length != styles.length)
+            texture.palette.length = styles.length;
+        styles.map!"a.textColor".copy(texture.palette);
     }
 
     string toString() const {
