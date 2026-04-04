@@ -1109,6 +1109,20 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         texture.drawAlign(canvasIO, rectangle);
     }
 
+    /// While [draw] will skip rendering text if its out of screen boundaries, [forceDraw] will
+    /// generate and draw the whole text, regardless of its screen position.
+    void forceDraw(CanvasIO canvasIO, Style style, Vector2 position) {
+        scope const Style[1] styles = [style];
+        forceDraw(canvasIO, styles, position);
+    }
+
+    /// ditto
+    void forceDraw(CanvasIO canvasIO, scope const Style[] styles, Vector2 position) {
+        generate(canvasIO, texture.allChunks);
+        fillPalette(styles);
+        texture.drawAlign(canvasIO, position, texture.allChunks);
+    }
+
     /// Make space in the texture's palette and fill it with text colors of each of the styles.
     private void fillPalette(scope const Style[] styles) {
         if (texture.palette.length != styles.length)
