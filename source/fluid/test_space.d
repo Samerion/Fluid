@@ -127,8 +127,7 @@ class TestSpace : Space, CanvasIO, DebugSignalIO {
     /// Params:
     ///     image = Image to check.
     bool isImageLoaded(DrawableImage image) nothrow {
-
-        const ptr = cast(size_t) image.data.ptr;
+        auto ptr = cast(size_t) image.data.ptr;
 
         // Image is registered and up to date, OK
         if (auto index = ptr in _imageIndices) {
@@ -138,7 +137,6 @@ class TestSpace : Space, CanvasIO, DebugSignalIO {
 
         // Not loaded
         return false;
-
     }
 
     /// Returns: The number of images registered by the test runner.
@@ -269,11 +267,10 @@ class TestSpace : Space, CanvasIO, DebugSignalIO {
     }
 
     override int load(Image image) nothrow {
-
-        const ptr = cast(size_t) image.data.ptr;
+        auto ptr = cast(size_t) image.data.ptr;
 
         // If the image is already loaded, mark it as so
-        if (auto index = ptr in _imageIndices) {
+        if (const index = ptr in _imageIndices) {
             _loadedImages.reload(*index, image);
             return *index;
         }
@@ -282,7 +279,6 @@ class TestSpace : Space, CanvasIO, DebugSignalIO {
         else {
             return _imageIndices[ptr] = _loadedImages.load(image);
         }
-
     }
 
     /// Draw a single frame and save the output to an SVG file at given location.
