@@ -386,20 +386,17 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
     alias minSize = size;
 
     /// Measure and set the bounding box for this text.
+    deprecated("`resize()` remains in Fluid by mistake. Use `resize(CanvasIO)` instead. "
+        ~ "This old overload will be removed in Fluid 0.9.0.")
     void resize() {
-
         resize!keepWords(Vector2(), false);
-
     }
 
     /// Set new bounding box for the text.
-    void resize(CanvasIO canvasIO) {
-        if (canvasIO) {
-            return resize(canvasIO, Vector2.init, false);
-        }
-        else {
-            return resize();
-        }
+    void resize(CanvasIO canvasIO)
+    in (canvasIO !is null, "CanvasIO is unavailable (null)")
+    do {
+        return resize(canvasIO, Vector2.init, false);
     }
 
     /// Set new bounding box for the text; wrap the text if it doesn't fit in boundaries.

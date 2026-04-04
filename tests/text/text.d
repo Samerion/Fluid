@@ -33,7 +33,7 @@ unittest {
     auto text = mapText(root, "Hello, World!", styleMap);
 
     root.draw();
-    text.resize();
+    text.resize(root);
     text.draw(root, styles, Vector2(0, 0));
 
 }
