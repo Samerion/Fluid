@@ -29,6 +29,66 @@ alias numberInputSpinner = nodeBuilder!NumberInputSpinner;
 
 @safe:
 
+/// Assigns [minValue][NumberInput.minValue], [maxValue][NumberInput.maxValue] or both.
+auto valueRange(T)(T min, T max) {
+    static struct ValueRange {
+        T min;
+        T max;
+
+        void apply(X)(NumberInput!X input) {
+            input.minValue = min;
+            input.maxValue = max;
+        }
+    }
+
+    return ValueRange(min, max);
+}
+
+/// ditto
+auto minValue(T)(T min) {
+    static struct MinValue {
+        T min;
+
+        void apply(X)(NumberInput!X input) {
+            input.minValue = min;
+        }
+    }
+
+    return MinValue(min);
+}
+
+/// ditto
+auto maxValue(T)(T max) {
+    static struct MaxValue {
+        T max;
+
+        void apply(X)(NumberInput!X input) {
+            input.maxValue = max;
+        }
+    }
+
+    return MaxValue(max);
+}
+
+@("NumberInput.valueRange example")
+unittest {
+    // Assign min and max values separately
+    intInput(
+        .minValue(1),
+        .maxValue(10),
+    );
+    // Or both at a time
+    intInput(
+        .valueRange(1, 10),
+    );
+
+    auto input = intInput(
+        .valueRange(1, 10),
+    );
+    assert(input.minValue == 1);
+    assert(input.maxValue == 10);
+}
+
 /// Number input field.
 class NumberInput(T) : AbstractNumberInput {
 
