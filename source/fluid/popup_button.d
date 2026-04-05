@@ -104,6 +104,11 @@ class PopupButton : ButtonImpl!Label {
 
     }
 
+    /// Close the popup, if it is open.
+    void closePopup() {
+        popup.remove();
+    }
+
     override void resizeImpl(Vector2 space) {
         require(overlayIO);
         super.resizeImpl(space);
