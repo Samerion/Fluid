@@ -339,6 +339,13 @@ struct HoverPointer {
 
     }
 
+    /// Returns:
+    ///     Position of the pointer in the previous frame, based on [position] and
+    ///     [positionDelta].
+    Vector2 previousPosition() const {
+        return position - positionDelta;
+    }
+
     /// Assign new values to [position] and [positionDelta] based on a single new position value
     /// for the pointer.
     ///
