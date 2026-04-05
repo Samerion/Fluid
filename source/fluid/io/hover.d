@@ -339,6 +339,19 @@ struct HoverPointer {
 
     }
 
+    /// Assign new values to [position] and [positionDelta] based on a single new position value
+    /// for the pointer.
+    ///
+    /// This function updates `positionDelta` by subtracting the old position from the new one,
+    /// and once that is done, updates `position`.
+    ///
+    /// Params:
+    ///     newPosition = New value for the `position` field.
+    void updatePosition(Vector2 newPosition) {
+        positionDelta = newPosition - position;
+        position = newPosition;
+    }
+
     /// Compare two pointers. All publicly exposed fields (`device`, `number`, `position`,
     /// `isDisabled`) must be equal. To check if the two pointers have the same origin (device and
     /// number), use `isSame`.
@@ -828,7 +841,7 @@ class HoverPointerAction : TreeAction, Publisher!HoverPointerAction, IO {
 
         // Place the pointer
         pointer.isDisabled = false;
-        pointer.position = position;
+        pointer.updatePosition(position);
         hoverIO.loadTo(pointer);
 
         return this;

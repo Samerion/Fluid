@@ -284,10 +284,11 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
     protected void updateMouse() @trusted {
 
         // Update mouse status
-        _mousePointer.position     = toFluid(GetMousePosition);
-        _mousePointer.scroll       = scroll();
-        _mousePointer.isScrollHeld = false;
-        _mousePointer.clickCount   = 0;
+        _mousePointer.updatePosition(
+            toFluid(GetMousePosition));
+        _mousePointer.scroll        = scroll();
+        _mousePointer.isScrollHeld  = false;
+        _mousePointer.clickCount    = 0;
 
         // Detect multiple mouse clicks
         if (IsMouseButtonDown(MouseButton.MOUSE_BUTTON_LEFT)) {
