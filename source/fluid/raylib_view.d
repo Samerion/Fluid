@@ -197,6 +197,7 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
         HoverPointer _mousePointer;
         Appender!(KeyboardKey[]) _heldKeys;
         MultipleClickSensor _multiClickSensor;
+        HoverPointer _cursorPointer;   /// pointer used to determine cursor image
 
     }
 
@@ -284,10 +285,11 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
     protected void updateMouse() @trusted {
 
         // Update mouse status
-        _mousePointer.position     = toFluid(GetMousePosition);
-        _mousePointer.scroll       = scroll();
-        _mousePointer.isScrollHeld = false;
-        _mousePointer.clickCount   = 0;
+        _mousePointer.updatePosition(
+            toFluid(GetMousePosition));
+        _mousePointer.scroll        = scroll();
+        _mousePointer.isScrollHeld  = false;
+        _mousePointer.clickCount    = 0;
 
         // Detect multiple mouse clicks
         if (IsMouseButtonDown(MouseButton.MOUSE_BUTTON_LEFT)) {
@@ -300,10 +302,25 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
         }
 
         hoverIO.loadTo(_mousePointer);
+        updateCursorIcon();
+        sendPointerEvents();
+    }
 
-        // Set cursor icon
-        if (auto node = cast(Node) hoverIO.hoverOf(_mousePointer)) {
+    private void updateCursorIcon() @trusted {
 
+        // Preload cursor pointer with the mouse pointer, if not already set
+        if (_cursorPointer is _cursorPointer.init) {
+            _cursorPointer = _mousePointer;
+        }
+
+        // Use the last moved pointer for the cursor
+        foreach (HoverPointer pointer; hoverIO) {
+            if (pointer.positionDelta.length < 0.5) continue;
+            _cursorPointer = pointer;
+        }
+
+        // Set the cursor icon
+        if (auto node = cast(Node) hoverIO.hoverOf(_cursorPointer)) {
             const cursor = node.pickStyle().mouseCursor;
 
             // Hide the cursor if requested
@@ -315,31 +332,25 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
                 SetMouseCursor(cursor.system.toRaylib);
                 ShowCursor();
             }
-
         }
         else {
             SetMouseCursor(Cursor.systemDefault.system.toRaylib);
             ShowCursor();
         }
+    }
 
-        // Send buttons
+    private void sendPointerEvents() @trusted {
         foreach (button; NoDuplicates!(EnumMembers!(MouseIO.Button))) {
-
             const buttonRay = button.toRaylib;
-
             if (buttonRay == -1) continue;
 
-            // Active event
             if (IsMouseButtonReleased(buttonRay)) {
                 hoverIO.emitEvent(_mousePointer, MouseIO.createEvent(button, true));
             }
-
             else if (IsMouseButtonDown(buttonRay)) {
                 hoverIO.emitEvent(_mousePointer, MouseIO.createEvent(button, false));
             }
-
         }
-
     }
 
     protected void updateKeyboard() @trusted {
