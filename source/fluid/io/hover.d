@@ -268,6 +268,9 @@ struct HoverPointer {
     /// Position in the window the pointer is pointing at.
     Vector2 position;
 
+    /// Difference in position since last frame.
+    Vector2 positionDelta;
+
     /// Current scroll value. For a mouse, this indicates mouse wheel movement, for other devices
     /// like touchpad or touchscreen, this will be translated from its movement.
     ///
@@ -336,6 +339,26 @@ struct HoverPointer {
 
     }
 
+    /// Returns:
+    ///     Position of the pointer in the previous frame, based on [position] and
+    ///     [positionDelta].
+    Vector2 previousPosition() const {
+        return position - positionDelta;
+    }
+
+    /// Assign new values to [position] and [positionDelta] based on a single new position value
+    /// for the pointer.
+    ///
+    /// This function updates `positionDelta` by subtracting the old position from the new one,
+    /// and once that is done, updates `position`.
+    ///
+    /// Params:
+    ///     newPosition = New value for the `position` field.
+    void updatePosition(Vector2 newPosition) {
+        positionDelta = newPosition - position;
+        position = newPosition;
+    }
+
     /// Compare two pointers. All publicly exposed fields (`device`, `number`, `position`,
     /// `isDisabled`) must be equal. To check if the two pointers have the same origin (device and
     /// number), use `isSame`.
@@ -390,6 +413,7 @@ struct HoverPointer {
             this.device,
             this.number,
             this.position,
+            this.positionDelta,
             this.scroll,
             this.isDisabled,
             this.clickCount,
@@ -403,11 +427,12 @@ struct HoverPointer {
     /// Params:
     ///     other = Pointer to copy data from.
     void update(const HoverPointer other) {
-        this.position     = other.position;
-        this.scroll       = other.scroll;
-        this.isScrollHeld = other.isScrollHeld;
-        this.isDisabled   = other.isDisabled;
-        this.clickCount   = other.clickCount;
+        this.position      = other.position;
+        this.positionDelta = other.positionDelta;
+        this.scroll        = other.scroll;
+        this.isScrollHeld  = other.isScrollHeld;
+        this.isDisabled    = other.isDisabled;
+        this.clickCount    = other.clickCount;
     }
 
     /// Emit an event through the pointer.
@@ -823,7 +848,7 @@ class HoverPointerAction : TreeAction, Publisher!HoverPointerAction, IO {
 
         // Place the pointer
         pointer.isDisabled = false;
-        pointer.position = position;
+        pointer.updatePosition(position);
         hoverIO.loadTo(pointer);
 
         return this;

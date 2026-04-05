@@ -185,6 +185,7 @@ class HoverTransform : NodeChain, HoverIO, Focusable, Hoverable, HoverScrollable
         result.device = cast() pointer.device;
         result.number = pointer.number;
         result.position = pointToLocal(pointer.position);
+        result.positionDelta = result.position - pointToLocal(pointer.previousPosition);
         return cast(inout) result.loadCopy(this, pointer.id);
     }
 
@@ -204,6 +205,7 @@ class HoverTransform : NodeChain, HoverIO, Focusable, Hoverable, HoverScrollable
         result.device = cast() pointer.device;
         result.number = pointer.number;
         result.position = pointToHost(pointer.position);
+        result.positionDelta = result.position - pointToHost(pointer.previousPosition);
         return cast(inout) result.loadCopy(hoverIO, pointer.id);
     }
 
