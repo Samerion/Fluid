@@ -13,7 +13,7 @@ class MyHover : Node, MouseIO {
     HoverPointer[] pointers;
 
     inout(HoverPointer) makePointer(int number, Vector2 position, bool isDisabled = false) inout {
-        return inout HoverPointer(this, number, position, Vector2(), isDisabled);
+        return inout HoverPointer(this, number, position, Vector2(), Vector2(), isDisabled);
     }
 
     void emit(int number, InputEvent event) {

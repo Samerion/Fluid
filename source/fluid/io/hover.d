@@ -268,6 +268,9 @@ struct HoverPointer {
     /// Position in the window the pointer is pointing at.
     Vector2 position;
 
+    /// Difference in position since last frame.
+    Vector2 positionDelta;
+
     /// Current scroll value. For a mouse, this indicates mouse wheel movement, for other devices
     /// like touchpad or touchscreen, this will be translated from its movement.
     ///
@@ -390,6 +393,7 @@ struct HoverPointer {
             this.device,
             this.number,
             this.position,
+            this.positionDelta,
             this.scroll,
             this.isDisabled,
             this.clickCount,
@@ -403,11 +407,12 @@ struct HoverPointer {
     /// Params:
     ///     other = Pointer to copy data from.
     void update(const HoverPointer other) {
-        this.position     = other.position;
-        this.scroll       = other.scroll;
-        this.isScrollHeld = other.isScrollHeld;
-        this.isDisabled   = other.isDisabled;
-        this.clickCount   = other.clickCount;
+        this.position      = other.position;
+        this.positionDelta = other.positionDelta;
+        this.scroll        = other.scroll;
+        this.isScrollHeld  = other.isScrollHeld;
+        this.isDisabled    = other.isDisabled;
+        this.clickCount    = other.clickCount;
     }
 
     /// Emit an event through the pointer.
