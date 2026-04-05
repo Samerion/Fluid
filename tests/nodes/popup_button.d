@@ -170,3 +170,32 @@ unittest {
     );
 
 }
+
+@("PopupButton.close() can be used to close the popup programmatically")
+unittest {
+    auto btn = popupButton(
+        "Click me",
+        label("Open"),
+    );
+    auto overlay = overlayChain(btn);
+    auto root = testSpace(overlay);
+
+    // Open
+    root.draw();
+    btn.press();
+    root.drawAndAssert(
+        btn.popup.isDrawn(),
+    );
+
+    // Close
+    btn.closePopup();
+    root.drawAndAssertFailure(
+        btn.popup.isDrawn(),
+    );
+
+    // Open again
+    btn.press();
+    root.drawAndAssert(
+        btn.popup.isDrawn(),
+    );
+}
