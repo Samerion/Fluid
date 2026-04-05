@@ -301,8 +301,11 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
         }
 
         hoverIO.loadTo(_mousePointer);
+        updateCursorIcon();
+        sendPointerEvents();
+    }
 
-        // Set cursor icon
+    private void updateCursorIcon() @trusted {
         if (auto node = cast(Node) hoverIO.hoverOf(_mousePointer)) {
 
             const cursor = node.pickStyle().mouseCursor;
@@ -322,25 +325,20 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
             SetMouseCursor(Cursor.systemDefault.system.toRaylib);
             ShowCursor();
         }
+    }
 
-        // Send buttons
+    private void sendPointerEvents() @trusted {
         foreach (button; NoDuplicates!(EnumMembers!(MouseIO.Button))) {
-
             const buttonRay = button.toRaylib;
-
             if (buttonRay == -1) continue;
 
-            // Active event
             if (IsMouseButtonReleased(buttonRay)) {
                 hoverIO.emitEvent(_mousePointer, MouseIO.createEvent(button, true));
             }
-
             else if (IsMouseButtonDown(buttonRay)) {
                 hoverIO.emitEvent(_mousePointer, MouseIO.createEvent(button, false));
             }
-
         }
-
     }
 
     protected void updateKeyboard() @trusted {
