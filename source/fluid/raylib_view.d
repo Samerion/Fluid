@@ -197,6 +197,7 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
         HoverPointer _mousePointer;
         Appender!(KeyboardKey[]) _heldKeys;
         MultipleClickSensor _multiClickSensor;
+        HoverPointer _cursorPointer;   /// pointer used to determine cursor image
 
     }
 
@@ -306,8 +307,20 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
     }
 
     private void updateCursorIcon() @trusted {
-        if (auto node = cast(Node) hoverIO.hoverOf(_mousePointer)) {
 
+        // Preload cursor pointer with the mouse pointer, if not already set
+        if (_cursorPointer is _cursorPointer.init) {
+            _cursorPointer = _mousePointer;
+        }
+
+        // Use the last moved pointer for the cursor
+        foreach (HoverPointer pointer; hoverIO) {
+            if (pointer.positionDelta.length < 0.5) continue;
+            _cursorPointer = pointer;
+        }
+
+        // Set the cursor icon
+        if (auto node = cast(Node) hoverIO.hoverOf(_cursorPointer)) {
             const cursor = node.pickStyle().mouseCursor;
 
             // Hide the cursor if requested
@@ -319,7 +332,6 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
                 SetMouseCursor(cursor.system.toRaylib);
                 ShowCursor();
             }
-
         }
         else {
             SetMouseCursor(Cursor.systemDefault.system.toRaylib);
