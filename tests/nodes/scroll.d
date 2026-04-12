@@ -390,3 +390,29 @@ unittest {
         })
         .runWhileDrawing(root);
 }
+
+// https://git.samerion.com/Samerion/Fluid/issues/628
+@("ScrollFrame's scrollbar is cropped")
+unittest {
+    const width = 20;
+    const height = ScrollInputHandle.minimumLength / 2;
+
+    auto frame = sizeLock!vscrollFrame(
+        .layout!(1, "fill"),
+        .sizeLimit(width, height),
+        tallBox(),
+    );
+    auto root = testSpace(
+        .nullTheme,
+        frame
+    );
+
+    root.drawAndAssert(
+        frame.contains(
+            frame.cropsTo(0, 0, width, height),
+            frame.scrollBar.isDrawn(),
+            frame.resetsCrop(),
+        ),
+    );
+
+}

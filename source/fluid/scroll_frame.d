@@ -277,18 +277,14 @@ class ScrollFrame : Frame, FluidScrollable, HoverScrollable {
 
         }
 
-        // Draw the scrollbar
-        drawChild(scrollBar, scrollBarRect);
+        const lastArea = canvasIO.intersectCrop(mainOuter);
+        scope (exit) canvasIO.cropArea = lastArea;
 
         // Draw the frame
-        if (canvasIO) {
-            const lastArea = canvasIO.intersectCrop(mainOuter);
-            scope (exit) canvasIO.cropArea = lastArea;
-            super.drawImpl(mainOuter, inner);
-        }
-        else {
-            super.drawImpl(mainOuter, inner);
-        }
+        super.drawImpl(mainOuter, inner);
+
+        // Draw the scrollbar
+        drawChild(scrollBar, scrollBarRect);
 
     }
 
