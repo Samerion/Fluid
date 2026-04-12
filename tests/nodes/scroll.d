@@ -73,24 +73,24 @@ unittest {
     );
 
     root.drawAndAssert(
-         frame.cropsTo(0, 0, 390, 250),
-         frame.drawsRectangle(0, 0, 390, 250).ofColor("#555555"),
+         frame.cropsTo(0, 0, 400, 250),
+         frame.drawsRectangle(0, 0, 400, 250).ofColor("#555555"),
          box.drawsRectangle(0, 0, 40, 5250),
          frame.resetsCrop(),
     );
 
     frame.scroll = 100;
     root.drawAndAssert(
-         frame.cropsTo(0, 0, 390, 250),
-         frame.drawsRectangle(0, 0, 390, 250).ofColor("#555555"),
+         frame.cropsTo(0, 0, 400, 250),
+         frame.drawsRectangle(0, 0, 400, 250).ofColor("#555555"),
          box.drawsRectangle(0, -100, 40, 5250),
          frame.resetsCrop(),
     );
 
     frame.scrollToEnd();
     root.drawAndAssert(
-         frame.cropsTo(0, 0, 390, 250),
-         frame.drawsRectangle(0, 0, 390, 250).ofColor("#555555"),
+         frame.cropsTo(0, 0, 400, 250),
+         frame.drawsRectangle(0, 0, 400, 250).ofColor("#555555"),
          box.drawsRectangle(0, -5000, 40, 5250),
          frame.resetsCrop(),
     );
@@ -116,23 +116,23 @@ unittest {
     );
 
     root.drawAndAssert(
-        frame.cropsTo       (0, 0, 390, 250),
-        frame.drawsRectangle(0, 0, 390, 250),
-        innerFrame.cropsTo       (0, 0, 380, 250),  // 250, not 500, because the boxes
-        innerFrame.drawsRectangle(0, 0, 380, 500),  // intersect
+        frame.cropsTo       (0, 0, 400, 250),
+        frame.drawsRectangle(0, 0, 400, 250),
+        innerFrame.cropsTo       (0, 0, 390, 250),  // 250, not 500, because the boxes
+        innerFrame.drawsRectangle(0, 0, 390, 500),  // intersect
         box.drawsRectangle(0, 0, 40, 5250),
-        innerFrame.cropsTo       (0, 0, 390, 250),
+        innerFrame.cropsTo       (0, 0, 400, 250),
         frame.resetsCrop(),
     );
 
     frame.scroll = 400;
     root.drawAndAssert(
-        frame.cropsTo       (0, 0, 390, 250),
-        frame.drawsRectangle(0, 0, 390, 250),
-        innerFrame.cropsTo       (0,    0, 380, 100),
-        innerFrame.drawsRectangle(0, -400, 380, 500),
+        frame.cropsTo       (0, 0, 400, 250),
+        frame.drawsRectangle(0, 0, 400, 250),
+        innerFrame.cropsTo       (0,    0, 390, 100),
+        innerFrame.drawsRectangle(0, -400, 390, 500),
         box.drawsRectangle(0, -400, 40, 5250),
-        innerFrame.cropsTo       (0, 0, 390, 250),
+        innerFrame.cropsTo       (0, 0, 400, 250),
         frame.resetsCrop(),
     );
 
@@ -160,13 +160,13 @@ unittest {
     );
 
     root.drawAndAssert(
-        vf.cropsTo         (0, 0, 290, 300),
-        vf.drawsRectangle  (0, 0, 290, 300),
+        vf.cropsTo         (0, 0, 300, 300),
+        vf.drawsRectangle  (0, 0, 300, 300),
         vbox.drawsRectangle(0, 0, 40, 5250),
         vf.resetsCrop      (),
 
-        hf.cropsTo         (0, 300, 300, 290),
-        hf.drawsRectangle  (0, 300, 300, 290),
+        hf.cropsTo         (0, 300, 300, 300),
+        hf.drawsRectangle  (0, 300, 300, 300),
         hbox.drawsRectangle(0, 300, 5250, 40),
         hf.resetsCrop      (),
     );
@@ -181,13 +181,13 @@ unittest {
     assert(hf.scroll == 20);
 
     root.drawAndAssert(
-        vf.cropsTo         (0,   0, 290,  300),
-        vf.drawsRectangle  (0,   0, 290,  300),
+        vf.cropsTo         (0,   0, 300,  300),
+        vf.drawsRectangle  (0,   0, 300,  300),
         vbox.drawsRectangle(0, -90,  40, 5250),
         vf.resetsCrop      (),
 
-        hf.cropsTo         (  0, 300,  300, 290),
-        hf.drawsRectangle  (  0, 300,  300, 290),
+        hf.cropsTo         (  0, 300,  300, 300),
+        hf.drawsRectangle  (  0, 300,  300, 300),
         hbox.drawsRectangle(-20, 300, 5250,  40),
         hf.resetsCrop      (),
     );

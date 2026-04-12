@@ -224,10 +224,10 @@ class ScrollFrame : Frame, FluidScrollable, HoverScrollable {
 
     }
 
-    override void drawImpl(Rectangle mainOuter, Rectangle inner) {
+    override void drawImpl(const Rectangle mainOuter, Rectangle inner) {
 
-        auto outer = mainOuter;
-        auto scrollBarRect = outer;
+        Rectangle outer = mainOuter;
+        Rectangle scrollBarRect = outer;
 
         scrollBar.horizontal = isHorizontal;
 
@@ -250,7 +250,7 @@ class ScrollFrame : Frame, FluidScrollable, HoverScrollable {
 
             scrollBarRect.y += outer.height;
             scrollBarRect.height = scrollBar.minSize.y;
-            mainOuter.height -= scrollBarRect.height;
+            outer.height -= scrollBarRect.height;
 
         }
 
@@ -273,7 +273,7 @@ class ScrollFrame : Frame, FluidScrollable, HoverScrollable {
 
             scrollBarRect.x += outer.width;
             scrollBarRect.width = scrollBar.minSize.x;
-            mainOuter.width -= scrollBarRect.width;
+            outer.width -= scrollBarRect.width;
 
         }
 
