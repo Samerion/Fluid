@@ -197,8 +197,8 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
         HoverPointer _mousePointer;
         Appender!(KeyboardKey[]) _heldKeys;
         MultipleClickSensor _multiClickSensor;
-        HoverPointer _cursorPointer;   /// pointer used to determine cursor image
-
+        HoverPointer _cursorPointer;   /// Pointer used to determine cursor image
+        MouseIO.Button _lastMouseButton;  /// Last hit mouse button, used for double click detection
     }
 
     this(Node next = null) {
@@ -291,16 +291,6 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
         _mousePointer.isScrollHeld  = false;
         _mousePointer.clickCount    = 0;
 
-        // Detect multiple mouse clicks
-        if (IsMouseButtonDown(MouseButton.MOUSE_BUTTON_LEFT)) {
-            _multiClickSensor.hold(timeIO, preferenceIO, _mousePointer);
-            _mousePointer.clickCount   = _multiClickSensor.clicks;
-        }
-        else if (IsMouseButtonReleased(MouseButton.MOUSE_BUTTON_LEFT)) {
-            _multiClickSensor.activate();
-            _mousePointer.clickCount   = _multiClickSensor.clicks;
-        }
-
         hoverIO.loadTo(_mousePointer);
         updateCursorIcon();
         sendPointerEvents();
@@ -344,10 +334,26 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
             const buttonRay = button.toRaylib;
             if (buttonRay == -1) continue;
 
+            const released = IsMouseButtonReleased(buttonRay);
+            const down = IsMouseButtonDown(buttonRay);
+
+            // Reset click counter if different from last clicked button
+            if (down || released) {
+                if (button != _lastMouseButton) {
+                    _lastMouseButton = button;
+                    _multiClickSensor.clear();
+                }
+            }
+
+            // Send pointer events
             if (IsMouseButtonReleased(buttonRay)) {
+                _multiClickSensor.activate();
+                _mousePointer.clickCount   = _multiClickSensor.clicks;
                 hoverIO.emitEvent(_mousePointer, MouseIO.createEvent(button, true));
             }
             else if (IsMouseButtonDown(buttonRay)) {
+                _multiClickSensor.hold(timeIO, preferenceIO, _mousePointer);
+                _mousePointer.clickCount   = _multiClickSensor.clicks;
                 hoverIO.emitEvent(_mousePointer, MouseIO.createEvent(button, false));
             }
         }
