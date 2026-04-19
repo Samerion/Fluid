@@ -1,13 +1,13 @@
-module nodes.node_slot;
+module nodes.slot;
 
 import fluid;
 
 @safe:
 
-@("NodeSlot can be empty")
+@("Slot can be empty")
 unittest {
 
-    auto slot = nodeSlot!Node();
+    auto slot = slot!Node();
     auto root = testSpace(nullTheme, slot);
 
     assert(slot.value is null);
@@ -18,11 +18,11 @@ unittest {
 
 }
 
-@("NodeSlot can carry a child")
+@("Slot can carry a child")
 unittest {
 
     auto content = label("Hello, World!");
-    auto slot = nodeSlot!Label(content);
+    auto slot = slot!Label(content);
     auto root = testSpace(nullTheme, slot);
 
     root.drawAndAssert(
@@ -34,11 +34,11 @@ unittest {
 
 }
 
-@("NodeSlot can change content")
+@("Slot can change content")
 unittest {
 
-    auto slot1 = nodeSlot!Label(label("Hello, "));
-    auto slot2 = nodeSlot!Label();
+    auto slot1 = slot!Label(label("Hello, "));
+    auto slot2 = slot!Label();
     auto root = testSpace(nullTheme, slot1, slot2);
 
     root.drawAndAssert(
@@ -65,10 +65,10 @@ unittest {
 
 }
 
-@("NodeSlot content can be cleared")
+@("Slot content can be cleared")
 unittest {
 
-    auto slot = nodeSlot!Label(label("Woo!"));
+    auto slot = slot!Label(label("Woo!"));
     auto root = testSpace(slot);
 
     root.drawAndAssert(

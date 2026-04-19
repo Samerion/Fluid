@@ -15,7 +15,7 @@ unittest {
         ),
     );
 
-    auto separator = nodeSlot!Separator(
+    auto separator = slot!Separator(
         .layout!(1, "fill"),
     );
     auto root = sizeLock!testSpace(
