@@ -528,3 +528,23 @@ unittest {
         ),
     );
 }
+
+@("addChildPopup can accept null as parent")
+unittest {
+    auto overlay = overlayChain(
+        .layout!(1, "fill")
+    );
+    auto root = testSpace(
+        .nullTheme,
+        overlay
+    );
+    auto popup = popupFrame(
+        label("This is my popup"),
+    );
+
+    overlay.addChildPopup(null, popup, Rectangle(40, 40, 5, 5));
+    root.drawAndAssert(
+        overlay.drawsChild(popup),
+        overlay.doesNotDrawChildren(),
+    );
+}
