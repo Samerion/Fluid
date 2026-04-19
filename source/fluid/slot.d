@@ -1,20 +1,20 @@
-/// A [NodeSlot] acts as a wrapper, it holds and displays a single other node.
+/// A [Slot] acts as a wrapper, it holds and displays a single other node.
 module fluid.slot;
 
 @safe:
 
 /// The main use of slots is to replace nodes inside the tree.
-@("NodeSlot example")
+@("Slot example")
 unittest {
     import fluid.label;
     import fluid.frame;
     import fluid.button;
 
-    NodeSlot!Label currentLabel;
+    Slot!Label currentLabel;
 
     run(
         vframe(
-            currentLabel = nodeSlot!Label(
+            currentLabel = slot!Label(
                 label("Hello, World!"),
             ),
 
@@ -29,8 +29,8 @@ unittest {
     );
 }
 
-/// For example, [NodeSlot] can be used to implement tabs
-@("NodeSlot tab")
+/// For example, [Slot] can be used to implement tabs
+@("Slot tab")
 unittest {
     import std.range;
     import fluid.label;
@@ -57,7 +57,7 @@ unittest {
         ),
     );
 
-    NodeSlot!Frame currentTab;
+    Slot!Frame currentTab;
     run(
         vframe(
             // Tab bar
@@ -70,7 +70,7 @@ unittest {
                 }),
             ),
             // Tab contents
-            currentTab = nodeSlot!Frame(audio),
+            currentTab = slot!Frame(audio),
         ),
     );
 }
@@ -85,34 +85,38 @@ import fluid.structs;
 import fluid.io.canvas;
 
 
-/// Creates a [NodeSlot] which accepts a single node of type `T` as a child.
-alias nodeSlot(alias T) = nodeBuilder!(NodeSlot!T);
+/// Creates a [Slot] which accepts a single node of type `T` as a child.
+alias slot(alias T) = nodeBuilder!(Slot!T);
+
+/// ditto
+deprecated("`nodeSlot` was renamed to `slot` and will be removed in Fluid 0.9.0")
+alias nodeSlot(alias T) = nodeBuilder!(Slot!T);
 
 ///
-@("nodeSlot builder example")
+@("slot builder example")
 unittest {
     import fluid.button;
     import fluid.frame;
     import fluid.label;
 
     // The template parameter restricts which nodes can be placed in the slot
-    nodeSlot!Button();  // This node slot accepts buttons
-    nodeSlot!Frame();   // This slot accepts frames
-    nodeSlot!Node();    // Any node can fit
+    slot!Button();  // This node slot accepts buttons
+    slot!Frame();   // This slot accepts frames
+    slot!Node();    // Any node can fit
 
     // You can place a node in the slot immediately.
-    nodeSlot!Label(
+    slot!Label(
         label("Hello, World!"),
     );
 }
 
 /// Layout has to be set on `NodeSlot` to be functional.
-@("nodeSlot builder layout example")
+@("slot builder layout example")
 unittest {
     import fluid.label;
 
     // This label will be centered:
-    nodeSlot!Label(
+    slot!Label(
         .layout!"center",
         label("Hello, World!"),
     );
@@ -122,7 +126,7 @@ unittest {
 unittest {
     import fluid.button;
 
-    nodeSlot!Button(
+    slot!Button(
         .layout!(1, "fill"),
         button(
             .layout!"fill",
@@ -132,14 +136,17 @@ unittest {
     );
 }
 
-/// `NodeSlot` is a container node that holds and displays up to one other node.
+deprecated("`NodeSlot` was renamed to `Slot` and will be removed in Fluid 0.9.0.")
+alias NodeSlot = Slot;
+
+/// `Slot` is a container node that holds and displays up to one other node.
 ///
 /// The child node can be optionally passed into the constructor, or assigned via the
 /// [`value`](#.NodeSlot.value) field.
 ///
 /// The child node is always given all of the available space (the child's `expand` field has
 /// no effect).
-class NodeSlot(T : Node) : Node {
+class Slot(T : Node) : Node {
 
     CanvasIO canvasIO;
 
@@ -163,7 +170,7 @@ class NodeSlot(T : Node) : Node {
     /// The slot will be [marked for resize][Node.updateSize].
     ///
     /// Note:
-    ///     It might be generally preferable to use [`value`](#.NodeSlot.value) directly, as it
+    ///     It might be generally preferable to use [`value`](#.Slot.value) directly, as it
     ///     makes the intent more clear.
     /// Params:
     ///     value = Node to place in the slot.
@@ -185,12 +192,12 @@ class NodeSlot(T : Node) : Node {
     }
 
     ///
-    @("NodeSlot.clear example")
+    @("Slot.clear example")
     unittest {
         import fluid.label;
 
         Label child;
-        auto slot = nodeSlot!Label(
+        auto slot = slot!Label(
             child = label("The node slot contains a label"),
         );
         assert(slot.value is child);
@@ -200,12 +207,12 @@ class NodeSlot(T : Node) : Node {
 
     /// Swap contents of two node slots.
     ///
-    /// Node slots can restrict their contents to specific node types. Since a `NodeSlot!Label`
-    /// can only accept labels, it could not be swapped with `NodeSlot!Frame`, as the labels and
+    /// Node slots can restrict their contents to specific node types. Since a `Slot!Label`
+    /// can only accept labels, it could not be swapped with `Slot!Frame`, as the labels and
     /// frames are not compatible.
     ///
-    /// Node slots of the same type can always swap contents, so a pair such as `NodeSlot!Node`
-    /// and `NodeSlot!Node` will swap without fail. Otherwise, nodes held in both must be
+    /// Node slots of the same type can always swap contents, so a pair such as `Slot!Node`
+    /// and `Slot!Node` will swap without fail. Otherwise, nodes held in both must be
     /// cross-compatible: If node slot `a` and node slot `b` are swapped, then `b`'s child must be
     /// accepted by `a` and `a`'s child must be accepted by `b`. This will condition be enforced
     /// at runtime and cannot be caught.
@@ -216,8 +223,8 @@ class NodeSlot(T : Node) : Node {
     ///
     /// Params:
     ///     other = The other slot to swap child nodes with.
-    void swapSlots(Slot : Node)(Slot other) {
-        static if (is(Slot : NodeSlot!U, U)) {
+    void swapSlots(Other : Node)(Other other) {
+        static if (is(Other : Slot!U, U)) {
 
             import std.format;
             import std.algorithm;
@@ -248,19 +255,19 @@ class NodeSlot(T : Node) : Node {
             else static assert(false, "Slots given to swapSlots are not compatible");
 
         }
-        else static assert(false, "The other item is not a NodeSlot");
+        else static assert(false, "The other item is not a `Slot`");
     }
 
     ///
-    @("NodeSlot.swapSlots usage example")
+    @("Slot.swapSlots usage example")
     unittest {
         import fluid.label;
 
         // Box of apples, bucket of oranges
-        auto box = nodeSlot!Label(
+        auto box = slot!Label(
             label("Apples"),
         );
-        auto bucket = nodeSlot!Label(
+        auto bucket = slot!Label(
             label("Oranges"),
         );
 
@@ -303,14 +310,14 @@ unittest {
 
     import fluid;
 
-    NodeSlot!Label slot1, slot2;
+    Slot!Label slot1, slot2;
 
     // Slots can be empty, with no node inside
     auto root = vspace(
         label("Hello, "),
-        slot1 = nodeSlot!Label(.layout!"fill"),
+        slot1 = slot!Label(.layout!"fill"),
         label(" and "),
-        slot2 = nodeSlot!Label(.layout!"fill"),
+        slot2 = slot!Label(.layout!"fill"),
     );
 
     // Slots can be assigned other nodes
