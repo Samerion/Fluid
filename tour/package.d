@@ -311,10 +311,13 @@ Space createUI(string initialChapter = null) @safe {
 }
 
 Space exampleList(void delegate(Chapter) @safe changeChapter) @safe {
-
     import std.meta;
     import std.array;
     import std.range;
+    import std.path;
+    import std.file;
+
+    const logoPath = thisExePath.dirName.buildPath("../logo.png");
 
     auto chapterGrid = gridFrame(
         .layout!"fill",
@@ -349,9 +352,8 @@ Space exampleList(void delegate(Chapter) @safe changeChapter) @safe {
             ~ "it's still incomplete. Content will be added in further updates of Fluid. Contributions are welcome."),
         chapterGrid,
         hseparator(),
-        imageView(.layout!"center", "logo.png", Vector2(249.5, 120)),
+        imageView(.layout!"center", logoPath, Vector2(249.5, 120)),
     );
-
 }
 
 /// Create a code block
