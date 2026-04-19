@@ -281,10 +281,11 @@ class TestSpace : Space, CanvasIO, DebugSignalIO {
         }
     }
 
-    /// Draw a single frame and save the output to an SVG file at given location.
+    /// Draw a single frame and save the output to an SVG file at given location. If no location
+    /// is gives, saves to a temporary directory and opens the file in an appropriate app.
     ///
-    /// Requires Fluid to be built with SVG support. To do so, set version `Fluid_SVG` and include dependencies
-    /// `elemi` and `arsd-official:image_files`.
+    /// Requires Fluid to be built with SVG support. To do so, set version `Fluid_SVG` and include
+    /// dependencies `elemi` and `arsd-official:image_files`.
     version (Fluid_SVG)
     void drawToSVG(string filename) {
 
@@ -296,6 +297,18 @@ class TestSpace : Space, CanvasIO, DebugSignalIO {
         draw();
         generator.saveSVG();
 
+    }
+
+    /// ditto
+    void drawToSVG() {
+        import std.file : tempDir;
+        import std.path : buildPath;
+        import std.datetime : Clock;
+
+        const baseName = "fluid-" ~ Clock.currTime.toISOString ~ ".svg";
+        const filename = tempDir.buildPath(baseName);
+        drawToSVG(filename);
+        openURL(filename);
     }
 
     /// Draw a single frame and test if the asserts can be fulfilled.
