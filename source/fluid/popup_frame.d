@@ -64,16 +64,21 @@ void addPopup(OverlayIO overlayIO, PopupFrame popup, Rectangle anchor) {
 ///
 /// Params:
 ///     overlayIO = `OverlayIO` instance to control to popup.
-///     parent    = Parent popup.
+///     parent    = Parent popup. If null, the call will be converted to [addPopup] instead.
 ///     popup     = Popup frame to spawn.
 ///     anchor    = Box to attach the popup frame to.
 /// See_Also:
 ///     [addPopup] for spawning popups without a parent.
 void addChildPopup(OverlayIO overlayIO, PopupFrame parent, PopupFrame popup, Rectangle anchor) {
-    popup.anchor = anchor;
-    popup.toTakeFocus = true;
-    parent.childPopup = popup;
-    overlayIO.addChildOverlay(parent, popup, OverlayIO.types.context);
+    if (parent is null) {
+        overlayIO.addPopup(popup, anchor);
+    }
+    else {
+        popup.anchor = anchor;
+        popup.toTakeFocus = true;
+        parent.childPopup = popup;
+        overlayIO.addChildOverlay(parent, popup, OverlayIO.types.context);
+    }
 }
 
 /// A [Frame] which can be drawn in arbitrary position above other nodes.
