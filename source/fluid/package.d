@@ -39,14 +39,14 @@ unittest {
 ///
 /// A single node isn't very useful on its own — but nodes can be composed together.
 /// Using handy layout nodes like [Frame] or [Space] you can arrange other nodes on the screen.
-/// Use a [NodeSlot] to quickly switch between displayed nodes.
+/// Use a [Slot] to quickly switch between displayed nodes.
 ///
 /// * [DragSlot][fluid.drag_slot] can be dragged and rearranged by the user.
 /// * [FieldSlot][fluid.field_slot] associates input with informative nodes, expanding hit regions.
 /// * [Frame][fluid.frame] is a more general, styleable variant of `space`.
 /// * [GridFrame][fluid.grid] creates a grid layout.
 /// * [MapFrame][fluid.map_frame] places nodes in arbitrary positions.
-/// * [NodeSlot][fluid.slot] wraps a node for quick replacement.
+/// * [Slot][fluid.slot] wraps a node for quick replacement.
 /// * [OnionFrame][fluid.onion_frame] stacks nodes on top of each other (layers).
 /// * [PopupButton][fluid.popup_button] is a handy shortcut for building dropdown menus.
 /// * [PopupFrame][fluid.popup_frame] displays outside of regular layout flow.

@@ -49,7 +49,7 @@ import fluid.future.context;
 /// node to place inside the slot.
 alias dragSlot = nodeBuilder!DragSlot;
 
-/// [NodeSlot] variant that can be dragged by the user and dropped into another node.
+/// [Slot] variant that can be dragged by the user and dropped into another node.
 ///
 /// A handle is added inside which provides space for the user to drag, but it can be hidden;
 /// any space in the slot, unless blocked by a child, can be used to drag the node. See

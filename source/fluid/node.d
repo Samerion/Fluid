@@ -1106,7 +1106,7 @@ abstract class Node : HasContext {
 ///
 /// Params:
 ///     node = This node will serve as the root of your user interface until closed. If you wish to change it at
-///         runtime, wrap it in a `NodeSlot`.
+///         runtime, wrap it in a [Slot].
 void run(Node node) {
     auto wrapper = createDefaultTreeWrapper();
     run(wrapper, node);

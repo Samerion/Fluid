@@ -110,7 +110,7 @@ unittest {
     );
 }
 
-/// Layout has to be set on `NodeSlot` to be functional.
+/// Layout has to be set on `Slot` to be functional.
 @("slot builder layout example")
 unittest {
     import fluid.label;
@@ -142,7 +142,7 @@ alias NodeSlot = Slot;
 /// `Slot` is a container node that holds and displays up to one other node.
 ///
 /// The child node can be optionally passed into the constructor, or assigned via the
-/// [`value`](#.NodeSlot.value) field.
+/// [`value`](#.Slot.value) field.
 ///
 /// The child node is always given all of the available space (the child's `expand` field has
 /// no effect).
