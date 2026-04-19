@@ -14,7 +14,7 @@ import fluid.tour;
 )
 Frame slotExample() {
 
-    auto mySlot = nodeSlot!Label();
+    auto mySlot = slot!Label();
 
     return vframe(
         mySlot = label("Click the button below!"),
@@ -27,12 +27,12 @@ Frame slotExample() {
 
 @(
     () => label("Node slots are templates — You can define what type of nodes they're allowed to hold. In the example "
-        ~ "above, the node slot is initalized with 'nodeSlot!Label()' which means it will only take in labels. Thanks "
+        ~ "above, the node slot is initalized with 'slot!Label()' which means it will only take in labels. Thanks "
         ~ "to this, we can easily peek inside or change its contents:"),
 )
 Frame secondExample() {
 
-    auto mySlot = nodeSlot!Label();
+    auto mySlot = slot!Label();
 
     return vframe(
         mySlot = label("Hello, World!"),
@@ -48,7 +48,7 @@ Frame secondExample() {
 )
 Frame clearExample() {
 
-    auto mySlot = nodeSlot!Label();
+    auto mySlot = slot!Label();
     auto myLabel = label("This label is in a node slot");
 
     return vframe(
@@ -73,15 +73,15 @@ Frame slotLayoutExample() {
 
     return vframe(
         .layout!"fill",
-        nodeSlot!Label(
+        slot!Label(
             .layout!(1, "fill"),
             label(.layout!"center", "Centered (through label)")
         ),
-        nodeSlot!Label(
+        slot!Label(
             .layout!(1, "fill"),
             label(.layout!"fill", "Filled")
         ),
-        nodeSlot!Label(
+        slot!Label(
             .layout!(1, "center"),
             label("Centered (through slot)")
         ),

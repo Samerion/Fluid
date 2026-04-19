@@ -50,7 +50,7 @@ debug (Fluid_DisablePlayground)
     version = Fluid_DisablePlayground;
 
 debug (Fluid_BuildMessages) {
-    version (Fluid_DisablePlayground) 
+    version (Fluid_DisablePlayground)
         pragma(msg, "Fluid: moduleView: Disabling interactive playground");
 }
 
@@ -434,7 +434,7 @@ struct DlangCompiler {
         else
             outputPath = path.setExtension(".so");
 
-        auto cmdline = [executable, sharedLibraryFlag, unittestFlag, path, "-of=" ~ outputPath] 
+        auto cmdline = [executable, sharedLibraryFlag, unittestFlag, path, "-of=" ~ outputPath]
             ~ debugFlags
             ~ importPathsFlag
             ~ extraFlags;
@@ -454,7 +454,7 @@ struct DlangCompiler {
             else
                 writefln!"Fluid: Compilation failed.\n%s"(result.output.stripRight);
         }
-        
+
         return result;
 
     }
@@ -498,7 +498,7 @@ do {
                 label("Warning: No suitable D compiler could be found; interactive playground is disabled.")
             ];
         }
-        
+
         result ~= vframe(
             .layout!"fill",
             .tags!(FluidTag.warning),
@@ -591,7 +591,7 @@ private struct ModuleView {
                 const prefix = source[0 .. start] ~ injectSource ~ source[start .. exampleStart];
                 const value = source[exampleStart .. exampleEnd];
                 const suffix = Rope(source[exampleEnd .. $]);
-                
+
                 // Append code editor to the result
                 documentation.children ~= exampleView(compiler, prefix, value, suffix, contentTheme);
                 return documentation;
@@ -631,7 +631,7 @@ private struct ModuleView {
 Frame exampleView(DlangCompiler compiler, CodeInput input, Theme contentTheme) {
 
     auto stdoutLabel = label(.layout!"fill", "");
-    auto resultCanvas = nodeSlot!Frame(.layout!"fill");
+    auto resultCanvas = slot!Frame(.layout!"fill");
 
     /// Wrapper over bindbc.SharedLib to ensure proper library destruction.
     struct SharedLib {
@@ -836,7 +836,7 @@ private bindbc.SharedLib runSharedLibrary(string path) @system {
             output = node;
         };
         scope (exit) mockRun = null;
-    
+
         // Make sure it could be loaded
         auto library = runSharedLibrary(outputPath);
         assert(library != bindbc.invalidHandle);

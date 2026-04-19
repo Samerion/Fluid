@@ -195,7 +195,7 @@ Space createUI(string initialChapter = null) @safe {
     Label titleLabel;
     Button leftButton, rightButton;
 
-    auto content = nodeSlot!Space(.layout!(1, "fill"));
+    auto content = slot!Space(.layout!(1, "fill"));
     auto outlineContent = vspace(.layout!"fill");
     auto outline = vframe(
         .layout!"fill",
@@ -398,7 +398,7 @@ Space showcaseCode(string code, Node node, Theme theme = Theme.init) {
         vframe(
             .layout!(1, "fill"),
             .previewWrapperTheme,
-            nodeSlot!Node(
+            slot!Node(
                 .layout!(1, "fill"),
                 node,
             ),

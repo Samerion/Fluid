@@ -151,7 +151,7 @@ Frame mutableFrameExample() {
         ~ "std.algorithm. As a downside to this, Fluid is not able to detect changes and resize ahead of time, like it "
         ~ "does with labels, so you must call 'updateSize()' on the frame for the changes to apply. Fluid will issue "
         ~ "an error at runtime if you don't do this, so be careful!"),
-    () => label("Do not worry though, a lot of layout management can be made easier with helpers like nodeSlot, which "
+    () => label("Do not worry though, a lot of layout management can be made easier with helpers like slot, which "
         ~ "we'll cover later."),
 )
 void endExample() { }
