@@ -337,7 +337,10 @@ class PopupFrame : InputNode!Frame, Overlayable, OverlayIO, FocusIO,
 
     override Focusable currentFocus(Focusable newValue) {
         assert(focusIO !is this, "Wrong FocusIO loaded");
-        focusIO.currentFocus = this;
+        if (focusIO) {
+            focusIO.currentFocus = this;
+        }
+
         if (newValue !is this) {
             return _currentFocus = newValue;
         }
