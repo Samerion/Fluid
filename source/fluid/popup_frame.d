@@ -237,7 +237,7 @@ class PopupFrame : InputNode!Frame, Overlayable, OverlayIO, FocusIO,
     /// Returns:
     ///     True, if this popup (or its child) is currently focused.
     override bool isFocused() const {
-        return focusIO.isFocused(this)
+        return (focusIO && focusIO.isFocused(this))
             || (childPopup && childPopup.isFocused);
     }
 
