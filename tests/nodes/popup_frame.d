@@ -548,3 +548,15 @@ unittest {
         overlay.doesNotDrawChildren(),
     );
 }
+
+@("#477 PopupFrame.actionImpl doesn't crash if PopupFrame is focused inside itself")
+unittest {
+    auto frame = popupFrame();
+    auto focus = focusChain(frame);
+    auto root = focus;
+    frame.currentFocus = frame;
+    frame.toTakeFocus = true;
+
+    root.draw();
+    frame.runInputAction!(FluidInputAction.press);
+}

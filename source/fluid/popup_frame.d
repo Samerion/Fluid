@@ -237,7 +237,7 @@ class PopupFrame : InputNode!Frame, Overlayable, OverlayIO, FocusIO,
     /// Returns:
     ///     True, if this popup (or its child) is currently focused.
     override bool isFocused() const {
-        return focusIO.isFocused(this)
+        return (focusIO && focusIO.isFocused(this))
             || (childPopup && childPopup.isFocused);
     }
 
@@ -293,12 +293,12 @@ class PopupFrame : InputNode!Frame, Overlayable, OverlayIO, FocusIO,
     do {
 
         // Pass input events to whatever node is currently focused
-        if (_currentFocus && _currentFocus.actionImpl(this, 0, actionID, isActive)) {
-            return true;
-        }
+        const hasChildHandled = _currentFocus
+            && _currentFocus !is this
+            && _currentFocus.actionImpl(this, 0, actionID, isActive);
 
         // Handle events locally otherwise
-        return this.runInputActionHandler(io, number, actionID, isActive);
+        return hasChildHandled|| this.runInputActionHandler(io, number, actionID, isActive);
 
     }
 
@@ -337,7 +337,10 @@ class PopupFrame : InputNode!Frame, Overlayable, OverlayIO, FocusIO,
 
     override Focusable currentFocus(Focusable newValue) {
         assert(focusIO !is this, "Wrong FocusIO loaded");
-        focusIO.currentFocus = this;
+        if (focusIO) {
+            focusIO.currentFocus = this;
+        }
+
         if (newValue !is this) {
             return _currentFocus = newValue;
         }
