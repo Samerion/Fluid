@@ -293,12 +293,12 @@ class PopupFrame : InputNode!Frame, Overlayable, OverlayIO, FocusIO,
     do {
 
         // Pass input events to whatever node is currently focused
-        if (_currentFocus && _currentFocus.actionImpl(this, 0, actionID, isActive)) {
-            return true;
-        }
+        const hasChildHandled = _currentFocus
+            && _currentFocus !is this
+            && _currentFocus.actionImpl(this, 0, actionID, isActive);
 
         // Handle events locally otherwise
-        return this.runInputActionHandler(io, number, actionID, isActive);
+        return hasChildHandled|| this.runInputActionHandler(io, number, actionID, isActive);
 
     }
 
