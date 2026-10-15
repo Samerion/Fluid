@@ -527,6 +527,16 @@ unittest {
             button.popup.isDrawn(),
         ),
     );
+
+    // Remove the frame, child frame disappears
+    frame.remove();
+    root.draw();
+    root.drawAndAssertFailure(
+        frame.isDrawn(),
+    );
+    root.drawAndAssertFailure(
+        button.popup.isDrawn(),
+    );
 }
 
 @("#645: Children that are marked as dialog windows are passed to host")
