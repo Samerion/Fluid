@@ -527,6 +527,74 @@ unittest {
             button.popup.isDrawn(),
         ),
     );
+
+    // Remove the frame, child frame disappears
+    frame.remove();
+    root.draw();
+    root.drawAndAssertFailure(
+        frame.isDrawn(),
+    );
+    root.drawAndAssertFailure(
+        button.popup.isDrawn(),
+    );
+}
+
+@("#645: Children that are marked as dialog windows are passed to host")
+unittest {
+    static class OpenPopup : Button {
+        OverlayIO overlayIO;
+        PopupFrame popup;
+
+        @safe:
+
+        this() {
+            super("_", &openPopup);
+            this.popup = popupFrame();
+        }
+
+        override void resizeImpl(Vector2 space) {
+            require(overlayIO);
+            super.resizeImpl(space);
+            minSize = Vector2(10, 10);
+        }
+
+        void openPopup() {
+            popup.toTakeFocus = true;
+            popup.anchor = Rectangle(0, 0, 0, 0);
+            overlayIO.addOverlay(popup, OverlayIO.types.dialog);
+        }
+    }
+
+    auto button = new OpenPopup;
+    auto frame = popupFrame(button);
+    auto overlay = overlayChain();
+    auto root = testSpace(nullTheme, overlay);
+
+    overlay.addPopup(frame,
+        Rectangle(0, 0, 0, 0));
+    root.drawAndAssert(
+        overlay.contains(
+            frame.isDrawn(),
+        ),
+    );
+    button.openPopup();
+    root.drawAndAssert(
+        overlay.contains(
+            frame.isDrawn(),
+            button.popup.isDrawn(),
+        ),
+    );
+
+    // Remove the frame, dialog window persists
+    frame.remove();
+    root.drawAndAssertFailure(
+        frame.isDrawn(),
+    );
+    root.drawAndAssert(
+        overlay.contains(
+            button.popup.isDrawn(),
+        ),
+    );
 }
 
 @("addChildPopup can accept null as parent")

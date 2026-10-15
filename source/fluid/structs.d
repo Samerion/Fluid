@@ -764,7 +764,7 @@ struct StaticID {
     debug string name;
 
     /// Returns: True if the IDs are the same.
-    bool opEquals(StaticID other) const {
+    bool opEquals(StaticID other) const nothrow {
         return id == other.id;
     }
 

@@ -351,7 +351,16 @@ class PopupFrame : InputNode!Frame, Overlayable, OverlayIO, FocusIO,
         if (auto child = cast(PopupFrame) node) {
             childPopup = child;
         }
-        overlayIO.addChildOverlay(this, node, type);
+
+        // Pass dialog windows to host directly
+        if (type.canFind(OverlayIO.types.dialog)) {
+            overlayIO.addOverlay(node, type);
+        }
+
+        // Other windows should turn into children
+        else {
+            overlayIO.addChildOverlay(this, node, type);
+        }
     }
 
     override void addChildOverlay(Overlayable node, Overlayable child, OverlayType[] type...)

@@ -61,6 +61,26 @@ class OverlayChain : NodeChain, OverlayIO {
         stopIO();
     }
 
+    /// Returns:
+    ///     True if the parent is not marked for removal and is present among the child list.
+    ///
+    ///     Returns false if the node is null.
+    private bool isChildVisible(Overlayable parent) {
+        return isChildVisible(cast(Node) parent);
+    }
+
+    /// ditto
+    private bool isChildVisible(Node parent) {
+        if (parent is null) return false;
+        if (parent.toRemove) return false;
+        foreach (child; children) {
+            if (child.node is parent) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     override void afterDraw(Rectangle, Rectangle inner) {
         size_t newIndex;
         foreach (child; children) {
@@ -68,6 +88,10 @@ class OverlayChain : NodeChain, OverlayIO {
             // Filter removed nodes out
             if (child.node.toRemove) {
                 child.node.toRemove = false;
+                continue;
+            }
+            // Filter children nodes out if their parent is missing
+            if (child.parent && !isChildVisible(child.parent)) {
                 continue;
             }
             scope (exit) children[newIndex++] = child;
