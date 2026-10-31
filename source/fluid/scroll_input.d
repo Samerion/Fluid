@@ -223,7 +223,7 @@ class ScrollInput : InputNode!Node {
 
     }
 
-    /// Change the value and run the `changed` callback.
+    /// Change the value and run the `onChange` callback.
     protected void emitChange(float move) {
 
         // Ignore if nothing changed.
@@ -233,7 +233,7 @@ class ScrollInput : InputNode!Node {
         this.scroll = position + move;
 
         // Run the callback
-        changed();
+        onChange();
 
     }
 
@@ -359,7 +359,7 @@ class ScrollInputHandle : InputNode!Node {
         parent.scroll = startScrollPosition + scrollDifference;
 
         // Emit signal
-        parent.changed();
+        parent.onChange();
 
         return true;
 

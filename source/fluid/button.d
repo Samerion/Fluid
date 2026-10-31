@@ -70,7 +70,7 @@ class ButtonImpl(T : Node = Label) : InputNode!T {
 
     /// A callback to run when the button is pressed. This is actually an alias for
     /// [InputNode.submitted][fluid.input.InputNode].
-    alias pressed = submitted;
+    alias pressed = onSubmit;
 
     // Button status
     public {

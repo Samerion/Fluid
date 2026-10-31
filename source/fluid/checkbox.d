@@ -51,20 +51,20 @@ class Checkbox : InputNode!Node {
     /// Create a new checkbox.
     /// Params:
     ///     isChecked = Whether the checkbox should be checked or not.
-    ///     changed   = Callback to run whenever the user changes the value.
-    this(bool isChecked, void delegate() @safe changed = null) {
+    ///     onChange  = Callback to run whenever the user changes the value.
+    this(bool isChecked, void delegate() @safe onChange = null) {
 
-        this(changed);
+        this(onChange);
         this._isChecked = isChecked;
 
     }
 
     /// ditto
-    this(void delegate() @safe changed = null) {
+    this(void delegate() @safe onChange = null) {
 
         this.size = Vector2(10, 10);
-        if (changed) {
-            this.changed ~= changed;
+        if (onChange) {
+            this.onChange ~= onChange;
         }
 
     }
@@ -122,7 +122,7 @@ class Checkbox : InputNode!Node {
     void toggle() {
 
         isChecked = !isChecked;
-        changed();
+        onChange();
 
     }
 

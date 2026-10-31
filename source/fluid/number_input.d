@@ -126,15 +126,15 @@ class NumberInput(T) : AbstractNumberInput {
 
     }
 
-    this(void delegate() @safe changed = null) {
+    this(void delegate() @safe onChange = null) {
 
-        super(changed);
+        super(onChange);
 
     }
 
-    this(T value, void delegate() @safe changed = null) {
+    this(T value, void delegate() @safe onChange = null) {
 
-        super(changed);
+        super(onChange);
         this.value = value;
         this.updateText();
 
@@ -206,7 +206,7 @@ class NumberInput(T) : AbstractNumberInput {
         updateText();
 
         // Call change callback
-        changed();
+        onChange();
 
     }
 
@@ -247,7 +247,7 @@ class NumberInput(T) : AbstractNumberInput {
         focus();
 
         // Call change callback
-        changed();
+        onChange();
 
     }
 
@@ -262,7 +262,7 @@ class NumberInput(T) : AbstractNumberInput {
         focus();
 
         // Call change callback
-        changed();
+        onChange();
 
     }
 
@@ -318,11 +318,11 @@ abstract class AbstractNumberInput : TextInput {
 
     }
 
-    this(void delegate() @safe changed = null) {
+    this(void delegate() @safe onChange = null) {
 
         super("");
-        if (changed) {
-            super.changed ~= changed;
+        if (onChange) {
+            super.onChange ~= onChange;
         }
         super.value = ['0'];
         this.spinner = numberInputSpinner(.layout!"fill", &increment, &decrement);
