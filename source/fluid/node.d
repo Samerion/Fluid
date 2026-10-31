@@ -366,7 +366,9 @@ abstract class Node : HasContext, Safe {
     ///
     /// Params:
     ///     action = Action to start.
-    final void startAction(TreeAction action)
+    /// Returns:
+    ///     Returns the same action as given, for easy chaining.
+    final T startAction(T : TreeAction)(T action)
     in (action, "Node.runAction(TreeAction) called with a `null` argument")
     do {
         action.startNode = this;
@@ -381,12 +383,15 @@ abstract class Node : HasContext, Safe {
         else {
             _queuedActionsNew ~= action;
         }
+
+        return action;
     }
 
     /// ditto
-    final void startTreeAction(TreeAction action) {
+    final T startTreeAction(T : TreeAction)(T action) {
         startAction(action);
         action.startNode = null;
+        return action;
     }
 
     /// Start a branch action (or multiple) to run on children of this node.

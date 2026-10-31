@@ -42,3 +42,15 @@ unittest {
     root.draw();
 
 }
+
+@("Node.startAction() supports chaining")
+unittest {
+    auto root = testSpace();
+
+    int counter;
+
+    root.startAction(new NextFrameAction)
+        .then!({ counter++; })
+        .runWhileDrawing(root);
+    assert(counter == 1);
+}
