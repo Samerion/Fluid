@@ -9,14 +9,6 @@ import fluid.types;
 
 @safe:
 
-deprecated("`simpleConstructor` has been renamed to `nodeBuilder` and will be removed in Fluid "
-    ~ "0.9.0.")
-{
-    alias simpleConstructor = nodeBuilder;
-    alias SimpleConstructor = NodeBuilder;
-    alias isSimpleConstructor = isNodeBuilder;
-}
-
 // For saner testing and debugging.
 version (unittest)
 private extern(C) __gshared string[] rt_options = ["oncycle=ignore"];

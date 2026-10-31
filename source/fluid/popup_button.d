@@ -67,13 +67,6 @@ class PopupButton : ButtonImpl!Label {
         /// given.
         PopupFrame popup;
 
-        /// Popup this button is placed in, if any. Set automatically if the popup is spawned
-        /// with `spawnPopup`.
-        ///
-        /// This field will be removed in Fluid 0.9.0.
-        deprecated("This field is no longer in use and will be removed in Fluid 0.9.0")
-        PopupFrame parentPopup;
-
     }
 
     private {
