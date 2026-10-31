@@ -70,7 +70,7 @@ class ButtonImpl(T : Node = Label) : InputNode!T {
 
     /// A callback to run when the button is pressed. This is actually an alias for
     /// [InputNode.submitted][fluid.input.InputNode].
-    alias pressed = onSubmit;
+    alias onPress = onSubmit;
 
     // Button status
     public {
@@ -85,19 +85,19 @@ class ButtonImpl(T : Node = Label) : InputNode!T {
     ///     sup     = Parameters to pass to the parent node.
     ///         Most commonly, this defines the button's visual content.
     ///         For [Button] this will be the label text.
-    ///     pressed = Action to perform when the button is pressed.
-    this(T...)(T sup, void delegate() @safe pressed) {
+    ///     onPress = Action to perform when the button is pressed.
+    this(T...)(T sup, void delegate() @safe onPress) {
         super(sup);
-        this.pressed ~= pressed;
+        this.onPress ~= onPress;
     }
 
-    /// Handle input by calling the [pressed][Button.pressed] delegate assigned to this
+    /// Handle input by firing the [onPress][Button.onPress] event assigned to this
     /// button.
     ///
     /// This method is bound to the [press input action][FluidInputAction.press].
     @(FluidInputAction.press)
     void press() @trusted {
-        pressed();
+        onPress();
     }
 
     static if (is(typeof(text) : string))
