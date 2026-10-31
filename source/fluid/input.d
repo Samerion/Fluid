@@ -119,14 +119,14 @@ enum FluidInputAction {
 ///
 /// See_Also:
 ///     `InputAction`
-immutable struct InputActionID {
+struct InputActionID {
     import fluid.future.static_id;
 
     StaticID staticID;
 
     alias staticID this;
 
-    private this(StaticID staticID) immutable {
+    private this(StaticID staticID) {
         this.staticID = staticID;
     }
 

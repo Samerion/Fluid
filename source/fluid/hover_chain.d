@@ -382,7 +382,7 @@ class HoverChain : NodeChain, ActionHoverIO {
         return _pointers[id].scrollable;
     }
 
-    override bool runInputAction(HoverPointer pointer, immutable InputActionID actionID,
+    override bool runInputAction(HoverPointer pointer, InputActionID actionID,
         bool isActive = true)
     do {
 

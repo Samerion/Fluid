@@ -367,7 +367,7 @@ class HoverTransform : NodeChain, HoverIO, Focusable, Hoverable, HoverScrollable
         return isDisabled;
     }
 
-    override bool actionImpl(IO io, int hostID, immutable InputActionID actionID, bool isActive) {
+    override bool actionImpl(IO io, int hostID, InputActionID actionID, bool isActive) {
 
         const localID = hostToLocalID(hostID);
         auto resource = _pointers[localID];

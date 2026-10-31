@@ -289,9 +289,7 @@ class PopupFrame : InputNode!Frame, Overlayable, OverlayIO, FocusIO,
         super.drawImpl(outer, inner);
     }
 
-    protected override bool actionImpl(IO io, int number, immutable InputActionID actionID,
-        bool isActive)
-    do {
+    protected override bool actionImpl(IO io, int number, InputActionID actionID, bool isActive) {
 
         // Pass input events to whatever node is currently focused
         const hasChildHandled = _currentFocus

@@ -89,7 +89,7 @@ interface ActionIOv2 : IO {
     }
 
     /// Callback type for [emitEvent].
-    alias ActionCallback = bool delegate(immutable InputActionID, bool isActive, int number) @safe;
+    alias ActionCallback = bool delegate(InputActionID, bool isActive, int number) @safe;
 
     /// Pass an input event to transform into an input map.
     ///
@@ -200,7 +200,7 @@ interface Actionable {
     ///         whereas an inactive action merely means the button or key is down.
     /// Returns:
     ///     True if the action was handled, false if not.
-    bool actionImpl(IO io, int number, immutable InputActionID action, bool isActive)
+    bool actionImpl(IO io, int number, InputActionID action, bool isActive)
     in (!blocksInput, "This node currently doesn't accept input.");
 
     /// A shortcut for invoking specific input actions from code.
@@ -216,7 +216,7 @@ interface Actionable {
     }
 
     /// ditto
-    final bool runInputAction(immutable InputActionID action, bool isActive) {
+    final bool runInputAction(InputActionID action, bool isActive) {
         return actionImpl(null, 0, action, isActive);
     }
 
@@ -232,7 +232,7 @@ interface Actionable {
         import fluid.future.context : IO;
         import fluid.io.action : InputActionID;
 
-        override bool actionImpl(IO io, int number, immutable InputActionID action, bool isActive) {
+        override bool actionImpl(IO io, int number, InputActionID action, bool isActive) {
 
             import fluid.io.action : runInputActionHandler;
 
@@ -516,7 +516,7 @@ bool runInputActionHandler(T)(T, IO, int, void delegate() @safe handler) {
 /// Returns:
 ///     True if there exists a matching input handler, and if it responded
 ///     to the input action.
-bool runInputActionHandler(T)(auto ref T aggregate, immutable InputActionID actionID, bool isActive = true) {
+bool runInputActionHandler(T)(auto ref T aggregate, InputActionID actionID, bool isActive = true) {
 
     return runInputActionHandler(aggregate, null, 0, actionID, isActive);
 
@@ -536,7 +536,7 @@ bool runInputActionHandler(T)(auto ref T aggregate, immutable InputActionID acti
 ///     True if there exists a matching input handler, and if it responded
 ///     to the input action.
 bool runInputActionHandler(T)(auto ref T aggregate, IO io, int number,
-    immutable InputActionID actionID, bool isActive = true)
+    InputActionID actionID, bool isActive = true)
 do {
 
     import std.functional : toDelegate;

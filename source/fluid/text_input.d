@@ -79,8 +79,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
     mixin template enableInputActions() {
         import fluid.future.context : IO;
         import fluid.io.action : InputActionID, runInputActionHandler;
-        override protected bool runLocalInputAction(IO io, int num, immutable InputActionID id,
-            bool active)
+        override protected bool runLocalInputAction(IO io, int num, InputActionID id, bool active)
         do {
             return runInputActionHandler(this, io, num, id, active);
         }
@@ -1417,7 +1416,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
     /// Hook into input actions to create matching history entries.
     ///
     /// See_Also: [savePush], [snapshot], [pushHistory]
-    override bool actionImpl(IO io, int number, immutable InputActionID id, bool isActive) {
+    override bool actionImpl(IO io, int number, InputActionID id, bool isActive) {
 
         // Passive events should not create snapshots
         const doSnapshot = isActive
@@ -1469,7 +1468,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         assert(root.value == "Hello, World!");
     }
 
-    protected bool runLocalInputAction(IO io, int num, immutable InputActionID id, bool active) {
+    protected bool runLocalInputAction(IO io, int num, InputActionID id, bool active) {
         return runInputActionHandler(this, io, num, id, active);
     }
 
