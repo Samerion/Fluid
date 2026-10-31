@@ -88,7 +88,7 @@ class ButtonImpl(T : Node = Label) : InputNode!T {
     ///     pressed = Action to perform when the button is pressed.
     this(T...)(T sup, void delegate() @safe pressed) {
         super(sup);
-        this.pressed = pressed;
+        this.pressed ~= pressed;
     }
 
     /// Handle input by calling the [pressed][Button.pressed] delegate assigned to this
@@ -97,7 +97,7 @@ class ButtonImpl(T : Node = Label) : InputNode!T {
     /// This method is bound to the [press input action][FluidInputAction.press].
     @(FluidInputAction.press)
     void press() @trusted {
-        if (pressed) pressed();
+        pressed();
     }
 
     static if (is(typeof(text) : string))

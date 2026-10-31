@@ -255,7 +255,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
         import fluid.button;
 
-        this.submitted = submitted;
+        this.submitted ~= submitted;
         this.lastTouch = Clock.currTime;
         this.contentLabel = new typeof(contentLabel);
         this.placeholder = placeholder;
@@ -383,7 +383,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
     void touchText() {
 
         touch();
-        if (changed) changed();
+        changed();
 
     }
 
@@ -1659,7 +1659,7 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
         import std.sumtype : match;
 
         // Run the callback
-        if (submitted) submitted();
+        submitted();
 
     }
 

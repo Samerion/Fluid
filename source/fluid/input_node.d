@@ -1,6 +1,8 @@
 ///
 module fluid.input_node;
 
+import diode;
+
 import fluid.node;
 import fluid.style;
 import fluid.input;
@@ -24,10 +26,10 @@ abstract class InputNode(Parent : Node) : Parent, Focusable, Hoverable {
     HoverIO hoverIO;
 
     /// Callback to run when the input value is altered.
-    void delegate() changed;
+    Event!() changed;
 
     /// Callback to run when the input is submitted.
-    void delegate() submitted;
+    Event!() submitted;
 
     this(T...)(T sup) {
 
