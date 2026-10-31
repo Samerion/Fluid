@@ -549,6 +549,11 @@ struct Image {
 
 }
 
+float length(Vector2 vector) {
+    import std.math : sqrt;
+    return sqrt(vector.x^^2 + vector.y^^2);
+}
+
 // Structures
 version (Have_raylib_d) {
 

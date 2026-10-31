@@ -309,7 +309,7 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
 
         // Use the last moved pointer for the cursor
         foreach (HoverPointer pointer; hoverIO) {
-            if (pointer.positionDelta.length < 0.5) continue;
+            if (!pointer.hasMoved) continue;
             _cursorPointer = pointer;
         }
 

@@ -392,6 +392,12 @@ struct HoverPointer {
 
     }
 
+    /// Returns:
+    ///     True, if pointer position has changed since last frame.
+    bool hasMoved() const {
+        return positionDelta.length >= 0.001;
+    }
+
     /// Returns: The ID/index assigned by `HoverIO` when this pointer was loaded.
     int id() const nothrow {
         return this._id;
