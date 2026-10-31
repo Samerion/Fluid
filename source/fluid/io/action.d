@@ -1,7 +1,7 @@
 /// This module contains interfaces for mapping input events to input actions.
 module fluid.io.action;
 
-import optional;
+import std.typecons;
 
 import fluid.input;
 import fluid.future.context;
@@ -436,7 +436,7 @@ if (isInputAction!action && isRetrievableResource!R) {
     if (io is null) {
         return false;
     }
-    Optional!R resource = R.fetch(io, number);
+    Nullable!R resource = R.fetch(io, number);
     if (resource.empty) {
         return false;
     }
@@ -449,7 +449,7 @@ if (isInputAction!action && isRetrievableResource!R) {
     if (io is null) {
         return false;
     }
-    Optional!R resource = R.fetch(io, number);
+    Nullable!R resource = R.fetch(io, number);
     if (resource.empty) {
         return false;
     }
@@ -463,11 +463,11 @@ if (isRetrievableResource!R) {
     if (io is null) {
         return false;
     }
-    Optional!R resource = R.fetch(io, number);
-    if (resource.empty) {
+    Nullable!R resource = R.fetch(io, number);
+    if (resource.isNull) {
         return false;
     }
-    return handler(resource.front);
+    return handler(resource.get);
 }
 
 /// ditto
@@ -476,11 +476,11 @@ if (isRetrievableResource!R) {
     if (io is null) {
         return false;
     }
-    Optional!R resource = R.fetch(io, number);
-    if (resource.empty) {
+    Nullable!R resource = R.fetch(io, number);
+    if (resource.isNull) {
         return false;
     }
-    handler(resource.front);
+    handler(resource.get);
     return true;
 }
 

@@ -1,7 +1,7 @@
 /// This module contains interfaces for handling focus and connecting focusable nodes with input devices.
 module fluid.io.focus;
 
-import optional;
+import std.typecons;
 import fluid.node;
 import fluid.types;
 import fluid.actions;
@@ -142,7 +142,7 @@ FindFocusBoxAction findFocusBox(FocusIO focusIO) {
 }
 
 /// This branch action tracks and reports position of the current focus box.
-class FindFocusBoxAction : BranchAction, Publisher!(Optional!Rectangle) {
+class FindFocusBoxAction : BranchAction, Publisher!(Nullable!Rectangle) {
 
     import fluid.node;
 
@@ -153,13 +153,13 @@ class FindFocusBoxAction : BranchAction, Publisher!(Optional!Rectangle) {
 
         /// Focus box reported by the node, if any. Use `.then!((Rectangle) { ... })` to get the focus box the moment
         /// it is found.
-        Optional!Rectangle focusBox;
+        Nullable!Rectangle focusBox;
 
     }
 
     private {
 
-        Subscriber!(Optional!Rectangle) _onFinishRectangle;
+        Subscriber!(Nullable!Rectangle) _onFinishRectangle;
 
     }
 
@@ -173,7 +173,7 @@ class FindFocusBoxAction : BranchAction, Publisher!(Optional!Rectangle) {
 
     alias subscribe = typeof(super).subscribe;
 
-    override void subscribe(Subscriber!(Optional!Rectangle) subscriber) {
+    override void subscribe(Subscriber!(Nullable!Rectangle) subscriber) {
 
         assert(_onFinishRectangle is null, "Subscriber already connected.");
         _onFinishRectangle = subscriber;
@@ -184,7 +184,7 @@ class FindFocusBoxAction : BranchAction, Publisher!(Optional!Rectangle) {
 
         assert(focusIO !is null, "FindFocusBoxAction launched without assigning focusIO");
 
-        this.focusBox = Optional!Rectangle();
+        this.focusBox = Nullable!Rectangle();
 
     }
 
@@ -416,10 +416,10 @@ interface WithPositionalFocus : WithFocus {
     /// Returns:
     ///     Last known focus box of the focused node. May be out of date if the focused node
     ///     has changed since last fetched.
-    protected Optional!Rectangle lastFocusBox() const;
+    protected Nullable!Rectangle lastFocusBox() const;
 
     /// Update focus box after it was changed.
-    protected Optional!Rectangle lastFocusBox(Optional!Rectangle newFocusBox);
+    protected Nullable!Rectangle lastFocusBox(Nullable!Rectangle newFocusBox);
 
     /// Returns:
     ///     An instance of PositionalFocusAction.
@@ -457,27 +457,27 @@ interface WithPositionalFocus : WithFocus {
 
     /// ditto
     final FocusSearchAction focusDirection(Style.Side side) {
-        return lastFocusBox.match!(
-            (Rectangle focusBox) {
+        if (lastFocusBox.isNull) {
+            return null;
+        }
+        else {
+            const focusBox = lastFocusBox.get;
 
-                auto reference = cast(Node) currentFocus;
+            auto reference = cast(Node) currentFocus;
 
-                // No focus, no action to launch
-                if (reference is null) return null;
+            // No focus, no action to launch
+            if (reference is null) return null;
 
-                auto self = cast(Node) this;
+            auto self = cast(Node) this;
 
-                positionalFocusAction.reset(reference, focusBox, side);
-                positionalFocusAction.then!((Rectangle box) {
-                    lastFocusBox = Optional!Rectangle(box);
-                });
-                self.startAction(positionalFocusAction);
+            positionalFocusAction.reset(reference, focusBox, side);
+            positionalFocusAction.then!((Rectangle box) {
+                lastFocusBox = Nullable!Rectangle(box);
+            });
+            self.startAction(positionalFocusAction);
 
-                return positionalFocusAction;
-
-            },
-            () => PositionalFocusAction.init,
-        );
+            return positionalFocusAction;
+        }
     }
 
     @(FluidInputAction.focusUp)

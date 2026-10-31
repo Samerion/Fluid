@@ -1,7 +1,7 @@
 /// This module implements interfaces for handling hover and connecting hoverable nodes with input devices.
 module fluid.io.hover;
 
-import optional;
+import std.typecons;
 
 import std.range;
 
@@ -326,7 +326,7 @@ struct HoverPointer {
     ///     number = Valid pointer number assigned by the I/O system.
     /// Returns:
     ///     Hover pointer under given number.
-    static Optional!HoverPointer fetch(IO io, int number) {
+    static Nullable!HoverPointer fetch(IO io, int number) {
 
         import std.format;
 

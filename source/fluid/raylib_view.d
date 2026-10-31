@@ -30,7 +30,7 @@ version (OSX) {
 }
 
 import raylib;
-import optional;
+import std.typecons;
 
 import std.meta;
 import std.traits;
@@ -428,7 +428,7 @@ class RaylibView(RaylibViewVersion raylibVersion) : Node, CanvasIO, MouseIO, Key
         return _dpi;
     }
 
-    override Optional!Rectangle cropArea() const nothrow {
+    override Nullable!Rectangle cropArea() const nothrow {
         return typeof(return)(_cropArea);
     }
 

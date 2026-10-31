@@ -1222,7 +1222,6 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     /// Draw selection, if applicable.
     protected void drawSelection(Rectangle inner) {
-        import optional : some;
 
         // Ignore if selection is empty
         if (selectionStart == selectionEnd) return;
@@ -1306,8 +1305,8 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
                 }
 
                 // Stop drawing when selection is offscreen
-                const isOffscreen = !cropArea.empty
-                    && inner.start.y + ruler.caret.y > cropArea.front.end.y;
+                const isOffscreen = !cropArea.isNull
+                    && inner.start.y + ruler.caret.y > cropArea.get.end.y;
                 if (isOffscreen) return;
 
             }

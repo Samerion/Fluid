@@ -13,7 +13,7 @@ debug (Fluid_BuildMessages) {
 
 import core.exception;
 
-import optional;
+import std.typecons;
 
 import std.conv : toText = text;
 import std.range;
@@ -95,7 +95,7 @@ class TestSpace : Space, CanvasIO, DebugSignalIO {
         TestProbe _probe;
 
         /// Current crop area.
-        Optional!Rectangle _cropArea;
+        Nullable!Rectangle _cropArea;
 
         /// Rectangle given to TestSpace when drawing.
         Rectangle _viewport;
@@ -202,7 +202,7 @@ class TestSpace : Space, CanvasIO, DebugSignalIO {
         return _debugSignals.get(name, 0);
     }
 
-    override Optional!Rectangle cropArea() const nothrow {
+    override Nullable!Rectangle cropArea() const nothrow {
         return _cropArea;
     }
 
@@ -222,7 +222,7 @@ class TestSpace : Space, CanvasIO, DebugSignalIO {
             _cropArea = _viewport;
         }
         else {
-            _cropArea = none;
+            _cropArea.nullify();
         }
     }
 

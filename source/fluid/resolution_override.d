@@ -9,7 +9,7 @@
 /// you can use `fluid.raylib.RaylibView.scale`.
 module fluid.resolution_override;
 
-import optional;
+import std.typecons;
 
 import fluid.node;
 import fluid.utils;
@@ -82,7 +82,7 @@ class ResolutionOverride(T : Node) : T, CanvasIO {
 
     // CanvasIO overrides
 
-    override Optional!Rectangle cropArea() const nothrow {
+    override Nullable!Rectangle cropArea() const nothrow {
         return canvasIO.cropArea();
     }
 

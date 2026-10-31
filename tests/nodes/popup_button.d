@@ -155,7 +155,7 @@ unittest {
     );
     focus.findFocusBox()
         .then!((box) {
-            return hover.point(box.front.center);
+            return hover.point(box.get.center);
         })
         .then!((a) {
             a.click;

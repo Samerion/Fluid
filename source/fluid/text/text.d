@@ -1096,7 +1096,7 @@ struct StyledText(StyleRange = TextStyleSlice[]) {
         const screen = canvasIO.cropArea;
 
         // Ignore if offscreen
-        if (!screen.empty && !overlap(rectangle, screen.front)) return;
+        if (!screen.isNull && !overlap(rectangle, screen.get)) return;
 
         // Regenerate visible textures
         generate(canvasIO, position);

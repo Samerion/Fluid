@@ -1,7 +1,7 @@
 module actions.find_focus_box_action;
 
 import fluid;
-import optional;
+import std.typecons;
 
 @safe:
 
@@ -18,7 +18,7 @@ class FocusTracker : Space {
         this.findFocusBoxAction = new FindFocusBoxAction;
     }
 
-    Optional!Rectangle focusBox() const {
+    Nullable!Rectangle focusBox() const {
 
         return findFocusBoxAction.focusBox;
 
@@ -84,7 +84,7 @@ unittest {
 
     // Frame 0: no focus
     root.findFocusBox()
-        .then!(rect => assert(rect.empty))
+        .then!(rect => assert(rect.isNull))
         .runWhileDrawing(root);
 
     // Frame 1: first box has focus
@@ -117,7 +117,7 @@ unittest {
     );
 
     root.draw();
-    assert(tracker.focusBox.empty);
+    assert(tracker.focusBox.isNull);
 
     box[0].focus();
     root.draw();
