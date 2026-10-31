@@ -457,27 +457,27 @@ interface WithPositionalFocus : WithFocus {
 
     /// ditto
     final FocusSearchAction focusDirection(Style.Side side) {
-        return lastFocusBox.match!(
-            (Rectangle focusBox) {
+        if (lastFocusBox.isNull) {
+            return null;
+        }
+        else {
+            const focusBox = lastFocusBox.get;
 
-                auto reference = cast(Node) currentFocus;
+            auto reference = cast(Node) currentFocus;
 
-                // No focus, no action to launch
-                if (reference is null) return null;
+            // No focus, no action to launch
+            if (reference is null) return null;
 
-                auto self = cast(Node) this;
+            auto self = cast(Node) this;
 
-                positionalFocusAction.reset(reference, focusBox, side);
-                positionalFocusAction.then!((Rectangle box) {
-                    lastFocusBox = Nullable!Rectangle(box);
-                });
-                self.startAction(positionalFocusAction);
+            positionalFocusAction.reset(reference, focusBox, side);
+            positionalFocusAction.then!((Rectangle box) {
+                lastFocusBox = Nullable!Rectangle(box);
+            });
+            self.startAction(positionalFocusAction);
 
-                return positionalFocusAction;
-
-            },
-            () => PositionalFocusAction.init,
-        );
+            return positionalFocusAction;
+        }
     }
 
     @(FluidInputAction.focusUp)

@@ -222,7 +222,7 @@ class TestSpace : Space, CanvasIO, DebugSignalIO {
             _cropArea = _viewport;
         }
         else {
-            _cropArea = none;
+            _cropArea.nullify();
         }
     }
 
