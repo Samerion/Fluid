@@ -176,7 +176,7 @@ void main(string[] args) {
         : createUI();
     auto root = ui;
 
-    root.nextFrame.then(() @trusted {
+    root.nextFrame.then!(() @trusted {
         import raylib;
         SetWindowTitle("Fluid Tour");
     });
