@@ -365,9 +365,8 @@ class NumberInputSpinner : Node, Hoverable {
     }
 
     public {
-
-        Event!() incremented;
-        Event!() decremented;
+        Event!() onIncrement;
+        Event!() onDecrement;
 
     }
 
@@ -383,10 +382,10 @@ class NumberInputSpinner : Node, Hoverable {
 
     }
 
-    this(void delegate() @safe incremented, void delegate() @safe decremented) {
+    this(void delegate() @safe onIncrement, void delegate() @safe onDecrement) {
 
-        this.incremented ~= incremented;
-        this.decremented ~= decremented;
+        this.onIncrement ~= onIncrement;
+        this.onDecrement ~= onDecrement;
 
     }
 
@@ -450,12 +449,12 @@ class NumberInputSpinner : Node, Hoverable {
 
         // Above center (increment)
         if (pointer.position.y < center(_lastRectangle).y) {
-            incremented();
+            onIncrement();
         }
 
         // Below center (decrement)
         else {
-            decremented();
+            onDecrement();
         }
 
     }
