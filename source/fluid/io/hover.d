@@ -164,7 +164,7 @@ interface ActionHoverIO : HoverIO {
     ///     isActive = If true, the action has been activated during this frame.
     /// Returns:
     ///     True if the input action was handled.
-    bool runInputAction(HoverPointer pointer, immutable InputActionID actionID,
+    bool runInputAction(HoverPointer pointer, InputActionID actionID,
         bool isActive = true);
 
     /// ditto
@@ -917,7 +917,7 @@ class HoverPointerAction : TreeAction, Publisher!HoverPointerAction, IO {
     ///     isActive   = "Active" status of the action.
     /// Returns:
     ///     True if the action was handled, false if not.
-    bool runInputAction(immutable InputActionID actionID, bool isActive = true) {
+    bool runInputAction(InputActionID actionID, bool isActive = true) {
 
         hoverIO.loadTo(pointer);
         auto hoverable = hoverIO.hoverOf(pointer);

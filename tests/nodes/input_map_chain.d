@@ -52,7 +52,7 @@ class ActionTester : InputNode!Node {
 
     }
 
-    bool runInputAction(immutable InputActionID actionID, bool isActive, int) {
+    bool runInputAction(InputActionID actionID, bool isActive, int) {
 
         return super.runInputAction(actionID, isActive);
 
