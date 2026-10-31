@@ -105,14 +105,9 @@ abstract class Node : HasContext, Safe {
         /// Attached styling delegates.
         Rule.StyleDelegate[] _styleDelegates;
 
-        /// Actions queued for this node; only used for queueing actions before the first `resize`; afterwards, all
-        /// actions are queued directly into the tree.
-        ///
-        /// `_queuedAction` queues into `LayoutTree` (legacy), whereas `_queuedActionsNew` queues into `TreeContext`.
+        /// Actions queued for this node; only used for queueing actions before the first
+        /// `resize`; afterwards, all actions are queued directly into the tree.
         TreeAction[] _queuedActions;
-
-        /// ditto
-        TreeAction[] _queuedActionsNew;
 
     }
 
@@ -369,7 +364,7 @@ abstract class Node : HasContext, Safe {
     /// Returns:
     ///     Returns the same action as given, for easy chaining.
     final T startAction(T : TreeAction)(T action)
-    in (action, "Node.runAction(TreeAction) called with a `null` argument")
+    in (action, "Node.startAction(TreeAction) was called with a `null` argument")
     do {
         action.startNode = this;
         action.toStop = false;
@@ -381,7 +376,7 @@ abstract class Node : HasContext, Safe {
 
         // Hold the action until a resize
         else {
-            _queuedActionsNew ~= action;
+            _queuedActions ~= action;
         }
 
         return action;
@@ -407,7 +402,7 @@ abstract class Node : HasContext, Safe {
     ///     A [RAII](https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization) struct
     ///     that stops all started actions as soon as the struct leaves the scope.
     protected final auto startBranchAction(BranchAction action)
-    in (action, "Node.runAction(TreeAction) called with a `null` argument")
+    in (action, "Node.startBranchAction(TreeAction) was called with a `null` argument")
     do {
         return startBranchAction(only(action));
     }
@@ -424,7 +419,7 @@ abstract class Node : HasContext, Safe {
     }
 
     protected final auto controlBranchAction(BranchAction action)
-    in (action, "Node.runAction(TreeAction) called with a `null` argument")
+    in (action, "Node.controlBranchAction(TreeAction) was called with a `null` argument")
     do {
         return controlBranchAction(only(action));
     }
@@ -729,8 +724,8 @@ abstract class Node : HasContext, Safe {
         reloadStyles();
 
         // Queue actions into the tree
-        treeContext.actions.spawn(_queuedActionsNew);
-        _queuedActionsNew = null;
+        treeContext.actions.spawn(_queuedActions);
+        _queuedActions = null;
 
     }
 

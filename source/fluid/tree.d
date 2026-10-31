@@ -35,15 +35,14 @@ abstract class TreeAction : Publisher!() {
         /// Overloads of the same callbacks will still be called for the event that prompted stopping.
         bool toStop;  // this should be private
 
-        /// Keeps track of the number of times the action has been started or stopped. Every start and every stop
-        /// bumps the generation number.
+        /// Keeps track of the number of times the action has been started or stopped. Every start
+        /// and every stop bumps the generation number.
         ///
-        /// The generation number is used to determine if the action runner should continue or discontinue the action.
-        /// If the number is greater than the one the runner stored at the time it was scheduled, it will stop running.
-        /// This means that if an action is restarted, the old run will be unregistered, preventing the action from
-        /// running twice at a time.
-        ///
-        /// Only applies to actions started using `Node.startAction`, introduced in 0.7.2, and not `Node.runAction`.
+        /// The generation number is used to determine if the action runner should continue or
+        /// discontinue the action. If the number is greater than the one the runner stored at
+        /// the time it was scheduled, it will stop running. This means that if an action is
+        /// restarted, the old run will be unregistered, preventing the action from running twice
+        /// at a time.
         int generation;
 
     }
