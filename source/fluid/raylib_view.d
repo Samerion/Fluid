@@ -30,7 +30,7 @@ version (OSX) {
 }
 
 import raylib;
-import optional;
+import std.typecons;
 
 import std.meta;
 import std.traits;

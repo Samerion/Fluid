@@ -1222,7 +1222,6 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
     /// Draw selection, if applicable.
     protected void drawSelection(Rectangle inner) {
-        import optional : some;
 
         // Ignore if selection is empty
         if (selectionStart == selectionEnd) return;

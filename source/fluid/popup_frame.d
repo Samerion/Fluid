@@ -5,7 +5,7 @@
 module fluid.popup_frame;
 
 import diode;
-import optional;
+import std.typecons;
 
 import std.traits;
 import std.algorithm;

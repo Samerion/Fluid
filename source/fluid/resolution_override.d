@@ -9,7 +9,7 @@
 /// you can use `fluid.raylib.RaylibView.scale`.
 module fluid.resolution_override;
 
-import optional;
+import std.typecons;
 
 import fluid.node;
 import fluid.utils;

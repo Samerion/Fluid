@@ -1,7 +1,7 @@
 /// This module contains interfaces for drawing geometry on a canvas.
 module fluid.io.canvas;
 
-import optional;
+import std.typecons;
 
 import fluid.node : HasContext;
 import fluid.types;

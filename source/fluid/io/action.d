@@ -1,7 +1,7 @@
 /// This module contains interfaces for mapping input events to input actions.
 module fluid.io.action;
 
-import optional;
+import std.typecons;
 
 import fluid.input;
 import fluid.future.context;

@@ -1,7 +1,7 @@
 /// This module implements interfaces for handling hover and connecting hoverable nodes with input devices.
 module fluid.io.hover;
 
-import optional;
+import std.typecons;
 
 import std.range;
 

@@ -1,7 +1,7 @@
 /// This module contains interfaces for handling focus and connecting focusable nodes with input devices.
 module fluid.io.focus;
 
-import optional;
+import std.typecons;
 import fluid.node;
 import fluid.types;
 import fluid.actions;

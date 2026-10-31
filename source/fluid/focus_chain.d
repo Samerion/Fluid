@@ -2,7 +2,7 @@
 module fluid.focus_chain;
 
 import diode;
-import optional;
+import std.typecons;
 import std.array;
 
 import fluid.node;

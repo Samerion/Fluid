@@ -1,7 +1,7 @@
 module actions.find_focus_box_action;
 
 import fluid;
-import optional;
+import std.typecons;
 
 @safe:
 

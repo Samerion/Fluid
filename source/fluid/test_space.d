@@ -13,7 +13,7 @@ debug (Fluid_BuildMessages) {
 
 import core.exception;
 
-import optional;
+import std.typecons;
 
 import std.conv : toText = text;
 import std.range;
