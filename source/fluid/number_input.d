@@ -321,7 +321,9 @@ abstract class AbstractNumberInput : TextInput {
     this(void delegate() @safe changed = null) {
 
         super("");
-        super.changed ~= changed;
+        if (changed) {
+            super.changed ~= changed;
+        }
         super.value = ['0'];
         this.spinner = numberInputSpinner(.layout!"fill", &increment, &decrement);
         caretToEnd();

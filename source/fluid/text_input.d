@@ -255,7 +255,9 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
 
         import fluid.button;
 
-        this.submitted ~= submitted;
+        if (submitted) {
+            this.submitted ~= submitted;
+        }
         this.lastTouch = Clock.currTime;
         this.contentLabel = new typeof(contentLabel);
         this.placeholder = placeholder;

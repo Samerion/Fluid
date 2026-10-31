@@ -46,7 +46,9 @@ class Slider(T) : AbstractSlider {
         assert(!range.empty, "Slider range must not be empty.");
 
         this.range = new SliderRangeImpl!R(range);
-        this.changed ~= changed;
+        if (changed) {
+            this.changed ~= changed;
+        }
 
     }
 

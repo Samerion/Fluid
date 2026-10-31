@@ -63,7 +63,9 @@ class Checkbox : InputNode!Node {
     this(void delegate() @safe changed = null) {
 
         this.size = Vector2(10, 10);
-        this.changed ~= changed;
+        if (changed) {
+            this.changed ~= changed;
+        }
 
     }
 
