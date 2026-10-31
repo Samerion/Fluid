@@ -147,7 +147,7 @@ unittest {
         button("Click me!", delegate { }),
     );
     ui.focusChild()
-        .then((Focusable child) => child
+        .then!((Focusable child) => child
             .runInputAction!(FluidInputAction.press));
 }
 

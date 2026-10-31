@@ -151,7 +151,7 @@ class FindFocusBoxAction : BranchAction, Publisher!(Optional!Rectangle) {
         /// System holding the focused node in question.
         FocusIO focusIO;
 
-        /// Focus box reported by the node, if any. Use `.then((Rectangle) { ... })` to get the focus box the moment
+        /// Focus box reported by the node, if any. Use `.then!((Rectangle) { ... })` to get the focus box the moment
         /// it is found.
         Optional!Rectangle focusBox;
 
@@ -471,7 +471,7 @@ interface WithPositionalFocus : WithFocus {
                 auto self = cast(Node) this;
 
                 positionalFocusAction.reset(reference, focusBox, side);
-                positionalFocusAction.then((Rectangle box) {
+                positionalFocusAction.then!((Rectangle box) {
                     lastFocusBox = Optional!Rectangle(box);
                 });
                 self.startAction(positionalFocusAction);

@@ -163,7 +163,7 @@ class PopupFrame : InputNode!Frame, Overlayable, OverlayIO, FocusIO,
         this._findFocusBoxAction     = new FindFocusBoxAction(this);
 
         _findFocusBoxAction
-            .then((Optional!Rectangle result) => _lastFocusBox = result);
+            .then!((Optional!Rectangle result) => _lastFocusBox = result);
     }
 
     /// Set a new rectangular anchor.

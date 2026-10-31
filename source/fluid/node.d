@@ -1176,7 +1176,7 @@ int runWhileDrawing(Publisher!() publisher, Node node, int frameLimit = int.max)
 
     int i;
     bool finished;
-    publisher.then(() => finished = true);
+    publisher.then!(() => finished = true);
 
     while (!finished) {
         node.draw();

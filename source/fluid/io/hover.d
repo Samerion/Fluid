@@ -731,7 +731,7 @@ Publisher!HoverPointerAction pointAndClick(HoverIO hoverIO, Vector2 position,
     bool isActive = true, int clickCount = 1)
 do {
     return hoverIO.point(position)
-        .then((a) {
+        .then!((a) {
             a.click(isActive, clickCount);
             return a;
         });
