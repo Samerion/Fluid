@@ -604,20 +604,10 @@ template InputActionHandlers(T) {
 
                 // Input action — add to the result
                 static if (isInputAction!actionType) {
-
                     Result = AliasSeq!(
                         Result,
                         InputActionHandler!(__traits(getAttributes, overload)[i], overload)
                     );
-
-                }
-
-                // Prevent usage via @InputAction
-                else static if (is(typeof(actionType)) && isInstanceOf!(typeof(actionType), InputAction)) {
-
-                    static assert(false,
-                        format!"Please use @(%s) instead of @InputAction!(%1$s)"(actionType.type));
-
                 }
 
             }
