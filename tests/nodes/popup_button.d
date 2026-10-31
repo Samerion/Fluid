@@ -35,7 +35,7 @@ unittest {
 
     // Focus the button
     focus.focusNext()
-        .thenAssertEquals(main)
+        .thenAssertEquals!(Publisher!Node)(main)
 
         // Press it
         .then!(() => focus.runInputAction!(FluidInputAction.press))

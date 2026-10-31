@@ -201,11 +201,11 @@ unittest {
     assert(root.isFocused(buttons[0]));
 
     const frames = root.focusNext
-        .thenAssertEquals(buttons[1])
+        .thenAssertEquals!(Publisher!Node)(buttons[1])
         .then!(() => root.focusNext)
-        .thenAssertEquals(buttons[2])
+        .thenAssertEquals!(Publisher!Node)(buttons[2])
         .then!(() => root.focusNext)
-        .thenAssertEquals(buttons[0])
+        .thenAssertEquals!(Publisher!Node)(buttons[0])
         .runWhileDrawing(root, 5);
 
     assert(frames == 3);
@@ -228,7 +228,7 @@ unittest {
 
     // Via chains
     root.focusNext()
-        .thenAssertEquals(buttons[0])
+        .thenAssertEquals!(Publisher!Node)(buttons[0])
         .then!(() => assert(root.isFocused(buttons[0])))
         .runWhileDrawing(root, 1);
 
@@ -257,7 +257,7 @@ unittest {
 
     // Via chains
     root.focusPrevious()
-        .thenAssertEquals(buttons[2])
+        .thenAssertEquals!(Publisher!Node)(buttons[2])
         .then!(() => assert(root.isFocused(buttons[2])))
         .runWhileDrawing(root, 1);
 
@@ -285,24 +285,24 @@ unittest {
     );
 
     root.focusNext()
-        .thenAssertEquals(buttons[0])
+        .thenAssertEquals!(Publisher!Node)(buttons[0])
         .then!(() => root.focusNext())
-        .thenAssertEquals(buttons[1])
+        .thenAssertEquals!(Publisher!Node)(buttons[1])
         .then!(() => root.focusNext())
-        .thenAssertEquals(buttons[2])
+        .thenAssertEquals!(Publisher!Node)(buttons[2])
         .then!(() => root.focusNext())
-        .thenAssertEquals(buttons[0])
+        .thenAssertEquals!(Publisher!Node)(buttons[0])
         .runWhileDrawing(root, 4);
 
     root.clearFocus();
     root.focusPrevious()
-        .thenAssertEquals(buttons[2])
+        .thenAssertEquals!(Publisher!Node)(buttons[2])
         .then!(() => root.focusPrevious())
-        .thenAssertEquals(buttons[1])
+        .thenAssertEquals!(Publisher!Node)(buttons[1])
         .then!(() => root.focusPrevious())
-        .thenAssertEquals(buttons[0])
+        .thenAssertEquals!(Publisher!Node)(buttons[0])
         .then!(() => root.focusPrevious())
-        .thenAssertEquals(buttons[2])
+        .thenAssertEquals!(Publisher!Node)(buttons[2])
         .runWhileDrawing(root, 4);
 
 }
@@ -327,23 +327,23 @@ unittest {
     root.draw();
 
     // Vertical focus
-    root.focusBelow().thenAssertEquals(buttons[1])
+    root.focusBelow().thenAssertEquals!(Publisher!Node)(buttons[1])
         .then!(() => root.nextFrame)
-        .then!(() => root.focusBelow).thenAssertEquals(buttons[4])
+        .then!(() => root.focusBelow).thenAssertEquals!(Publisher!Node)(buttons[4])
         .then!(() => root.nextFrame)
-        .then!(() => root.focusAbove).thenAssertEquals(buttons[1])
+        .then!(() => root.focusAbove).thenAssertEquals!(Publisher!Node)(buttons[1])
         .then!(() => root.nextFrame)
 
         // Horizontal
-        .then!(() => root.focusToRight).thenAssertEquals(buttons[2])
+        .then!(() => root.focusToRight).thenAssertEquals!(Publisher!Node)(buttons[2])
         .then!(() => root.nextFrame)
-        .then!(() => root.focusToRight).thenAssertEquals(buttons[3])
+        .then!(() => root.focusToRight).thenAssertEquals!(Publisher!Node)(buttons[3])
         .then!(() => root.nextFrame)
-        .then!(() => root.focusToRight).thenAssertEquals(null)
+        .then!(() => root.focusToRight).thenAssertEquals!(Publisher!Node)(null)
         .then!(() => assert(root.isFocused(buttons[3])))
 
         // Vertical, again
-        .then!(() => root.focusAbove).thenAssertEquals(buttons[0])
+        .then!(() => root.focusAbove).thenAssertEquals!(Publisher!Node)(buttons[0])
         .runWhileDrawing(root, 12);
 
 }
@@ -445,13 +445,13 @@ unittest {
 
     root.currentFocus = btn1;
     root.focusNext()
-        .thenAssertEquals(btn3)
+        .thenAssertEquals!(Publisher!Node)(btn3)
         .then!(() => root.focusNext)
-        .thenAssertEquals(btn1)
+        .thenAssertEquals!(Publisher!Node)(btn1)
         .then!(() => root.focusPrevious)
-        .thenAssertEquals(btn3)
+        .thenAssertEquals!(Publisher!Node)(btn3)
         .then!(() => root.focusPrevious)
-        .thenAssertEquals(btn1)
+        .thenAssertEquals!(Publisher!Node)(btn1)
         .runWhileDrawing(root);
 
 }
@@ -472,13 +472,13 @@ unittest {
     root.currentFocus = btn1;
     root.draw();
     root.focusBelow()
-        .thenAssertEquals(btn3)
+        .thenAssertEquals!(Publisher!Node)(btn3)
         .then!(() => root.focusBelow)
-        .thenAssertEquals(null)
+        .thenAssertEquals!(Publisher!Node)(null)
         .then!(() => root.focusAbove)
-        .thenAssertEquals(btn1)
+        .thenAssertEquals!(Publisher!Node)(btn1)
         .then!(() => root.focusAbove)
-        .thenAssertEquals(null)
+        .thenAssertEquals!(Publisher!Node)(null)
         .runWhileDrawing(root);
 
 }
