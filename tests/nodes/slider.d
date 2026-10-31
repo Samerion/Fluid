@@ -65,7 +65,7 @@ unittest {
 
     // Press at the center
     hover.point(center(rect))
-        .then((pointer) {
+        .then!((pointer) {
 
             pointer.press;
 
@@ -77,7 +77,7 @@ unittest {
             return pointer.move(Vector2(0, end(rect).y + 100));
 
         })
-        .then((pointer) {
+        .then!((pointer) {
 
             // Keep pressing
             pointer.press(false);
@@ -89,7 +89,7 @@ unittest {
             return pointer.stayIdle;
 
         })
-        .then((pointer) {
+        .then!((pointer) {
 
             assert(input.index == 0);
             assert(input.value == 1);
@@ -98,7 +98,7 @@ unittest {
             return pointer.move(Vector2(center(rect).x, end(rect).y + 100));
 
         })
-        .then((pointer) {
+        .then!((pointer) {
 
             // No change now
             assert(input.index == 0);
@@ -172,13 +172,13 @@ unittest {
 
     // Press at the center
     hover.point(center(rect))
-        .then((pointer) {
+        .then!((pointer) {
             pointer.press(false);
             assert(input.index == 4);
             assert(input.value == 5);
             return pointer.move(size * 2);
         })
-        .then((pointer) {
+        .then!((pointer) {
             pointer.press(false);
         })
         .runWhileDrawing(root, 2);

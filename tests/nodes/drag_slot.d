@@ -77,19 +77,19 @@ unittest {
 
     root.draw();
     hover.point(4, 4)
-        .then((a) {
+        .then!((a) {
             assert(a.isHovered(slot));
             assert(!slot.dragAction);
             a.press(false);
             return a.move(100, 100);
         })
-        .then((a) {
+        .then!((a) {
             a.press(false);
             assert(a.isHovered(slot));
             assert(slot.dragAction.offset == Vector2(96, 96));
             return a.move(50, -50);
         })
-        .then((a) {
+        .then!((a) {
             a.press(false);
             assert(slot.dragAction.offset == Vector2(46, -54));
             return root.nextFrame;
@@ -114,7 +114,7 @@ unittest {
 
     root.draw();
     hover.point(5, 5)
-        .then((a) {
+        .then!((a) {
             assert(a.isHovered(slot));
             assert(!slot.dragAction);
             assert(content.getMinSize == Vector2(10, 10));
@@ -123,7 +123,7 @@ unittest {
         })
 
         // Resize the node
-        .then((a) {
+        .then!((a) {
             a.press(false);
             content.size = Vector2(0, 0);
             content.updateSize();
@@ -131,13 +131,13 @@ unittest {
             assert(content.getMinSize == Vector2(10, 10));
             return a.move(205, 5);
         })
-        .then((a) {
+        .then!((a) {
             a.press(false);
             assert(slot.dragAction.offset == Vector2(200, 0));
             assert(content.getMinSize == Vector2(0, 0));
             return a.move(305, 5);
         })
-        .then((a) {
+        .then!((a) {
             a.press(false);
             assert(slot.dragAction.offset == Vector2(300, 0));
             assert(content.getMinSize == Vector2(0, 0));
@@ -268,13 +268,13 @@ unittest {
         ),
 
         hover.point(1, 451)
-            .then((a) {
+            .then!((a) {
                 a.press(false);
                 return a.move(dropTarget);
             })
 
             // Hover over the target
-            .then((a) {
+            .then!((a) {
                 a.press(false);
                 root.draw();
                 a.press(false);
@@ -308,7 +308,7 @@ unittest {
             })
 
             // Drop it
-            .then((a) {
+            .then!((a) {
                 root.draw();  // _readyToDrop = true
                 root.draw();  // drop()
 
@@ -356,11 +356,11 @@ unittest {
     );
 
     hover.point(1, 1)
-        .then((a) {
+        .then!((a) {
             a.click(false);
             return a.move(100, 100);
         })
-        .then((a) {
+        .then!((a) {
             assert(slot.isDragged);
             a.click(true);
             return a.stayIdle;

@@ -62,7 +62,7 @@ unittest {
     );
 
     hover.point(25, 25)
-        .then((a) {
+        .then!((a) {
             a.click;
             return a.stayIdle;
         })

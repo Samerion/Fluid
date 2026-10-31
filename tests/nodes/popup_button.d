@@ -38,47 +38,47 @@ unittest {
         .thenAssertEquals(main)
 
         // Press it
-        .then(() => focus.runInputAction!(FluidInputAction.press))
-        .then(_ => root.nextFrame)
+        .then!(() => focus.runInputAction!(FluidInputAction.press))
+        .then!(_ => root.nextFrame)
 
         // A popup should open
-        .then(() => assert(focus.isFocused(buttons[0]), "The first button inside should be focused"))
+        .then!(() => assert(focus.isFocused(buttons[0]), "The first button inside should be focused"))
 
         // Go to the previous button, expecting wrap
-        .then(() => focus.runInputAction!(FluidInputAction.focusPrevious))
-        .then(_ => root.nextFrame)
-        .then(() => assert(focus.isFocused(buttons[2]), "The last button inside the first menu should be focused"))
+        .then!(() => focus.runInputAction!(FluidInputAction.focusPrevious))
+        .then!(_ => root.nextFrame)
+        .then!(() => assert(focus.isFocused(buttons[2]), "The last button inside the first menu should be focused"))
 
         // Press the last button
-        .then(() => buttons[2].press())
-        .then(() => root.nextFrame)
-        .then(() => assert(focus.isFocused(buttons[3]), "The first button of the second menu should be focused"))
+        .then!(() => buttons[2].press())
+        .then!(() => root.nextFrame)
+        .then!(() => assert(focus.isFocused(buttons[3]), "The first button of the second menu should be focused"))
 
         // The up arrow should do nothing
-        .then(() => focus.runInputAction!(FluidInputAction.focusUp))
-        .then(_ => root.nextFrame)
-        .then(() => assert(focus.isFocused(buttons[3])))
+        .then!(() => focus.runInputAction!(FluidInputAction.focusUp))
+        .then!(_ => root.nextFrame)
+        .then!(() => assert(focus.isFocused(buttons[3])))
 
         // Press the down arrow
-        .then(() => focus.runInputAction!(FluidInputAction.focusDown))
-        .then(_ => root.nextFrame)
-        .then(() => assert(focus.isFocused(buttons[4])))
+        .then!(() => focus.runInputAction!(FluidInputAction.focusDown))
+        .then!(_ => root.nextFrame)
+        .then!(() => assert(focus.isFocused(buttons[4])))
 
         // Press the button
-        .then(() => buttons[4].press)
-        .then(() => assert(focus.isFocused(buttons[4])))
-        .then(() => assert(lastAction == "email"))
-        .then(() => assert(!sharePopup.isHidden))
+        .then!(() => buttons[4].press)
+        .then!(() => assert(focus.isFocused(buttons[4])))
+        .then!(() => assert(lastAction == "email"))
+        .then!(() => assert(!sharePopup.isHidden))
 
         // Close the popup
-        .then(() => focus.runInputAction!(FluidInputAction.cancel))
+        .then!(() => focus.runInputAction!(FluidInputAction.cancel))
 
         // Need two frames to process the tree action
-        .then(_ => main.nextFrame)
-        .then(() => main.nextFrame)
+        .then!(_ => main.nextFrame)
+        .then!(() => main.nextFrame)
 
         // Need another frame for the tree action
-        .then(() => assert(sharePopup.isHidden));
+        .then!(() => assert(sharePopup.isHidden));
 }
 
 @("PopupButton uses OverlayIO to create the popup")
@@ -142,7 +142,7 @@ unittest {
     );
 
     hover.point(100, 100)
-        .then((a) {
+        .then!((a) {
             a.click;
             return a.stayIdle;
         })
@@ -154,10 +154,10 @@ unittest {
         overlay.drawsChild(btn2.popup),
     );
     focus.findFocusBox()
-        .then((box) {
+        .then!((box) {
             return hover.point(box.front.center);
         })
-        .then((a) {
+        .then!((a) {
             a.click;
             return a.stayIdle;
         })

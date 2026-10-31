@@ -371,7 +371,7 @@ unittest {
         target.isDrawn.containing(5, 95),
     );
     hover.point(5, 105)
-        .then((a) {
+        .then!((a) {
             assert(!a.isHovered(target));
             return target.scrollIntoView();
         })
@@ -385,7 +385,7 @@ unittest {
         target.isDrawn.containing(5, 95),
     );
     hover.point(5, 95)
-        .then((a) {
+        .then!((a) {
             assert( a.isHovered(target));
         })
         .runWhileDrawing(root);

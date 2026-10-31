@@ -84,21 +84,21 @@ unittest {
 
     // Frame 0: no focus
     root.findFocusBox()
-        .then(rect => assert(rect.empty))
+        .then!(rect => assert(rect.empty))
         .runWhileDrawing(root);
 
     // Frame 1: first box has focus
     box[0].focus();
     assert(root.isFocused(box[0]));
     root.findFocusBox()
-        .then(rect => assert(rect == box[0].focusBox))
+        .then!(rect => assert(rect == box[0].focusBox))
         .runWhileDrawing(root);
 
     // Frame 2: second box has focus
     box[1].focus();
     assert(root.isFocused(box[1]));
     root.findFocusBox()
-        .then(rect => assert(rect == box[1].focusBox))
+        .then!(rect => assert(rect == box[1].focusBox))
         .runWhileDrawing(root);
 
 }

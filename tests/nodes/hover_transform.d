@@ -91,13 +91,13 @@ unittest {
     );
 
     hover.point(75, 25)
-        .then((a) {
+        .then!((a) {
             assert(tracker.hoverImplCount == 1);
             assert(tracker.pressHeldCount == 0);
             a.press(false);
             return a.stayIdle;
         })
-        .then((a) {
+        .then!((a) {
             assert(tracker.hoverImplCount == 1);
             assert(tracker.pressHeldCount == 1);
             assert(tracker.pressCount == 0);
@@ -131,7 +131,7 @@ unittest {
 
     // Holding and clicking works inside
     hover.point(75, 25)
-        .then((a) {
+        .then!((a) {
             assert(hover.isHovered(transform));
             assert(transform.isHovered(tracker));
             assert(tracker.hoverImplCount == 1);
@@ -140,7 +140,7 @@ unittest {
             assert(tracker.pressCount == 1);
             return a.stayIdle;
         })
-        .then((a) {
+        .then!((a) {
             a.press(false);
             assert(tracker.pressHeldCount == 2);
             assert(tracker.pressCount == 1);
@@ -148,7 +148,7 @@ unittest {
         })
 
         // Outside the node, only holding works
-        .then((a) {
+        .then!((a) {
             a.press(false);
             assert(hover.isHovered(transform));
             assert(transform.isHovered(tracker));
@@ -156,7 +156,7 @@ unittest {
             assert(tracker.pressCount == 1);
             return a.stayIdle;
         })
-        .then((a) {
+        .then!((a) {
             a.press(true);
             assert(tracker.pressHeldCount == 3);
             assert(tracker.pressCount == 1);
@@ -182,14 +182,14 @@ unittest {
     );
 
     hover.point(75, 25).scroll(0, 40)
-        .then((a) {
+        .then!((a) {
             assert(tracker.lastScroll == Vector2(0, 40));
             assert(tracker.totalScroll == Vector2(0, 40));
         })
         .runWhileDrawing(root, 2);
 
     hover.point(25, 25).scroll(0, 60)
-        .then((a) {
+        .then!((a) {
             assert(tracker.lastScroll == Vector2(0, 40));
             assert(tracker.totalScroll == Vector2(0, 40));
         })
@@ -340,7 +340,7 @@ unittest {
 
     // Scroll in inner
     hover.point(300, 300).scroll(1, 2)
-        .then((a) {
+        .then!((a) {
             const armed = hover.armedPointer(a.pointer);
 
             assert(hover.hoverOf(a.pointer).opEquals(transform));
@@ -352,7 +352,7 @@ unittest {
             // Scroll in outer
             return a.move(200, 200).scroll(3, 4);
         })
-        .then((a) {
+        .then!((a) {
             assert(hover.scrollOf(a.pointer).opEquals(outerScroll));
             assert(outerScroll.lastScroll == Vector2(3, 4));
             assert(innerScroll.lastScroll == Vector2(1, 2));
@@ -434,13 +434,13 @@ unittest {
     auto root = testSpace(hover);
 
     hover.point(25, 25)
-        .then((a) {
+        .then!((a) {
             assert(transform.isHovered(buttons[0]));
             a.press();
             return a.stayIdle;
         })
-        .then((a) => a.move(75, 75))
-        .then((a) {
+        .then!((a) => a.move(75, 75))
+        .then!((a) {
             assert(transform.isHovered(buttons[1]));
             a.press();
         })
@@ -472,13 +472,13 @@ unittest {
     auto root = testSpace(hover);
 
     hover.point(75, 75).scroll(0, 25)
-        .then((a) {
+        .then!((a) {
             const pointer = hover.armedPointer(a.pointer);
             assert(transform.scrollOf(pointer).opEquals(tracker));
             assert(tracker.lastScroll == Vector2(0, 25));
             return a.move(25, 25).holdScroll(0, 5);
         })
-        .then((a) {
+        .then!((a) {
             const pointer = hover.armedPointer(a.pointer);
             assert(transform.scrollOf(pointer).opEquals(tracker));
             assert(tracker.lastScroll  == Vector2(0,  5));
@@ -520,11 +520,11 @@ unittest {
     auto root = testSpace(focus);
 
     hover.point(25, 25)
-        .then((a) {
+        .then!((a) {
             a.press();
             return a.stayIdle();
         })
-        .then((a) { })
+        .then!((a) { })
         .runWhileDrawing(root, 2);
 
     assert(content.isFocused);

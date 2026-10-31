@@ -1371,11 +1371,11 @@ unittest {
 
     // Select some stuff
     hover.point(150, 10)
-        .then((a) {
+        .then!((a) {
             a.press(false);
             return a.move(65, 10);
         })
-        .then((a) {
+        .then!((a) {
             a.press(false);
             assert(input.selectedValue == "scroll this");
         })
@@ -1403,7 +1403,7 @@ unittest {
     root.draw();
 
     hover.point(150, 10)
-        .then((action) {
+        .then!((action) {
 
             // Double- and triple-click
             foreach (i; 0..3) {
@@ -1456,7 +1456,7 @@ unittest {
     assert(input.caretIndex == 0);
 
     hover.point(140, 90)
-        .then((a) {
+        .then!((a) {
              input.caretToPointer(a.pointer);
         })
         .runWhileDrawing(root);
@@ -1633,13 +1633,13 @@ unittest {
 
     // Press in the middle and drag to the top
     hover.point(middle)
-        .then((a) {
+        .then!((a) {
             a.press(false);
             return a.move(top);
         })
 
         // Check results; move to bottom
-        .then((a) {
+        .then!((a) {
             a.press(false);
             assert(input.selectedValue == "e one\nLin");
             assert(input.selectionStart > input.selectionEnd);
@@ -1647,13 +1647,13 @@ unittest {
         })
 
         // Now move to the blank line
-        .then((a) {
+        .then!((a) {
             a.press(false);
             assert(input.selectedValue == "e two\n\nLin");
             assert(input.selectionStart < input.selectionEnd);
             return a.move(blank);
         })
-        .then((a) {
+        .then!((a) {
             a.press(true);
             assert(input.selectedValue == "e two\n");
             assert(input.selectionStart < input.selectionEnd);
@@ -1685,7 +1685,7 @@ unittest {
 
     // Double click in the middle
     hover.point(middle)
-        .then((a) {
+        .then!((a) {
             a.doubleClick(false);
             assert(input.selectedValue == "Line");
             assert(input.selectionStart < input.selectionEnd);
@@ -1693,7 +1693,7 @@ unittest {
             // Drag the pointer to top row
             return a.move(top);
         })
-        .then((a) {
+        .then!((a) {
             a.doubleClick(false);
             assert(input.selectedValue == "Line one\nLine");
             assert(input.selectionStart > input.selectionEnd);
@@ -1701,7 +1701,7 @@ unittest {
             // Bottom row
             return a.move(bottom);
         })
-        .then((a) {
+        .then!((a) {
             a.doubleClick(false);
             assert(input.selectedValue == "Line two\n\nLine");
             assert(input.selectionStart < input.selectionEnd);
@@ -1709,7 +1709,7 @@ unittest {
             // And now drag the pointer to the blank line
             return a.move(blank);
         })
-        .then((a) {
+        .then!((a) {
             a.doubleClick(true);
         })
         .runWhileDrawing(root);
@@ -1741,28 +1741,28 @@ unittest {
     const bottom = middle + Vector2(0, lineHeight * 2);
 
     hover.point(middle)
-        .then((a) {
+        .then!((a) {
             a.tripleClick(false);
             assert(input.selectedValue == "Line two");
             assert(input.selectionStart < input.selectionEnd);
 
             return a.move(top);
         })
-        .then((a) {
+        .then!((a) {
             a.tripleClick(false);
             assert(input.selectedValue == "Line one\nLine two");
             assert(input.selectionStart > input.selectionEnd);
 
             return a.move(bottom);
         })
-        .then((a) {
+        .then!((a) {
             a.tripleClick(false);
             assert(input.selectedValue == "Line two\n\nLine four");
             assert(input.selectionStart < input.selectionEnd);
 
             return a.move(blank);
         })
-        .then((a) {
+        .then!((a) {
             a.tripleClick(true);
         })
         .runWhileDrawing(root);
