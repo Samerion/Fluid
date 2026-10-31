@@ -255,7 +255,7 @@ class DragSlot : Slot!Node, Hoverable {
     }
 
     override bool isHovered() const {
-        return super.isHovered();
+        return false;
     }
 
     override bool hoverImpl(HoverPointer) {

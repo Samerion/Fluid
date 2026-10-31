@@ -90,9 +90,6 @@ abstract class Node : HasContext, Safe {
         /// If true, this node is hidden and won't be rendered.
         bool _isHidden;
 
-        /// If true, this node is currently hovered.
-        bool _isHovered;
-
         /// If true, this node is currently disabled.
         bool _isDisabled;
 
@@ -297,13 +294,6 @@ abstract class Node : HasContext, Safe {
     /// Get the minimum size of this node.
     final Vector2 getMinSize() const {
         return minSize;
-    }
-
-    /// Check if this node is hovered.
-    ///
-    /// Returns false if the node or, while the node is being drawn, some of its ancestors are disabled.
-    bool isHovered() const {
-        return _isHovered && !_isDisabled;
     }
 
     /// Check if this node is disabled.

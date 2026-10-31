@@ -88,15 +88,13 @@ abstract class InputNode(Parent : Node) : Parent, Focusable, Hoverable {
 
     }
 
-    override bool isHovered() const {
-
+    bool isHovered() const {
         if (hoverIO) {
             return hoverIO.isHovered(this);
         }
         else {
-            return super.isHovered();
+            return false;
         }
-
     }
 
     /// Check if the node has focus.
