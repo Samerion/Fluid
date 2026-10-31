@@ -510,57 +510,6 @@ unittest {
 
 }
 
-/// This node property will disable mouse input on the given node.
-///
-/// Params:
-///     value = If set to false, the effect is reversed and mouse input is instead enabled.
-deprecated("`.ignoreMouse` was replaced by `.HitFilter.miss` and will be removed in Fluid 0.9.0")
-auto ignoreMouse(bool value = true) {
-
-    static struct IgnoreMouse {
-
-        bool value;
-
-        void apply(Node node) {
-
-            node.ignoreMouse = value;
-
-        }
-
-    }
-
-    return IgnoreMouse(value);
-
-}
-
-///
-deprecated
-unittest {
-
-    import fluid.label;
-    import fluid.button;
-
-    // Prevents the label from blocking the button
-    vframeButton(
-        label(.ignoreMouse, "Click me!"),
-        delegate { }
-    );
-
-}
-
-@("ignoreMouse property sets Node.ignoreMouse to true")
-deprecated
-unittest {
-
-    import fluid.space;
-
-    assert(vspace().ignoreMouse == false);
-    assert(vspace(.ignoreMouse).ignoreMouse == true);
-    assert(vspace(.ignoreMouse(false)).ignoreMouse == false);
-    assert(vspace(.ignoreMouse(true)).ignoreMouse == true);
-
-}
-
 /// This node property will make the subject hidden, setting the `isHidden` field to true.
 ///
 /// Params:

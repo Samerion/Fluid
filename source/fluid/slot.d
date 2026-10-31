@@ -88,10 +88,6 @@ import fluid.io.canvas;
 /// Creates a [Slot] which accepts a single node of type `T` as a child.
 alias slot(alias T) = nodeBuilder!(Slot!T);
 
-/// ditto
-deprecated("`nodeSlot` was renamed to `slot` and will be removed in Fluid 0.9.0")
-alias nodeSlot(alias T) = nodeBuilder!(Slot!T);
-
 ///
 @("slot builder example")
 unittest {
@@ -135,9 +131,6 @@ unittest {
         ),
     );
 }
-
-deprecated("`NodeSlot` was renamed to `Slot` and will be removed in Fluid 0.9.0.")
-alias NodeSlot = Slot;
 
 /// `Slot` is a container node that holds and displays up to one other node.
 ///
