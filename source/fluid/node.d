@@ -105,14 +105,9 @@ abstract class Node : HasContext, Safe {
         /// Attached styling delegates.
         Rule.StyleDelegate[] _styleDelegates;
 
-        /// Actions queued for this node; only used for queueing actions before the first `resize`; afterwards, all
-        /// actions are queued directly into the tree.
-        ///
-        /// `_queuedAction` queues into `LayoutTree` (legacy), whereas `_queuedActionsNew` queues into `TreeContext`.
+        /// Actions queued for this node; only used for queueing actions before the first
+        /// `resize`; afterwards, all actions are queued directly into the tree.
         TreeAction[] _queuedActions;
-
-        /// ditto
-        TreeAction[] _queuedActionsNew;
 
     }
 
@@ -381,7 +376,7 @@ abstract class Node : HasContext, Safe {
 
         // Hold the action until a resize
         else {
-            _queuedActionsNew ~= action;
+            _queuedActions ~= action;
         }
 
         return action;
@@ -729,8 +724,8 @@ abstract class Node : HasContext, Safe {
         reloadStyles();
 
         // Queue actions into the tree
-        treeContext.actions.spawn(_queuedActionsNew);
-        _queuedActionsNew = null;
+        treeContext.actions.spawn(_queuedActions);
+        _queuedActions = null;
 
     }
 
