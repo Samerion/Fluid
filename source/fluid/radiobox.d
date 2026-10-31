@@ -90,7 +90,7 @@ class Radiobox : Checkbox {
 
         // Check the box
         group.selection = this;
-        if (changed) changed();
+        changed();
 
     }
 

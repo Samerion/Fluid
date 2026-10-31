@@ -1,6 +1,8 @@
 ///
 module fluid.number_input;
 
+import diode;
+
 import std.ascii;
 import std.range;
 import std.traits;
@@ -204,7 +206,7 @@ class NumberInput(T) : AbstractNumberInput {
         updateText();
 
         // Call change callback
-        if (changed) changed();
+        changed();
 
     }
 
@@ -245,7 +247,7 @@ class NumberInput(T) : AbstractNumberInput {
         focus();
 
         // Call change callback
-        if (changed) changed();
+        changed();
 
     }
 
@@ -260,7 +262,7 @@ class NumberInput(T) : AbstractNumberInput {
         focus();
 
         // Call change callback
-        if (changed) changed();
+        changed();
 
     }
 
@@ -319,7 +321,9 @@ abstract class AbstractNumberInput : TextInput {
     this(void delegate() @safe changed = null) {
 
         super("");
-        super.changed = changed;
+        if (changed) {
+            super.changed ~= changed;
+        }
         super.value = ['0'];
         this.spinner = numberInputSpinner(.layout!"fill", &increment, &decrement);
         caretToEnd();
@@ -362,8 +366,8 @@ class NumberInputSpinner : Node, Hoverable {
 
     public {
 
-        void delegate() @safe incremented;
-        void delegate() @safe decremented;
+        Event!() incremented;
+        Event!() decremented;
 
     }
 
@@ -381,8 +385,8 @@ class NumberInputSpinner : Node, Hoverable {
 
     this(void delegate() @safe incremented, void delegate() @safe decremented) {
 
-        this.incremented = incremented;
-        this.decremented = decremented;
+        this.incremented ~= incremented;
+        this.decremented ~= decremented;
 
     }
 
@@ -446,12 +450,12 @@ class NumberInputSpinner : Node, Hoverable {
 
         // Above center (increment)
         if (pointer.position.y < center(_lastRectangle).y) {
-            if (incremented) incremented();
+            incremented();
         }
 
         // Below center (decrement)
         else {
-            if (decremented) decremented();
+            decremented();
         }
 
     }

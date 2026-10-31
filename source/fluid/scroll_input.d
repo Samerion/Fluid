@@ -233,7 +233,7 @@ class ScrollInput : InputNode!Node {
         this.scroll = position + move;
 
         // Run the callback
-        if (changed) changed();
+        changed();
 
     }
 
@@ -359,7 +359,7 @@ class ScrollInputHandle : InputNode!Node {
         parent.scroll = startScrollPosition + scrollDifference;
 
         // Emit signal
-        if (parent.changed) parent.changed();
+        parent.changed();
 
         return true;
 
