@@ -24,56 +24,6 @@
 			],
 			"targetPath": "build",
 			"name": "init-exec"
-		},
-		{
-			"environments-osx": {
-				"FLUID_LIBPATH": "$FLUID_PACKAGE_DIR/libraries/macos"
-			},
-			"sourceFiles": [
-				"source/fluid/module_view.d"
-			],
-			"versions": [
-				"Fluid_ModuleView"
-			],
-			"targetPath": "build",
-			"name": "module-view",
-			"environments": {
-				"BOLTS_PACKAGE_DIR": "$BOLTS_PACKAGE_DIR",
-				"BINDBC_FREETYPE_PACKAGE_DIR": "$BINDBC_FREETYPE_PACKAGE_DIR",
-				"OPTIONAL_PACKAGE_DIR": "$OPTIONAL_PACKAGE_DIR",
-				"BINDBC_LOADER_PACKAGE_DIR": "$BINDBC_LOADER_PACKAGE_DIR"
-			},
-			"sourcePaths": [],
-			"environments-windows": {
-				"FLUID_LIBPATH": "$FLUID_PACKAGE_DIR/libraries/windows"
-			},
-			"environments-linux": {
-				"FLUID_LIBPATH": "$FLUID_PACKAGE_DIR/libraries/ubuntu"
-			},
-			"dependencies": {
-				"fluid-tree-sitter": "~>0.2.0",
-				"fluid-tree-sitter:d": "~>0.2.0",
-				"fluid": {
-					"path": "."
-				}
-			},
-			"targetType": "library",
-			"configurations": [
-				{
-					"platforms": [
-						"linux"
-					],
-					"targetType": "library",
-					"subConfigurations": {
-						"fluid": "linux-dynamic"
-					},
-					"name": "linux-dynamic"
-				},
-				{
-					"targetType": "library",
-					"name": "default"
-				}
-			]
 		}
 	],
 	"license": "BSL",
@@ -85,9 +35,6 @@
 	"name": "fluid",
 	"libs": [
 		"freetype"
-	],
-	"excludedSourceFiles": [
-		"source/fluid/module_view.d"
 	],
 	"description": "Flexible, declarative library for graphical user interfaces (GUI, UI)",
 	"dependencies": {
