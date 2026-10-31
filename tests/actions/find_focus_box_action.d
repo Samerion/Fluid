@@ -84,7 +84,7 @@ unittest {
 
     // Frame 0: no focus
     root.findFocusBox()
-        .then!(rect => assert(rect.empty))
+        .then!(rect => assert(rect.isNull))
         .runWhileDrawing(root);
 
     // Frame 1: first box has focus
@@ -117,7 +117,7 @@ unittest {
     );
 
     root.draw();
-    assert(tracker.focusBox.empty);
+    assert(tracker.focusBox.isNull);
 
     box[0].focus();
     root.draw();

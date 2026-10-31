@@ -137,13 +137,13 @@ interface CanvasIO : IO, HasContext {
     final void cropArea(Nullable!Rectangle area) nothrow {
 
         // Reset the area if passed None()
-        if (area.empty) {
+        if (area.isNull) {
             resetCropArea();
         }
 
         // Crop otherwise
         else {
-            cropArea(area.front);
+            cropArea(area.get);
         }
 
     }
@@ -160,11 +160,11 @@ interface CanvasIO : IO, HasContext {
 
         const oldArea = cropArea;
 
-        if (oldArea.empty) {
+        if (oldArea.isNull) {
             cropArea = rectangle;
         }
         else {
-            cropArea = intersect(oldArea.front, rectangle);
+            cropArea = intersect(oldArea.get, rectangle);
         }
 
         return oldArea;

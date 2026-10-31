@@ -197,13 +197,13 @@ struct CompositeTexture {
     /// Loads all chunks if no `cropArea` is set.
     const visibleChunks(CanvasIO canvasIO, Vector2 position) {
         const area = canvasIO.cropArea;
-        if (area.empty) {
+        if (area.isNull) {
             return allChunks;
         }
         else {
             return visibleChunks(
-                position - area.front.start,
-                area.front.size);
+                position - area.get.start,
+                area.get.size);
         }
     }
 

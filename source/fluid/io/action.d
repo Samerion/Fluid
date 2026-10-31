@@ -464,10 +464,10 @@ if (isRetrievableResource!R) {
         return false;
     }
     Nullable!R resource = R.fetch(io, number);
-    if (resource.empty) {
+    if (resource.isNull) {
         return false;
     }
-    return handler(resource.front);
+    return handler(resource.get);
 }
 
 /// ditto
@@ -477,10 +477,10 @@ if (isRetrievableResource!R) {
         return false;
     }
     Nullable!R resource = R.fetch(io, number);
-    if (resource.empty) {
+    if (resource.isNull) {
         return false;
     }
-    handler(resource.front);
+    handler(resource.get);
     return true;
 }
 
