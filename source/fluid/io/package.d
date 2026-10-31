@@ -4,14 +4,15 @@ module fluid.io;
 public import fluid.io.io;
 
 // Basic
-public import fluid.io.time;
-public import fluid.io.focus;
-public import fluid.io.hover;
 public import fluid.io.action;
 public import fluid.io.canvas;
+public import fluid.io.clipboard;
+public import fluid.io.debug_signal;
+public import fluid.io.focus;
+public import fluid.io.hover;
 public import fluid.io.overlay;
 public import fluid.io.preference;
-public import fluid.io.debug_signal;
+public import fluid.io.time;
 
 // Devices
 public import fluid.io.mouse;
