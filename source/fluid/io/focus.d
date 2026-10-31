@@ -171,9 +171,6 @@ class FindFocusBoxAction : BranchAction, Publisher!(Optional!Rectangle) {
 
     }
 
-    alias then = typeof(super).then;
-    alias then = Publisher!(Optional!Rectangle).then;
-
     alias subscribe = typeof(super).subscribe;
 
     override void subscribe(Subscriber!(Optional!Rectangle) subscriber) {
@@ -748,9 +745,6 @@ final class PositionalFocusAction : FocusSearchAction, Publisher!Rectangle {
 
     }
 
-    alias then = typeof(super).then;
-    alias then = Publisher!Rectangle.then;
-
     this() {
 
     }
@@ -771,7 +765,7 @@ final class PositionalFocusAction : FocusSearchAction, Publisher!Rectangle {
 
     override void clearSubscribers() {
         super.clearSubscribers();
-        onFocusBox.clearSubscribers();
+        onFocusBox.clear();
     }
 
     override void subscribe(Subscriber!Rectangle subscriber) {

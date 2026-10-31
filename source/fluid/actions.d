@@ -30,14 +30,12 @@ abstract class NodeSearchAction : TreeAction, Publisher!Node {
 
     }
 
-    alias then = typeof(super).then;
-    alias then = Publisher!Node.then;
     alias subscribe = typeof(super).subscribe;
     alias subscribe = Publisher!Node.subscribe;
 
     override void clearSubscribers() {
         super.clearSubscribers();
-        finished.clearSubscribers();
+        finished.clear();
     }
 
     override void subscribe(Subscriber!Node subscriber) {
@@ -65,14 +63,12 @@ abstract class FocusSearchAction : NodeSearchAction, Publisher!Focusable {
 
     }
 
-    alias then = typeof(super).then;
-    alias then = Publisher!Focusable.then;
     alias subscribe = typeof(super).subscribe;
     alias subscribe = Publisher!Focusable.subscribe;
 
     override void clearSubscribers() {
         super.clearSubscribers();
-        finished.clearSubscribers();
+        finished.clear();
     }
 
     override void subscribe(Subscriber!Focusable subscriber) {

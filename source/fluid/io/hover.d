@@ -768,9 +768,6 @@ class HoverPointerAction : TreeAction, Publisher!HoverPointerAction, IO {
 
     }
 
-    alias then = typeof(super).then;
-    alias then = Publisher!HoverPointerAction.then;
-
     this(HoverIO hoverIO) {
 
         this.hoverIO = hoverIO;
@@ -790,7 +787,7 @@ class HoverPointerAction : TreeAction, Publisher!HoverPointerAction, IO {
 
     override void clearSubscribers() {
         super.clearSubscribers();
-        _onInteraction.clearSubscribers();
+        _onInteraction.clear();
     }
 
     /// Returns:

@@ -1,6 +1,7 @@
 ///
 module fluid.focus_chain;
 
+import diode;
 import optional;
 import std.array;
 

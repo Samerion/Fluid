@@ -4,6 +4,7 @@
 /// Use [popupFrame] to build, and [spawnPopup] or [spawnChildPopup] to display.
 module fluid.popup_frame;
 
+import diode;
 import optional;
 
 import std.traits;
