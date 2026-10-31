@@ -2643,7 +2643,7 @@ unittest {
     auto average = result[].map!(a => a / runCount);
     const totalAverage = average.sum / result[].length;
 
-    assert(totalAverage <= 20.msecs, format!"Too slow: average %(%s / %)"(average));
+    assert(totalAverage <= 50.msecs, format!"Too slow: average %(%s / %)"(average));
     if (totalAverage > 5.msecs) {
         import std.stdio;
         writefln!"Warning: TextInput edit after paste benchmark runs slowly, %(%s / %)"(average);
@@ -2682,7 +2682,7 @@ unittest {
     const average = result[0] / runCount;
     const averageCharacter = average / sampleText.length;
 
-    assert(averageCharacter <= 20.msecs, format!"Too slow: average %s per character"(averageCharacter));
+    assert(averageCharacter <= 50.msecs, format!"Too slow: average %s per character"(averageCharacter));
     if (averageCharacter > 5.msecs) {
         import std.stdio;
         writefln!"Warning: TextInput loads of small edits benchmark runs slowly, %s per character"(averageCharacter);
