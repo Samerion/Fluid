@@ -609,7 +609,7 @@ unittest {
     auto root = hover;
 
     hover.point(50, 50).scroll(0, 10)
-        .then((a) {
+        .then!((a) {
             assert(a.currentHover && a.currentHover.opEquals(btn));
             assert(a.currentScroll && a.currentScroll.opEquals(tracker));
             assert(tracker.totalScroll == Vector2(0, 10));
@@ -617,7 +617,7 @@ unittest {
 
             return a.scroll(5, 20);
         })
-        .then((a) {
+        .then!((a) {
             assert(a.currentHover && a.currentHover.opEquals(btn));
             assert(a.currentScroll && a.currentScroll.opEquals(tracker));
             assert(tracker.lastScroll == Vector2(5, 20));
@@ -651,7 +651,7 @@ unittest {
         auto root = hover;
 
         hover.point(50, 25)
-            .then((a) {
+            .then!((a) {
 
                 assert(a.currentScroll.opEquals(targetTracker));
 
@@ -660,7 +660,7 @@ unittest {
                 return a.move(50, 75).holdScroll(0, -25, testHold);
 
             })
-            .then((a) {
+            .then!((a) {
 
                 if (testHold)
                     assert(a.currentScroll.opEquals(targetTracker));
@@ -709,17 +709,17 @@ unittest {
         auto root = hover;
 
         hover.point(50, 50)
-            .then((a) {
+            .then!((a) {
                 assert(a.currentScroll.opEquals(innerTracker));
                 return a.holdScroll(0, -20, testHold);
             })
             // Pretend innerTracker has reached its limit for scrolling
-            .then((a) {
+            .then!((a) {
                 assert(a.currentScroll.opEquals(innerTracker));
                 innerTracker.disableScroll = true;
                 return a.holdScroll(0, -10, testHold);
             })
-            .then((a) {
+            .then!((a) {
                 if (testHold) {
                     assert(a.currentScroll.opEquals(innerTracker));
                 }
@@ -792,7 +792,7 @@ unittest {
 
     // Hover the first button; focus should stay the same
     hover.point(50, 25)
-        .then((a) {
+        .then!((a) {
             assert(a.isHovered(button1));
             assert(focus.currentFocus is null);
 
@@ -800,7 +800,7 @@ unittest {
             a.press();
             return a.stayIdle;
         })
-        .then((a) {
+        .then!((a) {
             assert(a.isHovered(button1));
             assert(focus.isFocused(button1));
 
@@ -808,7 +808,7 @@ unittest {
             a.press();
             return a.move(50, 75);
         })
-        .then((a) {
+        .then!((a) {
             assert(a.isHovered(button1));
             assert(focus.isFocused(button1));
 
@@ -845,7 +845,7 @@ unittest {
 
     // Hover the space; focus should stay the same
     hover.point(50, 25)
-        .then((a) {
+        .then!((a) {
             assert(!a.isHovered(targetButton));
             assert(focus.currentFocus.opEquals(targetButton));
 
@@ -853,7 +853,7 @@ unittest {
             a.press();
             return a.stayIdle;
         })
-        .then((a) {
+        .then!((a) {
             assert(!a.isHovered(targetButton));
             assert(focus.currentFocus is null);
 
@@ -861,7 +861,7 @@ unittest {
             a.press();
             return a.move(50, 75);
         })
-        .then((a) {
+        .then!((a) {
             assert(!a.isHovered(targetButton));
             assert(focus.currentFocus is null);
 
@@ -1023,12 +1023,12 @@ unittest {
 
     hover
         .point(50, 50)
-        .then((action) {
+        .then!((action) {
             assert(hover.isHovered(targetButton));
             action.press();
             return action.stayIdle;
         })
-        .then((action) {
+        .then!((action) {
             assert(hover.isHovered(targetButton));
             assert(focus.isFocused(otherButton));
             return action.stayIdle;

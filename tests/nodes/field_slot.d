@@ -27,12 +27,12 @@ unittest {
 
     // In this case, clicking anywhere should give the textInput focus
     hover.point(Vector2(200, 200))
-        .then((a) {
+        .then!((a) {
             assert(a.isHovered(slot));
             a.press();
             return root.nextFrame;
         })
-        .then({
+        .then!({
             // Focus should be transferred once actions have been processed
             assert(focus.isFocused(input));
         })

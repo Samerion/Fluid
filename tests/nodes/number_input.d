@@ -107,12 +107,12 @@ unittest {
 
     // Try incrementing
     hover.point(top)
-        .then((a) {
+        .then!((a) {
             assert(a.isHovered(input.spinner));
             a.press;
             return a.stayIdle;
         })
-        .then((a) {
+        .then!((a) {
             assert(calls == 1);  // Does this make sense?
             assert(input.value == 12);
             assert(input.TextInput.value == "12");
@@ -120,7 +120,7 @@ unittest {
             // Try decrementing
             return a.move(bottom - Vector2(1, 1));
         })
-        .then((a) {
+        .then!((a) {
             a.press;
             assert(a.isHovered(input.spinner));
             return a.stayIdle;
@@ -182,13 +182,13 @@ unittest {
 
         root.setScale(scale);
         hover.point(99, 49)
-            .then((a) {
+            .then!((a) {
                 a.click();
                 assert(ups   == 1);
                 assert(downs == 0);
                 return a.move(99, 51);
             })
-            .then((a) {
+            .then!((a) {
                 a.click();
                 assert(ups   == 1);
                 assert(downs == 1);

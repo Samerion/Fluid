@@ -21,6 +21,8 @@ unittest {
     );
 }
 
+import diode;
+
 import fluid.node;
 import fluid.utils;
 import fluid.input;
@@ -71,7 +73,7 @@ class FieldSlot(T : Node) : T, Hoverable, Focusable {
     /// This function is the event handler for [FluidInputAction.press].
     @(FluidInputAction.press)
     void press() {
-        focusAnd.then((Node node) {
+        focusAnd.then!((Node node) {
             if (auto focusable = cast(Focusable) node) {
                 focusable.runInputAction!(FluidInputAction.press);
             }
@@ -91,7 +93,7 @@ class FieldSlot(T : Node) : T, Hoverable, Focusable {
     ///     The [FocusRecurseAction] tree action used to search the tree.
     FocusRecurseAction focusAnd() {
         auto action = this.focusRecurseChildren();
-        action.then(&setFocusableChild);
+        action.then!(a => setFocusableChild(a));
         return action;
     }
 
@@ -111,7 +113,7 @@ class FieldSlot(T : Node) : T, Hoverable, Focusable {
         );
         auto action = slot
             .focusAnd()
-            .then((Node target) {
+            .then!((Node target) {
                 assert(target is nameInput);
             });
 

@@ -54,14 +54,14 @@ unittest {
 
     // Grab the scrollbar
     hover.point(195, 10)
-        .then((a) {
+        .then!((a) {
             assert(a.isHovered(frame.scrollBar.handle));
             a.press(false);
 
             // Drag the scrollbar 10 pixels lower
             return a.move(195, 20);
         })
-        .then((a) {
+        .then!((a) {
             a.press(false);
 
             // Note down the difference in scroll
@@ -71,7 +71,7 @@ unittest {
             // Drag the scrollbar 10 pixels lower, but also move it out of the scrollbar's area
             return a.move(150, 30);
         })
-        .then((a) {
+        .then!((a) {
             const target = scrollDiff*2;
 
             a.press(false);
@@ -81,14 +81,14 @@ unittest {
             // Make sure the button is hovered
             return a.move(150, 20);
         })
-        .then((a) {
+        .then!((a) {
             assert(a.isHovered(frame.scrollBar.handle),
                 "The scrollbar should retain hover control");
 
             // Release the mouse while it's hovering the button
             return a.stayIdle;
         })
-        .then((a) {
+        .then!((a) {
             assert(a.isHovered(btn));
         })
         .runWhileDrawing(root);
@@ -109,7 +109,7 @@ unittest {
     root.draw();
 
     hover.point(95, 5)
-        .then((a) {
+        .then!((a) {
             a.press();
         })
         .runWhileDrawing(root);

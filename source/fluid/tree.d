@@ -1,5 +1,7 @@
 module fluid.tree;
 
+import diode;
+
 import std.conv;
 import std.math;
 import std.container;
@@ -8,8 +10,6 @@ import std.algorithm;
 import fluid.node;
 import fluid.input;
 import fluid.style;
-
-import fluid.future.pipe;
 
 
 @safe:
@@ -20,6 +20,8 @@ version (OSX)
 
 /// A class for iterating over the node tree.
 abstract class TreeAction : Publisher!() {
+
+    mixin implementSafe;
 
     public {
 
@@ -71,7 +73,7 @@ abstract class TreeAction : Publisher!() {
 
     /// Remove all event handlers attached to this tree.
     void clearSubscribers() {
-        _finished.clearSubscribers();
+        _finished.clear();
     }
 
     override final void subscribe(Subscriber!() subscriber) {

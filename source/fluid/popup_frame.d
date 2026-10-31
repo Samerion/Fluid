@@ -4,6 +4,7 @@
 /// Use [popupFrame] to build, and [spawnPopup] or [spawnChildPopup] to display.
 module fluid.popup_frame;
 
+import diode;
 import optional;
 
 import std.traits;
@@ -163,7 +164,7 @@ class PopupFrame : InputNode!Frame, Overlayable, OverlayIO, FocusIO,
         this._findFocusBoxAction     = new FindFocusBoxAction(this);
 
         _findFocusBoxAction
-            .then((Optional!Rectangle result) => _lastFocusBox = result);
+            .then!((Optional!Rectangle result) => _lastFocusBox = result);
     }
 
     /// Set a new rectangular anchor.

@@ -1,6 +1,7 @@
 ///
 module fluid.focus_chain;
 
+import diode;
 import optional;
 import std.array;
 
@@ -61,7 +62,7 @@ class FocusChain : NodeChain, FocusIO, WithOrderedFocus, WithPositionalFocus {
 
         // Track the current focus box
         findFocusBoxAction
-            .then((Optional!Rectangle rect) => _lastFocusBox = rect);
+            .then!((Optional!Rectangle rect) => _lastFocusBox = rect);
 
     }
 

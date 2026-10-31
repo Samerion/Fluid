@@ -1,6 +1,8 @@
 ///
 module fluid.node;
 
+import diode;
+
 import std.math;
 import std.meta;
 import std.range;
@@ -34,7 +36,7 @@ else
 
 
 /// Represents a Fluid node.
-abstract class Node : HasContext {
+abstract class Node : HasContext, Safe {
 
     public import fluid.structs : NodeAlign, Layout;
     public import fluid.structs : Align = NodeAlign;
@@ -1176,7 +1178,7 @@ int runWhileDrawing(Publisher!() publisher, Node node, int frameLimit = int.max)
 
     int i;
     bool finished;
-    publisher.then(() => finished = true);
+    publisher.then!(() => finished = true);
 
     while (!finished) {
         node.draw();

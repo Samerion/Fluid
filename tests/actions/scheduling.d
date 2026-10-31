@@ -88,11 +88,11 @@ unittest {
     );
 
     const frames = root.focusChild()
-        .then((Node a) @trusted => assert(a == outerInput))
-        .then(() => scrollFrame.focusChild())
-        .then((Node a) @trusted => assert(a == outerInput))
-        .then(() => innerSpace.focusChild())
-        .then((Node a) @trusted => assert(a == innerInput))
+        .then!((Node a) @trusted => assert(a == outerInput))
+        .then!(() => scrollFrame.focusChild())
+        .then!((Node a) @trusted => assert(a == outerInput))
+        .then!(() => innerSpace.focusChild())
+        .then!((Node a) @trusted => assert(a == innerInput))
         .runWhileDrawing(root);
 
     assert(frames == 3);

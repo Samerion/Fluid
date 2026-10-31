@@ -151,7 +151,7 @@ class FindFocusBoxAction : BranchAction, Publisher!(Optional!Rectangle) {
         /// System holding the focused node in question.
         FocusIO focusIO;
 
-        /// Focus box reported by the node, if any. Use `.then((Rectangle) { ... })` to get the focus box the moment
+        /// Focus box reported by the node, if any. Use `.then!((Rectangle) { ... })` to get the focus box the moment
         /// it is found.
         Optional!Rectangle focusBox;
 
@@ -170,9 +170,6 @@ class FindFocusBoxAction : BranchAction, Publisher!(Optional!Rectangle) {
         this.focusIO = focusIO;
 
     }
-
-    alias then = typeof(super).then;
-    alias then = Publisher!(Optional!Rectangle).then;
 
     alias subscribe = typeof(super).subscribe;
 
@@ -471,7 +468,7 @@ interface WithPositionalFocus : WithFocus {
                 auto self = cast(Node) this;
 
                 positionalFocusAction.reset(reference, focusBox, side);
-                positionalFocusAction.then((Rectangle box) {
+                positionalFocusAction.then!((Rectangle box) {
                     lastFocusBox = Optional!Rectangle(box);
                 });
                 self.startAction(positionalFocusAction);
@@ -748,9 +745,6 @@ final class PositionalFocusAction : FocusSearchAction, Publisher!Rectangle {
 
     }
 
-    alias then = typeof(super).then;
-    alias then = Publisher!Rectangle.then;
-
     this() {
 
     }
@@ -771,7 +765,7 @@ final class PositionalFocusAction : FocusSearchAction, Publisher!Rectangle {
 
     override void clearSubscribers() {
         super.clearSubscribers();
-        onFocusBox.clearSubscribers();
+        onFocusBox.clear();
     }
 
     override void subscribe(Subscriber!Rectangle subscriber) {

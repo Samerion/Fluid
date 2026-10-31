@@ -15,6 +15,10 @@
 /// ---
 module fluid;
 
+@safe:
+
+public import diode;
+
 /// ## General nodes
 ///
 /// In Fluid, most things are accomplished with nodes. The most basic task a node can do is
@@ -147,7 +151,7 @@ unittest {
         button("Click me!", delegate { }),
     );
     ui.focusChild()
-        .then((Focusable child) => child
+        .then!((Focusable child) => child
             .runInputAction!(FluidInputAction.press));
 }
 
