@@ -15,6 +15,10 @@
 /// ---
 module fluid;
 
+@safe:
+
+public import diode;
+
 /// ## General nodes
 ///
 /// In Fluid, most things are accomplished with nodes. The most basic task a node can do is

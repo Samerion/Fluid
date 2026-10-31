@@ -21,6 +21,8 @@ unittest {
     );
 }
 
+import diode;
+
 import fluid.node;
 import fluid.utils;
 import fluid.input;
@@ -91,7 +93,7 @@ class FieldSlot(T : Node) : T, Hoverable, Focusable {
     ///     The [FocusRecurseAction] tree action used to search the tree.
     FocusRecurseAction focusAnd() {
         auto action = this.focusRecurseChildren();
-        action.then!(&setFocusableChild);
+        action.then!(a => setFocusableChild(a));
         return action;
     }
 
