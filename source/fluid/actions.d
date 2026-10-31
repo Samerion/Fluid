@@ -26,7 +26,7 @@ abstract class NodeSearchAction : TreeAction, Publisher!Node {
     private {
 
         /// Event that runs when the tree action finishes.
-        Event!Node finished;
+        Event!Node _onFinish;
 
     }
 
@@ -35,11 +35,11 @@ abstract class NodeSearchAction : TreeAction, Publisher!Node {
 
     override void clearSubscribers() {
         super.clearSubscribers();
-        finished.clear();
+        _onFinish.clear();
     }
 
     override void subscribe(Subscriber!Node subscriber) {
-        finished.subscribe(subscriber);
+        _onFinish.subscribe(subscriber);
     }
 
     override void beforeTree(Node node, Rectangle rect) {
@@ -49,7 +49,7 @@ abstract class NodeSearchAction : TreeAction, Publisher!Node {
 
     override void stopped() {
         super.stopped();
-        finished(result);
+        _onFinish(result);
     }
 
 }
@@ -59,7 +59,7 @@ abstract class FocusSearchAction : NodeSearchAction, Publisher!Focusable {
     private {
 
         /// Event that runs when the tree action finishes.
-        Event!Focusable finished;
+        Event!Focusable _onFinish;
 
     }
 
@@ -68,16 +68,16 @@ abstract class FocusSearchAction : NodeSearchAction, Publisher!Focusable {
 
     override void clearSubscribers() {
         super.clearSubscribers();
-        finished.clear();
+        _onFinish.clear();
     }
 
     override void subscribe(Subscriber!Focusable subscriber) {
-        finished.subscribe(subscriber);
+        _onFinish.subscribe(subscriber);
     }
 
     override void stopped() {
         super.stopped();
-        finished(cast(Focusable) result);
+        _onFinish(cast(Focusable) result);
     }
 
 }
