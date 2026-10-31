@@ -141,7 +141,7 @@ class PopupFrame : InputNode!Frame, Overlayable, OverlayIO, FocusIO,
         Rectangle _anchor;
         Vector2 _anchorVec;
         Focusable _currentFocus;
-        Optional!Rectangle _lastFocusBox;
+        Nullable!Rectangle _lastFocusBox;
 
         OrderedFocusAction _orderedFocusAction;
         PositionalFocusAction _positionalFocusAction;
@@ -164,7 +164,7 @@ class PopupFrame : InputNode!Frame, Overlayable, OverlayIO, FocusIO,
         this._findFocusBoxAction     = new FindFocusBoxAction(this);
 
         _findFocusBoxAction
-            .then!((Optional!Rectangle result) => _lastFocusBox = result);
+            .then!((Nullable!Rectangle result) => _lastFocusBox = result);
     }
 
     /// Set a new rectangular anchor.
@@ -242,11 +242,11 @@ class PopupFrame : InputNode!Frame, Overlayable, OverlayIO, FocusIO,
             || (childPopup && childPopup.isFocused);
     }
 
-    override Optional!Rectangle lastFocusBox() const {
+    override Nullable!Rectangle lastFocusBox() const {
         return _lastFocusBox;
     }
 
-    override protected Optional!Rectangle lastFocusBox(Optional!Rectangle newFocusBox) {
+    override protected Nullable!Rectangle lastFocusBox(Nullable!Rectangle newFocusBox) {
         return _lastFocusBox = newFocusBox;
     }
 

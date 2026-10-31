@@ -436,7 +436,7 @@ if (isInputAction!action && isRetrievableResource!R) {
     if (io is null) {
         return false;
     }
-    Optional!R resource = R.fetch(io, number);
+    Nullable!R resource = R.fetch(io, number);
     if (resource.empty) {
         return false;
     }
@@ -449,7 +449,7 @@ if (isInputAction!action && isRetrievableResource!R) {
     if (io is null) {
         return false;
     }
-    Optional!R resource = R.fetch(io, number);
+    Nullable!R resource = R.fetch(io, number);
     if (resource.empty) {
         return false;
     }
@@ -463,7 +463,7 @@ if (isRetrievableResource!R) {
     if (io is null) {
         return false;
     }
-    Optional!R resource = R.fetch(io, number);
+    Nullable!R resource = R.fetch(io, number);
     if (resource.empty) {
         return false;
     }
@@ -476,7 +476,7 @@ if (isRetrievableResource!R) {
     if (io is null) {
         return false;
     }
-    Optional!R resource = R.fetch(io, number);
+    Nullable!R resource = R.fetch(io, number);
     if (resource.empty) {
         return false;
     }

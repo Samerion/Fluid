@@ -45,7 +45,7 @@ class FocusChain : NodeChain, FocusIO, WithOrderedFocus, WithPositionalFocus {
         Appender!(char[]) _buffer;
         PositionalFocusAction _positionalFocusAction;
         OrderedFocusAction _orderedFocusAction;
-        Optional!Rectangle _lastFocusBox;
+        Nullable!Rectangle _lastFocusBox;
 
     }
 
@@ -62,7 +62,7 @@ class FocusChain : NodeChain, FocusIO, WithOrderedFocus, WithPositionalFocus {
 
         // Track the current focus box
         findFocusBoxAction
-            .then!((Optional!Rectangle rect) => _lastFocusBox = rect);
+            .then!((Nullable!Rectangle rect) => _lastFocusBox = rect);
 
     }
 
@@ -80,11 +80,11 @@ class FocusChain : NodeChain, FocusIO, WithOrderedFocus, WithPositionalFocus {
 
     }
 
-    override protected Optional!Rectangle lastFocusBox() const {
+    override protected Nullable!Rectangle lastFocusBox() const {
         return _lastFocusBox;
     }
 
-    override protected Optional!Rectangle lastFocusBox(Optional!Rectangle newFocusBox) {
+    override protected Nullable!Rectangle lastFocusBox(Nullable!Rectangle newFocusBox) {
         return _lastFocusBox = newFocusBox;
     }
 

@@ -95,7 +95,7 @@ class TestSpace : Space, CanvasIO, DebugSignalIO {
         TestProbe _probe;
 
         /// Current crop area.
-        Optional!Rectangle _cropArea;
+        Nullable!Rectangle _cropArea;
 
         /// Rectangle given to TestSpace when drawing.
         Rectangle _viewport;
@@ -202,7 +202,7 @@ class TestSpace : Space, CanvasIO, DebugSignalIO {
         return _debugSignals.get(name, 0);
     }
 
-    override Optional!Rectangle cropArea() const nothrow {
+    override Nullable!Rectangle cropArea() const nothrow {
         return _cropArea;
     }
 

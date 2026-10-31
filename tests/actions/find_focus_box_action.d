@@ -18,7 +18,7 @@ class FocusTracker : Space {
         this.findFocusBoxAction = new FindFocusBoxAction;
     }
 
-    Optional!Rectangle focusBox() const {
+    Nullable!Rectangle focusBox() const {
 
         return findFocusBoxAction.focusBox;
 

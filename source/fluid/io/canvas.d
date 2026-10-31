@@ -121,7 +121,7 @@ interface CanvasIO : IO, HasContext {
     ///
     /// Returns:
     ///     An area on the canvas that shapes can be drawn in.
-    Optional!Rectangle cropArea() const nothrow;
+    Nullable!Rectangle cropArea() const nothrow;
 
     /// Set an area the shapes can be drawn in. Any shape drawn after this call will be cropped to fit the specified
     /// rectangle on the canvas.
@@ -130,11 +130,11 @@ interface CanvasIO : IO, HasContext {
     ///
     /// Params:
     ///     area = Area on the canvas to restrict all subsequently drawn shapes to.
-    ///         If passed an empty `Optional`, calls `resetCropArea`.
+    ///         If passed an empty `Nullable`, calls `resetCropArea`.
     void cropArea(Rectangle area) nothrow;
 
     /// ditto
-    final void cropArea(Optional!Rectangle area) nothrow {
+    final void cropArea(Nullable!Rectangle area) nothrow {
 
         // Reset the area if passed None()
         if (area.empty) {
@@ -154,7 +154,7 @@ interface CanvasIO : IO, HasContext {
     ///     rectangle = New crop region.
     /// Returns:
     ///     The old region for later restoration.
-    final Optional!Rectangle intersectCrop(Rectangle rectangle) nothrow {
+    final Nullable!Rectangle intersectCrop(Rectangle rectangle) nothrow {
 
         import fluid.utils : intersect;
 

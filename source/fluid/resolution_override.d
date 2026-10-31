@@ -82,7 +82,7 @@ class ResolutionOverride(T : Node) : T, CanvasIO {
 
     // CanvasIO overrides
 
-    override Optional!Rectangle cropArea() const nothrow {
+    override Nullable!Rectangle cropArea() const nothrow {
         return canvasIO.cropArea();
     }
 
