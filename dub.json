@@ -96,7 +96,7 @@
 			"version": "~>5.0",
 			"optional": true
 		},
-		"diode": "~>0.1.9",
+		"diode": "~>0.1.10",
 		"bindbc-freetype": "~>1.1.1",
 		"elemi": {
 			"version": "~>1.2.2",
