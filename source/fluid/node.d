@@ -364,7 +364,7 @@ abstract class Node : HasContext, Safe {
     /// Returns:
     ///     Returns the same action as given, for easy chaining.
     final T startAction(T : TreeAction)(T action)
-    in (action, "Node.runAction(TreeAction) called with a `null` argument")
+    in (action, "Node.startAction(TreeAction) was called with a `null` argument")
     do {
         action.startNode = this;
         action.toStop = false;
@@ -402,7 +402,7 @@ abstract class Node : HasContext, Safe {
     ///     A [RAII](https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization) struct
     ///     that stops all started actions as soon as the struct leaves the scope.
     protected final auto startBranchAction(BranchAction action)
-    in (action, "Node.runAction(TreeAction) called with a `null` argument")
+    in (action, "Node.startBranchAction(TreeAction) was called with a `null` argument")
     do {
         return startBranchAction(only(action));
     }
@@ -419,7 +419,7 @@ abstract class Node : HasContext, Safe {
     }
 
     protected final auto controlBranchAction(BranchAction action)
-    in (action, "Node.runAction(TreeAction) called with a `null` argument")
+    in (action, "Node.controlBranchAction(TreeAction) was called with a `null` argument")
     do {
         return controlBranchAction(only(action));
     }
