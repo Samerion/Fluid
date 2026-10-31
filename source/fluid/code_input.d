@@ -121,11 +121,11 @@ class CodeInput : TextInput {
 
     }
 
-    this(CodeHighlighter highlighter = null, void delegate() @safe submitted = null) {
+    this(CodeHighlighter highlighter = null, void delegate() @safe onSubmit = null) {
 
         super.contentLabel = new ContentLabel;
-        if (submitted) {
-            this.submitted ~= submitted;
+        if (onSubmit) {
+            this.onSubmit ~= onSubmit;
         }
         this.highlighter = highlighter;
 

@@ -30,24 +30,24 @@ class Slider(T) : AbstractSlider {
     }
 
     /// Create the slider using the given range as the set of possible values/steps.
-    this(R)(R range, size_t index, void delegate() @safe changed = null)
+    this(R)(R range, size_t index, void delegate() @safe onChange = null)
     if (is(ElementType!R == T)) {
 
-        this(range, changed);
+        this(range, onChange);
         this.index = index;
 
     }
 
     /// ditto
-    this(R)(R range, void delegate() @safe changed = null)
+    this(R)(R range, void delegate() @safe onChange = null)
     if (is(ElementType!R == T)) {
 
         // TODO special-case empty sliders instead?
         assert(!range.empty, "Slider range must not be empty.");
 
         this.range = new SliderRangeImpl!R(range);
-        if (changed) {
-            this.changed ~= changed;
+        if (onChange) {
+            this.onChange ~= onChange;
         }
 
     }
@@ -208,7 +208,7 @@ abstract class AbstractSlider : InputNode!Node {
         if (index != step) {
 
             index = step;
-            changed();
+            onChange();
 
         }
 

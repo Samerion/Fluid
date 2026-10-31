@@ -26,10 +26,10 @@ abstract class InputNode(Parent : Node) : Parent, Focusable, Hoverable {
     HoverIO hoverIO;
 
     /// Callback to run when the input value is altered.
-    Event!() changed;
+    Event!() onChange;
 
     /// Callback to run when the input is submitted.
-    Event!() submitted;
+    Event!() onSubmit;
 
     this(T...)(T sup) {
 
