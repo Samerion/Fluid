@@ -128,7 +128,7 @@ class FieldSlot(T : Node) : T, Hoverable, Focusable {
 
     // implements Hoverable
     override bool isHovered() const {
-        return super.isHovered();
+        return false;
     }
 
     override bool blocksInput() const {

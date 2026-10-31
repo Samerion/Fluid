@@ -398,7 +398,7 @@ class NumberInputSpinner : Node, Hoverable {
     }
 
     override bool isHovered() const {
-        return super.isHovered();
+        return false;
     }
 
     override void resizeImpl(Vector2) {
