@@ -195,7 +195,7 @@ struct Layout {
 ///     position = Position assigned to the child rectangle.
 Vector2 alignRectangle(NodeAlign[2] alignment, Rectangle space, Vector2 size) {
 
-    float impl(NodeAlign align_, lazy float spaceLeft) {
+    float impl(NodeAlign align_, lazy float spaceLeft) @safe {
         with (NodeAlign)
         final switch (align_) {
             case start, fill: return 0;
