@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macOS-latest, macos-15]
+        os: [ubuntu-24.04, windows-latest, macOS-latest, macos-15]
         dc: [dmd, ldc, ldc-1.28.1]
         #dub: [dub, redub]
         #os: [ubuntu-latest, windows-latest]  # DEBUG
@@ -44,6 +44,10 @@ jobs:
         shell: bash
         run: $DUB build :tour
         if: matrix.dc != 'ldc-1.28.1'
+
+      - name: Compile in release mode
+        shell: bash
+        run: $DUB build -b=release
 
       - name: Run tests
         shell: bash
