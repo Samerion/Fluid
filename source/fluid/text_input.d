@@ -1123,6 +1123,8 @@ class TextInput : InputNode!Node, FluidScrollable, HoverScrollable {
     /// See_Also: `Text.rulerAt`
     /// Params:
     ///     index = Index of the requested character.
+    ///     preferNextLine = If the index is between two characters on different visual lines (and
+    ///         neither is a line break), decides which of them should be used.
     TextRuler rulerAt(size_t index, bool preferNextLine = false) {
 
         return contentLabel.text.rulerAt(index, preferNextLine);
