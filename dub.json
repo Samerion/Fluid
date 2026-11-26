@@ -36,7 +36,7 @@
 	"libs": [
 		"freetype"
 	],
-	"description": "Flexible, declarative library for graphical user interfaces (GUI, UI)",
+	"description": "Fluid: A flexible, declarative library for graphical user interfaces (GUI, UI)",
 	"dependencies": {
 		"raylib-d": {
 			"default": true,
