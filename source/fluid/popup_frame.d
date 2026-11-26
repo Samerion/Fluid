@@ -225,7 +225,6 @@ class PopupFrame : InputNode!Frame, Overlayable, OverlayIO, FocusIO,
     /// Give focus to [previousFocusable], that is, whatever node had
     /// [focus][FocusIO.currentFocus] before this one. If no node was focused, [clears
     /// focus][FocusIO.clearFocus].
-    @(FluidInputAction.cancel)
     void restorePreviousFocus() {
         if (previousFocusable) {
             previousFocusable.focus();
@@ -233,6 +232,13 @@ class PopupFrame : InputNode!Frame, Overlayable, OverlayIO, FocusIO,
         else {
             focusIO.clearFocus();
         }
+    }
+
+    /// Close the frame. By default, this does the same thing as [restorePreviousFocus], which
+    /// should, effectively, close the frame.
+    @(FluidInputAction.cancel)
+    void close() {
+        restorePreviousFocus();
     }
 
     /// Returns:

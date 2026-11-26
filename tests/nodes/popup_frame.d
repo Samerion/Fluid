@@ -628,3 +628,22 @@ unittest {
     root.draw();
     frame.runInputAction!(FluidInputAction.press);
 }
+
+@("PopupFrame.close closes the popup")
+unittest {
+    auto frame = popupFrame();
+    auto focus = focusChain(frame);
+    auto root = testSpace(focus);
+    frame.toTakeFocus = true;
+
+    root.draw();
+    root.drawAndAssert(
+        frame.isDrawn(),
+    );
+    frame.close();
+
+    root.drawAndAssertFailure(
+        frame.isDrawn(),
+    );
+
+}
